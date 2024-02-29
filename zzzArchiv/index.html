@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link href="./css/tableDark.css" rel="stylesheet">
+  <link href="./css/modalDark.css" rel="stylesheet">
+  <link href="./css/Chart.css" rel="stylesheet">
+  <style>
+ 
+  </style>
+  <title>ValuationXpro</title>
+</head>
+<body>
+  <div class="tab">
+    <button class="tablinks" id="ISSUER_Tab">ISSUER</button>
+    <button class="tablinks" id="PROD_Tab">PRODUCTS</button>
+    <button class="tablinks" id="DEALS_Tab">DEALS</button>
+    <button class="tablinks" id="PORT_Tab">PORTFOLIO</button>
+    <button class="tablinks" id="IR_Tab">RATES</button>
+    <button class="tablinks" id="TS_Tab">HIST DATA</button>
+    <button class="tablinks" id="MVaR_Tab">M-VaR</button>
+    <button class="tablinks" id="CVaR_Tab">C-VaR</button>
+    <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+  </div>
+
+<!-- Opening Sheet -->
+    <!-- <div id="openingSheetButtonContainer">
+      EMPTY!!!
+    </div> -->
+
+<!-- Modal - ISSUER -->
+<div id="ISSUER_Modal" class="table">
+  <div class="table-content">
+    <span class="close close-button">&times;</span>
+    <h2 class="section-header">ISSUER</h2>
+    <div class="data-wrapper">
+      <div class="button-wrapper">
+        <button id="issueraddButton">ADD</button>
+      </div>
+      <div class="data-container" id="issuerDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal - PROD -->
+<div id="PROD_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">PRODUCTS</h2>
+    <div class="data-wrapper">
+      <div class="button-wrapper">
+        <button id="prodaddButton">ADD</button>
+      </div>
+      <div class="data-container" id="prodDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+<div id="DEALS_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">DEALS</h2>
+      <div class="filter-wrapper" style="display: flex; flex-direction: column; align-items: flex-end;">
+
+        <div class="created-tables-dropdown" style="margin-bottom: 10px; width: 100%;">
+          <label for="createdTablesDropdown">Select _____PORTFOLIO:</label>
+          <select id="createdTablesDropdown"></select>
+        </div>
+
+        <div class="trade-dropdown-wrapper" style="margin-bottom: 10px; width: 100%;">
+          <label for="tradeDropdown">Select_______TRADE_ID:</label>
+          <select id="tradeDropdown" multiple style="height: 100px; vertical-align: top;"></select>
+        </div>
+        
+        <div class="tag-input" style="margin-bottom: 10px; width: 100%;">
+          <label for="nameInput">Name_selection:</label>
+          <input type="text" id="nameInput" value="" style="background-color: white;">
+        </div>
+
+        <!-- New Tag Input Field -->
+        <div class="tag-input" style="margin-bottom: 10px; width: 100%;">
+          <label for="tagInputField">Tag___selection:</label>
+          <input type="text" id="tagInputField" value="" style="background-color: white;">
+        </div>
+
+        <div class="button-row" style="margin-bottom: 10px;">
+          <button id="saveSelectionButton" style="width: 100px; background-color: green; color: white;">Save Selection</button>
+          <button id="deleteTableButton" style="width: 100px; background-color: red; color: white;">Delete Selection</button>
+        </div>
+        
+      </div>
+    </div>
+    <div class="data-wrapper">
+      <div class="button-wrapper">
+        <button id="dealsaddButton">ADD</button>
+      </div>
+      <div class="data-container" id="dealsDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+<!-- Modal - PORT -->
+<div id="PORT_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">PORTFOLIO</h2>
+      <!-- Display additional data -->
+      <div>
+        <p>Notional: <span id="portNotional"></span></p>
+        <p>NetAssetValue: <span id="portValue"></span></p>
+        <p>Portfolio Duration: <span id="portPV01"></span></p>
+        <div>
+          <p>Select Issuer:</p>
+          <select id="issuerDropdown" multiple>
+            <option value="ALL">ALL ISSUERS</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="data-wrapper">
+      <div class="button-wrapper">
+        <button id="fairValueButton">CALCULATE</button>
+      </div>
+      <div class="data-container" id="portDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - IR -->
+<div id="IR_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">INTEREST RATES</h2>
+    <div class="data-container" id="IRDataContainer"></div>
+    <div class="chart-container">
+      <!-- <canvas id="IRlineChart"></canvas> -->
+      <canvas id="IRlineChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - TS -->
+<div id="TS_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">HISTORIC DATA [%]</h2>
+    <div class="data-wrapper">
+      <div class="button-wrapper">
+        <!-- Optional: If you want a button in this modal, add it here -->
+      </div>
+      <div class="data-container" id="TSDataContainer"></div>
+    </div>
+    <div class="chart-container">
+      <canvas id="TSlineChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - MVaR -->
+<div id="MVaR_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">MARKET VaR</h2>
+
+    <!-- Left Part (Tables) -->
+    <div class="left-part">
+      <div class="data-wrapper">
+        <div class="button-wrapper">
+          <button id="MVaRButton">CALC_VaR</button>
+        </div>
+        <div id="inputMVaR-container"></div>
+        <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
+        <div class="data-container" id="MVaRDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Right Part (Chart) -->
+    <div class="right-part">
+      <!-- <div class="chart-container"> -->
+        <canvas id="MVaRChart"></canvas>
+      <!-- </div> -->
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal - CVaR -->
+<div id="CVaR_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">CREDIT VaR</h2>
+
+    <!-- Left Part (Tables) -->
+    <div class="left-part">
+      <div class="data-wrapper">
+        <div class="button-wrapper">
+          <button id="CVaRButton"class="edit-button">CALC_VaR</button>
+        </div>
+        <div class="chart-button-container">
+          <button class="chart-button" data-chart="EADChart">Show EAD</button>
+          <button class="chart-button" data-chart="LGDChart">Show LGD</button>
+          <button class="chart-button" data-chart="LossIssuerChart">LOSS ISSUER</button>
+        </div>
+        <div class="data-container" id="EADMainDataContainer"></div>
+        <div class="data-container" id="LossIssuerDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Right Part (Charts) -->
+    <div class="right-part">
+      <div class="chart-container">
+
+        <div class="chart-container-inner" id="EADChartContainer">
+          <canvas id="EADChart"></canvas>
+        </div>
+        <div class="chart-container-inner" id="LGDChartContainer">
+          <canvas id="LGDChart"></canvas>
+        </div>
+        <div class="chart-container-inner" id="LossIssuerChartContainer">
+          <canvas id="LossIssuerChart"></canvas>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal - UPDATES-->
+<div id="DATA_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>UPDATES</h2>
+    <div class="button-container">
+      <span class="button-label">Products, Deals and Swap-Rates </span>
+      <button id="updateDataExcelButton" class="edit-button">Data from EXCEL</button>
+      <span class="button-label">Data from ECB and FED (FRED) This update can take several minutes</span>
+      <button id="updateHistoricDataButton" class="edit-button">Historic Data</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
+<!-- Modal - Edit Row -->
+<div id="modal" class="modal">
+  <div class="modal-content draggable">
+    <span class="close">&times;</span>
+    <h2>Edit Row</h2>
+    <form id="editForm">
+      <!-- Add the dropdown (select) element here -->
+      <label for="issuerSelect">Select Issuer:</label>
+      <select id="issuerSelect"></select>
+      <!-- End of dropdown (select) element -->
+    </form>
+    <button id="saveButton">Save</button>
+    <button id="eraseButton">Delete</button>
+    <div id="errorMessage"></div>
+  </div>
+</div>
+
+
+
+  <script src="renderer.js" type="module"></script>
+
+  
+  <script>
+const tabIds = ['DEALS_Tab', 'PORT_Tab', 'PROD_Tab', 'ISSUER_Tab', 'IR_Tab', 'TS_Tab', 'MVaR_Tab', 'CVaR_Tab', 'DATA_Tab'];
+const modalIds = ['DEALS_Modal', 'PORT_Modal', 'PROD_Modal', 'ISSUER_Modal', 'IR_Modal', 'TS_Modal', 'MVaR_Modal', 'CVaR_Modal', 'DATA_Modal'];
+
+// Handle tab button click events using a loop
+for (let i = 0; i < tabIds.length; i++) {
+  const tab = document.getElementById(tabIds[i]);
+  const modal = document.getElementById(modalIds[i]);
+
+  tab.addEventListener('click', () => {
+    openTab(tabIds[i]);
+  });
+}
+
+// Open the specified tab content
+function openTab(tabName) {
+  // Hide all tab content
+  const tables = document.querySelectorAll('.table');
+  tables.forEach((table) => {
+    table.style.display = 'none';
+  });
+
+  // Show the specified tab content
+  for (let i = 0; i < tabIds.length; i++) {
+    if (tabName === tabIds[i]) {
+      const modal = document.getElementById(modalIds[i]);
+      modal.style.display = 'block';
+      break;
+    }
+  }
+}
+
+
+
+    // Close the active modal when the close button is clicked
+    const closeBtns = document.querySelectorAll('.close');
+    closeBtns.forEach((closeBtn) => {
+      closeBtn.addEventListener('click', () =>
+{
+    const modal = closeBtn.parentElement.parentElement;
+    modal.style.display = 'none';
+  });
+});
+
+// Make the modal draggable
+const draggableModals = document.querySelectorAll('.draggable');
+let isDragging = false;
+let initialMouseOffsetX = 0;
+let initialMouseOffsetY = 0;
+let initialModalPosX = 0;
+let initialModalPosY = 0;
+
+draggableModals.forEach((draggableModal) => {
+  // Mouse down event listener
+  draggableModal.addEventListener('mousedown', (e) => {
+    isDragging = true;
+
+    // Calculate the initial mouse offset relative to the modal's top and left positions
+    initialMouseOffsetX = e.clientX - draggableModal.getBoundingClientRect().left;
+    initialMouseOffsetY = e.clientY - draggableModal.getBoundingClientRect().top;
+
+    // Store the initial position of the modal
+    initialModalPosX = draggableModal.offsetLeft;
+    initialModalPosY = draggableModal.offsetTop;
+  });
+
+  // Mouse move event listener
+  window.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      // Calculate the new modal position based on the mouse movement
+      const newModalX = e.clientX - initialMouseOffsetX - initialModalPosX;
+      const newModalY = e.clientY - initialMouseOffsetY - initialModalPosY;
+
+      // Set the modal position
+      draggableModal.style.transform = `translate(${newModalX}px, ${newModalY}px)`;
+    }
+  });
+
+  // Mouse up event listener
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+});
+
+
+ 
+  </script>
+</body>
+</html>
+

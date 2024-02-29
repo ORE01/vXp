@@ -1,0 +1,127 @@
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    inset: 0;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    font-family: "Your Font Name", sans-serif;
+  }
+  
+  .modal-content {
+    background-color: rgb(70, 69, 69);
+     color: rgb(161, 160, 160);  /*BESCHRIFTUNG*/
+    margin: 10% auto;
+    padding: 20px;
+    width: 400px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+  }
+
+  
+  input[type="text"],
+textarea {
+  background-color: transparent;
+  border: none;
+  outline: none;
+
+}
+
+  .draggable {
+    position: absolute;
+    top: 30%;
+    left: 1;
+    z-index: 1000;
+    cursor: move;
+  }
+  
+  .modal-content.draggable input[type="text"],
+  .modal-content.draggable textarea {
+    position: relative;
+    z-index: 1;
+    background-color: #333;
+    color: rgb(161, 160, 160);
+  }
+  
+  .form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .label {
+    flex: 0 0 120px;
+    text-align: left;
+    margin-right: 10px;
+  }
+  
+  .input-field {
+    flex: 1;
+  }
+  
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  
+  .close:hover,
+  .close:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  
+   table {
+    border-collapse: collapse;
+  }
+  
+  table tr {
+    border-bottom: 1px solid #e41818;
+  }
+  
+  table th,
+  table td {
+    border: 1px solid #333;
+    padding: 8px;
+  } 
+  
+  #saveButton,
+  #eraseButton {
+    background-color: #4CAF50;
+    border: none;
+    color: #fff;
+    padding: 8px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  #saveButton:hover {
+    background-color: #015f06;
+  }
+  
+  #eraseButton:hover {
+    background-color: #800000;
+  }
+  
+  #saveButton:active {
+    background-color: #4CAF50;
+  }
+  
+  #eraseButton:active {
+    background-color: red;
+  }
+  
+  #eraseButton {
+    background-color: red;
+  }
+  
+  
