@@ -4,6 +4,7 @@ node_modules/
 large_directory/
 *.log
 zzzApp/
+bin/
 zzzArchiv/
 dist/
 files/
