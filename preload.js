@@ -1,22 +1,3 @@
-const { contextBridge, ipcRenderer } = require('electron');
-
-contextBridge.exposeInMainWorld('api', {
-  send: (channel, data) => {
-    ipcRenderer.send(channel, data);
-  },
-  receive: (channel, callback) => {
-    ipcRenderer.on(channel, (event, ...args) => callback(...args));
-  },
-
-});
-window.addEventListener('DOMContentLoaded', () => {
-  const replaceText = (selector, text) => {
-    const element = document.getElementById(selector);
-    if (element) element.innerText = text;
-  };
-
-  for (const type of ['chrome', 'node', 'electron']) {
-    replaceText(`${type}-version`, process.versions[type]);
-  }
-});
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:24966de370b41e3808a2c28dbb5ba54341ed67a5214e021d0763686287952517
+size 611
