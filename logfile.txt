@@ -424,3 +424,7 @@
 2024-02-29T09:58:09.626Z: main_fct: dbPath: C:/Users/ronal/electron_app/files/UNI.db
 2024-02-29T09:58:09.628Z: UserData Path: C:\Users\ronal\AppData\Roaming\valueXpro
 2024-02-29T09:58:09.882Z: Connected to the database.
+2024-02-29T21:21:56.276Z: main_fct: __dirname: C:\Users\ronal\electron_app
+2024-02-29T21:21:56.278Z: main_fct: dbPath: C:/Users/ronal/electron_app/files/UNI.db
+2024-02-29T21:21:56.278Z: UserData Path: C:\Users\ronal\AppData\Roaming\valueXpro
+2024-02-29T21:21:56.357Z: Connected to the database.
