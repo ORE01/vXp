@@ -1,0 +1,12 @@
+{
+    "appId": "com.example.valueXpro",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "artifactName": "valueXpro.${ext}"
+    }
+  }
+  
+  
