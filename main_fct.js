@@ -25,6 +25,7 @@ let dbPath;
 if (isDevelopmentEnvironment()) {
   // Absoluter Pfad: für die Entwicklung (nicht compelliert)
   dbPath = 'C:/Users/ronal/electron_app/files/UNI.db';
+  console.log('dbPath:', dbPath);
 } else {
   // Relativer Pfad für die compellierte Version:
   dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
@@ -273,6 +274,7 @@ function deleteTable(selectedTableName, sender) {
       deleteTableEntry('selections', selectedTableName);
 
       sender.send('table-deleted-successfully');
+      console.log(`'table-deleted-successfully' "${selectedTableName}" `);
     }
   });
 }
@@ -298,6 +300,7 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
 
     // Determine the Python executable based on the environment
     if (isDevelopmentEnvironment()) {
+      
       pythonExecutable = 'C:\\Users\\ronal\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
       pythonArgs.unshift('C:/Users/ronal/PycharmProjects/Risk/main.py');
     } else {

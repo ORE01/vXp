@@ -2,8 +2,8 @@ import { filterColumnsInData } from './renderer/dataProcessor.js';
 import processData from './renderer/dataProcessor.js';
 
 
-let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
-let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
+let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
+let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
 let PortValue = 0; 
 let PortNotional = 0;
 let PortYield = 0;
@@ -35,7 +35,7 @@ function formatNumberWithGrouping(value) {
 
 // Adjusted handlePortMainData function
 export function handlePortMainData(receivedData) {
-  console.log('handlePortMainData - Received Data:', receivedData);
+  // console.log('handlePortMainData - Received Data:', receivedData);
 
   const portData = filterColumnsInData(receivedData, columns);
 
@@ -74,6 +74,7 @@ export function handlePortMainData(receivedData) {
 
 // Function to filter data based on current selections in filtersConfig
 function filterData(data, filtersConfig) {
+  console.log('data, filtersConfig:', data, filtersConfig);
   return data.filter(dataPoint => {
     return Object.entries(filtersConfig).every(([key, valueSet]) => {
       return valueSet.has('ALL') || valueSet.has(dataPoint[key]);
@@ -82,7 +83,7 @@ function filterData(data, filtersConfig) {
 }
 
 export function handlePortMainFilteredData(receivedData, filtersConfig) {
-  console.log('handlePortMainData - Received Data:', receivedData);
+  console.log('handlePortMainFilteredData:', receivedData);
   const portDataContainer = document.getElementById('portDataContainer');
   const portData = receivedData;
 
@@ -136,9 +137,12 @@ export function handlePortMainFilteredData(receivedData, filtersConfig) {
     console.log('formFiltPortCPV01:', formFiltPortCPV01);
 
     let filteredPortDataNew = filterColumnsInData(filteredPortData, columnsShowen);
+    console.log('filteredPortDataNew:', filteredPortDataNew);
 
     // Update the HTML content
-    const portDataHTML = processData(filteredPortDataNew, 'PortMain');
+    const portTableName = appState.getSelectedPortTableName();
+    console.log('portTableName:', portTableName);
+    const portDataHTML = processData(filteredPortDataNew, portTableName);
     portDataContainer.innerHTML = portDataHTML;
   }
 }

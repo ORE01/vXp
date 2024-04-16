@@ -21,7 +21,7 @@ export function handleProdData(receivedData, filtersConfig) {
     let columns = ['PROD_ID', 'DESCRIPTION', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING_PROD', 'CS_Szenario'];
     //let filteredProdData = filterColumnsInData((prodData), columns);
     let filteredProdData = filterColumnsInData(filterProdData(prodData, filtersConfig), columns);
-    console.log('PROD; handleProdData:', filteredProdData);
+    // console.log('PROD; handleProdData:', filteredProdData);
     const prodDataHTML = processData(filteredProdData, 'ProdAll');
     prodDataContainer.innerHTML = prodDataHTML;
 
@@ -38,7 +38,7 @@ export function handleProdData(receivedData, filtersConfig) {
     });
 
     // Add Button
-    const prodAddButton = document.getElementById('prodaddButton');
+    const prodAddButton = document.getElementById('prodAddButton');
     prodAddButton.addEventListener('click', (event) => {
       const tableName = 'ProdAll';
       const actionType = 'add';

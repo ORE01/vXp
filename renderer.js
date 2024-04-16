@@ -1,514 +1,218 @@
-import { handleIssuerData } from './r_tab/ISSUER.js';
-import { handleProdData } from './PROD.js';
-import { handleDealsData, handlecreated_tablesData, dealsAddButtonHandler } from './DEALS.js';
-import { handlePortMainData, handlePortMainFilteredData, formPortValue, formPortNotional, formPortYield, formPortYieldA, formPortPV01, formPortCPV01 } from './PORT.js';
-import { handleIRSensData } from './IRSens.js';
-import { handleCSSensData } from './CSSens.js';
-// import { handleYieldData, PortYield } from './YIELD.js';
-import { handleIRData } from './IR.js';
+
+
+import { formPortValue, formPortNotional, formPortYield, formPortYieldA, formPortPV01, formPortCPV01 } from './PORT.js';
 import { handleTSData } from './TS.js';
 import { handleMVaRData, handleMVarInputData, updateMVaRChart } from './MVaR.js'; 
-import { handleEADMainData, handleCVaRData } from './CVaR.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
-import { createCSLineChart } from './charts/LineChart.js';
+import { AppState } from './AppState.js';
 
 
-
-let selectedTradeIDs = ['ALL']; 
 let selectedTableName = 'DealsMain';
+let appState;
+let selectedDealsTableName;
 let currentActiveTable = 'PortMain'; // Default to 'port' or set based on the initial display
-let currentReceivedData = null;
-
-let filteredData = null;
 
 
 
-window.addEventListener('DOMContentLoaded', () => {
 
-  //Filters and Dropdown for tables
-  const prodFiltersConfig = {
-    'ISSUER': new Set(['ALL']),
-    'PROD_ID': new Set(['ALL']),
-    'CouponType': new Set(['ALL']),
-    'RATING_PROD': new Set(['ALL']),
-    'MATURITY': new Set(['ALL']),
-    'RANK': new Set(['ALL']),
-  };
-  const prodDropdownConfig = {
-    'prodIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },
-    'prodProdIdDropdown': { dataKey: 'PROD_ID', selection: ['ALL'] },
-    'prodCouponTypeDropdown': { dataKey: 'CouponType', selection: ['ALL'] },
-    'prodRatingProdDropdown': { dataKey: 'RATING_PROD', selection: ['ALL'] },
-    'prodMaturityDropdown': { dataKey: 'MATURITY', selection: ['ALL'] },
-    'prodRankDropdown': { dataKey: 'RANK', selection: ['ALL'] },
-  };
-  const issuerFiltersConfig = {
-    'ISSUER': new Set(['ALL']),
-    'RATING': new Set(['ALL']),
-
-  };
-  const issuerDropdownConfig = {
-    'issuerIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },
-    'issuerRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
-  };
-  const portFiltersConfig = {
-    'ISSUER': new Set(['ALL']),
-    'PROD_ID': new Set(['ALL']),
-    'CouponType': new Set(['ALL']),
-    'CATEGORY': new Set(['ALL']),
-    'RATING': new Set(['ALL']),
-    'MATURITY': new Set(['ALL']),
-  };
-  const portDropdownConfig = {
-    'portIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },
-    'portProdIdDropdown': { dataKey: 'PROD_ID', selection: ['ALL'] },
-    'portCouponTypeDropdown': { dataKey: 'CouponType', selection: ['ALL'] },
-    'portCategoryDropdown': { dataKey: 'CATEGORY', selection: ['ALL'] },
-    'portRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
-    'portMaturityDropdown': { dataKey: 'MATURITY', selection: ['ALL'] },
-  };
-  const tabToTableNameMapping = {
-    'ISSUER_Tab': 'issuer',
-    'PROD_Tab': 'prod',
-    'DEALS_Tab': 'deals',
-    'PORT_Tab': 'port',
-    'IR_Tab': 'ir',
-    'TS_Tab': 'ts',
-    'MVaR_Tab': 'mvar',
-    'CVaR_Tab': 'cvar',
-    'DATA_Tab': 'data'
-  };
-
-  //tables Config from Filters and Dropdown
-  const tableConfigs = {
-    port: {
-      dropdownConfig: portDropdownConfig,
-      filtersConfig: portFiltersConfig,
-      dataHandler: handlePortMainFilteredData,
-    },
-    prod: {
-      dropdownConfig: prodDropdownConfig,
-      filtersConfig: prodFiltersConfig,
-      dataHandler: handleProdData,
-    },
-    issuer: {
-      dropdownConfig: issuerDropdownConfig,
-      filtersConfig: issuerFiltersConfig,
-      dataHandler: handleIssuerData,
-    },
-    //Add more tables here
-  };
-
-  function getTableNameFromTabId(tabId) {
-    return tabToTableNameMapping[tabId] || null;
-  }
-  // Function to add options to a dropdown
-  function addDropdownOption(dropdown, value, text) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = text;
-    dropdown.appendChild(option);
-  }
-  // Define the order of ratings
-  const ratingOrder = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB', 'BB-', , 'B+', 'B', 'B-', , 'CCC+', 'CCC', 'CCC-'];
-
-  // Custom sorting function for ratings
-  function sortRatings(a, b) {
-    return ratingOrder.indexOf(a) - ratingOrder.indexOf(b);
-  }
-
-  function sortDates(a, b) {
-    // Convert dates from "day-month-year" to "year-month-day"
-    const datePartsA = a.split('-');
-    const datePartsB = b.split('-');
-    const formattedDateA = new Date(`${datePartsA[2]}-${datePartsA[1]}-${datePartsA[0]}`);
-    const formattedDateB = new Date(`${datePartsB[2]}-${datePartsB[1]}-${datePartsB[0]}`);
-
-    return formattedDateA - formattedDateB;
-  }
-  
-  // Function to populate a dropdown with options
-  function populateDropdown(dropdownId, data, allText, tableType) {
-    const config = tableConfigs[tableType].dropdownConfig;
-    const dropdown = document.getElementById(dropdownId);
-    let uniqueValues = [...new Set(data.map(item => item[config[dropdownId].dataKey]))];
-
-    // Sort unique values based on dropdown ID
-    if (dropdownId === 'prodRatingDropdown'|| dropdownId === 'portRatingDropdown'|| dropdownId === 'issuerRatingDropdown') {
-        uniqueValues = uniqueValues.sort(sortRatings);
-    } else if (dropdownId === 'prodMaturityDropdown' || dropdownId === 'portMaturityDropdown') {
-        uniqueValues = uniqueValues.sort(sortDates);
-    } else {
-        uniqueValues = uniqueValues.sort();
-    }
-
-    // Check if the dropdown needs to be repopulated
-    const currentOptions = [...dropdown.options].map(option => option.value);
-    if (!arraysEqual(currentOptions, ['ALL', ...uniqueValues])) {
-        dropdown.innerHTML = '';
-        addDropdownOption(dropdown, 'ALL', allText);
-        uniqueValues.forEach(value => addDropdownOption(dropdown, value, value));
-    }
-  }
-
-  // Helper function to check if two arrays are equal
-  function arraysEqual(arr1, arr2) {
-    if (arr1.length !== arr2.length) return false;
-    for (let i = 0; i < arr1.length; i++) {
-      if (arr1[i] !== arr2[i]) return false;
-    }
-    return true;
-  }
-
-  // Function to apply filters to data and update dropdown options
-  function applyFiltersAndUpdateDropdowns(receivedData, tableType) {
-    console.log("receivedData:", receivedData);
-    console.log("tableType:", tableType);
-    const config = tableConfigs[tableType];
-
-    // Store current selections
-    const currentSelections = {};
-    Object.keys(config.dropdownConfig).forEach(dropdownId => {
-      const dropdown = document.getElementById(dropdownId);
-      if (dropdown) {
-        let selections = [...dropdown.selectedOptions].map(option => option.value);
-        currentSelections[dropdownId] = selections;
-      }
-    });
-
-    // Filter the data based on the current selections
-    filteredData = receivedData.filter(item => 
-        Object.entries(config.filtersConfig).every(([key, valueSet]) => 
-            valueSet.has('ALL') || valueSet.has(item[key])
-        )
-    );
-
-    // Repopulate dropdowns with the filtered data and restore the previous selections
-    Object.keys(config.dropdownConfig).forEach(dropdownId => {
-        const { dataKey } = config.dropdownConfig[dropdownId];
-        populateDropdown(dropdownId, filteredData, `ALL ${dataKey.toUpperCase()}`, tableType);
-
-        const dropdown = document.getElementById(dropdownId);
-        if (dropdown) {
-            const dropdownOptions = dropdown.options;
-            for (let i = 0; i < dropdownOptions.length; i++) {
-                const optionValue = dropdownOptions[i].value;
-                dropdownOptions[i].selected = currentSelections[dropdownId].includes(optionValue);
-            }
-            // Special handling for 'ALL' selection
-            if (dropdown.multiple && currentSelections[dropdownId].includes('ALL') && dropdownOptions.length > 1) {
-                dropdownOptions[0].selected = false; // Deselect 'ALL' if other options are also selected
-            }
-        }
-    });
-    currentReceivedData = filteredData;
-    return filteredData;
-  }
-
-  // EVENT LISTENER
-  function setupDropdownListeners(receivedData, type) {
-    const config = tableConfigs[type];
-
-    Object.keys(config.dropdownConfig).forEach(dropdownId => {
-        const dropdownElement = document.getElementById(dropdownId);
-        if (dropdownElement) {
-            const dropdownChangeListener = createDropdownChangeListener(dropdownElement, config, receivedData, type);
-            dropdownElement.addEventListener('change', dropdownChangeListener);
-        }
-    });
-  }
-
-  let isControlKeyPressed = false;
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Control') {
-        isControlKeyPressed = true;
-    }
-  });
-
-  // In your renderer.js or any other external JS file
-  document.addEventListener('keyup', (e) => {
-  if (e.key === 'Control') {
-      isControlKeyPressed = false;
-      // Access the current active tab ID through the window object
-      const tabId = window.currentActiveTabId;
-      const tableName = getTableNameFromTabId(tabId);
-      console.log('currentActiveTable:', tableName);
-      updateDisplayAfterSelection(tableName);
-  }
-  });
-
-  function updateDisplayAfterSelection(currentActiveTable) {
-  // Assuming 'currentActiveTable' and 'currentReceivedData' are defined and hold the current table type and data respectively
-  if (currentActiveTable && currentReceivedData) {
-      // Apply the filters and get the filtered data
-      console.log('currentActiveTable:', currentActiveTable);
-      const filteredData = applyFiltersAndUpdateDropdowns(currentReceivedData, currentActiveTable);
-
-      // Assuming you have a function in your configuration to handle the display update
-      const config = tableConfigs[currentActiveTable];
-      if (config && config.dataHandler) {
-          config.dataHandler(filteredData, config.filtersConfig);
-      }
-  }
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  appState = new AppState();
+  window.appState = appState;
 
 
-  function createDropdownChangeListener(dropdownElement, config, receivedData, type) {
-    return function(event) {
-        event.stopPropagation();
-        const newSelection = [...dropdownElement.selectedOptions].map(option => option.value);
-        console.log('New Selection:', newSelection);
-
-        config.dropdownConfig[dropdownElement.id].selection = newSelection;
-        config.filtersConfig[config.dropdownConfig[dropdownElement.id].dataKey] = new Set(newSelection);
-
-        // Apply filters and update only if the Control key is not pressed
-        if (!isControlKeyPressed) {
-            const filteredData = applyFiltersAndUpdateDropdowns(receivedData, type);
-            config.dataHandler(filteredData, config.filtersConfig);
-            currentReceivedData = filteredData;
-        }
-    };
-  }
 
 
-  function resetFiltersForActiveTable(receivedData, currentActiveTable) {
-  const activeConfig = tableConfigs[currentActiveTable];
-  console.log('resetFiltersForActiveTable, tableName:', currentActiveTable);
-
-  Object.keys(activeConfig.dropdownConfig).forEach(dropdownId => {
-      const dropdown = document.getElementById(dropdownId);
-      if (dropdown && dropdown.multiple) { // Check if it's a multi-select dropdown
-          // Deselect all options
-          [...dropdown.options].forEach(option => option.selected = false);
-          // Select 'ALL' option if it exists
-          const allOption = [...dropdown.options].find(option => option.value === 'ALL');
-          if (allOption) allOption.selected = true;
-      } else if (dropdown) {
-          dropdown.value = 'ALL'; // For single-select dropdowns
-      }
-
-      // Reset filter configuration
-      const dataKey = activeConfig.dropdownConfig[dropdownId].dataKey;
-      activeConfig.filtersConfig[dataKey].clear();
-      activeConfig.filtersConfig[dataKey].add('ALL');
-  });
-
-  const filteredDataAfterReset = applyFiltersAndUpdateDropdowns(receivedData, currentActiveTable);
-  activeConfig.dataHandler(filteredDataAfterReset, activeConfig.filtersConfig);
-  }
-
-
-  //ISSUER
-  window.api.receive('IssuerData', (receivedData) => {
-  //handleIssuerData(receivedData);
-  currentActiveTable = 'issuer';
-  setupDropdownListeners(receivedData, currentActiveTable);
-  const initialFilteredData = applyFiltersAndUpdateDropdowns(receivedData, currentActiveTable);
-  tableConfigs[currentActiveTable].dataHandler(initialFilteredData, tableConfigs[currentActiveTable].filtersConfig);
-
-  const prodResetButton = document.getElementById('issuerResetFiltersButton');
-
-  if (prodResetButton) {
-    prodResetButton.addEventListener('click', () => resetFiltersForActiveTable(receivedData, 'issuer'));
-  }
-  });
+  // CreatedPortPortData:
+  // Listen for created tables data once and apply it to the appropriate part of AppState.
+  window.api.receive('created_tablesData', (receivedData) => {
+    try {
+      console.log('Received created tables data:', receivedData);
+      appState.setCreatedPortData(receivedData, 'createdPortDropdown');
+      appState.applyFiltersAndUpdateDropdowns('portTables');
     
-  // Assuming you have already imported the createCSLineChart function and defined chartData and chartOptions
+      console.log('About to process PortPort data');
+      appState.setCreatedPortPortData(receivedData, 'createdPortPortDropdown');
+      // const getCreatedPortPort = appState.getCreatedPortPortData();
+      //currentActiveTable = appState.getCreatedPortPortData();
+      console.log('currentActiveTable():', currentActiveTable );
+      appState.applyFiltersAndUpdateDropdowns('portPortTables');
+    } catch (error) {
+      console.error("Error processing created tables data:", error);
+    }
+  });
 
+  // PortDropdown component
+  const createdPortDropdown = document.getElementById('createdPortDropdown');
+  if (createdPortDropdown) {
+    createdPortDropdown.addEventListener('change', event => {
+      const selectedTableName = event.target.value;
+      console.log('selectedTableName:', selectedTableName);
+      appState.setSelectedDealsTableName(selectedTableName);
+
+      const newPortTableName = selectedTableName.replace('Deals', 'Port');
+      console.log('selectedPortTableName:', newPortTableName);
+      appState.setSelectedPortTableName(newPortTableName);
+      console.log(appState.getSelectedPortTableName());
+
+      appState.setActiveTable('port');
+
+        // Update the dropdown options
+        updatePortDropdownOptions(selectedTableName);
+      // });
+    });
+  }
+
+  // Function to update the dropdown options
+  function updatePortDropdownOptions(selectedTableName = '') {
+    const createdPortDropdown = document.getElementById('createdPortDropdown');
+    if (createdPortDropdown) {
+      // Clear existing options
+      createdPortDropdown.innerHTML = '';
+
+      // Get the updated list of portfolios from appState
+      const portfolios = appState.getCreatedPortData();
+      
+      // Assuming this function exists in appState
+      console.log('portfolios:', portfolios);
+
+      // Add new options
+      portfolios.forEach(portfolio => {
+        const option = document.createElement('option');
+        option.value = portfolio.table_name; // Assuming portfolio object has a 'table_name' property
+        option.textContent = portfolio.table_name; // Assuming portfolio object has a 'table_name' property
+        createdPortDropdown.appendChild(option);
+      });
+
+      // Select the newly fetched portfolio in the dropdown
+      if (selectedTableName) {
+        createdPortDropdown.value = selectedTableName;
+      } else {
+        // Optionally, you can set the dropdown to a default value
+        createdPortDropdown.value = 'Select a table';
+      }
+
+      if (selectedTableName) {
+        // Send a message to the main process to fetch data for the selected table
+        window.api.send('fetch-table-data', selectedTableName);
+        console.log('fetch-table-data, selectedTableName', selectedTableName);
+
+        window.api.receive(selectedTableName + 'Data', (receivedData) => {
+          console.log('selectedTableName, receivedData:', receivedData);
+          appState.updateDealsDataTable(receivedData);
+        });
+      }
+    }
+  }
+  // //PortPortDropdown
+  // const createdPortPortDropdown = document.getElementById('createdPortPortDropdown');
+  // if (createdPortPortDropdown) {
+  //   createdPortPortDropdown.addEventListener('change', event => {
+  //   // dieser selectedTableName wird im py script übernommen
+  //     selectedTableName = event.target.value;
+  //     console.log('selectedPorPortTableName:', selectedTableName);
+  //     //nur ein neuer Portfolio Name:
+  //     appState.setSelectedPortTableName(selectedTableName);
+  //   });
+  // }
+
+  // CSMatrix:
   window.api.receive('CSMatrixData', (receivedData) => {
-  console.log('Received Data:', receivedData);
-
-  const ratings = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB'];
-
-  const dataArrayWithRating = receivedData.map((data, index) => ({
-    RATING: ratings[index],
-    ...data,
-  }));
-
-  console.log(dataArrayWithRating);
-
-  // Extract and format the numerical data from the numeric keys (1 to 30)
-  const dataArray = dataArrayWithRating.map(obj => {
-    return Object.keys(obj)
-      .filter(key => key !== 'RATING')
-      .map(key => obj[key]); // Divide by 100 to scale the data
+    console.log('CSMatrixData', receivedData);
+    appState.handleCSMatrixData(receivedData);
   });
 
-  // Extract the column names (years) as labels
-  const years = Object.keys(dataArrayWithRating[0]).filter(key => key !== 'RATING');
+  // CSParameter:
+  window.api.receive('CSParameterData', (receivedData) => {
+    appState.handleCSParameterData(receivedData);
+  });
 
-  // Define fixed colors for the lines
-  const lineColors = [
-    'rgba(75, 192, 192, 1)',
-    'rgba(255, 99, 132, 1)',
-    'rgba(54, 162, 235, 1)',
-    'rgba(255, 206, 86, 1)',
-    'rgba(153, 102, 255, 1)',
-    'rgba(255, 159, 64, 1)',
-    'rgba(255, 0, 0, 1)',
-    'rgba(0, 255, 0, 1)',
-    'rgba(0, 0, 255, 1)',
-    'rgba(128, 0, 128, 1)',
-    'rgba(255, 165, 0, 1)',
-    'rgba(0, 128, 128, 1)',
-    'rgba(128, 128, 0, 1)',
-    // Add more colors as needed
-  ];
+  // ISSUER:
+  window.api.receive('IssuerData', (receivedData) => {
+    console.log('IssuerData', receivedData);
 
-  // Define chart data and options
-  const chartData = {
-    labels: years, // Use the years as x-axis labels
-    datasets: ratings.map((rating, index) => ({
-      label: rating,
-      data: dataArray[index], // Use the corresponding data for each rating
-      borderColor: lineColors[index], // Assign a fixed color to each line
-      borderWidth: 1, // Set the line width to 1 (slim)
-      fill: false,
-      hidden: rating !== 'AAA', // Hide all curves except for 'AAA'
-    })),
-  };
+    appState.setActiveTable('issuer');
+    appState.setIssuerData(receivedData)
+    appState.applyFiltersAndUpdateDropdowns('issuer');
+    appState.tableConfigs[appState.currentActiveTable];
 
+    const issuerResetButton = document.getElementById('issuerResetFiltersButton');
 
-  const chartOptions = {
-    plugins: {
-      title: {
-        display: true,
-        text: 'Credit Spreads in Basis Points', // Your desired label
-        fontSize: 16,
-      },
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-      },
-      y: {
-        suggestedMin: 0,  // Set the minimum y-axis value
-        suggestedMax: 30, // Set the maximum y-axis value
-      },
-    },
-  };
+    if (issuerResetButton) {
+      issuerResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'issuer'));
+    }
 
-
-  // Call the createCSLineChart function with the chartData and chartOptions
-  createCSLineChart(chartData, chartOptions);
   });
 
 
-
-
-  //PROD
+  // PROD:
   window.api.receive('ProdAllData', (receivedData) => {
-    currentActiveTable = 'prod';
-    setupDropdownListeners(receivedData, currentActiveTable);
-    const initialFilteredData = applyFiltersAndUpdateDropdowns(receivedData, currentActiveTable);
-    tableConfigs[currentActiveTable].dataHandler(initialFilteredData, tableConfigs[currentActiveTable].filtersConfig);
+    console.log('ProdAllData', receivedData);
+
+    appState.setActiveTable('prod');
+    appState.setProdData(receivedData)
+    appState.applyFiltersAndUpdateDropdowns('prod');
+    appState.tableConfigs[appState.currentActiveTable];
 
     const prodResetButton = document.getElementById('prodResetFiltersButton');
 
     if (prodResetButton) {
-      prodResetButton.addEventListener('click', () => resetFiltersForActiveTable(receivedData, 'prod'));
+      prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'prod'));
     }
-  });
-
-  //DEALS
-
-  //verschiedenen PORTFOLIOS im dropdown
-  window.api.receive('created_tablesData', handlecreated_tablesData);
-
-  //Fct für dropdown
-  function updateTable(selectedTableName, receivedData) {
-    console.log('renderer updateTable:', selectedTableName, receivedData);
-    const tradeDropdown = document.getElementById('tradeDropdown');
-    const uniqueTradeIDs = [...new Set(receivedData.map((item) => item.TRADE_ID))];
-
-    // Sort uniqueTradeIDs array
-    uniqueTradeIDs.sort();
     
-    // Clear previous options
-    tradeDropdown.innerHTML = '';
-    
-    // Add the "ALL TRADE_ID" option at the top
-    const allTradeOption = document.createElement('option');
-    allTradeOption.value = 'ALL';
-    allTradeOption.textContent = 'ALL TRADE_ID';
-    tradeDropdown.appendChild(allTradeOption);
-    
-    // Add sorted trade ID options
-    uniqueTradeIDs.forEach((tradeID) => {
-      const option = document.createElement('option');
-      option.value = tradeID;
-      option.textContent = tradeID;
-      tradeDropdown.appendChild(option);
-    });
-    
-    // Update selectedTradeIDs when the dropdown selection changes
-    tradeDropdown.addEventListener('change', () => {
-      selectedTradeIDs = [...tradeDropdown.selectedOptions].map(option => option.value);
-      handleDealsData(selectedTableName, receivedData, selectedTradeIDs);
-      //tradeDropdown.removeEventListener('change', handleDealsData); //--------------------------------------------
-      
-    });
-    
-    // Initialize selected trade IDs to include "ALL TRADE_ID"
-    selectedTradeIDs = ['ALL'];
-    handleDealsData(selectedTableName, receivedData, selectedTradeIDs);    
-  };
+  // DEALS:
+  window.api.receive('DealsMainData', (receivedData) => {
+    console.log('DealsMain', receivedData);
 
-  // CREATE PORTFOLIO made from DEALS
-  createdTablesDropdown.addEventListener('change', event => {
-    selectedTableName = event.target.value;
-    console.log('renderer SelectedTableName:', selectedTableName);
-    
-    // Update the selected option in the dropdown
-    const selectOption = createdTablesDropdown.querySelector(`option[value="${selectedTableName}"]`);
-    if (selectOption) {
-      selectOption.selected = true;
-    }
+    appState.setActiveTable('deals');
+    appState.setDealsData(receivedData)
+    appState.applyFiltersAndUpdateDropdowns('deals');
+    appState.tableConfigs[appState.currentActiveTable];
 
-    // Send a message to fetch data for the selected table
-    window.api.send('fetch-table-data', selectedTableName);
 
-    // Display the data for the selected table
-    window.api.receive(selectedTableName + 'Data', (receivedData) => {
-      updateTable(selectedTableName, receivedData);
-    });
   });
 
 
-  //first loading DEALS 
-  window.api.receive(selectedTableName +'Data', (receivedData) => {
-    updateTable(selectedTableName +'Data', receivedData);
-  });
-
-  // SAVE SELECTION BUTTON
+  // Save selection button
   document.getElementById('saveSelectionButton').addEventListener('click', () => {
-    const nameInput = document.getElementById('nameInput');
-    const selectionName = 'Deals'+ nameInput.value;
-    console.log('selectionName:', selectionName);
+    console.log('saveSelectionButton');
+    const nameInputValue = document.getElementById('nameInput').value;
+    const selectionName = 'Deals' + nameInputValue;
+    const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
 
-    const tagInputField = document.getElementById('tagInputField');
-    const tagValues = tagInputField.value.split(',').map(tag => tag.trim());
-    console.log('tagValues:', tagValues);
+    console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
 
     if (!selectionName || tagValues.length === 0) {
       alert('Please enter a name and select at least one trade ID.');
       return;
     }
+
     // Send a message to the main process to save the selection
+    const filteredData = appState.getFilteredData('deals'); // Assuming 'deals' is the table type
+    const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
+
+    console.log('selectedTradeIDs:', selectedTradeIDs);
     window.api.send('save-deals-selection', {
       selectionName,
       tagValues,
       selectedTradeIDs
     });
 
+    // Show success message
+    alert(`Portfolio "${selectionName}"successfully created`);
+
+    // Update the available portfolios in the app state
+    const newPortfolio = { table_name: selectionName }; // Assuming the portfolio object structure
+    appState.setCreatedPortData([...appState.getCreatedPortData(), newPortfolio]);
+
+    // Update the dropdown options
+    updatePortDropdownOptions(selectionName);
   });
 
-  // DELETE SELECTION BUTTON
 
-  const deleteTableButton = document.getElementById('deleteTableButton');
-  deleteTableButton.addEventListener('click', () => {
+
+  // Delete selection button
+  document.getElementById('deleteTableButton').addEventListener('click', () => {
+    const selectedTableName = appState.getSelectedDealsTableName();
     if (selectedTableName !== 'Select a table') {
       // Confirm with the user before deleting the table
       const confirmation = window.confirm(`Are you sure you want to delete the table "${selectedTableName}"?`);
@@ -516,10 +220,14 @@ window.addEventListener('DOMContentLoaded', () => {
       if (confirmation) {
         // Send a message to the main process to delete the selected table
         window.api.send('delete-selected-table', selectedTableName);
-        
-        // Optionally, update the dropdown to show "Select a table" again
-        const createdTablesDropdown = document.getElementById('createdTablesDropdown');
-        createdTablesDropdown.value = 'Select a table';
+
+        // Update appState to exclude the deleted portfolio
+        const portfolios = appState.getCreatedPortData().filter(portfolio => portfolio.table_name !== selectedTableName);
+
+        appState.setCreatedPortData(portfolios);
+
+        // Update the dropdown options after deletion
+        updatePortDropdownOptions();
       }
     } else {
       // Notify the user to select a table before attempting to delete
@@ -527,94 +235,16 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Remove existing event listener for Add button (if it exists)
-  const dealsAddButton = document.getElementById('dealsaddButton');
-  dealsAddButton.removeEventListener('click', dealsAddButtonHandler);
 
-    // Add Button
-    dealsAddButton.addEventListener('click', (event) => {
-      dealsAddButtonHandler(event, selectedTableName);
-      console.log('Add Button selectedTableName:', selectedTableName);
-      dealsAddButton.removeEventListener('click', dealsAddButtonHandler);
-    });
-    dealsAddButton.removeEventListener('click', dealsAddButtonHandler);
-
-  //PORT
-  window.api.receive('PortMainData', (receivedData) => {
-    console.log('Received Data111:', receivedData);
-    //currentReceivedData = receivedData; 
-    handlePortMainData(receivedData);
-
-    document.getElementById('formPortValue').textContent = formPortValue;
-    document.getElementById('formPortNotional').textContent = formPortNotional;
-    document.getElementById('formPortYield').textContent = formPortYield;
-    document.getElementById('formPortYieldA').textContent = formPortYieldA;
-    document.getElementById('formPortPV01').textContent = formPortPV01;
-    document.getElementById('formPortCPV01').textContent = formPortCPV01;
-
-    console.log('formPortValue:', formPortValue);
-    console.log('formPortNotional:', formPortNotional);
-    console.log('formPortYield:', formPortYield);
-    console.log('formPortYieldA:', formPortYieldA);
-    console.log('formPortPV01:', formPortPV01);
-    console.log('formPortCPV01:', formPortCPV01);
-
-
-      // Update current active table
-      currentActiveTable = 'port';
-
-      
-
-
-
-    // Setup dropdowns
-    setupDropdownListeners(receivedData, currentActiveTable);
-
-    // Apply filters and initialize data display
-    const initialFilteredData = applyFiltersAndUpdateDropdowns(receivedData, currentActiveTable);
-    tableConfigs[currentActiveTable].dataHandler(initialFilteredData, tableConfigs[currentActiveTable].filtersConfig);
-
-    // currentReceivedData = initialFilteredData
-    // console.log('currentReceivedData:', currentReceivedData);
-    const portResetButton = document.getElementById('portResetFiltersButton');
-
-    if (portResetButton) {
-      portResetButton.addEventListener('click', () => resetFiltersForActiveTable(receivedData, 'port'));
-
-    }
   });
-
-  //IRSENS
-  window.api.receive('PortMainData', (receivedData) => {
-    const IRSensTable = handleIRSensData(receivedData);
-
-    // Update IRSens Data Container
-    const IRSensDataContainer = document.getElementById('IRSensDataContainer');
-    if (IRSensDataContainer) {
-      IRSensDataContainer.innerHTML = ''; // Clear existing contents
-      IRSensDataContainer.appendChild(IRSensTable); // Append the new table
-    }
-  });
-
-  //CSSENS
-  window.api.receive('PortMainData', (receivedData) => {
-    const CSSensTable = handleCSSensData(receivedData);
-
-    // Update CSSens Data Container
-    const CSSensDataContainer = document.getElementById('CSSensDataContainer');
-    if (CSSensDataContainer) {
-      CSSensDataContainer.innerHTML = ''; // Clear existing contents
-      CSSensDataContainer.appendChild(CSSensTable); // Append the new table
-    }
-  });
-
+  
   //TS
   window.api.receive('tblTSData', (receivedData) => {
     handleTSData(receivedData);
   });
   //IR
   window.api.receive('EUSWData', (receivedData) => {
-    handleIRData(receivedData);
+    appState.handleIRData(receivedData);
   });
   //MVaR
   window.api.receive('MVaRMainData', (receivedData) => {
@@ -705,10 +335,10 @@ window.addEventListener('DOMContentLoaded', () => {
     window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
   }
   //EAD
-  window.api.receive('EADMainData', handleEADMainData);
+  window.api.receive('EADMainData', appState.handleEADMainData);
 
   //CVaR (Verbindung zur DB und den tabellen via main.js)
-  window.api.receive('sortedLossesMainData', handleCVaRData);
+  window.api.receive('sortedLossesMainData', appState.handleCVaRData);
 
   //LossIssuer
   window.api.receive('sortedLossesIssuerMainData', handleLossIssuerMainData);
@@ -724,14 +354,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
 //ALL PYTHON PROJECTS:
 
-//Python START:
-function handleProjectButtonClick(buttonElement, projectName, selectedTableName) {
+//Python general START:
+function handleProjectButtonClick(buttonElement, projectName) {
   buttonElement.disabled = true;
   buttonElement.textContent = 'Executing...';
+
+  selectedDealsTableName = appState.getSelectedDealsTableName();
+
+
+
   // Send the start event to the main process
-  console.log('projectName', projectName);
-  console.log('selectedTableName)', selectedTableName);
-  window.api.send(`start-${projectName}`, selectedTableName);
+   console.log('projectName', projectName);
+   console.log('selectedTableName', selectedDealsTableName);
+  window.api.send(`start-${projectName}`, selectedDealsTableName);
 }
 function handleProjectResponse(buttonElement, projectName, response) {
   console.log('handleProjectResponse', projectName);
@@ -743,19 +378,66 @@ function handleProjectResponse(buttonElement, projectName, response) {
   } else {
     console.error(`Error starting ${projectName}:`, response.error);
   }
-
 }
+// Python-PROJECTS:
+
 // Py-fairValue project
 const fairValueButton = document.getElementById('fairValueButton');
 fairValueButton.addEventListener('click', () => {
   handleProjectButtonClick(fairValueButton, 'py-fairValue', selectedTableName);
 });
-window.api.receive('project-finished', (data) => {
+window.api.receive('py-fairValue-complete', (data) => {
   if (data.projectName === 'py-fairValue') {
     console.log('handleProjectResponse', data);
+
+    // const Name = appState.getSelectedPortTableName();
+    const Name1 = appState.getSelectedDealsTableName();
+    const Name = Name1.replace('Deals', 'Port');
+    console.log('selectedPortTableName', Name);
+    window.api.receive(Name + 'Data', (receivedData) => {
+      // console.log('selectedTableName:', selectedTableName );
+      //es müssen die deals neu gesetzt werden. Das stimmt so!
+      appState.updatePortDataTable(receivedData);
+      appState.handlePortMainData(receivedData);
+
+      document.getElementById('formPortValue').textContent = formPortValue;
+      document.getElementById('formPortNotional').textContent = formPortNotional;
+      document.getElementById('formPortYield').textContent = formPortYield;
+      document.getElementById('formPortYieldA').textContent = formPortYieldA;
+      document.getElementById('formPortPV01').textContent = formPortPV01;
+      document.getElementById('formPortCPV01').textContent = formPortCPV01;
+
+      const portResetButton = document.getElementById('portResetFiltersButton');
+
+        if (portResetButton) {
+          portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
+        }
+
+    //IRSENS
+      const IRSensTable = appState.handleIRSensData(receivedData);
+
+      // Update IRSens Data Container
+      const IRSensDataContainer = document.getElementById('IRSensDataContainer');
+      if (IRSensDataContainer) {
+        IRSensDataContainer.innerHTML = ''; // Clear existing contents
+        IRSensDataContainer.appendChild(IRSensTable); // Append the new table
+      }
+
+    //CSSENS
+      const CSSensTable = appState.handleCSSensData(receivedData);
+
+      // Update CSSens Data Container
+      const CSSensDataContainer = document.getElementById('CSSensDataContainer');
+      if (CSSensDataContainer) {
+        CSSensDataContainer.innerHTML = ''; // Clear existing contents
+        CSSensDataContainer.appendChild(CSSensTable); // Append the new table
+      }
+    });
+    
     handleProjectResponse(fairValueButton, data.projectName, data);
   }
 });
+
 // Py-MVaR project
 const MVaRButton = document.getElementById('MVaRButton');
 MVaRButton.addEventListener('click', () => {
@@ -770,7 +452,7 @@ window.api.receive('project-finished', (data) => {
 // Py-CVaR project
 const CVaRButton = document.getElementById('CVaRButton');
 CVaRButton.addEventListener('click', () => {
-  handleProjectButtonClick(CVaRButton, 'py-CVaR');
+  handleProjectButtonClick(CVaRButton, 'py-CVaR', selectedTableName);
 });
 window.api.receive('project-finished', (data) => {
   if (data.projectName === 'py-CVaR') {
@@ -789,6 +471,7 @@ window.api.receive('project-finished', (data) => {
     handleProjectResponse(updateDataExcelButton, data.projectName, data);
   }
 });
+
 //Py-HIST_DATA project
 const updateHistoricDataButton = document.getElementById('updateHistoricDataButton');
 updateHistoricDataButton.addEventListener('click', () => {
@@ -796,8 +479,23 @@ updateHistoricDataButton.addEventListener('click', () => {
 });
 window.api.receive('project-finished', (data) => {
   if (data.projectName === 'py-historicData') {
-    console.log('handleProjectResponse', data);
+    //console.log('handleProjectResponse', data);
     handleProjectResponse(updateHistoricDataButton, data.projectName, data);
   }
 });
+
+//Py-CS-Parameter project
+const CSParButton = document.getElementById('CSParButton');
+CSParButton.addEventListener('click', () => {
+  handleProjectButtonClick(CSParButton, 'py-cspar', 'CSMatrix');
+});
+window.api.receive('project-finished', (data) => {
+  if (data.projectName === 'py-cspar') {
+    console.log('handleProjectResponse', data);
+    handleProjectResponse(CSParButton, data.projectName, data);
+  }
+});
+
+export { appState };
+
 

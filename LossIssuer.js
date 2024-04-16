@@ -7,7 +7,7 @@ let LossIssuerChart;
 let LossIssuerDataContainer;
 
 export function handleLossIssuerMainData(receivedData) {
-  console.log('receivedData:', receivedData)
+  // console.log('receivedData:', receivedData)
   LossIssuerDataContainer = document.getElementById('LossIssuerDataContainer');
 
   if (LossIssuerDataContainer && receivedData) {

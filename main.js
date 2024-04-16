@@ -26,85 +26,96 @@ function createWindow() {
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 }
-// Abfragen der DB mit queryDB und loop mit fetchDataAndSendEvent
+
 function fetchDataAndSendEvent(query, event) {
   queryDB(query, (err, rows) => {
-    console.log('query:', query);
     if (err) {
-      console.error(err.message);
-    } else {
-      if (rows.length === 0) {
-        //console.log(`No ${query} data available.`);
-      } else {
-        const firstRow = rows[0];
-        const formatColumns = ['RATES','NOTIONAL', 'NAV','COUPON', 'START_DATE', 'MATURITY', 'TRADE_DATE', 
-                                'CS_Szenario', 'clean_price', 'GEARING', 'FLOOR', 'CAP', 'SPREADS',
-                                'DATE', 'EU_1Y',	'EU_5Y',	'EU_10Y',	'EU_20Y',	'EU_30Y',	'US_AAA',	'US_AA',	'US_A',	'US_BBB',	'US_BB',
-                                'VaR', 'ES'];
-
-        const formattedRows = rows.map(row => {
-          const formattedRow = { ...row };
-
-          formatColumns.forEach(column => {
-            if (column in firstRow) {
-              switch (column) {
-                case 'NOTIONAL':
-                case 'NAV':
-                case 'LGD':
-                case 'VaR':
-                case 'ES':
-                  const Value = Math.trunc(row[column]);//row[column].toLocaleString('en-GB', { maximumFractionDigits: 0 }).replace(/,/g, ' ');
-                  formattedRow[column] = Value.toString(); // Store the formatted number as plain text
-                  //formattedRow[`_${column}_style`] = 'color: blue;';
-                  break; 
-                case 'START_DATE':
-                case 'MATURITY':
-                case 'TRADE_DATE':
-                case 'DATE':
-                  const date = new Date(row[column]);
-                  const day = date.getDate().toString().padStart(2, '0');
-                  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                  const year = date.getFullYear();
-                  const formattedDate = `${day}-${month}-${year}`;
-                  formattedRow[column] = formattedDate;
-                  break;
-                case 'CS_Szenario': 
-                  formattedRow[column] = row[column];
-                    // const color = 'rgb(70, 192, 230)';
-                    //  const formattedValue = parseFloat(row[column]).toFixed(0);
-                    //  formattedRow[column] = formattedValue;
-                  break;
-                case 'clean_price':
-                  formattedRow[column] = `<span style="color: orange; display: flex; justify-content: center;">${(row[column] * 100).toFixed(3)}%</span>`;
-                break;
-                case 'COUPON':
-                case 'GEARING':
-                case 'FLOOR':
-                case 'CAP':
-                case 'SPREADS':
-                case 'RATES':
-                  formattedRow[column] = (row[column] * 100).toFixed(3) + '%';
-                  break;
-                case 'EU_1Y':
-                case 'EU_5Y':
-                case 'EU_10Y':
-                case 'EU_20Y':
-                case 'EU_30Y':
-                  formattedRow[column] = (row[column]).toFixed(3);
-                default:
-                  break;
-              }
-            }
-          });
-
-          return formattedRow;
-        });
-
-        mainWindow.webContents.send(event, formattedRows);
-      }
+      console.error("Error fetching data:", err.message);
+      return;
     }
+
+    if (rows.length === 0) {
+      console.log("No data available.");
+      return;
+    }
+
+    const formattedRows = formatColumns(rows);
+    mainWindow.webContents.send(event, formattedRows);
   });
 }
+
+function formatColumns(rows) {
+  const firstRow = rows[0];
+  const formatColumns = [
+    'TRADE_ID', 'RATES', 'NOTIONAL', 'NAV', 'COUPON', 'START_DATE', 'MATURITY', 'TRADE_DATE',
+    'CS_Szenario', 'clean_price', 'GEARING', 'FLOOR', 'CAP', 'SPREADS',
+    'DATE', 'EU_1Y', 'EU_5Y', 'EU_10Y', 'EU_20Y', 'EU_30Y', 'US_AAA', 'US_AA', 'US_A', 'US_BBB', 'US_BB',
+    'VaR', 'ES'
+  ];
+
+  return rows.map(row => {
+    const formattedRow = { ...row };
+    
+    formatColumns.forEach(column => {
+      if (column in firstRow) {
+        switch (column) {
+          case 'NOTIONAL':
+          case 'NAV':
+          case 'LGD':
+          case 'VaR':
+          case 'ES':
+            const Value = Math.trunc(row[column]);//row[column].toLocaleString('en-GB', { maximumFractionDigits: 0 }).replace(/,/g, ' ');
+            formattedRow[column] = Value.toString(); // Store the formatted number as plain text
+            //formattedRow[`_${column}_style`] = 'color: blue;';
+            break; 
+          case 'TRADE_ID':
+            formattedRow[column] = row[column].toString();
+          break;
+          case 'START_DATE':
+          case 'MATURITY':
+          case 'TRADE_DATE':
+          case 'DATE':
+            const date = new Date(row[column]);
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            const formattedDate = `${day}-${month}-${year}`;
+            formattedRow[column] = formattedDate;
+            break;
+          case 'CS_Szenario': 
+            formattedRow[column] = row[column];
+              // const color = 'rgb(70, 192, 230)';
+              //  const formattedValue = parseFloat(row[column]).toFixed(0);
+              //  formattedRow[column] = formattedValue;
+            break;
+          case 'clean_price':
+            formattedRow[column] = `<span style="color: orange; display: flex; justify-content: center;">${(row[column] * 100).toFixed(3)}%</span>`;
+          break;
+          case 'COUPON':
+          case 'GEARING':
+          case 'FLOOR':
+          case 'CAP':
+          case 'SPREADS':
+          case 'RATES':
+            formattedRow[column] = (row[column] * 100).toFixed(3) + '%';
+            break;
+          case 'EU_1Y':
+          case 'EU_5Y':
+          case 'EU_10Y':
+          case 'EU_20Y':
+          case 'EU_30Y':
+            formattedRow[column] = (row[column]).toFixed(3);
+          default:
+            break;
+        }
+      }
+    });
+
+    return formattedRow;
+  });
+}
+
+
 // Loop through the selected table names and fetch data
 function sendDataToRenderer() {
   console.log('tableNames:', tableNames);
@@ -128,30 +139,43 @@ getAllTableNames((err, receivedTableNames) => {
     sendDataToRenderer(tableNames);
   }
 });
+
+
 // Event handlers komuniziert mit renderer
 ipcMain.on('start-py-fairValue', async (event, selectedTableName) => {
   console.log('start-py-fairValue:', selectedTableName);
 
-  startPythonScriptWithEvent(event, 'fvo', 'py-fairValue', ['--table', selectedTableName])
-    .then(() => {
-      console.log('Python script executed successfully_main');
-      const tableName = 'PortMain';
-      refreshTable(tableName); // Assuming refreshTable is a function you've defined
-      console.log('Python script refreshed PortMain_main');
-    })
-    .catch(error => {
-      console.error('Python script execution failed:', error);
-    })
-    .finally(() => {
-      event.reply('project-finished', { success: true, projectName: 'py-fairValue' });
+  try {
+    // Ensure any synchronous code here is also wrapped in try-catch
 
-    });
+    await startPythonScriptWithEvent(event, 'fvo', 'py-fairValue', ['--table', selectedTableName]);
+
+    console.log('Python script executed successfully_main');
+    console.log('Python script:', selectedTableName);
+
+    // Transform selectedTableName from "DealsABC" to "PortABC"
+    const newTableName = selectedTableName.replace('Deals', 'Port');
+
+    console.log('Python script refreshed', newTableName);
+
+    // Assuming refreshTable is a function you've defined that refreshes the data for the newTableName
+    refreshTable(newTableName);
+    
+    // Send the new table name back to the renderer
+    event.reply('py-fairValue-complete', { success: true, projectName: 'py-fairValue', tableName: newTableName });
+  } catch (error) {
+    console.error('Error during Python script execution or processing:', error);
+    // This catch block now catches both synchronous errors and promise rejections
+    event.reply('py-fairValue-complete', { success: false, projectName: 'py-fairValue', error: error.toString(), tableName: selectedTableName });
+  }
 });
-ipcMain.on('start-py-MVaR', async (event) => {
+
+
+ipcMain.on('start-py-MVaR', async (event,selectedTableName) => {
   console.log('start-py-MVaR:');
   //await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['MVaRMain']);
   const tableName = 'MVaRMain';
-  startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['--table', tableName])
+  startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['--table', selectedTableName])
     .then(() => {
       console.log('Python script executed successfully_main');
       
@@ -167,14 +191,14 @@ ipcMain.on('start-py-MVaR', async (event) => {
     });
   
 });
-ipcMain.on('start-py-CVaR', async (event) => {
+ipcMain.on('start-py-CVaR', async (event, selectedTableName) => {
   console.log('start-py-CVaR:');
 
   // Define the tables to be used in the script and for refreshing
   const tablesToRefresh = ['EADMain', 'sortedLossesMain', 'sortedLossesIssuerMain', 'sortedLossesIndicesMain'];
 
   // Start the Python script and pass the tables array
-  startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', ['--table', 'EADMain'])
+  startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', ['--table', selectedTableName])
     .then(() => {
       console.log('Python script executed successfully_main');
       
@@ -236,6 +260,22 @@ ipcMain.on('start-py-historicData', (event) => {
 
   });
 });
+ipcMain.on('start-py-cspar', (event) => {
+  startPythonScriptWithEvent(event, 'cspar', 'py-csparData')
+  .then(() => {
+    console.log('py-cspar executed successfully');
+    const tableName = 'CSMatrix';
+    refreshTable(tableName);
+    console.log('Python script refreshed CSMatrix');
+  })
+  .catch(error => {
+    console.error('Python script execution failed:', error);
+  })
+  .finally(() => {
+    event.reply('project-finished', { success: true, projectName: 'py-cspar' });
+
+  });
+});
 
 
 // Startet die Anzeige der Fenster
@@ -246,15 +286,15 @@ app.whenReady().then(() => {
   });
 });
 
-// Display the selected Deals
-ipcMain.on('fetch-table-data', (event, selectedTableName) => {
-  console.log('selectedTableName_main:', selectedTableName);
-  refreshTable(selectedTableName, () => {
-    // This callback will be called after the selected table refresh is completed
-    // Now, you can safely refresh the "created tables" dropdown
-    refreshTable('created_tables');
-  });
-});
+// // Display the selected Deals
+// ipcMain.on('fetch-table-data', (event, selectedTableName) => {
+//   console.log('selectedTableName_main:', selectedTableName);
+//   refreshTable(selectedTableName, () => {
+//     // This callback will be called after the selected table refresh is completed
+//     // Now, you can safely refresh the "created tables" dropdown
+//     refreshTable('created_tables');
+//   });
+// });
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
@@ -324,6 +364,8 @@ const addNewRowListener = (event, { newRowData, cleanTableName }) => {
 
 ipcMain.on('add-new-row', addNewRowListener);
 // Trigger sending data to renderer after the page finishes loading
+
+
 app.on('browser-window-created', (event, window) => {
   window.webContents.on('did-finish-load', () => {
     sendDataToRenderer();
@@ -363,11 +405,28 @@ ipcMain.on('save-deals-selection', async (event, selectionData) => {
     console.error('Error handling selection:', error);
   }
 });
+
+// DELETE DEALS SELECTION
 ipcMain.on('delete-selected-table', (event, selectedTableName) => {
   console.log('main delete-selected-table:', selectedTableName);
   deleteTable(selectedTableName, event.sender);
   //refreshTable(selectedTableName);
 });
+
+// Display the selected Deals
+ipcMain.on('fetch-table-data', (event, selectedTableName) => {
+  console.log('selectedTableName_main:', selectedTableName);
+  refreshTable(selectedTableName, () => {
+    // This callback will be called after the selected table refresh is completed
+    // Now, you can safely refresh the "created tables" dropdown
+    refreshTable('created_tables');
+  });
+});
+
+
+
+
+
 
 
 

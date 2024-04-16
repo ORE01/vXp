@@ -2,7 +2,7 @@ import { PortValue, PortPV01, formPortPV01 } from './PORT.js';
 import createBarChart from './charts/BarChart.js';
 
 export function handleIRSensData(portMainData) {
-    console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
+    // console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
 
     let portValue = PortValue;
     let portPV01 = PortPV01;
@@ -87,7 +87,7 @@ export function handleIRSensData(portMainData) {
         YEARS: `${index + 1}y`, // Convert year index to string label
         PV01: parseFloat(value)  // Assuming pv01PartialPct values are strings with percentages, convert them to float
       }));
-      console.log(weightedYearsData);
+      // console.log(weightedYearsData);
     createPV01Chart(weightedYearsData);
 
     // Return the table element for appending to the DOM

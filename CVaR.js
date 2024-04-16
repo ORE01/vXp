@@ -66,7 +66,7 @@ export function handleEADMainData(receivedData) {
 }
 // Main Goal: Creation of CVaRDataContainer which holds CVaR and ES as a table
 export function handleCVaRData(receivedData) {
-  console.log('handleCVaRData:', receivedData);
+  // console.log('handleCVaRData:', receivedData);
   const CVaRDataContainer = document.getElementById('CVaRDataContainer');
 
   // Clear the container before appending new content
@@ -129,7 +129,7 @@ export function handleCVaRData(receivedData) {
       });
     });
 
-    console.log('table:', table);
+    // console.log('table:', table);
 
     // Append the table to the main container
     CVaRDataContainer.appendChild(table);

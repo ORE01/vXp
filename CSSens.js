@@ -7,7 +7,7 @@ import createBarChart from './charts/BarChart.js';
 let CPV01Chart; // This will hold the chart instance
 
 export function handleCSSensData(portMainData) {
-    console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
+    // console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
 
     const groupedCPV01 = portMainData.reduce((acc, { CPV01, RATING }) => {
         if (!acc[RATING]) {
@@ -24,6 +24,7 @@ export function handleCSSensData(portMainData) {
     });
 
     const processDataFormat = sortedCPV01.map(([RATING, CPV01]) => {
+        console.log('PortCPV01', PortCPV01);
         let cpv01Bp = (CPV01 / PortValue) * 10000; // Convert to basis points
         let weightedRatings = (CPV01 / PortCPV01) * 100; // Calculate the weighted rating as a percentage
         return {
@@ -51,7 +52,7 @@ export function handleCSSensData(portMainData) {
     return { RATING, PV01: weightedRatingPercent };
 });
 
-console.log(chartData);
+// console.log(chartData);
 createCPV01Chart(chartData);
 }
 

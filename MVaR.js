@@ -4,7 +4,7 @@ import createBarChart from './charts/BarChart.js';
 let MVaRChart;
 //INPUT!
 export function handleMVarInputData(receivedData) {
-  console.log('MVaR.js, receivedData:', receivedData);
+  // console.log('MVaR.js, receivedData:', receivedData);
   // Define a function to create an HTML table from the data
   function createTable(data) {
     const table = document.createElement('table');
@@ -84,7 +84,7 @@ const esValue = parseFloat(dataPoint.ES.replace(/,/g, ''));
     });
   }
 
-  console.log('MVaRDataRel:', MVaRDataRel);
+  // console.log('MVaRDataRel:', MVaRDataRel);
 
 
   // MVaRDataContainer: alle VaRs: total, IR, CS
