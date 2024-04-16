@@ -1,0 +1,73 @@
+/* Add this CSS to align the containers side by side */
+.table-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  .data-container {
+    /* Your existing styles for .data-container */
+    flex: 1; /* Make the .data-container occupy all the available width */
+  }
+  
+  .chart-container {
+    /* Your existing styles for .chart-container */
+    flex: 1; /* Make the .chart-container occupy all the available width */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .chart-container-inner {
+    /* Your existing styles for .chart-container-inner */
+    display: none;
+    width: 100%;
+    height: 600px;
+  }
+  
+  .chart-container-inner.active {
+    /* Your existing styles for the active chart container */
+    display: block;
+  }
+
+  #MVaRChart{
+     
+    width: 5px; 
+    height: 600px; 
+}
+
+  /* #LGDChart,
+  #EADChart,
+  #LossIssuerChart {
+     
+      width: 100px; 
+      height: 600px; 
+  } */
+  #issuerGraphContainer {
+    margin-left: 40px; /* Adjust the margin as needed to create space */
+  }
+  
+/* CSS for CPV01Chart container */
+.cpv01-chart-container {
+  width: 400px; /* Set the width */
+  height: 300px; /* Set the height */
+}
+
+/* CSS for PV01Chart container */
+.pv01-chart-container {
+  width: 400px; /* Set the width */
+  height: 300px; /* Set the height */
+}
+
+/* Ensure canvas elements fill their containers */
+.cpv01-chart-container canvas, .pv01-chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+/* CSS for the container of the chart */
+#issuerGraphContainer {
+  width: 100%; /* Make the container take up the full width */
+  height: 50vh; /* Set a fixed height for the container */
+  overflow: hidden; /* Hide overflow content */
+  position: relative;
+}
+

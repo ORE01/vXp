@@ -1,0 +1,324 @@
+/* Existing CSS for .data-container */
+.data-container {
+  /* text-align: right; */
+  background-color: rgb(70, 69, 69);
+  z-index: 0;
+  max-height: 890px;  /*Add a max-height for the data-container */
+  /*height: 100%;*/
+  overflow: auto; /* Use "auto" to show scrollbar only when needed */
+}
+#portMVaRDataContainer {
+  background-color: rgb(70, 69, 69);
+  z-index: 0;
+  width: 380px;
+  max-height: 890px;  /*Add a max-height for the data-container */
+  /*height: 100%;*/
+  overflow-y: auto; /* Use "auto" to show scrollbar only when needed */
+}
+#CVaRDataContainer, #MVaRMainDataContainer {
+  width: 300px; /* Set the width of the containers */
+  margin-bottom: 20px;
+  /* Add any other styling you need, like padding, margin, border, etc. */
+}
+
+#CVaRDataContainer table tr td:first-child,
+#MVaRMainDataContainer table tr td:first-child {
+  width: 70px; /* Set the width of the first column */
+  /* Add any additional styling you need for the first column */
+}
+
+
+
+/* Additional style for the data content */
+.table-content {
+  /* text-align: right; */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align the items to the top */
+}
+
+/* Additional style for the button and data-container wrapper */
+.data-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+/* Add some spacing between the button and data-container */
+.button-wrapper {
+  margin-bottom: 10px; 
+}
+.close-button {
+  float: right;
+  cursor: pointer;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-header {
+  width: 350px; /* ISSUER, PRODUCTS... */
+}
+
+.table {
+  display: none;
+  background-color: rgba(0, 0, 0, 0.8);
+  font-family: "Your Font Name", sans-serif;
+  font-size: 13px;
+  color: rgb(161, 160, 160);
+   height: 1200px; 
+}
+
+
+.table tr:nth-child(even) {
+  background-color: #333;
+}
+
+.table-content tbody td {
+  border: 1px solid black;
+}
+
+.table-content table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid black;
+  box-sizing: border-box;
+  text-align: right;
+}
+
+.table-content thead {
+  border: 1px solid black;
+}
+
+.table-content thead th {
+  position: sticky;
+  top: 0;
+  background-color: #222;
+  z-index: 2;
+  border: 1px solid black;
+  box-sizing: border-box;
+  padding: 2px;
+  text-align: center;
+}
+
+.table-content thead tr {
+  border: 1px solid black;
+}
+
+.table-content td 
+.table-content th {
+  padding: 2px;
+  border: 1px solid black;
+}
+
+.table-content td[data-column="clean_price"] {
+    background-color: orange;
+    color: white;
+  }
+
+@media screen and (max-width: 768px) {
+  .table-content {
+    top: 100px;
+    z-index: 60;
+  }
+}
+
+.tab {
+  background-color: gray;
+  overflow: hidden;
+  width: auto;
+  z-index: 100;
+}
+
+.tablinks {
+  background-color: rgb(70, 69, 69);
+  color: white;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: background-color 0.3s;
+  width: 110px;
+  z-index: 100;
+}
+
+.tablinks:hover {
+  background-color: #202020;
+}
+
+.table-selected {
+  background-color: #4CAF50; /* Example background color for selected tables */
+  color: white; /* Example text color for selected tables */
+}
+
+
+.tablinks.active {
+  background-color: rgb(0, 139, 35);
+}
+
+.edit-button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.edit-button:hover {
+  background-color: #45a049;
+}
+
+.loading-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #fff;
+  margin-left: 5px;
+  animation: loading-animation 0.8s infinite ease-in-out;
+  }
+  
+  @keyframes loading-animation {
+  0% {
+  transform: scale(0);
+  }
+  50% {
+  transform: scale(1);
+  }
+  100% {
+  transform: scale(0);
+  }
+  }
+  
+  #scrollButton {
+  display: block;
+  }
+  
+  #issuerAddButton,
+  #dealsAddButton,
+  #prodAddButton {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  }
+  
+  #issuerAddButton:hover,
+  #dealsAddButton:hover,
+  #prodAddButton:hover {
+  background-color: #45a049;
+  }
+  
+  #issuerAddButton:active,
+  #dealsAddButton:active,
+  #prodAddButton:active{
+  background-color: #3e8e41;
+  } 
+
+  /* Set a fixed width for the left part (tables) */
+.left-part {
+  width: 50%; /* Adjust the width as needed */
+  float: left;
+}
+
+/* Set a fixed width for the right part (graphs) */
+.right-part {
+  width: 50%; /* Adjust the width as needed */
+  float: left;
+}
+
+/* Prevent elements inside the right part from affecting its width */
+.right-part .chart-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chart-button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: inline;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.button-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px; /* Adjust the value as needed */
+}
+
+.button-container .edit-button {
+  margin-bottom: 10px; /* Add space between buttons */
+}
+
+.button-container .edit-button:last-child {
+  margin-bottom: 0; /* Remove the space for the last button */
+}
+
+.table-content h2 {
+  margin-right: 20px;
+  margin-left: 20px; 
+}
+
+.close {
+  padding-left: 7px; /* Adds padding inside the element, effectively moving the content to the right */
+}
+
+.resized-tab {
+  transform: scale(0.75); /* Example: reduce size to 75% */
+  transition: transform 0.3s ease; /* Smooth transition for resizing */
+  /* Additional styles as needed */
+}
+
+.small-section-header {
+  font-size: 18px;
+  text-align: left; /* Align text to the left */
+  margin: 0; /* Remove default margin */
+  padding: 0; /* Remove default padding */
+  /* Add other styling properties if required */
+}
+.portfolio-select-spacing {
+  margin-top: 1.5em; /* Adjust as needed */
+}
+
+.table .content-wrapper {
+  display: flex;
+}
+
+.left-section, .middle-section, .right-section {
+  flex: 0 1 300px;
+}
+
+.right-section .upper-part, #issuerGraphContainer {
+  max-width: 800px; /* Adjust this value as needed */
+  margin: 0 auto; /* This centers the chart container if it's smaller than the parent */
+}
+
+
+.right-section .lower-part {
+  flex: 0 1 auto; /* Don't grow, but can shrink */
+  margin-top: 20px; /* Adds space above the .lower-part */
+  padding-left: 40px;
+}
+
+
+
+
+
+
