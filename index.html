@@ -25,45 +25,68 @@
     <button class="tablinks" id="DATA_Tab">UPDATES</button> 
   </div>
 
-
 <!-- Modal - ISSUER -->
 <div id="ISSUER_Modal" class="table">
   <div class="table-content">
-    <span class="close close-button">&times;</span>
-    <div class="portfolio-info">
-      <h2 class="section-header">ISSUER</h2>
+    <span class="close">&times;</span>
+    <div class="content-wrapper">
+      <!-- Left Section: Dropdowns -->
+      <div class="left-section">
+        <div class="portfolio-info">
+          <h2 class="section-header">ISSUER</h2>
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+          <p>
+            <button id="issuerResetFiltersButton" class="reset-FiltersButton">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+        </div>
+      </div>
 
-      <!-- Scrollable area for dropdowns -->
-      <div class="dropdown-wrapper">
-        <div>
-          <p>Select Issuers:</p>
-          <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
-        </div>
-        <div>
-          <p>Select Rating:</p>
-          <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+      <!-- Middle Section: Issuer Data -->
+      <div class="middle-section">
+        <div class="data-wrapper">
+          <div class="button-wrapper">
+            <button id="issuerAddButton">ADD</button>
+          </div>
+          <div class="data-container" id="issuerDataContainer"></div>
         </div>
       </div>
-      <p>
-        <button id="issuerResetFiltersButton" class="reset-FiltersButton">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-            <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-            <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-          </svg>
-        </button>
-      </p>
-    </div>
-    <div class="data-wrapper">
-      <div class="button-wrapper">
-        <button id="issueraddButton">ADD</button>
+
+      <!-- Right Section: Chart and CS Parameters -->
+      <div class="right-section">
+        <!-- Upper Part: Chart -->
+        <div class="upper-part">
+          <div class="data-container" id="issuerGraphContainer">
+            <canvas id="CS_ChartCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Lower Part: CS Parameters -->
+        <div class="lower-part">
+
+          <p>CS Curve Parameter:</p>
+          <p>e: Relative Displacement in %. Default 1</p>
+          <p>f: Absolute Displacement in Basis Points. Default 0</p>
+          <div class="data-container" id="CSParameterDataContainer"></div>
+          <div class="button-wrapper">
+            <button id="CSParButton" class="edit-button">CSParameter</button>
+          </div>
+        </div>
       </div>
-      <div class="data-container" id="issuerDataContainer"></div>
-    </div>
-    
-    <!-- Graph Container (to the right of the table) -->
-    <div class="data-container" id="issuerGraphContainer">
-      <canvas id="CS_ChartCanvas"></canvas>
     </div>
   </div>
 </div>
@@ -102,6 +125,7 @@
           <select id="prodRankDropdown" multiple class="select-dropdown"></select>
         </div>
       </div>
+
       <p>
         <button id="prodResetFiltersButton" class="reset-FiltersButton">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -111,17 +135,18 @@
           </svg>
         </button>
       </p>
+
     </div>
     <div class="data-wrapper">
       <div class="button-wrapper">
-        <button id="prodaddButton">ADD</button>
+        <button id="prodAddButton">ADD</button>
       </div>
       <div class="data-container" id="prodDataContainer"></div>
     </div>
   </div>
 </div>
 
-<!-- Modal - CREATE PORTFOLIO -->
+<!-- Modal - DEALS / CREATE PORTFOLIO -->
 <div id="DEALS_Modal" class="table">
   <div class="table-content">
     <span class="close">&times;</span>
@@ -132,26 +157,26 @@
         <!-- Portfolio Dropdown -->
         <h2 class="small-section-header">Edit Portfolio</h2>
         <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <label for="createdTablesDropdown" style="width: 20%; min-width: 150px;">Select PORTFOLIO:</label>
-          <select id="createdTablesDropdown" style="width: 80%; background-color: white;"></select>
+          <label for="createdPortDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select PORTFOLIO:</label>
+          <select id="createdPortDropdown" style="width: 80%; background-color: white;"></select>
         </div>
 
         <!-- Trade ID Dropdown -->
         <h2 class="small-section-header">Create New Portfolio from Selected One</h2>
         <div class="trade-dropdown-wrapper portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <label for="tradeDropdown" style="width: 20%; min-width: 150px;">Select TRADE_ID:</label>
-          <select id="tradeDropdown" multiple style="width: 80%; background-color: white;"></select>
+          <label for="tradeDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select TRADE_ID:</label>
+          <select id="tradeDropdown" multiple class="select-dropdown" multiple style="width: 80%; background-color: white;"></select>
         </div>
         
         <!-- Name Input -->
         <div class="tag-input" style="display: flex; margin-bottom: 10px;">
-          <label for="nameInput" style="width: 20%; min-width: 150px;">New Portfolio Name:</label>
+          <label for="nameInput" style="width: 20%; min-width: 150px;margin-left: 20px;">New Portfolio Name:</label>
           <input type="text" id="nameInput" value="" style="width: 80%; background-color: white;">
         </div>
 
         <!-- Tag Input Field -->
         <div class="tag-input" style="display: flex; margin-bottom: 10px;">
-          <label for="tagInputField" style="width: 20%; min-width: 150px;">Tag selection:</label>
+          <label for="tagInputField" style="width: 20%; min-width: 150px; margin-left: 20px;">Tag selection:</label>
           <input type="text" id="tagInputField" value="" style="width: 80%; background-color: white;">
         </div>
 
@@ -160,29 +185,48 @@
           <button id="saveSelectionButton" style="margin-right: 5px; background-color: green; color: white;">Save Selection</button>
           <button id="deleteTableButton" style="background-color: red; color: white;">Delete Selection</button>
         </div>
-        
+
+      
+      <div class="dropdown-wrapper"> 
+        <div>
+          <p>Select Issuers:</p>
+          <select id="dealsIssuerDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+      </div>
+  
       </div>
     </div>
     <div class="data-wrapper">
       <div class="button-wrapper">
-        <button id="dealsaddButton">ADD</button>
+        <button id="dealsAddButton">ADD</button>
       </div>
       <div class="data-container" id="dealsDataContainer"></div>
     </div>
   </div>
 </div>
 
-<!-- Modal - PORT ANALYSE PORTFOLIO -->
+<!-- Modal - PORT / ANALYSE PORTFOLIO -->
 <div id="PORT_Modal" class="table">
   <div class="table-content">
     <span class="close">&times;</span>
     <div class="portfolio-info">
       <h2 class="section-header">PORTFOLIO</h2>
       <div>
-        <!-- <p>Value at Risk: VaR </p>
-        <p>Expected Shortfall: ES </p>
-        <p>Interest Rate: IR</p>
-        <p>Credit Spread: CS</p> -->
+
+        <!-- Portfolio Dropdown -->
+        <!-- <h2 class="small-section-header">Select Portfolio</h2>
+        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+          <label for="createdPortPortDropdown" style="width: 20%; min-width: 150px;">Select PORTFOLIO:</label>
+          <select id="createdPortPortDropdown" style="width: 80%; background-color: white;"></select> 
+        </div> -->
+
+        <div class="button-wrapper">
+          <button id="fairValueButton"class="edit-button">Fair Value</button>
+          <button id="MVaRButton"class="edit-button">VaR</button>
+          <button id="CVaRButton"class="edit-button">CVaR</button>
+        </div>
+
         <p>Notional: <span id="formPortNotional"></span></p>
         <p>NetAssetValue: <span id="formPortValue"></span></p>
         <p>Portfolio Yield: <span id="formPortYield"></span></p>
@@ -250,11 +294,11 @@
       </div>
     </div>
     <div class="data-wrapper">
-      <div class="button-wrapper">
+      <!-- <div class="button-wrapper">
         <button id="fairValueButton"class="edit-button">Fair Value</button>
         <button id="MVaRButton"class="edit-button">VaR</button>
         <button id="CVaRButton"class="edit-button">CVaR</button>
-      </div>
+      </div> -->
       <div class="data-container" id="portDataContainer"></div>
     </div>
   </div>
