@@ -42,9 +42,9 @@
   display: flex;
   flex-direction: column;
 }
-/* Add some spacing between the button and data-container */
+
 .button-wrapper {
-  margin-bottom: 10px; 
+  margin-bottom: 10px; /* Add some spacing between the button and data-container */
 }
 .close-button {
   float: right;
@@ -67,7 +67,7 @@
   font-family: "Your Font Name", sans-serif;
   font-size: 13px;
   color: rgb(161, 160, 160);
-   height: 1200px; 
+   height: 1100px; 
 }
 
 
@@ -176,58 +176,58 @@
 }
 
 .loading-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: #fff;
-  margin-left: 5px;
-  animation: loading-animation 0.8s infinite ease-in-out;
-  }
-  
-  @keyframes loading-animation {
-  0% {
-  transform: scale(0);
-  }
-  50% {
-  transform: scale(1);
-  }
-  100% {
-  transform: scale(0);
-  }
-  }
-  
-  #scrollButton {
-  display: block;
-  }
-  
-  #issuerAddButton,
-  #dealsAddButton,
-  #prodAddButton {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 8px 12px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  }
-  
-  #issuerAddButton:hover,
-  #dealsAddButton:hover,
-  #prodAddButton:hover {
-  background-color: #45a049;
-  }
-  
-  #issuerAddButton:active,
-  #dealsAddButton:active,
-  #prodAddButton:active{
-  background-color: #3e8e41;
-  } 
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #fff;
+    margin-left: 5px;
+    animation: loading-animation 0.8s infinite ease-in-out;
+    }
+    
+    @keyframes loading-animation {
+    0% {
+    transform: scale(0);
+    }
+    50% {
+    transform: scale(1);
+    }
+    100% {
+    transform: scale(0);
+    }
+    }
+    
+    #scrollButton {
+    display: block;
+    }
+    
+    #issueraddButton,
+    #dealsaddButton,
+    #prodaddButton {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    }
+    
+    #issueraddButton:hover,
+    #dealsaddButton:hover,
+    #prodaddButton:hover {
+    background-color: #45a049;
+    }
+    
+    #issueraddButton:active,
+    #dealsaddButton:active,
+    #prodaddButton:active{
+    background-color: #3e8e41;
+    } 
 
-  /* Set a fixed width for the left part (tables) */
+    /* Set a fixed width for the left part (tables) */
 .left-part {
   width: 50%; /* Adjust the width as needed */
   float: left;

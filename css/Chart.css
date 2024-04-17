@@ -63,6 +63,11 @@
   width: 100% !important;
   height: 100% !important;
 }
+/* CSS for the container of the chart */
+#issuerGraphContainer {
+  width: 100%; /* Make the container take up the full width */
+  height: 50vh; /* Set a fixed height for the container */
+  overflow: hidden; /* Hide overflow content */
+  position: relative;
+}
 
-  
-  
