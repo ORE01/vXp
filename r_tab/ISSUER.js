@@ -7,9 +7,25 @@ let issuerData;
 let filteredIssuerData;
 
 
-export function handleIssuerData(receivedData, appState) {
+export async function handleIssuerData(receivedData, appState) {
   const issuerDataContainer = document.getElementById('issuerDataContainer');
   issuerData = receivedData;
+
+
+  let rank;
+  try {
+    rank = await appState.getRankData();
+    console.log('rank', rank);
+  } catch (error) {
+    console.log('Error retrieving rank data:', error.message);
+    console.log('rankData not available yet');
+    // Optionally handle the error by setting rank to a default value or returning early
+    rank = {}; // Set default rank data or handle as needed
+  }
+  
+
+
+
   // issuerData  = AppState.filteredData['issuer'];
    console.log('issuerData:', issuerData); 
    //console.log('filtersConfig:', filtersConfig); 
