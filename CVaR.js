@@ -12,7 +12,7 @@ export function handleEADMainData(receivedData) {
   const EADMainData = receivedData;
 
   if (EADMainDataContainer && EADMainData) {
-    let columns = ['ISSUER', 'RATING', 'NOTIONAL', 'LGD', 'PD'];
+    let columns = ['ISSUER', 'RANK', 'RATING', 'NOTIONAL', 'LGD', 'PD'];
     filteredEADMainData = filterColumnsInData(EADMainData, columns);
     if (EADChart) {EADChart.destroy();}
     if (LGDChart) {LGDChart.destroy();}
@@ -66,7 +66,7 @@ export function handleEADMainData(receivedData) {
 }
 // Main Goal: Creation of CVaRDataContainer which holds CVaR and ES as a table
 export function handleCVaRData(receivedData) {
-  // console.log('handleCVaRData:', receivedData);
+  console.log('handleCVaRData:', receivedData);
   const CVaRDataContainer = document.getElementById('CVaRDataContainer');
 
   // Clear the container before appending new content

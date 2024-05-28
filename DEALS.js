@@ -1,4 +1,3 @@
-import { filterColumnsInData } from './renderer/dataProcessor.js';
 import processData from './renderer/dataProcessor.js';
 import { handleFormAction } from './renderer/FormButtonHandler.js';
 import { appState } from './renderer.js'; 
@@ -60,27 +59,3 @@ export function handleDealsData(receivedData, dealsTableName) {
     });
   }
 }
-
-export function handleCreatedPortData(Data, dropdownId) {
-//   console.log('createdPortData:', Data);
-//   console.log('dropdownId:', dropdownId);
-//   const dropdown = document.getElementById(dropdownId); // Use the passed dropdownId
-
-//   // Clear existing options
-//  dropdown.innerHTML = '';
-
-//   // Create an empty default option
-//   const defaultOption = document.createElement('option');
-//   defaultOption.value = ''; // You can set this to any default value
-//   defaultOption.text = 'Select a table'; // Display text for the default option
-//   dropdown.appendChild(defaultOption);
-
-//   // Populate the dropdown with fetched data
-//   Data.forEach(row => {
-//     const option = document.createElement('option');
-//     option.value = row.table_name; // Assuming the table_name column stores the table names
-//     option.text = row.table_name;
-//     dropdown.appendChild(option);
-//   });
-}
-

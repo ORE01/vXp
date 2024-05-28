@@ -169,8 +169,6 @@ ipcMain.on('start-py-fairValue', async (event, selectedTableName) => {
     event.reply('py-fairValue-complete', { success: false, projectName: 'py-fairValue', error: error.toString(), tableName: selectedTableName });
   }
 });
-
-
 ipcMain.on('start-py-MVaR', async (event,selectedTableName) => {
   console.log('start-py-MVaR:');
   //await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['MVaRMain']);
@@ -286,16 +284,6 @@ app.whenReady().then(() => {
   });
 });
 
-// // Display the selected Deals
-// ipcMain.on('fetch-table-data', (event, selectedTableName) => {
-//   console.log('selectedTableName_main:', selectedTableName);
-//   refreshTable(selectedTableName, () => {
-//     // This callback will be called after the selected table refresh is completed
-//     // Now, you can safely refresh the "created tables" dropdown
-//     refreshTable('created_tables');
-//   });
-// });
-
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
@@ -408,26 +396,20 @@ ipcMain.on('save-deals-selection', async (event, selectionData) => {
 
 // DELETE DEALS SELECTION
 ipcMain.on('delete-selected-table', (event, selectedTableName) => {
-  console.log('main delete-selected-table:', selectedTableName);
+  console.log('delete-selected-table:', selectedTableName);
   deleteTable(selectedTableName, event.sender);
-  //refreshTable(selectedTableName);
 });
 
 // Display the selected Deals
 ipcMain.on('fetch-table-data', (event, selectedTableName) => {
-  console.log('selectedTableName_main:', selectedTableName);
+  console.log('selectedTableName:', selectedTableName);
   refreshTable(selectedTableName, () => {
     // This callback will be called after the selected table refresh is completed
     // Now, you can safely refresh the "created tables" dropdown
-    refreshTable('created_tables');
+    refreshTable('createdDeals');
+    refreshTable('createdPort');
   });
 });
-
-
-
-
-
-
 
 
 function refreshTable(tableName, callback) {

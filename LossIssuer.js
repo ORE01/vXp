@@ -75,7 +75,7 @@ function toggleDisplay(chartType) {
 }
 
 export function processAndSortLossIssuerData(receivedData) {
-  let columns = ['CONVI', 'DEFAULTS', 'ISSUER', 'LOSS'];
+  let columns = ['CONVI', 'DEFAULTS', 'ISSUER_RANK', 'LOSS'];
   let filteredData = filterColumnsInData(receivedData, columns);
 
   // Sort the data
@@ -87,7 +87,7 @@ export function createLossIssuerChart(data) {
     LossIssuerChart.destroy();
   }
 
-  const labels = data.map(d => d.ISSUER);
+  const labels = data.map(d => d.ISSUER_RANK);
   const values = data.map(d => d.LOSS);
 
   LossIssuerChart = createBarChart({ 

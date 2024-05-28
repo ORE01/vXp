@@ -1,9 +1,9 @@
 import { filterColumnsInData } from './renderer/dataProcessor.js';
 import processData from './renderer/dataProcessor.js';
+import { handleFormAction } from './renderer/FormButtonHandler.js';
 
-
-let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
-let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
+let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
+let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
 let PortValue = 0; 
 let PortNotional = 0;
 let PortYield = 0;
@@ -25,6 +25,8 @@ let formFiltPortYieldA;
 let formFiltPortPV01;
 let formFiltPortCPV01;
 
+let savedValues = {};
+
 
 
 function formatNumberWithGrouping(value) {
@@ -35,7 +37,7 @@ function formatNumberWithGrouping(value) {
 
 // Adjusted handlePortMainData function
 export function handlePortMainData(receivedData) {
-  // console.log('handlePortMainData - Received Data:', receivedData);
+  console.log('handlePortMainData - Received Data:', receivedData);
 
   const portData = filterColumnsInData(receivedData, columns);
 
@@ -82,9 +84,10 @@ function filterData(data, filtersConfig) {
   });
 }
 
-export function handlePortMainFilteredData(receivedData, filtersConfig) {
+export function handlePortMainFilteredData(receivedData, filtersConfig, elementId) {
+  console.log('elementId:', elementId);
   console.log('handlePortMainFilteredData:', receivedData);
-  const portDataContainer = document.getElementById('portDataContainer');
+  const portDataContainer = document.getElementById(elementId);
   const portData = receivedData;
 
   if (portDataContainer && portData) {
@@ -121,13 +124,17 @@ export function handlePortMainFilteredData(receivedData, filtersConfig) {
     const formFiltPortPV01 = filteredPortPV01.toFixed(2);
     const formFiltPortCPV01 = filteredPortCPV01.toFixed(2);
 
-    // Display the formatted values in the corresponding span elements
-    document.getElementById('formFiltPortValue').textContent = formFiltPortValue;
-    document.getElementById('formFiltPortNotional').textContent = formFiltPortNotional;
-    document.getElementById('formFiltPortYield').textContent = formFiltPortYield;
-    document.getElementById('formFiltPortYieldA').textContent = formFiltPortYieldA;
-    document.getElementById('formFiltPortPV01').textContent = formFiltPortPV01;
-    document.getElementById('formFiltPortCPV01').textContent = formFiltPortCPV01;
+        // Save the values for the current elementId
+        savedValues[elementId] = {
+          formFiltPortValue,
+          formFiltPortNotional,
+          formFiltPortYield,
+          formFiltPortYieldA,
+          formFiltPortPV01,
+          formFiltPortCPV01,
+        };
+
+    displayValuesForElementId(elementId);
 
     console.log('formFiltPortValue:', formFiltPortValue);
     console.log('formFiltPortNotional:', formFiltPortNotional);
@@ -145,7 +152,87 @@ export function handlePortMainFilteredData(receivedData, filtersConfig) {
     const portDataHTML = processData(filteredPortDataNew, portTableName);
     portDataContainer.innerHTML = portDataHTML;
   }
+    // Edit Buttons
+    const portEditButtons = document.querySelectorAll('#portDataContainer .edit-button');
+    portEditButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const tableName = appState.getSelectedPortTableName();
+        const actionType = 'edit';
+        const rowIndex = parseInt(button.getAttribute('data-row'), 10);
+        handleFormAction(event, portData, rowIndex, tableName, actionType);
+      });
+    });
+
+      // PDF Button
+      const portAddButton = document.getElementById('portAddButton');
+      portAddButton.addEventListener('click', (event) => {
+        const tableName = appState.getSelectedPortTableName();
+        const actionType = 'add';
+        handleFormAction(event, portData, null, tableName, actionType);
+      });
+      
+
 }
+
+function displayValuesForElementId(elementId) {
+  const values = savedValues[elementId];
+  if (values) {
+    switch (elementId) {
+      case 'portDataContainer':
+        {
+          const elements = {
+            formFiltPortValue: 'formFiltPortValue',
+            formFiltPortNotional: 'formFiltPortNotional',
+            formFiltPortYield: 'formFiltPortYield',
+            formFiltPortYieldA: 'formFiltPortYieldA',
+            formFiltPortPV01: 'formFiltPortPV01',
+            formFiltPortCPV01: 'formFiltPortCPV01',
+          };
+        
+          for (const id of Object.values(elements)) {
+            const element = document.getElementById(id);
+            if (element) {
+              element.textContent = values[id];
+            }
+          }
+        }
+        break;
+
+      case 'compPortDataContainer':
+        {
+          const compElements1 = ['formPortNotional1'];
+
+          for (const id of compElements1) {
+            const element = document.getElementById(id);
+            if (element) {
+              element.textContent = values.formFiltPortNotional;
+            }
+          }
+        }
+        break;
+
+      case 'compPortDataContainer2':
+        {
+          const compElements2 = ['formPortNotional2'];
+
+          for (const id of compElements2) {
+            const element = document.getElementById(id);
+            if (element) {
+              element.textContent = values.formFiltPortNotional;
+            }
+          }
+        }
+        break;
+
+      default:
+        console.log(`No handler for elementId: ${elementId}`);
+    }
+  } else {
+    console.log(`No saved values for ${elementId}`);
+  }
+}
+
 
 export {PortValue, PortNotional, PortYield, PortPV01, PortCPV01, formPortValue, formPortNotional, formPortYield, formPortYieldA,  formPortPV01, formPortCPV01, formFiltPortValue, formFiltPortNotional, formFiltPortYield, formFiltPortYieldA, formFiltPortPV01, formFiltPortCPV01};
 

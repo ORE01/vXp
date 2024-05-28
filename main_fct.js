@@ -196,14 +196,14 @@ function insertSelection(selectionName, tagValues, selectedTradeIDs) {
       console.log('Selections table created or already exists');
 
       const createCreatedTablesTableQuery = `
-        CREATE TABLE IF NOT EXISTS created_tables (
+        CREATE TABLE IF NOT EXISTS createdDeals (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           table_name TEXT
         )`;
 
       db.run(createCreatedTablesTableQuery, [], function (err) {
         if (err) {
-          console.error('Error creating created_tables table:', err.message);
+          console.error('Error creating createdDeals table:', err.message);
           reject(err);
           return;
         }
@@ -226,7 +226,7 @@ function insertSelection(selectionName, tagValues, selectedTradeIDs) {
           console.log(`New table '${selectionName}' created successfully`);
 
           const insertTableNameQuery = `
-            INSERT INTO created_tables (table_name) 
+            INSERT INTO createdDeals (table_name) 
             VALUES (?)`;
 
           db.run(insertTableNameQuery, [selectionName], function (err) {
@@ -269,8 +269,8 @@ function deleteTable(selectedTableName, sender) {
     } else {
       console.log(`Table "${selectedTableName}" has been deleted.`);
       
-      // Now, delete the corresponding entries in created_tables and selections tables
-      deleteTableEntry('created_tables', selectedTableName);
+      // Now, delete the corresponding entries in createdDeals and selections tables
+      deleteTableEntry('createdDeals', selectedTableName);
       deleteTableEntry('selections', selectedTableName);
 
       sender.send('table-deleted-successfully');
@@ -278,9 +278,9 @@ function deleteTable(selectedTableName, sender) {
     }
   });
 }
-// DELETE the created Portfolios in DEALS with entries in tables 'created_tables' and 'selections'
+// DELETE the created Portfolios in DEALS with entries in tables 'createdDeals' and 'selections'
 function deleteTableEntry(tableName, selectedTableName) {
-  const columnName = tableName === 'created_tables' ? 'table_name' : 'selection_name'; // Determine the correct column name
+  const columnName = tableName === 'createdDeals' ? 'table_name' : 'selection_name'; // Determine the correct column name
   const query = `DELETE FROM ${tableName} WHERE ${columnName} = ?`;
 
   db.run(query, [selectedTableName], (err) => {

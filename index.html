@@ -17,6 +17,7 @@
     <button class="tablinks" id="PROD_Tab">PRODUCTS</button>
     <button class="tablinks" id="DEALS_Tab">CREATE PORTFOLIO</button>
     <button class="tablinks" id="PORT_Tab">ANALYSE PORTFOLIO</button>
+    <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
     <button class="tablinks" id="SENS_Tab">SENSITIVITIES</button>
     <button class="tablinks" id="IR_Tab">RATES</button>
     <button class="tablinks" id="TS_Tab">HIST DATA</button>
@@ -154,11 +155,11 @@
       <h2 class="section-header">EDIT / CREATE PORTFOLIO</h2>
       <div class="filter-wrapper" style="display: flex; flex-direction: column; width: 100%;">
 
-        <!-- Portfolio Dropdown -->
+        <!-- DEALS Dropdown -->
         <h2 class="small-section-header">Edit Portfolio</h2>
         <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <label for="createdPortDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select PORTFOLIO:</label>
-          <select id="createdPortDropdown" style="width: 80%; background-color: white;"></select>
+          <label for="createdDealsDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select PORTFOLIO:</label>
+          <select id="createdDealsDropdown" style="width: 80%; background-color: white;"></select>
         </div>
 
         <!-- Trade ID Dropdown -->
@@ -188,11 +189,31 @@
 
       
       <div class="dropdown-wrapper"> 
+
         <div>
-          <p>Select Issuers:</p>
-          <select id="dealsIssuerDropdown" multiple class="select-dropdown"></select>
+          <p>Select Products:</p>
+          <select id="dealsProdIdDropdown" multiple class="select-dropdown"></select>
           </select>
         </div>
+
+        <div>
+          <p>Select Category:</p>
+          <select id="dealsCategoryDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
+        <div>
+          <p>Select Notional:</p>
+          <select id="dealsNotionalDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
+        <div>
+          <p>Select Depotbank:</p>
+          <select id="dealsDepotbankDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
       </div>
   
       </div>
@@ -214,17 +235,15 @@
       <h2 class="section-header">PORTFOLIO</h2>
       <div>
 
-        <!-- Portfolio Dropdown -->
-        <!-- <h2 class="small-section-header">Select Portfolio</h2>
-        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <label for="createdPortPortDropdown" style="width: 20%; min-width: 150px;">Select PORTFOLIO:</label>
-          <select id="createdPortPortDropdown" style="width: 80%; background-color: white;"></select> 
-        </div> -->
+
 
         <div class="button-wrapper">
           <button id="fairValueButton"class="edit-button">Fair Value</button>
           <button id="MVaRButton"class="edit-button">VaR</button>
           <button id="CVaRButton"class="edit-button">CVaR</button>
+          
+          <button id="portAddButton">PDF</button>
+      
         </div>
 
         <p>Notional: <span id="formPortNotional"></span></p>
@@ -274,6 +293,11 @@
               <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
               </select>
             </div>
+            <div>
+              <p>Select Depotbank:</p>
+              <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
+              </select>
+            </div>
         </div>
         <p>
           <button id="portResetFiltersButton" class="reset-FiltersButton">
@@ -294,11 +318,6 @@
       </div>
     </div>
     <div class="data-wrapper">
-      <!-- <div class="button-wrapper">
-        <button id="fairValueButton"class="edit-button">Fair Value</button>
-        <button id="MVaRButton"class="edit-button">VaR</button>
-        <button id="CVaRButton"class="edit-button">CVaR</button>
-      </div> -->
       <div class="data-container" id="portDataContainer"></div>
     </div>
   </div>
@@ -454,6 +473,34 @@
   </div>
 </div>
 
+<!-- Modal - COMPARE PORTFOLIOS-->
+<div id="COMP_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>COMPARE PORTFOLIOS</h2>
+  </div>
+    <!-- Portfolio Dropdown -->
+    <h2 class="small-section-header">Select Portfolio 1</h2>
+    <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+      <!-- <label for="createdPortDropdown" style="width: 20%; min-width: 150px;">Select PORTFOLIO:</label> -->
+      <select id="createdPortDropdown" style="width: 80%; background-color: white;"></select> 
+    </div>
+    <p>Notional: <span id="formPortNotional1"></span></p>
+    <div class="data-wrapper">
+      <div class="data-container" id="compPortDataContainer"></div>
+    </div>
+
+    <h2 class="small-section-header">Select Portfolio 2</h2>
+    <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+      <!-- <label for="createdPortDropdown" style="width: 20%; min-width: 150px;">Select PORTFOLIO:</label> -->
+      <select id="createdPortDropdown2" style="width: 80%; background-color: white;"></select> 
+    </div>
+    <p>Notional: <span id="formPortNotional2"></span></p>
+    <div class="data-wrapper">
+      <div class="data-container" id="compPortDataContainer2"></div>
+    </div>
+</div>
+
 
 
 
@@ -490,8 +537,8 @@
 
 window.currentActiveTabId = '';
 
-const tabIds = ['DEALS_Tab', 'PORT_Tab', 'SENS_Tab', 'PROD_Tab', 'ISSUER_Tab', 'IR_Tab', 'TS_Tab', 'MVaR_Tab', 'CVaR_Tab', 'DATA_Tab'];
-const modalIds = ['DEALS_Modal', 'PORT_Modal', 'SENS_Modal','PROD_Modal', 'ISSUER_Modal', 'IR_Modal', 'TS_Modal', 'MVaR_Modal', 'CVaR_Modal', 'DATA_Modal'];
+const tabIds = ['DEALS_Tab', 'PORT_Tab', 'SENS_Tab', 'PROD_Tab', 'ISSUER_Tab', 'IR_Tab', 'TS_Tab', 'MVaR_Tab', 'CVaR_Tab', 'DATA_Tab', 'COMP_Tab'];
+const modalIds = ['DEALS_Modal', 'PORT_Modal', 'SENS_Modal','PROD_Modal', 'ISSUER_Modal', 'IR_Modal', 'TS_Modal', 'MVaR_Modal', 'CVaR_Modal', 'DATA_Modal', 'COMP_Modal'];
 
 // Handle tab button click events using a loop
 for (let i = 0; i < tabIds.length; i++) {

@@ -1,6 +1,6 @@
 
 
-import { formPortValue, formPortNotional, formPortYield, formPortYieldA, formPortPV01, formPortCPV01 } from './PORT.js';
+import { formPortValue, formPortNotional, formFiltPortNotional, formPortYield, formPortYieldA, formPortPV01, formPortCPV01 } from './PORT.js';
 import { handleTSData } from './TS.js';
 import { handleMVaRData, handleMVarInputData, updateMVaRChart } from './MVaR.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
@@ -22,98 +22,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // CreatedPortPortData:
-  // Listen for created tables data once and apply it to the appropriate part of AppState.
-  window.api.receive('created_tablesData', (receivedData) => {
+  // CreatedDealsData:
+  window.api.receive('createdDealsData', (receivedData) => {
     try {
-      console.log('Received created tables data:', receivedData);
-      appState.setCreatedPortData(receivedData, 'createdPortDropdown');
-      appState.applyFiltersAndUpdateDropdowns('portTables');
+      console.log('Received createdDealsData:', receivedData);
+     
+      appState.setCreatedDealsData(receivedData, 'createdDealsDropdown');
+      appState.applyFiltersAndUpdateDropdowns('dealsTables');
     
-      console.log('About to process PortPort data');
-      appState.setCreatedPortPortData(receivedData, 'createdPortPortDropdown');
-      // const getCreatedPortPort = appState.getCreatedPortPortData();
-      //currentActiveTable = appState.getCreatedPortPortData();
-      console.log('currentActiveTable():', currentActiveTable );
-      appState.applyFiltersAndUpdateDropdowns('portPortTables');
     } catch (error) {
       console.error("Error processing created tables data:", error);
     }
   });
 
-  // PortDropdown component
-  const createdPortDropdown = document.getElementById('createdPortDropdown');
-  if (createdPortDropdown) {
-    createdPortDropdown.addEventListener('change', event => {
-      const selectedTableName = event.target.value;
-      console.log('selectedTableName:', selectedTableName);
-      appState.setSelectedDealsTableName(selectedTableName);
+  // CreatedPortData:
+  window.api.receive('createdPortData', (receivedData) => {
+    try {
+      appState.setCreatedPortData(receivedData, 'createdPortDropdown');
+      console.log('createdPortData:', appState.getCreatedPortData());
 
-      const newPortTableName = selectedTableName.replace('Deals', 'Port');
-      console.log('selectedPortTableName:', newPortTableName);
-      appState.setSelectedPortTableName(newPortTableName);
-      console.log(appState.getSelectedPortTableName());
+      
 
-      appState.setActiveTable('port');
+      appState.setCreatedPortData2(receivedData, 'createdPortDropdown2');
+      console.log('createdPortData2:', appState.getCreatedPortData2());
+      appState.applyFiltersAndUpdateDropdowns('portTables');
+      //appState.applyFiltersAndUpdateDropdowns('portTables2');
 
-        // Update the dropdown options
-        updatePortDropdownOptions(selectedTableName);
-      // });
+    } catch (error) {
+      console.error("Error processing created tables data:", error);
+    }
+  });
+
+    // // CreatedPortData2:
+    // window.api.receive('createdPortData', (receivedData) => {
+    //   try {
+    //     appState.setCreatedPortData2(receivedData, 'createdPortDropdown2');
+    //     console.log('createdPortData2:', appState.getCreatedPortData2());
+  
+    //     appState.applyFiltersAndUpdateDropdowns('portTables');
+  
+    //   } catch (error) {
+    //     console.error("Error processing created tables data:", error);
+    //   }
+    // });
+
+
+  // DealsDropdown component
+  let createdDealsDropdown = document.getElementById('createdDealsDropdown');
+  if (createdDealsDropdown) {
+    createdDealsDropdown.addEventListener('change', event => {
+      const selectedDealsTableName = event.target.value;
+      console.log('selectedDealsTableName:', selectedDealsTableName);
+      appState.setSelectedDealsTableName(selectedDealsTableName);
+      // Update the dropdown options
+      appState.updateDropdownOptions({
+        dropdownElementId: 'createdDealsDropdown',
+        getDataFunction: appState.getCreatedDealsData.bind(appState),
+        updateDataFunction: appState.updateDealsDataTable.bind(appState),
+        selectedTableName: selectedDealsTableName,
+      });
     });
   }
 
-  // Function to update the dropdown options
-  function updatePortDropdownOptions(selectedTableName = '') {
-    const createdPortDropdown = document.getElementById('createdPortDropdown');
-    if (createdPortDropdown) {
-      // Clear existing options
-      createdPortDropdown.innerHTML = '';
-
-      // Get the updated list of portfolios from appState
-      const portfolios = appState.getCreatedPortData();
-      
-      // Assuming this function exists in appState
-      console.log('portfolios:', portfolios);
-
-      // Add new options
-      portfolios.forEach(portfolio => {
-        const option = document.createElement('option');
-        option.value = portfolio.table_name; // Assuming portfolio object has a 'table_name' property
-        option.textContent = portfolio.table_name; // Assuming portfolio object has a 'table_name' property
-        createdPortDropdown.appendChild(option);
+  // PortDropdown component
+  let createdPortDropdown = document.getElementById('createdPortDropdown');
+  if (createdPortDropdown) {
+    createdPortDropdown.addEventListener('change', event => {
+      const selectedPortTableName = event.target.value;
+      console.log('selectedPortTableName:', selectedPortTableName);
+      appState.setSelectedPortTableName(selectedPortTableName);
+    // Update the dropdown options
+      appState.updateDropdownOptions({
+        dropdownElementId: 'createdPortDropdown',
+        getDataFunction: appState.getCreatedPortData.bind(appState),
+        updateDataFunction: appState.updatePortDataTable.bind(appState),
+        selectedTableName: selectedPortTableName,
       });
-
-      // Select the newly fetched portfolio in the dropdown
-      if (selectedTableName) {
-        createdPortDropdown.value = selectedTableName;
-      } else {
-        // Optionally, you can set the dropdown to a default value
-        createdPortDropdown.value = 'Select a table';
-      }
-
-      if (selectedTableName) {
-        // Send a message to the main process to fetch data for the selected table
-        window.api.send('fetch-table-data', selectedTableName);
-        console.log('fetch-table-data, selectedTableName', selectedTableName);
-
-        window.api.receive(selectedTableName + 'Data', (receivedData) => {
-          console.log('selectedTableName, receivedData:', receivedData);
-          appState.updateDealsDataTable(receivedData);
-        });
-      }
-    }
+    });
   }
-  // //PortPortDropdown
-  // const createdPortPortDropdown = document.getElementById('createdPortPortDropdown');
-  // if (createdPortPortDropdown) {
-  //   createdPortPortDropdown.addEventListener('change', event => {
-  //   // dieser selectedTableName wird im py script übernommen
-  //     selectedTableName = event.target.value;
-  //     console.log('selectedPorPortTableName:', selectedTableName);
-  //     //nur ein neuer Portfolio Name:
-  //     appState.setSelectedPortTableName(selectedTableName);
-  //   });
-  // }
+  // PortDropdown2 component
+   let createdPortDropdown2 = document.getElementById('createdPortDropdown2');
+  if (createdPortDropdown) {
+    createdPortDropdown2.addEventListener('change', event => {
+      const SelectedPortTableName2 = event.target.value;
+      console.log('selectedPortTableName2:', SelectedPortTableName2);
+      appState.setSelectedPortTableName2(SelectedPortTableName2);
+    // Update the dropdown options
+      appState.updateDropdownOptions({
+        dropdownElementId: 'createdPortDropdown2',
+        getDataFunction: appState.getCreatedPortData2.bind(appState),
+        updateDataFunction: appState.updatePortDataTable2.bind(appState),
+        selectedTableName: SelectedPortTableName2,
+      });
+    });
+  }
 
   // CSMatrix:
   window.api.receive('CSMatrixData', (receivedData) => {
@@ -126,10 +128,17 @@ document.addEventListener('DOMContentLoaded', () => {
     appState.handleCSParameterData(receivedData);
   });
 
+  // Rank:
+  window.api.receive('RankData', (receivedData) => {
+    console.log('RankData', receivedData);
+    appState.setRankData(receivedData)
+    console.log('RankData set in appState', appState.getRankData());
+    // appState.handleCSParameterData(receivedData);
+  });
+
   // ISSUER:
   window.api.receive('IssuerData', (receivedData) => {
     console.log('IssuerData', receivedData);
-
     appState.setActiveTable('issuer');
     appState.setIssuerData(receivedData)
     appState.applyFiltersAndUpdateDropdowns('issuer');
@@ -202,13 +211,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update the available portfolios in the app state
     const newPortfolio = { table_name: selectionName }; // Assuming the portfolio object structure
-    appState.setCreatedPortData([...appState.getCreatedPortData(), newPortfolio]);
+    appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
 
     // Update the dropdown options
-    updatePortDropdownOptions(selectionName);
+    updateDealsDropdownOptions(selectionName);
   });
-
-
 
   // Delete selection button
   document.getElementById('deleteTableButton').addEventListener('click', () => {
@@ -222,12 +229,12 @@ document.addEventListener('DOMContentLoaded', () => {
         window.api.send('delete-selected-table', selectedTableName);
 
         // Update appState to exclude the deleted portfolio
-        const portfolios = appState.getCreatedPortData().filter(portfolio => portfolio.table_name !== selectedTableName);
+        const portfolios = appState.getCreatedDealsData().filter(portfolio => portfolio.table_name !== selectedTableName);
 
-        appState.setCreatedPortData(portfolios);
+        appState.setCreatedDealsData(portfolios);
 
         // Update the dropdown options after deletion
-        updatePortDropdownOptions();
+        updateDealsDropdownOptions();
       }
     } else {
       // Notify the user to select a table before attempting to delete
@@ -237,6 +244,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   });
+
+  //COMP
+  // window.api.receive('PortMainData', (receivedData) => {
+  //   console.log('receivedData:', receivedData );
+  //   appState.setActiveTable('comp');
+  //   appState.setPortData(receivedData)
+  //   appState.applyFiltersAndUpdateDropdowns('comp');
+  //   appState.tableConfigs[appState.currentActiveTable];
+
+    
+    // appState.setPortData(receivedData)
+
+    // document.getElementById('formPortValue').textContent = formPortValue;
+    // document.getElementById('formPortNotional1').textContent = formFiltPortNotional;
+    // document.getElementById('formPortYield').textContent = formPortYield;
+    // document.getElementById('formPortYieldA').textContent = formPortYieldA;
+    // document.getElementById('formPortPV01').textContent = formPortPV01;
+    // document.getElementById('formPortCPV01').textContent = formPortCPV01;
+
+  // const portResetButton = document.getElementById('portResetFiltersButton');
+
+  //   if (portResetButton) {
+  //     portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
+  //   }
+
+  // //IRSENS
+  //   const IRSensTable = appState.handleIRSensData(receivedData);
+
+  //   // Update IRSens Data Container
+  //   const IRSensDataContainer = document.getElementById('IRSensDataContainer');
+  //   if (IRSensDataContainer) {
+  //     IRSensDataContainer.innerHTML = ''; // Clear existing contents
+  //     IRSensDataContainer.appendChild(IRSensTable); // Append the new table
+  //   }
+
+  // //CSSENS
+  //   const CSSensTable = appState.handleCSSensData(receivedData);
+
+  //   // Update CSSens Data Container
+  //   const CSSensDataContainer = document.getElementById('CSSensDataContainer');
+  //   if (CSSensDataContainer) {
+  //     CSSensDataContainer.innerHTML = ''; // Clear existing contents
+  //     CSSensDataContainer.appendChild(CSSensTable); // Append the new table
+  //   }
+  // });
   
   //TS
   window.api.receive('tblTSData', (receivedData) => {
@@ -399,6 +451,8 @@ window.api.receive('py-fairValue-complete', (data) => {
       //es müssen die deals neu gesetzt werden. Das stimmt so!
       appState.updatePortDataTable(receivedData);
       appState.handlePortMainData(receivedData);
+      appState.applyFiltersAndUpdateDropdowns('port');
+      // appState.setPortData(receivedData)
 
       document.getElementById('formPortValue').textContent = formPortValue;
       document.getElementById('formPortNotional').textContent = formPortNotional;
