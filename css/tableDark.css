@@ -316,6 +316,10 @@
   margin-top: 20px; /* Adds space above the .lower-part */
   padding-left: 40px;
 }
+#COMP_Modal .data-wrapper {
+  height: 200px; /* Adjust the height value as needed */
+  overflow-y: auto; /* Optional: adds a vertical scrollbar if content overflows */
+}
 
 
 
