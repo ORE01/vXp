@@ -63,6 +63,26 @@
   width: 100% !important;
   height: 100% !important;
 }
+/* CSS for the container of the chart */
+#issuerGraphContainer {
+  width: 100%; /* Make the container take up the full width */
+  height: 50vh; /* Set a fixed height for the container */
+  overflow: hidden; /* Hide overflow content */
+  position: relative;
+}
 
-  
-  
+.comp-chart-container {
+  width: 30%; /* Adjust the width as needed */
+  max-width: 300px; /* Set a maximum width to limit expansion */
+  height: 400px; /* Set the height */
+  display: inline-block; /* Display the containers inline */
+  margin: 10px; /* Add margin between the containers */
+}
+
+
+#compChart {
+  width: 100%; /* Ensure the chart fills its container */
+  height: auto; /* Allow the height to adjust based on the container */
+}
+
+

@@ -1,3 +1,29 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:165ab31811557522fcbff70c4694ce3ca6ad1265127d64600c9d6ef522cf97b0
-size 817
+function createBarChart(data, chartName, Type, IndexAxis) {
+    //console.log('data.datasets:', data.datasets);
+    const ctx = document.getElementById(chartName).getContext('2d');
+    
+    const chart = new Chart(ctx, {
+      type: Type,
+      data: {
+        labels: data.labels,
+        datasets: data.datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: IndexAxis,
+        scales: {
+          y: {
+            beginAtZero: true, // Start the Y-axis from 0
+            ticks: {
+              autoSkip: false, // Do not skip labels
+              //maxTicksLimit: 200 // Set the maximum number of ticks to display
+            }
+          }
+        }
+      }
+    });
+    return chart;
+  }
+  
+  export default createBarChart;
