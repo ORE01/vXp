@@ -1,4 +1,4 @@
-node_modules
+# Ignorierte Verzeichnisse und Dateien
 node_modules/
 .env
 large_directory/
@@ -7,4 +7,6 @@ zzzApp/
 bin/
 zzzArchiv/
 files/
-out
+out temp_folder/
+ 
+ 
