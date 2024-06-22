@@ -8,7 +8,7 @@ bin/
 zzzArchiv/
 files/
 out temp_folder/
-dist/  # Neuer Eintrag für das Verzeichnis dist
+dist/
 
 
 
