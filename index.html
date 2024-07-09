@@ -35,7 +35,7 @@
       <div class="left-section">
         <div class="portfolio-info">
           <h2 class="section-header">ISSUER</h2>
-          <div class="dropdown-wrapper">
+          <!-- <div class="dropdown-wrapper">
             <div>
               <p>Select Issuers:</p>
               <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
@@ -54,11 +54,32 @@
               </svg>
             </button>
           </p>
-        </div>
+        </div> -->
       </div>
 
       <!-- Middle Section: Issuer Data -->
       <div class="middle-section">
+
+        <div class="dropdown-wrapper">
+          <div>
+            <p>Select Issuers:</p>
+            <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+          </div>
+          <div>
+            <p>Select Rating:</p>
+            <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+          </div>
+        </div>
+        <p>
+          <button id="issuerResetFiltersButton" class="reset-FiltersButton">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+              <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+              <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </p>
+      </div>
         <div class="data-wrapper">
           <div class="button-wrapper">
             <button id="issuerAddButton">ADD</button>
@@ -99,7 +120,7 @@
     <div class="portfolio-info">
       <h2 class="section-header">PRODUCTS</h2>
 
-      <!-- Scrollable area for dropdowns -->
+      <!-- Scrollable area for dropdowns
       <div class="dropdown-wrapper">
         <div>
           <p>Select Issuers:</p>
@@ -135,10 +156,48 @@
             <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
           </svg>
         </button>
-      </p>
+      </p> -->
 
     </div>
     <div class="data-wrapper">
+
+          <!-- Scrollable area for dropdowns -->
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Product Ids:</p>
+              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Coupon Type:</p>
+              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Maturity:</p>
+              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rank:</p>
+              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+    
+          <p>
+            <button id="prodResetFiltersButton" class="reset-FiltersButton">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
       <div class="button-wrapper">
         <button id="prodAddButton">ADD</button>
       </div>
@@ -186,8 +245,10 @@
           <button id="saveSelectionButton" style="margin-right: 5px; background-color: green; color: white;">Save Selection</button>
           <button id="deleteTableButton" style="background-color: red; color: white;">Delete Selection</button>
         </div>
+      </div>
+    </div>
+    <div class="data-wrapper">
 
-      
       <div class="dropdown-wrapper"> 
 
         <div>
@@ -225,10 +286,6 @@
           </svg>
         </button>
       </p>
-  
-      </div>
-    </div>
-    <div class="data-wrapper">
       <div class="button-wrapper">
         <button id="dealsAddButton">ADD</button>
       </div>
@@ -266,6 +323,12 @@
         <!-- <div class="data-container" id="PortYieldDataContainer"></div> -->
         <p>Interest Rate Sensitivity: <span id="formPortPV01"></span></p>
         <p>Credit Spread Sensitivity: <span id="formPortCPV01"></span></p>
+        <p>MVaR: <span id="formPortMvarTOT"></span></p>
+        <p>MVaRIR: <span id="formPortMvarIR"></span></p>
+        <p>MVaRCS: <span id="formPortMvarCS"></span></p>
+  
+        <p>CVaR: <span id="formPortCvarTOT"></span></p>
+
         <p>Value at Risk/Expected Shortfall:</p>
 
         <div class="data-container" id="MVaRMainDataContainer"></div>
@@ -275,52 +338,7 @@
         <p>
 
         </p>
-          <div class="dropdown-wrapper"> 
-            <div>
-              <p>Select Issuers:</p>
-              <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-            <div>
-              <p>Select Product Ids:</p>
-              <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-            <div>
-              <p>Select Coupon Type:</p>
-              <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-            <div>
-              <p>Select Category:</p>
-              <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="portRatingDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-            <div>
-              <p>Select Maturity:</p>
-              <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-            <div>
-              <p>Select Depotbank:</p>
-              <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
-              </select>
-            </div>
-        </div>
-        <p>
-          <button id="portResetFiltersButton" class="reset-FiltersButton">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-              <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-              <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-            </svg>
-          </button>
-        </p>
+
         <p>filtered:</p>
         <p>Notional: <span id="formFiltPortNotional"></span></p>
         <p>NetAssetValue: <span id="formFiltPortValue"></span></p>
@@ -330,7 +348,54 @@
         <p>Yield: <span id="formFiltPortYieldA"></span></p>
       </div>
     </div>
+    
     <div class="data-wrapper">
+      <div class="dropdown-wrapper"> 
+        <div>
+          <p>Select Issuers:</p>
+          <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Product Ids:</p>
+          <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Coupon Type:</p>
+          <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Category:</p>
+          <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Rating:</p>
+          <select id="portRatingDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Maturity:</p>
+          <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Depotbank:</p>
+          <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+    </div>
+    <p>
+      <button id="portResetFiltersButton" class="reset-FiltersButton">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+          <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+          <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+        </svg>
+      </button>
+    </p>
       <div class="data-container" id="portDataContainer"></div>
     </div>
   </div>
