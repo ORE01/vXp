@@ -1,0 +1,244 @@
+import processData from './renderer/dataProcessor.js';
+import { handleFormAction } from './renderer/FormButtonHandler.js';
+
+
+// Function to toggle visibility of the ECB content and handle data
+document.getElementById('toggleEcbText').addEventListener('click', function() {
+    const ecbContainer = document.getElementById('inputEcb-container');  // ECB table container
+    const mainTableContainer = document.getElementById('TSDataContainer');  // Main data table container
+    const chartContainer = document.querySelector('#TSlineChart').parentElement;  // Chart container (parent of canvas)
+    const checkboxContainer = document.getElementById('checkboxContainer');  // Checkbox container
+    const loadButton = document.getElementById('loadButton');  // Load data button
+    const AddButton = document.getElementById('ecbAddButton');  // Load data button
+    const toggleTSGraphTable = document.getElementById('toggleTSGraphTable');  // Graph/Table toggle text
+    
+
+    // Toggle visibility of the ECB content
+    if (ecbContainer.style.display === 'none' || ecbContainer.style.display === '') {
+        ecbContainer.style.display = 'block';  // Show ECB content
+        if (mainTableContainer) mainTableContainer.style.display = 'none';  // Hide main table
+        if (chartContainer) chartContainer.style.display = 'none';  // Hide chart
+        if (checkboxContainer) checkboxContainer.style.display = 'none';  // Hide checkboxes
+        if (loadButton) loadButton.style.display = 'none';  // Hide Load Data button
+        if (AddButton) AddButton.style.display = 'block';  // Hide Load Data button
+        if (toggleTSGraphTable) toggleTSGraphTable.style.display = 'none';  // Hide Graph/Table toggle
+    } else {
+        ecbContainer.style.display = 'none';  // Hide ECB content
+        
+        // Only show the chart, hide the table
+        if (mainTableContainer) mainTableContainer.style.display = 'none';  // Ensure main table remains hidden
+        if (chartContainer) chartContainer.style.display = 'block';  // Show chart
+        if (checkboxContainer) checkboxContainer.style.display = 'block';  // Show checkboxes
+        if (loadButton) loadButton.style.display = 'block';  // Show Load Data button
+        if (AddButton) AddButton.style.display = 'none'; 
+        if (toggleTSGraphTable) toggleTSGraphTable.style.display = 'block';  // Show Graph/Table toggle
+    }
+});
+
+
+// Function to handle ECB data and display it in a table
+export function handleEcbData(receivedData) {
+    const ecbDataContainer = document.getElementById('inputEcb-container');  // Get the container element for the ECB table
+    const ecbData = receivedData;  // Assign the received data
+
+    // Function to create an HTML table from the data
+    function createTable(data) {
+        const table = document.createElement('table');
+        const headers = Object.keys(data[0]);
+
+        // Create table headers
+        const headerRow = document.createElement('tr');
+        headers.forEach((header) => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        table.appendChild(headerRow);
+
+        // Populate table with data
+        data.forEach((row, rowIndex) => {
+            const tableRow = document.createElement('tr');
+            headers.forEach((header) => {
+                const cell = document.createElement('td');
+                cell.textContent = row[header];
+                cell.setAttribute('contentEditable', 'true');  // Make cells editable
+                tableRow.appendChild(cell);
+            });
+
+            // Add edit button to each row
+            const editCell = document.createElement('td');
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Edit';
+            editButton.classList.add('edit-button');
+            editButton.setAttribute('data-row', rowIndex);
+            editCell.appendChild(editButton);
+            tableRow.appendChild(editCell);
+
+            table.appendChild(tableRow);
+        });
+
+        return table;
+    }
+
+    // Clear any previous data from the container
+    while (ecbDataContainer.firstChild) {
+        ecbDataContainer.removeChild(ecbDataContainer.firstChild);
+    }
+
+    // Create and append the new table
+    const table = createTable(ecbData);
+    ecbDataContainer.appendChild(table);
+
+    // Attach event listeners for the edit buttons
+    const ecbEditButtons = document.querySelectorAll('#inputEcb-container .edit-button');
+    ecbEditButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const tableName = 'ecb';
+            const actionType = 'edit';
+            const rowIndex = parseInt(button.getAttribute('data-row'), 10);
+            handleFormAction(event, ecbData, rowIndex, tableName, actionType);
+        });
+    });
+
+    // Add event listener for the Add button
+    const ecbAddButton = document.getElementById('ecbAddButton');
+    ecbAddButton.addEventListener('click', (event) => {
+        const tableName = 'ecb';
+        const actionType = 'add';
+        handleFormAction(event, ecbData, null, tableName, actionType);
+    });
+}
+
+
+
+
+//---------------------------------------------------------------------------------//
+
+
+// Exported ECB Input - Save Data Function
+export function handleSaveEcbClick() {
+    console.log('handleSaveEcbClick called');
+    const editedEcbData = extractEditedEcbData();  // Extract edited data from the ECB table
+    console.log('Edited ECB Data:', editedEcbData);
+
+    const cleanTableName = 'ecb';  // Database table name for ECB data
+
+    editedEcbData.forEach(row => {
+        let uniqueIdentifier;
+
+        if (!row['ID']) {
+            // If no ID exists, log an error (this should not happen since you're entering an ID manually)
+            console.error(`Missing ID for row, skipping:`, row);
+            return;
+        } else {
+            // Use the manually entered ID as the unique identifier
+            uniqueIdentifier = { column: 'ID', value: row['ID'] };
+            console.log('Saving row with ID:', row['ID']);
+        }
+
+        const newData = {
+            INCLUDE: row['INCLUDE'] || '',
+            FX: row['FX'] || '',
+            FLOWREF: row['FLOWREF'] || '',
+            NAME: row['NAME'] || '',
+            SERIES_ID: row['SERIES_ID'] || '',
+            ID: row['ID'],  // Ensure the ID is included
+        };
+
+        console.log('New Data to Save:', newData);
+
+        // Call the save function for each row
+        saveEditedData(newData, cleanTableName, uniqueIdentifier);
+    });
+
+    updateTableAfterSave(editedEcbData);  // Update the table visually
+}
+
+
+// ECB Input - Extract Edited Data Function
+function extractEditedEcbData() {
+    const editedData = [];
+    const table = document.getElementById('inputEcb-container');  // Container for the ECB table
+    const rows = table.querySelectorAll('tr');
+
+    for (let i = 1; i < rows.length; i++) {  // Skip the header row
+        const row = rows[i];
+        const cells = row.querySelectorAll('td');
+        const rowData = {};
+
+        for (let j = 0; j < cells.length; j++) {
+            const header = table.querySelector('th:nth-child(' + (j + 1) + ')').textContent;  // Get column name
+            rowData[header] = cells[j].textContent.trim();  // Get edited cell value and trim whitespace
+        }
+
+        // Ensure that the row contains a unique ID
+        if (rowData['ID']) {
+            editedData.push(rowData);  // Add row data to the array
+        } else {
+            console.log('Skipping row without ID:', rowData);
+        }
+    }
+
+    return editedData;  // Return the edited data array
+}
+
+// Add Row to ECB Table
+export function addRowToEcbTable() {
+    const table = document.getElementById('inputEcb-container').querySelector('table');
+    if (table) {
+        const newRow = document.createElement('tr');
+        const headers = table.querySelectorAll('th');
+        const numColumns = headers.length;
+
+        for (let i = 0; i < numColumns; i++) {
+            const newCell = document.createElement('td');
+
+            // Ensure that the 'ID' column has a unique ID inputted manually by the user
+            if (headers[i].textContent === 'ID') {
+                newCell.textContent = '';  // Leave it blank for the user to input a unique ID manually
+            } else {
+                newCell.textContent = '';  // Leave it empty for other data inputs
+            }
+
+            newCell.setAttribute('contentEditable', 'true');  // Make the cell editable
+            newCell.style.border = '1px solid black';
+            newCell.style.padding = '8px';
+            newRow.appendChild(newCell);
+        }
+
+        table.appendChild(newRow);
+
+        // Call handleFormAction to further manage this new row addition
+        handleFormAction(null, null, null, 'ecb', 'add');
+    }
+}
+
+
+// ECB Input - Save Edited Data Function
+function saveEditedData(newData, cleanTableName, uniqueIdentifier) {
+    console.log('Saving ECB data:', newData, cleanTableName, uniqueIdentifier);
+
+    // Send the data to the backend via IPC (Electron)
+    window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
+
+    // Reprocess the table after the data is saved
+    const table = document.getElementById('inputEcb-container').querySelector('table');
+    const processedData = processData(newData, cleanTableName);  // Process data after save (depends on your processData function)
+    table.innerHTML = processedData;  // Replace the table content with processed data
+}
+
+
+// Update the table UI after saving to reflect the changes
+function updateTableAfterSave(editedData) {
+    const table = document.getElementById('inputEcb-container');
+    const rows = table.querySelectorAll('tr');
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.querySelectorAll('td');
+
+        Object.keys(editedData[i - 1]).forEach((key, j) => {
+            cells[j].textContent = editedData[i - 1][key];  // Update the table with saved values
+        });
+    }
+}
