@@ -1,0 +1,179 @@
+import processData from './renderer/dataProcessor.js';
+import createLineChart from './charts/LineChart.js';
+import { handleFormAction } from './renderer/FormButtonHandler.js';
+
+let FWDlineChart;
+
+// Function to linearly interpolate swap rates between known points
+function interpolateRates(swapRates, startYear, endYear, startIndex, endIndex) {
+  const interpolatedRates = [];
+  
+  for (let i = startYear + 1; i < endYear; i++) { // Interpolate between years
+    const x1 = startYear;
+    const y1 = swapRates[startIndex]; // Corresponding swap rate at startYear
+    const x2 = endYear;
+    const y2 = swapRates[endIndex]; // Corresponding swap rate at endYear
+
+    // Linear interpolation formula
+    const interpolatedRate = y1 + ((i - x1) / (x2 - x1)) * (y2 - y1);
+    interpolatedRates.push({ year: `${i}Y`, rate: interpolatedRate });
+  }
+
+  return interpolatedRates;
+}
+
+// Function to bootstrap discount factors and calculate forward rates
+function calculateForwardRates(swapRates) {
+  const discountFactors = [];
+  const forwardRates = [];
+
+  // Loop through each swap rate and calculate the discount factor and forward rate
+  swapRates.forEach((swapRate, n) => {
+    const S_n = swapRate / 100; // Convert percentage to decimal
+    let sumDiscountFactors = 0;
+
+    // Calculate the sum of previous discount factors
+    for (let i = 0; i < n; i++) {
+      sumDiscountFactors += discountFactors[i];
+    }
+
+    // Calculate the discount factor for year n+1
+    const D_n = (1 - S_n * sumDiscountFactors) / (1 + S_n);
+    discountFactors.push(D_n);
+
+    // If there's a previous discount factor, calculate the forward rate
+    if (n > 0) {
+      const fwdRate = (discountFactors[n - 1] / D_n) - 1;
+      forwardRates.push(fwdRate * 100); // Convert back to percentage
+    }
+  });
+
+  return { forwardRates };
+}
+
+// Function to handle the FWD data
+export function handleFWDData(receivedData) {
+  const FWDData = receivedData;
+  console.log('Received prodData callback called.');
+
+  const FWDDataContainer = document.getElementById('FWDDataContainer'); // Ensure this container exists
+  if (!FWDDataContainer) {
+    console.error('FWDDataContainer element is not found.');
+    return;
+  }
+
+  if (FWDData) {
+    const FWDDataHTML = processData(FWDData);
+    FWDDataContainer.innerHTML = FWDDataHTML;
+  }
+
+  // Retrieve the data from the FWDDataContainer
+  const table = FWDDataContainer.querySelector('#dataTable');
+  const rows = Array.from(table.rows);
+
+  // Ensure the FORWARDS header is added
+  const headerRow = table.rows[0]; // Assuming the first row is the header
+  const headerCells = Array.from(headerRow.cells);
+
+  // Check if the FORWARDS header exists, if not, add it
+  if (!headerCells.some(cell => cell.textContent.trim() === 'FORWARDS')) {
+    const forwardsHeader = document.createElement('th');
+    forwardsHeader.textContent = 'FORWARDS';
+    headerRow.appendChild(forwardsHeader); // Append the FORWARDS header
+  }
+
+  // Extract original swap rates and years from the table
+  let swapRates = rows.slice(1).map((row) => {
+    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
+    return parseFloat(rowData[2].replace('%', '')); // Extracting swap rate values and removing %
+  });
+
+  let swapYears = rows.slice(1).map((row) => {
+    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
+    return rowData[1]; // Extracting year values
+  });
+
+  // Interpolation between key points (15Y to 20Y, 20Y to 25Y, 25Y to 30Y)
+  const interpolationPoints = [
+    { startYear: 15, endYear: 20, startIndex: swapYears.indexOf('15Y'), endIndex: swapYears.indexOf('20Y') },
+    { startYear: 20, endYear: 25, startIndex: swapYears.indexOf('20Y'), endIndex: swapYears.indexOf('25Y') },
+    { startYear: 25, endYear: 30, startIndex: swapYears.indexOf('25Y'), endIndex: swapYears.indexOf('30Y') }
+  ];
+
+  // Interpolated rates and years
+  let interpolatedYears = [];
+  let interpolatedSwapRates = [...swapRates];
+
+  interpolationPoints.forEach(({ startYear, endYear, startIndex, endIndex }) => {
+    // Get interpolated rates for the missing years
+    const interpolatedRates = interpolateRates(swapRates, startYear, endYear, startIndex, endIndex);
+
+    // Update the list of interpolated years and swap rates
+    interpolatedRates.forEach(({ year, rate }, i) => {
+      interpolatedYears.push(year); // Year is in the form of "16Y", "17Y", etc.
+      interpolatedSwapRates.splice(startIndex + 1 + i, 0, rate);
+      swapYears.splice(startIndex + 1 + i, 0, year); // Add the interpolated years to the original list
+    });
+  });
+
+  // Now sort the years and rates properly in the correct sequence
+  const finalData = swapYears.map((year, index) => ({
+    year,
+    rate: interpolatedSwapRates[index]
+  }));
+
+  finalData.sort((a, b) => parseInt(a.year) - parseInt(b.year)); // Sort based on the numeric value of the years
+
+  // Calculate forward rates using the interpolated swap rates
+  const { forwardRates } = calculateForwardRates(finalData.map(item => item.rate));
+
+  // Destroy the existing FWD line chart before creating a new one
+  if (FWDlineChart) {
+    FWDlineChart.destroy();
+  }
+
+  // Get the RATES dataset for the chart
+  const ratesDataset = {
+    label: 'RATES',
+    data: [],
+    fill: false,
+    borderColor: 'rgba(75, 192, 192, 1)',
+    tension: 0.1,
+  };
+
+  const forwardsDataset = {
+    label: 'FORWARDS',
+    data: [],
+    fill: false,
+    borderColor: 'rgba(255, 99, 132, 1)',
+    tension: 0.1,
+  };
+
+  // Clear the table (except headers) before updating with new rows
+  while (table.rows.length > 1) {
+    table.deleteRow(1); // Keep deleting rows except the header row
+  }
+
+  // Insert rows for both original and interpolated data in the correct order
+  finalData.forEach((item, index) => {
+    const newRow = document.createElement('tr');
+    const forwardValue = forwardRates[index - 1] ? forwardRates[index - 1].toFixed(2) : ''; // For the forward column
+    newRow.innerHTML = `
+      <td>swap</td>
+      <td>${item.year}</td>
+      <td>${item.rate.toFixed(3)}%</td>
+      <td>Edit</td>
+      <td>${forwardValue}%</td> <!-- Add the calculated forward rate -->
+    `;
+    table.appendChild(newRow); // Append each new row
+
+    // Update the datasets
+    ratesDataset.data.push({ x: item.year, y: item.rate });
+    if (forwardValue) {
+      forwardsDataset.data.push({ x: item.year, y: parseFloat(forwardValue) });
+    }
+  });
+
+  // Create the FWD line chart using both RATES and FORWARDS datasets
+  FWDlineChart = createLineChart([ratesDataset, forwardsDataset], 'FWDlineChart', 'Interest Rates and Forwards', 3);
+}

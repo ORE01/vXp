@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link href="./css/tableDark.css" rel="stylesheet">
+  <link href="./css/modalDark.css" rel="stylesheet">
+  <link href="./css/Tables.css" rel="stylesheet">
+  <link href="./css/Chart.css" rel="stylesheet">
+  <link href="./css/Dropdown.css" rel="stylesheet">
+  <link href="./css/Button.css" rel="stylesheet">
+  <link href="./css/ToolTip.css" rel="stylesheet">
+
+<!-- Library Imports -->
+ 
+<!-- Chart.js 4.0.1 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"></script>
+
+<!-- Date adapter for handling time scales -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0"></script> -->
+
+<!-- Chart.js Zoom Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
+<!-- Chart.js Annotation Plugin (if you need it) -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+
+
+
+
+
+
+
+
+
+  <title>ValuationXpro</title>
+</head>
+<body>
+
+  <!-- Toolbar for Language Toggle -->
+  <div id="toolbar" class="toolbar">
+    <div class="language-toggle">
+      <button id="lang-en" class="language-button">EN</button>
+      <button id="lang-de" class="language-button">DE</button>
+    </div>
+  </div>
+
+
+  <div class="tab">
+    <button class="tablinks" id="ISSUER_Tab">ISSUERS</button>
+    <button class="tablinks" id="PROD_Tab">PRODUCTS</button>
+    <button class="tablinks" id="DEALS_Tab">CREATE PORTFOLIO</button>
+    <button class="tablinks" id="PORT_Tab">ANALYSE PORTFOLIO</button>
+    <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
+    <button class="tablinks" id="SENS_Tab">SENSITIVITIES</button>
+    <button class="tablinks" id="IR_Tab">RATES</button>
+    <button class="tablinks" id="FWD_Tab">FORWARDS</button>
+    <button class="tablinks" id="TS_Tab">HIST DATA</button>
+    <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
+    <button class="tablinks" id="MVaR_Tab">M-VaR</button>
+    <button class="tablinks" id="CVaR_Tab">C-VaR</button>
+    <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+    <button class="tablinks" id="ML_Tab">ML</button> 
+  </div>
+
+<!-- Modal - ISSUER -->
+<div id="ISSUER_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="content-wrapper">
+      <!-- Left Section: Dropdowns -->
+      <div class="left-section">
+        <div class="portfolio-info">
+          <h2 class="section-header">ISSUER</h2>
+      </div>
+
+      <!-- Middle Section: Issuer Data -->
+      <div class="middle-section">
+
+        <div class="dropdown-wrapper">
+          <div>
+            <p>Select Issuers:</p>
+            <select id="issuerIssuerDropdown" multiple class="select-dropdown "></select>
+          </div>
+          <div>
+            <p>Select Rating:</p>
+            <select id="issuerRatingDropdown" multiple class="select-dropdown "></select>
+          </div>
+        </div>
+        <p>
+          <button id="issuerResetFiltersButton" class="reset-FiltersButton">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+              <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+              <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+            </svg>
+          </button>
+        </p>
+      </div>
+        <div class="data-wrapper">
+          <div class="button-wrapper">
+            <button id="issuerAddButton">ADD</button>
+          </div>
+          <!-- <div class="table-wrapper"> -->
+            <!-- <div class="data-container" id="issuerDataContainer"></div> -->
+            <!-- <div class="table-wrapper" > -->
+              <div class="data-container" id="issuerDataContainer"></div>
+          <!-- </div> -->
+        </div>
+      </div>
+
+      <!-- Right Section: Chart and CS Parameters -->
+      <div class="right-section">
+        <!-- Upper Part: Chart -->
+        <div class="upper-part">
+          <div class="table-wrapper" id="issuerGraphContainer">
+            <canvas id="CS_ChartCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Lower Part: CS Parameters -->
+        <div class="lower-part">
+
+          <p>CS Curve Parameter:</p>
+          <p>e: Relative Displacement in %. Default 1</p>
+          <p>f: Absolute Displacement in Basis Points. Default 0</p>
+          <div class="data-container" id="CSParameterDataContainer"></div>
+          <div class="button-wrapper">
+            <button id="CSParButton" class="edit-button">CSParameter</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - PROD -->
+<div id="PROD_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">PRODUCTS</h2>
+
+    </div>
+    <div class="data-wrapper">
+
+          <!-- Scrollable area for dropdowns -->
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Product Ids:</p>
+              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Coupon Type:</p>
+              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Maturity:</p>
+              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rank:</p>
+              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+    
+          <p>
+            <button id="prodResetFiltersButton" class="reset-FiltersButton">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+      <div class="button-wrapper">
+        <button id="prodAddButton">ADD</button>
+      </div>
+      <div class="data-container" id="prodDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - DEALS / CREATE PORTFOLIO -->
+<div id="DEALS_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">EDIT / CREATE PORTFOLIO</h2>
+      <div class="filter-wrapper" style="display: flex; flex-direction: column; width: 100%;">
+
+        <!-- DEALS Dropdown -->
+        <h2 class="small-section-header">Edit Portfolio</h2>
+        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+          <label for="createdDealsDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select PORTFOLIO:</label>
+          <select id="createdDealsDropdown" style="width: 80%; background-color: white;"></select>
+        </div>
+
+        <!-- Trade ID Dropdown -->
+        <h2 class="small-section-header">Create New Portfolio from Selected One</h2>
+        <div class="trade-dropdown-wrapper portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+          <label for="tradeDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select TRADE_ID:</label>
+          <select id="tradeDropdown" multiple class="select-dropdown" multiple style="width: 80%; background-color: white;"></select>
+        </div>
+        
+        <!-- Name Input -->
+        <div class="tag-input" style="display: flex; margin-bottom: 10px;">
+          <label for="nameInput" style="width: 20%; min-width: 150px;margin-left: 20px;">New Portfolio Name:</label>
+          <input type="text" id="nameInput" value="" style="width: 80%; background-color: white;">
+        </div>
+
+        <!-- Tag Input Field -->
+        <div class="tag-input" style="display: flex; margin-bottom: 10px;">
+          <label for="tagInputField" style="width: 20%; min-width: 150px; margin-left: 20px;">Tag selection:</label>
+          <input type="text" id="tagInputField" value="" style="width: 80%; background-color: white;">
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-row" style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+          <button id="saveSelectionButton" style="margin-right: 5px; background-color: green; color: white;">Save Selection</button>
+          <button id="deleteTableButton" style="background-color: red; color: white;">Delete Selection</button>
+        </div>
+      </div>
+    </div>
+    <div class="data-wrapper">
+
+      <div class="dropdown-wrapper"> 
+
+        <div>
+          <p>Select Products:</p>
+          <select id="dealsProdIdDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
+        <div>
+          <p>Select Category:</p>
+          <select id="dealsCategoryDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
+        <div>
+          <p>Select Notional:</p>
+          <select id="dealsNotionalDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
+        <div>
+          <p>Select Depotbank:</p>
+          <select id="dealsDepotbankDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+
+      </div>
+
+      <p>
+        <button id="dealsResetFiltersButton" class="reset-FiltersButton">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+            <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+            <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+          </svg>
+        </button>
+      </p>
+      <div class="button-wrapper">
+        <button id="dealsAddButton">ADD</button>
+      </div>
+      <div class="data-container" id="dealsDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - PORT / ANALYSE PORTFOLIO -->
+<div id="PORT_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">PORTFOLIO</h2>
+      <div>
+
+        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+          <select id="createdPortDropdown0" style="width: 80%; background-color: white;"></select> 
+        </div>
+
+
+        <div class="button-wrapper">
+          <button id="fairValueButton"class="edit-button">Fair Value</button>
+          <button id="MVaRButton"class="edit-button">VaR</button>
+          <button id="CVaRButton"class="edit-button">CVaR</button>
+          
+          <button id="portAddButton">PDF</button>
+      
+        </div>
+
+        <p>Notional: <span id="formPortNotional"></span></p>
+        <p>NetAssetValue: <span id="formPortValue"></span></p>
+        <p>Portfolio Yield: <span id="formPortYield"></span></p>
+        <p>Portfolio Yield act: <span id="formPortYieldA"></span></p>
+        <!-- <div class="data-container" id="PortYieldDataContainer"></div> -->
+        <p>Interest Rate Sensitivity: <span id="formPortPV01"></span></p>
+        <p>Credit Spread Sensitivity: <span id="formPortCPV01"></span></p>
+        <p>MVaR: <span id="formPortMvarTOT"></span></p>
+        <p>MVaRIR: <span id="formPortMvarIR"></span></p>
+        <p>MVaRCS: <span id="formPortMvarCS"></span></p>
+  
+        <p>CVaR: <span id="formPortCvarTOT"></span></p>
+
+        <p>Value at Risk/Expected Shortfall:</p>
+
+        <div class="data-container" id="MVaRMainDataContainer"></div>
+
+        <div class="data-container" id="CVaRDataContainer"></div>
+
+        <p>
+
+        </p>
+
+        <p>filtered:</p>
+        <p>Notional: <span id="formFiltPortNotional"></span></p>
+        <p>NetAssetValue: <span id="formFiltPortValue"></span></p>
+        <p>Interest Rate Sensitivity: <span id="formFiltPortPV01"></span></p>
+        <p>Credit Spread Sensitivity: <span id="formFiltPortCPV01"></span></p>
+        <p>Yield at Buy: <span id="formFiltPortYield"></span></p>
+        <p>Yield: <span id="formFiltPortYieldA"></span></p>
+      </div>
+    </div>
+    
+    <div class="data-wrapper">
+      <div class="dropdown-wrapper"> 
+        <div>
+          <p>Select Issuers:</p>
+          <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Product Ids:</p>
+          <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Coupon Type:</p>
+          <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Category:</p>
+          <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Rating:</p>
+          <select id="portRatingDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Maturity:</p>
+          <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Depotbank:</p>
+          <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+    </div>
+    <p>
+      <button id="portResetFiltersButton" class="reset-FiltersButton">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+          <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+          <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+        </svg>
+      </button>
+    </p>
+      <div class="data-container" id="portDataContainer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - SENS -->
+<div id="SENS_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">SENSITIVITIES</h2>
+
+    <!-- Left Part (Tables) -->
+    <div class="left-part">
+      <div class="data-wrapper">
+        <!-- <div id="inputMVaR-container"></div>
+        <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>-->
+        <p>PV01:</p>
+        <div class="data-container" id="IRSensDataContainer"></div> 
+        <div style="margin-top: 10em;"></div> 
+        <p>CPV01:</p>
+        <div class="data-container" id="CRSensDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Right Part (Chart) -->
+    <div class="right-part">
+      <div class="pv01-chart-container">
+        <canvas id="PV01Chart"></canvas>
+      </div>
+      <div style="margin-top: 10em;"></div> 
+      <div class="cpv01-chart-container">
+        <canvas id="CPV01Chart" width="400" height="400"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - IR -->
+<div id="IR_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">INTEREST RATES</h2>
+    <!-- <div class="data-container" id="IRDataContainer"></div> -->
+    <div id="IRDataContainer"></div>
+    <div class="chart-container">
+      <!-- <canvas id="IRlineChart"></canvas> -->
+      <canvas id="IRlineChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - FORWARDS -->
+<div id="FWD_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">FORWARD RATES</h2>
+
+    <!-- Two-column wrapper: Table on the left, Charts on the right -->
+    <div class="forward-layout-wrapper">
+      
+      <!-- Data table container (left column) -->
+      <div class="data-container" id="FWDDataContainer"></div>
+    
+      <!-- Charts container (right column) -->
+      <div class="forward-charts-wrapper">
+
+        <!-- First CMS forward length input for comparison -->
+        <div id="cmsInputContainer1">
+          <label for="cmsForwardInput1">CMS Forward Length 1:</label>
+          <input type="number" id="cmsForwardInput1" value="1" min="1" /> <!-- Input field for CMS forward length 1 -->
+          <button id="CMSButton1">Apply CMS Rate 1</button> <!-- Button for first CMS rate -->
+        </div>
+
+        <!-- Second CMS forward length input for comparison -->
+        <div id="cmsInputContainer2">
+          <label for="cmsForwardInput2">CMS Forward Length 2:</label>
+          <input type="number" id="cmsForwardInput2" value="5" min="1" /> <!-- Input field for CMS forward length 2 -->
+          <button id="CMSButton2">Apply CMS Rate 2</button> <!-- Button for second CMS rate -->
+        </div>
+
+        <!-- First chart container (CMS Forward Rate Chart) -->
+        <div class="chart-container">
+          <canvas id="FWDlineChart" class="forward-line-chart"></canvas>  <!-- Chart for CMS rates comparison -->
+        </div>
+
+        <!-- Entry field for years_forward -->
+        <div id="inputContainer">
+          <label for="yearsForwardInput">Years Forward:</label>
+          <input type="number" id="yearsForwardInput" value="1" min="1" /> <!-- Input field for years_forward -->
+          <button id="applyYearsForwardButton">Apply</button> <!-- Button to apply the input value -->
+        </div>
+
+        <!-- Second chart container -->
+        <div class="chart-container">
+          <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>  <!-- Second chart -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Modal - DataProvider -->
+<div id="DataProvider_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header Provider">PROVIDER</h2>
+
+    <!-- Links to external websites -->
+    <div class="links-container" style="width: 150px;">
+      <a href="https://www.ecb.europa.eu" target="_blank" class="provider-link">Visit ECB</a>
+      <a href="https://fred.stlouisfed.org/" target="_blank" class="provider-link">Visit Fed (FRED)</a>
+      <a href="https://finance.yahoo.com/" target="_blank" class="provider-link">Visit Yahoo Finance</a>
+    </div>
+
+    <!-- Tabs for ECB, Fed, and Yahoo -->
+    <div class="provider-wrapper">
+      <button id="ecbTab" class="edit-button">ECB</button>
+      <button id="fedTab" class="edit-button">Fed</button>
+      <button id="yahooTab" class="edit-button">Yahoo</button>
+    
+      <!-- ECB, Fed, and Yahoo Data Containers -->
+      
+        <div class="data-container" id="inputEcb-container"></div>
+        <div class="data-container" id="inputFed-container" style="display: none;"></div>
+        <div class="data-container" id="inputYahoo-container" style="display: none;"></div>
+      
+      <!-- Add buttons -->
+      <button id="ecbAddButton" class="edit-button">Add ECB Row</button>
+      <button id="fedAddButton" class="edit-button" style="display: none;">Add Fed Row</button>
+      <button id="yahooAddButton" class="edit-button" style="display: none;">Add Yahoo Row</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+<!-- Modal - TS -->
+<div id="TS_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">HISTORIC DATA [%]</h2>
+        <!-- Container where the modal sections will be cloned and appended -->
+        <div id="modal-content-container"></div>
+
+  </div>
+</div>
+
+
+<!-- Template for the Modal Sections to Clone -->
+<template id="TS_Modal_Template">
+  
+  <div class="table-content">
+    
+    <div class="filter-wrapper">
+      <label>Select Data:</label>
+      <!-- Checkbox Container for filtering data (aligned left) -->
+      <!-- <div id="checkboxContainer" class="checkbox-left"> -->
+      <div id="checkboxContainer" class="table-wrapper">
+        
+      </div>
+
+      <!-- Moving Averages Checkboxes  -->
+      <div class="table-wrapper">
+        <div class="moving-average-container">
+          <label>Apply Moving Averages:</label>
+          <br />
+          <input type="checkbox" id="applySMA1" /> SMA 1
+          <input type="number" id="movingAveragePeriod1" value="20" min="1" />
+          <br />
+          <input type="checkbox" id="applySMA2" /> SMA 2
+          <input type="number" id="movingAveragePeriod2" value="50" min="1" />
+          <br />
+          <input type="checkbox" id="applySMA3" /> SMA 3
+          <input type="number" id="movingAveragePeriod3" value="200" min="1" />
+          <br />
+        </div>
+      </div>
+
+<!-- Normalization Dropdown -->
+<div class="table-wrapper">
+  <div class="normalization-container">
+    <label for="normalizationType">Normalization Type:</label>
+    <select id="normalizationTypeSelector">
+      <option value="none">None</option>
+      <option value="dynamic">Dynamic</option>
+      <option value="firstValue">First Value</option>
+    </select>
+  </div>
+</div>
+
+
+      <!-- Load Button and Graph/Table toggle (wrapped in a container) -->
+      <div class="load-and-toggle-container">
+        <button id="loadButton" class="edit-button">Load Data</button>
+
+        <!-- Graph/Table toggle -->
+        <!-- <p id="toggleTSGraphTable" class="toggle-text">Graph/Table</p> -->
+      </div>
+
+    </div>
+
+
+
+    <!-- Individual chart container for the TS Chart -->
+    <div class="TSChart-container">
+      <div class="chart-container">
+        <canvas id="TSlineChart" width="1000" height="400"></canvas>
+      </div>
+
+
+
+      <!-- Buttons for time ranges (centered under the chart) -->
+      <div class="time-range-buttons">
+        <button id="oneYearButton">1Y</button>
+        <button id="fiveYearButton">5Y</button>
+        <button id="tenYearButton">10Y</button>
+        <button id="maxButton">Max</button>
+      </div>
+
+      <!-- Checkboxes and input fields for multiple Moving Averages
+      <div class="moving-average-container">
+        <label>Apply Moving Averages:</label>
+        <br />
+        <input type="checkbox" id="applySMA1" /> SMA 1
+        <input type="number" id="movingAveragePeriod1" value="20" min="1" />
+        <br />
+        <input type="checkbox" id="applySMA2" /> SMA 2
+        <input type="number" id="movingAveragePeriod2" value="50" min="1" />
+        <br />
+        <input type="checkbox" id="applySMA3" /> SMA 3
+        <input type="number" id="movingAveragePeriod3" value="200" min="1" />
+        <br />
+      </div> -->
+
+    <!-- Main data table wrapper -->
+    <div class="data-wrapper">
+      <div class="data-container" id="TSDataContainer"></div>
+    </div>
+  </div>
+</template>
+
+
+
+
+
+
+
+
+<!-- Modal - MVaR -->
+<div id="MVaR_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">MARKET VaR</h2>
+
+    <!-- Left Part (Tables) -->
+    <div class="left-part">
+      <div class="data-wrapper">
+        <!-- <div class="button-wrapper">
+          <button id="MVaRButton">CALC_VaR</button>
+        </div> -->
+        <div id="inputMVaR-container"></div>
+        <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
+        <div class="data-container" id="MVaRDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Right Part (Chart) -->
+    <div class="right-part">
+      <!-- <div class="chart-container"> -->
+        <canvas id="MVaRChart"></canvas>
+      <!-- </div> -->
+    </div>
+  </div>
+</div>
+
+<!-- Modal - CVaR -->
+<div id="CVaR_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2 class="section-header">CREDIT VaR</h2>
+
+    <!-- Left Part (Tables) -->
+    <div class="left-part">
+      <div class="data-wrapper">
+        <div class="chart-button-container">
+          <button class="chart-button" data-chart="EADChart">EAD</button>
+          <button class="chart-button" data-chart="LGDChart">LGD</button>
+          <button class="chart-button" data-chart="LossIssuerChartRating">LOSS ISSUER (Rating)</button>
+          <button class="chart-button" data-chart="LossIssuerChartMarket">LOSS ISSUER (Market)</button>          
+        </div>
+
+        <!-- Data containers for EAD, Rating, and Market -->
+        <div class="data-container" id="EADMainDataContainer"></div>
+        <div class="data-container" id="LossIssuerDataContainerRating"></div>
+        <div class="data-container" id="LossIssuerDataContainerMarket"></div>
+      </div>
+    </div>
+
+    <!-- Right Part (Charts) -->
+    <div class="right-part">
+      <div class="chart-container">
+
+        <!-- Chart for EAD -->
+        <div class="chart-container-table" id="EADChartContainer">
+          <canvas id="EADChart"></canvas>
+        </div>
+      
+        <!-- Chart for LGD -->
+        <div class="chart-container-table" id="LGDChartContainer">
+          <canvas id="LGDChart"></canvas>
+        </div>
+      
+        <!-- Chart for Loss Issuer Rating -->
+        <div class="chart-container-inner" id="LossIssuerChartContainerRating">
+          <canvas id="LossIssuerChartRating"></canvas>
+        </div>
+      
+        <!-- Chart for Loss Issuer Market -->
+        <div class="chart-container-inner" id="LossIssuerChartContainerMarket">
+          <canvas id="LossIssuerChartMarket"></canvas>
+        </div>
+      
+        <!-- Chart for Loss Issuer Combined (NEW) -->
+        <!-- <div class="chart-container-inner" id="LossIssuerCombinedChartContainer">
+          <canvas id="LossIssuerCombinedChart"></canvas>
+        </div> -->
+      
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal - UPDATES-->
+<div id="DATA_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>UPDATES</h2>
+    <div class="button-container">
+      <span class="button-label">Products, Deals and Swap-Rates </span>
+      <button id="updateDataExcelButton" class="edit-button">Data from EXCEL</button>
+      <span class="button-label">Data from ECB and FED (FRED) This update can take several minutes</span>
+      <button id="updateHistoricDataButton" class="edit-button">Historic Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal - COMPARE PORTFOLIOS-->
+<div id="COMP_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>COMPARE PORTFOLIOS</h2>
+  </div>
+
+  <!-- Portfolio Dropdown -->
+  <h2 class="small-section-header">Select Portfolio 1</h2>
+
+
+  <div class="portfolio-comparison-container" >
+    <div class="portfolio-details-container">
+
+      <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+        <select id="createdPortDropdown" style="width: 60%; background-color: white;"></select> 
+      </div>
+      <p>Notional: <span id="formPortNotional1"></span></p>
+      <p>NAV: <span id="formPortValue1"></span></p>
+
+      <p>Yield at Buy: <span id="formPortYield1"></span></p>
+      <p>Yield: <span id="formPortYieldA1"></span></p>
+
+      <p>PV01: <span id="formPortPV011"></span></p>
+      <p>CPV01: <span id="formPortCPV011"></span></p>
+
+      <p>MVaR: <span id="formPortMvarTOT1"></span></p>
+      <p>MVaRIR: <span id="formPortMvarIR1"></span></p>
+      <p>MVaRCS: <span id="formPortMvarCS1"></span></p>
+
+      <p>CVaR: <span id="formPortCvarTOT1"></span></p>
+    </div>
+  <div class="data-wrapper">
+    <div class="data-container" id="compPortDataContainer"></div>
+  </div>
+</div>
+
+  <h2 class="small-section-header">Select Portfolio 2</h2>
+
+
+  <div class="portfolio-comparison-container" >
+    <div class="portfolio-details-container">
+
+      <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+        <select id="createdPortDropdown2" style="width: 60%; background-color: white;"></select> 
+      </div>
+      
+      <p>Notional: <span id="formPortNotional2"></span></p>
+      <p>NAV: <span id="formPortValue2"></span></p>
+
+      <p>Yield at Buy: <span id="formPortYield2"></span></p>
+      <p>Yield: <span id="formPortYieldA2"></span></p>
+
+      <p>PV01: <span id="formPortPV012"></span></p>
+      <p>CPV01: <span id="formPortCPV012"></span></p>
+
+      <p>MVaR: <span id="formPortMvarTOT2"></span></p>
+      <p>MVaRIR: <span id="formPortMvarIR2"></span></p>
+      <p>MVaRCS: <span id="formPortMvarCS2"></span></p>
+
+      <p>CVaR: <span id="formPortCvarTOT2"></span></p>
+    </div>
+    <div class="data-wrapper">
+      <div class="data-container" id="compPortDataContainer2"></div>
+    </div>
+  </div>
+  
+  <!-- Group 1: -->
+  <div class="chart-group">
+    <div id="compChartContainer1" class="comp-chart-container"></div>
+    <div id="compChartContainer2" class="comp-chart-container"></div>
+    
+  </div>
+
+  <!-- Group 2: -->
+  <div class="chart-group">
+    <div id="compChartContainer3" class="comp-chart-container"></div>
+    <div id="compChartContainer4" class="comp-chart-container"></div>
+    <div id="compChartContainer5" class="comp-chart-container"></div>
+
+<!-- Group 3: -->
+  </div>
+  <div class="chart-group">
+    <div id="compChartContainer6" class="comp-chart-container"></div>
+  </div>
+</div>
+</div>
+
+<!-- Modal - ML -->
+<div id="ML_Modal" class="table">
+
+  <div class="language-toggle">
+    <!-- Language toggle buttons -->
+    <!-- Uncomment if needed -->
+    <!-- <button id="lang-en" class="language-button">EN</button>
+    <button id="lang-de" class="language-button">DE</button> -->
+  </div>
+
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>ML Configuration</h2>
+
+    <!-- Wrapper for input fields, table, and button -->
+    <div class="models-container">
+      
+      <!-- Input table wrapper -->
+      <div class="input-table-wrapper">
+        <h3>Select Target:</h3>
+        <div class="table-wrapper MLInputWrapper">
+          <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+
+      <!-- Table for ML Models -->
+      <h3>Use Trained ML Model</h3>
+      <div class="data-container">
+        <table id="MLTrainedModelsTable" class="data-container">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Target</th>
+              <th>Model Name</th>
+              <th>Created At</th>
+              <th>Model Type</th>
+              <th>Epochs</th>
+              <th>Batch Size</th>
+              <th>Optimizer</th>
+              <th>Loss</th>
+              <th>Metrics</th>
+              <th>Select Model</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rows will be dynamically inserted here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Generate and Train New ML Model -->
+      <div class="models-container">
+        <h3>Select Untrained ML Model</h3>
+                <!-- Checkbox for using a new model -->
+                <!-- <div class="input-container"> -->
+
+                <!-- </div> -->
+        <table id="MLModelsTable" class="data-container">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Model Type</th>
+              <th>Description</th>
+              <th>Select</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rows will be dynamically inserted here -->
+          </tbody>
+        </table>
+      </div>
+
+      <label for="newModelCheckbox">Use new model:</label>
+      <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
+      
+      <!-- Wrapper for Epochs, Batch Size, Use New Model, and Run ML -->
+      <h3>Untrained ML Model Parameters</h3>
+      <div class="table-wrapper MLInputWrapper">
+
+        <!-- Epochs Size -->
+        <div class="input-container">
+          <label for="epochsInput">
+            Epochs:
+            <span class="info-icon" id="tooltip-epochs">?</span>
+          </label>
+          <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
+        </div>
+
+        <!-- Batch Size -->
+        <div class="input-container">
+          <label for="batchSizeInput">
+            Batch Size:
+            <span class="info-icon" id="tooltip-batch-size">?</span>
+          </label>
+          <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
+        </div>
+
+
+      </div>
+
+      <h3>Start ML Model</h3>
+      <!-- Button to run ML -->
+      <div class="button-container">
+        <button id="MLButton" class="edit-button">Run ML</button>
+      </div>
+    </div>
+
+  </div> <!-- End of table-content -->
+
+    <!-- Chart Section -->
+    <div class="chart-section">
+      <h3>ML Charts</h3>
+
+      <!-- First Chart -->
+      <div id="test-data-chart-wrapper">
+        <h4>ML Test Data Chart</h4>
+        <canvas id="MLTestDataChart" width="600" height="300"></canvas>
+      </div>
+
+      <!-- Second Chart -->
+      <div id="future-prediction-chart-wrapper">
+        <h4>ML Predictions Chart</h4>
+        <canvas id="MLFuturePredictionChart" width="600" height="300"></canvas>
+      </div>
+    </div>
+
+  
+
+</div> <!-- End of ML_Modal -->
+
+
+
+
+
+
+
+
+
+
+
+<!-- Modal - Edit Row -->
+<div id="modal" class="modal">
+  <div class="modal-content draggable">
+    <span class="close">&times;</span>
+    <h2>Edit Row</h2>
+    <form id="editForm">
+      <!-- Add the dropdown (select) element here -->
+      <label for="issuerSelect">Select Issuer:</label>
+      <select id="issuerSelect"></select>
+      <!-- End of dropdown (select) element -->
+    </form>
+    <button id="saveButton">Save</button>
+    <button id="eraseButton">Delete</button>
+    <div id="errorMessage"></div>
+  </div>
+</div>
+
+
+
+  <script src="renderer.js" type="module"></script>
+
+  
+  <script>
+
+window.currentActiveTabId = '';
+
+const tabIds = ['DEALS_Tab', 'PORT_Tab', 'SENS_Tab', 'PROD_Tab', 'ISSUER_Tab', 'IR_Tab', 'FWD_Tab', 'TS_Tab', 'MVaR_Tab', 'CVaR_Tab', 'DATA_Tab', 'COMP_Tab', 'DataProvider_Tab', 'ML_Tab'];
+const modalIds = ['DEALS_Modal', 'PORT_Modal', 'SENS_Modal','PROD_Modal', 'ISSUER_Modal', 'IR_Modal', 'FWD_Modal','TS_Modal', 'MVaR_Modal', 'CVaR_Modal', 'DATA_Modal', 'COMP_Modal', 'DataProvider_Modal', 'ML_Modal'];
+
+// Handle tab button click events using a loop
+for (let i = 0; i < tabIds.length; i++) {
+  const tab = document.getElementById(tabIds[i]);
+  const modal = document.getElementById(modalIds[i]);
+
+  tab.addEventListener('click', () => {
+    window.currentActiveTabId = tabIds[i];
+    openTab(tabIds[i]);
+  });
+}
+
+// Open the specified tab content
+function openTab(tabName) {
+  // Hide all tab content
+  const tables = document.querySelectorAll('.table');
+  tables.forEach((table) => {
+    table.style.display = 'none';
+  });
+
+  // Show the specified tab content
+  for (let i = 0; i < tabIds.length; i++) {
+    if (tabName === tabIds[i]) {
+      const modal = document.getElementById(modalIds[i]);
+      modal.style.display = 'block';
+      break;
+    }
+  }
+}
+
+
+    // Close the active modal when the close button is clicked
+    const closeBtns = document.querySelectorAll('.close');
+    closeBtns.forEach((closeBtn) => {
+      closeBtn.addEventListener('click', () =>
+{
+    const modal = closeBtn.parentElement.parentElement;
+    modal.style.display = 'none';
+  });
+});
+
+// Make the modal draggable
+const draggableModals = document.querySelectorAll('.draggable');
+let isDragging = false;
+let initialMouseOffsetX = 0;
+let initialMouseOffsetY = 0;
+let initialModalPosX = 0;
+let initialModalPosY = 0;
+
+draggableModals.forEach((draggableModal) => {
+  // Mouse down event listener
+  draggableModal.addEventListener('mousedown', (e) => {
+    isDragging = true;
+
+    // Calculate the initial mouse offset relative to the modal's top and left positions
+    initialMouseOffsetX = e.clientX - draggableModal.getBoundingClientRect().left;
+    initialMouseOffsetY = e.clientY - draggableModal.getBoundingClientRect().top;
+
+    // Store the initial position of the modal
+    initialModalPosX = draggableModal.offsetLeft;
+    initialModalPosY = draggableModal.offsetTop;
+  });
+
+  // Mouse move event listener
+  window.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      // Calculate the new modal position based on the mouse movement
+      const newModalX = e.clientX - initialMouseOffsetX - initialModalPosX;
+      const newModalY = e.clientY - initialMouseOffsetY - initialModalPosY;
+
+      // Set the modal position
+      draggableModal.style.transform = `translate(${newModalX}px, ${newModalY}px)`;
+    }
+  });
+
+  // Mouse up event listener
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+});
+
+
+ 
+  </script>
+</body>
+</html>
+

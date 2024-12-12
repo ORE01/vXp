@@ -1,0 +1,159 @@
+import processData from './renderer/dataProcessor.js';
+import createLineChart from './charts/LineChart.js';
+
+let TSlineChart;
+let isAscending = true; // Track sorting order
+
+export function handleTSData(receivedData) {
+  const checkboxContainer = document.getElementById('checkboxContainer'); // Container for checkboxes
+  const loadButton = document.getElementById('loadButton'); // Load button for triggering data load
+  const TSData = receivedData;
+
+  if (TSData && checkboxContainer && loadButton) {
+    // Process the TSData, but do not display it yet
+    const TSDataHTML = processData(TSData, 'tblTS');
+    const tempDiv = document.createElement('div'); // Create a temporary container for the processed data
+    tempDiv.innerHTML = TSDataHTML;
+
+    // Retrieve the table rows and headers without displaying them
+    const table = tempDiv.querySelector('#dataTable');
+    const rows = Array.from(table.rows);
+    const headers = Array.from(rows.shift().cells).map((cell) => cell.textContent.trim());
+
+    // Clear the checkboxes
+    checkboxContainer.innerHTML = '';
+
+    // Create checkboxes for each dataset (skip the first column, which is the DATE column)
+    const checkboxes = headers.slice(1).map((header, index) => {
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `checkbox-${index}`;
+      checkbox.value = header;
+      checkbox.checked = false; // By default, no datasets are selected
+      checkboxContainer.appendChild(checkbox);
+
+      const label = document.createElement('label');
+      label.htmlFor = checkbox.id;
+      label.textContent = header;
+      checkboxContainer.appendChild(label);
+      checkboxContainer.appendChild(document.createElement('br'));
+
+      return checkbox;
+    });
+
+    // Create a button for sorting the date column
+    const dateSortButton = document.createElement('button');
+    dateSortButton.innerHTML = 'DATE &#9650;'; // Default arrow pointing up
+    dateSortButton.style.marginLeft = '10px';
+    checkboxContainer.appendChild(dateSortButton); // Add it near the checkboxes
+
+    // Sorting functionality for the date column
+    dateSortButton.onclick = () => {
+      isAscending = !isAscending; // Toggle the sorting order
+
+      // Update the arrow based on sorting order
+      dateSortButton.innerHTML = isAscending ? 'DATE &#9650;' : 'DATE &#9660;';
+
+      // Sort the rows by the first column (DATE)
+      const sortedRows = rows.slice(1).sort((a, b) => {
+        const dateA = new Date(a.cells[0].textContent);
+        const dateB = new Date(b.cells[0].textContent);
+        return isAscending ? dateA - dateB : dateB - dateA;
+      });
+
+      // Update rows in the table with the sorted rows
+      rows.splice(1, sortedRows.length, ...sortedRows);
+
+      // Now refresh the table and the chart after sorting
+      refreshTableAndChart(rows, headers, checkboxes);
+    };
+
+    // Clear any previous event listeners on the load button to avoid multiple triggers
+    loadButton.replaceWith(loadButton.cloneNode(true));
+    const newLoadButton = document.getElementById('loadButton');
+
+    // Function to load and display selected datasets
+    newLoadButton.onclick = () => {
+      refreshTableAndChart(rows, headers, checkboxes);
+    };
+
+    // Ensure that the load button is visible
+    loadButton.style.display = 'block';
+  }
+}
+
+function refreshTableAndChart(rows, headers, checkboxes) {
+  const selectedDatasets = checkboxes
+    .map((checkbox, index) => checkbox.checked ? {
+      label: headers[index + 1], // Add +1 to skip the date column
+      data: [],
+      index: index + 1 // Save the index to match with the table columns
+    } : null)
+    .filter(Boolean); // Remove unchecked datasets (null values)
+
+  if (selectedDatasets.length === 0) {
+    alert('Please select at least one dataset.');
+    return;
+  }
+
+  // Parse date strings from 'dd-mm-yyyy' to JavaScript Date objects
+  const parseDate = (dateString) => {
+    const [day, month, year] = dateString.split('-');
+    return new Date(`${year}-${month}-${day}`); // Convert to yyyy-mm-dd format for JavaScript Date
+  };
+
+  // Keep the first row as the header and exclude it from sorting
+  const tableHeader = rows[0]; // The first row is the header, keep it intact
+  const dataRows = rows.slice(1); // All other rows are data
+
+  // Sort the data rows by the first column (DATE)
+  const sortedRows = dataRows.sort((a, b) => {
+    const dateA = parseDate(a.cells[0].textContent);
+    const dateB = parseDate(b.cells[0].textContent);
+    return isAscending ? dateA - dateB : dateB - dateA;
+  });
+
+  // Reverse the table rows without affecting the graph
+  const TSDataContainer = document.getElementById('TSDataContainer');
+  TSDataContainer.style.display = 'block'; // Show the table container
+
+  // Create the table dynamically with the selected datasets
+  const dateHeader = tableHeader.cells[0].outerHTML; // Keep the DATE column intact
+  const newHeaderHTML = selectedDatasets.map(dataset => `<th>${dataset.label}</th>`).join('');
+  tableHeader.innerHTML = `${dateHeader}${newHeaderHTML}`; // Update the table header
+
+  // Clear previous table rows before inserting new ones
+  TSDataContainer.innerHTML = ''; // Clear the container
+  TSDataContainer.appendChild(tableHeader); // Append the header row first
+
+  // Insert sorted rows into the table
+  sortedRows.forEach((row) => {
+    const dateCell = row.cells[0].outerHTML; // Keep the DATE cell
+    const selectedCells = selectedDatasets.map(dataset => row.cells[dataset.index].outerHTML).join('');
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `${dateCell}${selectedCells}`;
+    TSDataContainer.appendChild(newRow); // Append each new row to the table
+  });
+
+  // Update the chart with the original dataset order (not reversed)
+  selectedDatasets.forEach((dataset) => {
+    // Clear existing data for each dataset
+    dataset.data = [];
+
+    // Extract the original (unsorted) data for the graph
+    rows.slice(1).forEach((row) => {
+      const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
+      const xValue = rowData[0]; // Use the DATE values in the original order
+      const yValue = parseFloat(rowData[dataset.index]);
+      dataset.data.push({ x: xValue, y: yValue });
+    });
+  });
+
+  // Destroy the existing chart if any
+  if (TSlineChart) {
+    TSlineChart.destroy();
+  }
+
+  // Create the chart with the selected datasets, without reversing the graph data
+  TSlineChart = createLineChart(selectedDatasets, 'TSlineChart', 'Timeseries', 0);
+}
