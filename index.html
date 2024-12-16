@@ -626,6 +626,69 @@
 
 
 
+<!-- Template for the ML Modal Sections to Clone -->
+<!-- <template id="ML_Modal_Template">
+  
+  <div class="table-content">
+    
+    <div class="filter-wrapper">
+      <label>Select Data:</label>
+      
+      <div id="checkboxContainer" class="table-wrapper">
+        
+      </div>
+
+      
+      <div class="table-wrapper">
+        <div class="normalization-container">
+          <label for="normalizationType">Normalization Type:</label>
+          <select id="normalizationTypeSelector">
+            <option value="none">None</option>
+            <option value="dynamic">Dynamic</option>
+            <option value="firstValue">First Value</option>
+          </select>
+        </div>
+      </div>
+
+     
+      <div class="table-wrapper">
+        <div class="daily-volatility-container">
+          <label>Apply Daily Volatility:</label>
+          <br />
+          <input type="checkbox" id="showDailyVolatility" /> Daily Volatility
+          <br />
+        </div>
+      </div>
+
+      
+      <div class="load-and-toggle-container">
+        <button id="loadButton" class="edit-button">Load Data</button>
+      </div>
+    </div>
+
+    
+    <div class="TSChart-container">
+      <div class="chart-container">
+        <canvas id="TSlineChart" width="1000" height="400"></canvas>
+      </div>
+
+      
+      <div class="time-range-buttons">
+        <button id="oneYearButton">1Y</button>
+        <button id="fiveYearButton">5Y</button>
+        <button id="tenYearButton">10Y</button>
+        <button id="maxButton">Max</button>
+      </div>
+
+      
+      <div class="data-wrapper">
+        <div class="data-container" id="TSDataContainer"></div>
+      </div>
+    </div>
+  </div>
+</template> -->
+
+
 
 
 
@@ -843,6 +906,9 @@
           <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top: 10px;"></div>
         </div>
       </div>
+
+      <div id="MLTS-modal-container"></div>
+
 
       <!-- Table for ML Models -->
       <h3>Use Trained ML Model</h3>

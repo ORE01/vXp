@@ -1,11 +1,13 @@
-let chartInstances = {}; // Global variable to store the current chart instance
+let chartInstance = null;
+let futurePredictionsChartInstance = null;
 let FWDlineChartInstance;
 let isDrawing = false; // Variable to track if the mouse is being pressed
 let debounceTimeout;
 
 
+export default function createLineChart(datasets, chartName, chartTitle, pointRadius, modalIndex, smaPeriods) {
 
-export default function createLineChart(datasets, chartName, chartTitle, pointRadius, modalIndex, movingAveragePeriod) {
+  
   const canvasElement = document.getElementById(chartName);
 
   if (!canvasElement) {
@@ -20,161 +22,13 @@ export default function createLineChart(datasets, chartName, chartTitle, pointRa
     return null;
   }
 
-  // Array to store the chart datasets
-  const allDatasets = [];
-
-  // Iterate through the datasets
-  datasets.forEach((dataset, index) => {
-    // Original dataset (solid line)
-    const originalDataset = {
-      label: dataset.label,  // Original dataset label
-      data: dataset.data.map(dataPoint => ({
-        x: dataPoint.x,
-        y: dataPoint.y,
-        originalY: dataPoint.originalY
-      })),
-      fill: false,
-      borderColor: getColorFromPalette(index),  // Unique color for each original dataset
-      tension: 0.1,
-      pointRadius: pointRadius,
-      borderWidth: 1,
-      spanGaps: true,
-      borderDash: []  // Solid line for the original dataset
-    };
-
-    // Add the original dataset to the list of datasets
-    allDatasets.push(originalDataset);
-
-    // Check if Moving Average (MA) is enabled and calculated
-    if (dataset.smaData && dataset.smaData.length > 0) {
-      const maDataset = {
-        label: `${dataset.label} (SMA ${movingAveragePeriod})`,  // MA dataset label
-        data: dataset.smaData.map(dataPoint => ({
-          x: dataPoint.x,
-          y: dataPoint.y
-        })),
-        fill: false,
-        borderColor: 'rgba(255, 0, 0, 0.5)',  // Red color for MA
-        borderDash: [5, 5],  // Dotted line for MA
-        tension: 0.1,
-        pointRadius: 0,  // No points for MA
-        borderWidth: 2,
-        spanGaps: true,
-      };
-
-      // Add MA dataset to the list of datasets
-      allDatasets.push(maDataset);
-    }
-  });
-
-  // Log the final datasets passed to the chart
-  console.log('Final datasets for Chart.js:', allDatasets);
-
-  // Create the chart
-  let chartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: datasets[0].data.map(dataPoint => dataPoint.x),  // Use x-values from the first dataset
-      datasets: allDatasets  // Pass the original datasets and MAs
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'nearest',
-        axis: 'x',
-        intersect: false
-      },
-      scales: {
-        x: {
-          display: true,
-          title: {
-            display: true,
-            text: "Year",
-          },
-        },
-        y: {
-          display: true,
-          title: {
-            display: true,
-            text: "Value",
-          },
-        },
-      },
-      plugins: {
-        tooltip: {
-          enabled: true,
-          callbacks: {
-            label: function(context) {
-              const originalValue = context.raw ? context.raw.originalY : null;
-              return `${context.dataset.label}: ${typeof originalValue === 'number' ? originalValue.toFixed(2) : 'N/A'}`;
-            }
-          }
-        },
-        zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x',
-          },
-          zoom: {
-            wheel: {
-              enabled: true,
-            },
-            pinch: {
-              enabled: true,
-            },
-            mode: 'x',
-          },
-        },
-      }
-    }
-  });
-
-  // Setup chart buttons if applicable
-  setupChartButtons(chartInstance, datasets, modalIndex);
-
-  return chartInstance;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-let chartInstances = {}; // Global variable to store the current chart instance
-let FWDlineChartInstance;
-let isDrawing = false; // Variable to track if the mouse is being pressed
-let debounceTimeout;
-
-
-
-export default function createLineChart(datasets, chartName, chartTitle, pointRadius, modalIndex, movingAveragePeriod) {
-  const canvasElement = document.getElementById(chartName);
-
-  if (!canvasElement) {
-    console.error(`Canvas element with ID "${chartName}" not found.`);
-    return null;
-  }
-
-  const ctx = canvasElement.getContext("2d");
-
   // Array to store both original datasets and their corresponding MAs
   const allDatasets = [];
 
   // Iterate over all selected datasets
   datasets.forEach((dataset, index) => {
+    console.log(`Processing dataset [${dataset.label}] with data:`, dataset.data);
+
     // Original dataset (solid line)
     const originalDataset = {
       label: dataset.label,  // Original dataset label
@@ -188,44 +42,46 @@ export default function createLineChart(datasets, chartName, chartTitle, pointRa
       tension: 0.1,
       pointRadius: pointRadius,
       borderWidth: 1,
-      spanGaps: true,
+      spanGaps: false,
       borderDash: []  // Solid line for original dataset
     };
 
     // Add the original dataset to the array
     allDatasets.push(originalDataset);
 
-    // Check if Moving Average (MA) is calculated and exists
-    if (dataset.smaData && dataset.smaData.length > 0) {
-      const maDataset = {
-        label: `${dataset.label} (SMA ${movingAveragePeriod})`,  // MA dataset label
-        data: dataset.smaData.map(dataPoint => ({
-          x: dataPoint.x,
-          y: dataPoint.y
-        })),
-        fill: false,
-        borderColor: 'rgba(255, 0, 0, 0.5)',  // Red color for MA
-        borderDash: [5, 5],  // Dotted line for MA
-        tension: 0.1,
-        pointRadius: 0,  // No points for MA
-        borderWidth: 2,
-        spanGaps: true,
-      };
+    // Check and add multiple SMAs if the data exists
+    ['smaData1', 'smaData2', 'smaData3'].forEach((smaKey, smaIndex) => {
+      if (dataset[smaKey] && dataset[smaKey].length > 0) {
+        const period = smaPeriods[`sma${smaIndex + 1}`]; // Use the respective period (e.g., 20, 50, 200)
+        console.log(`Adding SMA ${period} for dataset [${dataset.label}]`);
 
-      // Add the MA dataset to the array
-      allDatasets.push(maDataset);
-    }
+        const maDataset = {
+          label: `${dataset.label} (SMA ${period})`,  // MA dataset label
+          data: dataset[smaKey].map(dataPoint => ({
+            x: dataPoint.x,
+            y: dataPoint.y
+          })),
+          fill: false,
+          borderColor: `rgba(${255 - (smaIndex * 50)}, 0, 0, 0.5)`,  // Different red shades for each SMA
+          borderDash: [5, 5],  // Dotted line for MA
+          tension: 0.1,
+          pointRadius: 0,  // No points for MA
+          borderWidth: 2,
+          spanGaps: false,
+        };
+
+        allDatasets.push(maDataset);
+        console.log(`Added SMA ${period} dataset for [${dataset.label}]`);
+      }
+    });
   });
-
-  // Log the datasets to verify they are correct
-  console.log('Final datasets for Chart.js:', allDatasets);
 
   // Create the chart
   let chartInstance = new Chart(ctx, {
     type: "line",
     data: {
-      labels: datasets[0].data.map(dataPoint => dataPoint.x),  // Use x-values from the first dataset
-      datasets: allDatasets  // Pass the original datasets and MAs
+      labels: datasets[0].data.map(dataPoint => dataPoint.x), // Use x-values from the first dataset
+      datasets: allDatasets // Pass the original datasets and MAs
     },
     options: {
       responsive: true,
@@ -256,64 +112,62 @@ export default function createLineChart(datasets, chartName, chartTitle, pointRa
           enabled: true,
           callbacks: {
             label: function(context) {
-              const originalValue = context.raw ? context.raw.originalY : null;
-              return `${context.dataset.label}: ${typeof originalValue === 'number' ? originalValue.toFixed(2) : 'N/A'}`;
+              if (context.dataset.label.includes('SMA')) {
+                // If the dataset is a moving average (SMA), display its y value directly
+                return `${context.dataset.label}: ${context.raw.y !== null ? context.raw.y.toFixed(2) : 'N/A'}`;
+              } else {
+                // For the original dataset, use the originalY value to avoid normalized data
+                const originalValue = context.raw ? context.raw.originalY : null;
+                return `${context.dataset.label}: ${typeof originalValue === 'number' ? originalValue.toFixed(2) : 'N/A'}`;
+              }
             }
           }
         },
+        
         zoom: {
           pan: {
             enabled: true,
-            mode: 'x',
+            mode: 'x', // Pan along the x-axis
           },
           zoom: {
+            drag: {
+              enabled: true, // Enable drag-to-zoom feature
+            },
             wheel: {
-              enabled: true,
+              enabled: true, // Enable zooming with the mouse wheel
             },
             pinch: {
-              enabled: true,
+              enabled: true, // Enable zooming by pinching on touch devices
             },
-            mode: 'x',
+            mode: 'x', // Zoom along the x-axis
           },
         },
       }
     }
   });
 
+  setupChartButtons(chartInstance, datasets, modalIndex);
+
   return chartInstance;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 function setupChartButtons(chartInstance, datasets, modalIndex) {
   const filteredDatasetsCopy = JSON.parse(JSON.stringify(datasets));
 
-  // Function to get the maximum available years for each dataset
   function getMaxYearsAvailable() {
     let maxYearsAvailable = 0;
     filteredDatasetsCopy.forEach((dataset) => {
       if (!dataset || !dataset.data) return;
 
-      // Find the first and last non-NaN data points
       const firstValidIndex = dataset.data.findIndex(({ y }) => y !== null && !isNaN(y));
       const lastValidIndex = dataset.data.length - 1 - [...dataset.data].reverse().findIndex(({ y }) => y !== null && !isNaN(y));
 
       if (firstValidIndex !== -1 && lastValidIndex !== -1) {
         const firstDate = parseDateString(dataset.data[firstValidIndex].x);
         const lastDate = parseDateString(dataset.data[lastValidIndex].x);
-        const yearsAvailable = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 365.25); // Convert ms to years
+        const yearsAvailable = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 365.25);
 
         maxYearsAvailable = Math.max(maxYearsAvailable, yearsAvailable);
       }
@@ -322,40 +176,107 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
     return maxYearsAvailable;
   }
 
-  function filterDataByTimeRange(yearsBack) {
+  function filterDataByTimeRange(yearsBack, modalIndex, containerId = 'modal-content-container') {
     const maxYearsAvailable = getMaxYearsAvailable();
-    const actualYearsBack = Math.min(yearsBack, maxYearsAvailable); // Use the smaller of the two
-
+    const actualYearsBack = Math.min(yearsBack, maxYearsAvailable);
+  
     const today = new Date();
     const targetDate = new Date(today.setFullYear(today.getFullYear() - actualYearsBack));
-
+  
     console.log(`Target date for ${actualYearsBack} years back:`, targetDate);
-
+  
     const filteredDatasets = JSON.parse(JSON.stringify(filteredDatasetsCopy));
-
+  
     filteredDatasets.forEach((dataset) => {
       if (!dataset || !dataset.data) return;
-
-      console.log(`Original dataset length for ${dataset.label}:`, dataset.data.length);
-
-      // Filter the data based on the target date
+  
       dataset.data = dataset.data.filter(dataPoint => {
         const dataDate = parseDateString(dataPoint.x);
         return dataDate >= targetDate;
       });
-
-      console.log(`Filtered dataset length for ${dataset.label}:`, dataset.data.length);
-
-      //dataset.data = dynamicNormalization(dataset);
+  
+      // Filter each SMA data set if it exists (SMA 1, SMA 2, SMA 3)
+      ['smaData1', 'smaData2', 'smaData3'].forEach(smaKey => {
+        if (dataset[smaKey]) {
+          dataset[smaKey] = dataset[smaKey].filter(dataPoint => {
+            const dataDate = parseDateString(dataPoint.x);
+            return dataDate >= targetDate;
+          });
+        }
+      });
     });
-
+  
+    // ✅ Check if this is a TS modal before checking for SMA elements
+    let applySMA1 = false, applySMA2 = false, applySMA3 = false;
+  
+    if (containerId === 'modal-content-container') {
+      const sma1Element = document.getElementById(`applySMA1_${modalIndex}`);
+      const sma2Element = document.getElementById(`applySMA2_${modalIndex}`);
+      const sma3Element = document.getElementById(`applySMA3_${modalIndex}`);
+  
+      applySMA1 = sma1Element?.checked ?? false;
+      applySMA2 = sma2Element?.checked ?? false;
+      applySMA3 = sma3Element?.checked ?? false;
+    }
+  
+    // Always load original dataset(s)
     chartInstance.data.labels = filteredDatasets[0]?.data.map(dataPoint => dataPoint.x) || [];
-    chartInstance.data.datasets.forEach((dataset, index) => {
-      dataset.data = filteredDatasets[index]?.data || [];
+    
+    const finalDatasets = [];
+    filteredDatasets.forEach((dataset, index) => {
+      finalDatasets.push({
+        label: dataset.label,
+        data: dataset.data,
+        borderColor: getColorFromPalette(index),
+        fill: false,
+        tension: 0.1,
+        pointRadius: 0,
+        borderWidth: 2
+      });
+  
+      // ✅ Push SMA datasets only if they are selected and apply only for TS modal
+      if (applySMA1 && dataset.smaData1) {
+        finalDatasets.push({
+          label: `${dataset.label} (SMA 1)`,
+          data: dataset.smaData1,
+          borderColor: 'rgba(255, 0, 0, 0.8)',  // Bright orange
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 2
+        });
+      }
+      if (applySMA2 && dataset.smaData2) {
+        finalDatasets.push({
+          label: `${dataset.label} (SMA 2)`,
+          data: dataset.smaData2,
+          borderColor: 'rgba(50, 205, 50, 0.8)',  // Bright lime green
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 2
+        });
+      }
+      if (applySMA3 && dataset.smaData3) {
+        finalDatasets.push({
+          label: `${dataset.label} (SMA 3)`,
+          data: dataset.smaData3,
+          borderColor: 'rgba(57, 255, 255, 0.8)',  // light blue
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.1,
+          pointRadius: 0,
+          borderWidth: 2
+        });
+      }
     });
-
+  
+    chartInstance.data.datasets = finalDatasets;
     chartInstance.update();
   }
+  
 
   function bindButton(buttonId, yearsBack) {
     const button = document.getElementById(buttonId);
@@ -363,7 +284,7 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
       console.error(`Button with ID ${buttonId} not found.`);
       return;
     }
-    button.replaceWith(button.cloneNode(true));
+    button.replaceWith(button.cloneNode(true)); // Replace to reset event listeners
     const newButton = document.getElementById(buttonId);
     newButton.addEventListener('click', () => {
       chartInstance.resetZoom();
@@ -375,24 +296,11 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
   bindButton(`oneYearButton_${modalIndex}`, 1);
   bindButton(`fiveYearButton_${modalIndex}`, 5);
   bindButton(`tenYearButton_${modalIndex}`, 10);
-  bindButton(`maxButton_${modalIndex}`, 50); // Use a large number to cover the full range
+  bindButton(`maxButton_${modalIndex}`, 50);
 
   // Default to a 5-year view
   filterDataByTimeRange(5);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -421,161 +329,6 @@ function getColorFromPalette(index) {
   // Wrap around the palette if the index exceeds its length
   return colorPalette[index % colorPalette.length];
 }
-
-
-
-function enableCrosshairOnMousePress(canvasElement, chartInstance, initialData) {
-  // Add a mousedown event listener to start drawing when the mouse button is pressed
-  canvasElement.addEventListener('mousedown', (event) => {
-    isDrawing = true;
-    drawCrosshair(event, chartInstance, initialData); // Initial drawing
-  });
-
-  // Add a mousemove event listener to draw the crosshair while the button is pressed
-  canvasElement.addEventListener('mousemove', (event) => {
-    if (isDrawing) {
-      drawCrosshair(event, chartInstance, initialData);
-    }
-  });
-
-  // Add a mouseup event listener to stop drawing and clear the crosshair when the button is released
-  canvasElement.addEventListener('mouseup', () => {
-    isDrawing = false;
-    chartInstance.render(); // Clear crosshair and redraw chart without it
-  });
-
-  // Add a mouseout event listener to stop drawing when the mouse leaves the canvas
-  canvasElement.addEventListener('mouseout', () => {
-    isDrawing = false;
-    chartInstance.render(); // Clear crosshair and redraw chart without it
-  });
-}
-
-function drawCrosshair(event, chartInstance, initialData) {
-  clearTimeout(debounceTimeout); // Clear any pending renders
-  
-  debounceTimeout = setTimeout(() => {
-    const canvasPosition = Chart.helpers.getRelativePosition(event, chartInstance);
-    const x = canvasPosition.x;
-
-    const ctx = chartInstance.ctx;
-    const topY = chartInstance.scales.y.top;
-    const bottomY = chartInstance.scales.y.bottom;
-    const chartWidth = chartInstance.width;
-
-    // Save the canvas state before drawing
-    ctx.save();
-
-    // Clear only the area where the crosshair and boxes will be drawn
-    ctx.clearRect(0, 0, chartInstance.width, chartInstance.height);
-    chartInstance.draw(); // Redraw chart elements
-
-    // Draw the crosshair line (no need to redraw the entire chart)
-    ctx.setLineDash([5, 5]); // Dashed line style
-    ctx.beginPath();
-    ctx.moveTo(x, topY);
-    ctx.lineTo(x, bottomY);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#fff'; // White dashed line
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset dashed line
-
-    let lastBoxY = null; // To track the last box position and avoid overlap
-    let nearestDate = null; // To track the nearest date for the bottom box
-
-    // **Optimization**: Reduce redundant searches for nearest points
-    let nearestPoints = [];
-
-    // Loop through datasets and cache nearest data points to improve speed
-    chartInstance.data.datasets.forEach((dataset, datasetIndex) => {
-      if (!chartInstance.isDatasetVisible(datasetIndex)) {
-        return; // Skip if the dataset is hidden
-      }
-
-      let nearestDataPoint = null;
-      let minDistance = Infinity;
-
-      dataset.data.forEach((dataPoint) => {
-        const dataPointX = chartInstance.scales.x.getPixelForValue(dataPoint.x);
-        const distance = Math.abs(dataPointX - x);
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestDataPoint = {
-            x: dataPointX,
-            y: chartInstance.scales.y.getPixelForValue(dataPoint.y),
-            date: dataPoint.x,
-            originalData: initialData[datasetIndex]?.originalData?.find(d => d.x === dataPoint.x) || null
-          };
-        }
-      });
-
-      if (nearestDataPoint) {
-        nearestPoints.push({ datasetIndex, nearestDataPoint });
-      }
-    });
-
-    // Draw each dataset's box for the nearest points
-    nearestPoints.forEach(({ datasetIndex, nearestDataPoint }) => {
-      const originalValue = nearestDataPoint.originalData?.y ?? 'N/A';
-      const text = `${chartInstance.data.datasets[datasetIndex].label}: ${originalValue}`;
-
-      const textWidth = ctx.measureText(text).width;
-
-      // Determine box position
-      let boxX = x + 15;
-      let boxY = nearestDataPoint.y - 20;
-
-      // Prevent box from going off the right edge
-      if (boxX + textWidth + 20 > chartWidth) {
-        boxX = chartWidth - textWidth - 20; // Shift box to the left
-      }
-
-      // Prevent box from going below the bottom of the chart
-      if (boxY + 30 > bottomY) {
-        boxY = bottomY - 30;
-      }
-
-      // Stack boxes to avoid overlap
-      if (lastBoxY !== null && Math.abs(boxY - lastBoxY) < 30) {
-        boxY = lastBoxY - 30; // Stack upwards
-      }
-
-      // Ensure boxes stay within the top of the chart
-      if (boxY < topY) {
-        boxY = topY + 10;
-      }
-
-      // Draw the text (no box background)
-      ctx.fillStyle = '#fff'; // White text color
-      ctx.fillText(text, boxX, boxY + 15);
-
-      lastBoxY = boxY;
-      nearestDate = nearestDataPoint.date; // Track the nearest date
-    });
-
-    // Draw the date box at the bottom of the chart
-    if (nearestDate) {
-      const dateText = `Date: ${nearestDate}`;
-      const dateTextWidth = ctx.measureText(dateText).width;
-
-      let dateBoxX = Math.min(x + 15, chartWidth - dateTextWidth - 20);
-      let dateBoxY = lastBoxY !== null ? lastBoxY - 30 : bottomY - 30;
-
-      if (dateBoxY + 30 > bottomY) {
-        dateBoxY = bottomY - 30;
-      }
-
-      ctx.fillStyle = '#fff'; // White text color
-      ctx.fillText(dateText, dateBoxX, dateBoxY + 15);
-    }
-
-    // Restore the canvas state after drawing
-    ctx.restore();
-  }, 20); // Reduced debounce to 20ms for faster responsiveness
-}
-
-
 
 export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);
@@ -908,70 +661,85 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
 }
 
 export function futurePredictionsChart(datasets, chartName, chartTitle, pointRadius) {
-  const ctx = document.getElementById(chartName).getContext("2d");
+  const canvas = document.getElementById(chartName);
+
+  if (!canvas) {
+    console.error(`Canvas with ID ${chartName} not found`);
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+
+  // Destroy the previous chart instance if it exists
+  if (futurePredictionsChartInstance) {
+    futurePredictionsChartInstance.destroy();
+    console.log("Previous chart instance for future predictions destroyed");
+  }
 
   // Extract x-values for the labels
   const xValues = datasets[0].data.map((dataPoint) => dataPoint.x);
 
-  // Create the chart
-  new Chart(ctx, {
-      type: "line",
-      data: {
-          labels: xValues,  // Use x values as labels
-          datasets: datasets.map((dataset, index) => ({
-              label: dataset.label,
-              data: dataset.data.map(point => point.y),  // Use y values as the dataset
-              fill: false,
-              borderColor: "rgba(75, 192, 192, 1)",  // Example color
-              tension: 0.1,
-              pointRadius: pointRadius,
-              borderWidth: 1,
-          })),
+  // Create the chart and store the instance globally
+  futurePredictionsChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: xValues,  // Use x values as labels
+      datasets: datasets.map((dataset, index) => ({
+        label: dataset.label,
+        data: dataset.data.map(point => point.y),  // Use y values as the dataset
+        fill: false,
+        borderColor: "rgba(75, 192, 192, 1)",  // Example color
+        tension: 0.1,
+        pointRadius: pointRadius,
+        borderWidth: 1,
+      })),
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color: "rgb(161, 160, 160)"
+          }
+        }
       },
-      options: {
-          responsive: true,
-          plugins: {
-              legend: {
-                  display: true,
-                  labels: {
-                      color: "rgb(161, 160, 160)"
-                  }
-              }
+      scales: {
+        x: {
+          display: true,
+          title: {
+            display: true,
+            text: "Index",
+            color: "rgb(161, 160, 160)",
           },
-          scales: {
-              x: {
-                  display: true,
-                  title: {
-                      display: true,
-                      text: "Index",
-                      color: "rgb(161, 160, 160)",
-                  },
-                  ticks: {
-                      color: "rgb(161, 160, 160)",
-                  },
-                  grid: {
-                      color: "rgb(90, 90, 90)",
-                  },
-              },
-              y: {
-                  display: true,
-                  title: {
-                      display: true,
-                      text: "Predictions",
-                      color: "rgb(161, 160, 160)",
-                  },
-                  ticks: {
-                      color: "rgb(161, 160, 160)",
-                  },
-                  grid: {
-                      color: "rgb(90, 90, 90)",
-                  },
-              },
+          ticks: {
+            color: "rgb(161, 160, 160)",
           },
+          grid: {
+            color: "rgb(90, 90, 90)",
+          },
+        },
+        y: {
+          display: true,
+          title: {
+            display: true,
+            text: "Predictions",
+            color: "rgb(161, 160, 160)",
+          },
+          ticks: {
+            color: "rgb(161, 160, 160)",
+          },
+          grid: {
+            color: "rgb(90, 90, 90)",
+          },
+        },
       },
+    },
   });
 }
+
 export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
+  
   const canvas = document.getElementById(chartName);
   if (!canvas) {
     console.error(`Canvas with ID ${chartName} not found`);
@@ -980,13 +748,19 @@ export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
 
   const ctx = canvas.getContext("2d");
 
+  // Destroy the previous chart instance if it exists
+  if (window.chartInstance) {
+    window.chartInstance.destroy();
+    console.log("Previous chart instance destroyed");
+  }
+
   if (!datasets || !datasets.length || !datasets[0].data || !datasets[0].data.length) {
     console.error("Invalid dataset provided for chart:", datasets);
     return;
   }
 
-  // Extract x-values (formatted date strings) for the labels
-  const xValues = datasets[0].data.map(dataPoint => dataPoint.x);
+  // Convert x-values (dates) to timestamps for the chart
+  const xValues = datasets[0].data.map(dataPoint => new Date(dataPoint.x).getTime()); // Convert dates to timestamps
 
   const colors = {
     train: "rgba(0, 123, 255, 1)",  // Blue for Train Data
@@ -1000,37 +774,39 @@ export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
     dashed: [5, 5],  // Dashed line for future predictions
   };
 
-  new Chart(ctx, {
+  const allDatasets = datasets.map((dataset) => {
+    let color, borderDash;
+    if (dataset.label === 'Train Data') {
+      color = colors.train;
+      borderDash = lineStyles.solid;
+    } else if (dataset.label === 'Test Data') {
+      color = colors.test;
+      borderDash = lineStyles.solid;
+    } else if (dataset.label === 'Predictions') {
+      color = colors.predictions;
+      borderDash = lineStyles.solid;
+    } else if (dataset.label === 'Future Predictions') {
+      color = colors.future;
+      borderDash = lineStyles.dashed;
+    }
+
+    return {
+      label: dataset.label,
+      data: dataset.data.map(point => ({ x: new Date(point.x).getTime(), y: point.y })),  // Use timestamps for x values
+      fill: false,
+      borderColor: color,
+      borderDash: borderDash,
+      tension: 0.1,
+      pointRadius: pointRadius,
+      borderWidth: 1,
+    };
+  });
+
+  window.chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: xValues,  // Use formatted date strings for labels
-      datasets: datasets.map((dataset) => {
-        let color, borderDash;
-        if (dataset.label === 'Train Data') {
-          color = colors.train;
-          borderDash = lineStyles.solid;
-        } else if (dataset.label === 'Test Data') {
-          color = colors.test;
-          borderDash = lineStyles.solid;
-        } else if (dataset.label === 'Predictions') {
-          color = colors.predictions;
-          borderDash = lineStyles.solid;
-        } else if (dataset.label === 'Future Predictions') {
-          color = colors.future;
-          borderDash = lineStyles.dashed;
-        }
-
-        return {
-          label: dataset.label,
-          data: dataset.data.map(point => ({ x: point.x, y: point.y })),  // Use string dates
-          fill: false,
-          borderColor: color,
-          borderDash: borderDash,
-          tension: 0.1,
-          pointRadius: pointRadius,
-          borderWidth: 1,
-        };
-      }),
+      labels: xValues,  // Use timestamps for labels
+      datasets: allDatasets
     },
     options: {
       responsive: true,
@@ -1044,22 +820,37 @@ export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
         zoom: {
           pan: {
             enabled: true,
-            mode: 'x',  // Enable horizontal panning
+            mode: 'x', // Pan along the x-axis
           },
           zoom: {
+            drag: {
+              enabled: true, // Enable drag-to-zoom feature
+            },
             wheel: {
-              enabled: true,  // Enable zooming with the mouse wheel
+              enabled: true, // Enable zooming with the mouse wheel
             },
             pinch: {
-              enabled: true,  // Enable zooming with pinch gestures on touch devices
+              enabled: true, // Enable zooming by pinching on touch devices
             },
-            mode: 'x',  // Only allow zooming on the x-axis
+            mode: 'x', // Zoom along the x-axis
           },
         },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              // Format the timestamp back into a readable date for the tooltip
+              const date = new Date(context.raw.x);
+              const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+              const value = context.raw.y;
+              return `${context.dataset.label}: ${formattedDate} - ${value}`;
+            }
+          }
+        }
       },
       scales: {
         x: {
-          display: true,
+          type: 'linear',  // Linear scale instead of 'time'
+          position: 'bottom',
           title: {
             display: true,
             text: 'Date',
@@ -1067,9 +858,10 @@ export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
           },
           ticks: {
             color: 'rgb(161, 160, 160)',
-            callback: function(value, index, values) {
-              // Shorten the x-axis to only show important date points
-              return value;  // Show full date labels
+            callback: function(value, index, ticks) {
+              // Format the timestamp back into a readable date for the x-axis ticks
+              const date = new Date(value);
+              return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
             }
           },
           grid: {
@@ -1093,4 +885,26 @@ export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
       },
     },
   });
+
+  return window.chartInstance;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
