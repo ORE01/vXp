@@ -315,7 +315,11 @@
 
         <div class="data-container" id="MVaRMainDataContainer"></div>
 
+        <p>Historical Defaults:</p>
         <div class="data-container" id="CVaRDataContainer"></div>
+
+        <p>Market Defaults:</p>
+        <div class="data-container" id="CVaR_marketDataContainer"></div>
 
         <p>
 
@@ -734,13 +738,15 @@
           <button class="chart-button" data-chart="EADChart">EAD</button>
           <button class="chart-button" data-chart="LGDChart">LGD</button>
           <button class="chart-button" data-chart="LossIssuerChartRating">LOSS ISSUER (Rating)</button>
-          <button class="chart-button" data-chart="LossIssuerChartMarket">LOSS ISSUER (Market)</button>          
+          <button class="chart-button" data-chart="LossIssuerChartMarket">LOSS ISSUER (Market)</button>  
+          <button class="chart-button" data-chart="LossIssuerChartMarketNorm">LOSS ISSUER (MarketNorm)</button>            
         </div>
 
         <!-- Data containers for EAD, Rating, and Market -->
         <div class="data-container" id="EADMainDataContainer"></div>
         <div class="data-container" id="LossIssuerDataContainerRating"></div>
         <div class="data-container" id="LossIssuerDataContainerMarket"></div>
+        <div class="data-container" id="LossIssuerDataContainerMarketNorm"></div>
       </div>
     </div>
 
@@ -767,16 +773,30 @@
         <div class="chart-container-inner" id="LossIssuerChartContainerMarket">
           <canvas id="LossIssuerChartMarket"></canvas>
         </div>
-      
-        <!-- Chart for Loss Issuer Combined (NEW) -->
-        <!-- <div class="chart-container-inner" id="LossIssuerCombinedChartContainer">
-          <canvas id="LossIssuerCombinedChart"></canvas>
-        </div> -->
-      
+
+        <!-- Chart for Loss Issuer Market -->
+        <div class="chart-container-inner" id="LossIssuerChartContainerMarketNorm">
+          <canvas id="LossIssuerChartMarketNorm"></canvas>
+        </div>
+
+
+
       </div>
-      
     </div>
   </div>
+
+  
+                <!-- Chart for Loss Issuer Combined (NEW) -->
+                <div id="LossIssuerCombinedChartContainer" class="chart-container-inner">
+                  <p>Value at Risk:</p>
+                  <canvas id="LossIssuerCombinedChart"></canvas>
+                </div>
+
+                  <!-- Chart for Loss Issuer Combined (NEW) -->
+                  <div id="LossIssuerCombinedESChartContainer" class="chart-container-inner">
+                    <p>Expected Shortfall:</p>
+                    <canvas id="LossIssuerCombinedESChart"></canvas>
+                  </div>
 </div>
 
 
