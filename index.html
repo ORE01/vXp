@@ -9,6 +9,7 @@
   <link href="./css/Dropdown.css" rel="stylesheet">
   <link href="./css/Button.css" rel="stylesheet">
   <link href="./css/ToolTip.css" rel="stylesheet">
+  <link href="./css/trafficLight.css" rel="stylesheet">
 
 <!-- Library Imports -->
  
@@ -731,6 +732,7 @@
     <span class="close">&times;</span>
     <h2 class="section-header">CREDIT VaR</h2>
 
+
     <!-- Left Part (Tables) -->
     <div class="left-part">
       <div class="data-wrapper">
@@ -781,7 +783,9 @@
 
 
 
+
       </div>
+
     </div>
   </div>
 
@@ -796,6 +800,15 @@
                   <div id="LossIssuerCombinedESChartContainer" class="chart-container-inner">
                     <p>Expected Shortfall:</p>
                     <canvas id="LossIssuerCombinedESChart"></canvas>
+                        <!-- Traffic Light placed below the header -->
+    <!-- Wrapper for the traffic light -->
+    <div class="traffic-light-wrapper">
+      <div class="traffic-light">
+        <div id="red" class="light red"></div>
+        <div id="yellow" class="light yellow"></div>
+        <div id="green" class="light green"></div>
+      </div>
+    </div>
                   </div>
 </div>
 
@@ -1066,6 +1079,8 @@
 
 
   <script src="renderer.js" type="module"></script>
+  <script src="trafficLight.js"></script>
+
 
   
   <script>
