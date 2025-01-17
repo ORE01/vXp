@@ -1,3 +1,12 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f5757b1b01c4b81b911b0964545b32f0c050521e37d3649a1915b578d67aebf0
-size 195
+{
+    "appId": "com.example.valueXpro",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "artifactName": "valueXpro.${ext}"
+    }
+  }
+  
+  

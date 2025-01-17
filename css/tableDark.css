@@ -1,3 +1,463 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:873e89fbb35223c2b595a9cd5804b483094819ca32398f874ca36fe19f1c871a
-size 11794
+.toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background-color: #f4f4f4;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  
+  z-index: 100;
+}
+
+
+html, body {
+  min-height: 100vh; 
+  background-color: #333; 
+  margin: 0; 
+  padding: 0; 
+  overflow: visible; 
+  width: 100%; 
+  height: 100%; 
+}
+
+
+body {
+  padding-top: 110px; /* Keep the padding at the top */
+  box-sizing: border-box; /* Include padding in height calculations */
+}
+
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 8px; /
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb {
+  background-color: #888; 
+  border-radius: 4px; 
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover {
+  background-color: #555; 
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+
+/* Tabs styling */
+.tab {
+  position: fixed; /* Fixed position */
+  top: 50px; /* Below the toolbar */
+  left: 0;
+  width: 100%; /* Stretch across the screen */
+  background-color: gray;
+  display: flex;
+  z-index: 99; /* Ensure tabs appear above content but below toolbar */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional shadow */
+}
+
+.tablinks {
+  background-color: rgb(70, 69, 69);
+  color: white;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: background-color 0.3s;
+  width: 110px;
+}
+
+.tablinks:hover {
+  background-color: #202020;
+}
+
+
+
+
+
+
+.section-header {
+  width: 350px; /* ISSUER, PRODUCTS... */
+}
+.section-header.Provider {
+  width: 200px; 
+}
+
+.loading-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #fff;
+  margin-left: 5px;
+  animation: loading-animation 0.8s infinite ease-in-out;
+  }
+  
+  @keyframes loading-animation {
+  0% {
+  transform: scale(0);
+  }
+  50% {
+  transform: scale(1);
+  }
+  100% {
+  transform: scale(0);
+  }
+  }
+  
+
+
+  /* Set a fixed width for the left part (tables) */
+.left-part {
+  width: 50%; /* Adjust the width as needed */
+  float: left;
+}
+
+/* Set a fixed width for the right part (graphs) */
+.right-part {
+  width: 50%; /* Adjust the width as needed */
+  float: left;
+}
+
+/* Prevent elements inside the right part from affecting its width */
+.right-part .chart-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+
+
+
+
+.close {
+  padding-left: 7px; /* Adds padding inside the element, effectively moving the content to the right */
+}
+
+.resized-tab {
+  transform: scale(0.75); /* Example: reduce size to 75% */
+  transition: transform 0.3s ease; /* Smooth transition for resizing */
+  /* Additional styles as needed */
+}
+
+.small-section-header {
+  font-size: 18px;
+  text-align: left; /* Align text to the left */
+  margin: 0; /* Remove default margin */
+  padding: 0; /* Remove default padding */
+  /* Add other styling properties if required */
+}
+.portfolio-select-spacing {
+  margin-top: 1.5em; /* Adjust as needed */
+}
+
+
+
+.left-section, .middle-section, .right-section {
+  flex: 0 1 300px;
+}
+
+.right-section .upper-part, #issuerGraphContainer {
+  max-width: 600px; /* Adjust this value as needed */
+  margin: 0 auto; /* This centers the chart container if it's smaller than the parent */
+}
+
+
+.right-section .lower-part {
+  flex: 0 1 auto; /* Don't grow, but can shrink */
+  margin-top: 20px; /* Adds space above the .lower-part */
+  padding-left: 40px;
+}
+
+
+.portfolio-info {
+  display: inline-block;
+  vertical-align: top;
+  text-align: left; /* Align text to the left */
+}
+
+
+
+
+
+
+
+
+.chart-group {
+  /* display: flex; */
+  flex-wrap: wrap; /* Allow wrapping */
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background-color: #222;
+}
+
+.comp-chart-container {
+  flex: 1 1 calc(33.333% - 20px); /* Three charts per row */
+  margin: 10px;
+  min-width: 300px; /* Ensure a minimum width for better visibility */
+}
+.chart-group-vertical {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  height: 400px;
+}
+.toggle-text {
+  color: rgb(0, 162, 255);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+#inputEcb-container {
+  margin-top: 10px;
+}
+
+
+/* Ensure Load Button and Graph/Table text stack vertically */
+.load-and-toggle-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  align-items: flex-start; /* Ensure alignment to the left */
+}
+
+/* Adjust the Graph/Table toggle text */
+#toggleTSGraphTable {
+  margin-top: 10px;  /* Space between Load Data button and text */
+  cursor: pointer;   /* Change cursor to pointer */
+}
+
+
+/* TS: Style for the scrollable checkbox container in TS.js*/
+.checkbox-left {
+  float: left;
+  margin-right: 20px;
+  max-height: 150px; /* Adjust height to fit 5 entries */
+  overflow-y: auto; /* Enable vertical scrolling */
+  /* border: 1px solid #ccc; Optional: Add a border for better visibility */
+  padding: 10px; /* Optional: Add some padding inside the box */
+}
+
+/* Optional: Customize the scrollbar */
+.checkbox-left::-webkit-scrollbar {
+  width: 8px; /* Width of the scrollbar */
+}
+
+
+
+
+
+
+
+
+
+
+.checkbox-left::-webkit-scrollbar-thumb {
+  background-color: #888; /* Scrollbar color */
+  border-radius: 4px; /* Rounded corners */
+}
+
+.checkbox-left::-webkit-scrollbar-thumb:hover {
+  background-color: #555; /* Darker color on hover */
+}
+
+
+/* Style for the scrollable moving-average-container */
+.moving-average-container {
+  max-height: 120px; /* Adjust height to fit 2-3 entries */
+  overflow-y: auto; /* Enable vertical scrolling */
+  /*border: 1px solid #ccc;  Optional: Add a border for better visibility */
+  padding: 10px; /* Optional: Add padding inside the box */
+  margin-top: 10px; /* Optional: Add space above the container */
+}
+
+/* Optional: Customize the scrollbar */
+.moving-average-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.moving-average-container::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 4px;
+}
+
+.moving-average-container::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+/* Style for the number input fields in moving-average-container */
+.moving-average-container input[type="number"] {
+  width: 60px; /* Set a smaller width for the number fields */
+  height: 6px; /* Adjust height for smaller input fields */
+  padding: 5px; /* Optional: Adjust padding for a consistent look */
+  margin-left: 5px; /* Optional: Add spacing between checkbox and number field */
+}
+
+/* Style for the checkbox */
+.moving-average-container input[type="checkbox"] {
+  margin-right: 5px; /* Add spacing between the checkbox and its label */
+}
+
+  /* Wrapper for checkboxContainer and moving-average-container */
+  .filter-wrapper {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    align-items: flex-start; /* Align items to the left */
+    gap: 15px; /* Space between the checkboxContainer and moving-average-container */
+    margin-bottom: 15px; /* Optional: Add spacing below the wrapper */
+  }
+
+  /* Style for the normalization container */
+  .normalization-container {
+    max-height: 150px; /* Set max height for the container */
+    overflow-y: auto; /* Enable vertical scrolling if needed */
+    /*border: 1px solid #ccc;  Add a border for the frame */
+    padding: 10px; /* Add padding for better spacing inside */
+    width: 150px; /* Fixed width to match design consistency */
+    margin-bottom: 10px; /* Space below the container */
+  }
+
+  /* Custom scrollbar for the normalization container */
+  .normalization-container::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+  }
+
+  .normalization-container::-webkit-scrollbar-thumb {
+    background-color: #888; /* Scrollbar color */
+    border-radius: 4px; /* Rounded corners */
+  }
+
+  .normalization-container::-webkit-scrollbar-thumb:hover {
+    background-color: #555; /* Darker color on hover */
+  }
+
+
+
+/* Positions the charts in a row and ensures they are below the input section */
+.charts-wrapper {
+  display: flex;
+  flex-wrap: wrap; /* Ensures proper wrapping on smaller screens */
+  gap: 20px;
+  justify-content: space-between;
+  margin-top: 20px; /* Additional margin for separation */
+}
+
+/* Ensures each chart takes up space and aligns properly */
+.chart-container {
+  flex: 1 1 45%; /* Each chart takes up about 45% of the container width */
+  text-align: center; /* Center-aligns the content within the chart-container */
+}
+
+
+
+
+
+.models-container {
+width: 80%;
+}
+
+/* .models-container h3 {
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: rgb(200, 200, 200); 
+}  */
+
+
+
+
+
+/* Wrapper for Epochs and Batch Size fields */
+.input-wrapper {
+  display: flex;
+  flex-direction: column; /* Align fields vertically */
+  gap: 10px; /* Add spacing between the fields */
+  max-width: 200px; /* Optional: Limit the wrapper width */
+  margin-bottom: 15px; /* Add spacing below the wrapper */
+}
+
+/* Styling for individual input-container */
+.input-container {
+  position: relative; 
+  display: flex;
+  justify-content: space-between; /* Align label and input side by side */
+  align-items: center; /* Center the label and input vertically */
+}
+
+/* Styling for input fields */
+.input-container input[type="number"] {
+  max-width: 50px; /* Set a compact width */
+  padding: 5px; /* Adjust padding */
+  border: 1px solid #ccc; /* Add a subtle border */
+  border-radius: 3px; /* Rounded corners for a polished look */
+  text-align: center; /* Center-align numbers */
+  font-size: 14px; /* Adjust font size for readability */
+}
+
+
+#epochsInput,
+#batchSizeInput {
+  height: 12px; /* Reduced height */
+  padding: 2px 5px; /* Compact padding */
+  border: 1px solid #ccc; /* Subtle border */
+  border-radius: 3px; /* Rounded corners */
+  text-align: center; /* Center-align the text */
+  font-size: 12px; /* Smaller font size */
+  max-width: 60px; /* Keep the width compact */
+}
+
+.links-container {
+  margin-bottom: 20px; /* Space below the links */
+  text-align: left; /* Align links to the left */
+  padding-left: 20px; /* Indent for better layout */
+}
+
+.provider-link {
+  display: block; /* Make each link a block element for vertical layout */
+  margin: 5px 0; /* Space between links */
+  color: #3399ff; /* Light blue text color */
+  text-decoration: none; /* Remove underline */
+  font-size: 16px; /* Adjust font size */
+  font-weight: normal; /* Normal font weight */
+  transition: color 0.2s ease; /* Smooth color transition */
+}
+
+.provider-link:hover {
+  color: #007acc; /* Darker blue on hover */
+  text-decoration: underline; /* Add underline on hover */
+}
+
+.chart-section {
+  display: flex; /* Use flexbox for alignment */
+  flex-direction: column; /* Arrange items in a column */
+  align-items: center; /* Center items horizontally */
+  justify-content: center; /* Center items vertically */
+  gap: 20px; /* Add spacing between charts */
+  padding: 20px; /* Optional: add padding for aesthetics */
+  text-align: center; /* Center text like titles */
+}
+
+#test-data-chart-wrapper,
+#future-prediction-chart-wrapper {
+  display: flex; /* Ensure wrappers don't collapse */
+  flex-direction: column;
+  align-items: center; /* Center the charts and titles inside the wrappers */
+}
+
+.highlight {
+  background-color: #ff6666 !important; /* 🔥 Light red background */
+  color: #fff !important; /* 🔥 White text for better contrast */
+  font-weight: bold; /* 🔥 Optional: Make the text bold */
+}
+
+
+

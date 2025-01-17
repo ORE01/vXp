@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:602febded0fb96f270c61e75039e6a8f9b2d85283228dc3010fd92c7b7e3fc34
-size 603
+// ToolTip.js
+
+export const tooltips = {
+    en: {
+      epochs: "An epoch represents one complete pass through the entire dataset during training.",
+      batchSize: "Batch size refers to the number of training samples processed together before the model updates its weights.",
+    },
+    de: {
+      epochs: "Eine Epoche entspricht einem vollständigen Durchlauf des gesamten Datensatzes während des Trainings.",
+      batchSize: "Batchgröße bezieht sich auf die Anzahl von Trainingsproben, die zusammen verarbeitet werden, bevor das Modell seine Gewichte aktualisiert.",
+    },
+  };
+  

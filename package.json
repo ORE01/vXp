@@ -1,3 +1,45 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7033c68c7c8c12b717aef6be85d0c8d10a6bf51d3d1cb8f8b9832664be2b119d
-size 987
+{
+  "name": "merciful-front-are-3a6cn",
+  "productName": "valueXpro",
+  "description": "Risk Management Application",
+  "keywords": [],
+  "main": "./main.js",
+  "version": "1.0.0",
+  "author": "ronal",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "win": {
+      "icon": "./vXp.ico",
+      "asar": true,
+      "asarUnpack": [
+        "files/UNI.db",
+        "files/AGG_Timeseries.xlsx",
+        "files/HISTORIC_DATA.xlsm",
+        "files/UNI_DATA.xlsm"
+      ],
+      "extraResources": [
+        {
+          "from": "./bin/main/",
+          "to": "./bin/main/"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "chart.js": "^4.4.4",
+    "chartjs-adapter-date-fns": "^3.0.0",
+    "cubic-spline": "^3.0.3",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.3.1",
+    "lightweight-charts": "^4.2.0",
+    "scipy": "^0.1.4",
+    "sqlite3": "^5.0.2"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.4.0"
+  }
+}
