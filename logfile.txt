@@ -2580,3 +2580,23 @@
 2025-01-15T08:14:40.339Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
 2025-01-15T08:14:40.339Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
 2025-01-15T08:14:40.380Z: Connected to the database.
+2025-01-15T15:42:39.880Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-15T15:42:39.882Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-15T15:42:39.882Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-15T15:42:39.994Z: Connected to the database.
+2025-01-16T07:46:54.352Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-16T07:46:54.354Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-16T07:46:54.354Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-16T07:46:54.441Z: Connected to the database.
+2025-01-17T07:26:23.445Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-17T07:26:23.448Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-17T07:26:23.448Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-17T07:26:23.655Z: Connected to the database.
+2025-01-17T08:00:41.272Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-17T08:00:41.273Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-17T08:00:41.274Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-17T08:00:41.358Z: Connected to the database.
+2025-01-17T08:48:19.597Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-17T08:48:19.600Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-17T08:48:19.600Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-17T08:48:19.648Z: Connected to the database.
