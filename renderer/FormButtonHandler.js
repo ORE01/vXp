@@ -4,6 +4,7 @@ import { issuerData } from '../r_tab/ISSUER.js';
 
 export function handleFormAction(event, data, rowIndex, selectedTableName, actionType) {
   displayModal(actionType, rowIndex);
+  console.log('event, data, rowIndex, selectedTableName, actionType', event, data, rowIndex, selectedTableName, actionType)
   setupFormFields(actionType, data, rowIndex, selectedTableName);
 
   if (actionType === 'add') {

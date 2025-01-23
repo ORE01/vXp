@@ -61,9 +61,10 @@ export function handleProdData(receivedData, filtersConfig) {
         prodAddButton.addEventListener('click', (event) => {
 
           event.stopPropagation();
+          const selectedProd = prodData['100'];
 
           // Open the combined modal for adding a new product and schedule
-          displayCombinedModal({}, null, [], true); // Passing `true` for add mode
+          displayCombinedModal(prodData, '100', [], true); // Passing `true` for add mode
         });
       }
     });
@@ -92,7 +93,7 @@ function displayCombinedModal(selectedProd, rowIndex, couponData, isAddMode = fa
 
   // Separate logic for edit and add modes
   if (isAddMode) {
-    handleAddMode(modalBody);
+    handleAddMode(selectedProd, rowIndex, couponData, modalBody);
   } else {
     handleEditMode(selectedProd, rowIndex, couponData, modalBody);
   }
@@ -169,6 +170,115 @@ function handleEditMode(selectedProd, rowIndex, couponData, modalBody) {
     couponForm.innerHTML = '<p>No schedule available for this product.</p>';
   }
 }
+
+function handleAddMode(selectedProd, rowIndex, couponData, modalBody) {
+  // ProdAll section
+  const prodAllContainer = document.createElement('div');
+  prodAllContainer.classList.add('prodAll-container');
+  const prodAllForm = document.createElement('form');
+  prodAllForm.id = 'prodAllForm';
+  prodAllContainer.appendChild(prodAllForm);
+  modalBody.appendChild(prodAllContainer);
+
+  // Handle ProdAll fields
+  handleFormAction(null, selectedProd, rowIndex, 'ProdAll', 'add');
+
+  // Wait for MATURITY and TENOR to be saved
+  const saveButton = document.getElementById('saveButton');
+  saveButton.addEventListener('click', () => {
+    // Ensure MATURITY and TENOR are available
+    const maturity = selectedProd.MATURITY;
+    const tenor = selectedProd.TENOR;
+
+    if (!maturity || !tenor) {
+      alert('MATURITY and TENOR must be provided to generate the coupon schedule.');
+      return;
+    }
+
+    // Generate CouponSchedules section
+    const couponContainer = document.createElement('div');
+    couponContainer.classList.add('coupon-container');
+    const couponForm = document.createElement('form');
+    couponForm.id = 'couponForm';
+    couponContainer.appendChild(couponForm);
+    modalBody.appendChild(couponContainer);
+
+    // Generate initial empty coupon schedule
+    const generatedCouponData = generateCouponSchedule(maturity, tenor);
+
+    // Populate CouponSchedules fields
+    let couponContent = `
+      <h3>Coupon Schedule</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Fix_CF</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${generatedCouponData
+            .map(
+              (row, index) => `
+            <tr>
+              <td>
+                <input type="date" data-field="DATE" value="${row.DATE || ''}" data-row-index="${index}" />
+              </td>
+              <td>
+                <input type="number" step="0.01" data-field="FIX_CF" value="${row.FIX_CF || ''}" data-row-index="${index}" />
+              </td>
+            </tr>
+          `
+            )
+            .join('')}
+        </tbody>
+      </table>
+    `;
+    couponForm.innerHTML = couponContent;
+
+    // Add Save button for CouponSchedules
+    const saveCouponButton = document.createElement('button');
+    saveCouponButton.textContent = 'Save Coupon Schedule';
+    saveCouponButton.type = 'button';
+    saveCouponButton.classList.add('save-button');
+    saveCouponButton.onclick = () => {
+      const rows = couponForm.querySelectorAll('tbody tr');
+      const newCouponData = Array.from(rows).map((row) => ({
+        DATE: row.querySelector('input[data-field="DATE"]').value,
+        FIX_CF: parseFloat(row.querySelector('input[data-field="FIX_CF"]').value) || 0,
+      }));
+
+      saveCouponScheduleData(newCouponData);
+    };
+
+    couponContainer.appendChild(saveCouponButton);
+  });
+}
+
+function generateCouponSchedule(maturity, tenor) {
+  const startDate = new Date();
+  const endDate = new Date(maturity);
+  const schedule = [];
+
+  let currentDate = startDate;
+  while (currentDate <= endDate) {
+    schedule.push({
+      DATE: currentDate.toISOString().split('T')[0],
+      FIX_CF: 0, // Default value for new schedules
+    });
+
+    // Increment by tenor (in months)
+    currentDate.setMonth(currentDate.getMonth() + parseInt(tenor, 10));
+  }
+
+  return schedule;
+}
+
+function saveCouponScheduleData(couponData) {
+  console.log('Saving Coupon Schedule data:', couponData);
+  // Simulate saving to prodCouponSchedules table
+}
+
 
 
 

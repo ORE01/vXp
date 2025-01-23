@@ -68,7 +68,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
         }
 
         case 'CouponType': {
-          const couponTypeOptions = ['FIX', 'FLOATER'];
+          const couponTypeOptions = ['FIX', 'FLOATER', 'TERM'];
           const couponTypeDropdown = createDropdown(fieldName, couponTypeOptions, rowData[fieldName]);
           formRow.appendChild(label);
           formRow.appendChild(couponTypeDropdown);
