@@ -3,8 +3,6 @@ import processData from './renderer/dataProcessor.js';
 import { handleFormAction } from './renderer/FormButtonHandler.js';
 import { displayValuesForElementId } from './COMP.js';
 import { appState } from './renderer.js';
-import { addTooltipsForTruncatedText } from './utils/tooltips.js';
-import { ensureRendered } from './utils/domHelpers.js';
 
 let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
 let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
@@ -52,7 +50,7 @@ function formatNumberWithGrouping(value) {
 
 // Adjusted handlePortMainData function
 export function handlePortMainData(receivedData) {
-  // console.log('handlePortMainData - Received Data:', receivedData);
+  console.log('handlePortMainData - Received Data:', receivedData);
 
   const portData = filterColumnsInData(receivedData, columns);
 
@@ -91,9 +89,9 @@ export function handlePortMainData(receivedData) {
 
 // Function to filter data based on current selections in filtersConfig
 function filterData(data, filtersConfig) {
-  // console.log('Function: filterData');
-  // console.log('data:', data);
-  // console.log('filtersConfig:', filtersConfig);
+  console.log('Function: filterData');
+  console.log('data:', data);
+  console.log('filtersConfig:', filtersConfig);
   
   return data.filter(dataPoint => {
     return Object.entries(filtersConfig).every(([key, valueSet]) => {
@@ -103,9 +101,9 @@ function filterData(data, filtersConfig) {
 }
 
 export function handlePortMainFilteredData(receivedData, filtersConfig, elementId) {
-  // console.log('Fct: handlePortMainFilteredData:');
-  // console.log('elementId:', elementId);
-  // console.log('receivedData:', receivedData);
+  console.log('Fct: handlePortMainFilteredData:');
+  console.log('elementId:', elementId);
+  console.log('receivedData:', receivedData);
 
   if (!receivedData || !Array.isArray(receivedData) || receivedData.length === 0) {
     console.error('receivedData is not in the expected format or is empty');
@@ -119,7 +117,7 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
 
 
   const MVaRData = appState.getMvarData();
-  // console.log('MVaRData:', MVaRData);
+  console.log('MVaRData:', MVaRData);
   if (!MVaRData) {
     // Set the associated variables to 0
     mvarIR = 0;
@@ -133,12 +131,12 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
   [mvarTOT, mvarIR, mvarCS] = MVaRData.map(item => item.VaR);
   [esTOT, esIR, esCS] = MVaRData.map(item => item.ES);
   
-  // console.log('mvarIR:', mvarIR);
-  // console.log('mvarCS:', mvarCS);
-  // console.log('mvarTOT:', mvarTOT);
-  // console.log('esIR:', esIR);
-  // console.log('esCS:', esCS);
-  // console.log('esTOT:', esTOT);
+  console.log('mvarIR:', mvarIR);
+  console.log('mvarCS:', mvarCS);
+  console.log('mvarTOT:', mvarTOT);
+  console.log('esIR:', esIR);
+  console.log('esCS:', esCS);
+  console.log('esTOT:', esTOT);
   };
 
   const CVaRData = appState.getCvarData();
@@ -154,8 +152,8 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
   [cvarTOT] = CVaRData.map(item => item.VaR);
   [cesTOT] = CVaRData.map(item => item.ES);
 
-  // console.log('cvarTOT:', cvarTOT);
-  // console.log('cesTOT:', cesTOT);
+  console.log('cvarTOT:', cvarTOT);
+  console.log('cesTOT:', cesTOT);
   };
 
   if (!portDataContainer) {
@@ -163,15 +161,17 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     return;
   }
 
-  // console.log('Before filtering: receivedData:', receivedData);
-  // console.log('filtersConfig:', filtersConfig);
+  console.log('Before filtering: receivedData:', receivedData);
+  console.log('filtersConfig:', filtersConfig);
 
   const portData = receivedData;
-  // console.log('portData:', portData);
+  console.log('portData:', portData);
 
   if (portDataContainer && portData) {
     let filteredPortData = filterColumnsInData(filterData(receivedData, filtersConfig), columns);
-    // console.log('filteredPortData:', filteredPortData);
+    console.log('filteredPortData:', filteredPortData);
+
+    appState.setFilteredPortData(filteredPortData);
    
     // Aggregate NOTIONAL and NAV to calculate total values
     let filteredTotalNav = 0;
@@ -215,7 +215,7 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
 
     const formCvarTOT = (parseFloat(cvarTOT) * 100).toFixed(2);
 
-  // console.log('formMvarTOT:', formMvarTOT);
+  console.log('formMvarTOT:', formMvarTOT);
 
     // elementId: Save the values
         savedValues[elementId] = {
@@ -262,35 +262,30 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
         };
 
 
-// console.log('savedValues[elementId] :', savedValues[elementId] );
+console.log('savedValues[elementId] :', savedValues[elementId] );
 
 
     displayValuesForElementId(elementId, savedValues);
 
 
-    // console.log('formFiltPortValue:', formFiltPortValue);
-    // console.log('formFiltPortNotional:', formFiltPortNotional);
-    // console.log('formFiltPortYield:', formFiltPortYield);
-    // console.log('formFiltPortYieldA:', formFiltPortYieldA);
-    // console.log('formFiltPortPV01:', formFiltPortPV01);
-    // console.log('formFiltPortCPV01:', formFiltPortCPV01);
-    // console.log('mvarTOT:', formMvarTOT);
-    // console.log('cvarTOT:', formCvarTOT);
+    console.log('formFiltPortValue:', formFiltPortValue);
+    console.log('formFiltPortNotional:', formFiltPortNotional);
+    console.log('formFiltPortYield:', formFiltPortYield);
+    console.log('formFiltPortYieldA:', formFiltPortYieldA);
+    console.log('formFiltPortPV01:', formFiltPortPV01);
+    console.log('formFiltPortCPV01:', formFiltPortCPV01);
+    console.log('mvarTOT:', formMvarTOT);
+    console.log('cvarTOT:', formCvarTOT);
 
     let filteredPortDataNew = filterColumnsInData(filteredPortData, columnsShowen);
-    // console.log('filteredPortDataNew:', filteredPortDataNew);
+    console.log('filteredPortDataNew:', filteredPortDataNew);
 
     // Update the HTML content
     // const portTableName = appState.getSelectedPortTableName();
-    console.log('portTableName:', portTableName);
+    // console.log('portTableName:', portTableName);
     const portDataHTML = processData(filteredPortDataNew, portTableName);
     portDataContainer.innerHTML = portDataHTML;
-
-    // Ensure DOM rendering before processing
-    ensureRendered(() => {
-      addTooltipsForTruncatedText(portDataContainer);
-
-  
+  }
     // Edit Buttons
     const portEditButtons = document.querySelectorAll('#portDataContainer .edit-button');
     portEditButtons.forEach((button) => {
@@ -310,8 +305,8 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
         const actionType = 'add';
         handleFormAction(event, portData, null, tableName, actionType);
       });
-    });  
-  }
+      
+
 }
 
 export {PortValue, PortNotional, PortYield, PortPV01, PortCPV01, formPortValue, formPortNotional, formPortYield, formPortYieldA,  formPortPV01, formPortCPV01, formFiltPortValue, formFiltPortNotional, formFiltPortYield, formFiltPortYieldA, formFiltPortPV01, formFiltPortCPV01};

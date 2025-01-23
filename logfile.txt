@@ -2752,3 +2752,23 @@
 2025-01-23T11:27:39.221Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
 2025-01-23T11:27:39.224Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
 2025-01-23T11:27:39.267Z: Connected to the database.
+2025-01-23T17:35:13.716Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-23T17:35:13.718Z: main_fct: dbPath: C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db
+2025-01-23T17:35:13.720Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-23T17:35:13.763Z: Database connection error: SQLITE_CANTOPEN: unable to open database file
+2025-01-23T17:37:41.839Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-23T17:37:41.841Z: main_fct: dbPath: C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db
+2025-01-23T17:37:41.844Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-23T17:37:41.886Z: Database connection error: SQLITE_CANTOPEN: unable to open database file
+2025-01-23T17:38:45.839Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-23T17:38:45.840Z: main_fct: dbPath: C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db
+2025-01-23T17:38:45.843Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-23T17:38:45.884Z: Database connection error: SQLITE_CANTOPEN: unable to open database file
+2025-01-23T17:45:28.090Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-23T17:45:28.091Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-23T17:45:28.095Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-23T17:45:28.138Z: Connected to the database.
+2025-01-23T17:52:19.463Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-01-23T17:52:19.465Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-01-23T17:52:19.468Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-01-23T17:52:19.508Z: Connected to the database.
