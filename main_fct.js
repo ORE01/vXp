@@ -23,12 +23,14 @@ function logToFile(message) {
 // Choose the correct database path based on the environment
 let dbPath;
 if (isDevelopmentEnvironment()) {
-  // Absoluter Pfad: für die Entwicklung (nicht compelliert)
-  dbPath = 'C:/Users/Ronald/riskApp/electron_app/files/UNI.db';
-  // console.log('dbPath:', dbPath);
+  // Absoluter Pfad: für die Entwicklung (nicht compelliert)
+  dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+  console.log('dbPath:', dbPath);
 } else {
-  // Relativer Pfad für die compellierte Version:
-  dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
+  // Relativer Pfad für die compellierte Version:
+  dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+  // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
+  // dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
   
 }
 
@@ -367,7 +369,7 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
     // Determine the Python executable based on the environment
     if (isDevelopmentEnvironment()) {
       pythonExecutable = 'C:\\Python312\\python.exe';  // Path to Python executable
-      pythonArgs.unshift('C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py');  // Full path to main.py
+      pythonArgs.unshift('C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.py');  // Full path to main.py
     } else {
       pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
     }
