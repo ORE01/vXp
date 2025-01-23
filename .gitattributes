@@ -1,5 +1,5 @@
-*.js -filter -diff -merge -text
-*.css -filter -diff -merge -text
-*.json -filter -diff -merge -text
-*.md -filter -diff -merge -text
-*.ico -filter -diff -merge -text
+*.js text
+*.css text
+*.json text
+*.md text
+*.ico binary
