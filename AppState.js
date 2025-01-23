@@ -35,6 +35,7 @@ export class AppState {
 
         this.issuerData = null;
         this.prodData = null;
+        this.couponData = null;
         this.dealsData = null;
         this.rankData = null;
         this.mvarData = null,
@@ -386,6 +387,21 @@ export class AppState {
     getProdData() {
         return this.prodData || []; // Return prodData or an empty array if not set
     }
+
+  // Set couponData and notify observers
+  setCouponData(data) {
+    console.log('Setting CouponData:', data);
+    this.couponData = data;
+    this.notifyObservers(); // Trigger updates
+  }
+
+  // Get couponData
+  getCouponData() {
+    console.log('Getting CouponData:', this.couponData);
+    return this.couponData;
+  }
+
+    
     
 
     setDealsData(data) {

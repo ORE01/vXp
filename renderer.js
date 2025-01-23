@@ -32,6 +32,7 @@ function setupEventListeners() {
   window.api.receive('RankData', handleRankData);
   
   window.api.receive('ProdAllData', handleProdData);
+  window.api.receive('ProdCouponSchedulesData', handleCouponData);
 
   window.api.receive('createdDealsData', handleCreatedDealsData);
   window.api.receive('createdPortData', handleCreatedPortData);
@@ -741,6 +742,11 @@ function setupButtons() {
     if (prodResetButton) {
       prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'prod'));
     }
+  }
+  // CouponSchedule
+  function handleCouponData(receivedData) {
+    console.log('CouponData', receivedData);
+    appState.setCouponData(receivedData);
   }
   // IR
   function handleEUSWData(data) {

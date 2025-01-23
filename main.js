@@ -660,3 +660,24 @@ const handleCSParameterUpdate = (event, { newRowData, cleanTableName }) => {
 // Register the event listener
 ipcMain.on('csparameter-update', handleCSParameterUpdate);
 
+// Listen for the 'fetch-prod-coupons' event
+// ipcMain.on('fetch-prod-coupons', (event, prodId) => {
+//   if (!prodId) {
+//     console.error("Error: 'prodId' is required.");
+//     mainWindow.webContents.send(event, { error: "'prodId' is required." });
+//     return;
+//   }
+//   console.log('prodId', prodId)
+
+//   // Construct the query to fetch data from ProdCouponSchedules
+//   const query = `SELECT * FROM ProdCouponSchedules WHERE PROD_ID = '${prodId}'`;
+
+//   console.log('Executing query:', query);
+
+//   // Use fetchDataAndSendEvent to execute the query and send the results
+//   fetchDataAndSendEvent(query, 'fetch-prod-coupons-response');
+// });
+
+
+
+

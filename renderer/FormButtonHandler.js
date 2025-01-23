@@ -1,4 +1,4 @@
-import { generateInputFields } from './inputFieldsGenerator.js';
+import { generateInputFields, generateCouponInputFields } from './inputFieldsGenerator.js';
 import { formatInputFieldValue } from '../utils/format.js';
 import { issuerData } from '../r_tab/ISSUER.js';
 
@@ -17,6 +17,22 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
     setupEditOperation(rowData, rowIndex, selectedTableName);
   }
 }
+
+export function handleCouponFormAction(event, data, rowIndex, actionType) {
+  console.log('handleCouponFormAction',  data)
+  displayModal(actionType, rowIndex);
+
+  if (actionType === 'add') {
+    setupCouponAddOperation(data);
+  } else if (actionType === 'edit') {
+    const rowData = data[rowIndex];
+    setupCouponEditOperation(data);
+  }
+}
+
+
+
+
 
 // let isAddingRow = false;
 let isAddingRow;
@@ -188,6 +204,55 @@ function gatherFormData(form) {
 //   form.innerHTML = '';
 // }
 
+// function displayModal(actionType, rowIndex = null) {
+//   const modal = document.getElementById('modal');
+//   const modalContent = modal.querySelector('.modal-content');
+//   const modalTitle = modal.querySelector('h2');
+
+//   // Set the modal title based on the action type
+//   if (actionType === 'add') {
+//     modalTitle.textContent = 'Add New Row';
+//   } else if (actionType === 'edit' && rowIndex !== null) {
+//     modalTitle.textContent = `Edit Row ${rowIndex + 1}`;
+//   }
+
+//   // Show the modal
+//   modal.style.display = 'block';
+
+//   // Close button handler
+//   const closeButton = modal.querySelector('.close');
+//   closeButton.onclick = () => {
+//     modal.style.display = 'none'; // Hide the modal
+//   };
+
+//   // Drag functionality
+//   const dragElement = modal.querySelector('.draggable'); // Draggable area
+//   let isDragging = false;
+//   let offsetX = 0, offsetY = 0;
+
+//   // Mouse down event
+//   dragElement.onmousedown = (e) => {
+//     isDragging = true;
+//     offsetX = e.clientX - modalContent.offsetLeft;
+//     offsetY = e.clientY - modalContent.offsetTop;
+
+//     // Mouse move event
+//     document.onmousemove = (moveEvent) => {
+//       if (isDragging) {
+//         modalContent.style.left = `${moveEvent.clientX - offsetX}px`;
+//         modalContent.style.top = `${moveEvent.clientY - offsetY}px`;
+//         modalContent.style.transform = "none"; // Disable centering during drag
+//       }
+//     };
+//   };
+
+//   // Mouse up event
+//   document.onmouseup = () => {
+//     isDragging = false;
+//     document.onmousemove = null;
+//   };
+// }
+
 function displayModal(actionType, rowIndex = null) {
   const modal = document.getElementById('modal');
   const modalContent = modal.querySelector('.modal-content');
@@ -199,6 +264,13 @@ function displayModal(actionType, rowIndex = null) {
   } else if (actionType === 'edit' && rowIndex !== null) {
     modalTitle.textContent = `Edit Row ${rowIndex + 1}`;
   }
+
+  // Clear specific sections for ProdAll and ProdCouponSchedules
+  const prodSection = document.getElementById('prodSection');
+  const couponSection = document.getElementById('couponSection');
+
+  if (prodSection) prodSection.innerHTML = ''; // Clear only ProdAll section
+  if (couponSection) couponSection.innerHTML = ''; // Clear only CouponSchedules section
 
   // Show the modal
   modal.style.display = 'block';
@@ -236,6 +308,7 @@ function displayModal(actionType, rowIndex = null) {
     document.onmousemove = null;
   };
 }
+
 
 
 
@@ -353,6 +426,9 @@ function getUniqueIdentifier(newData, selectedTableName) {
           case 'yahoo':
             uniqueIdentifierColumn = 'ID';
             break;  
+          case 'ProdCouponSchedules': 
+            uniqueIdentifierColumn = 'ID'; 
+            break;   
           // Add more cases as needed for different tables
           default:
               console.error('Unknown table:', selectedTableName);
@@ -418,7 +494,7 @@ function addNewRow(newRowData, cleanTableName) {
   });
 }
 
-function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
+export function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
   console.log('FBH saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
   // Send the update request to the main process
   window.api.send('update-data', { newData, cleanTableName, rowIndex, uniqueIdentifier });
@@ -441,3 +517,69 @@ function displayErrorMessage(message) {
     console.error("Error message container not found");
   }
 }
+
+
+
+
+
+function setupCouponAddOperation(data) {
+  const modal = document.getElementById('modal');
+  const form = document.getElementById('editForm');
+  const modalTitle = modal.querySelector('h2');
+
+  // Reset form and modal title
+  form.innerHTML = '';
+  modalTitle.textContent = 'Add New Coupon Row';
+
+  // Create an empty template for a new row
+  const emptyRow = { DATE: '', FIX_CF: '' };
+
+  generateInputFields(emptyRow, form, [], 'ProdCouponSchedules');
+
+  // Configure save button
+  const saveButton = document.getElementById('saveButton');
+  const newSaveButton = saveButton.cloneNode(true);
+  saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+  newSaveButton.addEventListener('click', () => addSaveButtonHandler(form, modal, 'ProdCouponSchedules'));
+}
+
+function setupCouponEditOperation(rowData) {
+  if (!rowData) {
+    console.error('setupCouponEditOperation: rowData is undefined or null.');
+    return;
+  }
+
+  console.log('setupCouponEditOperation data', rowData);
+  const modal = document.getElementById('modal');
+  const form = document.getElementById('editForm');
+  const modalTitle = modal.querySelector('h2');
+
+  // Reset form and modal title
+  form.innerHTML = '';
+  modalTitle.textContent = `Edit Coupon Data`;
+
+  // Use the new generateCouponInputFields for coupon-specific data
+  generateCouponInputFields(rowData, form);
+
+  // Configure save button
+  const saveButton = document.getElementById('saveButton');
+  const newSaveButton = saveButton.cloneNode(true);
+  saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+
+  newSaveButton.addEventListener('click', () => {
+    editSaveButtonHandler('ProdCouponSchedules', rowData)();
+  });
+
+  // Configure erase button
+  const eraseButton = document.getElementById('eraseButton');
+  const newEraseButton = eraseButton.cloneNode(true);
+  eraseButton.parentNode.replaceChild(newEraseButton, eraseButton);
+
+  newEraseButton.addEventListener('click', () => {
+    eraseButtonHandler('ProdCouponSchedules', rowData)();
+  });
+}
+
+
+
+
