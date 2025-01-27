@@ -1,0 +1,31 @@
+.traffic-light-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-left: 20px; /* Space between chart and traffic light */
+}
+
+.traffic-light {
+    width: 60px;
+    height: 180px;
+    background: #333;
+    border-radius: 15px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    border: 3px solid #555;/* Frame around the traffic light */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.light {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #555;
+}
+
+.green.active { background: green; }
+.yellow.active { background: yellow; }
+.red.active { background: red; }
+    

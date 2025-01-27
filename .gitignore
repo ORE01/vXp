@@ -1,0 +1,12 @@
+# Ignorierte Verzeichnisse und Dateien
+node_modules/
+.env
+large_directory/
+*.log
+zzzApp/
+bin/
+zzzArchiv/
+files/
+out temp_folder/
+dist/
+venv/

@@ -1,0 +1,153 @@
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+  font-family: "Your Font Name", sans-serif;
+}
+
+.modal-content {
+  position: absolute; /* Allows free positioning */
+  top: 50%; /* Initial centered position */
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center it initially */
+  width: 400px;
+  max-width: 90%; /* Make it responsive for smaller screens */
+  max-height: 90%; /* Prevent overflow on smaller screens */
+  overflow-y: auto; /* Enable scrolling if content exceeds modal height */
+  padding: 20px;
+  background-color: rgb(70, 69, 69);
+  color: rgb(161, 160, 160);
+  font-size: 14px;
+  border-radius: 8px; /* Add rounded corners for a modern look */
+  z-index: 1001; /* Ensure it stays above the overlay */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.draggable {
+  cursor: move;
+  position: absolute;
+  z-index: 1000;
+  -webkit-app-region: drag;
+}
+
+.modal-content.draggable input[type="text"],
+.modal-content.draggable textarea {
+  position: relative;
+  z-index: 1000;
+  background-color: #333;
+  color: rgb(161, 160, 160);
+}
+
+input[type="text"],
+textarea {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  padding: 4px; /* Add some padding for better usability */
+  font-size: 14px;
+  color: #fff;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  background-color: #444; /* Highlight active input fields */
+  border: 1px solid #4CAF50;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.label {
+  flex: 0 0 120px;
+  text-align: left;
+  margin-right: 10px;
+}
+
+.input-field {
+  flex: 1;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: #fff;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%; /* Make table take up full modal width */
+}
+
+table th,
+table td {
+  border: 1px solid #555; /* Subtle border for better readability */
+  padding: 8px;
+  text-align: left; /* Align table content */
+  font-size: 13px; /* Slightly smaller text for tables */
+}
+
+table th {
+  background-color: #333;
+  color: #fff;
+  font-weight: bold;
+}
+
+table tr:hover {
+  background-color: #444; /* Highlight row on hover */
+}
+
+#saveButton,
+#eraseButton {
+  background-color: #4CAF50;
+  border: none;
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-right: 10px; /* Add spacing between buttons */
+}
+
+#saveButton:hover {
+  background-color: #015f06;
+}
+
+#eraseButton {
+  background-color: #800000;
+}
+
+#eraseButton:hover {
+  background-color: #a00000;
+}
+
+#saveButton:active,
+#eraseButton:active {
+  transform: scale(0.95); /* Add a subtle click effect */
+}
+
+#modalBody {
+  margin-top: 20px;
+}
+
+p {
+  color: #ccc; /* Adjust text color for better contrast */
+  margin: 0;
+  padding: 5px 0;
+}
+
+  
+  

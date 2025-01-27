@@ -1,0 +1,79 @@
+/* Add some spacing between the button and data-container */
+.button-wrapper {
+    margin-bottom: 10px; 
+  }
+  .close-button {
+    float: right;
+    cursor: pointer;
+  }
+  .button-container {
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px; /* Adjust the value as needed */
+  }
+  
+  .button-container .edit-button {
+    margin-bottom: 10px; /* Add space between buttons */
+  }
+  
+  .button-container .edit-button:last-child {
+    margin-bottom: 0; /* Remove the space for the last button */
+  }
+  .edit-button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .edit-button:hover {
+    background-color: #45a049;
+  }
+  #scrollButton {
+    display: block;
+    }
+    
+    #issuerAddButton,
+    #dealsAddButton,
+    #prodAddButton {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    }
+    
+    #issuerAddButton:hover,
+    #dealsAddButton:hover,
+    #prodAddButton:hover {
+    background-color: #45a049;
+    }
+    
+    #issuerAddButton:active,
+    #dealsAddButton:active,
+    #prodAddButton:active{
+    background-color: #3e8e41;
+    } 
+    .chart-button {
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        padding: 4px 12px;
+        text-align: center;
+        text-decoration: none;
+        display: inline;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }

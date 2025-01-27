@@ -1,0 +1,226 @@
+/* Add this CSS to align the containers side by side */
+.table-content {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  .data-container {
+    /* Your existing styles for .data-container */
+    flex: 1; /* Make the .data-container occupy all the available width */
+  }
+  
+  .chart-container {
+    width: 100%; /* Ensure full width */
+    height: 400px; /* Adjust height to make the chart bigger */
+    display: block; /* Make sure it's visible */
+    position: relative; /* Keep relative positioning */
+  }
+  
+  
+  .chart-container-table {
+    /* Your existing styles for .chart-container-inner */
+    display: none;
+    width: 100%;
+    height: 500px;
+  }
+
+  .chart-container-inner {
+    display: flex;
+    align-items: center; /* Vertically aligns the chart and traffic light */
+    justify-content: flex-start; /* Ensures elements align horizontally */
+    gap: 20px; /* Adds space between the chart and traffic light */
+  }
+  
+  .chart-container-inner.active {
+    /* Your existing styles for the active chart container */
+    display: block;
+  }
+
+  #MVaRChart{
+     
+    width: 5px; 
+    height: 600px; 
+}
+
+  /* #LGDChart,
+  #EADChart,
+  #LossIssuerChart {
+     
+      width: 100px; 
+      height: 600px; 
+  } */
+  #issuerGraphContainer {
+    margin-left: 40px; /* Adjust the margin as needed to create space */
+  }
+  
+/* CSS for CPV01Chart container */
+.cpv01-chart-container {
+  width: 400px; /* Set the width */
+  height: 300px; /* Set the height */
+}
+
+/* CSS for PV01Chart container */
+.pv01-chart-container {
+  width: 400px; /* Set the width */
+  height: 300px; /* Set the height */
+}
+
+/* Ensure canvas elements fill their containers */
+.cpv01-chart-container canvas, .pv01-chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+/* CSS for the container of the chart */
+#issuerGraphContainer {
+  width: 100%; /* Make the container take up the full width */
+  height: 50vh; /* Set a fixed height for the container */
+  overflow: hidden; /* Hide overflow content */
+  position: relative;
+}
+
+.comp-chart-container {
+  width: 30%; /* Adjust the width as needed */
+  max-width: 300px; /* Set a maximum width to limit expansion */
+  height: 400px; /* Set the height */
+  display: inline-block; /* Display the containers inline */
+  margin: 10px; /* Add margin between the containers */
+}
+
+
+#compChart {
+  width: 100%; /* Ensure the chart fills its container */
+  height: auto; /* Allow the height to adjust based on the container */
+}
+
+
+
+
+
+/* Wrapper for the entire table and chart layout */
+#FWD_Modal .forward-layout-wrapper {
+  display: flex;
+  flex-direction: row;  /* Arrange table and charts side by side */
+  width: 100%;
+  gap: 20px;            /* Add space between the table and charts */
+}
+
+/* Specific styles for the data table container (left side) */
+#FWD_Modal .data-container {
+  display: block;
+  width: 40%;          /* Set width to 40% of the total modal width */
+  max-height: 100%;    /* Ensure it does not overflow the modal */
+  overflow-y: auto;    /* Allow vertical scrolling if the content is too large */
+}
+
+/* Wrapper for the charts (right side) */
+#FWD_Modal .forward-charts-wrapper {
+  display: flex;
+  flex-direction: column; /* Stack charts vertically */
+  width: 60%;             /* Charts take up 60% of the modal width */
+  gap: 20px;              /* Add space between the charts */
+}
+
+/* Specific styles for the FWDlineChart */
+#FWD_Modal .forward-line-chart {
+  width: 100%;
+  height: 400px;  /* Adjust the height as needed */
+}
+
+/* Specific styles for the FWDforwardCurveChart */
+#FWD_Modal .forward-swap-chart {
+  width: 100%;
+  height: 400px;  /* Adjust the height as needed */
+}
+
+
+/* Unique container for each TSChart */
+.TSChart-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1000px; /* Limit the maximum width of the chart */
+  margin: 20px auto; /* Center the chart container with margin */
+}
+
+.chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center align the chart and buttons */
+  margin-top: 20px; /* Add spacing */
+}
+
+.time-range-buttons {
+  display: flex;
+  gap: 10px; /* Space between buttons */
+  margin-top: 10px; /* Space between chart and buttons */
+}
+
+.time-range-buttons button {
+  padding: 6px 12px;
+  background-color: #888; /* Set the buttons to a gray color */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.time-range-buttons button:hover {
+  background-color: #666; /* Darker gray on hover */
+}
+
+
+
+#test-data-chart-wrapper,
+#future-prediction-chart-wrapper {
+  width: 100%;                  /* Take up full width of the container */
+  max-width: 800px;             /* Set a reasonable maximum width */
+  height: auto;                 /* Adjust height automatically */
+  margin: 20px auto;            /* Center the wrapper and add spacing */
+  text-align: center;           /* Center align content */
+  overflow: visible;            /* Ensure content isn't clipped */
+}
+
+#MLTestDataChart,
+#MLFuturePredictionChart {
+  display: block !important;    /* Ensure the canvas is visible */
+  width: 100% !important;       /* Take full width of the wrapper */
+  max-width: 600px;             /* Set a maximum width for responsiveness */
+  height: 300px !important;     /* Set explicit height for better visibility */
+  margin: 0 auto;               /* Center the canvas horizontally */
+  background-color: rgba(0, 0, 0, 0.05); /* Optional: light background for debugging */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Optional: subtle border for clarity */
+}
+
+#LossIssuerCombinedChartContainer, 
+#LossIssuerCombinedESChartContainer {
+  width: 100%; /* Full width of the parent container */
+  max-width: 1200px; /* Set a maximum width to prevent it from stretching too much */
+  height: 600px; /* Fixed height for the container */
+  display: flex; /* Flex to ensure content fills the space */
+  justify-content: center; /* Center the canvas horizontally */
+  align-items: center; /* Center the canvas vertically */
+  margin: 0 auto; /* Center the container itself */
+  margin-bottom: 40px; /* Adds space between the two chart containers */
+}
+
+#LossIssuerCombinedChartContainer {
+  margin-top: 40px; /* Space between the data container and the first chart */
+}
+
+#LossIssuerCombinedChart, 
+#LossIssuerCombinedESChart {
+  width: 100%; /* Take up 100% of the container's width */
+  height: 400px; /* Take up 100% of the container's height */
+  /*max-height: 600px;  Prevent it from going beyond 600px in height */
+}
+
+
+p {
+  text-align: left; 
+  font-weight: bold; 
+  margin-bottom: 10px; 
+}
+
+

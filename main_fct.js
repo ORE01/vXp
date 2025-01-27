@@ -23,20 +23,21 @@ function logToFile(message) {
 // Choose the correct database path based on the environment
 let dbPath;
 if (isDevelopmentEnvironment()) {
-  // Absoluter Pfad: für die Entwicklung (nicht compelliert)
+  // Absoluter Pfad: für die Entwicklung (nicht compelliert)
   dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-  console.log('dbPath:', dbPath);
+  // dbPath = 'C:/Users/Ronald/riskApp/electron_app/files/UNI.db';
+  console.log('dbPath:', dbPath);
 } else {
-  // Relativer Pfad für die compellierte Version:
-  dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-  // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
-  // dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
+  // Relativer Pfad für die compellierte Version:
+  // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+  // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
+  dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
   
 }
 
-console.log('main_fct: __dirname:', __dirname);
-console.log('main_fct: dbPath:', dbPath);
-console.log(app.getPath('userData'));
+// console.log('main_fct: __dirname:', __dirname);
+// console.log('main_fct: dbPath:', dbPath);
+// console.log(app.getPath('userData'));
 
 // Replace console.log and console.error with logToFile
 logToFile('main_fct: __dirname: ' + __dirname);
@@ -51,7 +52,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
         // Replace console.error
         logToFile('Database connection error: ' + err.message);
   } else {
-    console.log('Connected to the database.');
+    console.log('Connected to database! READY to ROCK and ROLL');
         // Replace console.log
         logToFile('Connected to the database.');
   }
@@ -77,7 +78,7 @@ function queryDB(tableName, callback) {
       console.error(err.message);
       callback(err, null);
     } else {
-      console.log('main_fct: queryDB: DB_Data erhalten');
+      //console.log('main_fct: queryDB: DB_Data erhalten');
       //console.log('Retrieved rows:', rows);
       setTimeout(() => {
         callback(null, rows);
@@ -113,16 +114,16 @@ function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) 
     WHERE ${uniqueIdentifier.column} = '${uniqueIdentifier.value}'`;
 
 
-    console.log('newData:', newData);
-    console.log('rowIndex:', rowIndex);
-    console.log('uniqueIdentifier.column:', uniqueIdentifier.column);
-    console.log('main_fct updateRecord cleanTableName:', tableName);
-    console.log('tableName:', tableName);
-    console.log('columnNames:', columnNames);
-    console.log('setClause:', setClause);
-    console.log('uniqueIdentifier.column:', uniqueIdentifier.column);
-    console.log('uniqueIdentifier.value:', uniqueIdentifier.value);
-    console.log('Query:', query);
+    // console.log('newData:', newData);
+    // console.log('rowIndex:', rowIndex);
+    // console.log('uniqueIdentifier.column:', uniqueIdentifier.column);
+    // console.log('main_fct updateRecord cleanTableName:', tableName);
+    // console.log('tableName:', tableName);
+    // console.log('columnNames:', columnNames);
+    // console.log('setClause:', setClause);
+    // console.log('uniqueIdentifier.column:', uniqueIdentifier.column);
+    // console.log('uniqueIdentifier.value:', uniqueIdentifier.value);
+    // console.log('Query:', query);
 
   db.run(query, (err) => {
     if (err) {
@@ -361,7 +362,7 @@ function deleteTable(selectedTableName, sender) {
 
 // Generalized function to start Python scripts
 function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
-  console.log('ARGUMENTS main_fct; args:', args);
+  console.log('main_fct: startPythonScriptWithEvent:', args);
   return new Promise((resolve, reject) => {
     let pythonExecutable;
     let pythonArgs = [scriptIdentifier, ...args];
@@ -369,7 +370,8 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
     // Determine the Python executable based on the environment
     if (isDevelopmentEnvironment()) {
       pythonExecutable = 'C:\\Python312\\python.exe';  // Path to Python executable
-      pythonArgs.unshift('C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py');  // Full path to main.py
+      // pythonArgs.unshift('C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py');  // Full path to main.py
+      pythonArgs.unshift('C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.py');  // Full path to main.py
     } else {
       pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
     }
@@ -393,9 +395,9 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
 
       // Handle process close
       pythonProcess.on('close', (code) => {
-        console.log(`Python process exited with code_main_fct ${code}`);
+        // console.log(`Python process exited with code_main_fct ${code}`);
         if (code === 0) {
-          console.log("Python script executed successfully without JSON output.");
+          // console.log("Python script executed successfully.");
           resolve({ success: true, message: "Python script executed successfully." });
         } else {
           reject(new Error(`Python script failed with code ${code}`));
@@ -408,9 +410,16 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
   });
 }
 
+function insertCSParameter(data, tableName, callback) {
+  const query = `INSERT INTO ${tableName} (CSSzenario, a, b, c, d, e, f) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  const params = [data.CSSzenario, data.a, data.b, data.c, data.d, data.e, data.f];
+
+  db.run(query, params, function (err) {
+    callback(err); // Callback to handle the response
+  });
+}
 
 
 
 
-
-module.exports = { getAllTableNames, queryDB, updateRecord,  insertDeal, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent};
+module.exports = { getAllTableNames, queryDB, updateRecord,  insertDeal, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, insertCSParameter};

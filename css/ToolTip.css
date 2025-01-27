@@ -1,0 +1,80 @@
+    /* Language toggle styling */
+    .language-toggle {
+        display: flex;
+        gap: 10px; /* Add spacing between buttons */
+    }
+    /* Language buttons */
+    .language-button {
+        background-color: #4CAF50; /* Green background */
+        color: white; /* White text */
+        border: none;
+        padding: 8px 12px;
+        font-size: 14px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+      }
+  
+      .language-button:hover {
+        background-color: #45a049;
+      }
+  
+  /* BOX */
+.info-icon {
+    display: inline-block;
+    margin-left: 5px;
+    background-color: #4CAF50; /* Green background */
+    color: white; /* White text */
+    border-radius: 50%; /* Circular shape */
+    width: 16px; /* Fixed width */
+    height: 16px; /* Fixed height */
+    text-align: center; /* Center text inside the icon */
+    font-size: 12px; /* Adjust font size */
+    line-height: 16px; /* Center the text vertically */
+    cursor: pointer; /* Pointer cursor for interaction */
+    position: relative; /* For positioning the tooltip */
+  }
+  
+  /* Tooltip container */
+  .info-icon::after {
+    content: attr(data-tooltip); /* Use the data-tooltip attribute */
+    display: none; /* Initially hidden */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 150%; /* Position above the icon */
+    background-color: rgba(0, 0, 0, 0.9); /* Dark background */
+    color:rgb(161, 160, 160); /* Light gray text */
+    padding: 10px; /* Add padding for readability */
+    border-radius: 8px; /* Rounded corners */
+    font-size: 12px; /* Tooltip font size */
+    white-space: normal; /* Allow text wrapping */
+    min-width: 200px; /* Set a minimum width for tooltips */
+    max-width: 500px; /* Set a maximum width for tooltips */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Add a shadow */
+    z-index: 900; /* Ensure it appears above other elements */
+    text-align: left; /* Align text for readability */
+  }
+  
+  /* Tooltip arrow */
+  .info-icon::before {
+    content: '';
+    display: none; /* Initially hidden */
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 140%; /* Slightly above the tooltip box */
+    border-width: 6px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent; /* Arrow color and direction */
+    z-index: 1001;
+  }
+  
+  /* Show tooltip on hover */
+  .info-icon:hover::after,
+  .info-icon:hover::before {
+    display: block;
+  }
+
+
+  
