@@ -36,7 +36,7 @@
     "dotenv": "^16.3.1",
     "lightweight-charts": "^4.2.0",
     "scipy": "^0.1.4",
-    "sqlite3": "^5.0.2"
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "electron": "^30.0.0",
