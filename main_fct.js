@@ -34,9 +34,9 @@ if (isDevelopmentEnvironment()) {
   console.log('dbPath:', dbPath);
 } else {
   // Relativer Pfad für die compellierte Version:
-  // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+  dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
   // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
-  dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
+//   dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
   
 }
 
