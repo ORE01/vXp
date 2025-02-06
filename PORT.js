@@ -3,6 +3,7 @@ import processData from './renderer/dataProcessor.js';
 import { handleFormAction } from './renderer/FormButtonHandler.js';
 import { displayValuesForElementId } from './COMP.js';
 import { appState } from './renderer.js';
+import { addTooltipsForTruncatedText, addProdIdTooltips } from './utils/tooltips.js';
 
 let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
 let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
@@ -171,7 +172,7 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     let filteredPortData = filterColumnsInData(filterData(receivedData, filtersConfig), columns);
     console.log('filteredPortData:', filteredPortData);
 
-    appState.setFilteredPortData(filteredPortData);
+    //appState.setFilteredPortData(filteredPortData);
    
     // Aggregate NOTIONAL and NAV to calculate total values
     let filteredTotalNav = 0;
@@ -285,6 +286,9 @@ console.log('savedValues[elementId] :', savedValues[elementId] );
     // console.log('portTableName:', portTableName);
     const portDataHTML = processData(filteredPortDataNew, portTableName);
     portDataContainer.innerHTML = portDataHTML;
+
+    addTooltipsForTruncatedText(portDataContainer);
+    addProdIdTooltips(portDataContainer); 
   }
     // Edit Buttons
     const portEditButtons = document.querySelectorAll('#portDataContainer .edit-button');

@@ -4,6 +4,8 @@ import { handleSwapForwardCurve, handleFWDData } from './FORWARDS.js';
 import { handleProviderData } from './DATAProvider.js'; 
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
+import { handleCouponData } from './PRODCoupon.js';
+
 import { tooltips } from './ToolTip.js';
 import { AppState } from './AppState.js';
 import { initializeTabs } from './utils/tabs.js';
@@ -32,7 +34,19 @@ function setupEventListeners() {
   window.api.receive('RankData', handleRankData);
   
   window.api.receive('ProdAllData', handleProdData);
-  window.api.receive('ProdCouponSchedulesData', handleCouponData);
+  // Listener für ProdCouponSchedulesData
+  window.api.receive('ProdCouponSchedulesData', (receivedData) => {
+    console.log('Received ProdCouponSchedulesData:', receivedData);
+
+    // Speichern der Daten in appState
+    if (appState && typeof appState.setCouponData === 'function') {
+      appState.setCouponData(receivedData);
+      console.log('Coupon data saved in appState.');
+    } else {
+      console.error('appState or setCouponData is not defined!');
+    }
+  });
+
 
   window.api.receive('createdDealsData', handleCreatedDealsData);
   window.api.receive('createdPortData', handleCreatedPortData);
@@ -743,11 +757,11 @@ function setupButtons() {
       prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'prod'));
     }
   }
-  // CouponSchedule
-  function handleCouponData(receivedData) {
-    console.log('CouponData', receivedData);
-    appState.setCouponData(receivedData);
-  }
+  // PRODCouponData
+  // function handleCouponData(receivedData) {
+  //   console.log('CouponData', receivedData);
+  //   appState.setCouponData(receivedData);
+  // }
   // IR
   function handleEUSWData(data) {
     console.log("Received data in handleEUSWData:", data);  // Log to verify data content

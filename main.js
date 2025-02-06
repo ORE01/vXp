@@ -507,38 +507,24 @@ const updateDataListener = async (event, { cleanTableName, rowIndex, newData, un
 // Attach the event listener for the "update-data" event only once during initialization
 ipcMain.on('update-data', updateDataListener);
 
-
-
-// Define the event listener function and attach the event listener
-const addNewRowListener = (event, { newRowData, cleanTableName }) => {
+ipcMain.on('add-new-row', (event, { newRowData, cleanTableName }) => {
   console.log('Event listener triggered in main.js');
+  console.log('Received data:', newRowData);
 
-  // Remove the event listener to prevent further triggers
-  ipcMain.removeListener('add-new-row', addNewRowListener);
-
-  // Add your logic here to save the new row data in the database
   insertDeal(newRowData, cleanTableName, (err) => {
     if (err) {
-      console.error(err.message);
+      console.error('Error inserting row:', err.message);
       event.reply('add-new-row-error', err.message);
     } else {
-      console.log('New row data:', newRowData);
+      console.log('Row added successfully:', newRowData);
       event.reply('add-new-row-success');
-
-      // Clear the newRowData object if needed
-      newRowData = {};
-      ipcMain.removeListener('add-new-row', addNewRowListener);
-      // Refresh the table
       refreshTable(cleanTableName);
-
-      // Reattach the event listener
-      ipcMain.on('add-new-row', addNewRowListener);
     }
   });
-};
+});
 
-ipcMain.on('add-new-row', addNewRowListener);
-// Trigger sending data to renderer after the page finishes loading
+
+
 
 
 app.on('browser-window-created', (event, window) => {
@@ -659,24 +645,6 @@ const handleCSParameterUpdate = (event, { newRowData, cleanTableName }) => {
 
 // Register the event listener
 ipcMain.on('csparameter-update', handleCSParameterUpdate);
-
-// Listen for the 'fetch-prod-coupons' event
-// ipcMain.on('fetch-prod-coupons', (event, prodId) => {
-//   if (!prodId) {
-//     console.error("Error: 'prodId' is required.");
-//     mainWindow.webContents.send(event, { error: "'prodId' is required." });
-//     return;
-//   }
-//   console.log('prodId', prodId)
-
-//   // Construct the query to fetch data from ProdCouponSchedules
-//   const query = `SELECT * FROM ProdCouponSchedules WHERE PROD_ID = '${prodId}'`;
-
-//   console.log('Executing query:', query);
-
-//   // Use fetchDataAndSendEvent to execute the query and send the results
-//   fetchDataAndSendEvent(query, 'fetch-prod-coupons-response');
-// });
 
 
 

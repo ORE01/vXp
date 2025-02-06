@@ -10,7 +10,10 @@ import { handleIRData } from './IR.js';
 import { handleFWDData, handleSwapForwardCurve } from './FORWARDS.js';
 import { handleMVaRData } from './MVaR.js'; 
 import { handleEADMainData, handleCVaRData } from './CVaR.js'; 
+import { handleCouponData } from './PRODCoupon.js';
+
 import { formPortValue, formPortNotional, formFiltPortNotional, formPortYield, formPortYieldA, formPortPV01, formPortCPV01 } from './PORT.js';
+
 
 
 
@@ -35,6 +38,7 @@ export class AppState {
 
         this.issuerData = null;
         this.prodData = null;
+        this.filteredProdData = null,
         this.couponData = null;
         this.dealsData = null;
         this.rankData = null;
@@ -81,6 +85,8 @@ export class AppState {
         this.handleSwapForwardCurve = handleSwapForwardCurve;
         
         this.handleMVaRData = handleMVaRData;
+        //this.handleCouponData = handleCouponData;
+
         
 
         this.applyFiltersAndUpdateDropdowns = this.applyFiltersAndUpdateDropdowns.bind(this);
@@ -399,6 +405,14 @@ export class AppState {
   getCouponData() {
     console.log('Getting CouponData:', this.couponData);
     return this.couponData;
+  }
+
+  setFilteredProdData(data) {
+    this.filteredProdData = data;
+  }
+
+  getFilteredProdData() {
+    return this.filteredProdData;
   }
 
     

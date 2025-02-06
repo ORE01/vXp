@@ -1,5 +1,6 @@
 import { prodData } from '../PROD.js';
 import { filteredIssuerData } from '../r_tab/ISSUER.js';
+import { convertDateToISO } from '../utils/format.js';
 
 
 // mapping of tables to functions:
@@ -9,54 +10,66 @@ const tableHandlers = {
   CSParameter: handleCSParameterFields,
 };
 
-// skip for the ISSUER field for tables listed:
+// ISSUER-Feld PROBLEM:
 export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter']);
 
+// ISSUER-Feld PROBLEM:
+export function shouldSkipTable(tableName) {
+  return skipIssuerForTables.has(tableName) || (typeof tableName === 'string' && tableName.startsWith('Deals'));
+}
 
 
 
 
+
+
+// Generiert Eingabefelder für ein gegebenes `rowData`-Objekt
 export function generateInputFields(rowData, form, uniqueIssuers, selectedTableName) {
-  console.log('IFG generateInputFields:', selectedTableName);
+  console.log('Generating input fields for:', selectedTableName);
 
-  // Sort uniqueIssuers alphabetically
+  // Sortiere `uniqueIssuers` alphabetisch (optional)
   uniqueIssuers.sort();
 
   Object.keys(rowData).forEach((fieldName) => {
+    // Falls das Feld `ISSUER` ist und es für diese Tabelle ignoriert werden soll → Überspringen
+    if (fieldName === 'ISSUER' && shouldSkipTable(selectedTableName)) {
+      console.log(`Skipping ISSUER field for table: ${selectedTableName}`);
+      return;
+    }
+
+    // Erstelle eine Form-Row für das Feld
     const formRow = document.createElement('div');
     formRow.classList.add('form-row');
 
+    // Label für das Feld erstellen
     const label = document.createElement('label');
     label.textContent = fieldName;
     label.classList.add('label');
 
-    // Handle ISSUER field problem
-    if (fieldName === 'ISSUER' && skipIssuerForTables.has(selectedTableName)) {
-      return; // Skip iteration for the ISSUER field
-    }
-
-    // Determine the appropriate handler based on the selected table name
+    // Prüfe, ob eine spezielle Handler-Funktion für diese Tabelle existiert
     for (const [prefix, handler] of Object.entries(tableHandlers)) {
       if (selectedTableName.startsWith(prefix)) {
         if (handler(fieldName, rowData, formRow, label)) {
           form.appendChild(formRow);
-          return; // Skip further processing for this field
+          return; // Falls Spezialverarbeitung durchgeführt wurde → nächstes Feld
         }
       }
     }
 
-    // Default input field for all other cases
+    // Standardmäßiges Eingabefeld für alle anderen Fälle
     const input = document.createElement('input');
     input.type = 'text';
     input.value = rowData[fieldName] || '';
     input.setAttribute('data-field', fieldName);
     input.classList.add('input-field');
+
+    // Feld dem Formular hinzufügen
     formRow.appendChild(label);
     formRow.appendChild(input);
-
     form.appendChild(formRow);
   });
 }
+
     function handleProdAllFields(fieldName, rowData, formRow, label) {
       switch (fieldName) {
         case 'RANK': {
@@ -66,9 +79,10 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           formRow.appendChild(rankDropdown);
           return true;
         }
+        
 
         case 'CouponType': {
-          const couponTypeOptions = ['FIX', 'FLOATER', 'TERM'];
+          const couponTypeOptions = ['FIX', 'FLOATER'];
           const couponTypeDropdown = createDropdown(fieldName, couponTypeOptions, rowData[fieldName]);
           formRow.appendChild(label);
           formRow.appendChild(couponTypeDropdown);
@@ -181,13 +195,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
     
 
 
-    export function convertDateToISO(dateStr) {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
-      }
-      return dateStr;
-    }
+
     function createDropdown(fieldName, options, selectedValue) {
       const dropdown = document.createElement('select');
       dropdown.id = `${fieldName.toLowerCase()}Select`;
@@ -204,77 +212,3 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
       dropdown.value = selectedValue;
       return dropdown;
     }
-
-
-    export function generateCouponInputFields(dataArray, form) {
-      console.log('Generating input fields for coupon data as columns:', dataArray);
-    
-      if (!dataArray || dataArray.length === 0) {
-        form.innerHTML = '<p>No data available</p>';
-        return;
-      }
-    
-      // Create the table structure
-      const table = document.createElement('table');
-      table.classList.add('coupon-table');
-    
-      // Generate column headers
-      const headerRow = document.createElement('tr');
-      Object.keys(dataArray[0]).forEach((key) => {
-        const headerCell = document.createElement('th');
-        headerCell.textContent = key;
-        headerRow.appendChild(headerCell);
-      });
-      table.appendChild(headerRow);
-    
-      // Generate rows of data
-      dataArray.forEach((row, rowIndex) => {
-        const dataRow = document.createElement('tr');
-    
-        Object.entries(row).forEach(([key, value]) => {
-          const cell = document.createElement('td');
-    
-          // Create input fields for each data cell
-          const input = document.createElement('input');
-          if (key.toLowerCase().includes('date')) {
-            // Parse date to the format "YYYY-MM-DD" for input[type="date"]
-            const formattedDate = formatDateForInput(value);
-            input.type = 'date';
-            input.value = formattedDate || '';
-          } else {
-            input.type = determineInputType(key, value);
-            input.value = value || '';
-          }
-    
-          input.setAttribute('data-row', rowIndex); // To identify the row
-          input.setAttribute('data-field', key); // To identify the field
-          input.classList.add('input-field');
-    
-          cell.appendChild(input);
-          dataRow.appendChild(cell);
-        });
-    
-        table.appendChild(dataRow);
-      });
-    
-      // Append the table to the form
-      form.appendChild(table);
-    }
-    
-    // Helper function to format dates to "YYYY-MM-DD" for input[type="date"]
-    function formatDateForInput(dateValue) {
-      if (!dateValue) return '';
-      const [day, month, year] = dateValue.split('-'); // Assuming "DD-MM-YYYY" format
-      return `${year}-${month}-${day}`; // Convert to "YYYY-MM-DD"
-    }
-    
-    // Helper function to determine input type
-    function determineInputType(key, value) {
-      if (typeof value === 'number') {
-        return 'number';
-      } else {
-        return 'text';
-      }
-    }
-    
-    

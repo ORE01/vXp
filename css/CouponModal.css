@@ -1,0 +1,25 @@
+#coupon-modal .modal-content {
+  width: 250px; /* Reduzierte Breite für ein kompakteres Design */
+  max-width: 90%; /* Responsives Verhalten auf kleineren Bildschirmen */
+  padding: 15px; /* Weniger Padding für kompakteres Layout */
+  background: #333; /* Dunkler Hintergrund */
+  color: #ccc; /* Helle Schriftfarbe */
+  border-radius: 8px; /* Abgerundete Ecken */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5); /* Leichter Schatten */
+  overflow-y: auto; /* Scrollbar, falls der Inhalt zu groß ist */
+}
+
+#coupon-modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7); /* Hintergrund mit Transparenz */
+  z-index: 1000;
+}
+
+  

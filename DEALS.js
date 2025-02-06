@@ -1,8 +1,7 @@
 import processData from './renderer/dataProcessor.js';
 import { handleFormAction } from './renderer/FormButtonHandler.js';
 import { appState } from './renderer.js'; 
-import { addTooltipsForTruncatedText } from './utils/tooltips.js';
-import { ensureRendered } from './utils/domHelpers.js';
+import { addTooltipsForTruncatedText, addProdIdTooltips } from './utils/tooltips.js';
 
 let filteredDealsData;
 // ADD Button
@@ -88,47 +87,10 @@ export function handleDealsData(receivedData, dealsTableName) {
     //console.log('Deals Data Container HTML:', dealsDataContainer.innerHTML);
 
 
-    // Ensure DOM rendering before processing
-    ensureRendered(() => {
+
       addTooltipsForTruncatedText(dealsDataContainer);
+      addProdIdTooltips(dealsDataContainer); 
 
-      // Fetch product data from appState
-      const prodAllData = appState.getProdData();
-      //console.log('prodAllData:', prodAllData);
-          if (!prodAllData || prodAllData.length === 0) {
-            console.error('prodAllData is empty or undefined!');
-            return; // Exit the function early to prevent errors
-          }
-
-
-      // Add Tooltips for PROD_ID
-      const prodIdElements = dealsDataContainer.querySelectorAll('tr > td:nth-child(3)');
-
-      prodIdElements.forEach((element) => {
-        const prodId = element.textContent.trim();
-      
-        // Find matching product in prodAllData
-        const productDetails = prodAllData.find((prod) => prod.PROD_ID === prodId);
-      
-        if (productDetails) {
-          const tooltipContent = `
-            Product ID: ${productDetails.PROD_ID || 'N/A'}\n
-            Description: ${productDetails.DESCRIPTION || 'N/A'}\n
-            Coupon Type: ${productDetails.CouponType || 'N/A'}\n
-            Maturity: ${productDetails.MATURITY || 'N/A'}\n
-            Issuer: ${productDetails.ISSUER || 'N/A'}\n
-            Rank: ${productDetails.RANK || 'N/A'}\n
-            Rating: ${productDetails.RATING_PROD || 'N/A'}\n
-            
-          `;
-      
-          element.setAttribute('title', tooltipContent);
-      
-          //console.log('Found product details:', productDetails);
-        } else {
-          console.warn(`No details found for PROD_ID: ${prodId}`);
-        }
-      });
       
       
 
@@ -149,6 +111,5 @@ export function handleDealsData(receivedData, dealsTableName) {
         const actionType = 'add';
         handleFormAction(event, filteredDealsData, null, tableName, actionType);
       });
-    });
   }
 }

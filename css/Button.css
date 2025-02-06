@@ -8,9 +8,11 @@
   }
   .button-container {
     display: flex;
-    flex-direction: column;
-    margin-top: 20px; /* Adjust the value as needed */
-  }
+    justify-content: flex-end; /* Buttons nach rechts ausrichten */
+    gap: 10px; /* Abstand zwischen den Buttons */
+    margin-top: 20px; /* Abstand zum oberen Inhalt */
+}
+
   
   .button-container .edit-button {
     margin-bottom: 10px; /* Add space between buttons */
@@ -77,3 +79,25 @@
         border-radius: 4px;
         cursor: pointer;
       }
+
+/* Allgemeine Button-Stile (wie andere Buttons in deinem Design) */
+#coupon-button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#coupon-button:hover {
+  background-color: #45a049;
+}
+
+#coupon-button:active {
+  background-color: #3e8e41;
+}
+    

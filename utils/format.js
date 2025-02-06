@@ -27,13 +27,39 @@ export function formatNumberWithCommas(value) {
   // Format the number to two decimal places and add the % sign
   return numericValue.toFixed(2) + '%';
 }
+
+// Für die Anzeige
+export function formatDisplayValue(fieldName, value) {
+  if (!value) return ''; // Handle empty values
+
+  if ([
+    'COUPON', 
+    'FIX_CF', 
+    'GEARING', 
+    'FLOOR', 
+    'CAP', 
+    'SPREADS', 
+    'clean_price', 
+    'FORWARDS', 
+    'RATES'
+  ].includes(fieldName)) {
   
+    return (parseFloat(value) * 100).toFixed(2) + '%'; // Convert decimal to percentage format
+  }
+
+  return value; // Return unchanged for other fields
+}
+
+
+
+  //For SAVING!!!!
 export function formatInputFieldValue(fieldName, value) {
   console.log('fieldNameFF:', fieldName);
   console.log('value', value);
   let formattedValue = value;
 
   if (fieldName === 'COUPON' ||
+      fieldName === 'FIX_CF' ||
       fieldName === 'GEARING' ||
       fieldName === 'FLOOR' ||
       fieldName === 'CAP' ||
@@ -42,15 +68,24 @@ export function formatInputFieldValue(fieldName, value) {
       fieldName === 'FORWARDS' ||
       fieldName === 'RATES') {
       formattedValue = parseFloat(formattedValue) / 100;
-      console.log('formattedValue:', formattedValue);
+      console.log('formattedValue:', formattedValue); 
 
   } else if (fieldName === 'NOTIONAL') {
       formattedValue = parseInt(formattedValue); // Convert to whole number
       console.log('formattedValue:', formattedValue);
+      
   } else if (fieldName === 'RATING') {
     formattedValue = String(formattedValue); // Convert to whole number
     console.log('formattedValue:', formattedValue);
  }
 
   return formattedValue;
+}
+
+export function convertDateToISO(dateStr) {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return dateStr;
 }

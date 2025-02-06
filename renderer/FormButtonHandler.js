@@ -1,22 +1,25 @@
-import { generateInputFields, generateCouponInputFields } from './inputFieldsGenerator.js';
+import { generateInputFields} from './inputFieldsGenerator.js';
+import { generateCouponInputFields } from './couponInputFieldsGenerator.js';
 import { formatInputFieldValue } from '../utils/format.js';
 import { issuerData } from '../r_tab/ISSUER.js';
 
+
 export function handleFormAction(event, data, rowIndex, selectedTableName, actionType) {
   displayModal(actionType, rowIndex);
-  console.log('event, data, rowIndex, selectedTableName, actionType', event, data, rowIndex, selectedTableName, actionType)
   setupFormFields(actionType, data, rowIndex, selectedTableName);
 
   if (actionType === 'add') {
     console.log('data, rowIndex, selectedTableName', data, selectedTableName)
 
     setupAddOperation(data, selectedTableName);
+
   } else if (actionType === 'edit') {
     console.log('data',data)
     const rowData = data[rowIndex];
     
     setupEditOperation(rowData, rowIndex, selectedTableName);
   }
+  removeCouponButton();
 }
 
 export function handleCouponFormAction(event, data, rowIndex, actionType) {
@@ -29,15 +32,12 @@ export function handleCouponFormAction(event, data, rowIndex, actionType) {
     const rowData = data[rowIndex];
     setupCouponEditOperation(data);
   }
+  
 }
-
-
-
-
 
 // let isAddingRow = false;
 let isAddingRow;
-const addSaveButtonHandler = (form, modal, selectedTableName) => {
+export const addSaveButtonHandler = (form, modal, selectedTableName) => {
   console.log('Save button clicked');
   if (isAddingRow) return;
   isAddingRow = true;
@@ -55,43 +55,6 @@ const addSaveButtonHandler = (form, modal, selectedTableName) => {
   }
   isAddingRow = false;
 };
-
-
-// function setupAddOperation(data, selectedTableName) {
-//   console.log('data, selectedTableName', data, selectedTableName)
-//   const modal = document.getElementById('modal');
-//   const modalTitle = modal.querySelector('h2');
-//   const form = document.getElementById('editForm'); // Ensure this ID matches your Add Form
-  
-//   // Reset the form and modal for a new addition
-//   form.innerHTML = '';
-//   modalTitle.textContent = 'Add New Row';
-
-//   // Preparing an empty template based on the structure of `data`
-//   const emptyRowData = data.length > 0 ? Object.keys(data[0]).reduce((acc, fieldName) => {
-//       acc[fieldName] = '';
-//       return acc;
-//   }, {}) : {};
-
-//   // Additional setup for specific tables
-//   // if (selectedTableName === 'Issuer') {
-//   // Assume issuerData is available globally or passed as a parameter
-//   const uniqueIssuers = [...new Set(data.map(item => item.ISSUER))];
-//   emptyRowData['ISSUER'] = uniqueIssuers.length > 0 ? uniqueIssuers[0] : '';
-//   // }
-//   //console.log('uniqueIssuers:', uniqueIssuers);
-//   // Generate input fields based on the empty data template
-//   generateInputFields(emptyRowData, form, uniqueIssuers, selectedTableName); // Adjust if your function signature differs
-
-//   // Cloning the saveButton without redefining it
-//   const saveButton = document.getElementById('saveButton');
-//   const saveButtonClone = saveButton.cloneNode(true);
-//   saveButton.parentNode.replaceChild(saveButtonClone, saveButton);
-
-//   console.log('Attaching event listener to saveButton');
-
-//   saveButtonClone.addEventListener('click', () => addSaveButtonHandler(form, modal, selectedTableName));
-// }
 
 function setupAddOperation(data, selectedTableName) {
   console.log('data, selectedTableName', data, selectedTableName);
@@ -180,79 +143,6 @@ function gatherFormData(form) {
   return newRowData;
 }
 
-// function displayModal(actionType, rowIndex = null) {
-//   const modal = document.getElementById('modal');
-//   const modalTitle = modal.querySelector('h2');
-
-//   // Set the modal title based on the action type
-//   if (actionType === 'add') {
-//     modalTitle.textContent = 'Add New Row';
-//   } else if (actionType === 'edit' && rowIndex !== null) {
-//     modalTitle.textContent = `Edit Row ${rowIndex + 1}`;
-//   }
-
-//   // Show the modal
-//   modal.style.display = 'block';
-
-//   // Close button handler
-//   const closeButton = modal.querySelector('.close');
-//   closeButton.onclick = () => {
-//     modal.style.display = 'none'; // Hide the modal
-//   };
-
-//   // Ensure the form within the modal is cleared when displaying
-//   const form = modal.querySelector('#editForm');
-//   form.innerHTML = '';
-// }
-
-// function displayModal(actionType, rowIndex = null) {
-//   const modal = document.getElementById('modal');
-//   const modalContent = modal.querySelector('.modal-content');
-//   const modalTitle = modal.querySelector('h2');
-
-//   // Set the modal title based on the action type
-//   if (actionType === 'add') {
-//     modalTitle.textContent = 'Add New Row';
-//   } else if (actionType === 'edit' && rowIndex !== null) {
-//     modalTitle.textContent = `Edit Row ${rowIndex + 1}`;
-//   }
-
-//   // Show the modal
-//   modal.style.display = 'block';
-
-//   // Close button handler
-//   const closeButton = modal.querySelector('.close');
-//   closeButton.onclick = () => {
-//     modal.style.display = 'none'; // Hide the modal
-//   };
-
-//   // Drag functionality
-//   const dragElement = modal.querySelector('.draggable'); // Draggable area
-//   let isDragging = false;
-//   let offsetX = 0, offsetY = 0;
-
-//   // Mouse down event
-//   dragElement.onmousedown = (e) => {
-//     isDragging = true;
-//     offsetX = e.clientX - modalContent.offsetLeft;
-//     offsetY = e.clientY - modalContent.offsetTop;
-
-//     // Mouse move event
-//     document.onmousemove = (moveEvent) => {
-//       if (isDragging) {
-//         modalContent.style.left = `${moveEvent.clientX - offsetX}px`;
-//         modalContent.style.top = `${moveEvent.clientY - offsetY}px`;
-//         modalContent.style.transform = "none"; // Disable centering during drag
-//       }
-//     };
-//   };
-
-//   // Mouse up event
-//   document.onmouseup = () => {
-//     isDragging = false;
-//     document.onmousemove = null;
-//   };
-// }
 
 function displayModal(actionType, rowIndex = null) {
   const modal = document.getElementById('modal');
@@ -275,40 +165,55 @@ function displayModal(actionType, rowIndex = null) {
 
   // Show the modal
   modal.style.display = 'block';
-
+ 
   // Close button handler
   const closeButton = modal.querySelector('.close');
   closeButton.onclick = () => {
     modal.style.display = 'none'; // Hide the modal
   };
 
-  // Drag functionality
-  const dragElement = modal.querySelector('.draggable'); // Draggable area
-  let isDragging = false;
-  let offsetX = 0, offsetY = 0;
+  //makeModalDraggable(modalContent);
+}
 
-  // Mouse down event
+function makeModalDraggable(modalContent) {
+  const dragElement = modalContent; // ✅ Now only modal-content is draggable
+  let isDragging = false, offsetX = 0, offsetY = 0;
+
   dragElement.onmousedown = (e) => {
     isDragging = true;
-    offsetX = e.clientX - modalContent.offsetLeft;
-    offsetY = e.clientY - modalContent.offsetTop;
+    modalContent.style.transition = 'none'; // Prevent smooth transitions while dragging
+    modalContent.style.position = 'fixed'; // ✅ Ensure modal-content stays fixed on screen
 
-    // Mouse move event
-    document.onmousemove = (moveEvent) => {
+    const rect = modalContent.getBoundingClientRect();
+
+    // Remove centering transform to avoid jumps
+    if (modalContent.style.transform.includes('translate')) {
+      modalContent.style.left = `${rect.left}px`;
+      modalContent.style.top = `${rect.top}px`;
+      modalContent.style.transform = 'none'; // ✅ Fix jumping issue
+    }
+
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    const onMouseMove = (moveEvent) => {
       if (isDragging) {
         modalContent.style.left = `${moveEvent.clientX - offsetX}px`;
         modalContent.style.top = `${moveEvent.clientY - offsetY}px`;
-        modalContent.style.transform = "none"; // Disable centering during drag
       }
     };
-  };
 
-  // Mouse up event
-  document.onmouseup = () => {
-    isDragging = false;
-    document.onmousemove = null;
+    const onMouseUp = () => {
+      isDragging = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 }
+
 
 
 
@@ -371,18 +276,64 @@ const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () =>
 };
 
 let isErasing = false;
-const eraseButtonHandler = (selectedTableName, rowIndex, data) => async () => {
-  console.log('selectedTableName, uniqueIdentifier', data)
+
+
+export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async () => {
+  console.log('Erase attempt for:', data);
   if (isErasing) return;
   isErasing = true;
 
   try {
     const cleanTableName = getCleanTableName(selectedTableName);
-    const uniqueIdentifier = getUniqueIdentifier(data, selectedTableName);
-    console.log('selectedTableName, uniqueIdentifier', selectedTableName, uniqueIdentifier)
+    let uniqueIdentifier = getUniqueIdentifier(data, selectedTableName);
+    console.log('selectedTableName, uniqueIdentifier:', selectedTableName, uniqueIdentifier);
+
+    // ✅ Keep existing logic for erasing from ProdAll
     await eraseRow(cleanTableName, uniqueIdentifier);
+
+    // ✅ NEW: Also check and erase from ProdCouponSchedules
+    console.log('Checking existence in ProdCouponSchedules for:', uniqueIdentifier);
+
+    let uniqueValue = uniqueIdentifier;
+    if (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null) {
+      uniqueValue = uniqueIdentifier.value; // Extract actual ID value
+    }
+    uniqueValue = String(uniqueValue).trim(); // Ensure it's a string
+
+    // Get all coupon data
+    const couponData = appState.getCouponData();
+    console.log('Available rows in ProdCouponSchedules:', couponData);
+
+    // Find matching rows
+    const matchingRows = couponData.filter(row => {
+      console.log('Checking row:', row); // Debugging log
+      return row.PROD_ID && String(row.PROD_ID).trim() === uniqueValue;
+    });
+
+    if (matchingRows.length > 0) {
+      console.log(`Found ${matchingRows.length} matching rows in ProdCouponSchedules. Deleting...`);
+      for (const row of matchingRows) {
+        console.log('Attempting to delete row:', row);
+
+        if (!row.ID) {
+          console.error('❌ ERROR: Row missing ID:', row);
+          continue; // Skip this row to prevent errors
+        }
+
+        // ✅ Convert ID to a number (removing commas if needed)
+        const numericID = Number(String(row.ID).replace(/,/g, '')); // Removes commas and converts to a number
+        console.log(`Deleting row from ProdCouponSchedules where ID = ${numericID}`);
+
+        // ✅ Ensure `eraseRow` receives column + value
+        await eraseRow('ProdCouponSchedules', { column: 'ID', value: numericID });
+      }
+    } else {
+      console.log('❌ No matching rows found in ProdCouponSchedules.');
+    }
+
     closeModal();
   } catch (error) {
+    console.error('❌ Error in eraseButtonHandler:', error);
     displayErrorMessage(`Failed to erase row: ${error.message}`);
   } finally {
     isErasing = false;
@@ -475,7 +426,7 @@ document.querySelectorAll('.deleteButton').forEach(button => {
   });
 });
 
-function addNewRow(newRowData, cleanTableName) {
+export function addNewRow(newRowData, cleanTableName) {
   return new Promise((resolve, reject) => {
     console.log('FBH in addNewRow newRowData:', newRowData);
     console.log('FBH in addNewRow cleanTableName:', cleanTableName);
@@ -523,26 +474,26 @@ function displayErrorMessage(message) {
 
 
 
-function setupCouponAddOperation(data) {
-  const modal = document.getElementById('modal');
-  const form = document.getElementById('editForm');
-  const modalTitle = modal.querySelector('h2');
+// function setupCouponAddOperation(data) {
+//   const modal = document.getElementById('modal');
+//   const form = document.getElementById('editForm');
+//   const modalTitle = modal.querySelector('h2');
 
-  // Reset form and modal title
-  form.innerHTML = '';
-  modalTitle.textContent = 'Add New Coupon Row';
+//   // Reset form and modal title
+//   form.innerHTML = '';
+//   modalTitle.textContent = 'Add New Coupon Row';
 
-  // Create an empty template for a new row
-  const emptyRow = { DATE: '', FIX_CF: '' };
+//   // Create an empty template for a new row
+//   const emptyRow = { DATE: '', FIX_CF: '' };
 
-  generateInputFields(emptyRow, form, [], 'ProdCouponSchedules');
+//   generateInputFields(emptyRow, form, [], 'ProdCouponSchedules');
 
-  // Configure save button
-  const saveButton = document.getElementById('saveButton');
-  const newSaveButton = saveButton.cloneNode(true);
-  saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-  newSaveButton.addEventListener('click', () => addSaveButtonHandler(form, modal, 'ProdCouponSchedules'));
-}
+//   // Configure save button
+//   const saveButton = document.getElementById('saveButton');
+//   const newSaveButton = saveButton.cloneNode(true);
+//   saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+//   newSaveButton.addEventListener('click', () => addSaveButtonHandler(form, modal, 'ProdCouponSchedules'));
+// }
 
 function setupCouponEditOperation(rowData) {
   if (!rowData) {
@@ -559,7 +510,7 @@ function setupCouponEditOperation(rowData) {
   form.innerHTML = '';
   modalTitle.textContent = `Edit Coupon Data`;
 
-  // Use the new generateCouponInputFields for coupon-specific data
+  // TERMSTRUCTURE of COUPONS:
   generateCouponInputFields(rowData, form);
 
   // Configure save button
@@ -571,16 +522,20 @@ function setupCouponEditOperation(rowData) {
     editSaveButtonHandler('ProdCouponSchedules', rowData)();
   });
 
-  // Configure erase button
-  const eraseButton = document.getElementById('eraseButton');
-  const newEraseButton = eraseButton.cloneNode(true);
-  eraseButton.parentNode.replaceChild(newEraseButton, eraseButton);
-
-  newEraseButton.addEventListener('click', () => {
-    eraseButtonHandler('ProdCouponSchedules', rowData)();
-  });
 }
 
+function removeCouponButton() {
+  const couponButton = document.getElementById('coupon-button');
+  if (couponButton) {
+      couponButton.remove();
+      console.log("Coupon button removed.");
+  }
+}
 
-
-
+// **Attach event to close button to remove coupon button**
+document.addEventListener("DOMContentLoaded", () => {
+  const closeButton = document.querySelector(".close"); 
+  if (closeButton) {
+      closeButton.addEventListener("click", removeCouponButton);
+  }
+});
