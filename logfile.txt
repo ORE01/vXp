@@ -2916,3 +2916,27 @@
 2025-02-06T08:27:19.639Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
 2025-02-06T08:27:19.642Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
 2025-02-06T08:27:19.734Z: Connected to the database.
+2025-02-06T13:01:15.650Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-02-06T13:01:15.652Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-02-06T13:01:15.655Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-02-06T13:01:15.701Z: Connected to the database.
+2025-02-06T13:03:46.902Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-02-06T13:03:46.903Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-02-06T13:03:46.906Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-02-06T13:03:46.951Z: Connected to the database.
+2025-02-06T13:35:40.495Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-02-06T13:35:40.496Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-02-06T13:35:40.499Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-02-06T13:35:40.542Z: Connected to the database.
+2025-02-07T10:36:04.366Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-02-07T10:36:04.368Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-02-07T10:36:04.371Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-02-07T10:36:04.453Z: Connected to the database.
+2025-02-07T11:02:55.377Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-02-07T11:02:55.379Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-02-07T11:02:55.382Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-02-07T11:02:55.427Z: Connected to the database.
+2025-02-07T11:07:06.199Z: main_fct: __dirname: C:\Users\Ronald\riskApp\electron_app
+2025-02-07T11:07:06.200Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
+2025-02-07T11:07:06.203Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
+2025-02-07T11:07:06.244Z: Connected to the database.

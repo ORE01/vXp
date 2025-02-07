@@ -430,7 +430,7 @@ function setupButtons() {
       selectedTradeIDs
     });
 
-    alert(`Portfolio "${selectionName}" successfully created`);
+    //alert(`Portfolio "${selectionName}" successfully created`);
 
     const newPortfolio = { table_name: selectionName };
     appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
@@ -438,6 +438,9 @@ function setupButtons() {
 
     appState.updateDealsDropdownOptions(selectionName);
     appState.applyFiltersAndUpdateDropdowns('deals');
+
+    nameInput.focus();
+
   }
 
   function handleDeleteSelection() {

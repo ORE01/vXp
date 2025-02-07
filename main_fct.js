@@ -27,16 +27,16 @@ function logToFile(message) {
 // Choose the correct database path based on the environment
 let dbPath;
 if (isDevelopmentEnvironment()) {
-  // Absoluter Pfad: für die Entwicklung (nicht compelliert)
-  //dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-  // dbPath = 'C:/Users/Ronald/riskApp/electron_app/files/UNI.db';
-  dbPath = getDatabasePath();
-  console.log('dbPath:', dbPath);
+      // Absoluter Pfad: für die Entwicklung (nicht compelliert)
+      // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+      // dbPath = 'C:/Users/Ronald/riskApp/electron_app/files/UNI.db';
+      dbPath = getDatabasePath();
+      console.log('dbPath:', dbPath);
 } else {
-  // Relativer Pfad für die compellierte Version:
-  dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-  // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
-//   dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
+      // Relativer Pfad für die compellierte Version:
+      // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+      // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
+      dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
   
 }
 
@@ -366,58 +366,6 @@ function deleteTable(selectedTableName, sender) {
 }
 
 
-
-
-
-// Generalized function to start Python scripts
-// function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
-//   console.log('main_fct: startPythonScriptWithEvent:', args);
-//   return new Promise((resolve, reject) => {
-//     let pythonExecutable;
-//     let pythonArgs = [scriptIdentifier, ...args];
-
-//     // Determine the Python executable based on the environment
-//     if (isDevelopmentEnvironment()) {
-//       const devPaths = getDevelopmentPythonPath();
-//       pythonExecutable = devPaths.executable;
-//       pythonArgs.unshift(devPaths.scriptPath);
-//     } else {
-//       pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
-//     }
-
-//     try {
-//       const pythonProcess = spawn(pythonExecutable, pythonArgs);
-//       let scriptOutput = '';  // Variable to store the collected output
-
-//       // Collect stdout data
-//       pythonProcess.stdout.on('data', (data) => {
-//         console.log(`stdout: ${data}`);
-//         scriptOutput += data.toString();  // Append the data to scriptOutput
-//         event.sender.send(`${eventType}-output`, data.toString());
-//       });
-
-//       // Collect stderr data (for error logging)
-//       pythonProcess.stderr.on('data', (data) => {
-//         console.error(`stderr: ${data}`);
-//         event.sender.send(`${eventType}-error`, data.toString());
-//       });
-
-//       // Handle process close
-//       pythonProcess.on('close', (code) => {
-//         // console.log(`Python process exited with code_main_fct ${code}`);
-//         if (code === 0) {
-//           // console.log("Python script executed successfully.");
-//           resolve({ success: true, message: "Python script executed successfully." });
-//         } else {
-//           reject(new Error(`Python script failed with code ${code}`));
-//         }
-//       });
-//     } catch (error) {
-//       console.error(`Failed to start Python script: ${error.message}`);
-//       reject(error);
-//     }
-//   });
-// }
 function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
   console.log('main_fct: startPythonScriptWithEvent:', args);
 

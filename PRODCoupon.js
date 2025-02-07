@@ -281,10 +281,22 @@ function generateCouponForm(data) {
     // Ensure the user can only input numbers but keeps the % formatting
     fixCFInput.addEventListener('input', (event) => {
       let rawValue = event.target.value.replace('%', ''); // Remove the %
+    
       if (!isNaN(rawValue) && rawValue !== '') {
-        event.target.value = parseFloat(rawValue).toFixed(2) + '%';
+        const cursorPosition = event.target.selectionStart;  // Get current cursor position
+    
+        // Only append '%' without adding decimals
+        event.target.value = rawValue + '%';
+    
+        // Restore cursor position before the '%'
+        event.target.setSelectionRange(cursorPosition, cursorPosition);
+      } else {
+        // Clear if input is invalid
+        event.target.value = '';
       }
     });
+    
+    
 
     // Append inputs to row
     row.appendChild(idInput);
@@ -315,7 +327,7 @@ function generateNewCouponSchedule(prodId, startDate, maturity, couponfreq) {
   let rowCounter = 1; // Counter for generating unique IDs
 
   // ⚠️ Move to the first actual coupon payment date
-  currentDate.setMonth(currentDate.getMonth() + intervalInMonths);
+  //currentDate.setMonth(currentDate.getMonth() + intervalInMonths);
 
   while (currentDate <= end) {
     // Generate a numeric ID by combining prodId and rowCounter
@@ -338,67 +350,7 @@ function generateNewCouponSchedule(prodId, startDate, maturity, couponfreq) {
 }
 
   
-// function saveCouponChanges(couponData, couponForm) {
-//     const updatedData = [];
-  
-//     // Sammle die aktualisierten Daten aus dem Formular
-//     const rows = couponForm.querySelectorAll(".coupon-row");
-//     rows.forEach((row, rowIndex) => {
-//       console.log(`Processing Row: ${rowIndex}`);
-  
-//       const dateInput = row.querySelector("input[data-field='DATE']");
-//       const fixCFInput = row.querySelector("input[data-field='FIX_CF']");
-  
-//       // Validierung und Logging bei fehlenden Eingaben
-//       if (!dateInput) {
-//         console.warn(`Row ${rowIndex}: Date input not found.`);
-//         return;
-//       }
-//       if (!fixCFInput) {
-//         console.warn(`Row ${rowIndex}: Fix_CF input not found.`);
-//         return;
-//       }
-  
-//       const datasetRowIndex = dateInput.dataset.rowIndex;
-//       if (!datasetRowIndex) {
-//         console.error(`Row ${rowIndex}: Missing data-row-index attribute on dateInput.`);
-//         return;
-//       }
-  
-//       // Log der Eingaben
-//       console.log(`Row ${rowIndex}: DATE=${dateInput.value}, FIX_CF=${fixCFInput.value}`);
-  
-//       // Sicherstellen, dass die Daten für diese Zeile existieren
-//       const rowData = couponData[datasetRowIndex];
-//       if (!rowData) {
-//         console.warn(`Row ${datasetRowIndex}: No matching data in couponData. Skipping.`);
-//         return;
-//       }
-  
-//       // Vorbereiten der aktualisierten Zeilendaten
-//       const updatedRow = {
-//         ID: rowData.ID, // Beibehalten der korrekten ID
-//         PROD_ID: rowData.PROD_ID,
-//         DATE: dateInput.value,
-//         FIX_CF: parseFloat(fixCFInput.value),
-//       };
-  
-//       // Logging der aktualisierten Zeile
-//       console.log(`Updated Row Data for ID=${updatedRow.ID}:`, updatedRow);
-  
-//       updatedData.push(updatedRow);
-//     });
-  
-//     console.log("Updated Coupon Schedule to Save:", updatedData);
-  
-//     // Speichern der aktualisierten Daten mit saveChanges
-//     updatedData.forEach((row) => {
-//       const uniqueIdentifier = { column: "ID", value: row.ID }; // ID als eindeutigen Schlüssel nutzen
-//       console.log("Saving row:", row, "with uniqueIdentifier:", uniqueIdentifier);
-  
-//       saveChanges(row, "ProdCouponSchedules", null, uniqueIdentifier);
-//     });
-// }
+
 function saveCouponChanges(couponData, couponForm) {
   const updatedData = [];
 
