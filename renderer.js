@@ -407,94 +407,273 @@ function setupButtons() {
     }
   }
 
+  // function handleSaveSelection() {
+  //   console.log('saveSelectionButton');
+  //   const nameInputValue = document.getElementById('nameInput').value;
+  //   const selectionName = 'Deals' + nameInputValue;
+  //   const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
+
+  //   console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
+
+  //   if (!selectionName || tagValues.length === 0) {
+  //     alert('Please enter a name and select at least one trade ID.');
+  //     return;
+  //   }
+
+  //   const filteredData = appState.getFilteredData('deals');
+  //   const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
+
+  //   console.log('selectedTradeIDs:', selectedTradeIDs);
+  //   window.api.send('save-deals-selection', {
+  //     selectionName,
+  //     tagValues,
+  //     selectedTradeIDs
+  //   });
+
+  //   //alert(`Portfolio "${selectionName}" successfully created`);
+
+  //   const newPortfolio = { table_name: selectionName };
+  //   appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
+  //   appState.updateDealsDataTable.bind(appState);
+
+  //   appState.updateDealsDropdownOptions(selectionName);
+  //   appState.applyFiltersAndUpdateDropdowns('deals');
+
+  //   nameInput.focus();
+
+  // }
   function handleSaveSelection() {
     console.log('saveSelectionButton');
     const nameInputValue = document.getElementById('nameInput').value;
     const selectionName = 'Deals' + nameInputValue;
     const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
-
+  
     console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
-
+  
     if (!selectionName || tagValues.length === 0) {
       alert('Please enter a name and select at least one trade ID.');
       return;
     }
-
+  
     const filteredData = appState.getFilteredData('deals');
     const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
-
+  
     console.log('selectedTradeIDs:', selectedTradeIDs);
     window.api.send('save-deals-selection', {
       selectionName,
       tagValues,
       selectedTradeIDs
     });
-
-    //alert(`Portfolio "${selectionName}" successfully created`);
-
+  
+    // ✅ Use the success confirmation modal
+    showSuccessConfirmation(`Portfolio "${selectionName}" successfully created!`, () => {
+      console.log('User closed the success confirmation modal.');
+    });
+  
     const newPortfolio = { table_name: selectionName };
     appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
     appState.updateDealsDataTable.bind(appState);
-
+  
     appState.updateDealsDropdownOptions(selectionName);
     appState.applyFiltersAndUpdateDropdowns('deals');
-
-    nameInput.focus();
-
-  }
-
+  
+    nameInput.focus();  // Keep focus on the input
+  }   
+      function showSuccessConfirmation(message, onClose) {
+        // Create the overlay (semi-transparent background)
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.zIndex = '1000';
+      
+        // Create the modal box
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = '#222';  // Dark background like table headers
+        modal.style.padding = '20px';
+        modal.style.borderRadius = '8px';
+        modal.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.5)';
+        modal.style.textAlign = 'center';
+        modal.style.maxWidth = '400px';
+        modal.style.width = '100%';
+        modal.style.fontFamily = '"Your Font Name", sans-serif';
+        modal.style.color = 'rgb(161, 160, 160)';  // Subtle grey text
+      
+        // Add success message
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        messageElement.style.marginBottom = '20px';
+        messageElement.style.fontSize = '14px';
+        modal.appendChild(messageElement);
+      
+        // OK button
+        const okButton = document.createElement('button');
+        okButton.textContent = 'OK';
+        okButton.style.backgroundColor = '#4CAF50';  // Green like .table-selected
+        okButton.style.color = 'white';
+        okButton.style.border = 'none';
+        okButton.style.padding = '10px 20px';
+        okButton.style.borderRadius = '5px';
+        okButton.style.cursor = 'pointer';
+        okButton.style.fontSize = '13px';
+      
+        okButton.addEventListener('click', () => {
+          document.body.removeChild(overlay);  // Close the modal
+          if (onClose) onClose();  // Trigger callback if provided
+        });
+      
+        modal.appendChild(okButton);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+      } 
   function handleDeleteSelection() {
     console.log('Delete button clicked');
     const selectedTableName = appState.getSelectedDealsTableName();
+  
     if (selectedTableName !== 'Select a table') {
       const portTableName = selectedTableName.replace(/^Deals/, 'Port');
-      const confirmation = window.confirm(`Are you sure you want to delete the tables "${selectedTableName}" and "${portTableName}"?`);
-
-      if (confirmation) {
-        console.log(`Confirmed deletion of ${selectedTableName} and ${portTableName}`);
-        window.api.send('delete-selected-table', selectedTableName);
-
-        setTimeout(() => {
-          console.log('Message sent to main process to delete the selected table');
-          
-          // Update createdDealsData
-          const dealsData = appState.getCreatedDealsData().filter(deal => deal.table_name !== selectedTableName);
-          appState.setCreatedDealsData(dealsData);
-          appState.updateDealsDropdownOptions();
-
-          // Update createdPortData
-          const portData = appState.getCreatedPortData().filter(port => port.table_name !== portTableName);
-          appState.setCreatedPortData(portData);
-
-          // Refresh port dropdowns
-          ['createdPortDropdown0', 'createdPortDropdown', 'createdPortDropdown2'].forEach(dropdownId => {
-            appState.updateDropdownOptions({
-              dropdownElementId: dropdownId,
-              getDataFunction: appState.getCreatedPortData.bind(appState),
-              updateDataFunction: appState.updatePortDataTable.bind(appState),
-              updateMvarDataFunction: appState.updateMvarDataTable.bind(appState),
-              updateCvarDataFunction: appState.updateCvarDataTable.bind(appState),
-              selectedTableName: null // No table selected after deletion
+  
+      // ✅ Use the custom confirmation modal
+      showConfirmationModal(
+        `Are you sure you want to delete the tables "${selectedTableName}" and "${portTableName}"?`,
+        
+        // On Confirm
+        () => {
+          console.log(`Confirmed deletion of ${selectedTableName} and ${portTableName}`);
+          window.api.send('delete-selected-table', selectedTableName);
+  
+          setTimeout(() => {
+            console.log('Message sent to main process to delete the selected table');
+  
+            // Update createdDealsData
+            const dealsData = appState.getCreatedDealsData().filter(deal => deal.table_name !== selectedTableName);
+            appState.setCreatedDealsData(dealsData);
+            appState.updateDealsDropdownOptions();
+  
+            // Update createdPortData
+            const portData = appState.getCreatedPortData().filter(port => port.table_name !== portTableName);
+            appState.setCreatedPortData(portData);
+  
+            // Refresh port dropdowns
+            ['createdPortDropdown0', 'createdPortDropdown', 'createdPortDropdown2'].forEach(dropdownId => {
+              appState.updateDropdownOptions({
+                dropdownElementId: dropdownId,
+                getDataFunction: appState.getCreatedPortData.bind(appState),
+                updateDataFunction: appState.updatePortDataTable.bind(appState),
+                updateMvarDataFunction: appState.updateMvarDataTable.bind(appState),
+                updateCvarDataFunction: appState.updateCvarDataTable.bind(appState),
+                selectedTableName: null
+              });
             });
-          });
-
-          requestAnimationFrame(() => {
-            const nameInput = document.getElementById('nameInput');
-            if (nameInput) {
-              nameInput.focus();
-              const length = nameInput.value.length;
-              nameInput.setSelectionRange(length, length);
-              console.log('Cursor set at the end of nameInput:', nameInput.selectionStart, nameInput.selectionEnd);
-            } else {
-              console.log('nameInput not found');
-            }
-          });
-        }, 100);
-      }
+  
+            requestAnimationFrame(() => {
+              const nameInput = document.getElementById('nameInput');
+              if (nameInput) {
+                nameInput.focus();
+                const length = nameInput.value.length;
+                nameInput.setSelectionRange(length, length);
+                console.log('Cursor set at the end of nameInput:', nameInput.selectionStart, nameInput.selectionEnd);
+              } else {
+                console.log('nameInput not found');
+              }
+            });
+          }, 100);
+        },
+  
+        // On Cancel
+        () => {
+          console.log('Deletion canceled by user.');
+        }
+      );
     } else {
       alert('Please select a table to delete.');
     }
   }
+      function showConfirmationModal(message, onConfirm, onCancel) {
+        // Create the overlay (dark semi-transparent background)
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';  // Darker overlay
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.zIndex = '1000';
+      
+        // Create the modal box
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = '#222';  // Dark background like table headers
+        modal.style.padding = '20px';
+        modal.style.borderRadius = '8px';
+        modal.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.5)';  // Stronger shadow for depth
+        modal.style.textAlign = 'center';
+        modal.style.maxWidth = '400px';
+        modal.style.width = '100%';
+        modal.style.fontFamily = '"Your Font Name", sans-serif';
+        modal.style.color = 'rgb(161, 160, 160)';  // Subtle grey text
+      
+        // Add message
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        messageElement.style.marginBottom = '20px';
+        messageElement.style.fontSize = '14px';
+        modal.appendChild(messageElement);
+      
+        // Create buttons container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.justifyContent = 'space-around';
+      
+        // Confirm button (green, like .table-selected)
+        const confirmButton = document.createElement('button');
+        confirmButton.textContent = 'Yes';
+        confirmButton.style.backgroundColor = '#4CAF50';  // Matching your selected table color
+        confirmButton.style.color = 'white';
+        confirmButton.style.border = 'none';
+        confirmButton.style.padding = '10px 20px';
+        confirmButton.style.borderRadius = '5px';
+        confirmButton.style.cursor = 'pointer';
+        confirmButton.style.fontSize = '13px';
+        confirmButton.addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          onConfirm();
+        });
+      
+        // Cancel button (dark grey with subtle text)
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'No';
+        cancelButton.style.backgroundColor = '#333';  // Dark background like even rows
+        cancelButton.style.color = 'rgb(161, 160, 160)';  // Subtle grey text
+        cancelButton.style.border = '1px solid #4CAF50';  // Green border to match theme
+        cancelButton.style.padding = '10px 20px';
+        cancelButton.style.borderRadius = '5px';
+        cancelButton.style.cursor = 'pointer';
+        cancelButton.style.fontSize = '13px';
+        cancelButton.addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          if (onCancel) onCancel();
+        });
+      
+        // Append buttons to container
+        buttonContainer.appendChild(confirmButton);
+        buttonContainer.appendChild(cancelButton);
+        modal.appendChild(buttonContainer);
+      
+        // Append modal to overlay
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+      }
+  
+  
 
   // PYTHON EXECUTION:
   function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {

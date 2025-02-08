@@ -73,14 +73,14 @@ export function handlePortMainData(receivedData) {
     PortCPV01+= parseFloat(dataPoint.CPV01);
   });
 
-  formPortValue = formatNumberWithGrouping(PortValue);
-  formPortNotional = formatNumberWithGrouping(PortNotional);
+  formPortValue = formatNumberWithGrouping(PortValue)+ ' EUR';
+  formPortNotional = formatNumberWithGrouping(PortNotional)+ ' EUR';
 
   formPortYield = PortYield/PortValue *100;
-  formPortYield = formPortYield.toFixed(2);
+  formPortYield = formPortYield.toFixed(2)+'%';
 
   formPortYieldA = PortYieldA/PortValue *100;
-  formPortYieldA = formPortYieldA.toFixed(2);
+  formPortYieldA = formPortYieldA.toFixed(2)+'%';
 
   formPortPV01 = PortPV01/PortValue * 10000;
   formPortPV01 = formPortPV01.toFixed(2);
@@ -205,19 +205,19 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     const filteredPortPV01 = filteredTotalPV01/filteredTotalNav * 10000;
     const filteredPortCPV01 = filteredTotalCPV01/filteredTotalNav * 10000;
 
-    const formFiltPortValue = formatNumberWithGrouping(filteredPortValue);
-    const formFiltPortNotional = formatNumberWithGrouping(filteredPortNotional);
-    const formFiltPortYield = filteredPortYield.toFixed(2);
-    const formFiltPortYieldA = filteredPortYieldA.toFixed(2);
+    const formFiltPortValue = formatNumberWithGrouping(filteredPortValue)+' EUR';
+    const formFiltPortNotional = formatNumberWithGrouping(filteredPortNotional)+' EUR';
+    const formFiltPortYield = filteredPortYield.toFixed(2)+'%';
+    const formFiltPortYieldA = filteredPortYieldA.toFixed(2)+'%';
 
     const formFiltPortPV01 = filteredPortPV01.toFixed(2);
     const formFiltPortCPV01 = filteredPortCPV01.toFixed(2);
 
-    const formMvarTOT = (parseFloat(mvarTOT) ).toFixed(2);
-    const formMvarIR = (parseFloat(mvarIR) ).toFixed(2);
-    const formMvarCS = (parseFloat(mvarCS) ).toFixed(2);
+    const formMvarTOT = (parseFloat(mvarTOT) ).toFixed(2)+'%';
+    const formMvarIR = (parseFloat(mvarIR) ).toFixed(2)+'%';
+    const formMvarCS = (parseFloat(mvarCS) ).toFixed(2)+'%';
 
-    const formCvarTOT = (parseFloat(cvarTOT) * 100).toFixed(2);
+    const formCvarTOT = (parseFloat(cvarTOT) * 100).toFixed(2)+'%';
 
   console.log('formMvarTOT:', formMvarTOT);
 
@@ -316,7 +316,24 @@ console.log('savedValues[elementId] :', savedValues[elementId] );
 
 }
 
-export {PortValue, PortNotional, PortYield, PortPV01, PortCPV01, formPortValue, formPortNotional, formPortYield, formPortYieldA,  formPortPV01, formPortCPV01, formFiltPortValue, formFiltPortNotional, formFiltPortYield, formFiltPortYieldA, formFiltPortPV01, formFiltPortCPV01};
+export {PortValue, 
+        PortNotional, 
+        PortYield, 
+        PortPV01, 
+        PortCPV01, 
+        formPortValue, 
+        formPortNotional, 
+        formPortYield, 
+        formPortYieldA,  
+        formPortPV01, 
+        formPortCPV01, 
+        formFiltPortValue, 
+        formFiltPortNotional, 
+        formFiltPortYield, 
+        formFiltPortYieldA, 
+        formFiltPortPV01, 
+        formFiltPortCPV01
+};
 
 
   

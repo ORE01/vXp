@@ -989,18 +989,18 @@ this.setFilteredDataForTable(tableType, filteredData);
 
                     });
 
-                    // Fetch and update CVar data
-                    const CVaRDataTableName = `CVar${selectedTableName}Main_rel`;
+                    // Fetch and update CVar data: hier gibt es 3 verschiedene market, norm, rating: setze derzeit nur einen: rating! 
+                    const CVaRDataTableName = `CVar${selectedTableName}_rating_rel`;
                     // console.log('CVaRDataTableName:', CVaRDataTableName); 
                     window.api.send('fetch-table-data', CVaRDataTableName);
                     // console.log('fetch-table-data, selectedTableName', CVaRDataTableName);
 
                     
-                    window.api.receive(CVaRDataTableName + 'Data', (receivedMVarData) => {
+                    window.api.receive(CVaRDataTableName + 'Data', (receivedCVarData) => {
                         // console.log('selectedTableName, receivedData:', CVaRDataTableName, receivedMVarData);
-                        updateCvarDataFunction(receivedMVarData);
+                        updateCvarDataFunction(receivedCVarData);
                         // updateMvarDataTable(receivedMVarData);
-                        this.setCvarData(receivedMVarData);
+                        this.setCvarData(receivedCVarData);
 
 
                     });
