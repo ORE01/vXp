@@ -53,7 +53,7 @@ export function handleMVarInputData(receivedData) {
 // Function to format number with commas
 
 export function handleMVaRData(receivedData) {
-  console.log('handleMVaRData:', receivedData)
+  //console.log('handleMVaRData:', receivedData)
   const MVaRData = receivedData;
   const MVaRDataRel = [];
 
@@ -165,7 +165,7 @@ export function handleMVaRData(receivedData) {
       MVaRMainDataContainer.appendChild(mvarDataTable);
     }
   
-console.log('MVaRMainDataContainer:', table)
+//console.log('MVaRMainDataContainer:', table)
     // Optional: return the first table if needed elsewhere
     return table;
   }

@@ -1,36 +1,42 @@
-import { formatNumber } from '../utils/format.js';
+import { formatNumber, getFormatRules } from '../utils/format.js';
 
 
 function processData(data, selectedTableName) {
   let html = '';
-  console.log('dataP proData selectedTableName:', selectedTableName);
-  //console.log('processData - data:', data);
+  const formatRules = getFormatRules();
 
-  // Define a list of tables to exclude from having an "Edit" column
-  const excludeEditColumnTables = [
-    'tblTS', 
-    'MVaRMain', 
-    'CVaRMain',
-    'EADMain',
-    'EADMain_rating', 
-    'sortedLossesMain_rating', 
-    'sortedLossesIssuerMain_rating', 
-    'EADMain_market', 
-    'sortedLossesMain_market', 
-    'sortedLossesIssuerMain_market',    
-    'EADMain_norm', 
-    'sortedLossesMain_norm', 
-    'sortedLossesIssuerMain_norm', 
-    'EADMain_marketNorm', 
-    'sortedLossesMain_marketNorm', 
-    'sortedLossesIssuerMain_marketNorm', 
-  ];
 
-  // Exclude all table names that start with "Port"
-  const excludePortTables = /^Port/;
+                //console.log('dataP proData selectedTableName:', selectedTableName);
+                //console.log('processData - data:', data);
 
-  // Check if the current table is in the list of tables to exclude the "Edit" column
-  const includeEditColumn = !excludeEditColumnTables.includes(selectedTableName) && !excludePortTables.test(selectedTableName);
+                // Define a list of tables to exclude from having an "Edit" column
+                const excludeEditColumnTables = [
+                  'tblTS', 
+                  'MVaRMain', 
+                  'CVaRMain',
+                  'EADMain',
+                  'EADMain_rating', 
+                  'sortedLossesMain_rating', 
+                  'sortedLossesIssuerMain_rating', 
+                  'EADMain_market', 
+                  'sortedLossesMain_market', 
+                  'sortedLossesIssuerMain_market',    
+                  'EADMain_norm', 
+                  'sortedLossesMain_norm', 
+                  'sortedLossesIssuerMain_norm', 
+                  'EADMain_marketNorm', 
+                  'sortedLossesMain_marketNorm', 
+                  'sortedLossesIssuerMain_marketNorm', 
+                ];
+
+                // Exclude all table names that start with "Port"
+                const excludePortTables = /^Port/;
+
+                // Check if the current table is in the list of tables to exclude the "Edit" column
+                const includeEditColumn = !excludeEditColumnTables.includes(selectedTableName) && !excludePortTables.test(selectedTableName);
+
+
+
 
   // Generate table headers
   html += '<table id="dataTable">';
@@ -61,31 +67,6 @@ function processData(data, selectedTableName) {
   }
 
   html += '</tr></thead><tbody>';
-
-  // const formatNumber = (decimals, isPercentage = false, multiplyBy100 = false) => (value) => {
-  //   let number = parseFloat(value);
-  //   if (multiplyBy100) number *= 100; 
-  //   const options = { minimumFractionDigits: decimals, maximumFractionDigits: decimals };
-  //   const formattedNumber = number.toLocaleString('en', options);
-  //   return isPercentage ? `${formattedNumber}%` : formattedNumber;
-  // };
-
-  const formatRules = {
-    'PD': formatNumber(3, true, true), 
-    'PD_M': formatNumber(3, true, true), 
-    'PD_M_norm': formatNumber(3, true, true), 
-    'ytm': formatNumber(3, true, true), 
-    'ytm_BUY': formatNumber(3, true, true), 
-    'ytmPort': formatNumber(3, true, true), 
-    'CONVI': formatNumber(2, true), 
-    'NOTIONAL': formatNumber(0), 
-    'EAD': formatNumber(0), 
-    'LGD': formatNumber(0),
-    'LOSS': formatNumber(0),
-    'NAV': formatNumber(0),
-    'CPV01': formatNumber(0),
-    'absolute': formatNumber(0),
-  };
 
   data.forEach((item, rowIndex) => {
     html += '<tr>';

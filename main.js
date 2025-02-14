@@ -191,40 +191,43 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
     });
   }
 });
-ipcMain.on('start-py-MVaR', async (event,args) => {
+ipcMain.on('start-py-MVaR', async (event, args) => {
   console.log('start-py-MVaR:', args);
 
-  const { tableName} = args; 
-
-  const tablesToRefresh = ['MVaRMain', ];
+  const { tableName } = args;
+  const tablesToRefresh = ['MVaRMain', 'MVaRMain_rel'];
 
   if (!tableName) {
-    console.error('❌ Missing required arguments: "tableName".');
-    event.reply('py-MVaR-complete', {
+    console.error('❌ Missing required argument: "tableName".');
+    event.reply('py-mvar-complete', {
       success: false,
       projectName: 'py-MVaR',
-      // message: 'Both "tableName" and "scenarioName" are required.',
       message: '"tableName" is required.',
     });
-    return; // Beende die Verarbeitung, wenn ein Argument fehlt
+    return;
   }
-  //await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['MVaRMain']);
-  //tableName = 'MVaRMain';
+
   startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['--table', tableName])
     .then(() => {
-      console.log('Python script executed successfully_main');
-      
-      refreshTable(tablesToRefresh); // Assuming refreshTable is a function you've defined
-      console.log('Python script refreshed PortMain_main');
+      console.log('✅ Python script executed successfully');
+
+      // Non-blocking refresh like CVaR
+      tablesToRefresh.forEach(table => {
+        refreshTable(table, () => {
+          console.log('Refreshed table:', table);
+        });
+      });
+
+      console.log('All tables refresh initiated');
     })
     .catch(error => {
-      console.error('Python script execution failed:', error);
+      console.error('❌ Python script execution failed:', error);
     })
     .finally(() => {
-      event.reply('project-finished', { success: true, projectName: 'py-MVaR' });
-
+      event.reply('py-mvar-complete', { success: true, projectName: 'py-MVaR' });  // Add this line
+      event.reply('project-finished', { success: true, projectName: 'py-MVaR' });  // Keep if needed for other handlers
     });
-  
+    
 });
 ipcMain.on('start-py-CVaR', async (event, args) => {
   console.log('start-py-CVaR:', args);
@@ -232,6 +235,9 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
   // Define the tables to be used in the script and for refreshing
   const tablesToRefresh = [
     'EADMain_rating', 
+    'CVarMain_market_rel',
+    'CVarMain_rating_rel',
+    'CVarMain_norm_rel',
     'sortedLossesMain_rating',
     'sortedLossesIssuerMain_rating',
     'sortedLossesIndicesMain_rating',
@@ -245,8 +251,8 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
     'sortedLossesIndicesMain_norm'
   ];
 
-  // Start the Python script and pass the tables array
-  const { tableName, CSSzenario } = args; // Extract `tableName` and `CSSzenario` from arguments
+  // Extract `tableName` and `CSSzenario` from arguments
+  const { tableName, CSSzenario } = args; 
 
   if (!tableName || !CSSzenario) {
     console.error('❌ Missing required arguments: "tableName" or "CSSzenario".');
@@ -257,29 +263,30 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
     });
     return; // Exit if any argument is missing
   }
+
   const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario];
   console.log('🚀 Starting Python script with arguments:', pythonArgs);
+
   startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs)
     .then(() => {
-      console.log('Python script executed successfully_main');
-      
-        // Refresh each table
-      tablesToRefresh.forEach(tableName => {
-      refreshTable(tableName);
-      console.log('tableName:', tableName);
-  });
-      console.log('Python script refreshed PortMain_main');
+      console.log('Python script executed successfully');
+
+      // Refresh each table using a distinct variable name
+      tablesToRefresh.forEach(table => {
+        refreshTable(table, () => {
+          console.log('Refreshed table:', table);
+        });
+      });
+
+      console.log('All tables refreshed successfully');
     })
     .catch(error => {
       console.error('Python script execution failed:', error);
     })
     .finally(() => {
+      event.reply('py-cvar-complete', { success: true, projectName: 'py-CVaR' });
       event.reply('project-finished', { success: true, projectName: 'py-CVaR' });
-
     });
-
-
-
 });
 ipcMain.on('start-py-excel', (event) => {
   // Define the tables to be used in the script and for refreshing
@@ -553,11 +560,11 @@ ipcMain.on('erase-data', async (event, {cleanTableName, uniqueIdentifier }) => {
 // SAVE DEALS SELECTION
 ipcMain.on('save-deals-selection', async (event, selectionData) => {
   console.log('selectionData1:', selectionData);
-  const { selectionName, tagValues, selectedTradeIDs } = selectionData;
+  const { selectedFromTableName, selectionName, tagValues, selectedTradeIDs } = selectionData;
 
   try {
     // Wait for the selection to be inserted and the table to be created
-    await insertSelection(selectionName, tagValues, selectedTradeIDs);
+    await insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs);
     console.log('Selection inserted and table created successfully');
     
     // Now that the table exists, refresh it
@@ -581,23 +588,12 @@ ipcMain.on('fetch-table-data', (event, selectedTableName) => {
     // Now, you can safely refresh the "created tables" dropdown
     refreshTable('createdDeals');
     refreshTable('createdPort');
+    
   });
 });
 
 
-function refreshTable(tableName, callback) {
-  let eventIdentifier = tableName + 'Data';
 
-  // Fetch new data and send event
-  fetchDataAndSendEvent(tableName, eventIdentifier, () => {
-    //console.log('REFRESHED:', eventIdentifier);
-
-    // Call the callback function (if provided) after the refresh is completed
-    if (typeof callback === 'function') {
-      callback();
-    }
-  });
-}
 
 ipcMain.on('start-training', (event) => {
   const pythonProcess = spawn('python', ['path/to/your_script.py']);
@@ -645,6 +641,36 @@ const handleCSParameterUpdate = (event, { newRowData, cleanTableName }) => {
 
 // Register the event listener
 ipcMain.on('csparameter-update', handleCSParameterUpdate);
+
+// function refreshTable(tableName, callback) {
+//   let eventIdentifier = tableName + 'Data';
+
+//   // Fetch new data and send event
+//   fetchDataAndSendEvent(tableName, eventIdentifier, () => {
+//     //console.log('REFRESHED:', eventIdentifier);
+
+//     // Call the callback function (if provided) after the refresh is completed
+//     if (typeof callback === 'function') {
+//       callback();
+//     }
+//   });
+// }
+function refreshTable(tableName, callback) {
+  let eventIdentifier = tableName + 'Data';
+  // console.log(`🔄 [refreshTable] Starting refresh for table: ${tableName} (event: ${eventIdentifier})`);
+
+  fetchDataAndSendEvent(tableName, eventIdentifier, () => {
+    // console.log(`✅ [refreshTable] Data fetched for ${eventIdentifier}`);
+
+    if (typeof callback === 'function') {
+      // console.log(`➡️ [refreshTable] Executing callback for ${tableName}`);
+      callback();  // Ensure this is being called
+    } else {
+      console.warn(`⚠️ [refreshTable] No callback provided for ${tableName}`);
+    }
+  });
+}
+
 
 
 

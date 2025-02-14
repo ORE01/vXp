@@ -5,6 +5,7 @@ import { displayValuesForElementId } from './COMP.js';
 import { appState } from './renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from './utils/tooltips.js';
 import { handleLiquidityData } from './liquidity.js';
+import { formatNumberWithGrouping } from './utils/format.js';
 
 let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01', 'CPV01','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA'];
 let columnsShowen = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'clean_price', 'NAV','PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm'];
@@ -44,15 +45,15 @@ let cesTOT;
 
 
 
-function formatNumberWithGrouping(value) {
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+// function formatNumberWithGrouping(value) {
+//   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+//   // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+// }
 
 
 // Adjusted handlePortMainData function
 export function handlePortMainData(receivedData) {
-  console.log('handlePortMainData - Received Data:', receivedData);
+  // console.log('handlePortMainData - Received Data:', receivedData);
 
   const portData = filterColumnsInData(receivedData, columns);
 
@@ -91,9 +92,9 @@ export function handlePortMainData(receivedData) {
 
 // Function to filter data based on current selections in filtersConfig
 function filterData(data, filtersConfig) {
-  console.log('Function: filterData');
-  console.log('data:', data);
-  console.log('filtersConfig:', filtersConfig);
+  // console.log('Function: filterData');
+  // console.log('data:', data);
+  // console.log('filtersConfig:', filtersConfig);
   
   return data.filter(dataPoint => {
     return Object.entries(filtersConfig).every(([key, valueSet]) => {
@@ -103,9 +104,9 @@ function filterData(data, filtersConfig) {
 }
 
 export function handlePortMainFilteredData(receivedData, filtersConfig, elementId) {
-  console.log('Fct: handlePortMainFilteredData:');
-  console.log('elementId:', elementId);
-  console.log('receivedData:', receivedData);
+  // console.log('Fct: handlePortMainFilteredData:');
+  // console.log('elementId:', elementId);
+  // console.log('receivedData:', receivedData);
 
   if (!receivedData || !Array.isArray(receivedData) || receivedData.length === 0) {
     console.error('receivedData is not in the expected format or is empty');
@@ -114,12 +115,14 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
 
 
   const portTableName = appState.getSelectedPortTableName();
-  console.log('portTableName:', portTableName);
+  // console.log('portTableName:', portTableName);
   const portDataContainer = document.getElementById(elementId);
 
 
   const MVaRData = appState.getMvarData();
-  console.log('MVaRData:', MVaRData);
+
+  
+  // console.log('MVaRData:', MVaRData);
   if (!MVaRData) {
     // Set the associated variables to 0
     mvarIR = 0;
@@ -133,12 +136,12 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
   [mvarTOT, mvarIR, mvarCS] = MVaRData.map(item => item.VaR);
   [esTOT, esIR, esCS] = MVaRData.map(item => item.ES);
   
-  console.log('mvarIR:', mvarIR);
-  console.log('mvarCS:', mvarCS);
-  console.log('mvarTOT:', mvarTOT);
-  console.log('esIR:', esIR);
-  console.log('esCS:', esCS);
-  console.log('esTOT:', esTOT);
+  // console.log('mvarIR:', mvarIR);
+  // console.log('mvarCS:', mvarCS);
+  // console.log('mvarTOT:', mvarTOT);
+  // console.log('esIR:', esIR);
+  // console.log('esCS:', esCS);
+  // console.log('esTOT:', esTOT);
   };
 
   const CVaRData = appState.getCvarData();
@@ -154,8 +157,8 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
   [cvarTOT] = CVaRData.map(item => item.VaR);
   [cesTOT] = CVaRData.map(item => item.ES);
 
-  console.log('cvarTOT:', cvarTOT);
-  console.log('cesTOT:', cesTOT);
+  // console.log('cvarTOT:', cvarTOT);
+  // console.log('cesTOT:', cesTOT);
   };
 
   if (!portDataContainer) {
@@ -163,18 +166,18 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     return;
   }
 
-  console.log('Before filtering: receivedData:', receivedData);
-  console.log('filtersConfig:', filtersConfig);
+  // console.log('Before filtering: receivedData:', receivedData);
+  // console.log('filtersConfig:', filtersConfig);
 
   const portData = receivedData;
-  console.log('portData:', portData);
+  // console.log('portData:', portData);
 
   if (portDataContainer && portData) {
     let filteredPortData = filterColumnsInData(filterData(receivedData, filtersConfig), columns);
-    console.log('filteredPortData:', filteredPortData);
+    // console.log('filteredPortData:', filteredPortData);
 
     appState.setFilteredPortData(filteredPortData);
-    handleLiquidityData();
+    //handleLiquidityData();
 
    
     // Aggregate NOTIONAL and NAV to calculate total values
@@ -213,13 +216,13 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     const formFiltPortPV01 = filteredPortPV01.toFixed(2);
     const formFiltPortCPV01 = filteredPortCPV01.toFixed(2);
 
-    const formMvarTOT = (parseFloat(mvarTOT) ).toFixed(2)+'%';
-    const formMvarIR = (parseFloat(mvarIR) ).toFixed(2)+'%';
-    const formMvarCS = (parseFloat(mvarCS) ).toFixed(2)+'%';
+    const formMvarTOT = (parseFloat(mvarTOT) ).toFixed(3)+'%';
+    const formMvarIR = (parseFloat(mvarIR) ).toFixed(3)+'%';
+    const formMvarCS = (parseFloat(mvarCS) ).toFixed(3)+'%';
 
-    const formCvarTOT = (parseFloat(cvarTOT) * 100).toFixed(2)+'%';
+    const formCvarTOT = (parseFloat(cvarTOT) * 100).toFixed(3)+'%';
 
-  console.log('formMvarTOT:', formMvarTOT);
+  // console.log('formMvarTOT:', formMvarTOT);
 
     // elementId: Save the values
         savedValues[elementId] = {
@@ -266,23 +269,23 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
         };
 
 
-console.log('savedValues[elementId] :', savedValues[elementId] );
+// console.log('savedValues[elementId] :', savedValues[elementId] );
 
 
     displayValuesForElementId(elementId, savedValues);
 
 
-    console.log('formFiltPortValue:', formFiltPortValue);
-    console.log('formFiltPortNotional:', formFiltPortNotional);
-    console.log('formFiltPortYield:', formFiltPortYield);
-    console.log('formFiltPortYieldA:', formFiltPortYieldA);
-    console.log('formFiltPortPV01:', formFiltPortPV01);
-    console.log('formFiltPortCPV01:', formFiltPortCPV01);
-    console.log('mvarTOT:', formMvarTOT);
-    console.log('cvarTOT:', formCvarTOT);
+    // console.log('formFiltPortValue:', formFiltPortValue);
+    // console.log('formFiltPortNotional:', formFiltPortNotional);
+    // console.log('formFiltPortYield:', formFiltPortYield);
+    // console.log('formFiltPortYieldA:', formFiltPortYieldA);
+    // console.log('formFiltPortPV01:', formFiltPortPV01);
+    // console.log('formFiltPortCPV01:', formFiltPortCPV01);
+    // console.log('mvarTOT:', formMvarTOT);
+    // console.log('cvarTOT:', formCvarTOT);
 
     let filteredPortDataNew = filterColumnsInData(filteredPortData, columnsShowen);
-    console.log('filteredPortDataNew:', filteredPortDataNew);
+    // console.log('filteredPortDataNew:', filteredPortDataNew);
 
     // Update the HTML content
     // const portTableName = appState.getSelectedPortTableName();

@@ -21,12 +21,12 @@ function handleTrafficLight(ratingData, normData) {
     const ratingAvg = ratingLosses.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10;
     const normAvg = normLosses.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10;
 
-    console.log(`Rating Avg: ${ratingAvg}, Norm Avg: ${normAvg}`);
+    //console.log(`Rating Avg: ${ratingAvg}, Norm Avg: ${normAvg}`);
 
     // Calculate the percentage difference
     const differencePercent = Math.abs((normAvg - ratingAvg)/ratingAvg ) * 100;
 
-    console.log(`Percentage Difference: ${differencePercent}%`);
+    //console.log(`Percentage Difference: ${differencePercent}%`);
 
     // Update traffic light based on thresholds
     if (differencePercent > 20) {

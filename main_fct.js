@@ -6,7 +6,7 @@ const electron = require('electron');
 const app = electron.app || electron.remote.app;
 require('dotenv').config();
 
-const {getDevelopmentPythonPath, getDatabasePath} = require('./main_path');
+const {getDatabasePath} = require('./main_path');
 
 
 
@@ -24,21 +24,29 @@ function logToFile(message) {
   fs.appendFileSync(logFilePath, new Date().toISOString() + ': ' + message + '\n');
 }
 
-// Choose the correct database path based on the environment
+// DATABASE path based on the environment
 let dbPath;
-if (isDevelopmentEnvironment()) {
-      // Absoluter Pfad: für die Entwicklung (nicht compelliert)
-      // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-      // dbPath = 'C:/Users/Ronald/riskApp/electron_app/files/UNI.db';
-      dbPath = getDatabasePath();
-      console.log('dbPath:', dbPath);
-} else {
-      // Relativer Pfad für die compellierte Version:
-      // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-      // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
-      dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
+// if (isDevelopmentEnvironment()) {
+//       // Absoluter Pfad: für die Entwicklung (nicht compelliert)
+//       // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+//       // dbPath = 'C:/Users/Ronald/riskApp/electron_app/files/UNI.db';
+//       dbPath = getDatabasePath();
+//       console.log('dbPath:', dbPath);
+// } else {
+//       // Relativer Pfad für die compellierte Version:
+//       // dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
+//       // dbPath = 'C:/Users/wendlert/AppData/Local/Programs/merciful-front-are-3a6cn/resources/app.asar.unpacked/files/UNI.db'
+//       dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
   
+// }
+if (isDevelopmentEnvironment()) {
+  dbPath = getDatabasePath(); // ✅ Holt den Pfad aus getDatabasePath()
+  console.log('dbPath:', dbPath);
+} else {
+  // Relativer Pfad für die compilierte Version
+  dbPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
 }
+
 
 // console.log('main_fct: __dirname:', __dirname);
 // console.log('main_fct: dbPath:', dbPath);
@@ -186,7 +194,7 @@ function insertDeal(data, tableName, callback) {
   });
 }
 // CREATE new Portfolios in DEALS
-function insertSelection(selectionName, tagValues, selectedTradeIDs) {
+function insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs) {
   return new Promise((resolve, reject) => {
     const createSelectionsTableQuery = `
       CREATE TABLE IF NOT EXISTS selections (
@@ -223,7 +231,7 @@ function insertSelection(selectionName, tagValues, selectedTradeIDs) {
         const createNewTableQuery = `
           CREATE TABLE IF NOT EXISTS ${selectionName} AS
           SELECT *
-          FROM DealsMain
+          FROM ${selectedFromTableName}
           WHERE TRADE_ID IN (${selectedTradeIDs.join(',')})`;
 
         db.run(createNewTableQuery, [], function (err) {
@@ -269,10 +277,122 @@ function insertSelection(selectionName, tagValues, selectedTradeIDs) {
   });
 }
 // DELETE the created Portfolios in DEALS
+// function deleteTable(selectedTableName, sender) {
+//   console.log('deleteTable: selectedTableName', selectedTableName);
+
+//   // Function to delete a table entry from a specified auxiliary table
+//   function deleteTableEntry(auxTable, columnName, columnValue) {
+//     const query = `DELETE FROM ${auxTable} WHERE ${columnName} = ?`;
+//     db.run(query, [columnValue], (err) => {
+//       if (err) {
+//         console.error(`Error deleting entry with ${columnName} "${columnValue}" from "${auxTable}":`, err.message);
+//         sender.send('table-entry-deletion-error', { tableName: selectedTableName, auxTable, message: err.message });
+//       } else {
+//         console.log(`Entry with ${columnName} "${columnValue}" has been deleted from "${auxTable}".`);
+//       }
+//     });
+//   }
+
+//   // Delete the main table with prefix Deals
+//   const queryDeals = `DROP TABLE IF EXISTS ${selectedTableName}`;
+//   db.run(queryDeals, (err) => {
+//     if (err) {
+//       console.error(`Error deleting table "${selectedTableName}":`, err.message);
+//       sender.send('table-deletion-error', { tableName: selectedTableName, message: err.message });
+//     } else {
+//       console.log(`Table "${selectedTableName}" has been deleted.`);
+
+//       // Identify the corresponding Port table and delete it
+//       const portTableName = selectedTableName.replace(/^Deals/, 'Port');
+//       const queryPort = `DROP TABLE IF EXISTS ${portTableName}`;
+//       db.run(queryPort, (err) => {
+//         if (err) {
+//           console.error(`Error deleting table "${portTableName}":`, err.message);
+//           sender.send('table-deletion-error', { tableName: portTableName, message: err.message });
+//         } else {
+//           console.log(`Table "${portTableName}" has been deleted.`);
+
+//           // Assuming the correct column names in createdDeals, selections, and createdPort tables
+//           const dealsColumnName = 'table_name'; // Adjust if necessary
+//           const portColumnName = 'table_name'; // Adjust if necessary
+//           const selectionColumnName = 'selection_name'; // Adjust based on your schema
+
+//           // Delete entries from auxiliary tables
+//           deleteTableEntry('createdDeals', dealsColumnName, selectedTableName);
+//           deleteTableEntry('selections', selectionColumnName, selectedTableName);
+
+//           deleteTableEntry('createdPort', portColumnName, portTableName);
+
+//           // Identify the corresponding MVarPort tables and delete them
+//           const mvarTableName = selectedTableName.replace(/^Deals/, 'MVarPort').replace(/$/, 'Main');
+//           const queryMVar = `DROP TABLE IF EXISTS ${mvarTableName}`;
+//           db.run(queryMVar, (err) => {
+//             if (err) {
+//               console.error(`Error deleting table "${mvarTableName}":`, err.message);
+//               sender.send('table-deletion-error', { tableName: mvarTableName, message: err.message });
+//             } else {
+//               console.log(`Table "${mvarTableName}" has been deleted.`);
+
+//               const mvarRelTableName = selectedTableName.replace(/^Deals/, 'MVarPort').replace(/$/, 'Main_rel');
+//               const queryMVarRel = `DROP TABLE IF EXISTS ${mvarRelTableName}`;
+//               db.run(queryMVarRel, (err) => {
+//                 if (err) {
+//                   console.error(`Error deleting table "${mvarRelTableName}":`, err.message);
+//                   sender.send('table-deletion-error', { tableName: mvarRelTableName, message: err.message });
+//                 } else {
+//                   console.log(`Table "${mvarRelTableName}" has been deleted.`);
+
+//                   // Identify the corresponding CVarPort_rel table and delete it
+//                   const cvarRelTableName = `${selectedTableName.replace(/^Deals/, 'CVarPort')}Main_rel`;
+//                   const queryCVarRel = `DROP TABLE IF EXISTS ${cvarRelTableName}`;
+//                   db.run(queryCVarRel, (err) => {
+//                     if (err) {
+//                       console.error(`Error deleting table "${cvarRelTableName}":`, err.message);
+//                       sender.send('table-deletion-error', { tableName: cvarRelTableName, message: err.message });
+//                     } else {
+//                       console.log(`Table "${cvarRelTableName}" has been deleted.`);
+
+//                       // Notify about the successful deletion
+//                       sender.send('table-deleted-successfully', {
+//                         dealsTable: selectedTableName,
+//                         portTable: portTableName,
+//                         mvarTable: mvarTableName,
+//                         mvarRelTable: mvarRelTableName,
+//                         cvarRelTable: cvarRelTableName
+//                       });
+//                       console.log(`'table-deleted-successfully' "${selectedTableName}", "${portTableName}", "${mvarTableName}", "${mvarRelTableName}", and "${cvarRelTableName}"`);
+//                     }
+//                   });
+//                 }
+//               });
+//             }
+//           });
+//         }
+//       });
+//     }
+//   });
+// }
 function deleteTable(selectedTableName, sender) {
   console.log('deleteTable: selectedTableName', selectedTableName);
 
-  // Function to delete a table entry from a specified auxiliary table
+  // Hilfsfunktion zum Löschen einer Tabelle
+  function dropTable(tableName, messageType) {
+    return new Promise((resolve, reject) => {
+      const query = `DROP TABLE IF EXISTS ${tableName}`;
+      db.run(query, (err) => {
+        if (err) {
+          console.error(`Error deleting table "${tableName}":`, err.message);
+          sender.send(messageType, { tableName, message: err.message });
+          reject(err);
+        } else {
+          console.log(`Table "${tableName}" has been deleted.`);
+          resolve();
+        }
+      });
+    });
+  }
+
+  // Hilfsfunktion zum Löschen eines Eintrags aus einer Hilfstabelle
   function deleteTableEntry(auxTable, columnName, columnValue) {
     const query = `DELETE FROM ${auxTable} WHERE ${columnName} = ?`;
     db.run(query, [columnValue], (err) => {
@@ -285,86 +405,103 @@ function deleteTable(selectedTableName, sender) {
     });
   }
 
-  // Delete the main table with prefix Deals
-  const queryDeals = `DROP TABLE IF EXISTS ${selectedTableName}`;
-  db.run(queryDeals, (err) => {
-    if (err) {
-      console.error(`Error deleting table "${selectedTableName}":`, err.message);
-      sender.send('table-deletion-error', { tableName: selectedTableName, message: err.message });
-    } else {
-      console.log(`Table "${selectedTableName}" has been deleted.`);
-
-      // Identify the corresponding Port table and delete it
-      const portTableName = selectedTableName.replace(/^Deals/, 'Port');
-      const queryPort = `DROP TABLE IF EXISTS ${portTableName}`;
-      db.run(queryPort, (err) => {
-        if (err) {
-          console.error(`Error deleting table "${portTableName}":`, err.message);
-          sender.send('table-deletion-error', { tableName: portTableName, message: err.message });
-        } else {
-          console.log(`Table "${portTableName}" has been deleted.`);
-
-          // Assuming the correct column names in createdDeals, selections, and createdPort tables
-          const dealsColumnName = 'table_name'; // Adjust if necessary
-          const portColumnName = 'table_name'; // Adjust if necessary
-          const selectionColumnName = 'selection_name'; // Adjust based on your schema
-
-          // Delete entries from auxiliary tables
-          deleteTableEntry('createdDeals', dealsColumnName, selectedTableName);
-          deleteTableEntry('selections', selectionColumnName, selectedTableName);
-
-          deleteTableEntry('createdPort', portColumnName, portTableName);
-
-          // Identify the corresponding MVarPort tables and delete them
-          const mvarTableName = selectedTableName.replace(/^Deals/, 'MVarPort').replace(/$/, 'Main');
-          const queryMVar = `DROP TABLE IF EXISTS ${mvarTableName}`;
-          db.run(queryMVar, (err) => {
-            if (err) {
-              console.error(`Error deleting table "${mvarTableName}":`, err.message);
-              sender.send('table-deletion-error', { tableName: mvarTableName, message: err.message });
-            } else {
-              console.log(`Table "${mvarTableName}" has been deleted.`);
-
-              const mvarRelTableName = selectedTableName.replace(/^Deals/, 'MVarPort').replace(/$/, 'Main_rel');
-              const queryMVarRel = `DROP TABLE IF EXISTS ${mvarRelTableName}`;
-              db.run(queryMVarRel, (err) => {
-                if (err) {
-                  console.error(`Error deleting table "${mvarRelTableName}":`, err.message);
-                  sender.send('table-deletion-error', { tableName: mvarRelTableName, message: err.message });
-                } else {
-                  console.log(`Table "${mvarRelTableName}" has been deleted.`);
-
-                  // Identify the corresponding CVarPort_rel table and delete it
-                  const cvarRelTableName = `${selectedTableName.replace(/^Deals/, 'CVarPort')}Main_rel`;
-                  const queryCVarRel = `DROP TABLE IF EXISTS ${cvarRelTableName}`;
-                  db.run(queryCVarRel, (err) => {
-                    if (err) {
-                      console.error(`Error deleting table "${cvarRelTableName}":`, err.message);
-                      sender.send('table-deletion-error', { tableName: cvarRelTableName, message: err.message });
-                    } else {
-                      console.log(`Table "${cvarRelTableName}" has been deleted.`);
-
-                      // Notify about the successful deletion
-                      sender.send('table-deleted-successfully', {
-                        dealsTable: selectedTableName,
-                        portTable: portTableName,
-                        mvarTable: mvarTableName,
-                        mvarRelTable: mvarRelTableName,
-                        cvarRelTable: cvarRelTableName
-                      });
-                      console.log(`'table-deleted-successfully' "${selectedTableName}", "${portTableName}", "${mvarTableName}", "${mvarRelTableName}", and "${cvarRelTableName}"`);
-                    }
-                  });
-                }
-              });
-            }
-          });
-        }
+  const portTableName = selectedTableName.replace(/^Deals/, 'Port');
+  const mvarTableName = selectedTableName.replace(/^Deals/, 'MVarPort') + 'Main';
+  const mvarRelTableName = selectedTableName.replace(/^Deals/, 'MVarPort') + 'Main_rel';
+  const cvarRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + 'Main_rel';
+  
+  // CVarPort-Tabellen mit den entsprechenden Suffixen
+  const cvarMarketRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_market_rel';
+  const cvarRatingRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_rating_rel';
+  const cvarNormRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_norm_rel';
+  
+  // Tabelle löschen in Reihenfolge
+  dropTable(selectedTableName, 'table-deletion-error')
+    .then(() => dropTable(portTableName, 'table-deletion-error'))
+    .then(() => dropTable(mvarTableName, 'table-deletion-error'))
+    .then(() => dropTable(mvarRelTableName, 'table-deletion-error'))
+    .then(() => dropTable(cvarRelTableName, 'table-deletion-error'))
+    .then(() => dropTable(cvarMarketRelTableName, 'table-deletion-error'))
+    .then(() => dropTable(cvarRatingRelTableName, 'table-deletion-error'))
+    .then(() => dropTable(cvarNormRelTableName, 'table-deletion-error'))
+    .then(() => {
+      // Einträge aus den Hilfstabellen löschen
+      deleteTableEntry('createdDeals', 'table_name', selectedTableName);
+      deleteTableEntry('selections', 'selection_name', selectedTableName);
+      deleteTableEntry('createdPort', 'table_name', portTableName);
+    })
+    .then(() => {
+      // Erfolgsmeldung senden
+      sender.send('table-deleted-successfully', {
+        dealsTable: selectedTableName,
+        portTable: portTableName,
+        mvarTable: mvarTableName,
+        mvarRelTable: mvarRelTableName,
+        cvarRelTable: cvarRelTableName,
+        cvarMarketRelTable: cvarMarketRelTableName,
+        cvarRatingRelTable: cvarRatingRelTableName,
+        cvarNormRelTable: cvarNormRelTableName
       });
-    }
-  });
+  
+      console.log(`'table-deleted-successfully' "${selectedTableName}", "${portTableName}", "${mvarTableName}", "${mvarRelTableName}", "${cvarRelTableName}", "${cvarMarketRelTableName}", "${cvarRatingRelTableName}", "${cvarNormRelTableName}"`);
+    })
+    .catch((err) => console.error('Error during table deletion process:', err));
+  
 }
 
+
+
+// function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
+//   console.log('main_fct: startPythonScriptWithEvent:', args);
+
+//   return new Promise((resolve, reject) => {
+//       let pythonExecutable;
+//       let pythonArgs = [scriptIdentifier, ...args];
+
+//       if (isDevelopmentEnvironment()) {
+//           const devPaths = getDevelopmentPythonPath();
+//           pythonExecutable = devPaths.executable;
+
+//           if (devPaths.scriptPath) {
+//               pythonArgs.unshift(devPaths.scriptPath); // Nur für Ronny
+//           }
+//       } else {
+//           pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
+//       }
+
+//     try {
+//       const pythonProcess = spawn(pythonExecutable, pythonArgs);
+//       let scriptOutput = '';  // Variable to store the collected output
+
+//       // Collect stdout data
+//       pythonProcess.stdout.on('data', (data) => {
+//         console.log(`stdout: ${data}`);
+//         scriptOutput += data.toString();  // Append the data to scriptOutput
+//         event.sender.send(`${eventType}-output`, data.toString());
+//       });
+
+//       // Collect stderr data (for error logging)
+//       pythonProcess.stderr.on('data', (data) => {
+//         console.error(`stderr: ${data}`);
+//         event.sender.send(`${eventType}-error`, data.toString());
+//       });
+
+//       // Handle process close
+//       pythonProcess.on('close', (code) => {
+//         // console.log(`Python process exited with code_main_fct ${code}`);
+//         if (code === 0) {
+//           // console.log("Python script executed successfully.");
+//           resolve({ success: true, message: "Python script executed successfully." });
+//         } else {
+//           reject(new Error(`Python script failed with code ${code}`));
+//         }
+//       });
+//     } catch (error) {
+//       console.error(`Failed to start Python script: ${error.message}`);
+//       reject(error);
+//     }
+//   });
+// }
 
 function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
   console.log('main_fct: startPythonScriptWithEvent:', args);
@@ -373,50 +510,61 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
       let pythonExecutable;
       let pythonArgs = [scriptIdentifier, ...args];
 
-      if (isDevelopmentEnvironment()) {
-          const devPaths = getDevelopmentPythonPath();
-          pythonExecutable = devPaths.executable;
+      // Bestimme die Umgebung
+      const env = process.env.NODE_ENV ? process.env.NODE_ENV.trim().toLowerCase() : 'production';
 
-          if (devPaths.scriptPath) {
-              pythonArgs.unshift(devPaths.scriptPath); // Nur für Ronny
-          }
-      } else {
-          pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
-      }
-
-    try {
-      const pythonProcess = spawn(pythonExecutable, pythonArgs);
-      let scriptOutput = '';  // Variable to store the collected output
-
-      // Collect stdout data
-      pythonProcess.stdout.on('data', (data) => {
-        console.log(`stdout: ${data}`);
-        scriptOutput += data.toString();  // Append the data to scriptOutput
-        event.sender.send(`${eventType}-output`, data.toString());
-      });
-
-      // Collect stderr data (for error logging)
-      pythonProcess.stderr.on('data', (data) => {
-        console.error(`stderr: ${data}`);
-        event.sender.send(`${eventType}-error`, data.toString());
-      });
-
-      // Handle process close
-      pythonProcess.on('close', (code) => {
-        // console.log(`Python process exited with code_main_fct ${code}`);
-        if (code === 0) {
-          // console.log("Python script executed successfully.");
-          resolve({ success: true, message: "Python script executed successfully." });
-        } else {
-          reject(new Error(`Python script failed with code ${code}`));
-        }
-      });
-    } catch (error) {
-      console.error(`Failed to start Python script: ${error.message}`);
-      reject(error);
+      if (env === 'development') {
+        // Standard-Entwicklungsumgebung mit zwei möglichen Pfaden
+        const defaultExecutable = 'C:\\Python312\\python.exe';
+        const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
+    
+        pythonExecutable = defaultExecutable;
+        pythonArgs.unshift(defaultScriptPath);
+    
+    } else if (env === 'thomasdev') {
+        pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
+    
+    } else { 
+        // Standardmäßig Production
+        pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
     }
+    
+    
+
+      try {
+          const pythonProcess = spawn(pythonExecutable, pythonArgs);
+          let scriptOutput = '';  // Variable to store the collected output
+
+          // Collect stdout data
+          pythonProcess.stdout.on('data', (data) => {
+              console.log(`stdout: ${data}`);
+              scriptOutput += data.toString();  // Append the data to scriptOutput
+              event.sender.send(`${eventType}-output`, data.toString());
+          });
+
+          // Collect stderr data (for error logging)
+          pythonProcess.stderr.on('data', (data) => {
+              console.error(`stderr: ${data}`);
+              event.sender.send(`${eventType}-error`, data.toString());
+          });
+
+          // Handle process close
+          pythonProcess.on('close', (code) => {
+              if (code === 0) {
+                  resolve({ success: true, message: "Python script executed successfully." });
+              } else {
+                  reject(new Error(`Python script failed with code ${code}`));
+              }
+          });
+      } catch (error) {
+          console.error(`Failed to start Python script: ${error.message}`);
+          reject(error);
+      }
   });
 }
+
+
+
 
 function insertCSParameter(data, tableName, callback) {
   const query = `INSERT INTO ${tableName} (CSSzenario, a, b, c, d, e, f) VALUES (?, ?, ?, ?, ?, ?, ?)`;

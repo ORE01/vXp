@@ -1,0 +1,25 @@
+fairValue Button Workflow:
+    Button Click:
+    Calls handleFairValueProject() → sends start-py-fairValue to the backend.
+
+    Backend:
+    Runs the Python script → sends py-fairValue-complete back to the renderer.
+
+    Renderer:
+    window.api.receive('py-fairValue-complete', handleFairValueComplete);
+
+    UI Update:
+    handleFairValueComplete() calls appState.fetchAndHandlePortData() to refresh data.
+
+MVaR Button Workflow (Not Fully Working)
+    Button Click:
+    Calls handleMVaRProject() → sends start-py-MVaR to the backend.
+
+    Backend:
+    Runs the Python script → sends py-mvar-complete back to the renderer.
+
+    Renderer:
+    window.api.receive('py-mvar-complete', handleMVaRComplete);
+
+    UI Update:
+    handleMVaRComplete() should refresh data, but it doesn’t seem to.

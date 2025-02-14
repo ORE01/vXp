@@ -1,4 +1,4 @@
-/* Add some spacing between the button and data-container */
+/* EDIT BUTTON */
 .button-wrapper {
     margin-bottom: 10px; 
   }
@@ -37,6 +37,20 @@
   .edit-button:hover {
     background-color: #45a049;
   }
+
+/* DELETE BUTTON */
+  .delete-button {
+    background-color: #b30000; /* Red background */
+  }
+
+  .delete-button:hover {
+    background-color: #800000; /* Darker red on hover */
+    color: #fff; /* Ensure text remains visible */
+  }
+
+
+
+
   #scrollButton {
     display: block;
     }
@@ -100,4 +114,29 @@
 #coupon-button:active {
   background-color: #3e8e41;
 }
+
+/* RESET BUTTON */
+.reset-FiltersButton {
+  background-color: #333;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.4s ease; /* Smooth hover transition */
+}
+
+.reset-FiltersButton svg {
+  margin-right: 8px; /* Space between icon and text */
+}
+
+.reset-FiltersButton:hover {
+  background-color: rgb(70, 69, 69);
+}
+
     

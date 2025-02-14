@@ -397,16 +397,15 @@ export class AppState {
 
   // Set couponData and notify observers
   setCouponData(data) {
-    console.log('Setting CouponData:', data);
+    //console.log('Setting CouponData:', data);
     this.couponData = data;
     this.notifyObservers(); // Trigger updates
   }
 
   // Get couponData
   getCouponData() {
-    console.log('Getting CouponData:', this.couponData);
-    return this.couponData;
-  }
+    return Array.isArray(this.couponData) ? this.couponData : []; 
+    }
 
   setFilteredProdData(data) {
     this.filteredProdData = data;
@@ -442,9 +441,26 @@ export class AppState {
     }
 
     setCvarData(data) {
-        this.cvarData = data;
-        this.notifyObservers(); 
+        //console.log('setCvarData called with:', data);
+    
+        if (Array.isArray(data)) {
+            // Data is already an array, set it directly
+            this.cvarData = data;
+            //console.log('✅ cvarData successfully set as array:', this.cvarData);
+        } else if (data && typeof data === 'object') {
+            // If it's a single object, wrap it in an array
+            console.warn('⚠️ Received a single object, wrapping it in an array:', data);
+            this.cvarData = [data];
+        } else {
+            // If the data is invalid, set an empty array to prevent errors
+            console.error('❌ Invalid data provided to setCvarData. Expected an array or object, received:', data);
+            this.cvarData = [];
+        }
+    
+        this.notifyObservers();  // Notify any components that rely on cvarData
     }
+    
+    
     getCvarData() {
         return this.cvarData;
         
@@ -453,14 +469,14 @@ export class AppState {
 // Filtered Portfolio
 
     setFilteredPortData(data) {
-        console.log('filteredPortData:', data)
+        //console.log('filteredPortData:', data)
         this.filteredPortData = data
         
         this.notifyObservers();
     }
 
     getFilteredPortData() {
-        console.log('check daten appstate', this.filteredPortData)
+        //console.log('check daten appstate', this.filteredPortData)
             return this.filteredPortData;
             
         }
@@ -503,7 +519,7 @@ export class AppState {
         this.notifyObservers();
     }
     getCreatedDealsData() {
-        console.log('getCreatedDealsData:', this.availableDealsTablesArray);
+        //console.log('getCreatedDealsData:', this.availableDealsTablesArray);
         return this.availableDealsTablesArray;
         
     }
@@ -552,7 +568,7 @@ export class AppState {
 
 
     updateDealsDataTable(receivedData) {
-        console.log('updateDealsDataTable', receivedData);
+        //console.log('updateDealsDataTable', receivedData);
         
         this.setDealsData(receivedData);
         // this.updateDropdowns('deals');
@@ -973,37 +989,69 @@ this.setFilteredDataForTable(tableType, filteredData);
 
                 if (selectedTableName.startsWith('Port')) {
 
-                    // Fetch and update MVar data
-                    const MVaRDataTableName = `MVar${selectedTableName}Main_rel`;
-                    // console.log('MVaRDataTableName:', MVaRDataTableName); 
-                    window.api.send('fetch-table-data', MVaRDataTableName);
-                    // console.log('fetch-table-data, selectedTableName', MVaRDataTableName);
+                   // 1. Fetch the dynamic MVaR table for the selected portfolio
+                const dynamicMVaRDataTableName = `MVar${selectedTableName}Main_rel`;
+                window.api.send('fetch-table-data', dynamicMVaRDataTableName);
 
-                    
-                    window.api.receive(MVaRDataTableName + 'Data', (receivedMVarData) => {
-                        // console.log('selectedTableName, receivedData:', MVaRDataTableName, receivedMVarData);
-                        updateMvarDataFunction(receivedMVarData);
-                        // updateMvarDataTable(receivedMVarData);
-                        this.setMvarData(receivedMVarData);
+                // // 🛠 Remove existing listener for dynamic data
+                // window.api.removeAllListeners(dynamicMVaRDataTableName + 'Data');
 
+                window.api.receive(dynamicMVaRDataTableName + 'Data', (receivedDynamicMVaRData) => {
+                    if (receivedDynamicMVaRData && receivedDynamicMVaRData.length > 0) {
+                        //console.log('✅ Dynamic MVaR data received:', receivedDynamicMVaRData);
+                        //updateMvarDataFunction(receivedDynamicMVaRData);  // Update UI with dynamic data
+                        this.setMvarData(receivedDynamicMVaRData);        // Store dynamic data in app state
+                    } else {
+                        console.warn(`⚠️ No dynamic MVaR data found for ${dynamicMVaRDataTableName}.`);
+                        this.setMvarData([]);  // Handle missing dynamic data
+                    }
+                });
 
-                    });
+                // 2. Fetch the general MVaRMain_rel table
+                const generalMVaRDataTableName = 'MVaRMain_rel';
+                window.api.send('fetch-table-data', generalMVaRDataTableName);
+
+                // // 🛠 Remove any existing listener before adding a new one
+                // window.api.removeAllListeners(generalMVaRDataTableName + 'Data');
+
+                window.api.receive(generalMVaRDataTableName + 'Data', (receivedGeneralMVaRData) => {
+                    if (receivedGeneralMVaRData && receivedGeneralMVaRData.length > 0) {
+                        //console.log('✅ General MVaR data received:', receivedGeneralMVaRData);
+                        //updateMvarDataFunction(receivedGeneralMVaRData);  // Optionally update the UI with general data
+                        this.setMvarData(receivedGeneralMVaRData);        // Store general data in app state
+                    } else {
+                        console.warn(`⚠️ No general MVaR data found for ${generalMVaRDataTableName}.`);
+                        this.setMvarData([]);  // Handle missing general data
+                    }
+                });
+
 
                     // Fetch and update CVar data: hier gibt es 3 verschiedene market, norm, rating: setze derzeit nur einen: rating! 
                     const CVaRDataTableName = `CVar${selectedTableName}_rating_rel`;
-                    // console.log('CVaRDataTableName:', CVaRDataTableName); 
                     window.api.send('fetch-table-data', CVaRDataTableName);
-                    // console.log('fetch-table-data, selectedTableName', CVaRDataTableName);
-
+                    
+                    // // 🛠 Remove existing listener for CVar data
+                    // window.api.removeAllListeners(CVaRDataTableName + 'Data');
                     
                     window.api.receive(CVaRDataTableName + 'Data', (receivedCVarData) => {
-                        // console.log('selectedTableName, receivedData:', CVaRDataTableName, receivedMVarData);
-                        updateCvarDataFunction(receivedCVarData);
-                        // updateMvarDataTable(receivedMVarData);
-                        this.setCvarData(receivedCVarData);
-
-
+                        //console.log('Received CVaR Data:', receivedCVarData);
+                    
+                        // Check if the data is an array; if not, wrap it in an array
+                        if (Array.isArray(receivedCVarData)) {
+                            this.setCvarData(receivedCVarData);
+                        } else if (receivedCVarData && typeof receivedCVarData === 'object') {
+                            console.warn('⚠️ Received a single object, converting to array:', receivedCVarData);
+                            this.setCvarData([receivedCVarData]);  // Wrap in an array
+                        } else {
+                            console.error('❌ Invalid CVaR data format:', receivedCVarData);
+                            this.setCvarData([]);  // Fallback to an empty array
+                        }
                     });
+                    
+                    
+                    
+
+                    
 
                 } else {
 

@@ -359,7 +359,7 @@ export function createCombinedLossIssuerChart(ratingData, marketData, marketNorm
               const fullRangeMax = allConvIValues.length// - 1;
 
               if (minIndex === fullRangeMin && maxIndex === fullRangeMax) {
-                console.log('Already at full zoom-out, no further action.');
+                // console.log('Already at full zoom-out, no further action.');
                 return; 
               }
 
@@ -367,7 +367,7 @@ export function createCombinedLossIssuerChart(ratingData, marketData, marketNorm
                 chart.resetZoom();
               }
 
-              console.log('Zoom Complete:', minIndex, maxIndex);
+              // console.log('Zoom Complete:', minIndex, maxIndex);
             }
           },
           limits: {
@@ -464,7 +464,7 @@ export function createCombinedLossIssuerESChart(ratingData, marketData, marketNo
   // 🔥 Calculate averages for the first 10 entries in each dataset
   const calculateAverage = (values) => {
     const firstTenValues = values.slice(0, 10);
-    console.log('Values used to calculate average:', firstTenValues);
+    // console.log('Values used to calculate average:', firstTenValues);
     const sum = firstTenValues.reduce((acc, val) => acc + val, 0);
     return firstTenValues.length > 0 ? sum / firstTenValues.length : 0;
   };

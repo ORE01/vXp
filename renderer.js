@@ -1,5 +1,5 @@
 import { handleTSData } from './TS.js';
-import { handleMVaRData, handleMVarInputData, updateMVaRChart } from './MVaR.js'; 
+import { handleMVaRData, handleMVarInputData, updateMVaRChart} from './MVaR.js'; 
 import { handleSwapForwardCurve, handleFWDData } from './FORWARDS.js';
 import { handleProviderData } from './DATAProvider.js'; 
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './ML.js'; 
@@ -26,37 +26,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 function setupEventListeners() {
+
+  // FI-Market Data
   window.api.receive('EUSWData', handleEUSWData);
-  
+
+  // ISSUER 
   window.api.receive('IssuerData', handleIssuerData);
   window.api.receive('CSMatrixData', handleCSMatrixData);
   window.api.receive('CSParameterData', handleCSParameterData);
   window.api.receive('RankData', handleRankData);
-  
+
+  // FI-Product Data
   window.api.receive('ProdAllData', handleProdData);
-  // Listener für ProdCouponSchedulesData
   window.api.receive('ProdCouponSchedulesData', (receivedData) => {
-    console.log('Received ProdCouponSchedulesData:', receivedData);
+    //console.log('Received ProdCouponSchedulesData:', receivedData);
 
     // Speichern der Daten in appState
     if (appState && typeof appState.setCouponData === 'function') {
       appState.setCouponData(receivedData);
-      console.log('Coupon data saved in appState.');
+      //console.log('Coupon data saved in appState.');
     } else {
       console.error('appState or setCouponData is not defined!');
     }
   });
-
-
+  // PORTFOLIO
+  window.api.receive('DealsMainData', handleDealsMainData);
   window.api.receive('createdDealsData', handleCreatedDealsData);
   window.api.receive('createdPortData', handleCreatedPortData);
-  // window.api.receive('CSMatrixData', handleCSMatrixData);
-  // window.api.receive('CSParameterData', handleCSParameterData);
-  // window.api.receive('RankData', handleRankData);
-  // window.api.receive('IssuerData', handleIssuerData);
-  // window.api.receive('ProdAllData', handleProdData);
-  window.api.receive('DealsMainData', handleDealsMainData);
-  // window.api.receive('EUSWData', handleEUSWData);
 
   // MVaR
   window.api.receive('MVaRMainData', handleMVaRMainData);
@@ -66,7 +62,7 @@ function setupEventListeners() {
   window.api.receive('EADMain_marketData', (data) => {appState.handleEADMainData.call(appState, data, 'EADMain_market'); });
   setupCvarLossesData('sortedLossesMain', appState.handleCVaRData.bind(appState), ['rating', 'market', 'norm']);
   setupCvarLossesData('sortedLossesIssuerMain', handleLossIssuerMainData, ['rating', 'market', 'norm']);
-  
+
   // ML
   window.api.receive('ML_FuturePredictionsData', (data) => handleFuturePredictions(data));
   window.api.receive('ML_MergedDataData', (data) => handleMLTestData(data));
@@ -85,6 +81,8 @@ function setupEventListeners() {
 
   // PYTHON PROJECTS: helper
   window.api.receive('py-fairValue-complete', handleFairValueComplete);
+  window.api.receive('py-mvar-complete', handleMVaRComplete);
+  window.api.receive('py-cvar-complete', handleCVaRComplete);
   window.api.receive('project-finished', handleProjectFinished);
 
   // TS CLONED
@@ -105,6 +103,8 @@ function setupEventListeners() {
       });
     }
   });
+
+
 }
     function setupDataProvider(eventNames, handler) {
       eventNames.forEach(([eventName, type]) => {
@@ -299,6 +299,9 @@ function setupPortDropdowns() {
             selectedTableName: selectedPortTableName
         });
     }
+
+
+
   //START PYTHON PROJECTS and so on...:
 function setupButtons() {
   document.getElementById('saveSelectionButton').addEventListener('click', handleSaveSelection);
@@ -359,6 +362,14 @@ function setupButtons() {
         updateTooltips(lang);
       });
     });
+
+// THEME TOGGLE button
+    const themeToggleButton = document.getElementById('themeToggle');
+    if (themeToggleButton) {
+      themeToggleButton.addEventListener('click', () => {
+        document.body.classList.toggle('light-theme');  // Toggles between dark and light themes
+    });
+  }
 }
 
   function handleProviderClick(activeProviderId, providers) {
@@ -381,7 +392,7 @@ function setupButtons() {
   // PORTFOLIO
   function handleCreatedDealsData(receivedData) {
     try {
-      console.log('Received createdDealsData:', receivedData);
+      //console.log('Received createdDealsData:', receivedData);
       appState.setCreatedDealsData(receivedData, 'createdDealsDropdown');
       appState.applyFiltersAndUpdateDropdowns('dealsTables');
     } catch (error) {
@@ -407,48 +418,13 @@ function setupButtons() {
     }
   }
 
-  // function handleSaveSelection() {
-  //   console.log('saveSelectionButton');
-  //   const nameInputValue = document.getElementById('nameInput').value;
-  //   const selectionName = 'Deals' + nameInputValue;
-  //   const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
-
-  //   console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
-
-  //   if (!selectionName || tagValues.length === 0) {
-  //     alert('Please enter a name and select at least one trade ID.');
-  //     return;
-  //   }
-
-  //   const filteredData = appState.getFilteredData('deals');
-  //   const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
-
-  //   console.log('selectedTradeIDs:', selectedTradeIDs);
-  //   window.api.send('save-deals-selection', {
-  //     selectionName,
-  //     tagValues,
-  //     selectedTradeIDs
-  //   });
-
-  //   //alert(`Portfolio "${selectionName}" successfully created`);
-
-  //   const newPortfolio = { table_name: selectionName };
-  //   appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
-  //   appState.updateDealsDataTable.bind(appState);
-
-  //   appState.updateDealsDropdownOptions(selectionName);
-  //   appState.applyFiltersAndUpdateDropdowns('deals');
-
-  //   nameInput.focus();
-
-  // }
   function handleSaveSelection() {
-    console.log('saveSelectionButton');
+    //console.log('saveSelectionButton');
     const nameInputValue = document.getElementById('nameInput').value;
     const selectionName = 'Deals' + nameInputValue;
     const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
   
-    console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
+    //console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
   
     if (!selectionName || tagValues.length === 0) {
       alert('Please enter a name and select at least one trade ID.');
@@ -456,17 +432,24 @@ function setupButtons() {
     }
   
     const filteredData = appState.getFilteredData('deals');
+    const selectedFromTableName = appState.getSelectedDealsTableName();
+
+        console.log('filteredData:', filteredData);
+        console.log('selectedTableName:', selectedFromTableName);
+
     const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
   
     console.log('selectedTradeIDs:', selectedTradeIDs);
+
     window.api.send('save-deals-selection', {
+      selectedFromTableName,
       selectionName,
       tagValues,
       selectedTradeIDs
     });
   
     // ✅ Use the success confirmation modal
-    showSuccessConfirmation(`Portfolio "${selectionName}" successfully created!`, () => {
+    showMessageBox(`Portfolio "${selectionName}" successfully created!`, () => {
       console.log('User closed the success confirmation modal.');
     });
   
@@ -476,62 +459,38 @@ function setupButtons() {
   
     appState.updateDealsDropdownOptions(selectionName);
     appState.applyFiltersAndUpdateDropdowns('deals');
-  
-    nameInput.focus();  // Keep focus on the input
   }   
-      function showSuccessConfirmation(message, onClose) {
-        // Create the overlay (semi-transparent background)
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        overlay.style.display = 'flex';
-        overlay.style.justifyContent = 'center';
-        overlay.style.alignItems = 'center';
-        overlay.style.zIndex = '1000';
-      
-        // Create the modal box
-        const modal = document.createElement('div');
-        modal.style.backgroundColor = '#222';  // Dark background like table headers
-        modal.style.padding = '20px';
-        modal.style.borderRadius = '8px';
-        modal.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.5)';
-        modal.style.textAlign = 'center';
-        modal.style.maxWidth = '400px';
-        modal.style.width = '100%';
-        modal.style.fontFamily = '"Your Font Name", sans-serif';
-        modal.style.color = 'rgb(161, 160, 160)';  // Subtle grey text
-      
-        // Add success message
-        const messageElement = document.createElement('p');
-        messageElement.textContent = message;
-        messageElement.style.marginBottom = '20px';
-        messageElement.style.fontSize = '14px';
-        modal.appendChild(messageElement);
-      
-        // OK button
-        const okButton = document.createElement('button');
-        okButton.textContent = 'OK';
-        okButton.style.backgroundColor = '#4CAF50';  // Green like .table-selected
-        okButton.style.color = 'white';
-        okButton.style.border = 'none';
-        okButton.style.padding = '10px 20px';
-        okButton.style.borderRadius = '5px';
-        okButton.style.cursor = 'pointer';
-        okButton.style.fontSize = '13px';
-      
-        okButton.addEventListener('click', () => {
-          document.body.removeChild(overlay);  // Close the modal
-          if (onClose) onClose();  // Trigger callback if provided
-        });
-      
-        modal.appendChild(okButton);
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-      } 
+        function showMessageBox(message, onClose) {
+          // Create the overlay
+          const overlay = document.createElement('div');
+          overlay.classList.add('confirmation-overlay');
+
+          // Create the modal box
+          const modal = document.createElement('div');
+          modal.classList.add('confirmation-modal', 'confirmation-success');
+
+          // Add success message
+          const messageElement = document.createElement('p');
+          messageElement.textContent = message;
+          messageElement.classList.add('confirmation-message');
+          modal.appendChild(messageElement);
+
+          // OK button
+          const okButton = document.createElement('button');
+          okButton.textContent = 'OK';
+          okButton.classList.add('confirmation-button', 'confirmation-button-green');
+
+          okButton.addEventListener('click', () => {
+              document.body.removeChild(overlay);  // Close the modal
+              if (onClose) onClose();  // Trigger callback if provided
+          });
+
+          // Append button to modal
+          modal.appendChild(okButton);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+      }
+
   function handleDeleteSelection() {
     console.log('Delete button clicked');
     const selectedTableName = appState.getSelectedDealsTableName();
@@ -540,7 +499,7 @@ function setupButtons() {
       const portTableName = selectedTableName.replace(/^Deals/, 'Port');
   
       // ✅ Use the custom confirmation modal
-      showConfirmationModal(
+      showConformationBox(
         `Are you sure you want to delete the tables "${selectedTableName}" and "${portTableName}"?`,
         
         // On Confirm
@@ -595,83 +554,54 @@ function setupButtons() {
       alert('Please select a table to delete.');
     }
   }
-      function showConfirmationModal(message, onConfirm, onCancel) {
-        // Create the overlay (dark semi-transparent background)
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';  // Darker overlay
-        overlay.style.display = 'flex';
-        overlay.style.justifyContent = 'center';
-        overlay.style.alignItems = 'center';
-        overlay.style.zIndex = '1000';
-      
-        // Create the modal box
-        const modal = document.createElement('div');
-        modal.style.backgroundColor = '#222';  // Dark background like table headers
-        modal.style.padding = '20px';
-        modal.style.borderRadius = '8px';
-        modal.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.5)';  // Stronger shadow for depth
-        modal.style.textAlign = 'center';
-        modal.style.maxWidth = '400px';
-        modal.style.width = '100%';
-        modal.style.fontFamily = '"Your Font Name", sans-serif';
-        modal.style.color = 'rgb(161, 160, 160)';  // Subtle grey text
-      
-        // Add message
-        const messageElement = document.createElement('p');
-        messageElement.textContent = message;
-        messageElement.style.marginBottom = '20px';
-        messageElement.style.fontSize = '14px';
-        modal.appendChild(messageElement);
-      
-        // Create buttons container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.justifyContent = 'space-around';
-      
-        // Confirm button (green, like .table-selected)
-        const confirmButton = document.createElement('button');
-        confirmButton.textContent = 'Yes';
-        confirmButton.style.backgroundColor = '#4CAF50';  // Matching your selected table color
-        confirmButton.style.color = 'white';
-        confirmButton.style.border = 'none';
-        confirmButton.style.padding = '10px 20px';
-        confirmButton.style.borderRadius = '5px';
-        confirmButton.style.cursor = 'pointer';
-        confirmButton.style.fontSize = '13px';
-        confirmButton.addEventListener('click', () => {
-          document.body.removeChild(overlay);
-          onConfirm();
-        });
-      
-        // Cancel button (dark grey with subtle text)
-        const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'No';
-        cancelButton.style.backgroundColor = '#333';  // Dark background like even rows
-        cancelButton.style.color = 'rgb(161, 160, 160)';  // Subtle grey text
-        cancelButton.style.border = '1px solid #4CAF50';  // Green border to match theme
-        cancelButton.style.padding = '10px 20px';
-        cancelButton.style.borderRadius = '5px';
-        cancelButton.style.cursor = 'pointer';
-        cancelButton.style.fontSize = '13px';
-        cancelButton.addEventListener('click', () => {
-          document.body.removeChild(overlay);
-          if (onCancel) onCancel();
-        });
-      
-        // Append buttons to container
-        buttonContainer.appendChild(confirmButton);
-        buttonContainer.appendChild(cancelButton);
-        modal.appendChild(buttonContainer);
-      
-        // Append modal to overlay
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
+        function showConformationBox(message, onConfirm, onCancel) {
+          // Create the overlay
+          const overlay = document.createElement('div');
+          overlay.classList.add('confirmation-overlay');
+
+          // Create the modal box
+          const modal = document.createElement('div');
+          modal.classList.add('confirmation-modal');
+
+          // Add message
+          const messageElement = document.createElement('p');
+          messageElement.textContent = message;
+          messageElement.classList.add('confirmation-message');
+          modal.appendChild(messageElement);
+
+          // Create buttons container
+          const buttonContainer = document.createElement('div');
+          buttonContainer.classList.add('confirmation-button-container');
+
+          // Confirm button (Now Red)
+          const confirmButton = document.createElement('button');
+          confirmButton.textContent = 'Yes';
+          confirmButton.classList.add('confirmation-button', 'confirmation-button-red'); // 🔴 CHANGED TO RED
+          confirmButton.addEventListener('click', () => {
+              document.body.removeChild(overlay);
+              onConfirm();
+          });
+
+          // Cancel button
+          const cancelButton = document.createElement('button');
+          cancelButton.textContent = 'No';
+          cancelButton.classList.add('confirmation-button', 'confirmation-button-grey');
+          cancelButton.addEventListener('click', () => {
+              document.body.removeChild(overlay);
+              if (onCancel) onCancel();
+          });
+
+          // Append buttons to container and modal
+          buttonContainer.appendChild(confirmButton);
+          buttonContainer.appendChild(cancelButton);
+          modal.appendChild(buttonContainer);
+
+          // Append modal to overlay
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
       }
+
+
   
   
 
@@ -700,6 +630,10 @@ function setupButtons() {
         case 'py-CVaR':
           handleCVaRProject(buttonElement, extraParam);
           break;  
+        
+        case 'py-MVaR':
+          handleMVaRProject(buttonElement, extraParam);
+          break;    
   
         default://ALL other projects which do not need Payload!
           selectedTableName = appState.getSelectedDealsTableName();
@@ -713,190 +647,262 @@ function setupButtons() {
       buttonElement.textContent = 'Run';
     }
   }
-
   //py-Projects
-  function handleMLProject(extraParam) {
-    const selectedTableName = 'tblTS';
-  
-    // Fetch selected target
-    const targetCheckboxContainer = document.getElementById('targetCheckboxContainer');
-    const selectedTargetCheckbox = targetCheckboxContainer.querySelector('input[type="checkbox"]:checked');
-    extraParam.target = selectedTargetCheckbox ? selectedTargetCheckbox.value : 'NVDA'; // Default target
-  
-    // Fetch epochs and batch size
-    const epochsInput = document.getElementById('epochsInput').value;
-    const batchSizeInput = document.getElementById('batchSizeInput').value;
-    extraParam.epochs = epochsInput ? parseInt(epochsInput, 10) : 1;
-    extraParam.batch_size = batchSizeInput ? parseInt(batchSizeInput, 10) : 32;
-  
-    // Handle model selection
-    handleMLModelSelection(extraParam);
-  
-    const payload = {
-      tableName: selectedTableName,
-      ...extraParam,
-    };
-  
-    console.log('🚀 Sending payload for py-ml:', payload);
-    window.api.send(`start-py-ml`, payload);
-  }
-  function handleMLModelSelection(extraParam) {
-    const newModelCheckbox = document.getElementById('newModelCheckbox').checked;
-    extraParam.newModel = newModelCheckbox;
-  
-    if (newModelCheckbox) {
-      const selectedModelType = appState.getMLModelType();
-      if (!selectedModelType) {
-        throw new Error('Please select a model type for the new model.');
+      //fairvalue
+      function handleFairValueProject(buttonElement, extraParam) {
+        const selectedTableName = appState.getSelectedDealsTableName();
+        const CSSzenario = appState.getCSSzenarioData();
+      
+        if (!CSSzenario) {
+          throw new Error('No scenario data available. Please set a scenario first.');
+        }
+      
+        extraParam.CSSzenario = CSSzenario;
+      
+        const payload = {
+          tableName: selectedTableName,
+          ...extraParam,
+        };
+      
+        console.log('🚀 Sending payload for py-fairValue:', payload);
+        window.api.send(`start-py-fairValue`, payload);
       }
-      extraParam.modelType = selectedModelType;
-      console.log(`✅ Selected model type for new model: ${selectedModelType}`);
-    } else {
-      const selectedModel = appState.getMLTrainedModel();
-      if (selectedModel) {
-        extraParam.modelName = selectedModel.modelName || '';
-        extraParam.modelType = selectedModel.modelType || '';
-        extraParam.optimizer = selectedModel.optimizer || null;
-        extraParam.loss = selectedModel.loss || null;
-        extraParam.metrics = selectedModel.metrics || [];
+          function handleFairValueComplete(data) {
+            if (data.projectName === 'py-fairValue') {
+                console.log('handleProjectResponse', data);
+                appState.setActiveTable('deals');
+                const selectedDealsTableName = appState.getSelectedDealsTableName();
+                const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
+                console.log('selectedPortTableName', selectedPortTableName);
+
+                // Fetch and handle port data
+                appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer');
+                handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
+
+                // Add the new entry to createdPortData
+                const newPortDataEntry = { table_name: selectedPortTableName };
+                appState.setCreatedPortData(newPortDataEntry);
+
+                // Refresh the dropdown options after updating createdPortData
+                updatePortDropdowns(selectedPortTableName);
+            }
+          }
+
+      //MVaR
+      function handleMVaRProject(buttonElement, extraParam) {
+        const selectedTableName = appState.getSelectedDealsTableName();
+      
+        if (!selectedTableName) {
+          throw new Error('No table selected for MVaR processing.');
+        }
+      
+        const payload = {
+          tableName: selectedTableName,
+          ...extraParam,
+        };
+      
+        console.log('🚀 Sending payload for py-MVaR:', payload);
+        window.api.send('start-py-MVaR', payload);
       }
-    }
-  }
-  function handleCSParProject(buttonElement, extraParam) {
-    const selectedTableName = 'CSParameter';
-    const selectedRows = [];
-    const checkboxes = document.querySelectorAll('#CSParameterDataContainer .select-scenario:checked');
-  
-    if (checkboxes.length === 0) {
-      throw new Error('Please select at least one scenario.');
-    }
-  
-    checkboxes.forEach((checkbox) => {
-      const row = checkbox.closest('tr');
-      if (!row) return;
-  
-      const cells = row.querySelectorAll('td');
-      const nameColumn = cells.length > 1 ? cells[cells.length - 2] : null; // Second-to-last column
-      const CSSzenario = nameColumn ? nameColumn.textContent.trim() : null;
-  
-      if (CSSzenario) {
-        selectedRows.push(CSSzenario);
+          function handleMVaRComplete(data) {
+            if (data.projectName === 'py-MVaR') {
+                console.log('handleProjectResponse', data);
+        
+                appState.setActiveTable('port');  // Set the active table to port (adjust if needed)
+        
+                const selectedDealsTableName = appState.getSelectedDealsTableName();
+                const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
+                console.log('selectedPortTableName', selectedPortTableName);
+        
+                // 1. Fetch and handle port data (main portfolio data)
+                appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer');
+                handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
+        
+                // 2. Add the new MVaR-specific entry (if needed)
+                const newMVaRDataEntry = { table_name: `MVar${selectedPortTableName}Main_rel` };
+                appState.setMvarData(newMVaRDataEntry);
+        
+                // 3. Refresh the dropdown options to reflect updated MVaR data
+                updatePortDropdowns(selectedPortTableName);
+            }
+        }
+        
+        
+        
+      
+      
+
+      function handleCVaRProject(buttonElement, extraParam) {
+        const selectedTableName = appState.getSelectedDealsTableName();
+        const CSSzenario = appState.getCSSzenarioData();
+      
+        if (!CSSzenario) {
+          throw new Error('No scenario data available. Please set a scenario first.');
+        }
+      
+        extraParam.CSSzenario = CSSzenario;
+      
+        const payload = {
+          tableName: selectedTableName,
+          ...extraParam,
+        };
+      
+        console.log('🚀 Sending payload for py-CVaR:', payload);
+        window.api.send(`start-py-CVaR`, payload);
       }
-    });
-  
-    if (selectedRows.length === 0) {
-      throw new Error('Please select at least one scenario.');
-    }
-  
-    const CSSzenario = selectedRows[0];
-    appState.setCSSzenarioData(CSSzenario);
-  
-    extraParam.CSSzenario = CSSzenario;
-    extraParam.selectedRows = selectedRows;
-  
-    const payload = {
-      tableName: selectedTableName,
-      ...extraParam,
-    };
-  
-    console.log('🚀 Sending payload for py-cspar:', payload);
-    window.api.send(`start-py-cspar`, payload);
-  }
-  function handleFairValueProject(buttonElement, extraParam) {
-    const selectedTableName = appState.getSelectedDealsTableName();
-    const CSSzenario = appState.getCSSzenarioData();
-  
-    if (!CSSzenario) {
-      throw new Error('No scenario data available. Please set a scenario first.');
-    }
-  
-    extraParam.CSSzenario = CSSzenario;
-  
-    const payload = {
-      tableName: selectedTableName,
-      ...extraParam,
-    };
-  
-    console.log('🚀 Sending payload for py-fairValue:', payload);
-    window.api.send(`start-py-fairValue`, payload);
-  }
-  function handleCVaRProject(buttonElement, extraParam) {
-    const selectedTableName = appState.getSelectedDealsTableName();
-    const CSSzenario = appState.getCSSzenarioData();
-  
-    if (!CSSzenario) {
-      throw new Error('No scenario data available. Please set a scenario first.');
-    }
-  
-    extraParam.CSSzenario = CSSzenario;
-  
-    const payload = {
-      tableName: selectedTableName,
-      ...extraParam,
-    };
-  
-    console.log('🚀 Sending payload for py-CVaR:', payload);
-    window.api.send(`start-py-CVaR`, payload);
-  }
+          function handleCVaRComplete(data) {
+            if (data.projectName === 'py-CVaR') {
+                console.log('handleProjectResponse', data);
+        
+                appState.setActiveTable('port');  // Set the active table to port (adjust if needed)
+        
+                const selectedDealsTableName = appState.getSelectedDealsTableName();
+                const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
+                console.log('selectedPortTableName', selectedPortTableName);
+        
+                // 1. Fetch and handle port data (main portfolio data)
+                appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer');
+                handleProjectResponse(document.getElementById('CVaRButton'), data.projectName, data);
+        
+                // 2. Add the new MVaR-specific entry (if needed)
+                const newCVaRDataEntry = { table_name: `CVar${selectedPortTableName}Main_rel` };
+                appState.setCvarData(newCVaRDataEntry);
+        
+                // 3. Refresh the dropdown options to reflect updated MVaR data
+                updatePortDropdowns(selectedPortTableName);
+            }
+        }
 
-  function sendPayloadToAPI(projectName, tableName, extraParam) {
-    const payload = {
-      tableName,
-      ...extraParam,
-    };
-  
-    console.log(`🚀 Sending payload for ${projectName}:`, payload);
-    window.api.send(`start-${projectName}`, payload);
-  }
-  function handleProjectResponse(buttonElement, projectName, response) {
-    console.log('handleProjectResponse', projectName);
-    buttonElement.disabled = false;
-    buttonElement.textContent = projectName;
+      function handleMLProject(extraParam) {
+        const selectedTableName = 'tblTS';
+      
+        // Fetch selected target
+        const targetCheckboxContainer = document.getElementById('targetCheckboxContainer');
+        const selectedTargetCheckbox = targetCheckboxContainer.querySelector('input[type="checkbox"]:checked');
+        extraParam.target = selectedTargetCheckbox ? selectedTargetCheckbox.value : 'NVDA'; // Default target
+      
+        // Fetch epochs and batch size
+        const epochsInput = document.getElementById('epochsInput').value;
+        const batchSizeInput = document.getElementById('batchSizeInput').value;
+        extraParam.epochs = epochsInput ? parseInt(epochsInput, 10) : 1;
+        extraParam.batch_size = batchSizeInput ? parseInt(batchSizeInput, 10) : 32;
+      
+        // Handle model selection
+        handleMLModelSelection(extraParam);
+      
+        const payload = {
+          tableName: selectedTableName,
+          ...extraParam,
+        };
+      
+        console.log('🚀 Sending payload for py-ml:', payload);
+        window.api.send(`start-py-ml`, payload);
+      }
+      function handleMLModelSelection(extraParam) {
+        const newModelCheckbox = document.getElementById('newModelCheckbox').checked;
+        extraParam.newModel = newModelCheckbox;
+      
+        if (newModelCheckbox) {
+          const selectedModelType = appState.getMLModelType();
+          if (!selectedModelType) {
+            throw new Error('Please select a model type for the new model.');
+          }
+          extraParam.modelType = selectedModelType;
+          console.log(`✅ Selected model type for new model: ${selectedModelType}`);
+        } else {
+          const selectedModel = appState.getMLTrainedModel();
+          if (selectedModel) {
+            extraParam.modelName = selectedModel.modelName || '';
+            extraParam.modelType = selectedModel.modelType || '';
+            extraParam.optimizer = selectedModel.optimizer || null;
+            extraParam.loss = selectedModel.loss || null;
+            extraParam.metrics = selectedModel.metrics || [];
+          }
+        }
+      }
+      function handleCSParProject(buttonElement, extraParam) {
+        const selectedTableName = 'CSParameter';
+        const selectedRows = [];
+        const checkboxes = document.querySelectorAll('#CSParameterDataContainer .select-scenario:checked');
+      
+        if (checkboxes.length === 0) {
+          throw new Error('Please select at least one scenario.');
+        }
+      
+        checkboxes.forEach((checkbox) => {
+          const row = checkbox.closest('tr');
+          if (!row) return;
+      
+          const cells = row.querySelectorAll('td');
+          const nameColumn = cells.length > 1 ? cells[cells.length - 2] : null; // Second-to-last column
+          const CSSzenario = nameColumn ? nameColumn.textContent.trim() : null;
+      
+          if (CSSzenario) {
+            selectedRows.push(CSSzenario);
+          }
+        });
+      
+        if (selectedRows.length === 0) {
+          throw new Error('Please select at least one scenario.');
+        }
+      
+        const CSSzenario = selectedRows[0];
+        appState.setCSSzenarioData(CSSzenario);
+      
+        extraParam.CSSzenario = CSSzenario;
+        extraParam.selectedRows = selectedRows;
+      
+        const payload = {
+          tableName: selectedTableName,
+          ...extraParam,
+        };
+      
+        console.log('🚀 Sending payload for py-cspar:', payload);
+        window.api.send(`start-py-cspar`, payload);
+      }
 
-    if (response.success) {
-      console.log(`${projectName} executed successfully.`);
-    } else {
-      console.error(`Error starting ${projectName}:`, response.error);
-    }
-  }
 
-  function handleFairValueComplete(data) {
-    if (data.projectName === 'py-fairValue') {
-        console.log('handleProjectResponse', data);
-        appState.setActiveTable('deals');
-        const selectedDealsTableName = appState.getSelectedDealsTableName();
-        const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
-        console.log('selectedPortTableName', selectedPortTableName);
+      
 
-        // Fetch and handle port data
-        appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer');
-        handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
+      function sendPayloadToAPI(projectName, tableName, extraParam) {
+        const payload = {
+          tableName,
+          ...extraParam,
+        };
+      
+        console.log(`🚀 Sending payload for ${projectName}:`, payload);
+        window.api.send(`start-${projectName}`, payload);
+      }
+      function handleProjectResponse(buttonElement, projectName, response) {
+        //console.log('handleProjectResponse', projectName);
+        buttonElement.disabled = false;
+        buttonElement.textContent = projectName;
 
-        // Add the new entry to createdPortData
-        const newPortDataEntry = { table_name: selectedPortTableName };
-        appState.setCreatedPortData(newPortDataEntry);
+        if (response.success) {
+          console.log(`${projectName} executed successfully.`);
+        } else {
+          console.error(`Error starting ${projectName}:`, response.error);
+        }
+      }
 
-        // Refresh the dropdown options after updating createdPortData
-        updatePortDropdowns(selectedPortTableName);
-    }
-  }
 
-  function handleProjectFinished(data) {
-    const projectButtonMap = {
-      'py-MVaR': 'MVaRButton',
-      'py-CVaR': 'CVaRButton',
-      'py-excel': 'updateDataExcelButton',
-      'py-historicData': 'updateHistoricDataButton',
-      'py-cspar': 'CSParButton',
-      'py-ml': 'MLButton'
-    };
 
-    const buttonId = projectButtonMap[data.projectName];
-    if (buttonId) {
-      console.log('handleProjectResponse', data);
-      handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
-    }
-  }
+      function handleProjectFinished(data) {
+        const projectButtonMap = {
+          'py-MVaR': 'MVaRButton',
+          'py-CVaR': 'CVaRButton',
+          'py-excel': 'updateDataExcelButton',
+          'py-historicData': 'updateHistoricDataButton',
+          'py-cspar': 'CSParButton',
+          'py-ml': 'MLButton'
+        };
+
+        const buttonId = projectButtonMap[data.projectName];
+        if (buttonId) {
+          //console.log('handleProjectResponse', data);
+          handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
+        }
+      }
 
 
 
@@ -946,14 +952,14 @@ function setupButtons() {
   // }
   // IR
   function handleEUSWData(data) {
-    console.log("Received data in handleEUSWData:", data);  // Log to verify data content
+    //console.log("Received data in handleEUSWData:", data);  // Log to verify data content
     appState.handleIRData.call(appState, data);
     appState.handleFWDData.call(appState, data);  // This should cache receivedData in cachedReceivedData
     appState.handleSwapForwardCurve.call(appState, data);
   }
   // CSMatrix
   function handleCSMatrixData(receivedData) {
-    console.log('CSMatrixData', receivedData);
+    //console.log('CSMatrixData', receivedData);
     appState.handleCSMatrixData(receivedData);
   }
   // CSParameter
@@ -962,13 +968,13 @@ function setupButtons() {
   }
   // RANK
   function handleRankData(receivedData) {
-    console.log('RankData', receivedData);
+    //console.log('RankData', receivedData);
     appState.setRankData(receivedData);
     console.log('RankData set in appState', appState.getRankData());
   }
   // MVaR
   function handleMVaRMainData(receivedData) {
-    console.log('handleMVaRMainData:', receivedData)
+    //console.log('handleMVaRMainData:', receivedData)
     const MVaRTable = handleMVaRData(receivedData);
     const MVaRDataContainer = document.getElementById('MVaRDataContainer');
     if (MVaRDataContainer) {
@@ -982,12 +988,28 @@ function setupButtons() {
       portMVaRDataContainer.appendChild(MVaRTable.cloneNode(true));
     }
     updateMVaRChart(receivedData);
+    //appState.updateMvarDataTable(receivedData);
   }
+  // function handleMVaRComplete(response) {
+  //   if (response.success) {
+  //     console.log('✅ MVaR data refresh completed successfully');
+  
+  //     // Fetch the updated MVaR data from appState
+  //     const updatedMVaRData = appState.getMvarData();
+      
+  //     // Update the UI with the new data
+  //     handleMVaRData(updatedMVaRData);  
+  //     updateMVaRChart(updatedMVaRData); 
+  //   } else {
+  //     console.error('❌ Failed to refresh MVaR data:', response.error);
+  //   }
+  // }
+  
   // MVaR Input
   function handleSaveClick() {
-    console.log('handleSaveClick called');
+    //console.log('handleSaveClick called');
     const editedData = extractEditedData();
-    console.log('Edited Data:', editedData);
+    //console.log('Edited Data:', editedData);
     const cleanTableName = 'MVaRInput_2';
     const uniqueIdentifier = { column: 'id', value: editedData[0]['id'] };
     const newData = {
@@ -1023,7 +1045,7 @@ function setupButtons() {
     document.getElementById(buttonId).addEventListener('click', () => {
       const cachedData = appState.getForwardData();
 
-      console.log(`Applying CMS Rate with cached data from appState for button ${buttonId}:`, cachedData);
+      //console.log(`Applying CMS Rate with cached data from appState for button ${buttonId}:`, cachedData);
       if (cachedData) {
         handleFWDData(cachedData, applyCubicSpline);
       } else {

@@ -1,0 +1,26 @@
+/* Default (Dark Theme) */
+:root {
+    --bg-color: rgb(70, 69, 69);
+    --text-color: rgb(161, 160, 160);
+    --border-color: rgb(100, 100, 100);
+    --highlight-color: #4CAF50;
+    --hover-text-color: white;
+    --hover-bg-color: #333;
+    --font-family: "Your Font Name", sans-serif;
+    --font-size: 13px;
+    --header-bg-color: #222;
+    --header-text-color: rgb(161, 160, 160);
+  }
+  
+  /* Light Theme */
+  .light-theme {
+    --bg-color: #f9f9f9;
+    --text-color: #333;
+    --border-color: #ccc;
+    --highlight-color: #4CAF50;
+    --hover-text-color: #000;
+    --hover-bg-color: #e0e0e0;
+    --header-bg-color: #ddd;
+    --header-text-color: #333;
+  }
+  

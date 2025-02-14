@@ -6,21 +6,6 @@
     color: rgb(161, 160, 160);
   }
 
-  /* .table {
-    position: absolute; 
-    z-index: 10; 
-    top: 160px; 
-    left:340px; 
-    visibility: hidden; 
-    opacity: 0; 
-    height: 0; 
-    overflow: hidden; 
-    transition: opacity 0.3s ease, visibility 0.3s ease, height 0.3s ease; 
-  } */
-
-  
-  
-  
   .table-selected {
     background-color: #4CAF50; 
     color: white; 
@@ -219,28 +204,6 @@
   position: relative; /* Ensure proper stacking context */
 }
 
-
-
-/* .data-container td:hover::after {
-   content: attr(title); 
-   position: absolute;
-   background-color: #222;
-   color: #fff;
-   padding: 5px;
-   border-radius: 5px;
-   white-space: normal;
-   max-width: 300px;
-   z-index: 9999;
-   top: calc(100% + 5px);
-   left: 50%;
-   transform: translateX(-50%);
-   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-} */
-
-
-
-
-
   
   #portMVaRDataContainer {
     background-color: rgb(31, 31, 31);
@@ -280,20 +243,6 @@
     height: 250px; /* Adjust the height value as needed */
     overflow-y: auto; /* Optional: adds a vertical scrollbar if content overflows */
   }
-
-
-  /* .provider-wrapper .data-container {
-    width: 1200px; 
-    height: 600px; 
-    overflow: auto; 
-    border: 1px solid #ccc;
-    margin-top: 10px; 
-  }
-
-  .provider-wrapper .data-container table {
-    width: 100%;
-    table-layout: fixed; 
-  } */
 
   #epochsInput {
     display: block; /* Ensure block behavior for full control */

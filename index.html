@@ -10,6 +10,7 @@
   <link href="./css/Button.css" rel="stylesheet">
   <link href="./css/ToolTip.css" rel="stylesheet">
   <link href="./css/trafficLight.css" rel="stylesheet">
+  <link href="./css/messageBox.css" rel="stylesheet">
   
   <!-- <link href="./css/CouponModal.css" rel="stylesheet">  -->
 
@@ -44,6 +45,7 @@
     <div class="language-toggle">
       <button id="lang-en" class="language-button">EN</button>
       <button id="lang-de" class="language-button">DE</button>
+      <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
     </div>
   </div>
 
@@ -204,32 +206,34 @@
         <h2 class="small-section-header">Edit Portfolio</h2>
         <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
           <label for="createdDealsDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select PORTFOLIO:</label>
-          <select id="createdDealsDropdown" style="width: 80%; background-color: white;"></select>
+          <select id="createdDealsDropdown" class="deals-dropdown"></select>
+
         </div>
 
         <!-- Trade ID Dropdown -->
         <h2 class="small-section-header">Create New Portfolio from Selected One</h2>
         <div class="trade-dropdown-wrapper portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
           <label for="tradeDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select TRADE_ID:</label>
-          <select id="tradeDropdown" multiple class="select-dropdown" multiple style="width: 80%; background-color: white;"></select>
+          <select id="tradeDropdown" multiple class="select-dropdown"></select>
         </div>
         
         <!-- Name Input -->
         <div class="tag-input" style="display: flex; margin-bottom: 10px;">
           <label for="nameInput" style="width: 20%; min-width: 150px;margin-left: 20px;">New Portfolio Name:</label>
-          <input type="text" id="nameInput" value="" style="width: 80%; background-color: white;">
+          <input type="text" id="nameInput" value=""  class="input-field" style="color: #f9f9f9;">
+
         </div>
 
         <!-- Tag Input Field -->
         <div class="tag-input" style="display: flex; margin-bottom: 10px;">
           <label for="tagInputField" style="width: 20%; min-width: 150px; margin-left: 20px;">Tag selection:</label>
-          <input type="text" id="tagInputField" value="" style="width: 80%; background-color: white;">
+          <input type="text" id="tagInputField" value="" class="input-field" style="color: #f9f9f9;">
         </div>
 
         <!-- Buttons -->
         <div class="button-row" style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
-          <button id="saveSelectionButton" style="margin-right: 5px; background-color: green; color: white;">Save Selection</button>
-          <button id="deleteTableButton" style="background-color: red; color: white;">Delete Selection</button>
+          <button id="saveSelectionButton" class="edit-button">Save Selection</button>
+          <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
         </div>
       </div>
     </div>
@@ -289,7 +293,7 @@
       <div>
 
         <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <select id="createdPortDropdown0" style="width: 80%; background-color: white;"></select> 
+          <select id="createdPortDropdown0" class="select-dropdown" style="color: #f9f9f9;"></select> 
         </div>
 
 
@@ -631,74 +635,6 @@
     </div>
   </div>
 </template>
-
-
-
-<!-- Template for the ML Modal Sections to Clone -->
-<!-- <template id="ML_Modal_Template">
-  
-  <div class="table-content">
-    
-    <div class="filter-wrapper">
-      <label>Select Data:</label>
-      
-      <div id="checkboxContainer" class="table-wrapper">
-        
-      </div>
-
-      
-      <div class="table-wrapper">
-        <div class="normalization-container">
-          <label for="normalizationType">Normalization Type:</label>
-          <select id="normalizationTypeSelector">
-            <option value="none">None</option>
-            <option value="dynamic">Dynamic</option>
-            <option value="firstValue">First Value</option>
-          </select>
-        </div>
-      </div>
-
-     
-      <div class="table-wrapper">
-        <div class="daily-volatility-container">
-          <label>Apply Daily Volatility:</label>
-          <br />
-          <input type="checkbox" id="showDailyVolatility" /> Daily Volatility
-          <br />
-        </div>
-      </div>
-
-      
-      <div class="load-and-toggle-container">
-        <button id="loadButton" class="edit-button">Load Data</button>
-      </div>
-    </div>
-
-    
-    <div class="TSChart-container">
-      <div class="chart-container">
-        <canvas id="TSlineChart" width="1000" height="400"></canvas>
-      </div>
-
-      
-      <div class="time-range-buttons">
-        <button id="oneYearButton">1Y</button>
-        <button id="fiveYearButton">5Y</button>
-        <button id="tenYearButton">10Y</button>
-        <button id="maxButton">Max</button>
-      </div>
-
-      
-      <div class="data-wrapper">
-        <div class="data-container" id="TSDataContainer"></div>
-      </div>
-    </div>
-  </div>
-</template> -->
-
-
-
-
 
 
 
@@ -1064,29 +1000,6 @@
 
 
 
-
-
-
-
-
-
-<!-- Modal - Edit Row -->
-<!-- <div id="modal" class="modal">
-  <div class="modal-content draggable">
-    <span class="close">&times;</span>
-    <h2>Edit Row</h2>
-    <form id="editForm">
-      
-      <label for="issuerSelect">Select Issuer:</label>
-      <select id="issuerSelect"></select>
-      
-    </form>
-    <button id="saveButton">Save</button>
-    <button id="eraseButton">Delete</button>
-    <div id="errorMessage"></div>
-  </div>
-</div> -->
-
 <!-- Modal - Edit Row -->
 <div id="modal" class="modal">
   <div class="modal-content draggable">
@@ -1095,7 +1008,7 @@
     <form id="editForm">
       
       <label for="issuerSelect">Select Issuer:</label>
-      <select id="issuerSelect"></select>
+      <select id="issuerSelect" class="input-field"></select>
       
     </form>
     <div id="modalBody">
@@ -1106,25 +1019,6 @@
     <div id="errorMessage"></div>
   </div>
 </div>
-
-
-<!-- Modal - Edit Row -->
-<!-- <div id="modal" class="modal">
-  <div class="modal-content draggable">
-    <span class="close">&times;</span>
-    <h2>Modal Title</h2>
-    <div id="modalBody">
-     
-      <div id="prodAllSection"></div>
-      
-      <div id="couponSchedulesSection"></div>
-    </div>
-    <button id="saveButton">Save</button>
-    <button id="eraseButton">Delete</button>
-  </div>
-</div> -->
-
-
 
 
 

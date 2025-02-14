@@ -9,12 +9,12 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
   setupFormFields(actionType, data, rowIndex, selectedTableName);
 
   if (actionType === 'add') {
-    console.log('data, rowIndex, selectedTableName', data, selectedTableName)
+    //console.log('data, rowIndex, selectedTableName', data, selectedTableName)
 
     setupAddOperation(data, selectedTableName);
 
   } else if (actionType === 'edit') {
-    console.log('data',data)
+    //console.log('data',data)
     const rowData = data[rowIndex];
     
     setupEditOperation(rowData, rowIndex, selectedTableName);
@@ -23,7 +23,7 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
 }
 
 export function handleCouponFormAction(event, data, rowIndex, actionType) {
-  console.log('handleCouponFormAction',  data)
+  //console.log('handleCouponFormAction',  data)
   displayModal(actionType, rowIndex);
 
   if (actionType === 'add') {
@@ -38,17 +38,17 @@ export function handleCouponFormAction(event, data, rowIndex, actionType) {
 // let isAddingRow = false;
 let isAddingRow;
 export const addSaveButtonHandler = (form, modal, selectedTableName) => {
-  console.log('Save button clicked');
+  //console.log('Save button clicked');
   if (isAddingRow) return;
   isAddingRow = true;
   const newRowData = gatherFormData(form);
   
   try {
     const newSelectedTableName = selectedTableName;
-    console.log('selectedTableName', newSelectedTableName);
+    //console.log('selectedTableName', newSelectedTableName);
     const cleanTableName = newSelectedTableName;
     addNewRow(newRowData, cleanTableName);
-    console.log(`New row added to ${cleanTableName} successfully.`);
+    //console.log(`New row added to ${cleanTableName} successfully.`);
     closeModal();
   } catch (error) {
     displayErrorMessage(`Failed to add new row: ${error.message}`);
@@ -57,7 +57,7 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
 };
 
 function setupAddOperation(data, selectedTableName) {
-  console.log('data, selectedTableName', data, selectedTableName);
+  //console.log('data, selectedTableName', data, selectedTableName);
   const modal = document.getElementById('modal');
   const modalTitle = modal.querySelector('h2');
   const form = document.getElementById('editForm'); // Ensure this ID matches your Add Form
@@ -86,7 +86,7 @@ function setupAddOperation(data, selectedTableName) {
   const saveButtonClone = saveButton.cloneNode(true);
   saveButton.parentNode.replaceChild(saveButtonClone, saveButton);
 
-  console.log('Attaching event listener to saveButton');
+  //console.log('Attaching event listener to saveButton');
 
   saveButtonClone.addEventListener('click', () => addSaveButtonHandler(form, modal, selectedTableName));
 }
@@ -121,7 +121,7 @@ function setupEditOperation(data, rowIndex, selectedTableName) {
 
 function gatherFormData(form) {
   // Log the form being passed to verify it's the expected one
-  console.log('Form passed to gatherFormData:', form);
+  //console.log('Form passed to gatherFormData:', form);
 
   if (!form) {
     console.error('Form not found in gatherFormData function.');
@@ -131,7 +131,7 @@ function gatherFormData(form) {
   const newRowData = {};
   // Ensure we're querying only within the form element
   const inputFields = form.querySelectorAll('input, select');
-  console.log('Input Fields:', inputFields); // Log to verify the fields are being selected
+  //console.log('Input Fields:', inputFields); // Log to verify the fields are being selected
 
   inputFields.forEach(input => {
     const fieldName = input.getAttribute('data-field');

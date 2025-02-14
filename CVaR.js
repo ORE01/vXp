@@ -196,7 +196,7 @@ export function handleCVaRData(receivedData, type) {
 
       secondaryContainer.innerHTML = ''; // Clear content
       secondaryContainer.appendChild(primaryContainer.firstElementChild.cloneNode(true)); // Clone and append
-      console.log(`Cloned content from "${primaryContainerId}" to "${containerId}".`);
+      //console.log(`Cloned content from "${primaryContainerId}" to "${containerId}".`);
     });
   }
 }

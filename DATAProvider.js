@@ -3,7 +3,7 @@ import { handleFormAction } from './renderer/FormButtonHandler.js';
 
 // Universal function to handle both ECB and Fed data and display in a table
 export function handleProviderData(receivedData, tableName) {
-    console.log(`Received data for ${tableName}:`, receivedData);
+    //console.log(`Received data for ${tableName}:`, receivedData);
   
     // ** Get the container for the provider (like ECB, Fed, Yahoo) **
     const container = document.getElementById(`input${tableName.charAt(0).toUpperCase() + tableName.slice(1)}-container`);
@@ -38,7 +38,7 @@ export function handleProviderData(receivedData, tableName) {
         handleFormAction(event, receivedData, null, tableName, actionType);
       });
     }
-  }
+}
   
   
 

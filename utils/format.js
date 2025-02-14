@@ -11,7 +11,7 @@ export function isValidNumber(value) {
 }
 
 export function formatNumberWithCommas(value) {
-  console.log('Value received:', value); // Debugging line to log the value
+  //console.log('Value received:', value); // Debugging line to log the value
   
   // Check if value is null, undefined, an empty string, or explicitly 'N/A'
   if (value === null || value === undefined || value === '' || String(value).toUpperCase() === 'N/A') {
@@ -25,7 +25,7 @@ export function formatNumberWithCommas(value) {
   }
 
   // Format the number to two decimal places and add the % sign
-  return numericValue.toFixed(2) + '%';
+  return numericValue.toFixed(3) + '%';
 }
 
 // Für die Anzeige
@@ -54,8 +54,8 @@ export function formatDisplayValue(fieldName, value) {
 
   //For SAVING!!!!
 export function formatInputFieldValue(fieldName, value) {
-  console.log('fieldNameFF:', fieldName);
-  console.log('value', value);
+  // console.log('fieldNameFF:', fieldName);
+  // console.log('value', value);
   let formattedValue = value;
 
   if (fieldName === 'COUPON' ||
@@ -68,15 +68,15 @@ export function formatInputFieldValue(fieldName, value) {
       fieldName === 'FORWARDS' ||
       fieldName === 'RATES') {
       formattedValue = parseFloat(formattedValue) / 100;
-      console.log('formattedValue:', formattedValue); 
+      //console.log('formattedValue:', formattedValue); 
 
   } else if (fieldName === 'NOTIONAL') {
       formattedValue = parseInt(formattedValue); // Convert to whole number
-      console.log('formattedValue:', formattedValue);
+      //console.log('formattedValue:', formattedValue);
       
   } else if (fieldName === 'RATING') {
     formattedValue = String(formattedValue); // Convert to whole number
-    console.log('formattedValue:', formattedValue);
+    //console.log('formattedValue:', formattedValue);
  }
 
   return formattedValue;
@@ -88,4 +88,27 @@ export function convertDateToISO(dateStr) {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
   return dateStr;
+}
+
+export function getFormatRules() {
+  return {
+    'PD': formatNumber(3, true, true), 
+    'PD_M': formatNumber(3, true, true), 
+    'PD_M_norm': formatNumber(3, true, true), 
+    'ytm': formatNumber(3, true, true), 
+    'ytm_BUY': formatNumber(3, true, true), 
+    'ytmPort': formatNumber(3, true, true), 
+    'CONVI': formatNumber(2, true), 
+    'NOTIONAL': formatNumber(0), 
+    'EAD': formatNumber(0), 
+    'LGD': formatNumber(0),
+    'LOSS': formatNumber(0),
+    'NAV': formatNumber(0),
+    'CPV01': formatNumber(0),
+    'absolute': formatNumber(0),
+  };
+}
+export function formatNumberWithGrouping(value) {
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }

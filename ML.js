@@ -5,7 +5,7 @@ import { ensureRendered } from './utils/domHelpers.js';
 
 // Handle Future Predictions
 export function handleFuturePredictions(receivedData) {
-  console.log('FuturePrediction data received:', receivedData);
+  // console.log('FuturePrediction data received:', receivedData);
 
   if (!Array.isArray(receivedData)) {
       console.error('Invalid data structure:', receivedData);
@@ -19,7 +19,7 @@ export function handleFuturePredictions(receivedData) {
   }));
 
   // Log the predictions to ensure data integrity
-  console.log('Predictions data for chart:', predictions);
+  // console.log('Predictions data for chart:', predictions);
 
   if (predictions.length === 0) {
       console.error('No data points found in predictions.');
@@ -38,7 +38,7 @@ export function handleFuturePredictions(receivedData) {
 
 // Handle Future Predictions
 export function handleMLTestData(receivedData) {
-    console.log('ML Test data received:', receivedData);
+    // console.log('ML Test data received:', receivedData);
   
     if (!Array.isArray(receivedData)) {
       console.error('Invalid data structure for test data:', receivedData);
@@ -102,7 +102,7 @@ export function handleMLTestData(receivedData) {
       }
     ];
 
-    console.log('ML Test data for chart:', datasets);
+    // console.log('ML Test data for chart:', datasets);
 
     // Create the chart using the provided data and the canvas element ID
     MLTestDataChart(datasets, 'MLTestDataChart', 'ML Test Data Chart', 3);
@@ -196,7 +196,7 @@ export function handleMLTrainedModels(data) {
           loss: event.target.dataset.loss || '',
           metrics,
         });
-        console.log('Current MLTrainedModel:', appState.getMLTrainedModel());
+        // console.log('Current MLTrainedModel:', appState.getMLTrainedModel());
       } else {
         appState.setMLTrainedModel(null); // Clear the state if unchecked
       }
@@ -221,7 +221,7 @@ export function handleMLTrainedModels(data) {
 
 // Helper function for safe JSON parsing
 function safeJSONParse(jsonString) {
-  console.log('Parsing JSON:', jsonString); // Log raw input
+  // console.log('Parsing JSON:', jsonString); // Log raw input
   try {
     return JSON.parse(jsonString);
   } catch (error) {
@@ -253,7 +253,7 @@ function handleDeleteAction(event, rowIndex, tableName, modelId) {
     
 
     // Log the active element to confirm
-    console.log('Active element after restoring focus:', document.activeElement);
+    // console.log('Active element after restoring focus:', document.activeElement);
   });
 
   window.api.once('erase-data-error', (errorMessage) => {
@@ -264,7 +264,7 @@ function handleDeleteAction(event, rowIndex, tableName, modelId) {
 
 
 export function handleMLModels(receivedData) {
-  console.log('MLModels data received:', receivedData);
+  // console.log('MLModels data received:', receivedData);
   const tableBody = document.querySelector("#MLModelsTable tbody");
 
   // Clear existing rows in the table
@@ -311,11 +311,11 @@ export function handleMLModels(receivedData) {
           // Set the selected model in the app state
           const selectedModelType = event.target.getAttribute("data-model-type");
           appState.setMLModelType(selectedModelType);
-          console.log(`Selected model type: ${selectedModelType}`);
+          // console.log(`Selected model type: ${selectedModelType}`);
         } else {
           // Clear the selected model if unchecked
           appState.setMLModelType(null);
-          console.log("Model Type selection cleared.");
+          // console.log("Model Type selection cleared.");
         }
       });
     });

@@ -1,96 +1,153 @@
-/* Style for the scrollable dropdown area */
-/* Ensure the container uses flexbox */
+/* 
+CONTENT:
+    DROPDOWN:
+      select-dropdown: general
+      delas-dropdown: specific
+    INPUTFIELDS 
+*/
+
+
+
+/* General Container Styling */
 .dropdown-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px; /* Optional: Adds space between items */
+  gap: 10px; /* Controls spacing between dropdowns */
 }
 
-/* Each dropdown will take up the same space */
 .dropdown-wrapper div {
-  /* flex: 1; */
-  min-width: 150px; /* Optional: Ensures dropdowns do not get too small */
+  min-width: 150px; /* Prevents dropdowns from becoming too small */
 }
 
-/* Adjust the select element to fit the parent div */
+
+
+
+
+/* Dropdown Styling */
 .select-dropdown {
   width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: rgb(70, 69, 69); /* Dark gray background */
+  border: 1px solid rgb(100, 100, 100);
+  border-radius: 8px;
+  padding: 2px 5px;
+  font-family: "Your Font Name", sans-serif;
+  font-size: 13px;
+  font-weight: normal;                /* Default text weight */
+  color: rgb(161, 160, 160);         /* Light gray text */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: color 0.3s ease, font-weight 0.3s ease;  /* Smooth transition for color and weight */
 }
 
-
-/* Additional styles remain unchanged */
-.select-dropdown {
-    max-height: 200px; /* Adjust as needed */
-    overflow-y: auto;
-    width: 200px;
-}
-
-.select-dropdown option {
-    padding: 5px; /* Adjust as needed */
-}
-  .reset-FiltersButton {
-    background-color: #333;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-flex; /* Changed to inline-flex for alignment */
-    align-items: center; /* Align items in center */
-    justify-content: center; /* Center content horizontally */
-    font-size: 16px;
-    margin: 4px 2px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition-duration: 0.4s;
-  }
-  
-  .reset-FiltersButton svg {
-    margin-right: 8px; /* Space between icon and text */
-  }
-  
-  .reset-FiltersButton:hover {
-    background-color: rgb(70, 69, 69);
-    color: white;
-  }
-  
-  /* Dropdown styling */
-.select-dropdown {
-  background-color: #f9f9f9; /* Light gray background */
-  border: 1px solid rgb(100, 100, 100); /* Border for visibility */
-  border-radius: 8px; /* Rounded corners */
-  padding: 5px; /* Inner padding for text */
-  font-size: 14px; /* Readable font size */
-  color: black; /* Text color */
-  max-height: 200px; /* Limit height for scrolling */
-  overflow-y: auto; /* Enable vertical scrolling */
-  width: 100%; /* Ensure full width inside the wrapper */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Optional shadow */
-  appearance: none; /* Remove default browser styling */
-}
-
-/* Add hover and focus styling */
+/* Hover & Focus Effects */
 .select-dropdown:hover,
 .select-dropdown:focus {
-  border-color: #4CAF50; /* Green border on hover or focus */
+  color: white;                      
+  /* font-weight: bold; */
+  border-color: #4CAF50;           
 }
 
-/* Styling for the scrollbar */
+/* Dropdown Options Styling */
+.select-dropdown option {
+  padding: 2px 5px;
+  background-color: rgb(70, 69, 69); /* Keep same background */
+  color: rgb(161, 160, 160);         /* Light gray text */
+  font-weight: normal;               /* Default weight */
+  transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+/* Highlight option text on hover WITHOUT changing background */
+.select-dropdown option:hover {
+  color: white;                      
+  /* font-weight: bold;                 */
+  cursor: pointer;
+}
+
+
+
+
+
+
+
+
+
+
+/* Scrollbar Styling */
 .select-dropdown::-webkit-scrollbar {
-  width: 8px; /* Scrollbar width */
+  width: 8px;
 }
 
 .select-dropdown::-webkit-scrollbar-thumb {
-  background-color: #888; /* Scrollbar thumb color */
-  border-radius: 8px; /* Rounded corners for scrollbar */
+  background-color: #888;
+  border-radius: 8px;
 }
 
 .select-dropdown::-webkit-scrollbar-thumb:hover {
-  background-color: #555; /* Darker color on hover */
+  background-color: #555;
 }
 
 .select-dropdown::-webkit-scrollbar-track {
-  background: transparent; /* Transparent background for scrollbar track */
+  background: transparent;
+} 
+
+/* DEALS/PORTFOLIO Dropdown Styling */
+.deals-dropdown {
+  width: 80%;
+  background-color: rgb(70, 69, 69);  /* Dark gray background */
+  color: rgb(161, 160, 160);          /* Light gray text */
+  border: 1px solid #555;             /* Slightly darker border */
+  border-radius: 5px;
+  padding: 5px;
+  font-size: 14px;
+  font-family: "Your Font Name", sans-serif;
+  font-weight: normal;                /* Default text weight */             
+  transition: color 0.3s ease, font-weight 0.3s ease, border-color 0.3s ease;
 }
 
-   
+/* Hover & Focus Effects */
+.deals-dropdown:hover,
+.deals-dropdown:focus {
+  color: white;                      
+  /* font-weight: bold;                   */
+  border-color: #4CAF50;              
+}
+
+/* Dropdown Options Styling */
+.deals-dropdown option {
+  background-color: rgb(70, 69, 69);  /* Keep same background */
+  color: rgb(161, 160, 160);          /* Light gray text */
+  font-weight: normal;                /* Default weight */
+  transition: color 0.3s ease, font-weight 0.3s ease;
+}
+
+/* Highlight option text on hover WITHOUT changing background */
+.deals-dropdown option:hover {
+  color: white;                       /* Turn option text white */
+  font-weight: bold;                  /* Make option text bold */
+  cursor: pointer;
+}
+
+
+/* INPUTFIELDS */
+
+.input-field {
+  width: 100%;
+  background-color: rgb(70, 69, 69); 
+  border: 1px solid rgb(100, 100, 100);
+  border-radius: 8px;
+  padding: 2px 5px;
+  font-family: "Your Font Name", sans-serif;
+  font-size: 13px;
+  color: #f9f9f9; 
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); 
+  transition: background-color 0.3s ease, border-color 0.3s ease; 
+}
+
+
+.input-field:hover,
+.input-field:focus {
+  background-color: #202020; 
+  border-color: #4CAF50;    
+  outline: none;            
+}

@@ -72,6 +72,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
 
     function handleProdAllFields(fieldName, rowData, formRow, label) {
       switch (fieldName) {
+
         case 'RANK': {
           const rankOptions = ['senior_secured', 'senior_preferred', 'senior_unsecured', 'senior_subordinated', 'junior_subordinated'];
           const rankDropdown = createDropdown(fieldName, rankOptions, rowData[fieldName]);
@@ -114,7 +115,24 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           formRow.appendChild(tenorDropdown);
           return true;
         }
-
+        case 'ISSUER': {
+          const issuerOptions = filteredIssuerData
+            .map((issuer) => issuer.ISSUER)
+            .filter(Boolean)
+            .sort();
+          const uniqueIssuerOptions = [...new Set(issuerOptions)];
+          const issuerDropdown = createDropdown(fieldName, uniqueIssuerOptions, rowData[fieldName]);
+        
+          // Event Listener: Update Ticker when ISSUER changes
+          issuerDropdown.addEventListener('change', function () {
+            updateTickerDropdown(this.value);
+          });
+        
+          formRow.appendChild(label);
+          formRow.appendChild(issuerDropdown);
+          return true;
+        }
+        
         case 'TICKER': {
           const tickerOptions = filteredIssuerData
             .map((issuer) => issuer.TICKER)
@@ -122,15 +140,56 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
             .sort();
           const uniqueTickerOptions = [...new Set(tickerOptions)];
           const tickerDropdown = createDropdown(fieldName, uniqueTickerOptions, rowData[fieldName]);
+        
+          // Event Listener: Update ISSUER when Ticker changes
+          tickerDropdown.addEventListener('change', function () {
+            updateIssuerDropdown(this.value);
+          });
+        
           formRow.appendChild(label);
           formRow.appendChild(tickerDropdown);
           return true;
         }
+        
 
         default:
           return false; // Return false if no case matches
       }
     }
+        function updateTickerDropdown(selectedIssuer) {
+          const tickerDropdown = document.querySelector('[data-field="TICKER"]');
+          if (!tickerDropdown) return;
+        
+          // Find the corresponding Ticker for the selected Issuer
+          const matchedTicker = filteredIssuerData.find((item) => item.ISSUER === selectedIssuer)?.TICKER;
+        
+          // Update the Ticker dropdown
+          tickerDropdown.innerHTML = '';
+          if (matchedTicker) {
+            const option = document.createElement('option');
+            option.value = matchedTicker;
+            option.textContent = matchedTicker;
+            tickerDropdown.appendChild(option);
+            tickerDropdown.value = matchedTicker; // Auto-select the value
+          }
+        }
+        function updateIssuerDropdown(selectedTicker) {
+          const issuerDropdown = document.querySelector('[data-field="ISSUER"]');
+          if (!issuerDropdown) return;
+        
+          // Find the corresponding Issuer for the selected Ticker
+          const matchedIssuer = filteredIssuerData.find((item) => item.TICKER === selectedTicker)?.ISSUER;
+        
+          // Update the Issuer dropdown
+          issuerDropdown.innerHTML = '';
+          if (matchedIssuer) {
+            const option = document.createElement('option');
+            option.value = matchedIssuer;
+            option.textContent = matchedIssuer;
+            issuerDropdown.appendChild(option);
+            issuerDropdown.value = matchedIssuer; // Auto-select the value
+          }
+        }  
     function handleDealsFields(fieldName, rowData, formRow, label) {
       switch (fieldName) {
         case 'PROD_ID': {
