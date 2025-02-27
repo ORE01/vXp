@@ -172,11 +172,12 @@ body::-webkit-scrollbar-track {
 }
 
 
-.right-section .lower-part {
-  flex: 0 1 auto; /* Don't grow, but can shrink */
-  margin-top: 20px; /* Adds space above the .lower-part */
-  padding-left: 40px;
+.right-section {
+  display: flex;
+  flex-direction: column; /* Ensures vertical stacking */
+  align-items: center; /* Optional: Centers items horizontally */
 }
+
 
 
 .portfolio-info {
@@ -460,4 +461,30 @@ width: 80%;
 }
 
 
+.content-wrapper {
+  display: flex;
+  flex-direction: column; /* Ensures sections are stacked */
+  align-items: center;
+  gap: 20px; /* Adds space between sections */
+}
+
+.chart-container {
+  max-width: 800px; /* Increase width */
+  width: 100%;
+  height: 400px; /* Increase height */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#CS_ChartCanvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+
+.parameters-container {
+  width: 100%;
+  text-align: center;
+}
 

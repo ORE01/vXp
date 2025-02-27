@@ -1,3 +1,5 @@
+
+
 export const formatNumber = (decimals, isPercentage = false, multiplyBy100 = false) => (value) => {
     let number = parseFloat(value);
     if (multiplyBy100) number *= 100; 
@@ -41,7 +43,9 @@ export function formatDisplayValue(fieldName, value) {
     'SPREADS', 
     'clean_price', 
     'FORWARDS', 
-    'RATES'
+    'RATES', 
+    'EUSWAP',
+    'EUSWAP_SZ1'
   ].includes(fieldName)) {
   
     return (parseFloat(value) * 100).toFixed(2) + '%'; // Convert decimal to percentage format
@@ -66,7 +70,9 @@ export function formatInputFieldValue(fieldName, value) {
       fieldName === 'SPREADS' ||
       fieldName === 'clean_price' ||
       fieldName === 'FORWARDS' ||
-      fieldName === 'RATES') {
+      fieldName === 'RATES'||
+      fieldName === 'EUSWAP'||
+      fieldName === 'EUSWAP_SZ1') {
       formattedValue = parseFloat(formattedValue) / 100;
       //console.log('formattedValue:', formattedValue); 
 
@@ -112,3 +118,4 @@ export function formatNumberWithGrouping(value) {
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
+

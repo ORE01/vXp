@@ -390,11 +390,17 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
           },
           ticks: {
             color: "rgb(161, 160, 160)",
+            callback: function(value) {
+              return value.toFixed(2); // Rundet Werte auf 2 Nachkommastellen
+            }
           },
           grid: {
             color: "rgb(90, 90, 90)",
           },
+          suggestedMin: Math.min(...datasets.flatMap(ds => ds.data.map(d => d.y))) - 0.1, // Dynamisches Minimum mit Puffer
+          suggestedMax: Math.max(...datasets.flatMap(ds => ds.data.map(d => d.y))) + 0.1, // Dynamisches Maximum mit Puffer
         },
+        
       },
       plugins: {
         annotation: {},  // Ensure annotations are disabled completely
@@ -525,11 +531,17 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
           },
           ticks: {
             color: "rgb(161, 160, 160)",
+            callback: function(value) {
+              return value.toFixed(2); // Rundet Werte auf 2 Nachkommastellen
+            }
           },
           grid: {
             color: "rgb(90, 90, 90)",
           },
+          suggestedMin: Math.min(...datasets.flatMap(ds => ds.data.map(d => d.y))) - 0.1, // Dynamisches Minimum mit Puffer
+          suggestedMax: Math.max(...datasets.flatMap(ds => ds.data.map(d => d.y))) + 0.1, // Dynamisches Maximum mit Puffer
         },
+        
       },
       plugins: {
         annotation: {},  // Ensure annotations are disabled completely

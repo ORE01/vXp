@@ -12,7 +12,7 @@ const {getDatabasePath} = require('./main_path');
 
 // Function to determine if in development environment
 function isDevelopmentEnvironment() {
-  return process.env.NODE_ENV === 'development';
+  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'thomasdev';
 }
 
 // Define log file path depending on the environment

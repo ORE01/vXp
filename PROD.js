@@ -22,11 +22,25 @@ export function handleProdData(receivedData, filtersConfig) {
 
   if (prodDataContainer && prodData) {
     let columns = ['PROD_ID', 'DESCRIPTION', 'CouponType', 'SCHEDULE', 'MATURITY', 'ISSUER', 'RANK', 'RATING_PROD', 'CS_Szenario'];
-    //let filteredProdData = filterColumnsInData((prodData), columns);
+    
     let filteredProdData = filterColumnsInData(filterProdData(prodData, filtersConfig), columns);
 
     console.log('PROD; handleProdData:', filteredProdData);
     appState.setFilteredProdData(filteredProdData);
+
+    // filteredProdData = filteredProdData.map(row => {
+    //   if (row.CS_Szenario && row.CS_Szenario.trim() !== '') {
+    //     row.redFlag = true; // Setze eine Markierung
+    //   } else {
+    //     row.redFlag = false;
+    //   }
+    //   return row;
+    // });
+    
+
+    checkCSSzenarioFlag(filteredProdData);
+
+
 
     const prodDataHTML = processData(filteredProdData, 'ProdAll');
     prodDataContainer.innerHTML = prodDataHTML;
@@ -92,6 +106,7 @@ export function handleProdData(receivedData, filtersConfig) {
 
 
 
+
 function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfreq) {
 
   const modalContent = document.querySelector('.modal-content');
@@ -128,6 +143,67 @@ function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfr
   };
   
 }
+
+
+// function checkCSSzenarioFlag(filteredProdData) {
+//   console.log('🔍 CS Szenario Check läuft...');
+
+//   const csWarningContainer = document.getElementById('csWarningContainer');
+//   const csWarningLight = document.getElementById('csWarning'); 
+
+//   if (!csWarningContainer || !csWarningLight) {
+//       console.error("⚠️ Fehler: 'csWarningContainer' oder 'csWarning' nicht gefunden!");
+//       return;
+//   }
+
+//   // Prüfe, ob CS_Szenario einen gültigen Wert hat
+//   const hasCSSzenario = filteredProdData.some(row => row.CS_Szenario && row.CS_Szenario.trim() !== '' && row.CS_Szenario !== null);
+
+//   if (hasCSSzenario) {
+//       csWarningContainer.style.visibility = 'visible'; // Anzeige aktivieren
+//       csWarningLight.style.backgroundColor = 'red';  // Warnleuchte aktivieren
+//       console.log('🚨 CS Szenario aktiv! Rotes Licht.');
+//   } else {
+//       csWarningContainer.style.visibility = 'hidden'; // Warnung verstecken
+//       csWarningLight.style.backgroundColor = 'gray';  // Standardfarbe
+//       console.log('✅ Kein CS Szenario gesetzt.');
+//   }
+// }
+
+function checkCSSzenarioFlag(filteredProdData) {
+  console.log('🔍 CS Szenario Check läuft...');
+
+  const csWarningContainer = document.getElementById('csWarningContainer');
+  const csWarningLight = document.getElementById('csWarning'); 
+
+  if (!csWarningContainer || !csWarningLight) {
+      console.error("⚠️ Fehler: 'csWarningContainer' oder 'csWarning' nicht gefunden!");
+      return;
+  }
+
+  // Finde alle betroffenen Zeilen
+  const affectedRows = filteredProdData.filter(row => row.CS_Szenario && row.CS_Szenario.trim() !== '' && row.CS_Szenario !== null);
+  const affectedProdIds = affectedRows.map(row => row.PROD_ID);
+
+  if (affectedProdIds.length > 0) {
+      csWarningContainer.style.visibility = 'visible'; // Warnung sichtbar machen
+      csWarningLight.style.backgroundColor = 'red';  // Warnleuchte aktivieren
+
+      // 🆕 PROD_IDs als Text hinzufügen, aber Warnleuchte beibehalten
+      const idsText = affectedProdIds.join(', ');
+      document.getElementById('csWarningText').textContent = idsText;
+
+      console.log(`🚨 CS Szenario aktiv für folgende PROD_IDs:`, affectedProdIds);
+  } else {
+      csWarningContainer.style.visibility = 'hidden'; // Warnung verstecken
+      csWarningLight.style.backgroundColor = 'gray';  // Standardfarbe zurücksetzen
+
+      console.log('✅ Kein CS Szenario gesetzt.');
+  }
+}
+
+
+
 
 
 

@@ -45,12 +45,13 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
   let couponForm;
   let generatedData = []; // Declare at the top level to ensure it's accessible
 
-  // Decide which form to generate
-  // console.log('couponSchedule:', couponSchedule);
-  if (couponSchedule === 1 && filteredData.length === 0) {
+  // EMPTY COUPON MODAL
+  
+  if (Number(couponSchedule) === 1 && filteredData.length === 0)
+    {
     console.log("No existing entries found for SCHEDULE. Generating new schedule...");
 
-    generatedData = generateNewCouponSchedule(prodId, startDate, maturity, couponfreq);
+    generatedData = generateEmptyCouponFormData(prodId, startDate, maturity, couponfreq);
     console.log("generatedData.", generatedData);
 
     couponForm = generateCouponForm(generatedData);
@@ -88,6 +89,8 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
 
     modalContent.appendChild(saveButton);
 
+
+// EXISTIG COUPON MODAL
   } else {
     console.log("Displaying existing data...");
     couponForm = generateCouponForm(filteredData);
@@ -119,214 +122,7 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
   // modal.classList.add('visible'); // ✅ Show modal by adding class
 
 }
-// export function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfreq) {
-//   const receivedData = appState.getCouponData();
-
-//   if (!Array.isArray(receivedData)) {
-//     console.error("❌ Error: receivedData is not an array", receivedData);
-//     return;
-//   }
-
-//   const filteredData = receivedData.filter(item => String(item.PROD_ID) === String(prodId));
-//   console.log(`Filtered Coupon Data for PROD_ID '${prodId}':`, filteredData);
-
-//   let modal = document.getElementById('coupon-modal');
-//   let modalContent;
-
-//   if (!modal) {
-//     modal = document.createElement('div');
-//     modal.id = 'coupon-modal';
-//     modal.classList.add('modal');
-
-//     modalContent = document.createElement('div');
-//     modalContent.classList.add('modal-content', 'draggable');
-
-//     modal.appendChild(modalContent);
-//     document.body.appendChild(modal);
-//   } else {
-//     modalContent = modal.querySelector('.modal-content');
-//     modalContent.innerHTML = ''; // ✅ Clear previous content but keep modal
-//   }
-
-//   // ✅ Define Close Button before clearing modalContent
-//   const closeButton = document.createElement('span');
-//   closeButton.classList.add('close');
-//   closeButton.innerHTML = '&times;';
-//   closeButton.onclick = () => modal.classList.remove('visible'); 
-//   modalContent.appendChild(closeButton);
-
-//   // ✅ Define Title
-//   const title = document.createElement('h2');
-//   title.textContent = `Coupon Schedule for PROD_ID: ${prodId}`;
-//   modalContent.appendChild(title);
-
-//   let couponForm;
-//   let generatedData = [];
-
-//   if (couponSchedule === 1 && filteredData.length === 0) {
-//     console.log("No existing entries found for SCHEDULE. Generating new schedule...");
-//     generatedData = generateNewCouponSchedule(prodId, startDate, maturity, couponfreq);
-//     console.log("Generated Data:", generatedData);
-
-//     couponForm = generateCouponForm(generatedData);
-//   } else {
-//     console.log("Displaying existing data...");
-//     couponForm = generateCouponForm(filteredData);
-//   }
-
-//   // ✅ Define Save Button
-//   const saveButton = document.createElement('button');
-//   saveButton.id = 'saveButton';
-//   saveButton.textContent = 'Save Changes';
-
-//   saveButton.onclick = () => {
-//     if (couponSchedule === 1 && filteredData.length === 0) {
-//       const rows = couponForm.querySelectorAll('.coupon-row');
-//       console.log('Coupon Rows:', rows);
-
-//       const selectedTableName = 'ProdCouponSchedules';
-//       rows.forEach((row, rowIndex) => {
-//         const form = document.createElement('form');
-//         form.id = `coupon-form-row-${rowIndex}`;
-
-//         row.querySelectorAll('input').forEach(input => {
-//           const clonedInput = input.cloneNode(true);
-//           form.appendChild(clonedInput);
-//         });
-
-//         console.log(`Form for row ${rowIndex}:`, form);
-//         addSaveButtonHandler(form, null, selectedTableName);
-//       });
-
-//       console.log('Finished saving all rows.');
-//     } else {
-//       saveCouponChanges(filteredData, couponForm);
-//     }
-
-//     modal.classList.remove('visible');
-//   };
-
-//   modalContent.appendChild(couponForm);
-//   modalContent.appendChild(saveButton);
-
-//   modal.classList.add('visible');
-// }
-
-
-
-      function generateCouponForm(data) {
-        const form = document.createElement('form');
-        form.id = 'coupon-form';
-
-        // Add a header row with column names
-        const headerRow = document.createElement('div');
-        headerRow.classList.add('coupon-header');
-        headerRow.style.display = 'flex';
-        headerRow.style.marginBottom = '5px';
-        headerRow.style.fontWeight = 'bold';
-        headerRow.style.justifyContent = 'flex-start';
-
-        // Column names
-        const dateHeader = document.createElement('div');
-        dateHeader.textContent = 'DATE';
-        dateHeader.style.width = '120px';
-        dateHeader.style.marginRight = '10px';
-
-        const fixCFHeader = document.createElement('div');
-        fixCFHeader.textContent = 'FIX_CF';
-        fixCFHeader.style.width = '80px';
-
-        // Append headers to the header row
-        headerRow.appendChild(dateHeader);
-        headerRow.appendChild(fixCFHeader);
-
-        // Add the header row to the form
-        form.appendChild(headerRow);
-
-        // Add rows for data
-        data.forEach((item, index) => {
-          const row = document.createElement('div');
-          row.classList.add('coupon-row');
-          row.style.display = 'flex';
-          row.style.marginBottom = '5px';
-          row.style.justifyContent = 'flex-start';
-
-          // Format the date using convertDateToISO
-          const formattedDate = convertDateToISO(item.DATE);
-
-          // Hidden ID input
-          const idInput = document.createElement('input');
-          idInput.type = 'hidden';
-          idInput.value = item.ID;
-          idInput.dataset.field = 'ID';
-          idInput.dataset.rowIndex = index;
-
-          // Hidden PROD_ID input
-          const prodIdInput = document.createElement('input');
-          prodIdInput.type = 'hidden';
-          prodIdInput.value = item.PROD_ID;
-          prodIdInput.dataset.field = 'PROD_ID';
-          prodIdInput.dataset.rowIndex = index;
-
-          // DATE input
-          const dateInput = document.createElement('input');
-          dateInput.type = 'date';
-          dateInput.value = formattedDate;
-          dateInput.dataset.field = 'DATE';
-          dateInput.dataset.rowIndex = index;
-          dateInput.style.width = '120px';
-          dateInput.style.marginRight = '10px';
-
-          // FIX_CF input (formatted as a percentage)
-          // const formattedFixCF = formatInputFieldValue('FIX_CF', item.FIX_CF); // Apply formatting
-          // Format FIX_CF manually to display as percentage (e.g., 0.04 → "4.00%")
-          // const formattedFixCF = item.FIX_CF ? (parseFloat(item.FIX_CF) * 100).toFixed(2) + '%' : '';
-          const formattedFixCF = formatDisplayValue('FIX_CF', item.FIX_CF);
-
-
-
-          const fixCFInput = document.createElement('input');
-          fixCFInput.type = 'text'; // Change from 'number' to 'text' to allow the '%' sign
-          fixCFInput.value = formattedFixCF; // Use the formatted value
-          fixCFInput.dataset.field = 'FIX_CF';
-          fixCFInput.dataset.rowIndex = index;
-          fixCFInput.style.width = '80px';
-
-          // Ensure the user can only input numbers but keeps the % formatting
-          fixCFInput.addEventListener('input', (event) => {
-            let rawValue = event.target.value.replace('%', ''); // Remove the %
-          
-            if (!isNaN(rawValue) && rawValue !== '') {
-              const cursorPosition = event.target.selectionStart;  // Get current cursor position
-          
-              // Only append '%' without adding decimals
-              event.target.value = rawValue + '%';
-          
-              // Restore cursor position before the '%'
-              event.target.setSelectionRange(cursorPosition, cursorPosition);
-            } else {
-              // Clear if input is invalid
-              event.target.value = '';
-            }
-          });
-          
-          
-
-          // Append inputs to row
-          row.appendChild(idInput);
-          row.appendChild(prodIdInput);
-          row.appendChild(dateInput);
-          row.appendChild(fixCFInput);
-
-          // Add row to form
-          form.appendChild(row);
-        });
-
-        return form;
-      }
-
-
-      function generateNewCouponSchedule(prodId, startDate, maturity, couponfreq) {
+      function generateEmptyCouponFormData(prodId, startDate, maturity, couponfreq) {
         const schedule = [];
         const start = new Date(convertDateToISO(startDate)); // Convert start date
         const end = new Date(convertDateToISO(maturity)); // Convert maturity date
@@ -365,8 +161,179 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
         console.log("Generated new coupon schedule with IDs:", schedule);
         return schedule;
       }
+      // function generateCouponForm(data) {
+      //   const form = document.createElement('form');
+      //   form.id = 'coupon-form';
+
+      //   // Add a header row with column names
+      //   const headerRow = document.createElement('div');
+      //   headerRow.classList.add('coupon-header');
+      //   headerRow.style.display = 'flex';
+      //   headerRow.style.marginBottom = '5px';
+      //   headerRow.style.fontWeight = 'bold';
+      //   headerRow.style.justifyContent = 'flex-start';
+
+      //   // Column names
+      //   const dateHeader = document.createElement('div');
+      //   dateHeader.textContent = 'DATE';
+      //   dateHeader.style.width = '120px';
+      //   dateHeader.style.marginRight = '10px';
+
+      //   const fixCFHeader = document.createElement('div');
+      //   fixCFHeader.textContent = 'FIX_CF';
+      //   fixCFHeader.style.width = '80px';
+
+      //   // Append headers to the header row
+      //   headerRow.appendChild(dateHeader);
+      //   headerRow.appendChild(fixCFHeader);
+
+      //   // Add the header row to the form
+      //   form.appendChild(headerRow);
+
+      //   // Add rows for data
+      //   data.forEach((item, index) => {
+      //     const row = document.createElement('div');
+      //     row.classList.add('coupon-row');
+      //     row.style.display = 'flex';
+      //     row.style.marginBottom = '5px';
+      //     row.style.justifyContent = 'flex-start';
+
+      //     // Format the date using convertDateToISO
+      //     const formattedDate = convertDateToISO(item.DATE);
+
+      //     // Hidden ID input
+      //     const idInput = document.createElement('input');
+      //     idInput.type = 'hidden';
+      //     idInput.value = item.ID;
+      //     idInput.dataset.field = 'ID';
+      //     idInput.dataset.rowIndex = index;
+
+      //     // Hidden PROD_ID input
+      //     const prodIdInput = document.createElement('input');
+      //     prodIdInput.type = 'hidden';
+      //     prodIdInput.value = item.PROD_ID;
+      //     prodIdInput.dataset.field = 'PROD_ID';
+      //     prodIdInput.dataset.rowIndex = index;
+
+      //     // DATE input
+      //     const dateInput = document.createElement('input');
+      //     dateInput.type = 'date';
+      //     dateInput.value = formattedDate;
+      //     dateInput.dataset.field = 'DATE';
+      //     dateInput.dataset.rowIndex = index;
+      //     dateInput.style.width = '120px';
+      //     dateInput.style.marginRight = '10px';
+
+      //     // FIX_CF input (formatted as a percentage)
+      //     // const formattedFixCF = formatInputFieldValue('FIX_CF', item.FIX_CF); // Apply formatting
+      //     // Format FIX_CF manually to display as percentage (e.g., 0.04 → "4.00%")
+      //     // const formattedFixCF = item.FIX_CF ? (parseFloat(item.FIX_CF) * 100).toFixed(2) + '%' : '';
+      //     const formattedFixCF = formatDisplayValue('FIX_CF', item.FIX_CF);
+
+
+
+      //     const fixCFInput = document.createElement('input');
+      //     fixCFInput.type = 'text'; // Change from 'number' to 'text' to allow the '%' sign
+      //     fixCFInput.value = formattedFixCF; // Use the formatted value
+      //     fixCFInput.dataset.field = 'FIX_CF';
+      //     fixCFInput.dataset.rowIndex = index;
+      //     fixCFInput.style.width = '80px';
+
+      //     // Ensure the user can only input numbers but keeps the % formatting
+      //     fixCFInput.addEventListener('input', (event) => {
+      //       let rawValue = event.target.value.replace('%', ''); // Remove the %
+          
+      //       if (!isNaN(rawValue) && rawValue !== '') {
+      //         const cursorPosition = event.target.selectionStart;  // Get current cursor position
+          
+      //         // Only append '%' without adding decimals
+      //         event.target.value = rawValue + '%';
+          
+      //         // Restore cursor position before the '%'
+      //         event.target.setSelectionRange(cursorPosition, cursorPosition);
+      //       } else {
+      //         // Clear if input is invalid
+      //         event.target.value = '';
+      //       }
+      //     });
+          
+          
+
+      //     // Append inputs to row
+      //     row.appendChild(idInput);
+      //     row.appendChild(prodIdInput);
+      //     row.appendChild(dateInput);
+      //     row.appendChild(fixCFInput);
+
+      //     // Add row to form
+      //     form.appendChild(row);
+      //   });
+
+      //   return form;
+      // }
 
         
+      function generateCouponForm(data) {
+        const form = document.createElement('form');
+        form.id = 'coupon-form';
+        form.appendChild(createHeaderRow());
+    
+        data.forEach((item, index) => {
+            form.appendChild(createCouponRow(item, index));
+        });
+    
+        return form;
+    }
+    
+              function createHeaderRow() {
+                  const headerRow = document.createElement('div');
+                  headerRow.classList.add('coupon-header');
+                  headerRow.innerHTML = `
+                      <div style="width: 120px; margin-right: 10px; font-weight: bold;">DATE</div>
+                      <div style="width: 80px; font-weight: bold;">FIX_CF</div>
+                  `;
+                  return headerRow;
+              }
+              
+              function createCouponRow(item, index) {
+                const formattedFixCF = item.FIX_CF ? `${(parseFloat(item.FIX_CF) * 100).toFixed(2)}%` : '0.00%';
+            
+                const row = document.createElement('div');
+                row.classList.add('coupon-row');
+                row.innerHTML = `
+                    <input type="hidden" value="${item.ID}" data-field="ID" data-row-index="${index}">
+                    <input type="hidden" value="${item.PROD_ID}" data-field="PROD_ID" data-row-index="${index}">
+                    <input type="date" value="${convertDateToISO(item.DATE)}" data-field="DATE" data-row-index="${index}" style="width: 120px; margin-right: 10px;">
+                    <input type="text" value="${formattedFixCF}" data-field="FIX_CF" data-row-index="${index}" style="width: 80px;">
+                `;
+            
+                const fixCFInput = row.querySelector('[data-field="FIX_CF"]');
+                fixCFInput.addEventListener('input', (event) => {
+                    let rawValue = event.target.value.replace('%', ''); // Remove the %
+                    if (!isNaN(rawValue) && rawValue !== '') {
+                        const cursorPosition = event.target.selectionStart;
+                        event.target.value = `${parseFloat(rawValue).toFixed(2)}%`;
+                        event.target.setSelectionRange(cursorPosition, cursorPosition);
+                    } else {
+                        event.target.value = '';
+                    }
+                });
+            
+                return row;
+            }
+            
+    
+
+
+
+
+
+
+
+
+
+
+
 
       function saveCouponChanges(couponData, couponForm) {
         const updatedData = [];

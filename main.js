@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { getAllTableNames, queryDB, updateRecord,  insertDeal, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, handlePythonProgress, insertCSParameter} = require('./main_fct');
+const { formatColumns} = require('./utils/main_format');
 
 require('dotenv').config();
 
@@ -45,81 +46,7 @@ function fetchDataAndSendEvent(query, event) {
   });
 }
 
-function formatColumns(rows) {
-  const firstRow = rows[0];
-  const formatColumns = [
-    'TRADE_ID', 'RATES', 'NOTIONAL', 'NAV', 'COUPON', 'START_DATE', 'MATURITY', 'TRADE_DATE',
-    'CS_Szenario', 'clean_price', 'GEARING', 'FLOOR', 'CAP', 'SPREADS',
-    'DATE', 'EU_1Y', 'EU_5Y', 'EU_10Y', 'EU_20Y', 'EU_30Y', 'US_AAA', 'US_AA', 'US_A', 'US_BBB', 'US_BB',
-    'VaR', 'ES'
-  ];
 
-  return rows.map(row => {
-    const formattedRow = { ...row };
-    
-    formatColumns.forEach(column => {
-      if (column in firstRow) {
-        switch (column) {
-          case 'NOTIONAL':
-          case 'NAV':
-          case 'LGD':
-            const Value = Math.trunc(row[column]);
-            formattedRow[column] = Value.toString();
-            break; 
-          case 'TRADE_ID':
-            formattedRow[column] = row[column].toString();
-            break;
-          case 'START_DATE':
-          case 'MATURITY':
-          case 'TRADE_DATE':
-          case 'DATE':
-            const date = new Date(row[column]);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear();
-            const formattedDate = `${day}-${month}-${year}`;
-            formattedRow[column] = formattedDate;
-            break;
-          case 'CS_Szenario': 
-            formattedRow[column] = row[column];
-            break;
-          case 'clean_price':
-            // Display as an empty string if value is null or NaN
-            formattedRow[column] = row[column] != null ? `<span style="color: orange; display: flex; justify-content: center;">${(row[column] * 100).toFixed(3)}%</span>` : "";
-            break;
-          case 'COUPON':
-          case 'GEARING':
-          case 'FLOOR':
-          case 'CAP':
-          case 'SPREADS':
-          case 'RATES':
-            // Display as an empty string if value is null or NaN
-            formattedRow[column] = row[column] != null ? (row[column] * 100).toFixed(3) + '%' : "";
-            break;
-          case 'EU_1Y':
-          case 'EU_5Y':
-          case 'EU_10Y':
-          case 'EU_20Y':
-          case 'EU_30Y':
-          case 'VaR':
-          case 'ES':
-            // Display as an empty string if value is null or NaN
-            formattedRow[column] = row[column] != null ? row[column].toFixed(3) : "";
-            break;
-          default:
-            break;
-        }
-      }
-    });
-
-    return formattedRow;
-  });
-}
-
-
-
-
-// Loop through the selected table names and fetch data
 function sendDataToRenderer() {
   //console.log('tableNames:', tableNames);
   tableNames.forEach(tableName => {
@@ -143,24 +70,72 @@ getAllTableNames((err, receivedTableNames) => {
   }
 });
 
+// ipcMain.on('start-py-fairValue', async (event, args) => {
+//   console.log('main: Received arguments for py-fairValue:', args);
+
+//   const { tableName, CSSzenario } = args; // Extrahiere `tableName` und `name` aus den Argumenten
+
+//   if (!tableName || !CSSzenario) {
+//     console.error('❌ Missing required arguments: "tableName" or "CSSzenario".');
+//     event.reply('py-fairValue-complete', {
+//       success: false,
+//       projectName: 'py-fairValue',
+//       message: 'Both "tableName" and "scenarioName" are required.',
+//     });
+//     return; // Beende die Verarbeitung, wenn ein Argument fehlt
+//   }
+
+//   try {
+//     // Python-Skript ausführen mit `--table` und `--name` als Argumente
+//     const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario];
+//     console.log('main: Starting Python script with arguments:', pythonArgs);
+
+//     const result = await startPythonScriptWithEvent(event, 'fvo', 'py-fairValue', pythonArgs);
+
+//     console.log('✅ Python script executed successfully:', result);
+
+//     // Transformation von `tableName` (optional)
+//     const newTableName = tableName.replace('Deals', 'Port');
+//     //console.log('🔄 Transformed tableName:', newTableName);
+
+//     // Tabelle aktualisieren (falls nötig)
+//     refreshTable(newTableName);
+
+//     // Antwort an Renderer senden
+//     event.reply('py-fairValue-complete', {
+//       success: true,
+//       projectName: 'py-fairValue',
+//       tableName: newTableName,
+//       result,
+//     });
+//   } catch (error) {
+//     console.error('❌ Error during Python script execution or processing:', error);
+//     event.reply('py-fairValue-complete', {
+//       success: false,
+//       projectName: 'py-fairValue',
+//       error: error.toString(),
+//       tableName,
+//     });
+//   }
+// });
 ipcMain.on('start-py-fairValue', async (event, args) => {
   console.log('main: Received arguments for py-fairValue:', args);
 
-  const { tableName, CSSzenario } = args; // Extrahiere `tableName` und `name` aus den Argumenten
+  const { tableName, CSSzenario, selectedCurve } = args; // `selectedCurve` extrahieren
 
-  if (!tableName || !CSSzenario) {
-    console.error('❌ Missing required arguments: "tableName" or "CSSzenario".');
+  if (!tableName || !CSSzenario || !selectedCurve) {
+    console.error('❌ Missing required arguments: "tableName", "CSSzenario", or "selectedCurve".');
     event.reply('py-fairValue-complete', {
       success: false,
       projectName: 'py-fairValue',
-      message: 'Both "tableName" and "scenarioName" are required.',
+      message: 'All three arguments ("tableName", "CSSzenario", "selectedCurve") are required.',
     });
-    return; // Beende die Verarbeitung, wenn ein Argument fehlt
+    return; // Verarbeitung abbrechen, wenn ein Argument fehlt
   }
 
   try {
-    // Python-Skript ausführen mit `--table` und `--name` als Argumente
-    const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario];
+    // Python-Skript mit zusätzlichen Argumenten starten
+    const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario, '--selectedCurve', selectedCurve];
     console.log('main: Starting Python script with arguments:', pythonArgs);
 
     const result = await startPythonScriptWithEvent(event, 'fvo', 'py-fairValue', pythonArgs);
@@ -169,7 +144,6 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
 
     // Transformation von `tableName` (optional)
     const newTableName = tableName.replace('Deals', 'Port');
-    //console.log('🔄 Transformed tableName:', newTableName);
 
     // Tabelle aktualisieren (falls nötig)
     refreshTable(newTableName);
@@ -191,6 +165,7 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
     });
   }
 });
+
 ipcMain.on('start-py-MVaR', async (event, args) => {
   console.log('start-py-MVaR:', args);
 
@@ -642,19 +617,7 @@ const handleCSParameterUpdate = (event, { newRowData, cleanTableName }) => {
 // Register the event listener
 ipcMain.on('csparameter-update', handleCSParameterUpdate);
 
-// function refreshTable(tableName, callback) {
-//   let eventIdentifier = tableName + 'Data';
 
-//   // Fetch new data and send event
-//   fetchDataAndSendEvent(tableName, eventIdentifier, () => {
-//     //console.log('REFRESHED:', eventIdentifier);
-
-//     // Call the callback function (if provided) after the refresh is completed
-//     if (typeof callback === 'function') {
-//       callback();
-//     }
-//   });
-// }
 function refreshTable(tableName, callback) {
   let eventIdentifier = tableName + 'Data';
   // console.log(`🔄 [refreshTable] Starting refresh for table: ${tableName} (event: ${eventIdentifier})`);

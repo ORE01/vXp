@@ -1,0 +1,21 @@
+/* for szenarion setting */
+.warning-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 15px;
+    visibility: hidden; /* Standardmäßig versteckt */
+  }
+  
+  .warning-text {
+    font-family: "Your Font Name", sans-serif;
+    font-size: 13px;
+    color: #222;
+  }
+  
+  .warning-light {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: transparent; /* Standard: unsichtbar */
+  }

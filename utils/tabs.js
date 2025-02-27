@@ -1,6 +1,38 @@
 export function initializeTabs() {
-    const tabIds = ['DEALS_Tab', 'PORT_Tab', 'SENS_Tab', 'PROD_Tab', 'ISSUER_Tab', 'IR_Tab', 'FWD_Tab', 'TS_Tab', 'MVaR_Tab', 'CVaR_Tab', 'DATA_Tab', 'COMP_Tab', 'DataProvider_Tab', 'ML_Tab'];
-    const modalIds = ['DEALS_Modal', 'PORT_Modal', 'SENS_Modal','PROD_Modal', 'ISSUER_Modal', 'IR_Modal', 'FWD_Modal','TS_Modal', 'MVaR_Modal', 'CVaR_Modal', 'DATA_Modal', 'COMP_Modal', 'DataProvider_Modal', 'ML_Modal'];
+    const tabIds = [
+      'DEALS_Tab', 
+      'PORT_Tab', 
+      'SENS_Tab', 
+      'PROD_Tab', 
+      'ISSUER_Tab', 
+      'IR_Tab', 
+      'FWD_Tab', 
+      'TS_Tab', 
+      'MVaR_Tab', 
+      'CVaR_Tab', 
+      'DATA_Tab', 
+      'COMP_Tab', 
+      'DataProvider_Tab', 
+      'ML_Tab', 
+      'CS_Tab',
+    ];
+    const modalIds = [
+      'DEALS_Modal', 
+      'PORT_Modal', 
+      'SENS_Modal',
+      'PROD_Modal', 
+      'ISSUER_Modal', 
+      'IR_Modal', 
+      'FWD_Modal',
+      'TS_Modal',
+      'MVaR_Modal', 
+      'CVaR_Modal', 
+      'DATA_Modal', 
+      'COMP_Modal',
+      'DataProvider_Modal',
+      'ML_Modal', 
+      'CS_Modal',
+    ];
   
     const tables = document.querySelectorAll('.table');
     tables.forEach((table) => {

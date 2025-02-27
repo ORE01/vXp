@@ -9,9 +9,10 @@ let IRlineChart;
 // Function to handle the IR data
 export function handleIRData(receivedData) {
   const IRData = receivedData;
-  console.log('Received prodData callback called.');
-  console.log('Received prodData callback called.');
-  console.log('Received prodData callback called.');
+  console.log('EUSW:', receivedData);
+  // console.log('Received prodData callback called.');
+  // console.log('Received prodData callback called.');
+  // console.log('Received prodData callback called.');
   if (IRDataContainer && IRData) {
     const IRDataHTML = processData(IRData);
     IRDataContainer.innerHTML = IRDataHTML;
@@ -47,12 +48,32 @@ export function handleIRData(receivedData) {
     tension: 0.1,
   };
 
-  rows.forEach((row) => {
-    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
-    const xValue = rowData[1]; // Assuming the YEAR values are in the first column
-    const rateValue = parseFloat(rowData[2]); // Assuming the RATES values are in the second column
+  let yearIndex = -1;
+  let ratesIndex = -1;
+  
+  rows.forEach((row, index) => {
+    if (index === 0) {
+      // Find column indexes dynamically using the header row
+      const headers = Array.from(row.cells).map(cell => cell.textContent.trim());
+      yearIndex = headers.indexOf('YEAR');
+      ratesIndex = headers.indexOf('RATES');
+  
+      if (yearIndex === -1 || ratesIndex === -1) {
+        console.error("Error: 'YEAR' or 'RATES' column not found in table.");
+        return;
+      }
+      return; // Skip the header row
+    }
+  
+    // Extract data dynamically based on column names
+    const rowData = Array.from(row.cells).map(cell => cell.textContent.trim());
+    const xValue = rowData[yearIndex];  // Get YEAR value
+    const rateValue = parseFloat(rowData[ratesIndex]); // Get RATES value
+  
     ratesDataset.data.push({ x: xValue, y: rateValue });
   });
+  
+  
 
   // Create the IR line chart using the RATES dataset
   IRlineChart = createRatesLineChart([ratesDataset], 'IRlineChart', 'Interest Rates', 3);

@@ -92,17 +92,68 @@ function setupEventListeners() {
     setupLossIssuerUI(); // Call your function after a delay
   }, 300); // Wait for 0.3 seconds
 
-  // CSSzenario EventListener check box:
+  // CSSzenario EventListener für Checkboxen
   document.addEventListener('change', (event) => {
+    // console.log("📢 Event ausgelöst:", event.target); // Logge das auslösende Element
+
     if (event.target.classList.contains('select-scenario')) {
-      const checkboxes = document.querySelectorAll('.select-scenario');
-      checkboxes.forEach((checkbox) => {
-        if (checkbox !== event.target) {
-          checkbox.checked = false; // Uncheck all other checkboxes
+        // console.log("✅ Eine Szenario-Checkbox wurde geändert!");
+
+        const checkboxes = document.querySelectorAll('.select-scenario');
+        let isDefaultSelected = false;
+
+        checkboxes.forEach((checkbox) => {
+            // console.log(`🔍 Checkbox: ${checkbox.dataset.row}, Checked: ${checkbox.checked}`);
+
+            if (checkbox !== event.target) {
+                checkbox.checked = false; // Deaktiviere alle anderen Checkboxen
+            }
+            // Prüfe, ob die CSSzenario-Spalte den Wert "default" enthält
+            if (checkbox.checked && checkbox.dataset.row === "0") { 
+                isDefaultSelected = true;
+            }
+        });
+
+        // console.log("📊 Ist 'default' aktiv?", isDefaultSelected);
+
+        // Warnung in der Toolbar anzeigen/verstecken
+        const creditWarningContainer = document.getElementById("creditWarningContainer");
+        const creditWarningLight = document.getElementById("creditWarning");
+
+        if (!isDefaultSelected) {
+            // console.log("🚨 Rote Ampel AN!");
+            creditWarningLight.style.backgroundColor = "red";
+            creditWarningContainer.style.visibility = "visible";
+        } else {
+            // console.log("✅ Standard-Szenario aktiv, Ampel AUS!");
+            creditWarningLight.style.backgroundColor = "transparent";
+            creditWarningContainer.style.visibility = "hidden";
         }
-      });
     }
   });
+
+  // IRCurveSzenario
+  document.getElementById("ratesSelector").addEventListener("change", (event) => {
+      const selectedCurve = event.target.value;
+      appState.setSelectedCurve(selectedCurve); // Speichere die Auswahl
+      handleEUSWData(appState.getForwardData()); // Aktualisiere die Graphen
+
+      // Warnung in der Toolbar anzeigen, wenn nicht EUSWAP
+      const warningContainer = document.getElementById("curveWarningContainer");
+      const warningLight = document.getElementById("curveWarning");
+
+      if (selectedCurve !== "EUSWAP") {
+          warningLight.style.backgroundColor = "red";
+          warningContainer.style.visibility = "visible"; // Falls es unsichtbar ist
+      } else {
+          warningLight.style.backgroundColor = "transparent";
+          warningContainer.style.visibility = "hidden"; // Verstecke die Warnung
+      }
+  });
+
+
+  
+  
 
 
 }
@@ -652,12 +703,14 @@ function setupButtons() {
       function handleFairValueProject(buttonElement, extraParam) {
         const selectedTableName = appState.getSelectedDealsTableName();
         const CSSzenario = appState.getCSSzenarioData();
+        const selectedCurve = appState.getSelectedCurve();
       
         if (!CSSzenario) {
           throw new Error('No scenario data available. Please set a scenario first.');
         }
       
         extraParam.CSSzenario = CSSzenario;
+        extraParam.selectedCurve = selectedCurve;
       
         const payload = {
           tableName: selectedTableName,
@@ -952,11 +1005,35 @@ function setupButtons() {
   // }
   // IR
   function handleEUSWData(data) {
-    //console.log("Received data in handleEUSWData:", data);  // Log to verify data content
+    const selectedCurve = document.getElementById("ratesSelector").value;
+
+    // Setze RATES auf die gewählte Spalte
+    data.forEach(row => {
+        if (selectedCurve in row) {
+            row.RATES = row[selectedCurve]; 
+        }
+    });
+
+    // Graphen direkt aktualisieren
     appState.handleIRData.call(appState, data);
-    appState.handleFWDData.call(appState, data);  // This should cache receivedData in cachedReceivedData
+    appState.handleFWDData.call(appState, data);
     appState.handleSwapForwardCurve.call(appState, data);
-  }
+}
+
+
+// Event-Listener für das Dropdown hinzufügen
+document.getElementById("ratesSelector").addEventListener("change", () => {
+    const selectedCurve = document.getElementById("ratesSelector").value;
+
+    console.log(`🔄 Neue Auswahl: ${selectedCurve} → Daten werden aktualisiert`);
+
+    // Sende ein Event an `main.js`, um die Daten mit der neuen Spalte zu aktualisieren
+    window.api.send('EUSWData-refresh', selectedCurve);
+});
+
+
+
+
   // CSMatrix
   function handleCSMatrixData(receivedData) {
     //console.log('CSMatrixData', receivedData);

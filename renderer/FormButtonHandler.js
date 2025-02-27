@@ -23,7 +23,7 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
 }
 
 export function handleCouponFormAction(event, data, rowIndex, actionType) {
-  //console.log('handleCouponFormAction',  data)
+  console.log('handleCouponFormAction',  data)
   displayModal(actionType, rowIndex);
 
   if (actionType === 'add') {
@@ -509,6 +509,8 @@ function getUniqueIdentifier(newData, selectedTableName) {
             break;  
           case 'ProdCouponSchedules': 
             uniqueIdentifierColumn = 'ID'; 
+          case 'EUSW': 
+            uniqueIdentifierColumn = 'YEAR'; 
             break;   
           // Add more cases as needed for different tables
           default:

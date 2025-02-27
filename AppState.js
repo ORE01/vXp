@@ -47,6 +47,7 @@ export class AppState {
         this.mlModel = null; 
 
         this.CSSzenarioData = 'default';
+        this.selectedCurve = "EUSWAP",
 
         this.createdDealsData = null;
         this.createdPortData = null;
@@ -562,6 +563,14 @@ export class AppState {
     getCSSzenarioData() {
         return this.CSSzenarioData;
         
+    }
+
+    setSelectedCurve(curveName) {
+        this.selectedCurve = curveName;
+      }
+    
+    getSelectedCurve() {
+    return this.selectedCurve;
     }
 
 

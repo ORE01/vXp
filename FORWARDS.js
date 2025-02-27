@@ -44,22 +44,41 @@ export function handleFWDData(receivedData, applyCubicSpline) {
 
   const table = FWDDataContainer.querySelector('#dataTable');
   if (!table) {
-    console.error("No table element found in FWDDataContainer after updating with processed data.");
-    return;
+      console.error("Table not found in FWDDataContainer.");
+      return;
   }
-
+  
   const rows = Array.from(table.rows);
-
-  // Extract swap rates and years
-  let swapRates = rows.slice(1).map((row) => {
-    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
-    return parseFloat(rowData[2].replace('%', '')); 
+  if (rows.length < 2) { // Must have at least header + 1 row
+      console.error("No data rows found in the table.");
+      return;
+  }
+  
+  // Get column names dynamically and determine their postion in the table!!!
+  const headers = Array.from(rows[0].cells).map((cell) => cell.textContent.trim());
+  const ratesIndex = headers.indexOf("RATES");// bestimmt die position!!!
+  const yearIndex = headers.indexOf("YEAR");
+  
+  if (ratesIndex === -1 || yearIndex === -1) {
+      console.error("Column 'RATES' or 'YEAR' not found in the table!");
+      return;
+  }
+  
+  // Now safely extract swap rates
+  let swapRates = rows.slice(1).map(row => {
+      const rowData = Array.from(row.cells).map(cell => cell.textContent.trim());
+      return parseFloat(rowData[ratesIndex].replace('%', '')); 
   });
-
-  let swapYears = rows.slice(1).map((row) => {
-    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
-    return parseInt(rowData[1].replace('Y', '')); 
+  
+  let swapYears = rows.slice(1).map(row => {
+      const rowData = Array.from(row.cells).map(cell => cell.textContent.trim());
+      return parseInt(rowData[yearIndex].replace('Y', '')); 
   });
+  
+  // Debugging
+  console.log("Extracted Swap Rates:", swapRates);
+  console.log("Extracted Swap Years:", swapYears);
+  
 
   if (!swapRates.length || !swapYears.length) {
     console.error("Failed to extract swap rates or years from data table.");

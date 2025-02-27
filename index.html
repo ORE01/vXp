@@ -11,6 +11,8 @@
   <link href="./css/ToolTip.css" rel="stylesheet">
   <link href="./css/trafficLight.css" rel="stylesheet">
   <link href="./css/messageBox.css" rel="stylesheet">
+  <link href="./css/Warnings.css" rel="stylesheet">
+  <link href="./css/CREDITSPREADS.css" rel="stylesheet">
   
   <!-- <link href="./css/CouponModal.css" rel="stylesheet">  -->
 
@@ -40,14 +42,38 @@
 </head>
 <body>
 
-  <!-- Toolbar for Language Toggle -->
-  <div id="toolbar" class="toolbar">
+<!-- Toolbar for Language Toggle -->
+<div id="toolbar" class="toolbar">
     <div class="language-toggle">
-      <button id="lang-en" class="language-button">EN</button>
-      <button id="lang-de" class="language-button">DE</button>
-      <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
+        <button id="lang-en" class="language-button">EN</button>
+        <button id="lang-de" class="language-button">DE</button>
+        <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
+
+        <!-- Curve Szenario Warning -->
+        <div id="curveWarningContainer" class="warning-container">
+            <span class="warning-text">Curve Szenario Set</span>
+            <div id="curveWarning" class="warning-light"></div>
+        </div>
+
+        <!-- Credit Spread Szenario Warning -->
+        <div id="creditWarningContainer" class="warning-container">
+            <span class="warning-text">Credit Spread Szenario Set</span>
+            <div id="creditWarning" class="warning-light"></div>
+        </div>
+
+        <!-- CS Szenario Warning -->
+        <div id="csWarningContainer" class="warning-container">
+          <span class="warning-text">CS Szenario for ID Set:</span>
+          <div id="csWarning" class="warning-light"></div> 
+          <span id="csWarningText" class="warning-text"></span> <!-- 🔴 Hier erscheinen die betroffenen IDs -->
+        </div>
+
+
+      
     </div>
-  </div>
+</div>
+
+
 
 
   <div class="tab">
@@ -59,85 +85,58 @@
     <button class="tablinks" id="SENS_Tab">SENSITIVITIES</button>
     <button class="tablinks" id="IR_Tab">RATES</button>
     <button class="tablinks" id="FWD_Tab">FORWARDS</button>
-    <button class="tablinks" id="TS_Tab">HIST DATA</button>
-    <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
+    <button class="tablinks" id="CS_Tab">CREDIT SPREADS</button> 
     <button class="tablinks" id="MVaR_Tab">M-VaR</button>
     <button class="tablinks" id="CVaR_Tab">C-VaR</button>
-    <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+    <button class="tablinks" id="TS_Tab">HIST DATA</button>
+    <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
     <button class="tablinks" id="ML_Tab">ML</button> 
+    <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+    
   </div>
+
 
 <!-- Modal - ISSUER -->
 <div id="ISSUER_Modal" class="table">
   <div class="table-content">
     <span class="close">&times;</span>
-    <div class="content-wrapper">
-      <!-- Left Section: Dropdowns -->
-      <div class="left-section">
-        <div class="portfolio-info">
-          <h2 class="section-header">ISSUER</h2>
-      </div>
+    <div class="portfolio-info">
+      <h2 class="section-header">ISSUER</h2>
+    </div>
 
-      <!-- Middle Section: Issuer Data -->
-      <div class="middle-section">
-
-        <div class="dropdown-wrapper">
-          <div>
-            <p>Select Issuers:</p>
-            <select id="issuerIssuerDropdown" multiple class="select-dropdown "></select>
-          </div>
-          <div>
-            <p>Select Rating:</p>
-            <select id="issuerRatingDropdown" multiple class="select-dropdown "></select>
-          </div>
+    <div class="data-wrapper">
+      <!-- Scrollable area for dropdowns -->
+      <div class="dropdown-wrapper">
+        <div>
+          <p>Select Issuers:</p>
+          <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
         </div>
-        <p>
-          <button id="issuerResetFiltersButton" class="reset-FiltersButton">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-              <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-              <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-            </svg>
-          </button>
-        </p>
-      </div>
-        <div class="data-wrapper">
-          <div class="button-wrapper">
-            <button id="issuerAddButton">ADD</button>
-          </div>
-          <!-- <div class="table-wrapper"> -->
-            <!-- <div class="data-container" id="issuerDataContainer"></div> -->
-            <!-- <div class="table-wrapper" > -->
-              <div class="data-container" id="issuerDataContainer"></div>
-          <!-- </div> -->
+        <div>
+          <p>Select Rating:</p>
+          <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
         </div>
       </div>
 
-      <!-- Right Section: Chart and CS Parameters -->
-      <div class="right-section">
-        <!-- Upper Part: Chart -->
-        <div class="upper-part">
-          <div class="table-wrapper" id="issuerGraphContainer">
-            <canvas id="CS_ChartCanvas"></canvas>
-          </div>
-        </div>
+      <p>
+        <button id="issuerResetFiltersButton" class="reset-FiltersButton">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+            <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+            <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+          </svg>
+        </button>
+      </p>
 
-        <!-- Lower Part: CS Parameters -->
-        <div class="lower-part">
-
-          <p>CS Curve Parameter:</p>
-          <p>e: Relative Displacement in %. Default 1</p>
-          <p>f: Absolute Displacement in Basis Points. Default 0</p>
-          <div class="data-container" id="CSParameterDataContainer"></div>
-          <div class="button-wrapper">
-            <button id="CSParButton" class="edit-button">CSParameter</button>
-            <button id="CSParameterAddButton"class="edit-button">Add New CSParameter</button>
-          </div>
-        </div>
+      <div class="button-wrapper">
+        <button id="issuerAddButton">ADD</button>
       </div>
+
+      <div class="data-container" id="issuerDataContainer"></div>
     </div>
   </div>
 </div>
+
+
 
 <!-- Modal - PROD -->
 <div id="PROD_Modal" class="table">
@@ -432,6 +431,14 @@
   <div class="table-content">
     <span class="close">&times;</span>
     <h2 class="section-header">INTEREST RATES</h2>
+
+
+    <label for="ratesSelector">Select Curve:</label>
+      <select id="ratesSelector">
+        <option value="EUSWAP">EUSWAP</option>
+        <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
+      </select>
+
     <!-- <div class="data-container" id="IRDataContainer"></div> -->
     <div id="IRDataContainer"></div>
     <div class="chart-container">
@@ -490,6 +497,39 @@
     </div>
   </div>
 </div>
+
+
+<!-- CS_Modal: New Modal for CS Parameters and Chart -->
+<div id="CS_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    
+    <!-- Header Section -->
+    <h2 class="section-header">CREDIT SPREADS</h2>
+
+    <div class="content-wrapper">
+      <!-- Chart Section -->
+      <div class="chart-container">
+        <canvas id="CS_ChartCanvas"></canvas>
+      </div>
+
+      <!-- CS Parameters Section -->
+      <div class="parameters-container">
+        <p>CS Curve Parameter:</p>
+        <p>e: Relative Displacement in %. Default 1</p>
+        <p>f: Absolute Displacement in Basis Points. Default 0</p>
+        <div id="CSParameterDataContainer"></div>
+        <div class="button-wrapper">
+          <button id="CSParButton" class="edit-button">CSParameter</button>
+          <button id="CSParameterAddButton" class="edit-button">Add New CSParameter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
 
 
 
