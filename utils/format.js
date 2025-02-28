@@ -83,7 +83,10 @@ export function formatInputFieldValue(fieldName, value) {
   } else if (fieldName === 'RATING') {
     formattedValue = String(formattedValue); // Convert to whole number
     //console.log('formattedValue:', formattedValue);
- }
+
+  } else if (['a', 'b', 'c', 'd', 'Shift_percent', 'Shift_bp'].includes(fieldName)) {
+    formattedValue = parseFloat(formattedValue) || 0; // Convert text to number (default to 0)
+}
 
   return formattedValue;
 }

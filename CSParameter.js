@@ -47,6 +47,7 @@ export function handleCSParameterData(receivedData) {
 }
 
 function processDataWithCheckbox(CSPData) {
+  console.log('CSPData', CSPData)
   let tableHTML = '<thead><tr>';
   tableHTML += '<th>Select Scenario</th>'; // Add checkbox column header
   Object.keys(CSPData[0]).forEach((key) => {
@@ -70,6 +71,8 @@ function processDataWithCheckbox(CSPData) {
   tableHTML += '</tbody>';
   return tableHTML;
 }
+
+
 
 
 

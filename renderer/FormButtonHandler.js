@@ -5,6 +5,7 @@ import { issuerData } from '../r_tab/ISSUER.js';
 
 
 export function handleFormAction(event, data, rowIndex, selectedTableName, actionType) {
+
   displayModal(actionType, rowIndex);
   setupFormFields(actionType, data, rowIndex, selectedTableName);
 
@@ -14,7 +15,15 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
     setupAddOperation(data, selectedTableName);
 
   } else if (actionType === 'edit') {
-    //console.log('data',data)
+    console.log('data',data)
+    console.log('Row Index:', rowIndex);
+    console.log('Data Length:', data.length);
+    console.log('Selected Row Data:', data[rowIndex]); // This should NOT be undefined
+
+
+
+
+
     const rowData = data[rowIndex];
     
     setupEditOperation(rowData, rowIndex, selectedTableName);
