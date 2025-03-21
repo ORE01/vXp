@@ -13,8 +13,6 @@
   <link href="./css/messageBox.css" rel="stylesheet">
   <link href="./css/Warnings.css" rel="stylesheet">
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
-  
-  <!-- <link href="./css/CouponModal.css" rel="stylesheet">  -->
 
 <!-- Library Imports -->
  
@@ -316,7 +314,9 @@
         <p>MVaRIR: <span id="formPortMvarIR"></span></p>
         <p>MVaRCS: <span id="formPortMvarCS"></span></p>
   
-        <p>CVaR: <span id="formPortCvarTOT"></span></p>
+        <p>CVaR Rating: <span id="formPortCvarRating"></span></p>
+        <p>CVaR CS: <span id="formPortCvarMarket"></span></p>
+        <p>CVaR CS norm: <span id="formPortCvarNorm"></span></p>
 
         <p>Value at Risk/Expected Shortfall:</p>
 
@@ -389,7 +389,7 @@
         </svg>
       </button>
     </p>
-      <div class="data-container" id="portDataContainer"></div>
+      <div class="data-container" id="portDataContainer0"></div>
     </div>
   </div>
 </div>
@@ -509,7 +509,7 @@
 
     <div class="content-wrapper">
       <!-- Chart Section -->
-      <div class="chart-container">
+      <div class="chart-container cs-chart">
         <canvas id="CS_ChartCanvas"></canvas>
       </div>
 
@@ -829,7 +829,7 @@
     <div class="portfolio-details-container">
 
       <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-        <select id="createdPortDropdown" style="width: 60%; background-color: white;"></select> 
+        <select id="createdPortDropdown1" style="width: 60%; background-color: white;"></select> 
       </div>
       <p>Notional: <span id="formPortNotional1"></span></p>
       <p>NAV: <span id="formPortValue1"></span></p>
@@ -844,10 +844,12 @@
       <p>MVaRIR: <span id="formPortMvarIR1"></span></p>
       <p>MVaRCS: <span id="formPortMvarCS1"></span></p>
 
-      <p>CVaR: <span id="formPortCvarTOT1"></span></p>
+      <p>CVaR: <span id="formPortCvarRating1"></span></p>
+      <p>CVaR: <span id="formPortCvarMarket1"></span></p>
+      <p>CVaR: <span id="formPortCvarNorm1"></span></p>
     </div>
   <div class="data-wrapper">
-    <div class="data-container" id="compPortDataContainer"></div>
+    <div class="data-container" id="portDataContainer1"></div>
   </div>
 </div>
 
@@ -874,10 +876,12 @@
       <p>MVaRIR: <span id="formPortMvarIR2"></span></p>
       <p>MVaRCS: <span id="formPortMvarCS2"></span></p>
 
-      <p>CVaR: <span id="formPortCvarTOT2"></span></p>
+      <p>CVaR: <span id="formPortCvarRating2"></span></p>
+      <p>CVaR: <span id="formPortCvarMarket2"></span></p>
+      <p>CVaR: <span id="formPortCvarNorm2"></span></p>
     </div>
     <div class="data-wrapper">
-      <div class="data-container" id="compPortDataContainer2"></div>
+      <div class="data-container" id="portDataContainer2"></div>
     </div>
   </div>
   
@@ -898,6 +902,8 @@
   </div>
   <div class="chart-group">
     <div id="compChartContainer6" class="comp-chart-container"></div>
+    <div id="compChartContainer7" class="comp-chart-container"></div>
+    <div id="compChartContainer8" class="comp-chart-container"></div>
   </div>
 </div>
 </div>

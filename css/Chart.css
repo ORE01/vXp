@@ -15,8 +15,11 @@
     height: 400px; /* Adjust height to make the chart bigger */
     display: block; /* Make sure it's visible */
     position: relative; /* Keep relative positioning */
+    justify-content: center;
+    align-items: center;
   }
-  
+
+
   
   .chart-container-table {
     /* Your existing styles for .chart-container-inner */
@@ -30,6 +33,7 @@
     align-items: center; /* Vertically aligns the chart and traffic light */
     justify-content: flex-start; /* Ensures elements align horizontally */
     gap: 20px; /* Adds space between the chart and traffic light */
+    min-height: 400px;
   }
   
   .chart-container-inner.active {

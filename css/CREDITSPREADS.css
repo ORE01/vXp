@@ -1,18 +1,21 @@
 .content-wrapper {
     display: flex;
-    flex-direction: column; /* Ensures sections are stacked */
+    flex-direction: column; 
     align-items: center;
-    gap: 20px; /* Adds space between sections */
+    gap: 20px; 
   }
   
-  .chart-container {
-    max-width: 800px; /* Increase width */
+.cs-chart {
+    max-width: 800px; 
     width: 100%;
-    height: 400px; /* Increase height */
+    height: 400px; 
     display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+    justify-content: center; /* Zentriert horizontal */
+    align-items: flex-start; /* Verschiebt es nach oben */
+    position: relative;
+    margin-top: 20px; /* Falls nötig, Abstand nach oben anpassen */
+}
+
   
   #CS_ChartCanvas {
     width: 100% !important;

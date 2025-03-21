@@ -11,12 +11,14 @@ import { handleFWDData, handleSwapForwardCurve } from './FORWARDS.js';
 import { handleMVaRData } from './MVaR.js'; 
 import { handleEADMainData, handleCVaRData } from './CVaR.js'; 
 import { handleCouponData } from './PRODCoupon.js';
+import { getPortDataForElement } from './PORT.js';
 
 import { formPortValue, formPortNotional, formFiltPortNotional, formPortYield, formPortYieldA, formPortPV01, formPortCPV01 } from './PORT.js';
+import { appState } from './renderer.js';
 // import { handleLiquidityData } from './liquidity.js';
 
 
-
+const portDataMap = {}; // 🔄 Speichert Daten pro Container
 
 
 
@@ -33,6 +35,8 @@ export class AppState {
         this.currentPortDataTable0 = 'PortMainData'; 
         this.currentPortDataTable = 'PortMainData'; 
         this.currentPortDataTable2 = 'PortMainData'; 
+
+        this.portfolioData = []; 
         
 
         this.currentActiveTable = null;
@@ -41,7 +45,10 @@ export class AppState {
         this.prodData = null;
         this.filteredProdData = null,
         this.couponData = null;
-        this.dealsData = null;
+
+        this.dealsData = [];
+        this.allDealsData = [];
+
         this.rankData = null;
         this.mvarData = null,
         this.mlModel = null; 
@@ -59,8 +66,16 @@ export class AppState {
         
         this.currentReceivedData = null;
         this.selectedTradeIDs = ['ALL'];
-        this.selectedDealsTableName = 'DealsMain';
-        this.selectedPortTableName = 'PortMain';
+        this.selectedDealsTableName = 'UNI';
+        this.selectedPortTableName = 'UNI';
+
+        this.portDataSets = { port0: null, port1: null, port2: null };
+        this.mvarDataSets = { port0: null, port1: null, port2: null };
+        this.cvarDataSets = { port0: null, port1: null, port2: null };
+        
+
+
+
 
         // Binding methods
         this.handleDropdownChange = this.handleDropdownChange.bind(this);
@@ -136,7 +151,7 @@ export class AppState {
             portTables0: {
                 'table_name': new Set(['ALL']),
             },
-            portTables: {
+            portTables1: {
                 'table_name': new Set(['ALL']),
             },
             portTables2: {
@@ -177,28 +192,20 @@ export class AppState {
             },
             dealsTables: {
                 'createdDealsDropdown': { dataKey: 'table_name', selection: ['ALL'] },
-            },            
+            },         
             portTables0: {
-                'createdPortDropdown0': { dataKey: 'table_name', selection: ['ALL'] },
-                //'createdPortDropdown2': { dataKey: 'table_name', selection: ['ALL'] },
+                'createdPortDropdown0': { dataKey: 'table_name', selection: ['ALL'] }, 
             },  
-            portTables: {
-                'createdPortDropdown': { dataKey: 'table_name', selection: ['ALL'] },
-                //'createdPortDropdown2': { dataKey: 'table_name', selection: ['ALL'] },
+            portTables1: {
+                'createdPortDropdown1': { dataKey: 'table_name', selection: ['ALL'] },  
             },   
             portTables2: {
-                // 'createdPortDropdown': { dataKey: 'table_name', selection: ['ALL'] },
                 'createdPortDropdown2': { dataKey: 'table_name', selection: ['ALL'] },
-            },        
-            // comp: {
-            //      'createdPortDropdown': { dataKey: 'table_name', selection: ['ALL'] },
-            //     // 'createdPortDropdown2': { dataKey: 'table_name', selection: ['ALL'] },
-            // },  
-            // comp2: {
-            //     // 'createdPortDropdown': { dataKey: 'table_name', selection: ['ALL'] },
-            //      'createdPortDropdown2': { dataKey: 'table_name', selection: ['ALL'] },
-            // }, 
+            },  
+                  
+
         };
+        
         this.tabToDataMapping = {
             'ISSUER_Tab': {
                 default: 'issuer',
@@ -221,7 +228,7 @@ export class AppState {
             'COMP_Tab': {
                 default: 'port',
                 dropdowns: {
-                    'createdPortDropdown': 'portTables', 
+                    'createdPortDropdown1': 'portTables1', 
                     'createdPortDropdown2': 'portTables2', 
                 }
             },
@@ -264,19 +271,25 @@ export class AppState {
             port: {
                 dropdownConfig: this.dropdownConfig.port,
                 filtersConfig: this.filtersConfig.port,
-                elementIds: ['portDataContainer', 'compPortDataContainer', 'compPortDataContainer2'],
+                elementIds: ['portDataContainer0', 'portDataContainer1', 'portDataContainer2'],
                 dataHandler: (receivedData) => {
-                  const activeElementId = this.getActiveElementId();
-                //   console.log(this.getActiveElementId());
-                  if (activeElementId) {
-                    handlePortMainFilteredData(receivedData, this.filtersConfig.port, activeElementId, this.tableConfigs[activeElementId]);
-                    //handleMVarInputData(receivedData);
-                
-                } else {
-                    console.error('No active elementId is set');
-                  }
-                },
-              },
+                    const activeElementId = this.getActiveElementId();
+                    const selectedPortTableName = this.getSelectedPortTableName();
+                    
+                    console.log('receivedData:', receivedData);
+                    console.log('activeElementId:', activeElementId);
+                    console.log('selectedPortTableName:', selectedPortTableName);
+            
+                    if (receivedData && receivedData.length > 0) {
+                        handlePortMainFilteredData(receivedData, this.filtersConfig.port, activeElementId, this.tableConfigs[activeElementId]);
+                        handlePortMainData(receivedData, activeElementId);
+                    } else {
+                        console.warn("⚠️ No portfolio data found in appState!");
+                    }
+                }
+            },
+            
+            
 
             dealsTables: {
                 dropdownConfig: this.dropdownConfig.dealsTables,
@@ -288,9 +301,9 @@ export class AppState {
                 filtersConfig: this.filtersConfig.portTables0,
                 dataHandler: this.handlePortTable.bind(this),
                 },   
-            portTables: {
-                dropdownConfig: this.dropdownConfig.portTables,
-                filtersConfig: this.filtersConfig.portTables,
+            portTables1: {
+                dropdownConfig: this.dropdownConfig.portTables1,
+                filtersConfig: this.filtersConfig.portTables1,
                 dataHandler: this.handlePortTable.bind(this),
                 },    
             portTables2: {
@@ -356,22 +369,22 @@ export class AppState {
     // Method to update active table
     setActiveTable(tableType) {
         this.currentActiveTable = tableType;
-        this.notifyObservers();
+        // this.notifyObservers();
     }
 
     // Method to update received data
     setReceivedData(data) {
         this.currentReceivedData = data;
-        this.notifyObservers();
+        // this.notifyObservers();
     }
 
     setIssuerData(data) {      
         this.issuerData = data;
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
     }
     setRankData(data) {      
         this.rankData = data;
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
         // this.updateUIBasedOnAppState();
     }
     getRankData() {
@@ -389,81 +402,96 @@ export class AppState {
 
     setProdData(data) {
         this.prodData = data;
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
     }
 
     getProdData() {
         return this.prodData || []; // Return prodData or an empty array if not set
     }
 
-  // Set couponData and notify observers
-  setCouponData(data) {
-    //console.log('Setting CouponData:', data);
-    this.couponData = data;
-    this.notifyObservers(); // Trigger updates
-  }
-
-  // Get couponData
-  getCouponData() {
-    return Array.isArray(this.couponData) ? this.couponData : []; 
+    // Set couponData and notify observers
+    setCouponData(data) {
+        //console.log('Setting CouponData:', data);
+        this.couponData = data;
+        // this.notifyObservers(); // Trigger updates
     }
 
-  setFilteredProdData(data) {
-    this.filteredProdData = data;
-  }
+    // Get couponData
+    getCouponData() {
+        return Array.isArray(this.couponData) ? this.couponData : []; 
+        }
 
-  getFilteredProdData() {
-    return this.filteredProdData;
-  }
+    setFilteredProdData(data) {
+        this.filteredProdData = data;
+    }
+
+    getFilteredProdData() {
+        return this.filteredProdData;
+    }
 
     
     
-
+    setAllDealsData(data) {
+        this.allDealsData = data;
+        // this.notifyObservers(); 
+    }
+    getAllDealsData() {
+        return this.allDealsData; 
+    }
     setDealsData(data) {
         this.dealsData = data;
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
     }
     getDealsData() {
         return this.dealsData; 
     }
 
+
     setPortData(data) {
         this.portData = data;
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
     }
 
+    // ✅ Setzt die Portfolios in den AppState
+    setPortfolioData(data) {
+        this.portfolioData = data;
+        console.log('✅ Portfolio-Daten gespeichert:', this.portfolioData);
+    }
+
+    // ✅ Holt die Portfolios aus dem AppState
+    getPortfolioData() {
+        return this.portfolioData;
+    }
+    
+
     setMvarData(data) {
+        console.log('setMvarData:', data)
         this.mvarData = data;
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
     }
     getMvarData() {
         return this.mvarData;
         
     }
-
     setCvarData(data) {
-        //console.log('setCvarData called with:', data);
-    
-        if (Array.isArray(data)) {
-            // Data is already an array, set it directly
-            this.cvarData = data;
-            //console.log('✅ cvarData successfully set as array:', this.cvarData);
-        } else if (data && typeof data === 'object') {
-            // If it's a single object, wrap it in an array
-            console.warn('⚠️ Received a single object, wrapping it in an array:', data);
-            this.cvarData = [data];
-        } else {
-            // If the data is invalid, set an empty array to prevent errors
-            console.error('❌ Invalid data provided to setCvarData. Expected an array or object, received:', data);
-            this.cvarData = [];
-        }
-    
-        this.notifyObservers();  // Notify any components that rely on cvarData
+        this.cvarData = data;
+        // this.notifyObservers(); 
     }
     
     
     getCvarData() {
         return this.cvarData;
+        
+    }
+    setAllCvarData(data) {
+        console.log('setAllCvarData:', data)
+        this.AllCvarData = data;
+        // this.notifyObservers(); 
+    }
+    
+    
+    getAllCvarData() {
+        return this.AllCvarData;
         
     }
 
@@ -473,7 +501,7 @@ export class AppState {
         //console.log('filteredPortData:', data)
         this.filteredPortData = data
         
-        this.notifyObservers();
+        // this.notifyObservers();
     }
 
     getFilteredPortData() {
@@ -483,21 +511,25 @@ export class AppState {
         }
 
     setSelectedDealsTableName(tableName) {
-        this.currentDealsDataTable = tableName;
+        
+        this.selectedDealsTableName = tableName;
+        console.log('setSelectedDealsTableName:', tableName);  
         // Optionally, you might want to notify observers about this change
-        this.notifyObservers();
+        // this.notifyObservers();
     }
     getSelectedDealsTableName() {
-        return this.currentDealsDataTable;
+        
+        return this.selectedDealsTableName;
     }
 
     setSelectedPortTableName(tableName) {
-        this.currentPortDataTable = tableName;
-        // Optionally, you might want to notify observers about this change
-        this.notifyObservers();
+        this.selectedPortTableName = tableName;  // 🔥 Speichert in `selectedPortTableName`
+        console.log('🛠 setSelectedPortTableName speichert:', this.selectedPortTableName);
     }
+
     getSelectedPortTableName() {
-        return this.currentPortDataTable;
+        // console.log('🔎 getSelectedPortTableName gibt zurück:', this.selectedPortTableName);
+        return this.selectedPortTableName;  // 🔥 Gibt den korrekten Wert zurück
     }
 
     // created Deals
@@ -516,7 +548,7 @@ export class AppState {
             this.availableDealsTablesData[table.table_name] = table;
             this.availableDealsTablesArray.push(table);
         });
-        //console.log('this.availableDealsTablesArray', this.availableDealsTablesArray)
+        console.log('this.availableDealsTablesArray', this.availableDealsTablesArray)
         this.notifyObservers();
     }
     getCreatedDealsData() {
@@ -548,7 +580,7 @@ export class AppState {
             return;
         }
         
-        //console.log('this.availablePortTablesArray', this.availablePortTablesArray);
+        console.log('this.availablePortTablesArray', this.availablePortTablesArray);
         this.notifyObservers();
     }
 
@@ -558,7 +590,7 @@ export class AppState {
 
     setCSSzenarioData(data) {
         this.CSSzenarioData = data || 'default'; 
-        this.notifyObservers(); 
+        // this.notifyObservers(); 
     }
     getCSSzenarioData() {
         return this.CSSzenarioData;
@@ -577,22 +609,22 @@ export class AppState {
 
 
     updateDealsDataTable(receivedData) {
-        //console.log('updateDealsDataTable', receivedData);
+        console.log('updateDealsDataTable', receivedData);
+        console.trace("🔍 updateDealsDataTable triggered from:");
         
         this.setDealsData(receivedData);
-        // this.updateDropdowns('deals');
+        //this.updateDropdowns('deals');
         this.applyFiltersAndUpdateDropdowns('deals');
     }
 
-
-
     updatePortDataTable(receivedData) {
-        //console.log('updatePortDataTable', receivedData);
-
+        console.log('📌 updatePortDataTable called with:', receivedData);
+        console.trace("🔍 updatePortDataTable triggered from:");
+        
         this.setPortData(receivedData);
-        // this.updateDropdowns('port');
         this.applyFiltersAndUpdateDropdowns('port');
     }
+    
 
 
     updateMvarDataTable(receivedData) {
@@ -609,13 +641,13 @@ export class AppState {
     
     setSelectedTradeIDs(ids) {
         this.selectedTradeIDs = ids;
-        this.notifyObservers();
+        // this.notifyObservers();
     }
 
     // General method for updating filtered data based on table type
     setFilteredDataForTable(tableType, data) {
         this.filteredData[tableType] = data;
-        this.notifyObservers(); // Notify observers about the update
+        // this.notifyObservers(); // Notify observers about the update
     }
     getFilteredData(tableType) {
         return this.filteredData[tableType];
@@ -631,7 +663,7 @@ export class AppState {
     // Set the forward data and notify observers
     setForwardData(data) {
         this.forwardData = data;
-        this.notifyObservers();  // Notify observers if applicable
+        // this.notifyObservers();  // Notify observers if applicable
     }
 
     // Retrieve the forward data
@@ -643,7 +675,7 @@ export class AppState {
     setMLTrainedModel(model) {
         this.mlModel = model || null; // Store the full object or clear it if null/undefined
         //console.log('MLModel updated:', this.mlModel);
-        this.notifyObservers();
+        // this.notifyObservers();
     }
 
     // Retrieve the ML Model
@@ -656,7 +688,7 @@ export class AppState {
     setMLModelType(modelType) {
         this.mlModelType = modelType;
         //console.log('MLModelType updated:', this.mlModelType);
-        this.notifyObservers(); // Notify observers, if applicable
+        // this.notifyObservers(); // Notify observers, if applicable
     }
 
     // Retrieve the MLModel
@@ -743,8 +775,8 @@ export class AppState {
         const tableType = this.getTableTypeFromDropdownId(dropdownId);
         let selectedOptions;
     
-        //console.log('Dropdown ID:', dropdownId);
-        //console.log('Table Type:', tableType);
+        console.log('Dropdown ID:', dropdownId);
+        console.log('Table Type:', tableType);
     
         // Handling "ALL" selection specifically
         if (event.target.value === "ALL") {
@@ -794,28 +826,32 @@ export class AppState {
             
             'tradeDropdown': 'deals' ,
 
-            'createdDealsDropdown': 'dealsTables',
-            'createdPortDropdown0': 'portTables',
-            'createdPortDropdown': 'portTables',
-            'createdPortDropdown2': 'portTables',
+            'createdDealsDropdown': 'portTables1',
+            'createdPortDropdown0': 'portTables1',
+            'createdPortDropdown1': 'portTables1',
+            'createdPortDropdown2': 'portTables1',
             
         };
         return mapping[dropdownId] || null; // Fallback to null if no match is found
     }
 
     updateDropdownSelection(tableType, dropdownId, selectedOptions) {
-        // Update the selection for the specific dropdown in state
+        console.log(`🔄 Aktualisiere Auswahl für ${dropdownId} (${tableType}):`, selectedOptions);
+    
+        // Update selection
         if (this.dropdownConfig[tableType] && this.dropdownConfig[tableType][dropdownId]) {
             this.dropdownConfig[tableType][dropdownId].selection = selectedOptions;
+            console.log(`✅ Gespeicherte Auswahl für ${dropdownId}:`, this.dropdownConfig[tableType][dropdownId].selection);
+        } else {
+            console.warn(`⚠️ Kein Eintrag für ${dropdownId} in dropdownConfig[${tableType}] gefunden.`);
         }
     }
+    
 
     applyFiltersAndUpdateDropdowns(tableType) {
-        //console.log('tableType', tableType);
         let receivedData;
     
         switch (tableType) {
-            
             case 'issuer':
                 receivedData = this.issuerData;
                 break;
@@ -824,7 +860,7 @@ export class AppState {
                 break;
             case 'deals':
                 receivedData = this.dealsData;
-                break;
+                break; 
             case 'port':
                 receivedData = this.portData;
                 break;    
@@ -832,57 +868,44 @@ export class AppState {
                 receivedData = this.availableDealsTablesArray;
                 break;
             case 'portTables0':
-                receivedData = this.availablePortTablesArray;
-                break;  
-            case 'portTables':
-                receivedData = this.availablePortTablesArray;
-                break;    
+            case 'portTables1':
             case 'portTables2':
-                receivedData = this.availablePortTablesArray;
-                break;     
-            // Handle other cases...
+                receivedData = this.getCreatedPortData();
+                break;  
             default:
                 console.error("Unknown tableType:", tableType);
                 return; // Early exit if tableType is not recognized
         }
     
         if (!Array.isArray(receivedData)) {
-            // console.log('tableType', tableType );
-            // console.log('receivedData', receivedData );
-            // console.error("Received data is not an array:", receivedData);
-            
             return;
         }
+    
+        const dropdownConfig = this.dropdownConfig[tableType];
+
+        if (!dropdownConfig) {
+            console.error(`🚨 Fehler: Kein dropdownConfig für ${tableType} gefunden!`);
+            return; 
+        }
         
-// Debugging: Log current selections
-const dropdownConfig = this.dropdownConfig[tableType];
-//console.log("Dropdown Config:", dropdownConfig);
-//console.log("receivedData:", receivedData);
+        let filteredData = receivedData.filter(item => {
+                return Object.entries(dropdownConfig).every(([dropdownId, {selection}]) => {
+                    const dataKey = dropdownConfig[dropdownId].dataKey;
+                    if (selection.includes('ALL')) return true;
 
-// Ensure the filter applies correctly by matching the data structure
-let filteredData;
-if (tableType === 'dealsTables') {
-    // Bypass filtering for dealsTables
-    filteredData = receivedData;
-} else {
-    filteredData = receivedData.filter(item => {
-        return Object.entries(dropdownConfig).every(([dropdownId, {selection}]) => {
-            const dataKey = dropdownConfig[dropdownId].dataKey;
-            if (selection.includes('ALL')) return true;
-            // console.log(`Filtering for ${dropdownId} (${dataKey}): Item value=${item[dataKey]}, Selection=`, selection);
-            return selection.includes(item[dataKey]);
-        });
-    });
-}
+                    return selection.includes(item[dataKey]);
+                });
+            });
+        // }
+        console.log(`📌 Filtered data for table type "${tableType}":`, filteredData);
 
-// console.log('Filtered Data:', filteredData, tableType);
-this.setFilteredDataForTable(tableType, filteredData);
-
+        this.setFilteredDataForTable(tableType, filteredData);
     
         // Repopulate dropdowns and update UI as necessary
         this.repopulateDropdownsForTableType(tableType, filteredData);
-        this.updateUIWithFilteredData(tableType);
+        this.updateUIWithFilteredData(tableType, filteredData);
     }
+    
 
     repopulateDropdownsForTableType(tableType, filteredData) {
         const config = this.tableConfigs[tableType];
@@ -924,10 +947,10 @@ this.setFilteredDataForTable(tableType, filteredData);
         }
     }
 
-    updateUIWithFilteredData(tableType) {
-        const filteredData = this.getFilteredData(tableType);
-        //console.log("tableType:", tableType);
-        //console.log("filteredData:", filteredData);
+    updateUIWithFilteredData(tableType, filteredData) {
+        // const filteredData = this.getFilteredData(tableType);
+        console.log("tableType:", tableType);
+        console.log("filteredData:", filteredData);
     
         const config = this.tableConfigs[tableType];
         if (config && typeof config.dataHandler === 'function') {
@@ -968,188 +991,128 @@ this.setFilteredDataForTable(tableType, filteredData);
         selectedTableName,
     }) {
         const dropdownElement = document.getElementById(dropdownElementId);
-        if (dropdownElement) {
-            // Clear existing options
-            dropdownElement.innerHTML = '';
-    
-            // Get the updated list of data from appState
-            const data = getDataFunction();
-    
-            // Log the fetched data for debugging purposes
-            // console.log('fetched data:', data);
-    
-            // Add new options
-            data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.table_name;
-                option.textContent = item.table_name;
-                dropdownElement.appendChild(option);
-            });
-    
-            // Select the newly fetched table in the dropdown
-            if (selectedTableName) {
-                dropdownElement.value = selectedTableName;
-            } else {
-                // Optionally, you can set the dropdown to a default value
-                dropdownElement.value = 'Select a table';
-            }
-    
-            if (selectedTableName) {
-
-                if (selectedTableName.startsWith('Port')) {
-
-                   // 1. Fetch the dynamic MVaR table for the selected portfolio
-                const dynamicMVaRDataTableName = `MVar${selectedTableName}Main_rel`;
-                window.api.send('fetch-table-data', dynamicMVaRDataTableName);
-
-                // // 🛠 Remove existing listener for dynamic data
-                // window.api.removeAllListeners(dynamicMVaRDataTableName + 'Data');
-
-                window.api.receive(dynamicMVaRDataTableName + 'Data', (receivedDynamicMVaRData) => {
-                    if (receivedDynamicMVaRData && receivedDynamicMVaRData.length > 0) {
-                        //console.log('✅ Dynamic MVaR data received:', receivedDynamicMVaRData);
-                        //updateMvarDataFunction(receivedDynamicMVaRData);  // Update UI with dynamic data
-                        this.setMvarData(receivedDynamicMVaRData);        // Store dynamic data in app state
-                    } else {
-                        console.warn(`⚠️ No dynamic MVaR data found for ${dynamicMVaRDataTableName}.`);
-                        this.setMvarData([]);  // Handle missing dynamic data
-                    }
-                });
-
-                // 2. Fetch the general MVaRMain_rel table
-                const generalMVaRDataTableName = 'MVaRMain_rel';
-                window.api.send('fetch-table-data', generalMVaRDataTableName);
-
-                // // 🛠 Remove any existing listener before adding a new one
-                // window.api.removeAllListeners(generalMVaRDataTableName + 'Data');
-
-                window.api.receive(generalMVaRDataTableName + 'Data', (receivedGeneralMVaRData) => {
-                    if (receivedGeneralMVaRData && receivedGeneralMVaRData.length > 0) {
-                        //console.log('✅ General MVaR data received:', receivedGeneralMVaRData);
-                        //updateMvarDataFunction(receivedGeneralMVaRData);  // Optionally update the UI with general data
-                        this.setMvarData(receivedGeneralMVaRData);        // Store general data in app state
-                    } else {
-                        console.warn(`⚠️ No general MVaR data found for ${generalMVaRDataTableName}.`);
-                        this.setMvarData([]);  // Handle missing general data
-                    }
-                });
-
-
-                    // Fetch and update CVar data: hier gibt es 3 verschiedene market, norm, rating: setze derzeit nur einen: rating! 
-                    const CVaRDataTableName = `CVar${selectedTableName}_rating_rel`;
-                    window.api.send('fetch-table-data', CVaRDataTableName);
-                    
-                    // // 🛠 Remove existing listener for CVar data
-                    // window.api.removeAllListeners(CVaRDataTableName + 'Data');
-                    
-                    window.api.receive(CVaRDataTableName + 'Data', (receivedCVarData) => {
-                        //console.log('Received CVaR Data:', receivedCVarData);
-                    
-                        // Check if the data is an array; if not, wrap it in an array
-                        if (Array.isArray(receivedCVarData)) {
-                            this.setCvarData(receivedCVarData);
-                        } else if (receivedCVarData && typeof receivedCVarData === 'object') {
-                            console.warn('⚠️ Received a single object, converting to array:', receivedCVarData);
-                            this.setCvarData([receivedCVarData]);  // Wrap in an array
-                        } else {
-                            console.error('❌ Invalid CVaR data format:', receivedCVarData);
-                            this.setCvarData([]);  // Fallback to an empty array
-                        }
-                    });
-                    
-                    
-                    
-
-                    
-
-                } else {
-
-                };
-
-
-
-                // Send a message to the main process to fetch data for the selected table
-                window.api.send('fetch-table-data', selectedTableName);
-                // console.log('fetch-table-data, selectedTableName', selectedTableName);
-    
-                // Listen for the data response and call the update function for the main table data
-                window.api.receive(selectedTableName + 'Data', (receivedData) => {
-                    // console.log('selectedTableName, receivedData:', selectedTableName + 'Data', receivedData);
-                    updateDataFunction(receivedData);
-                    });
-                
-            }
-        } else {
-            console.error(`Dropdown element with ID ${dropdownElementId} not found.`);
+        if (!dropdownElement) {
+            console.error(`⚠️ Dropdown element '${dropdownElementId}' not found.`);
+            return;
         }
-    }
+    
+        // 🛠 Get the updated list of data from appState
+        const data = getDataFunction();
+        if (!Array.isArray(data) || data.length === 0) {
+            console.warn(`⚠️ No data found for dropdown '${dropdownElementId}'`);
+            dropdownElement.innerHTML = '<option disabled>No data available</option>';
+            return;
+        }
+    
+        console.log(`📌 Updating dropdown '${dropdownElementId}' with`, data.length, 'entries.');
+    
+        // 🛠 Populate dropdown with new options
+        dropdownElement.innerHTML = '';
+        data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.table_name;
+            option.textContent = item.table_name;
+            dropdownElement.appendChild(option);
+        });
     
 
-    updateDealsDropdownOptions() {
-        const dropdown = document.getElementById('createdDealsDropdown');
-        dropdown.innerHTML = ''; // Clear existing options
-      
-        const createdDeals = appState.getCreatedDealsData();
-        createdDeals.forEach(deal => {
-          const option = document.createElement('option');
-          option.value = deal.table_name;
-          option.text = deal.table_name;
-          dropdown.add(option);
-        });
+        // 🛠 Set selected option
+        dropdownElement.value = selectedTableName;
+        console.log(`✅ Selected table in '${dropdownElementId}':`, selectedTableName);
+    
+
+        appState.setSelectedPortTableName(selectedTableName);
+
+        // Portfolios oder DealsMain geladen werden
+        const isPortfolio = dropdownElementId.startsWith('createdPortDropdown');
+        const allData = isPortfolio ? appState.getPortfolioData() : appState.getAllDealsData();
+        console.log(`📌 Daten für alle Portfolios:`, allData);
+        const filteredData = allData.filter(entry => entry.port_name === selectedTableName);
+
+        console.log(`📌 Gefilterte Daten für ${selectedTableName}:`, filteredData);
+
+        if (filteredData.length > 0) {
+            updateDataFunction(filteredData);
+        } else {
+            console.warn(`⚠️ Keine Daten gefunden für '${selectedTableName}' (${isPortfolio ? 'Portfolio' : 'Deals'}).`);
+        }
+
+    
+        // const dynamicMVaRDataTable = `MVar${selectedTableName}Main_rel`;
+        // window.api.send('fetch-table-data', dynamicMVaRDataTable);
+        // registerListener(`${dynamicMVaRDataTable}Data`, receivedDynamicMVaRData => {
+        //     if (updateMvarDataFunction && receivedDynamicMVaRData?.length) {
+        //         updateMvarDataFunction(receivedDynamicMVaRData);
+        //     } else {
+        //         console.warn(`⚠️ No dynamic MVaR data found for '${selectedTableName}'`);
+        //     }
+        // });
+    
+        // const generalMVaRDataTable = 'MVaRMain_rel';
+        // window.api.send('fetch-table-data', generalMVaRDataTable);
+        // registerListener(`${generalMVaRDataTable}Data`, receivedGeneralMVaRData => {
+        //     if (updateMvarDataFunction && receivedGeneralMVaRData?.length) {
+        //         updateMvarDataFunction(receivedGeneralMVaRData);
+        //     }
+        // });
     }
-
-
 
     fetchAndHandlePortData(tableName, dropdownId) {
-        window.api.send('fetch-table-data', tableName);
+        console.log(`🔍 Fetching Portfolio Data from appState for: ${tableName}`);
     
-        window.api.receive(tableName + 'Data', (receivedData) => {
-            // console.log('selectedTableName:', tableName);
-            // console.log('dropdownId:', dropdownId);
+        // ✅ Daten direkt aus `appState` holen
+        const allPortfolios = appState.getPortfolioData();
+        if (!allPortfolios || allPortfolios.length === 0) {
+            console.warn(`⚠️ No portfolio data available in appState.`);
+            return;
+        }
     
-            // Check the table type and handle accordingly
-            const tableType = tableName.startsWith('Port') ? 'port' : 'deals';
+        console.log('📌 Alle gespeicherten Portfolios:', allPortfolios);
     
-            if (tableType === 'deals') {
-                // console.log('Table type is deals. No action needed.');
-                return; // Do nothing if the table type is deals
-            }
+        // 🔹 Das richtige Portfolio filtern
+        const filteredData = allPortfolios.filter(entry => entry.port_name === tableName);
+        if (!filteredData.length) {
+            console.warn(`⚠️ Kein Portfolio gefunden für ${tableName} in Portfolios.`);
+            return;
+        }
+
+        console.log(`📌 filteredData für ${tableName}.`,filteredData);
     
-            // Determine the appropriate container ID and update the data
-            let containerId;
-            switch (dropdownId) {
-                case 'createdPortDropdown0':
-                    containerId = 'portDataContainer';
-                    break;
-                case 'createdPortDropdown':
-                    containerId = 'compPortDataContainer';
-                    break;
-                case 'createdPortDropdown2':
-                    containerId = 'compPortDataContainer2';
-                    break;
-                default:
-                    containerId = 'portDataContainer';
-            }
+        // 🔹 Richtigen Container ermitteln
+        let containerId;
+        switch (dropdownId) {
+            case 'createdPortDropdown0': containerId = 'portDataContainer0'; break;
+            case 'createdPortDropdown1': containerId = 'portDataContainer1'; break;
+            case 'createdPortDropdown2': containerId = 'portDataContainer2'; break;
+            default: containerId = 'portDataContainer0';
+        }
     
-            // Set the active element ID and update the data
-            this.setActiveElementId(containerId);
-            this.updatePortData(receivedData);
-        });
+        console.log(`📌 Aktualisiere Container: ${containerId} mit Daten für: ${tableName}`);
+    
+        // 🔹 Aktives Element setzen & Daten aktualisieren
+        this.setActiveElementId(containerId);
+        this.updatePortData(filteredData, containerId);
     }
     
-    
-    
-    
-    
+    updatePortData(receivedData, containerId) {
+        
+        //this.updatePortDataTable(receivedData);
+        
+        const portData = receivedData//getPortDataForElement(containerId);
 
-    updatePortData(receivedData) {
-        this.updatePortDataTable(receivedData);
-        this.handlePortMainData(receivedData);
+
+        console.log('receivedData', receivedData, containerId); 
+        console.log('portData', portData);
+
+
+        this.handlePortMainData(portData, containerId);
         this.applyFiltersAndUpdateDropdowns('port');
     
         // Update the form fields based on the active element ID
-        const containerId = this.getActiveElementId();
+        // const containerId = this.getActiveElementId();
         const elements = this.getFormElementsForContainer(containerId);
+
+        // console.log('elements', elements)
     
         elements.formPortValue.textContent = formPortValue;
         elements.formPortNotional.textContent = formPortNotional;
@@ -1183,10 +1146,10 @@ this.setFilteredDataForTable(tableType, filteredData);
             CSSensDataContainer.appendChild(CSSensTable); // Append the new table
         }
     }
-    
+
     getFormElementsForContainer(containerId) {
         switch (containerId) {
-            case 'compPortDataContainer':
+            case 'portDataContainer1':
                 return {
                     formPortValue: document.getElementById('formPortValue1'),
                     formPortNotional: document.getElementById('formPortNotional1'),
@@ -1195,7 +1158,7 @@ this.setFilteredDataForTable(tableType, filteredData);
                     formPortPV01: document.getElementById('formPortPV011'),
                     formPortCPV01: document.getElementById('formPortCPV011')
                 };
-            case 'compPortDataContainer2':
+            case 'portDataContainer2':
                 return {
                     formPortValue: document.getElementById('formPortValue2'),
                     formPortNotional: document.getElementById('formPortNotional2'),
@@ -1216,9 +1179,4 @@ this.setFilteredDataForTable(tableType, filteredData);
         }
     }
     
-    
-
-    
-    
-
 }

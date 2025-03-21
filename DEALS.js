@@ -70,7 +70,7 @@ export function dealsAddButtonHandler (event, selectedTableName) {
 // }
 
 export function handleDealsData(receivedData, dealsTableName) {
-  //console.log('DEALS receivedData:', receivedData);
+  console.log('DEALS receivedData:', receivedData);
   //console.log('DEALS selectedTableName:', dealsTableName);
 
   const dealsDataContainer = document.getElementById('dealsDataContainer');
@@ -78,7 +78,7 @@ export function handleDealsData(receivedData, dealsTableName) {
   const tableName = dealsTableName;
 
   if (dealsDataContainer && dealsData) {
-    const filteredDealsData = appState.getFilteredData('deals');
+    const filteredDealsData = receivedData    //appState.getFilteredData('deals');
     //console.log('appState.getDealsData():', filteredDealsData);
 
     const dealsDataHTML = processData(filteredDealsData, dealsTableName);

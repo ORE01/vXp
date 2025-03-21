@@ -276,6 +276,7 @@ function insertSelection(selectedFromTableName, selectionName, tagValues, select
     });
   });
 }
+
 // DELETE the created Portfolios in DEALS
 // function deleteTable(selectedTableName, sender) {
 //   console.log('deleteTable: selectedTableName', selectedTableName);

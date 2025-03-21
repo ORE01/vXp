@@ -11,7 +11,7 @@ const tableHandlers = {
 };
 
 // ISSUER-Feld PROBLEM:
-export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter']);
+export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter','Portfolios']);
 
 // ISSUER-Feld PROBLEM:
 export function shouldSkipTable(tableName) {

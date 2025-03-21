@@ -126,6 +126,7 @@ body::-webkit-scrollbar-track {
 .right-part {
   width: 50%; /* Adjust the width as needed */
   float: left;
+  margin-top: 50px;
 }
 
 /* Prevent elements inside the right part from affecting its width */

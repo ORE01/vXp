@@ -25,7 +25,7 @@ export function handleProdData(receivedData, filtersConfig) {
     
     let filteredProdData = filterColumnsInData(filterProdData(prodData, filtersConfig), columns);
 
-    console.log('PROD; handleProdData:', filteredProdData);
+    // console.log('PROD; handleProdData:', filteredProdData);
     appState.setFilteredProdData(filteredProdData);
 
     // filteredProdData = filteredProdData.map(row => {
@@ -171,7 +171,7 @@ function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfr
 // }
 
 function checkCSSzenarioFlag(filteredProdData) {
-  console.log('🔍 CS Szenario Check läuft...');
+  // console.log('🔍 CS Szenario Check läuft...');
 
   const csWarningContainer = document.getElementById('csWarningContainer');
   const csWarningLight = document.getElementById('csWarning'); 
@@ -198,7 +198,7 @@ function checkCSSzenarioFlag(filteredProdData) {
       csWarningContainer.style.visibility = 'hidden'; // Warnung verstecken
       csWarningLight.style.backgroundColor = 'gray';  // Standardfarbe zurücksetzen
 
-      console.log('✅ Kein CS Szenario gesetzt.');
+      // console.log('✅ Kein CS Szenario gesetzt.');
   }
 }
 

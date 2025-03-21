@@ -12,7 +12,7 @@ export function displayValuesForElementId(elementId, savedValues) {
   }
 
   switch (elementId) {
-    case 'portDataContainer':
+    case 'portDataContainer0':
       {
         const elements = {
           formFiltPortValue: 'formFiltPortValue',
@@ -28,7 +28,9 @@ export function displayValuesForElementId(elementId, savedValues) {
           formMvarIR:'formPortMvarIR',
           formMvarCS:'formPortMvarCS',
 
-          formCvarTOT:'formPortCvarTOT',
+          formCvarRating:'formPortCvarRating',
+          formCvarMarket:'formPortCvarMarket',
+          formCvarNorm:'formPortCvarNorm',
         };
 
         for (const id of Object.values(elements)) {
@@ -40,7 +42,7 @@ export function displayValuesForElementId(elementId, savedValues) {
       }
       break;
 
-    case 'compPortDataContainer':
+    case 'portDataContainer1':
       {
         const elements = {
           formFiltPortValue: 'formPortValue1',
@@ -56,7 +58,9 @@ export function displayValuesForElementId(elementId, savedValues) {
           formMvarIR:'formPortMvarIR1',
           formMvarCS:'formPortMvarCS1',
 
-          formCvarTOT:'formPortCvarTOT1',
+          formCvarRating:'formPortCvarRating1',
+          formCvarMarket:'formPortCvarMarket1',
+          formCvarNorm:'formPortCvarNorm1',
         };
 
         for (const id of Object.values(elements)) {
@@ -68,7 +72,7 @@ export function displayValuesForElementId(elementId, savedValues) {
       }
       break;
 
-    case 'compPortDataContainer2':
+    case 'portDataContainer2':
       {
         const elements = {
           formFiltPortValue: 'formPortValue2',
@@ -84,7 +88,9 @@ export function displayValuesForElementId(elementId, savedValues) {
           formMvarIR:'formPortMvarIR2',
           formMvarCS:'formPortMvarCS2',
 
-          formCvarTOT:'formPortCvarTOT2',
+          formCvarRating:'formPortCvarRating2',
+          formCvarMarket:'formPortCvarMarket2',
+          formCvarNorm:'formPortCvarNorm2',
         };
 
         for (const id of Object.values(elements)) {
@@ -102,11 +108,13 @@ export function displayValuesForElementId(elementId, savedValues) {
 
 
 // ComparisonCharts
-const containerIds = ['compChartContainer1', 'compChartContainer2', 'compChartContainer3', 'compChartContainer4', 'compChartContainer5', 'compChartContainer6']; // Include the ID for the third chart container
-const chartNames = ['PV01', 'CPV01', 'MvarTOT', 'MvarIR', 'MvarCS', 'CvarTOT'];
+const containerIds = ['compChartContainer1', 'compChartContainer2', 'compChartContainer3', 'compChartContainer4', 'compChartContainer5', 'compChartContainer6', 'compChartContainer7', 'compChartContainer8']; // Include the ID for the third chart container
+const chartNames = ['PV01', 'CPV01', 'MvarTOT', 'MvarIR', 'MvarCS', 'CvarRating','CvarMarket','CvarNorm'];
 const chartLabels = [
   ['Portfolio 1', 'Portfolio 2', 'Difference'], 
   ['Portfolio 1', 'Portfolio 2', 'Difference'], 
+  ['Portfolio 1', 'Portfolio 2', 'Difference'],
+  ['Portfolio 1', 'Portfolio 2', 'Difference'],
   ['Portfolio 1', 'Portfolio 2', 'Difference'],
   ['Portfolio 1', 'Portfolio 2', 'Difference'],
   ['Portfolio 1', 'Portfolio 2', 'Difference'],
@@ -121,8 +129,8 @@ const chartType = 'bar';
 
 function createComparisonCharts(savedValues, containerIds, chartNames, chartLabels, chartType, destroyPrevious = false) {
   // Check if both sets of data are available
-  const isFirstSetPresent = savedValues['compPortDataContainer'];
-  const isSecondSetPresent = savedValues['compPortDataContainer2'];
+  const isFirstSetPresent = savedValues['portDataContainer1'];
+  const isSecondSetPresent = savedValues['portDataContainer2'];
 
   if (isFirstSetPresent && isSecondSetPresent) {
     // Loop through each container and create a chart
@@ -143,9 +151,9 @@ function createComparisonCharts(savedValues, containerIds, chartNames, chartLabe
         datasets: [{
           label: chartNames[index],
           data: [
-            parseFloat(savedValues['compPortDataContainer'][`formPort${chartNames[index]}1`]) || 0,
-            parseFloat(savedValues['compPortDataContainer2'][`formPort${chartNames[index]}2`]) || 0,
-            parseFloat(savedValues['compPortDataContainer'][`formPort${chartNames[index]}1`]) - parseFloat(savedValues['compPortDataContainer2'][`formPort${chartNames[index]}2`]) || 0
+            parseFloat(savedValues['portDataContainer1'][`formPort${chartNames[index]}1`]) || 0,
+            parseFloat(savedValues['portDataContainer2'][`formPort${chartNames[index]}2`]) || 0,
+            parseFloat(savedValues['portDataContainer1'][`formPort${chartNames[index]}1`]) - parseFloat(savedValues['portDataContainer2'][`formPort${chartNames[index]}2`]) || 0
           ],
           backgroundColor: [
             'rgba(255, 99, 132, 0.2)', // Red
@@ -162,8 +170,8 @@ function createComparisonCharts(savedValues, containerIds, chartNames, chartLabe
       };
 
       // Check if both datasets contain the necessary data before calculating the difference
-      if (savedValues['compPortDataContainer'][`formPort${chartNames[index]}1`] && savedValues['compPortDataContainer2'][`formPort${chartNames[index]}2`]) {
-        const difference = parseFloat(savedValues['compPortDataContainer'][`formPort${chartNames[index]}1`]) - parseFloat(savedValues['compPortDataContainer2'][`formPort${chartNames[index]}2`]);
+      if (savedValues['portDataContainer1'][`formPort${chartNames[index]}1`] && savedValues['portDataContainer2'][`formPort${chartNames[index]}2`]) {
+        const difference = parseFloat(savedValues['portDataContainer1'][`formPort${chartNames[index]}1`]) - parseFloat(savedValues['portDataContainer2'][`formPort${chartNames[index]}2`]);
         chartData.datasets[0].data.push(difference);
       } else {
         // If data is missing for either dataset, push 0 as the difference

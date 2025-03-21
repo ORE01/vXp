@@ -70,58 +70,11 @@ getAllTableNames((err, receivedTableNames) => {
   }
 });
 
-// ipcMain.on('start-py-fairValue', async (event, args) => {
-//   console.log('main: Received arguments for py-fairValue:', args);
 
-//   const { tableName, CSSzenario } = args; // Extrahiere `tableName` und `name` aus den Argumenten
-
-//   if (!tableName || !CSSzenario) {
-//     console.error('❌ Missing required arguments: "tableName" or "CSSzenario".');
-//     event.reply('py-fairValue-complete', {
-//       success: false,
-//       projectName: 'py-fairValue',
-//       message: 'Both "tableName" and "scenarioName" are required.',
-//     });
-//     return; // Beende die Verarbeitung, wenn ein Argument fehlt
-//   }
-
-//   try {
-//     // Python-Skript ausführen mit `--table` und `--name` als Argumente
-//     const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario];
-//     console.log('main: Starting Python script with arguments:', pythonArgs);
-
-//     const result = await startPythonScriptWithEvent(event, 'fvo', 'py-fairValue', pythonArgs);
-
-//     console.log('✅ Python script executed successfully:', result);
-
-//     // Transformation von `tableName` (optional)
-//     const newTableName = tableName.replace('Deals', 'Port');
-//     //console.log('🔄 Transformed tableName:', newTableName);
-
-//     // Tabelle aktualisieren (falls nötig)
-//     refreshTable(newTableName);
-
-//     // Antwort an Renderer senden
-//     event.reply('py-fairValue-complete', {
-//       success: true,
-//       projectName: 'py-fairValue',
-//       tableName: newTableName,
-//       result,
-//     });
-//   } catch (error) {
-//     console.error('❌ Error during Python script execution or processing:', error);
-//     event.reply('py-fairValue-complete', {
-//       success: false,
-//       projectName: 'py-fairValue',
-//       error: error.toString(),
-//       tableName,
-//     });
-//   }
-// });
 ipcMain.on('start-py-fairValue', async (event, args) => {
   console.log('main: Received arguments for py-fairValue:', args);
 
-  const { tableName, CSSzenario, selectedCurve } = args; // `selectedCurve` extrahieren
+  const { tableName, CSSzenario, selectedCurve } = args; 
 
   if (!tableName || !CSSzenario || !selectedCurve) {
     console.error('❌ Missing required arguments: "tableName", "CSSzenario", or "selectedCurve".');
@@ -130,41 +83,50 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
       projectName: 'py-fairValue',
       message: 'All three arguments ("tableName", "CSSzenario", "selectedCurve") are required.',
     });
-    return; // Verarbeitung abbrechen, wenn ein Argument fehlt
+    return;
   }
 
   try {
-    // Python-Skript mit zusätzlichen Argumenten starten
+    // Python-Skript mit Argumenten starten
     const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario, '--selectedCurve', selectedCurve];
     console.log('main: Starting Python script with arguments:', pythonArgs);
 
     const result = await startPythonScriptWithEvent(event, 'fvo', 'py-fairValue', pythonArgs);
-
     console.log('✅ Python script executed successfully:', result);
 
-    // Transformation von `tableName` (optional)
+    // ✅ Aktualisiere "Portfolios"-Tabelle asynchron
+    refreshTable('Portfolios', () => {
+      console.log('✅ Refreshed table: Portfolios');
+    });
+
+    // ✅ Transformation von `tableName` falls nötig
     const newTableName = tableName.replace('Deals', 'Port');
 
-    // Tabelle aktualisieren (falls nötig)
-    refreshTable(newTableName);
-
-    // Antwort an Renderer senden
+    // ✅ Antwort an Renderer senden
     event.reply('py-fairValue-complete', {
       success: true,
       projectName: 'py-fairValue',
       tableName: newTableName,
-      result,
+      result
     });
+
   } catch (error) {
-    console.error('❌ Error during Python script execution or processing:', error);
+    console.error('❌ Error during Python script execution:', error);
     event.reply('py-fairValue-complete', {
       success: false,
       projectName: 'py-fairValue',
       error: error.toString(),
       tableName,
     });
+  } finally {
+    event.reply('project-finished', {
+      success: true,
+      projectName: 'py-fairValue'
+    });
   }
 });
+
+
 
 ipcMain.on('start-py-MVaR', async (event, args) => {
   console.log('start-py-MVaR:', args);
@@ -184,7 +146,7 @@ ipcMain.on('start-py-MVaR', async (event, args) => {
 
   startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['--table', tableName])
     .then(() => {
-      console.log('✅ Python script executed successfully');
+      console.log('Python script executed successfully');
 
       // Non-blocking refresh like CVaR
       tablesToRefresh.forEach(table => {
@@ -240,7 +202,7 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
   }
 
   const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario];
-  console.log('🚀 Starting Python script with arguments:', pythonArgs);
+  console.log('Starting Python script with arguments:', pythonArgs);
 
   startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs)
     .then(() => {
@@ -501,6 +463,7 @@ ipcMain.on('add-new-row', (event, { newRowData, cleanTableName }) => {
       console.log('Row added successfully:', newRowData);
       event.reply('add-new-row-success');
       refreshTable(cleanTableName);
+      refreshTable('DealsMain');
     }
   });
 });
@@ -533,21 +496,41 @@ ipcMain.on('erase-data', async (event, {cleanTableName, uniqueIdentifier }) => {
 });
 
 // SAVE DEALS SELECTION
+// ipcMain.on('save-deals-selection', async (event, selectionData) => {
+//   console.log('selectionData1:', selectionData);
+//   const { selectedFromTableName, selectionName, tagValues, selectedTradeIDs } = selectionData;
+
+//   try {
+//     // Wait for the selection to be inserted and the table to be created
+//     await insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs);
+//     console.log('Selection inserted and table created successfully');
+    
+//     // Now that the table exists, refresh it
+//     refreshTable(selectionName);
+//   } catch (error) {
+//     console.error('Error handling selection:', error);
+//   }
+// });
+
 ipcMain.on('save-deals-selection', async (event, selectionData) => {
   console.log('selectionData1:', selectionData);
-  const { selectedFromTableName, selectionName, tagValues, selectedTradeIDs } = selectionData;
+  const { selectedFromTableName, tagValues, selectedTradeIDs } = selectionData;
+  
+  // ⚡ Use the correct portfolio name (without 'Deals' prefix)
+  const portName = selectedFromTableName.replace('Deals', '');
 
   try {
-    // Wait for the selection to be inserted and the table to be created
-    await insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs);
-    console.log('Selection inserted and table created successfully');
-    
-    // Now that the table exists, refresh it
-    refreshTable(selectionName);
+    // Insert selection into DealsMain with the correct port_name
+    await insertSelection(selectedFromTableName, portName, tagValues, selectedTradeIDs);
+    console.log(`✅ Selection inserted for portfolio: ${portName}`);
+
+    // Refresh DealsMain after inserting new data
+    refreshTable('DealsMain');
   } catch (error) {
-    console.error('Error handling selection:', error);
+    console.error('❌ Error handling selection:', error);
   }
 });
+
 
 // DELETE DEALS SELECTION
 ipcMain.on('delete-selected-table', (event, selectedTableName) => {
@@ -556,16 +539,29 @@ ipcMain.on('delete-selected-table', (event, selectedTableName) => {
 });
 
 // Display the selected Deals
-ipcMain.on('fetch-table-data', (event, selectedTableName) => {
-  // console.log('selectedTableName:', selectedTableName);
-  refreshTable(selectedTableName, () => {
-    // This callback will be called after the selected table refresh is completed
-    // Now, you can safely refresh the "created tables" dropdown
-    refreshTable('createdDeals');
-    refreshTable('createdPort');
+// ipcMain.on('fetch-table-data', (event, selectedTableName) => {
+//   // console.log('selectedTableName:', selectedTableName);
+//   refreshTable(selectedTableName, () => {
+//     // This callback will be called after the selected table refresh is completed
+//     // Now, you can safely refresh the "created tables" dropdown
+//     refreshTable('createdDeals');
+//     refreshTable('createdPort');
     
+//   });
+// });
+
+ipcMain.on('fetch-portfolios-data', (event) => {
+  console.log('🔍 Fetching portfolio data from "Portfolios" table.');
+
+  refreshTable('Portfolios', () => {
+    console.log('✅ Portfolios table refreshed successfully.');
+
+    // Nach dem Laden auch die Dropdowns aktualisieren
+    // refreshTable('createdDeals');
+    // refreshTable('createdPort');
   });
 });
+
 
 
 

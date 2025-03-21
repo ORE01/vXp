@@ -76,8 +76,8 @@ export function handleFWDData(receivedData, applyCubicSpline) {
   });
   
   // Debugging
-  console.log("Extracted Swap Rates:", swapRates);
-  console.log("Extracted Swap Years:", swapYears);
+  // console.log("Extracted Swap Rates:", swapRates);
+  // console.log("Extracted Swap Years:", swapYears);
   
 
   if (!swapRates.length || !swapYears.length) {

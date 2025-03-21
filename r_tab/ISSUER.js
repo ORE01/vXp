@@ -11,6 +11,8 @@ let filteredIssuerData;
 
 
 export async function handleIssuerData(receivedData, appState) {
+  console.log('Issuer Data:', receivedData);
+
   const issuerDataContainer = document.getElementById('issuerDataContainer');
   issuerData = receivedData;
 
@@ -18,7 +20,7 @@ export async function handleIssuerData(receivedData, appState) {
   let rank;
   try {
     rank = await appState.getRankData();
-    console.log('rank', rank);
+    // console.log('rank', rank);
   } catch (error) {
     console.log('Error retrieving rank data:', error.message);
     console.log('rankData not available yet');
@@ -30,15 +32,15 @@ export async function handleIssuerData(receivedData, appState) {
 
 
   // issuerData  = AppState.filteredData['issuer'];
-   console.log('issuerData:', issuerData); 
+  //  console.log('issuerData:', issuerData); 
    //console.log('filtersConfig:', filtersConfig); 
   if (issuerDataContainer && issuerData) {
     let columns = ['ISSUER', 'TICKER', 'RATING'];
-    // filteredIssuerData  = issuerData// appState.getFilteredDataForTable(issuerData, 'issuer');
-    filteredIssuerData = appState.filteredData['issuer']
+    // filteredIssuerData  = appState.getFilteredData('issuer');
+    // filteredIssuerData = appState.filteredData['issuer']
     
-    // filteredIssuerData  = receivedData;
-    // console.log('issuerData:', issuerData);
+    filteredIssuerData  = receivedData;
+    console.log('filteredIssuerData:', filteredIssuerData);
     
     
     const issuerDataHTML = processData(filteredIssuerData, 'Issuer');
@@ -67,7 +69,7 @@ export async function handleIssuerData(receivedData, appState) {
     issueraddButton.addEventListener('click', (event) => {
       const tableName = 'Issuer';
       const actionType = 'add';
-      console.log('AddButton')
+      // console.log('AddButton')
       handleFormAction(event, issuerData, null, tableName, actionType);
     });
 

@@ -39,8 +39,11 @@ let esIR;
 let esCS;
 let esTOT;
 
-let cvarTOT;
-let cesTOT;
+
+
+let cvarRating = 0, cesRating = 0;
+let cvarMarket = 0, cesMarket = 0;
+let cvarNorm = 0, cesNorm = 0;
 
 
 
@@ -52,43 +55,85 @@ let cesTOT;
 
 
 // Adjusted handlePortMainData function
-export function handlePortMainData(receivedData) {
-  // console.log('handlePortMainData - Received Data:', receivedData);
+// export function handlePortMainData(receivedData) {
+//   // console.log('handlePortMainData - Received Data:', receivedData);
+
+//   const portData = filterColumnsInData(receivedData, columns);
+
+//   PortValue = 0;
+//   PortNotional = 0;
+//   PortYield = 0;
+//   PortYieldA = 0;
+//   PortPV01 = 0;
+//   PortCPV01 = 0;
+
+//   // Aggregate NOTIONAL and NAV to calculate total values
+//   portData.forEach((dataPoint) => {
+//     PortValue += parseFloat(dataPoint.NAV);
+//     PortNotional += parseFloat(dataPoint.NOTIONAL);
+//     PortYield += parseFloat(dataPoint.ytmPort);
+//     PortYieldA += parseFloat(dataPoint.ytmPortA);
+//     PortPV01+= parseFloat(dataPoint.PV01);
+//     PortCPV01+= parseFloat(dataPoint.CPV01);
+//   });
+
+//   formPortValue = formatNumberWithGrouping(PortValue)+ ' EUR';
+//   formPortNotional = formatNumberWithGrouping(PortNotional)+ ' EUR';
+
+//   formPortYield = PortYield/PortValue *100;
+//   formPortYield = formPortYield.toFixed(2)+'%';
+
+//   formPortYieldA = PortYieldA/PortValue *100;
+//   formPortYieldA = formPortYieldA.toFixed(2)+'%';
+
+//   formPortPV01 = PortPV01/PortValue * 10000;
+//   formPortPV01 = formPortPV01.toFixed(2);
+
+//   formPortCPV01 = PortCPV01/PortValue * 10000;
+//   formPortCPV01 = formPortCPV01.toFixed(2);
+// }
+const portDataMap = {}; // Speichert Daten pro Container
+
+export function handlePortMainData(receivedData, elementId) {
+  console.log(`🔄 handlePortMainData für ${elementId} aufgerufen`);
+
+  if (!portDataMap[elementId]) {
+    portDataMap[elementId] = {}; // Falls noch keine Daten gespeichert sind
+  }
 
   const portData = filterColumnsInData(receivedData, columns);
+  console.log('portData:', portData);
 
-  PortValue = 0;
-  PortNotional = 0;
-  PortYield = 0;
-  PortYieldA = 0;
-  PortPV01 = 0;
-  PortCPV01 = 0;
+  let PortValue = 0;
+  let PortNotional = 0;
+  let PortYield = 0;
+  let PortYieldA = 0;
+  let PortPV01 = 0;
+  let PortCPV01 = 0;
 
-  // Aggregate NOTIONAL and NAV to calculate total values
+  // Aggregate NOTIONAL und NAV für das aktuelle Dropdown
   portData.forEach((dataPoint) => {
     PortValue += parseFloat(dataPoint.NAV);
     PortNotional += parseFloat(dataPoint.NOTIONAL);
     PortYield += parseFloat(dataPoint.ytmPort);
     PortYieldA += parseFloat(dataPoint.ytmPortA);
-    PortPV01+= parseFloat(dataPoint.PV01);
-    PortCPV01+= parseFloat(dataPoint.CPV01);
+    PortPV01 += parseFloat(dataPoint.PV01);
+    PortCPV01 += parseFloat(dataPoint.CPV01);
   });
 
-  formPortValue = formatNumberWithGrouping(PortValue)+ ' EUR';
-  formPortNotional = formatNumberWithGrouping(PortNotional)+ ' EUR';
+  // Formatierte Werte speichern
+  portDataMap[elementId] = {
+    formPortValue: formatNumberWithGrouping(PortValue) + " EUR",
+    formPortNotional: formatNumberWithGrouping(PortNotional) + " EUR",
+    formPortYield: (PortYield / PortValue * 100).toFixed(2) + "%",
+    formPortYieldA: (PortYieldA / PortValue * 100).toFixed(2) + "%",
+    formPortPV01: (PortPV01 / PortValue * 10000).toFixed(2),
+    formPortCPV01: (PortCPV01 / PortValue * 10000).toFixed(2),
+  };
 
-  formPortYield = PortYield/PortValue *100;
-  formPortYield = formPortYield.toFixed(2)+'%';
-
-  formPortYieldA = PortYieldA/PortValue *100;
-  formPortYieldA = formPortYieldA.toFixed(2)+'%';
-
-  formPortPV01 = PortPV01/PortValue * 10000;
-  formPortPV01 = formPortPV01.toFixed(2);
-
-  formPortCPV01 = PortCPV01/PortValue * 10000;
-  formPortCPV01 = formPortCPV01.toFixed(2);
+  console.log(`✅ Gespeicherte Daten für ${elementId}:`, portDataMap[elementId]);
 }
+
 
 // Function to filter data based on current selections in filtersConfig
 function filterData(data, filtersConfig) {
@@ -105,8 +150,8 @@ function filterData(data, filtersConfig) {
 
 export function handlePortMainFilteredData(receivedData, filtersConfig, elementId) {
   // console.log('Fct: handlePortMainFilteredData:');
-  // console.log('elementId:', elementId);
-  // console.log('receivedData:', receivedData);
+  console.log('elementId:', elementId);
+  console.log('receivedData:', receivedData);
 
   if (!receivedData || !Array.isArray(receivedData) || receivedData.length === 0) {
     console.error('receivedData is not in the expected format or is empty');
@@ -114,52 +159,132 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
   }
 
 
-  const portTableName = appState.getSelectedPortTableName();
-  // console.log('portTableName:', portTableName);
+  const portTableName = appState.getSelectedPortTableName() || 'PortMain';
+  console.log('portTableName:', portTableName);
   const portDataContainer = document.getElementById(elementId);
 
+  const MVaRData = appState.getMvarData() || []; // Stelle sicher, dass es definiert ist
+  console.log('🔍 MVaRData:', MVaRData);
 
-  const MVaRData = appState.getMvarData();
+
+// Finde das richtige Portfolio in MVaRData
+const selectedMVaRData = MVaRData.find(item => item.port_name === portTableName);
+
+if (!selectedMVaRData) {
+  console.warn(`⚠️ Kein MVaR-Eintrag für ${portTableName} gefunden.`);
+  mvarIR = 0;
+  mvarCS = 0;
+  mvarTOT = 0;
+  esIR = 0;
+  esCS = 0;
+  esTOT = 0;
+} else {
+  // Extrahiere Werte aus dem gefundenen Portfolio
+  mvarTOT = selectedMVaRData.VaR_T_abs || 0;
+  mvarIR = selectedMVaRData.VaR_IR_abs || 0;
+  mvarCS = selectedMVaRData.VaR_CS_abs || 0;
+  esTOT = selectedMVaRData.ES_T_abs || 0;
+  esIR = selectedMVaRData.ES_IR_abs || 0;
+  esCS = selectedMVaRData.ES_CS_abs || 0;
+
 
   
-  // console.log('MVaRData:', MVaRData);
-  if (!MVaRData) {
-    // Set the associated variables to 0
-    mvarIR = 0;
-    mvarCS = 0;
-    mvarTOT = 0;
-    esIR = 0;
-    esCS = 0;
-    esTOT = 0;
-  } else {
-
-  [mvarTOT, mvarIR, mvarCS] = MVaRData.map(item => item.VaR);
-  [esTOT, esIR, esCS] = MVaRData.map(item => item.ES);
   
-  // console.log('mvarIR:', mvarIR);
-  // console.log('mvarCS:', mvarCS);
-  // console.log('mvarTOT:', mvarTOT);
-  // console.log('esIR:', esIR);
-  // console.log('esCS:', esCS);
-  // console.log('esTOT:', esTOT);
+  
+  console.log('mvarIR:', mvarIR);
+  console.log('mvarCS:', mvarCS);
+  console.log('mvarTOT:', mvarTOT);
+  console.log('esIR:', esIR);
+  console.log('esCS:', esCS);
+  console.log('esTOT:', esTOT);
   };
 
-  const CVaRData = appState.getCvarData();
+  // const CVaRData = appState.getCvarData();
 
-  if (!CVaRData) {
-    // Set the associated variables to 0
+  const registeredListeners = new Set(); // Speichert aktive Listener
 
-    cvarTOT = 0;
+  const portTableNameX = portTableName.replace(/Data$/, ''); // Entfernt "Data" am Ende
+  // const types = ['rating', 'market', 'norm']; // Die drei benötigten Datentypen
 
-    cesTOT = 0;
+  // console.log('🔄 CVaR-Datenabfrage gestartet von:', new Error().stack);
+
+  
+  // types.forEach((type) => {
+  //     const CVaRTableName = `CVar${portTableNameX}_${type}_rel`;
+  //     // console.log(`🔄 Anfrage für ${CVaRTableName}`);
+  
+  //     window.api.send('fetch-table-data', CVaRTableName);
+  
+  //     // **Verhindere doppelte Listener mit einer Set-Liste**
+  //     if (!registeredListeners.has(CVaRTableName)) {
+  //         registeredListeners.add(CVaRTableName);
+  
+  //         window.api.receive(`${CVaRTableName}Data`, (receivedCVarData) => {
+  //             // console.log(`✅ Empfangene CVaR-Daten aus ${CVaRTableName}:`, receivedCVarData);
+  
+  //             // Verarbeite die CVaR-Daten mit dem entsprechenden Typ
+  //             processCVarData(receivedCVarData, type);
+  //         });
+  //     } else {
+  //         console.warn(`⚠️ Listener für ${CVaRTableName} existiert bereits, wird nicht erneut hinzugefügt.`);
+  //     }
+  // });
+  
+  
+
+
+  
+  const allCVarData = appState.getAllCvarData(); // ✅ Get the full CVaR dataset
+  // console.log("🔍 allCVarData:", allCVarData);
+  console.log("🔍 CVaR Portfolio:", portTableNameX);
+  // console.log("📌 Available CVaR Portfolios:", allCVarData.map(item => item.port_name));
+  
+  
+  // Ensure data is an array
+  const dataArray = Array.isArray(allCVarData) ? allCVarData : [];
+  
+  // Filter only entries that match the selected portfolio
+  const filteredData = dataArray.filter(item => item.port_name === portTableNameX);
+  // console.log("🔍 Raw CVaR Data:", filteredData);
+  // filteredData.forEach(item => console.log(`pd_flag: ${item.pd_flag} (Type: ${typeof item.pd_flag})`));
+
+  
+  // Default values
+  let cvarRating = 0, cvarMarket = 0, cvarNorm = 0;
+  let cesRating = 0, cesMarket = 0, cesNorm = 0;
+  
+  // Find relevant entries
+  const ratingEntry = filteredData.find(item => item.pd_flag === 'RATING');
+  const marketEntry = filteredData.find(item => item.pd_flag === 'MARKET');
+  const normEntry = filteredData.find(item => item.pd_flag === 'NORM');
+  
+  // Assign values if found
+  if (ratingEntry) {
+      cvarRating = parseFloat(ratingEntry.VaR_rel) || 0;
+      cesRating = parseFloat(ratingEntry.ES_rel) || 0;
+      // console.log("✅ CVaR Rating:", cvarRating, "CES Rating:", cesRating);
   } else {
+      console.warn("⚠️ No CVaR data found for rating!");
+  }
+  
+  if (marketEntry) {
+      cvarMarket = parseFloat(marketEntry.VaR_rel) || 0;
+      cesMarket = parseFloat(marketEntry.ES_rel) || 0;
+      // console.log("✅ CVaR Market:", cvarMarket, "CES Market:", cesMarket);
+  } else {
+      console.warn("⚠️ No CVaR data found for market!");
+  }
+  
+  if (normEntry) {
+      cvarNorm = parseFloat(normEntry.VaR_rel) || 0;
+      cesNorm = parseFloat(normEntry.ES_rel) || 0;
+      // console.log("✅ CVaR Norm:", cvarNorm, "CES Norm:", cesNorm);
+  } else {
+      // console.warn("⚠️ No CVaR data found for norm!");
+  }
+  
 
-  [cvarTOT] = CVaRData.map(item => item.VaR);
-  [cesTOT] = CVaRData.map(item => item.ES);
-
-  // console.log('cvarTOT:', cvarTOT);
-  // console.log('cesTOT:', cesTOT);
-  };
+  
 
   if (!portDataContainer) {
     console.error(`Element with id ${elementId} not found`);
@@ -174,10 +299,16 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
 
   if (portDataContainer && portData) {
     let filteredPortData = filterColumnsInData(filterData(receivedData, filtersConfig), columns);
-    // console.log('filteredPortData:', filteredPortData);
+    
+    // if (JSON.stringify(appState.getFilteredPortData()) === JSON.stringify(filteredPortData)) {
+    //     console.warn("⚠️ Data is the same, skipping update.");
+    //     return;
+    // }
 
+    console.log("🔄 Updating filteredPortData...");
     appState.setFilteredPortData(filteredPortData);
-    //handleLiquidityData();
+
+
 
    
     // Aggregate NOTIONAL and NAV to calculate total values
@@ -220,9 +351,11 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     const formMvarIR = (parseFloat(mvarIR) ).toFixed(3)+'%';
     const formMvarCS = (parseFloat(mvarCS) ).toFixed(3)+'%';
 
-    const formCvarTOT = (parseFloat(cvarTOT) * 100).toFixed(3)+'%';
+    const formCvarRating = (parseFloat(cvarRating) * 100).toFixed(3)+'%';
+    const formCvarMarket = (parseFloat(cvarMarket) * 100).toFixed(3)+'%';
+    const formCvarNorm = (parseFloat(cvarNorm) * 100).toFixed(3)+'%';
 
-  // console.log('formMvarTOT:', formMvarTOT);
+  // console.log('formCvarRating:', formCvarRating);
 
     // elementId: Save the values
         savedValues[elementId] = {
@@ -237,7 +370,9 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
           formPortMvarIR:formMvarIR,
           formPortMvarCS:formMvarCS,
 
-          formPortCvarTOT:formCvarTOT,
+          formPortCvarRating:formCvarRating,
+          formPortCvarMarket:formCvarMarket,
+          formPortCvarNorm:formCvarNorm,
 
           formPortValue1: formFiltPortValue,
           formPortNotional1: formFiltPortNotional,
@@ -251,7 +386,9 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
           formPortMvarIR1:formMvarIR,
           formPortMvarCS1:formMvarCS,
 
-          formPortCvarTOT1:formCvarTOT,
+          formPortCvarRating1:formCvarRating,
+          formPortCvarMarket1:formCvarMarket,
+          formPortCvarNorm1:formCvarNorm,
 
           formPortValue2: formFiltPortValue,
           formPortNotional2: formFiltPortNotional,
@@ -265,7 +402,9 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
           formPortMvarIR2:formMvarIR,
           formPortMvarCS2:formMvarCS,
 
-          formPortCvarTOT2:formCvarTOT,
+          formPortCvarRating2:formCvarRating,
+          formPortCvarMarket2:formCvarMarket,
+          formPortCvarNorm2:formCvarNorm,
         };
 
 
@@ -282,7 +421,7 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
     // console.log('formFiltPortPV01:', formFiltPortPV01);
     // console.log('formFiltPortCPV01:', formFiltPortCPV01);
     // console.log('mvarTOT:', formMvarTOT);
-    // console.log('cvarTOT:', formCvarTOT);
+    // console.log('cvarRating:', formCvarRating);
 
     let filteredPortDataNew = filterColumnsInData(filteredPortData, columnsShowen);
     // console.log('filteredPortDataNew:', filteredPortDataNew);
@@ -337,6 +476,30 @@ export {PortValue,
         formFiltPortPV01, 
         formFiltPortCPV01
 };
+
+export function getPortDataForElement(elementId) {
+  return portDataMap[elementId] || {};
+}
+
+
+
+
+function processCVarData(receivedCVarData, type) {
+  if (!receivedCVarData || !Array.isArray(receivedCVarData) || receivedCVarData.length === 0) {
+      console.warn(`⚠️ Keine CVaR-Daten für ${type} gefunden.`);
+      return;
+  }
+
+  // console.log(`📊 Verarbeite CVaR-Daten für ${type}:`, receivedCVarData);
+
+  // Speichert die Daten in appState
+  const currentCVaRData = appState.getCvarData() || {};  // Vorherige Daten holen
+  currentCVaRData[type] = receivedCVarData;  // Spezifische Daten für `rating`, `market`, `norm` setzen
+
+  appState.setCvarData(currentCVaRData);  // Aktualisierte Daten speichern
+}
+
+
 
 
   
