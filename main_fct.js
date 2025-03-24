@@ -194,88 +194,142 @@ function insertDeal(data, tableName, callback) {
   });
 }
 // CREATE new Portfolios in DEALS
-function insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs) {
-  return new Promise((resolve, reject) => {
-    const createSelectionsTableQuery = `
-      CREATE TABLE IF NOT EXISTS selections (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        selection_name TEXT,
-        tags TEXT,
-        trade_ids TEXT
-      )`;
+// function insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs) {
+//   return new Promise((resolve, reject) => {
+//     const createSelectionsTableQuery = `
+//       CREATE TABLE IF NOT EXISTS selections (
+//         id INTEGER PRIMARY KEY AUTOINCREMENT,
+//         selection_name TEXT,
+//         tags TEXT,
+//         trade_ids TEXT
+//       )`;
 
-    db.run(createSelectionsTableQuery, [], function (err) {
-      if (err) {
-        console.error('Error creating selections table:', err.message);
-        reject(err);
+//     db.run(createSelectionsTableQuery, [], function (err) {
+//       if (err) {
+//         console.error('Error creating selections table:', err.message);
+//         reject(err);
+//         return;
+//       }
+
+//       console.log('Selections table created or already exists');
+
+//       const createCreatedTablesTableQuery = `
+//         CREATE TABLE IF NOT EXISTS createdDeals (
+//           id INTEGER PRIMARY KEY AUTOINCREMENT,
+//           table_name TEXT
+//         )`;
+
+//       db.run(createCreatedTablesTableQuery, [], function (err) {
+//         if (err) {
+//           console.error('Error creating createdDeals table:', err.message);
+//           reject(err);
+//           return;
+//         }
+
+//         console.log('Created tables table created or already exists');
+
+//         const createNewTableQuery = `
+//           CREATE TABLE IF NOT EXISTS ${selectionName} AS
+//           SELECT *
+//           FROM ${selectedFromTableName}
+//           WHERE TRADE_ID IN (${selectedTradeIDs.join(',')})`;
+
+//         db.run(createNewTableQuery, [], function (err) {
+//           if (err) {
+//             console.error('Error creating new table:', err.message);
+//             reject(err);
+//             return;
+//           }
+
+//           console.log(`New table '${selectionName}' created successfully`);
+
+//           const insertTableNameQuery = `
+//             INSERT INTO createdDeals (table_name) 
+//             VALUES (?)`;
+
+//           db.run(insertTableNameQuery, [selectionName], function (err) {
+//             if (err) {
+//               console.error('Error inserting table name:', err.message);
+//               reject(err);
+//               return;
+//             }
+
+//             console.log(`Table name '${selectionName}' inserted into tracking table`);
+
+//             const tagsValue = tagValues.length > 0 ? tagValues.join(',') : null;
+//             const insertSelectionQuery = `
+//               INSERT INTO selections (selection_name, tags, trade_ids) 
+//               VALUES (?, ?, ?)`;
+
+//             db.run(insertSelectionQuery, [selectionName, tagsValue, selectedTradeIDs.join(',')], function (err) {
+//               if (err) {
+//                 console.error('Error inserting selection:', err.message);
+//                 reject(err);
+//               } else {
+//                 console.log('Selection inserted successfully');
+//                 resolve();
+//               }
+//             });
+//           });
+//         });
+//       });
+//     });
+//   });
+// }
+
+function insertSelection(selectionName, selectedTradeIDs) {
+  return new Promise((resolve, reject) => {
+    // selectedTradeIDs ggf. in ein Array umwandeln
+    if (!Array.isArray(selectedTradeIDs)) {
+      try {
+        if (typeof selectedTradeIDs === 'string') {
+          selectedTradeIDs = JSON.parse(selectedTradeIDs.replace(/'/g, '"'));
+        } else {
+          throw new Error('selectedTradeIDs must be an array or valid JSON array string');
+        }
+      } catch (err) {
+        console.error('❌ Error parsing selectedTradeIDs:', err.message);
+        reject(new TypeError('selectedTradeIDs must be an array or a valid JSON array string'));
         return;
       }
+    }
 
-      console.log('Selections table created or already exists');
+    const placeholders = selectedTradeIDs.map(() => '?').join(',');
 
-      const createCreatedTablesTableQuery = `
-        CREATE TABLE IF NOT EXISTS createdDeals (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          table_name TEXT
-        )`;
+    const insertQuery = `
+      INSERT INTO DealsMain (
+        INCLUDE, PROD_ID, TRADE_DATE, CATEGORY, NOTIONAL, PRICE_BUY, Depotbank, port_name
+      )
+      SELECT 
+        INCLUDE,
+        PROD_ID,  -- ⬅️ Fehler behoben: nicht mit TRADE_ID überschreiben
+        TRADE_DATE,
+        CATEGORY,
+        NOTIONAL,
+        PRICE_BUY,
+        Depotbank,
+        ? AS port_name
+      FROM DealsMain
+      WHERE TRADE_ID IN (${placeholders})`;
 
-      db.run(createCreatedTablesTableQuery, [], function (err) {
-        if (err) {
-          console.error('Error creating createdDeals table:', err.message);
-          reject(err);
-          return;
-        }
-
-        console.log('Created tables table created or already exists');
-
-        const createNewTableQuery = `
-          CREATE TABLE IF NOT EXISTS ${selectionName} AS
-          SELECT *
-          FROM ${selectedFromTableName}
-          WHERE TRADE_ID IN (${selectedTradeIDs.join(',')})`;
-
-        db.run(createNewTableQuery, [], function (err) {
-          if (err) {
-            console.error('Error creating new table:', err.message);
-            reject(err);
-            return;
-          }
-
-          console.log(`New table '${selectionName}' created successfully`);
-
-          const insertTableNameQuery = `
-            INSERT INTO createdDeals (table_name) 
-            VALUES (?)`;
-
-          db.run(insertTableNameQuery, [selectionName], function (err) {
-            if (err) {
-              console.error('Error inserting table name:', err.message);
-              reject(err);
-              return;
-            }
-
-            console.log(`Table name '${selectionName}' inserted into tracking table`);
-
-            const tagsValue = tagValues.length > 0 ? tagValues.join(',') : null;
-            const insertSelectionQuery = `
-              INSERT INTO selections (selection_name, tags, trade_ids) 
-              VALUES (?, ?, ?)`;
-
-            db.run(insertSelectionQuery, [selectionName, tagsValue, selectedTradeIDs.join(',')], function (err) {
-              if (err) {
-                console.error('Error inserting selection:', err.message);
-                reject(err);
-              } else {
-                console.log('Selection inserted successfully');
-                resolve();
-              }
-            });
-          });
-        });
-      });
+    db.run(insertQuery, [selectionName, ...selectedTradeIDs], function (err) {
+      if (err) {
+        console.error('❌ Error inserting new deals:', err.message);
+        reject(err);
+      } else {
+        console.log(`✅ ${this.changes} rows duplicated in DealsMain with new TRADE_ID and port_name = '${selectionName}'`);
+        resolve();
+      }
     });
   });
 }
+
+
+
+
+
+
+
 
 // DELETE the created Portfolios in DEALS
 // function deleteTable(selectedTableName, sender) {
@@ -373,82 +427,118 @@ function insertSelection(selectedFromTableName, selectionName, tagValues, select
 //     }
 //   });
 // }
+// function deleteTable(selectedTableName, sender) {
+//   console.log('deleteTable: selectedTableName', selectedTableName);
+
+//   // Hilfsfunktion zum Löschen einer Tabelle
+//   function dropTable(tableName, messageType) {
+//     return new Promise((resolve, reject) => {
+//       const query = `DROP TABLE IF EXISTS ${tableName}`;
+//       db.run(query, (err) => {
+//         if (err) {
+//           console.error(`Error deleting table "${tableName}":`, err.message);
+//           sender.send(messageType, { tableName, message: err.message });
+//           reject(err);
+//         } else {
+//           console.log(`Table "${tableName}" has been deleted.`);
+//           resolve();
+//         }
+//       });
+//     });
+//   }
+
+//   // Hilfsfunktion zum Löschen eines Eintrags aus einer Hilfstabelle
+//   function deleteTableEntry(auxTable, columnName, columnValue) {
+//     const query = `DELETE FROM ${auxTable} WHERE ${columnName} = ?`;
+//     db.run(query, [columnValue], (err) => {
+//       if (err) {
+//         console.error(`Error deleting entry with ${columnName} "${columnValue}" from "${auxTable}":`, err.message);
+//         sender.send('table-entry-deletion-error', { tableName: selectedTableName, auxTable, message: err.message });
+//       } else {
+//         console.log(`Entry with ${columnName} "${columnValue}" has been deleted from "${auxTable}".`);
+//       }
+//     });
+//   }
+
+//   const portTableName = selectedTableName.replace(/^Deals/, 'Port');
+//   const mvarTableName = selectedTableName.replace(/^Deals/, 'MVarPort') + 'Main';
+//   const mvarRelTableName = selectedTableName.replace(/^Deals/, 'MVarPort') + 'Main_rel';
+//   const cvarRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + 'Main_rel';
+  
+//   // CVarPort-Tabellen mit den entsprechenden Suffixen
+//   const cvarMarketRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_market_rel';
+//   const cvarRatingRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_rating_rel';
+//   const cvarNormRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_norm_rel';
+  
+//   // Tabelle löschen in Reihenfolge
+//   dropTable(selectedTableName, 'table-deletion-error')
+//     .then(() => dropTable(portTableName, 'table-deletion-error'))
+//     .then(() => dropTable(mvarTableName, 'table-deletion-error'))
+//     .then(() => dropTable(mvarRelTableName, 'table-deletion-error'))
+//     .then(() => dropTable(cvarRelTableName, 'table-deletion-error'))
+//     .then(() => dropTable(cvarMarketRelTableName, 'table-deletion-error'))
+//     .then(() => dropTable(cvarRatingRelTableName, 'table-deletion-error'))
+//     .then(() => dropTable(cvarNormRelTableName, 'table-deletion-error'))
+//     .then(() => {
+//       // Einträge aus den Hilfstabellen löschen
+//       deleteTableEntry('createdDeals', 'table_name', selectedTableName);
+//       deleteTableEntry('selections', 'selection_name', selectedTableName);
+//       deleteTableEntry('createdPort', 'table_name', portTableName);
+//     })
+//     .then(() => {
+//       // Erfolgsmeldung senden
+//       sender.send('table-deleted-successfully', {
+//         dealsTable: selectedTableName,
+//         portTable: portTableName,
+//         mvarTable: mvarTableName,
+//         mvarRelTable: mvarRelTableName,
+//         cvarRelTable: cvarRelTableName,
+//         cvarMarketRelTable: cvarMarketRelTableName,
+//         cvarRatingRelTable: cvarRatingRelTableName,
+//         cvarNormRelTable: cvarNormRelTableName
+//       });
+  
+//       console.log(`'table-deleted-successfully' "${selectedTableName}", "${portTableName}", "${mvarTableName}", "${mvarRelTableName}", "${cvarRelTableName}", "${cvarMarketRelTableName}", "${cvarRatingRelTableName}", "${cvarNormRelTableName}"`);
+//     })
+//     .catch((err) => console.error('Error during table deletion process:', err));
+  
+// }
+
 function deleteTable(selectedTableName, sender) {
-  console.log('deleteTable: selectedTableName', selectedTableName);
+  const tablesToClean = ['DealsMain', 'CreditVaR', 'MarketVaR']; // du kannst hier jederzeit erweitern
+  let completed = 0;
+  let hasError = false;
 
-  // Hilfsfunktion zum Löschen einer Tabelle
-  function dropTable(tableName, messageType) {
-    return new Promise((resolve, reject) => {
-      const query = `DROP TABLE IF EXISTS ${tableName}`;
-      db.run(query, (err) => {
-        if (err) {
-          console.error(`Error deleting table "${tableName}":`, err.message);
-          sender.send(messageType, { tableName, message: err.message });
-          reject(err);
-        } else {
-          console.log(`Table "${tableName}" has been deleted.`);
-          resolve();
-        }
-      });
-    });
-  }
+  tablesToClean.forEach((table) => {
+    const deleteQuery = `DELETE FROM ${table} WHERE port_name = ?`;
 
-  // Hilfsfunktion zum Löschen eines Eintrags aus einer Hilfstabelle
-  function deleteTableEntry(auxTable, columnName, columnValue) {
-    const query = `DELETE FROM ${auxTable} WHERE ${columnName} = ?`;
-    db.run(query, [columnValue], (err) => {
+    db.run(deleteQuery, [selectedTableName], function (err) {
       if (err) {
-        console.error(`Error deleting entry with ${columnName} "${columnValue}" from "${auxTable}":`, err.message);
-        sender.send('table-entry-deletion-error', { tableName: selectedTableName, auxTable, message: err.message });
-      } else {
-        console.log(`Entry with ${columnName} "${columnValue}" has been deleted from "${auxTable}".`);
+        console.error(`❌ Fehler beim Löschen aus '${table}':`, err.message);
+        if (!hasError) {
+          hasError = true;
+          sender.send('delete-table-response', {
+            success: false,
+            message: `Fehler beim Löschen aus '${table}': ${err.message}`
+          });
+        }
+        return;
+      }
+
+      console.log(`✅ ${this.changes} Zeilen aus '${table}' mit port_name='${selectedTableName}' gelöscht.`);
+
+      completed++;
+
+      if (completed === tablesToClean.length && !hasError) {
+        sender.send('delete-table-response', {
+          success: true,
+          message: `Alle Einträge mit port_name='${selectedTableName}' wurden gelöscht.`
+        });
       }
     });
-  }
-
-  const portTableName = selectedTableName.replace(/^Deals/, 'Port');
-  const mvarTableName = selectedTableName.replace(/^Deals/, 'MVarPort') + 'Main';
-  const mvarRelTableName = selectedTableName.replace(/^Deals/, 'MVarPort') + 'Main_rel';
-  const cvarRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + 'Main_rel';
-  
-  // CVarPort-Tabellen mit den entsprechenden Suffixen
-  const cvarMarketRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_market_rel';
-  const cvarRatingRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_rating_rel';
-  const cvarNormRelTableName = selectedTableName.replace(/^Deals/, 'CVarPort') + '_norm_rel';
-  
-  // Tabelle löschen in Reihenfolge
-  dropTable(selectedTableName, 'table-deletion-error')
-    .then(() => dropTable(portTableName, 'table-deletion-error'))
-    .then(() => dropTable(mvarTableName, 'table-deletion-error'))
-    .then(() => dropTable(mvarRelTableName, 'table-deletion-error'))
-    .then(() => dropTable(cvarRelTableName, 'table-deletion-error'))
-    .then(() => dropTable(cvarMarketRelTableName, 'table-deletion-error'))
-    .then(() => dropTable(cvarRatingRelTableName, 'table-deletion-error'))
-    .then(() => dropTable(cvarNormRelTableName, 'table-deletion-error'))
-    .then(() => {
-      // Einträge aus den Hilfstabellen löschen
-      deleteTableEntry('createdDeals', 'table_name', selectedTableName);
-      deleteTableEntry('selections', 'selection_name', selectedTableName);
-      deleteTableEntry('createdPort', 'table_name', portTableName);
-    })
-    .then(() => {
-      // Erfolgsmeldung senden
-      sender.send('table-deleted-successfully', {
-        dealsTable: selectedTableName,
-        portTable: portTableName,
-        mvarTable: mvarTableName,
-        mvarRelTable: mvarRelTableName,
-        cvarRelTable: cvarRelTableName,
-        cvarMarketRelTable: cvarMarketRelTableName,
-        cvarRatingRelTable: cvarRatingRelTableName,
-        cvarNormRelTable: cvarNormRelTableName
-      });
-  
-      console.log(`'table-deleted-successfully' "${selectedTableName}", "${portTableName}", "${mvarTableName}", "${mvarRelTableName}", "${cvarRelTableName}", "${cvarMarketRelTableName}", "${cvarRatingRelTableName}", "${cvarNormRelTableName}"`);
-    })
-    .catch((err) => console.error('Error during table deletion process:', err));
-  
+  });
 }
+
 
 
 

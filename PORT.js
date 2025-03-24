@@ -150,8 +150,8 @@ function filterData(data, filtersConfig) {
 
 export function handlePortMainFilteredData(receivedData, filtersConfig, elementId) {
   // console.log('Fct: handlePortMainFilteredData:');
-  console.log('elementId:', elementId);
-  console.log('receivedData:', receivedData);
+  // console.log('elementId:', elementId);
+  // console.log('receivedData:', receivedData);
 
   if (!receivedData || !Array.isArray(receivedData) || receivedData.length === 0) {
     console.error('receivedData is not in the expected format or is empty');
@@ -160,11 +160,11 @@ export function handlePortMainFilteredData(receivedData, filtersConfig, elementI
 
 
   const portTableName = appState.getSelectedPortTableName() || 'PortMain';
-  console.log('portTableName:', portTableName);
+  // console.log('portTableName:', portTableName);
   const portDataContainer = document.getElementById(elementId);
 
   const MVaRData = appState.getMvarData() || []; // Stelle sicher, dass es definiert ist
-  console.log('🔍 MVaRData:', MVaRData);
+  // console.log('🔍 MVaRData:', MVaRData);
 
 
 // Finde das richtige Portfolio in MVaRData
@@ -236,7 +236,7 @@ if (!selectedMVaRData) {
   
   const allCVarData = appState.getAllCvarData(); // ✅ Get the full CVaR dataset
   // console.log("🔍 allCVarData:", allCVarData);
-  console.log("🔍 CVaR Portfolio:", portTableNameX);
+  // console.log("🔍 CVaR Portfolio:", portTableNameX);
   // console.log("📌 Available CVaR Portfolios:", allCVarData.map(item => item.port_name));
   
   

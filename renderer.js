@@ -473,68 +473,14 @@ function handleCreatedPortData(receivedData) {
   }
 }
 
-
-  // function handleSaveSelection() {
-  //   //console.log('saveSelectionButton');
-  //   const nameInputValue = document.getElementById('nameInput').value;
-  //   const selectionName = 'Deals' + nameInputValue;
-
-  //   const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
-  
-  //   console.log('nameInputValue, selectionName, tagValues:', nameInputValue, selectionName, tagValues);
-  
-  //   if (!selectionName || tagValues.length === 0) {
-  //     alert('Please enter a name and select at least one trade ID.');
-  //     return;
-  //   }
-  
-  //   const filteredData = appState.getFilteredData('deals');
-  //   const selectedFromTableName = appState.getSelectedDealsTableName();
-
-  //       // console.log('filteredData:', filteredData);
-  //       // console.log('selectedTableName:', selectedFromTableName);
-
-  //   const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
-  
-  //   // console.log('selectedTradeIDs:', selectedTradeIDs);
-
-  //   window.api.send('save-deals-selection', {
-  //     selectedFromTableName,
-  //     selectionName,
-  //     tagValues,
-  //     selectedTradeIDs
-  //   });
-  
-  //   // ✅ Use the success confirmation modal
-  //   showMessageBox(`Portfolio "${selectionName}" successfully created!`, () => {
-  //     console.log('User closed the success confirmation modal.');
-  //   });
-  
-  //   const newPortfolio = { table_name: selectionName };
-  //   console.log('newPortfolio:', newPortfolio);
-
-  //   appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
-  //   appState.updateDealsDataTable.bind(appState);
-  
-  //   //appState.updateDealsDropdownOptions(selectionName);
-  //   appState.updateDropdownOptions({
-  //     dropdownElementId: 'createdDealsDropdown',
-  //     getDataFunction: appState.getCreatedDealsData.bind(appState),
-  //     updateDataFunction: appState.updateDealsDataTable.bind(appState),
-  //     selectedTableName: selectionName
-  // });
-  //   appState.setSelectedDealsTableName(selectionName);
-  //   appState.applyFiltersAndUpdateDropdowns('deals');
-  // }   
-  
   function handleSaveSelection() {
-    const portName = document.getElementById('nameInput').value; // No 'Deals' prefix
 
+    const port_name = document.getElementById('nameInput').value; // No 'Deals' prefix
     const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
 
-    console.log('portName, tagValues:', portName, tagValues);
+    console.log('port_name, tagValues:', port_name, tagValues);
 
-    if (!portName || tagValues.length === 0) {
+    if (!port_name || tagValues.length === 0) {
         alert('Please enter a name and select at least one trade ID.');
         return;
     }
@@ -547,17 +493,17 @@ function handleCreatedPortData(receivedData) {
     // Send data to backend with only `port_name`
     window.api.send('save-deals-selection', {
         selectedFromTableName,
-        portName,  // Only the name without 'Deals'
+        port_name,  // Only the name without 'Deals'
         tagValues,
         selectedTradeIDs
     });
 
     // ✅ Show success confirmation modal
-    showMessageBox(`Portfolio "${portName}" successfully created!`, () => {
+    showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {
         console.log('User closed the success confirmation modal.');
     });
 
-    const newPortfolio = { table_name: portName };
+    const newPortfolio = { table_name: port_name };
     console.log('newPortfolio:', newPortfolio);
 
     appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
@@ -567,11 +513,19 @@ function handleCreatedPortData(receivedData) {
         dropdownElementId: 'createdDealsDropdown',
         getDataFunction: appState.getCreatedDealsData.bind(appState),
         updateDataFunction: appState.updateDealsDataTable.bind(appState),
-        selectedTableName: portName
+        selectedTableName: port_name
     });
 
-    appState.setSelectedDealsTableName(portName);
+    appState.setSelectedDealsTableName(port_name);
     appState.applyFiltersAndUpdateDropdowns('deals');
+
+    // 👇 Simuliere Klick auf den Reset-Button nach dem Speichern
+const resetButton = document.getElementById('dealsResetFiltersButton');
+if (resetButton) {
+  resetButton.click();
+}
+
+
 }
 
   
@@ -824,13 +778,14 @@ function handleCreatedPortData(receivedData) {
                     // 🔹 Filtert das aktuelle Portfolio heraus
                     const filteredData = receivedPortfoliosData.filter(entry => entry.port_name === selectedPortTableName);
                     appState.updatePortDataTable(filteredData);
+                    console.log('✅ Portfolio filteredData:', filteredData, selectedPortTableName);
         
                     // 🛠 4️⃣ Jetzt erst Dropdowns aktualisieren (weil die neuen Daten da sind)
                     ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
                         appState.updateDropdownOptions({
                             dropdownElementId: dropdownId,
                             getDataFunction: appState.getCreatedPortData.bind(appState),  // Holt Portfolios
-                            updateDataFunction: appState.updatePortDataTable.bind(appState), // Zeigt Portfolios an
+                            updateDataFunction: appState.getPortfolioData.bind(appState), // Zeigt Portfolios an
                             selectedTableName: index === 0 ? selectedPortTableName : undefined // Nur in Dropdown0 auswählen
                         });
                     });

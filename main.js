@@ -496,33 +496,16 @@ ipcMain.on('erase-data', async (event, {cleanTableName, uniqueIdentifier }) => {
 });
 
 // SAVE DEALS SELECTION
-// ipcMain.on('save-deals-selection', async (event, selectionData) => {
-//   console.log('selectionData1:', selectionData);
-//   const { selectedFromTableName, selectionName, tagValues, selectedTradeIDs } = selectionData;
-
-//   try {
-//     // Wait for the selection to be inserted and the table to be created
-//     await insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs);
-//     console.log('Selection inserted and table created successfully');
-    
-//     // Now that the table exists, refresh it
-//     refreshTable(selectionName);
-//   } catch (error) {
-//     console.error('Error handling selection:', error);
-//   }
-// });
 
 ipcMain.on('save-deals-selection', async (event, selectionData) => {
   console.log('selectionData1:', selectionData);
-  const { selectedFromTableName, tagValues, selectedTradeIDs } = selectionData;
+  const {port_name, selectedTradeIDs } = selectionData;
   
-  // ⚡ Use the correct portfolio name (without 'Deals' prefix)
-  const portName = selectedFromTableName.replace('Deals', '');
-
   try {
     // Insert selection into DealsMain with the correct port_name
-    await insertSelection(selectedFromTableName, portName, tagValues, selectedTradeIDs);
-    console.log(`✅ Selection inserted for portfolio: ${portName}`);
+    await insertSelection(port_name, selectedTradeIDs);
+
+    console.log(`✅ Selection inserted for portfolio: ${port_name}`);
 
     // Refresh DealsMain after inserting new data
     refreshTable('DealsMain');
@@ -537,6 +520,9 @@ ipcMain.on('delete-selected-table', (event, selectedTableName) => {
   console.log('delete-selected-table:', selectedTableName);
   deleteTable(selectedTableName, event.sender);
 });
+
+
+
 
 // Display the selected Deals
 // ipcMain.on('fetch-table-data', (event, selectedTableName) => {
