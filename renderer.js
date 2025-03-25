@@ -488,7 +488,12 @@ function handleCreatedPortData(receivedData) {
     const filteredData = appState.getFilteredData('deals');
     const selectedFromTableName = appState.getSelectedDealsTableName();
 
-    const selectedTradeIDs = filteredData.map(entry => entry.TRADE_ID);
+    const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
+
+
+
+  
+  
 
     // Send data to backend with only `port_name`
     window.api.send('save-deals-selection', {
@@ -711,9 +716,10 @@ if (resetButton) {
                 break;
 
             default:
-                selectedTableName = appState.getSelectedDealsTableName();
-                sendPayloadToAPI(projectName, selectedTableName, extraParam);
-                break;
+              let selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
+              sendPayloadToAPI(projectName, selectedTableName, extraParam);
+              break;
+              
         }
 
         // ✅ Event-Listener für den Abschluss setzen
@@ -816,39 +822,6 @@ if (resetButton) {
         console.log('🚀 Sending payload for py-MVaR:', payload);
         window.api.send('start-py-MVaR', payload);
       }
-        //   function handleMVaRComplete(data) {
-        //     if (data.projectName === 'py-MVaR') {
-        //         console.log('handleProjectResponse', data);
-        
-        //         appState.setActiveTable('port');  // Set the active table to port (adjust if needed)
-        
-        //         const selectedDealsTableName = appState.getSelectedDealsTableName();
-        //         const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
-        //         console.log('selectedPortTableName', selectedPortTableName);
-        
-        //         // 1. Fetch and handle port data (main portfolio data)
-        //         appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer0');
-        //         handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
-        
-        //         // // 2. Add the new MVaR-specific entry (if needed)
-        //         // const newMVaRDataEntry = { table_name: `MVar${selectedPortTableName}Main_rel` };
-        //         // console.log('setMvarData', newMVaRDataEntry);
-        //         // appState.setMvarData(newMVaRDataEntry);
-        
-        //       //   // 3. Refresh the dropdown options to reflect updated MVaR data
-        //       //   ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach(dropdownId => {
-        //       //     appState.updateDropdownOptions({
-        //       //         dropdownElementId: dropdownId,
-        //       //         getDataFunction: appState.getCreatedPortData.bind(appState),
-        //       //         updateDataFunction: appState.updatePortDataTable.bind(appState),
-        //       //         selectedTableName: selectedPortTableName
-        //       //     });
-        //       // });
-              
-                
-        //     }
-        // }
-
         function handleMVaRComplete(data) {
           if (data.projectName === 'py-MVaR') {
               console.log('handleProjectResponse', data);

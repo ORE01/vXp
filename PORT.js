@@ -199,42 +199,11 @@ if (!selectedMVaRData) {
   console.log('esTOT:', esTOT);
   };
 
-  // const CVaRData = appState.getCvarData();
-
+ 
   const registeredListeners = new Set(); // Speichert aktive Listener
-
   const portTableNameX = portTableName.replace(/Data$/, ''); // Entfernt "Data" am Ende
-  // const types = ['rating', 'market', 'norm']; // Die drei benötigten Datentypen
-
-  // console.log('🔄 CVaR-Datenabfrage gestartet von:', new Error().stack);
-
-  
-  // types.forEach((type) => {
-  //     const CVaRTableName = `CVar${portTableNameX}_${type}_rel`;
-  //     // console.log(`🔄 Anfrage für ${CVaRTableName}`);
-  
-  //     window.api.send('fetch-table-data', CVaRTableName);
-  
-  //     // **Verhindere doppelte Listener mit einer Set-Liste**
-  //     if (!registeredListeners.has(CVaRTableName)) {
-  //         registeredListeners.add(CVaRTableName);
-  
-  //         window.api.receive(`${CVaRTableName}Data`, (receivedCVarData) => {
-  //             // console.log(`✅ Empfangene CVaR-Daten aus ${CVaRTableName}:`, receivedCVarData);
-  
-  //             // Verarbeite die CVaR-Daten mit dem entsprechenden Typ
-  //             processCVarData(receivedCVarData, type);
-  //         });
-  //     } else {
-  //         console.warn(`⚠️ Listener für ${CVaRTableName} existiert bereits, wird nicht erneut hinzugefügt.`);
-  //     }
-  // });
-  
-  
-
-
-  
   const allCVarData = appState.getAllCvarData(); // ✅ Get the full CVaR dataset
+
   // console.log("🔍 allCVarData:", allCVarData);
   // console.log("🔍 CVaR Portfolio:", portTableNameX);
   // console.log("📌 Available CVaR Portfolios:", allCVarData.map(item => item.port_name));

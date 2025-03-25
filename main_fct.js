@@ -174,25 +174,51 @@ function closeDatabase() {
     }
   });
 }
+// function insertDeal(data, tableName, callback) {
+//   const columnNames = Object.keys(data);
+//   const columnValues = Object.values(data);
+
+//   const placeholders = columnNames.map(() => '?').join(', ');
+//   const query = `
+//   INSERT INTO ${tableName} (${columnNames.join(', ')}) 
+//   VALUES (${placeholders})`;
+
+//   db.run(query, columnValues, function (err) {
+//     if (err) {
+//       console.error(err.message);
+//       callback(err);
+//     } else {
+//       console.log('main_fct: insertDeal: Data inserted erfolgreich .');
+//       callback(null);
+//     }
+//   });
+// }
+
 function insertDeal(data, tableName, callback) {
-  const columnNames = Object.keys(data);
-  const columnValues = Object.values(data);
+  const {
+    INCLUDE,
+    PROD_ID,
+    TRADE_DATE,
+    CATEGORY,
+    NOTIONAL,
+    PRICE_BUY,
+    Depotbank,
+    port_name
+  } = data;
 
-  const placeholders = columnNames.map(() => '?').join(', ');
-  const query = `
-  INSERT INTO ${tableName} (${columnNames.join(', ')}) 
-  VALUES (${placeholders})`;
+  const insertQuery = `
+    INSERT INTO ${tableName} (
+      INCLUDE, PROD_ID, TRADE_DATE, CATEGORY, NOTIONAL, PRICE_BUY, Depotbank, port_name
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
-  db.run(query, columnValues, function (err) {
-    if (err) {
-      console.error(err.message);
-      callback(err);
-    } else {
-      console.log('main_fct: insertDeal: Data inserted erfolgreich .');
-      callback(null);
-    }
-  });
+  db.run(insertQuery, [INCLUDE, PROD_ID, TRADE_DATE, CATEGORY, NOTIONAL, PRICE_BUY, Depotbank, port_name], callback);
 }
+
+
+
+
 // CREATE new Portfolios in DEALS
 // function insertSelection(selectedFromTableName, selectionName, tagValues, selectedTradeIDs) {
 //   return new Promise((resolve, reject) => {
@@ -277,9 +303,54 @@ function insertDeal(data, tableName, callback) {
 //   });
 // }
 
+// function insertSelection(selectionName, selectedTradeIDs) {
+//   return new Promise((resolve, reject) => {
+//     // selectedTradeIDs ggf. in ein Array umwandeln
+//     if (!Array.isArray(selectedTradeIDs)) {
+//       try {
+//         if (typeof selectedTradeIDs === 'string') {
+//           selectedTradeIDs = JSON.parse(selectedTradeIDs.replace(/'/g, '"'));
+//         } else {
+//           throw new Error('selectedTradeIDs must be an array or valid JSON array string');
+//         }
+//       } catch (err) {
+//         console.error('❌ Error parsing selectedTradeIDs:', err.message);
+//         reject(new TypeError('selectedTradeIDs must be an array or a valid JSON array string'));
+//         return;
+//       }
+//     }
+
+//     const placeholders = selectedTradeIDs.map(() => '?').join(',');
+
+//     const insertQuery = `
+//       INSERT INTO DealsMain (
+//         INCLUDE, PROD_ID, TRADE_DATE, CATEGORY, NOTIONAL, PRICE_BUY, Depotbank, port_name
+//       )
+//       SELECT 
+//         INCLUDE,
+//         PROD_ID,  -- ⬅️ Fehler behoben: nicht mit TRADE_ID überschreiben
+//         TRADE_DATE,
+//         CATEGORY,
+//         NOTIONAL,
+//         PRICE_BUY,
+//         Depotbank,
+//         ? AS port_name
+//       FROM DealsMain
+//       WHERE TRADE_ID IN (${placeholders})`;
+
+//     db.run(insertQuery, [selectionName, ...selectedTradeIDs], function (err) {
+//       if (err) {
+//         console.error('❌ Error inserting new deals:', err.message);
+//         reject(err);
+//       } else {
+//         console.log(`✅ ${this.changes} rows duplicated in DealsMain with new TRADE_ID and port_name = '${selectionName}'`);
+//         resolve();
+//       }
+//     });
+//   });
+// }
 function insertSelection(selectionName, selectedTradeIDs) {
   return new Promise((resolve, reject) => {
-    // selectedTradeIDs ggf. in ein Array umwandeln
     if (!Array.isArray(selectedTradeIDs)) {
       try {
         if (typeof selectedTradeIDs === 'string') {
@@ -302,7 +373,7 @@ function insertSelection(selectionName, selectedTradeIDs) {
       )
       SELECT 
         INCLUDE,
-        PROD_ID,  -- ⬅️ Fehler behoben: nicht mit TRADE_ID überschreiben
+        PROD_ID,
         TRADE_DATE,
         CATEGORY,
         NOTIONAL,
@@ -311,6 +382,9 @@ function insertSelection(selectionName, selectedTradeIDs) {
         ? AS port_name
       FROM DealsMain
       WHERE TRADE_ID IN (${placeholders})`;
+
+    console.log('✅ Final SQL:', insertQuery);
+    console.log('✅ Final Params:', [selectionName, ...selectedTradeIDs]);
 
     db.run(insertQuery, [selectionName, ...selectedTradeIDs], function (err) {
       if (err) {
@@ -323,6 +397,8 @@ function insertSelection(selectionName, selectedTradeIDs) {
     });
   });
 }
+
+
 
 
 

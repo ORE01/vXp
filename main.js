@@ -3,6 +3,7 @@ const path = require('path');
 const { getAllTableNames, queryDB, updateRecord,  insertDeal, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, handlePythonProgress, insertCSParameter} = require('./main_fct');
 const { formatColumns} = require('./utils/main_format');
 
+
 require('dotenv').config();
 
 const { spawn } = require('child_process');
@@ -125,9 +126,6 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
     });
   }
 });
-
-
-
 ipcMain.on('start-py-MVaR', async (event, args) => {
   console.log('start-py-MVaR:', args);
 
@@ -227,7 +225,7 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
 });
 ipcMain.on('start-py-excel', (event) => {
   // Define the tables to be used in the script and for refreshing
-  const tablesToRefresh = ['PortMain', 'DealsMain', 'ProdAll', 'Issuer'];
+  const tablesToRefresh = ['Portfolios', 'DealsMain', 'ProdAll', 'Issuer'];
 
   // Start the Python script and pass the tables array
   startPythonScriptWithEvent(event, 'excel', 'py-excel')
@@ -513,6 +511,26 @@ ipcMain.on('save-deals-selection', async (event, selectionData) => {
     console.error('❌ Error handling selection:', error);
   }
 });
+
+// ipcMain.on('save-deals-selection', async (event, selectionData) => {
+//   console.log('selectionData1:', selectionData);
+//   const { port_name, selectedTradeIDs } = selectionData;
+  
+//   try {
+//     // Generiere eindeutige Trade-IDs
+//     const uniqueTradeIDs = selectedTradeIDs.map(id => `${id}_${crypto.randomUUID()}`);
+
+//     // Insert selection into DealsMain mit den neuen IDs
+//     await insertSelection(port_name, uniqueTradeIDs);
+
+//     console.log(`✅ Selection inserted for portfolio: ${port_name}`);
+
+//     // Refresh DealsMain nach Einfügen
+//     refreshTable('DealsMain');
+//   } catch (error) {
+//     console.error('❌ Error handling selection:', error);
+//   }
+// });
 
 
 // DELETE DEALS SELECTION
