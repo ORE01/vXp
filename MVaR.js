@@ -1,4 +1,3 @@
-import { PortValue } from './PORT.js';
 import createBarChart from './charts/BarChart.js';
 import { appState } from './renderer.js';
 import { formatNumber, formatNumberWithCommas } from './utils/format.js';
@@ -51,150 +50,51 @@ export function handleMVarInputData(receivedData) {
   container.appendChild(table);
 }
 
-// export function handleMVaRData(receivedData) {
-//   //console.log('handleMVaRData:', receivedData)
-//   const MVaRData = receivedData;
-//   const MVaRDataRel = [];
-
-//   // Divide all values with PortValue and store in MVaRDataRel
-//   if (PortValue !== 0) {
-//     MVaRData.forEach((dataPoint) => {
-//       //Das sind strings und enthalten , die gehüren weg um sie in Zahlen umzuwandeln
-//       const varValue = parseFloat(dataPoint.VaR.replace(/,/g, ''));
-//       const esValue = parseFloat(dataPoint.ES.replace(/,/g, ''));
-
-//       const relativeVaR = ((varValue / PortValue) * 100)
-//       const relativeES = ((esValue / PortValue) * 100)
-
-//       MVaRDataRel.push({
-//         ...dataPoint,
-//         VaR: relativeVaR,
-//         ES: relativeES,
-//       });
-//     });
-//   } else {
-//     // Handle the case when PortValue is 0 to avoid division by zero
-//     MVaRData.forEach((dataPoint) => {
-//       MVaRDataRel.push({
-//         ...dataPoint,
-//         VaR: 'N/A',
-//         ES: 'N/A',
-//       });
-//     });
-//   }
-
-//   // console.log('MVaRDataRel:', MVaRDataRel);
-
-// // MVaR_tab: Componant VaR:  Populate the table with MVaRData and MVaRDataRel
-//   // MVaRDataContainer: alle VaRs: total, IR, CS
-//   const MVaRDataContainer = document.getElementById('MVaRDataContainer');
-//     if (MVaRDataContainer && MVaRData) {
-//       // Create and update the table content
-//       const table = document.createElement('table');
-//       table.classList.add('MVaRTable');
-
-//       // Create table headers
-//       const tableHeaders = ['Componant', 'VaR', 'VaR_%', 'ES', 'ES_%'];
-//       const headerRow = table.insertRow(0);
-//       tableHeaders.forEach((headerText, index) => {
-//         const cell = headerRow.insertCell(index);
-//         cell.textContent = headerText;
-//     });
-
-//     MVaRData.forEach((dataPoint, rowIndex) => {
-//       const row = table.insertRow(rowIndex + 1);
-
-//       // Index (raw, no formatting needed)
-//       const cell1 = row.insertCell(0);
-//       cell1.textContent = dataPoint.index;
-
-//       // Absolute VaR (formatted to 0 decimal places)
-//       const cell2 = row.insertCell(1);
-//       cell2.textContent = formatNumber(0)(dataPoint.VaR); 
-
-//       // Relative VaR (formatted to 2 decimal places)
-//       const cell3 = row.insertCell(2);
-//       //cell3.textContent = MVaRDataRel[rowIndex].VaR;
-//       cell3.textContent = formatNumberWithCommas(MVaRDataRel[rowIndex].VaR);
-
-//       // Absolute ES (formatted to 0 decimal places)
-//       const cell4 = row.insertCell(3);
-//       cell4.textContent = formatNumber(0)(dataPoint.ES); 
-
-//       // Relative ES (formatted to 2 decimal places)
-//       const cell5 = row.insertCell(4);
-//       // cell5.textContent = MVaRDataRel[rowIndex].ES;
-//       cell5.textContent = formatNumberWithCommas(MVaRDataRel[rowIndex].ES);
-//     });
-
-
-//     // PORTFOLIO_tab: MVaRMainDataContainer
-//     const MVaRMainDataContainer = document.getElementById('MVaRMainDataContainer');
-//     if (MVaRMainDataContainer && MVaRData && MVaRDataRel && MVaRData.length > 0) {
-//       // Clear existing content in MVaRMainDataContainer
-//       while (MVaRMainDataContainer.firstChild) {
-//         MVaRMainDataContainer.removeChild(MVaRMainDataContainer.firstChild);
-//       }
-    
-//       const mvarDataTable = document.createElement('table');
-//       mvarDataTable.classList.add('MVaRDataTable');
-    
-//       // Create and populate the header row
-//       const headerRow = mvarDataTable.insertRow(0);
-//       ['MARKET', 'absolute', 'relative'].forEach((text, index) => {
-//         let cell = headerRow.insertCell(index);
-//         cell.textContent = text;
-//       });
-    
-//       // Populate the first data row for MVaR
-//       const firstRowData = MVaRData[0];
-//       const firstRowRelData = MVaRDataRel[0];
-//       const rowMVaR = mvarDataTable.insertRow(1);
-//       rowMVaR.insertCell(0).textContent = 'VaR';
-//       rowMVaR.insertCell(1).textContent = formatNumber(0)(firstRowData.VaR);
-//       rowMVaR.insertCell(2).textContent = formatNumberWithCommas(firstRowRelData.VaR);
-
-//       // Populate the second data row for M_ES
-//       const rowM_ES = mvarDataTable.insertRow(2);
-//       rowM_ES.insertCell(0).textContent = 'ES';
-//       rowM_ES.insertCell(1).textContent = formatNumber(0)(firstRowData.ES);
-//       rowM_ES.insertCell(2).textContent = formatNumberWithCommas(firstRowRelData.ES);
-    
-//       // Append the table to the MVaRMainDataContainer
-//       MVaRMainDataContainer.appendChild(mvarDataTable);
-//     }
-  
-// //console.log('MVaRMainDataContainer:', table)
-//     // Optional: return the first table if needed elsewhere
-//     return table;
-//   }
-// }
-
 export function handleMVaRData(receivedData) {
-  console.log('handleMVaRData:', receivedData);
   appState.setMvarData(receivedData);
-  
-  let selectedPortTableName = appState.getSelectedPortTableName();
-  console.log('🔍 selectedPortTableName:', selectedPortTableName);
 
-  if (!receivedData || receivedData.length === 0) return null; // Kein Fehler, falls keine Daten vorhanden sind
+  let port_name = appState.getSelectedPortTableName();
+  //console.log('handleMVaRData:', receivedData);
+  //console.log('🔍 port_name:', port_name);
 
-  // Filtere die Daten nur für das ausgewählte Portfolio
-  const filteredData = receivedData.find(dataPoint => dataPoint.port_name === selectedPortTableName);
+  if (!receivedData || receivedData.length === 0) return null;
 
+  // 1️⃣ Versuche, Daten für das aktuelle Portfolio zu finden
+  let filteredData = receivedData.find(dataPoint => dataPoint.port_name === port_name);
+
+  // 2️⃣ Wenn nicht gefunden → versuche 'DEFAULT'
   if (!filteredData) {
-    console.warn(`⚠️ Kein MVaR-Datensatz für ${selectedPortTableName} gefunden.`);
-    return null;
+    console.warn(`⚠️ Kein Datensatz für "${port_name}" gefunden. Versuche Fallback auf 'DEFAULT'.`);
+    filteredData = receivedData.find(dataPoint => dataPoint.port_name === 'DEFAULT');
+  }
+
+  // 3️⃣ Wenn auch 'DEFAULT' fehlt → Dummy-Datensatz mit 0
+  if (!filteredData) {
+    console.warn(`⚠️ Auch kein 'DEFAULT'-Eintrag gefunden. Verwende leere 0-Werte.`);
+    filteredData = {
+      port_name: 'DEFAULT',
+      VaR_T_abs: 0,
+      VaR_T_rel: 0,
+      VaR_IR_abs: 0,
+      VaR_IR_rel: 0,
+      VaR_CS_abs: 0,
+      VaR_CS_rel: 0,
+      ES_T_rel: 0,
+      ES_IR_rel: 0,
+      ES_CS_rel: 0,
+      index: 'n/a'
+    };
   }
 
   const MVaRDataContainer = document.getElementById('MVaRDataContainer');
-  let table = document.createElement('table'); // Immer eine Tabelle erstellen, um Fehler zu vermeiden
+  let table = document.createElement('table');
 
   if (MVaRDataContainer) {
-    MVaRDataContainer.innerHTML = ''; // Container leeren
+    MVaRDataContainer.innerHTML = '';
     table.classList.add('MVaRTable');
 
-    // Tabellen-Header
+    updateMVaRChart(filteredData);
+
     const tableHeaders = ['Portfolio', 'VaR_T_abs', 'VaR_T_rel', 'VaR_IR_abs', 'VaR_IR_rel', 'VaR_CS_abs', 'VaR_CS_rel'];
     const headerRow = table.insertRow(0);
     tableHeaders.forEach((headerText, index) => {
@@ -202,7 +102,6 @@ export function handleMVaRData(receivedData) {
       cell.textContent = headerText;
     });
 
-    // Erstelle nur eine Zeile für das ausgewählte Portfolio
     const row = table.insertRow(1);
     row.insertCell(0).textContent = filteredData.port_name;
     row.insertCell(1).textContent = formatNumber(0)(filteredData.VaR_T_abs);
@@ -217,22 +116,73 @@ export function handleMVaRData(receivedData) {
 
   return table;
 }
+    function updateMVaRChart(MVaRData) {
+      //console.log('MVaRData:', MVaRData);
+
+      // Immer ein Array draus machen
+      const filteredData = Array.isArray(MVaRData) ? MVaRData : [MVaRData];
+
+      if (!filteredData.length) {
+        console.warn('⚠️ Keine Daten für das Portfolio gefunden.');
+        return;
+      }
+
+      //console.log('filteredData:', filteredData);
+
+      if (MVaRChart) {
+        MVaRChart.destroy();
+      }
+      
+      const MVaRLabels = filteredData.map(data => data.index || '');
+
+      const MVaRValues = {
+        Total:  filteredData.map(d => d.VaR_T_rel),
+        Interest_Rate: filteredData.map(d => d.VaR_IR_rel),
+        Credit_Spread: filteredData.map(d => d.VaR_CS_rel),
+      };
+      
+      const data = {
+        labels: MVaRLabels,
+        MVaRValues
+      };
+      
+      
+      //console.log('BarChartData:', data);
+
+      //MVaRChart = createBarChart({ labels: MVaRLabels, datasets: [{ data: MVaRValues, backgroundColor: 'rgba(70, 192, 230, 0.7)', borderColor: 'rgba(70, 192, 230, 0.7)' }] }, 'MVaRChart', 'bar', 'x');
+      MVaRChart = createBarChart({
+        labels: MVaRLabels,
+        datasets: [
+          {
+            label: 'Total VaR',
+            data: MVaRValues.Total,
+            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Interest Rate VaR',
+            data: MVaRValues.Interest_Rate,
+            backgroundColor: 'rgba(70, 192, 230, 0.2)',
+            borderColor: 'rgba(70, 192, 230, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Credit Spread VaR',
+            data: MVaRValues.Credit_Spread,
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }
+        ]
+      }, 'MVaRChart', 'bar', 'x');
+      
+      
+
+    }
 
 
 
 
-//Chart
-export function updateMVaRChart(MVaRData) {
-//   // Destroy the existing chart before creating a new one
-//   if (MVaRChart) {MVaRChart.destroy();}
-    
-//   const MVaRLabels = MVaRData.map(data => data.index);
-//   const MVaRValues = MVaRData.map(data => parseFloat(data.VaR.replace(/\s/g, '')));
-//   const data = { MVaRLabels, MVaRValues };
-//   //console.log('BarChartData:', data);
-
-//   //MVaRChart = createBarChart(data, 'MVaRChart', 'bar', 'x');
-//   MVaRChart = createBarChart({ labels: MVaRLabels, datasets: [{ data: MVaRValues, backgroundColor: 'rgba(70, 192, 230, 0.7)', borderColor: 'rgba(70, 192, 230, 0.7)' }] }, 'MVaRChart', 'bar', 'x');
-}
 
 

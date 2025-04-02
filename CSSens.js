@@ -1,13 +1,17 @@
 // Minor change to test git push 1-3-2024 1011
 
-import { PortValue, PortCPV01, formPortCPV01 } from './PORT.js';
 import processData from './renderer/dataProcessor.js';
 import createBarChart from './charts/BarChart.js';
 
 let CPV01Chart; // This will hold the chart instance
 
 export function handleCSSensData(portMainData) {
-    // console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
+    //console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
+
+    const portValue = portMainData.reduce((sum, row) => sum + (parseFloat(row.NAV) || 0), 0);
+    const portCPV01  = portMainData.reduce((sum, row) => sum + (parseFloat(row.CPV01) || 0), 0);
+    
+    //console.log('portValue, PortPV01:', portValue, portCPV01 );
 
     const groupedCPV01 = portMainData.reduce((acc, { CPV01, RATING }) => {
         if (!acc[RATING]) {
@@ -24,12 +28,11 @@ export function handleCSSensData(portMainData) {
     });
 
     const processDataFormat = sortedCPV01.map(([RATING, CPV01]) => {
-        // console.log('PortCPV01', PortCPV01);
-        let cpv01Bp = (CPV01 / PortValue) * 10000; // Convert to basis points
-        let weightedRatings = (CPV01 / PortCPV01) * 100; // Calculate the weighted rating as a percentage
+        let cpv01Bp = (CPV01 / portValue) * 10000; // Convert to basis points
+        let weightedRatings = (CPV01 / portCPV01) * 100; // Calculate the weighted rating as a percentage
         return {
             RATING,
-            'CPV01': CPV01.toFixed(2),
+            'CPV01_EUR': CPV01.toFixed(2),
             'CPV01_bp': `${cpv01Bp.toFixed(2)} bp`,
             'Weighted_Ratings': `${weightedRatings.toFixed(2)}%`
         };
@@ -47,8 +50,8 @@ export function handleCSSensData(portMainData) {
     // Prepare data for the chart
    // Prepare chart data using 'weighted_ratings' and 'RATING'
    const chartData = sortedCPV01.map(([RATING, CPV01]) => {
-    // Calculate the weighted rating as a percentage of CPV01 relative to PortCPV01
-    let weightedRatingPercent = (CPV01 / PortCPV01) * 100;
+    // Calculate the weighted rating as a percentage of CPV01 relative to portCPV01
+    let weightedRatingPercent = (CPV01 / portCPV01) * 100;
     return { RATING, PV01: weightedRatingPercent };
 });
 

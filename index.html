@@ -303,42 +303,17 @@
       
         </div>
 
-        <p>Notional: <span id="formPortNotional"></span></p>
-        <p>NetAssetValue: <span id="formPortValue"></span></p>
-        <p>Portfolio Yield: <span id="formPortYield"></span></p>
-        <p>Portfolio Yield act: <span id="formPortYieldA"></span></p>
-        <!-- <div class="data-container" id="PortYieldDataContainer"></div> -->
-        <p>Interest Rate Sensitivity: <span id="formPortPV01"></span></p>
-        <p>Credit Spread Sensitivity: <span id="formPortCPV01"></span></p>
-        <p>MVaR: <span id="formPortMvarTOT"></span></p>
-        <p>MVaRIR: <span id="formPortMvarIR"></span></p>
-        <p>MVaRCS: <span id="formPortMvarCS"></span></p>
-  
-        <p>CVaR Rating: <span id="formPortCvarRating"></span></p>
-        <p>CVaR CS: <span id="formPortCvarMarket"></span></p>
-        <p>CVaR CS norm: <span id="formPortCvarNorm"></span></p>
 
-        <p>Value at Risk/Expected Shortfall:</p>
-
+        <div class="data-container" id="portAggDataContainer3"></div>
         <div class="data-container" id="MVaRMainDataContainer"></div>
 
-        <p>Historical Defaults:</p>
-        <div class="data-container" id="CVaR_ratingDataContainer"></div>
-
-        <!-- <p>Market Defaults:</p>
-        <div class="data-container" id="CVaR_marketDataContainer"></div> -->
-
-        <p>
-
-        </p>
+        <!-- <p>Historical Defaults:</p>
+        <div class="data-container" id="CVaR_ratingDataContainer"></div> -->
 
         <p>filtered:</p>
-        <p>Notional: <span id="formFiltPortNotional"></span></p>
-        <p>NetAssetValue: <span id="formFiltPortValue"></span></p>
-        <p>Interest Rate Sensitivity: <span id="formFiltPortPV01"></span></p>
-        <p>Credit Spread Sensitivity: <span id="formFiltPortCPV01"></span></p>
-        <p>Yield at Buy: <span id="formFiltPortYield"></span></p>
-        <p>Yield: <span id="formFiltPortYieldA"></span></p>
+
+        <div class="data-container" id="portAggDataContainer0"></div>
+
       </div>
     </div>
     
@@ -390,6 +365,7 @@
       </button>
     </p>
       <div class="data-container" id="portDataContainer0"></div>
+      <!-- <div class="data-container" id="portDataContainer1"></div> -->
     </div>
   </div>
 </div>
@@ -711,11 +687,11 @@
     <span class="close">&times;</span>
     <h2 class="section-header">CREDIT VaR</h2>
       <div class="data-wrapper">
-      <p>Historical Credit Metrics:</p>
-      <div class="data-container" id="CVaR_ratingDataContainer1"></div>
-      <p>Market Implied Credit Metrics:</p>
+      <p>Historical Credit Metrics (Rating):</p>
+      <div class="data-container" id="CVaR_ratingDataContainer"></div>
+      <p>Market Implied Credit Metrics (Market):</p>
       <div class="data-container" id="CVaR_marketDataContainer"></div>
-      <p>Risk Adjusted Credit Metrics:</p>
+      <p>Risk Adjusted Credit Metrics (MarketNorm):</p>
       <div class="data-container" id="CVaR_normDataContainer"></div>
     </div>
     
@@ -831,22 +807,11 @@
       <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
         <select id="createdPortDropdown1" style="width: 60%; background-color: white;"></select> 
       </div>
-      <p>Notional: <span id="formPortNotional1"></span></p>
-      <p>NAV: <span id="formPortValue1"></span></p>
 
-      <p>Yield at Buy: <span id="formPortYield1"></span></p>
-      <p>Yield: <span id="formPortYieldA1"></span></p>
 
-      <p>PV01: <span id="formPortPV011"></span></p>
-      <p>CPV01: <span id="formPortCPV011"></span></p>
+      <div class="data-container" id="portAggDataContainer1"></div>
 
-      <p>MVaR: <span id="formPortMvarTOT1"></span></p>
-      <p>MVaRIR: <span id="formPortMvarIR1"></span></p>
-      <p>MVaRCS: <span id="formPortMvarCS1"></span></p>
 
-      <p>CVaR: <span id="formPortCvarRating1"></span></p>
-      <p>CVaR: <span id="formPortCvarMarket1"></span></p>
-      <p>CVaR: <span id="formPortCvarNorm1"></span></p>
     </div>
   <div class="data-wrapper">
     <div class="data-container" id="portDataContainer1"></div>
@@ -862,23 +827,10 @@
       <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
         <select id="createdPortDropdown2" style="width: 60%; background-color: white;"></select> 
       </div>
+
+      <div class="data-container" id="portAggDataContainer2"></div>
       
-      <p>Notional: <span id="formPortNotional2"></span></p>
-      <p>NAV: <span id="formPortValue2"></span></p>
 
-      <p>Yield at Buy: <span id="formPortYield2"></span></p>
-      <p>Yield: <span id="formPortYieldA2"></span></p>
-
-      <p>PV01: <span id="formPortPV012"></span></p>
-      <p>CPV01: <span id="formPortCPV012"></span></p>
-
-      <p>MVaR: <span id="formPortMvarTOT2"></span></p>
-      <p>MVaRIR: <span id="formPortMvarIR2"></span></p>
-      <p>MVaRCS: <span id="formPortMvarCS2"></span></p>
-
-      <p>CVaR: <span id="formPortCvarRating2"></span></p>
-      <p>CVaR: <span id="formPortCvarMarket2"></span></p>
-      <p>CVaR: <span id="formPortCvarNorm2"></span></p>
     </div>
     <div class="data-wrapper">
       <div class="data-container" id="portDataContainer2"></div>

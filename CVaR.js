@@ -1,16 +1,31 @@
 import { filterColumnsInData } from './renderer/dataProcessor.js';
 import processData from './renderer/dataProcessor.js';
 import createBarChart from './charts/BarChart.js';
-import { PortValue } from './PORT.js';
 import { formatNumber, isValidNumber, formatNumberWithCommas } from './utils/format.js';
 
 let EADChart;
 let LGDChart;
 let filteredEADMainData = [];
 
-export function handleEADMainData(receivedData, table_name) {
+export function handleEADMainData(receivedData) {
+  const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
+  ////console.log('port_name:', port_name);
+
+
+
+
   const EADMainDataContainer = document.getElementById('EADMainDataContainer');
-  const EADMainData = receivedData;
+
+  // 🔍 Daten vorher filtern
+  const filtered = receivedData.filter(
+    row => row.port_name === port_name && row.pd_flag === 'RATING'
+  );
+
+
+  ////console.log('filtered:', filtered);
+
+
+  const EADMainData = filtered;
 
   if (EADMainDataContainer && EADMainData) {
     let columns = ['ISSUER', 'RANK', 'RATING', 'NOTIONAL', 'LGD', 'PD', 'PD_M', 'PD_M_norm'];
@@ -21,7 +36,7 @@ export function handleEADMainData(receivedData, table_name) {
     // Sort the data by the "NOTIONAL" in descending order
     filteredEADMainData.sort((a, b) => parseFloat(b.NOTIONAL.replace(/\s/g, '')) - parseFloat(a.NOTIONAL.replace(/\s/g, '')));
 
-    const EADMainDataHTML = processData(filteredEADMainData, table_name);
+    const EADMainDataHTML = processData(filteredEADMainData, port_name, 'EAD');
     EADMainDataContainer.innerHTML = EADMainDataHTML;
 
     // CHARTS:
@@ -36,7 +51,7 @@ export function handleEADMainData(receivedData, table_name) {
     
     // Format the data for the LGD bar chart
     const LGDValues = filteredEADMainData.map(data => parseFloat(data.LGD.toString().replace(/\s/g, '')));
-    //console.log('LGDvalues:', LGDValues);
+    //////console.log('LGDvalues:', LGDValues);
 
     // Create the combined dataset for EAD and LGD
     const combinedDataset = [
@@ -67,16 +82,18 @@ export function handleEADMainData(receivedData, table_name) {
 }
 
 export function handleCVaRData(receivedData) {
-  console.log(`📌 CVaR Data received:`, receivedData);
+  //console.log(`📌 CVaR Data received:`, receivedData);
 
-  const selectedPortName = appState.getSelectedPortTableName();
-  console.log(`🔍 Filtering for port_name:`, selectedPortName);
+  let port_name = appState.getSelectedPortTableName();
+  //console.log(`🔍 Filtering for port_name:`, port_name);
 
   // Filter by port_name
-  const filteredByPort = receivedData.filter(item => item.port_name === selectedPortName);
+  const filteredByPort = receivedData.filter(item => item.port_name === port_name);
+
+  appState.setCvarData(filteredByPort);
 
   const containerMapping = {
-      rating: ['CVaR_ratingDataContainer', 'CVaR_ratingDataContainer1'],
+      rating: ['CVaR_ratingDataContainer'],
       market: ['CVaR_marketDataContainer'],
       norm: ['CVaR_normDataContainer'],
   };
@@ -85,7 +102,7 @@ export function handleCVaRData(receivedData) {
       const filteredData = filteredByPort.filter(item => 
           item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
       );
-      console.log(`✅ Filtered Data for ${pd_flag}:`, filteredData);
+      //console.log(`✅ Filtered Data for ${pd_flag}:`, filteredData);
 
       const containerIds = containerMapping[pd_flag];
       if (!containerIds || filteredData.length === 0) return;
@@ -97,7 +114,7 @@ export function handleCVaRData(receivedData) {
       }
 
       // Populate the first container with a formatted table
-      populateCVaRTable(primaryContainer, filteredData);
+      populateCVaRTable(primaryContainer, filteredData, port_name);
 
       // Clone content into additional containers
       if (containerIds.length > 1) {
@@ -112,49 +129,47 @@ export function handleCVaRData(receivedData) {
 }
 
 
-function populateCVaRTable(container, CVaRData) {
-  if (!CVaRData || CVaRData.length === 0) {
-      console.warn("⚠️ No CVaR data available.");
-      container.innerHTML = "<p>No data available</p>";
-      return;
-  }
+    function populateCVaRTable(container, CVaRData, port_name) {
+      if (!CVaRData || CVaRData.length === 0) {
+          console.warn("⚠️ No CVaR data available.");
+          container.innerHTML = "<p>No data available</p>";
+          return;
+      }
 
-  // Create a new table
-  const table = document.createElement("table");
-  table.border = "1"; // Add border for visibility
+      // Create a new table
+      const table = document.createElement("table");
+      table.border = "1"; // Add border for visibility
 
-  // Create table headers
-  const headers = ["Metric", "Absolute", "Relative"];
-  const headerRow = table.insertRow();
-  headers.forEach(headerText => {
-      const cell = headerRow.insertCell();
-      cell.textContent = headerText;
-      cell.style.fontWeight = "bold"; // Make headers bold
-  });
+      // Create table headers
+      const headers = [`Metric for ${port_name}`, "Absolute", "Relative"];
+      const headerRow = table.insertRow();
+      headers.forEach(headerText => {
+          const cell = headerRow.insertCell();
+          cell.textContent = headerText;
+          cell.style.fontWeight = "bold"; // Make headers bold
+      });
 
-  // Process and insert data rows
-  const metrics = [
-      { label: "VaR", absKey: "VaR_abs", relKey: "VaR_rel" },
-      { label: "ES", absKey: "ES_abs", relKey: "ES_rel" }
-  ];
+      // Process and insert data rows
+      const metrics = [
+          { label: "VaR", absKey: "VaR_abs", relKey: "VaR_rel" },
+          { label: "ES", absKey: "ES_abs", relKey: "ES_rel" }
+      ];
 
-  metrics.forEach(metric => {
-      const row = table.insertRow();
-      row.insertCell().textContent = metric.label; // First column: Metric name
-      row.insertCell().textContent = formatNumber(CVaRData[0][metric.absKey]); // Absolute value
-      row.insertCell().textContent = formatPercentage(CVaRData[0][metric.relKey]); // Relative value
-  });
+      metrics.forEach(metric => {
+          const row = table.insertRow();
+          row.insertCell().textContent = metric.label; // First column: Metric name
+          row.insertCell().textContent = formatNumber(0)(CVaRData[0][metric.absKey]); // ✅
+          row.insertCell().textContent = formatPercentage(CVaRData[0][metric.relKey]); // ✅ (wenn korrekt definiert)
 
-  // Clear previous content and append the new table
-  container.innerHTML = "";
-  container.appendChild(table);
-}
+      });
 
-
-// Helper function: Formats relative values as percentages
-function formatPercentage(value) {
-  return value !== undefined ? (value * 100).toFixed(2) + "%" : "N/A";
-}
+      // Clear previous content and append the new table
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+    function formatPercentage(value) {
+      return value !== undefined ? (value * 100).toFixed(2) + "%" : "N/A";
+    }
 
 
 export { filteredEADMainData};

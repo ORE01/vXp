@@ -70,7 +70,7 @@ export function dealsAddButtonHandler (event, selectedTableName) {
 // }
 
 export function handleDealsData(receivedData, dealsTableName) {
-  console.log('DEALS receivedData:', receivedData);
+  //console.log('DEALS receivedData:', receivedData);
   //console.log('DEALS selectedTableName:', dealsTableName);
 
   const dealsDataContainer = document.getElementById('dealsDataContainer');

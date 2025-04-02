@@ -1,6 +1,7 @@
 import { filterColumnsInData } from './renderer/dataProcessor.js';
 import processData from './renderer/dataProcessor.js';
 import createBarChart from './charts/BarChart.js';
+import { appState } from './renderer.js';
 // import {handleTrafficLight} from './trafficLight.js';
 
 // Global scope — this runs as soon as the file is loaded
@@ -11,96 +12,179 @@ let ratingData = [];
 let marketData = [];
 let marketNormData = [];
 
-export function handleLossIssuerMainData(receivedData, type) {
-  // console.log('LossIssuer receivedData:', receivedData);
+// export function handleLossIssuerMainData(receivedData) {
+//   console.log('LossIssuer receivedData:', receivedData);
+
+//   const port_name = appState.getSelectedDealsTableName(); // z. B. "UNI"
+//   console.log('port_name:', port_name);
+
+// const filteredData = receivedData.filter(
+//   row => row.port_name === port_name && row.pd_flag
+// );
   
-  // 🔥 Define the type map for dynamic access
+//   // 🔥 Define the type map for dynamic access
+//   const typeMap = {
+//     'RATING': {
+//       dataContainerId: 'LossIssuerDataContainerRating',
+//       chartId: 'LossIssuerChartRating',
+//       tableName: 'sortedLossesIssuerMain_rating'
+//     },
+//     'MARKET': {
+//       dataContainerId: 'LossIssuerDataContainerMarket',
+//       chartId: 'LossIssuerChartMarket',
+//       tableName: 'sortedLossesIssuerMain_market'
+//     },
+//     'NORM': {
+//       dataContainerId: 'LossIssuerDataContainerMarketNorm',
+//       chartId: 'LossIssuerChartMarketNorm',
+//       tableName: 'sortedLossesIssuerMain_marketNorm'
+//     }
+//   };
+
+//   // 🔥 Get the data for the current type
+//   const { dataContainerId, chartId, tableName } = typeMap || {}; // Destructure the mapped data
+  
+//   if (!dataContainerId || !chartId || !tableName) {
+//     console.error(`Invalid type "${type}" provided for handleLossIssuerMainData.`);
+//     return; // If the type is invalid, stop execution
+//   }
+
+//   const LossIssuerDataContainer = document.getElementById(dataContainerId);
+
+//   if (LossIssuerDataContainer && filteredData) {
+//     let sortedData = processAndSortLossIssuerData(receivedData);
+//     const LossIssuerDataHTML = processData(sortedData, tableName); 
+//     LossIssuerDataContainer.innerHTML = LossIssuerDataHTML;
+  
+//     // 🔥 Highlight the 10th row (index 9 since it is zero-indexed)
+//     const allRows = LossIssuerDataContainer.querySelectorAll('tr'); 
+//     if (allRows.length > 10) {
+//       allRows[10].classList.add('highlight'); 
+//     }
+
+//     // Save the datasets globally to be used in combined chart
+//     if (type === 'rating') {
+//       ratingData = sortedData;
+//       createLossIssuerChart(ratingData, 'LossIssuerChartRating', 'rating'); 
+//     } else if (type === 'market') {
+//       marketData = sortedData;
+//       createLossIssuerChart(marketData, 'LossIssuerChartMarket', 'market'); 
+//     } else if (type === 'norm') {
+//       marketNormData = sortedData; 
+//       createLossIssuerChart(marketNormData, 'LossIssuerChartMarketNorm', 'norm'); 
+//     }
+
+//     // Call the combined chart after all datasets are available
+//     if (ratingData.length > 0 && marketData.length > 0 && marketNormData.length > 0) {
+//       createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
+//       createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart'); 
+//     }
+
+//     const fetchRatingData = () => new Promise(resolve => {
+//       // Simulate async data fetch for rating
+//       setTimeout(() => resolve(ratingData), 1000);
+//     });
+    
+//     const fetchNormData = () => new Promise(resolve => {
+//       // Simulate async data fetch for norm
+//       setTimeout(() => resolve(marketNormData), 2000);
+//     });
+    
+//     Promise.all([fetchRatingData(), fetchNormData()]).then(([ratingData, marketNormData]) => {
+//       // console.log("Rating Data Before Mapping:", ratingData);
+//       // console.log("Market Norm Data Before Mapping:", marketNormData);
+  
+//       // Safely map LOSS values
+//       const extractedRatingLosses = ratingData.map(item => item.LOSS || 0); // Default to 0 if LOSS is undefined
+//       const extractedNormLosses = marketNormData.map(item => item.LOSS || 0);
+  
+//       // console.log("Extracted Rating Losses:", extractedRatingLosses);
+//       // console.log("Extracted Norm Losses:", extractedNormLosses);
+  
+//       handleTrafficLight(extractedRatingLosses, extractedNormLosses);
+//   });
+  
+  
+//   }
+// }
+
+export function handleLossIssuerMainData(receivedData) {
+  //console.log('LossIssuer receivedData:', receivedData);
+
+  const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
+  //console.log('port_name:', port_name);
+
   const typeMap = {
-    'rating': {
+    'RATING': {
       dataContainerId: 'LossIssuerDataContainerRating',
       chartId: 'LossIssuerChartRating',
-      tableName: 'sortedLossesIssuerMain_rating'
+      tableName: 'sortedLossesIssuerMain'
     },
-    'market': {
+    'MARKET': {
       dataContainerId: 'LossIssuerDataContainerMarket',
       chartId: 'LossIssuerChartMarket',
-      tableName: 'sortedLossesIssuerMain_market'
+      tableName: 'sortedLossesIssuerMain'
     },
-    'norm': {
+    'NORM': {
       dataContainerId: 'LossIssuerDataContainerMarketNorm',
       chartId: 'LossIssuerChartMarketNorm',
-      tableName: 'sortedLossesIssuerMain_marketNorm'
+      tableName: 'sortedLossesIssuerMain'
     }
   };
 
-  // 🔥 Get the data for the current type
-  const { dataContainerId, chartId, tableName } = typeMap[type] || {}; // Destructure the mapped data
-  
-  if (!dataContainerId || !chartId || !tableName) {
-    console.error(`Invalid type "${type}" provided for handleLossIssuerMainData.`);
-    return; // If the type is invalid, stop execution
-  }
+  // 🔁 Schleife über alle Typen
+  Object.entries(typeMap).forEach(([pdFlag, config]) => {
+    const { dataContainerId, chartId, tableName } = config;
 
-  const LossIssuerDataContainer = document.getElementById(dataContainerId);
+    const LossIssuerDataContainer = document.getElementById(dataContainerId);
+    const filteredData = receivedData.filter(
+      row => row.port_name === port_name && row.pd_flag === pdFlag
+    );
 
-  if (LossIssuerDataContainer && receivedData) {
-    let sortedData = processAndSortLossIssuerData(receivedData);
-    const LossIssuerDataHTML = processData(sortedData, tableName); 
-    LossIssuerDataContainer.innerHTML = LossIssuerDataHTML;
-  
-    // 🔥 Highlight the 10th row (index 9 since it is zero-indexed)
-    const allRows = LossIssuerDataContainer.querySelectorAll('tr'); 
-    if (allRows.length > 10) {
-      allRows[10].classList.add('highlight'); 
+    if (LossIssuerDataContainer && filteredData.length > 0) {
+      let sortedData = processAndSortLossIssuerData(filteredData);
+      const LossIssuerDataHTML = processData(sortedData, port_name, tableName);
+      LossIssuerDataContainer.innerHTML = LossIssuerDataHTML;
+
+      const allRows = LossIssuerDataContainer.querySelectorAll('tr');
+      if (allRows.length > 10) {
+        allRows[10].classList.add('highlight');
+      }
+
+      // Speichern für später
+      if (pdFlag === 'RATING') {
+        ratingData = sortedData;
+        createLossIssuerChart(ratingData, chartId, 'rating');
+      } else if (pdFlag === 'MARKET') {
+        marketData = sortedData;
+        createLossIssuerChart(marketData, chartId, 'market');
+      } else if (pdFlag === 'NORM') {
+        marketNormData = sortedData;
+        createLossIssuerChart(marketNormData, chartId, 'norm');
+      }
     }
+  });
 
-    // Save the datasets globally to be used in combined chart
-    if (type === 'rating') {
-      ratingData = sortedData;
-      createLossIssuerChart(ratingData, 'LossIssuerChartRating', 'rating'); 
-    } else if (type === 'market') {
-      marketData = sortedData;
-      createLossIssuerChart(marketData, 'LossIssuerChartMarket', 'market'); 
-    } else if (type === 'norm') {
-      marketNormData = sortedData; 
-      createLossIssuerChart(marketNormData, 'LossIssuerChartMarketNorm', 'norm'); 
-    }
-
-    // Call the combined chart after all datasets are available
-    if (ratingData.length > 0 && marketData.length > 0 && marketNormData.length > 0) {
-      createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
-      createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart'); 
-    }
+  // 🟡 Kombinierte Charts nur erstellen, wenn alle drei da sind
+  if (ratingData.length > 0 && marketData.length > 0 && marketNormData.length > 0) {
+    createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
+    createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart');
 
     const fetchRatingData = () => new Promise(resolve => {
-      // Simulate async data fetch for rating
       setTimeout(() => resolve(ratingData), 1000);
     });
-    
+
     const fetchNormData = () => new Promise(resolve => {
-      // Simulate async data fetch for norm
       setTimeout(() => resolve(marketNormData), 2000);
     });
-    
+
     Promise.all([fetchRatingData(), fetchNormData()]).then(([ratingData, marketNormData]) => {
-      // console.log("Rating Data Before Mapping:", ratingData);
-      // console.log("Market Norm Data Before Mapping:", marketNormData);
-  
-      // Safely map LOSS values
-      const extractedRatingLosses = ratingData.map(item => item.LOSS || 0); // Default to 0 if LOSS is undefined
+      const extractedRatingLosses = ratingData.map(item => item.LOSS || 0);
       const extractedNormLosses = marketNormData.map(item => item.LOSS || 0);
-  
-      // console.log("Extracted Rating Losses:", extractedRatingLosses);
-      // console.log("Extracted Norm Losses:", extractedNormLosses);
-  
       handleTrafficLight(extractedRatingLosses, extractedNormLosses);
-  });
-  
-  
+    });
   }
 }
-
-
 
 export function setupLossIssuerUI() {
   let EADMainDataContainer = document.getElementById('EADMainDataContainer');
@@ -120,68 +204,63 @@ export function setupLossIssuerUI() {
 
   setupEventListeners();
 }
+    function setupEventListeners() {
+      const lossIssuerRatingButton = document.querySelector('.chart-button[data-chart="LossIssuerChartRating"]');
+      const lossIssuerMarketButton = document.querySelector('.chart-button[data-chart="LossIssuerChartMarket"]');
+      const lossIssuerMarketNormButton = document.querySelector('.chart-button[data-chart="LossIssuerChartMarketNorm"]');
+      const eadButton = document.querySelector('.chart-button[data-chart="EADChart"]');
+      const lgdButton = document.querySelector('.chart-button[data-chart="LGDChart"]');
+      
+      toggleDisplay('EAD');
 
-
-function setupEventListeners() {
-  const lossIssuerRatingButton = document.querySelector('.chart-button[data-chart="LossIssuerChartRating"]');
-  const lossIssuerMarketButton = document.querySelector('.chart-button[data-chart="LossIssuerChartMarket"]');
-  const lossIssuerMarketNormButton = document.querySelector('.chart-button[data-chart="LossIssuerChartMarketNorm"]');
-  const eadButton = document.querySelector('.chart-button[data-chart="EADChart"]');
-  const lgdButton = document.querySelector('.chart-button[data-chart="LGDChart"]');
-  
-  toggleDisplay('EAD');
-
-  lossIssuerRatingButton.addEventListener('click', () => toggleDisplay('LossIssuerRating'));
-  lossIssuerMarketButton.addEventListener('click', () => toggleDisplay('LossIssuerMarket'));
-  lossIssuerMarketNormButton.addEventListener('click', () => toggleDisplay('LossIssuerMarketNorm'));
-  eadButton.addEventListener('click', () => toggleDisplay('EAD'));
-  lgdButton.addEventListener('click', () => toggleDisplay('LGD'));
-}
-
-function toggleDisplay(chartType) {
-  const dataContainers = {
-    'EAD': 'EADMainDataContainer',
-    'LossIssuerRating': 'LossIssuerDataContainerRating',
-    'LossIssuerMarket': 'LossIssuerDataContainerMarket',
-    'LossIssuerMarketNorm': 'LossIssuerDataContainerMarketNorm'
-  };
-
-  const chartContainers = {
-    'EAD': 'EADChartContainer',
-    'LGD': 'LGDChartContainer', 
-    'LossIssuerRating': 'LossIssuerChartContainerRating',
-    'LossIssuerMarket': 'LossIssuerChartContainerMarket',
-    'LossIssuerMarketNorm': 'LossIssuerChartContainerMarketNorm'
-  };
-
-  Object.keys(dataContainers).forEach(key => {
-    const containerId = dataContainers[key];
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('Container not found for key:', key, 'ID:', containerId);
-    } else {
-      container.style.display = (key === chartType || (key === 'EAD' && chartType === 'LGD')) ? 'block' : 'none';
+      lossIssuerRatingButton.addEventListener('click', () => toggleDisplay('LossIssuerRating'));
+      lossIssuerMarketButton.addEventListener('click', () => toggleDisplay('LossIssuerMarket'));
+      lossIssuerMarketNormButton.addEventListener('click', () => toggleDisplay('LossIssuerMarketNorm'));
+      eadButton.addEventListener('click', () => toggleDisplay('EAD'));
+      lgdButton.addEventListener('click', () => toggleDisplay('LGD'));
     }
-  });
+    function toggleDisplay(chartType) {
+      const dataContainers = {
+        'EAD': 'EADMainDataContainer',
+        'LossIssuerRating': 'LossIssuerDataContainerRating',
+        'LossIssuerMarket': 'LossIssuerDataContainerMarket',
+        'LossIssuerMarketNorm': 'LossIssuerDataContainerMarketNorm'
+      };
 
-  Object.keys(chartContainers).forEach(key => {
-    const chartContainerId = chartContainers[key];
-    const chartContainer = document.getElementById(chartContainerId);
-    if (!chartContainer) {
-      console.error('Chart container not found for key:', key, 'ID:', chartContainerId);
-    } else {
-      // 🔥 Do not hide the combined chart
-      if (chartContainerId !== 'LossIssuerCombinedChartContainer' && chartContainerId !== 'LossIssuerCombinedESChartContainer') {
-        // Your logic here
-      }
-       {
-        chartContainer.style.display = key === chartType ? 'block' : 'none';
-      }
+      const chartContainers = {
+        'EAD': 'EADChartContainer',
+        'LGD': 'LGDChartContainer', 
+        'LossIssuerRating': 'LossIssuerChartContainerRating',
+        'LossIssuerMarket': 'LossIssuerChartContainerMarket',
+        'LossIssuerMarketNorm': 'LossIssuerChartContainerMarketNorm'
+      };
+
+      Object.keys(dataContainers).forEach(key => {
+        const containerId = dataContainers[key];
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.error('Container not found for key:', key, 'ID:', containerId);
+        } else {
+          container.style.display = (key === chartType || (key === 'EAD' && chartType === 'LGD')) ? 'block' : 'none';
+        }
+      });
+
+      Object.keys(chartContainers).forEach(key => {
+        const chartContainerId = chartContainers[key];
+        const chartContainer = document.getElementById(chartContainerId);
+        if (!chartContainer) {
+          console.error('Chart container not found for key:', key, 'ID:', chartContainerId);
+        } else {
+          // 🔥 Do not hide the combined chart
+          if (chartContainerId !== 'LossIssuerCombinedChartContainer' && chartContainerId !== 'LossIssuerCombinedESChartContainer') {
+            // Your logic here
+          }
+          {
+            chartContainer.style.display = key === chartType ? 'block' : 'none';
+          }
+        }
+      });
     }
-  });
-}
-
-
 
 export function processAndSortLossIssuerData(receivedData) {
   let columns = ['CONVI', 'DEFAULTS', 'ISSUER_RANK', 'LOSS'];
@@ -190,7 +269,6 @@ export function processAndSortLossIssuerData(receivedData) {
   // Sort the data
   return filteredData;
 }
-
 export function createLossIssuerChart(data, chartId, type) {
   // 🔥 Destroy the old chart if it exists
   if (window[chartId] && typeof window[chartId].destroy === 'function') {
@@ -228,7 +306,6 @@ export function createLossIssuerChart(data, chartId, type) {
     }] 
   }, chartId, 'bar', 'y');
 }
-
 
 //VaR
 export function createCombinedLossIssuerChart(ratingData, marketData, marketNormData, chartId) {
@@ -598,8 +675,6 @@ export function createCombinedLossIssuerESChart(ratingData, marketData, marketNo
     }
   });
 }
-
-
 
 
 

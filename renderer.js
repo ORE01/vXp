@@ -1,11 +1,12 @@
 import { handleTSData } from './TS.js';
-import { handleMVaRData, handleMVarInputData, updateMVaRChart} from './MVaR.js'; 
-import { handleCVaRData} from './CVaR.js'; 
+import { handlePortAggData, handlePortProdData} from './PORT.js';
+import { handleMVaRData, handleMVarInputData} from './MVaR.js'; 
+import { handleCVaRData, handleEADMainData} from './CVaR.js'; 
 import { handleSwapForwardCurve, handleFWDData } from './FORWARDS.js';
 import { handleProviderData } from './DATAProvider.js'; 
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
-import { handleCouponData } from './PRODCoupon.js';
+
 
 import { tooltips } from './ToolTip.js';
 import { AppState } from './AppState.js';
@@ -28,16 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
 
-  // FI-Market Data
+// FI-Market Data
   window.api.receive('EUSWData', handleEUSWData);
 
-  // ISSUER 
+// ISSUER 
   window.api.receive('IssuerData', handleIssuerData);
   window.api.receive('CSMatrixData', handleCSMatrixData);
   window.api.receive('CSParameterData', handleCSParameterData);
   window.api.receive('RankData', handleRankData);
 
-  // FI-Product Data
+// FI-Product Data
   window.api.receive('ProdAllData', handleProdData);
   window.api.receive('ProdCouponSchedulesData', (receivedData) => {
     //console.log('Received ProdCouponSchedulesData:', receivedData);
@@ -51,35 +52,41 @@ function setupEventListeners() {
     }
   });
 
-  //DEALS:
-  window.api.receive('DealsMainData', handleDealsMainData);
-  window.api.receive('DealsMainData', handleCreatedDealsData);
+// DEALS:
+window.api.receive('DealsMainData', (data) => {
+  handleDealsNameList(data);
+  handleDealsMainData(data);
+});
 
 // PORTFOLIO
-  window.api.receive('DealsMainData', handleCreatedPortData);
-  window.api.receive('PortfoliosData', handlePortfolioData);
+window.api.receive('PortfoliosData', (data) => {
+  handlePortNameList(data);
+  handlePortfolioData(data);
+});
 
 
-
-  // MVaR
-  window.api.receive('MarketVaRData', handleMVaRMainData);
-  // window.api.receive('MVaRMainData', handleMVaRMainData);
+// MVaR: Input
   window.api.receive('MVaRInput_2Data', handleMVarInputData);
 
-  // CVaR
+// MVaR
+  window.api.receive('MarketVaRData', handleAllMVaRData);
+
+// EAD
+  window.api.receive('EADData', (data) => handleAllEADData(data));
+
+// CVaR
   window.api.receive('CreditVaRData', (data) => handleAllCVaRData(data));
 
-  window.api.receive('EADMain_marketData', (data) => {appState.handleEADMainData.call(appState, data, 'EADMain_market'); });
-  //setupCvarLossesData('sortedLossesMain', appState.handleCVaRData.bind(appState), ['rating', 'market', 'norm']);
-  setupCvarLossesData('sortedLossesIssuerMain', handleLossIssuerMainData, ['rating', 'market', 'norm']);
+// LOSSES sorted
+  window.api.receive('sortedLossesIssuerMainData', (data) => handleAllLossData(data));
 
-  // ML
+// ML
   window.api.receive('ML_FuturePredictionsData', (data) => handleFuturePredictions(data));
   window.api.receive('ML_MergedDataData', (data) => handleMLTestData(data));
   window.api.receive('ML_TrainedModelsData', handleMLTrainedModels); 
   window.api.receive('ML_ModelsData', handleMLModels);
 
-  // DATA PROVIDER: ecb, fed, yahoo
+// DATA PROVIDER: ecb, fed, yahoo
   setupDataProvider(
     [
       ['ecbData', 'ecb'],
@@ -172,12 +179,12 @@ function setupEventListeners() {
         window.api.receive(eventName, (data) => handler(data, type));
       });
     }
-    function setupCvarLossesData(eventPrefix, handler, types) {
-      types.forEach((type) => {
-        const eventName = `${eventPrefix}_${type}Data`;
-        window.api.receive(eventName, (data) => handler(data, type));
-      });
-    }
+    // function setupCvarLossesData(eventPrefix, handler, types) {
+    //   types.forEach((type) => {
+    //     const eventName = `${eventPrefix}_${type}Data`;
+    //     window.api.receive(eventName, (data) => handler(data, type));
+    //   });
+    // }
     function createTSModals(data) {
       const modalContentContainer = document.getElementById('modal-content-container');
       if (!modalContentContainer) {
@@ -251,17 +258,17 @@ function setupEventListeners() {
       // Deals Dropdown
       setupDropdown({
           dropdownId: 'createdDealsDropdown',
-          getDataFunction: appState.getCreatedDealsData,
+          getDataFunction: appState.getDealsNameList,
           updateDataFunction: appState.updateDealsDataTable,
           setSelectedDealsTableName: appState.setSelectedDealsTableName,
           setActiveTable: () => appState.setActiveElementId('dealsDataContainer')
       });
   
       // Portfolio Dropdowns (0, 1, 2)
-      ['0', '1', '2'].forEach(num => {
+      ['0','1', '2'].forEach(num => {
           setupDropdown({
               dropdownId: `createdPortDropdown${num}`,
-              getDataFunction: appState.getCreatedPortData,
+              getDataFunction: appState.getPortNameList,
               updateDataFunction: appState.updatePortDataTable,
               updateMvarDataFunction: appState.updateMvarDataTable,
               updateCvarDataFunction: appState.updateCvarDataTable,
@@ -290,25 +297,49 @@ function setupEventListeners() {
     if (dropdown) {
         dropdown.addEventListener('change', event => {
             const selectedTableName = event.target.value;
-            console.log(`🔄 Portfolio ausgewählt: ${selectedTableName}`);
+            //console.log(`🔄 Portfolio ausgewählt: ${selectedTableName}`);
 
             // ✅ DealsTableName setzen
             if (setSelectedDealsTableName) {
                 appState.setSelectedDealsTableName(selectedTableName);
-                console.log('📌 DealsTableName gesetzt auf:', appState.getSelectedDealsTableName());
+                //console.log('📌 DealsTableName gesetzt auf:', appState.getSelectedDealsTableName());
             }
 
             // ✅ PortTableName setzen
             if (setSelectedPortTableName) {
                 appState.setSelectedPortTableName(selectedTableName);
-                console.log('✅ Gespeichertes Portfolio:', appState.getSelectedPortTableName());
+                //console.log('port_name:', appState.getSelectedPortTableName());
 
                 // 🛠 MVaR-Daten aktualisieren
-                const storedMVaRData = appState.getMvarData();
-                if (storedMVaRData && storedMVaRData.length > 0) {
-                    handleMVaRData(storedMVaRData);
+                const MVaRData = appState.getMvarData();
+                if (MVaRData && MVaRData.length > 0) {
+                    handleMVaRData(MVaRData);
                 } else {
                     console.warn('⚠️ Keine gespeicherten MVaR-Daten gefunden.');
+                }
+
+                // 🛠 EAD-Daten aktualisieren
+                const EADData = appState.getAllEADData();
+                if (EADData && EADData.length > 0) {
+                    handleEADMainData(EADData);
+                } else {
+                    console.warn('⚠️ Keine gespeicherten EAD-Daten gefunden.');
+                }
+            
+                // 🛠 CVaR-Daten aktualisieren
+                const CVaRData = appState.getAllCvarData();
+                if (CVaRData && CVaRData.length > 0) {
+                    handleCVaRData(CVaRData);
+                } else {
+                    console.warn('⚠️ Keine gespeicherten CVaR-Daten gefunden.');
+                }
+
+                // 🛠 LOSS-Daten aktualisieren
+                const LossData = appState.getAllLossData();
+                if (LossData && LossData.length > 0) {
+                    handleLossIssuerMainData(LossData);
+                } else {
+                    console.warn('⚠️ Keine gespeicherten CVaR-Daten gefunden.');
                 }
             }
 
@@ -325,7 +356,7 @@ function setupEventListeners() {
             });
 
             // 🛠 Fetch and display the data for the selected portfolio
-            appState.fetchAndHandlePortData(selectedTableName, dropdownId);
+            //appState.fetchAndHandlePortData(selectedTableName, dropdownId);
         });
     }
 }
@@ -418,19 +449,9 @@ function setupEventListeners() {
   }
 
   // PORTFOLIO
-  // function handleCreatedDealsData(receivedData) {
-  //   try {
-  //     //console.log('Received createdDealsData:', receivedData);
-  //     appState.setCreatedDealsData(receivedData, 'createdDealsDropdown');
-  //     appState.applyFiltersAndUpdateDropdowns('dealsTables');
-  //   } catch (error) {
-  //     console.error("Error processing created tables data:", error);
-  //   }
-  // }
-
-  function handleCreatedDealsData(receivedData) {
+  function handleDealsNameList(receivedData) {
     try {
-        console.log('Received Alle Deals Daten:', receivedData);
+        //console.log('Received Alle Deals Daten:', receivedData);
         
         // Extract unique portfolio names from the port_name column
         const uniquePortNames = [...new Set(receivedData.map(entry => entry.port_name).filter(name => name))];
@@ -439,21 +460,21 @@ function setupEventListeners() {
         const uniquePortfolios = uniquePortNames.map(name => ({ table_name: name }));
 
         // Save the unique deals portfolios
-        appState.setCreatedDealsData(uniquePortfolios, 'createdDealsDropdown');
+        appState.setDealsNameList(uniquePortfolios, 'createdDealsDropdown');
 
         // Update the dropdown
         appState.applyFiltersAndUpdateDropdowns('dealsTables');
 
-        console.log('✅ Unique deals portfolios:', uniquePortfolios);
+        //console.log('✅ Unique deals portfolios:', uniquePortfolios);
     } catch (error) {
         console.error("❌ Error processing created deals data:", error);
     }
 }
 
 // Created PORT data
-function handleCreatedPortData(receivedData) {
+  function handlePortNameList(receivedData) {
   try {
-      console.log('Received Alle Portfolio Daten:', receivedData);
+      //console.log('Received Alle Portfolio Daten:', receivedData);
 
       // Extract unique portfolio names from port_name column
       const uniquePortNames = [...new Set(receivedData.map(entry => entry.port_name).filter(name => name))];
@@ -463,75 +484,140 @@ function handleCreatedPortData(receivedData) {
 
       // Update each dropdown with unique portfolio names
       ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
-          appState.setCreatedPortData(uniquePortfolios, dropdown);
+          appState.setPortNameList(uniquePortfolios, dropdown);
           appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
       });
 
-      console.log('✅ Unique portfolios for dropdowns:', uniquePortfolios);
+      //console.log('✅ Unique portfolios for dropdowns:', uniquePortfolios);
   } catch (error) {
       console.error("❌ Error processing created port data:", error);
   }
 }
 
-  function handleSaveSelection() {
+//   function handleSaveSelection() {
+//     const port_name = document.getElementById('nameInput').value; // No 'Deals' prefix
+//     const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
 
-    const port_name = document.getElementById('nameInput').value; // No 'Deals' prefix
-    const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
+//     console.log('port_name, tagValues:', port_name, tagValues);
 
-    console.log('port_name, tagValues:', port_name, tagValues);
+//     if (!port_name || tagValues.length === 0) {
+//         alert('Please enter a name and select at least one trade ID.');
+//         return;
+//     }
+//     const filteredData = appState.getFilteredData('deals');
+//     const selectedFromTableName = appState.getSelectedDealsTableName();
+//     const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
+//     // Send data to backend with only `port_name`
+//     window.api.send('save-deals-selection', {
+//         selectedFromTableName,
+//         port_name,  // Only the name without 'Deals'
+//         tagValues,
+//         selectedTradeIDs
+//     });
 
-    if (!port_name || tagValues.length === 0) {
-        alert('Please enter a name and select at least one trade ID.');
-        return;
+//     // ✅ Show success confirmation modal
+//     showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {
+//         console.log('User closed the success confirmation modal.');
+//     });
+
+//     const newPortfolio = { table_name: port_name };
+//     console.log('newPortfolio:', newPortfolio);
+
+//     appState.setDealsNameList([...appState.getDealsNameList(), newPortfolio]);
+//     appState.updateDealsDataTable.bind(appState);
+
+//     appState.updateDropdownOptions({
+//         dropdownElementId: 'createdDealsDropdown',
+//         getDataFunction: appState.getDealsNameList.bind(appState),
+//         updateDataFunction: appState.updateDealsDataTable.bind(appState),
+//         selectedTableName: port_name
+//     });
+
+//     appState.setSelectedDealsTableName(port_name);
+
+// // Schreibt nur das letzt angelegte Portfolio in die Liste
+//     //appState.dropdownConfig['dealsTables']['createdDealsDropdown'].selection = [port_name];
+// // Manuell Auswahl im Dropdown setzen + Event auslösen
+// const dropdown = document.getElementById('createdDealsDropdown');
+// if (dropdown) {
+//     dropdown.value = port_name;
+//     dropdown.dispatchEvent(new Event('change'));
+//     console.log(`🎯 Manuell ausgewählt: '${port_name}' im Dropdown.`);
+// }
+
+
+//     appState.applyFiltersAndUpdateDropdowns('deals');
+
+//     // 👇 Simuliere Klick auf den Reset-Button nach dem Speichern
+//   const resetButton = document.getElementById('dealsResetFiltersButton');
+//   if (resetButton) {
+//     resetButton.click();
+//   }
+
+// }
+
+function handleSaveSelection() {
+  const port_name = document.getElementById('nameInput').value;
+  const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
+
+  //console.log('port_name, tagValues:', port_name, tagValues);
+
+  if (!port_name || tagValues.length === 0) {
+    alert('Please enter a name and select at least one trade ID.');
+    return;
+  }
+
+  const filteredData = appState.getFilteredData('deals');
+  const selectedFromTableName = appState.getSelectedDealsTableName();
+  const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
+
+  window.api.send('save-deals-selection', {
+    selectedFromTableName,
+    port_name,
+    tagValues,
+    selectedTradeIDs
+  });
+
+  showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {
+    //console.log('User closed the success confirmation modal.');
+  });
+
+  const newPortfolio = { table_name: port_name };
+  appState.setDealsNameList([...appState.getDealsNameList(), newPortfolio]);
+
+  // ✅ 1. Setze das Dropdown-Filter-Kriterium für applyFilters...
+  appState.dropdownConfig['dealsTables']['createdDealsDropdown'].selection = [port_name];
+
+  // ✅ 2. Filtere und aktualisiere UI
+  appState.applyFiltersAndUpdateDropdowns('dealsTables');
+
+  // ✅ 3. Aktualisiere Dropdown (enthält nun neue Optionen)
+  appState.updateDropdownOptions({
+    dropdownElementId: 'createdDealsDropdown',
+    getDataFunction: appState.getDealsNameList.bind(appState),
+    updateDataFunction: appState.updateDealsDataTable.bind(appState),
+    selectedTableName: port_name
+  });
+
+  // ✅ 4. Setze aktiv die Auswahl im Dropdown im DOM
+  setTimeout(() => {
+    const dropdown = document.getElementById('createdDealsDropdown');
+    if (dropdown) {
+      dropdown.value = port_name;
+      dropdown.dispatchEvent(new Event('change'));
+      //console.log(`🎯 Manuell ausgewählt: '${port_name}' im Dropdown.`);
     }
+  }, 100);
 
-    const filteredData = appState.getFilteredData('deals');
-    const selectedFromTableName = appState.getSelectedDealsTableName();
+  // ✅ 5. Setze intern die Auswahl für appState
+  appState.setSelectedDealsTableName(port_name);
+  appState.setSelectedPortTableName(port_name);
 
-    const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
-
-
-
-  
-  
-
-    // Send data to backend with only `port_name`
-    window.api.send('save-deals-selection', {
-        selectedFromTableName,
-        port_name,  // Only the name without 'Deals'
-        tagValues,
-        selectedTradeIDs
-    });
-
-    // ✅ Show success confirmation modal
-    showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {
-        console.log('User closed the success confirmation modal.');
-    });
-
-    const newPortfolio = { table_name: port_name };
-    console.log('newPortfolio:', newPortfolio);
-
-    appState.setCreatedDealsData([...appState.getCreatedDealsData(), newPortfolio]);
-    appState.updateDealsDataTable.bind(appState);
-
-    appState.updateDropdownOptions({
-        dropdownElementId: 'createdDealsDropdown',
-        getDataFunction: appState.getCreatedDealsData.bind(appState),
-        updateDataFunction: appState.updateDealsDataTable.bind(appState),
-        selectedTableName: port_name
-    });
-
-    appState.setSelectedDealsTableName(port_name);
-    appState.applyFiltersAndUpdateDropdowns('deals');
-
-    // 👇 Simuliere Klick auf den Reset-Button nach dem Speichern
-const resetButton = document.getElementById('dealsResetFiltersButton');
-if (resetButton) {
-  resetButton.click();
+  // ✅ 6. Reset-Button klicken
+  const resetButton = document.getElementById('dealsResetFiltersButton');
+  if (resetButton) resetButton.click();
 }
 
-
-}
 
   
   
@@ -580,33 +666,33 @@ if (resetButton) {
         
         // On Confirm
         () => {
-          console.log(`Confirmed deletion of ${selectedTableName} and ${portTableName}`);
+          //console.log(`Confirmed deletion of ${selectedTableName} and ${portTableName}`);
           window.api.send('delete-selected-table', selectedTableName);
   
           setTimeout(() => {
-            console.log('Message sent to main process to delete the selected table');
+            //console.log('Message sent to main process to delete the selected table');
   
             // Update createdDealsData
-            const dealsData = appState.getCreatedDealsData().filter(deal => deal.table_name !== selectedTableName);
-            appState.setCreatedDealsData(dealsData);
+            const dealsData = appState.getDealsNameList().filter(deal => deal.table_name !== selectedTableName);
+            appState.setDealsNameList(dealsData);
             
             appState.updateDropdownOptions({
               dropdownElementId: 'createdDealsDropdown',
-              getDataFunction: appState.getCreatedDealsData.bind(appState),
+              getDataFunction: appState.getDealsNameList.bind(appState),
               updateDataFunction: appState.updateDealsDataTable.bind(appState),
               selectedTableName: selectedTableName
           });
           
   
             // Update createdPortData
-            const portData = appState.getCreatedPortData().filter(port => port.table_name !== portTableName);
-            appState.setCreatedPortData(portData);
+            const portData = appState.getPortNameList().filter(port => port.table_name !== portTableName);
+            appState.setPortNameList(portData);
   
             // Refresh port dropdowns
             ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach(dropdownId => {
               appState.updateDropdownOptions({
                 dropdownElementId: dropdownId,
-                getDataFunction: appState.getCreatedPortData.bind(appState),
+                getDataFunction: appState.getPortNameList.bind(appState),
                 updateDataFunction: appState.updatePortDataTable.bind(appState),
                 updateMvarDataFunction: appState.updateMvarDataTable.bind(appState),
                 updateCvarDataFunction: appState.updateCvarDataTable.bind(appState),
@@ -620,9 +706,9 @@ if (resetButton) {
                 nameInput.focus();
                 const length = nameInput.value.length;
                 nameInput.setSelectionRange(length, length);
-                console.log('Cursor set at the end of nameInput:', nameInput.selectionStart, nameInput.selectionEnd);
+                //console.log('Cursor set at the end of nameInput:', nameInput.selectionStart, nameInput.selectionEnd);
               } else {
-                console.log('nameInput not found');
+                //console.log('nameInput not found');
               }
             });
           }, 100);
@@ -724,7 +810,7 @@ if (resetButton) {
 
         // ✅ Event-Listener für den Abschluss setzen
         window.api.receive(`${projectName}-complete`, () => {
-            console.log(`✅ ${projectName} finished, resetting button.`);
+            //console.log(`✅ ${projectName} finished, resetting button.`);
             buttonElement.disabled = false;
             buttonElement.textContent = 'Run';
         });
@@ -741,8 +827,8 @@ if (resetButton) {
   //py-Projects
       //fairvalue
       function handleFairValueProject(buttonElement, extraParam) {
-        const selectedTableName = appState.getSelectedDealsTableName();
-        console.log('🚀 Sending payload for py-fairValue:', selectedTableName);
+        const port_name = appState.getSelectedDealsTableName();
+        //console.log('🚀 Sending payload for py-fairValue:', port_name);
         const CSSzenario = appState.getCSSzenarioData();
         const selectedCurve = appState.getSelectedCurve();
       
@@ -754,61 +840,82 @@ if (resetButton) {
         extraParam.selectedCurve = selectedCurve;
       
         const payload = {
-          tableName: selectedTableName,
+          tableName: port_name,
           ...extraParam,
         };
       
-        console.log('🚀 Sending payload for py-fairValue:', payload);
+        //console.log('🚀 Sending payload for py-fairValue:', payload);
         window.api.send(`start-py-fairValue`, payload);
       }
           function handleFairValueComplete(data) {
+            //console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
             if (data.projectName === 'py-fairValue') {
-                console.log('📌 Fair Value Calculation Completed:', data);
-        
-                // 🛠 1️⃣ Setzt die aktive Tabelle auf "deals"
-                appState.setActiveTable('deals');
-        
-                // 🛠 2️⃣ Holt den Portfolionamen aus Deals
-                const selectedDealsTableName = appState.getSelectedDealsTableName();
-                const selectedPortTableName = selectedDealsTableName;
-                console.log('🔹 Neues Portfolio:', selectedPortTableName);
-        
-                // 🛠 3️⃣ Holt die aktuellsten Portfolio-Daten **vor** dem Update der Dropdowns
-                window.api.send('fetch-portfolios-data');
-                window.api.receive('PortfoliosData', receivedPortfoliosData => {
-                    console.log('✅ Portfolio-Daten erhalten:', receivedPortfoliosData);
-        
-                    // 🔹 Speichert alle Portfolios
-                    appState.setPortfolioData(receivedPortfoliosData);
-        
-                    // 🔹 Filtert das aktuelle Portfolio heraus
-                    const filteredData = receivedPortfoliosData.filter(entry => entry.port_name === selectedPortTableName);
-                    appState.updatePortDataTable(filteredData);
-                    console.log('✅ Portfolio filteredData:', filteredData, selectedPortTableName);
-        
-                    // 🛠 4️⃣ Jetzt erst Dropdowns aktualisieren (weil die neuen Daten da sind)
-                    ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
-                        appState.updateDropdownOptions({
-                            dropdownElementId: dropdownId,
-                            getDataFunction: appState.getCreatedPortData.bind(appState),  // Holt Portfolios
-                            updateDataFunction: appState.getPortfolioData.bind(appState), // Zeigt Portfolios an
-                            selectedTableName: index === 0 ? selectedPortTableName : undefined // Nur in Dropdown0 auswählen
-                        });
-                    });
-        
-                    // 🛠 5️⃣ Setzt das neue Portfolio als aktiv (nachdem die Daten da sind)
-                    appState.setSelectedPortTableName(selectedPortTableName);
-        
-                    console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
-                });
+              // 🛠 1️⃣ Setzt die aktive Tabelle auf "deals"
+              appState.setActiveTable('deals');
+              appState.setActiveElementId('portDataContainer0')
+      
+              // 🛠 2️⃣ Holt den Portfolionamen aus Deals
+              const port_name = appState.getSelectedDealsTableName();
+              //console.log('🔹 Neues Portfolio:', port_name);
+      
+             // Antwort nur für Button:
+              handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
+
+              // 🛠 3️⃣ Holt die aktuellsten Portfolio-Daten **vor** dem Update der Dropdowns
+              fetchAndUpdateFairValueData();
             }
+          }
+        function fetchAndUpdateFairValueData() {
+          window.api.receive('PortfoliosData', (receivedData) => {
+            //console.log(`✅ Updated PortfoliosData Data:`, receivedData);
+        
+            if (!receivedData || receivedData.length === 0) {
+              console.warn("⚠️ No new Portfolios data received!");
+              appState.setAllPortfolioData([]);
+              return;
+            }
+        
+            appState.setAllPortfolioData(receivedData);
+            //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
+        
+            // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
+            const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
+              if (!port_name) {
+                console.warn("⚠️ Kein Portfolio ausgewählt.");
+                return;
+              }
+            
+            const filteredData = receivedData.filter(entry => entry.port_name === port_name);
+            appState.updatePortDataTable(filteredData);
+            //console.log('✅ Portfolio filteredData:', filteredData, port_name);
+        
+            // 🛠 Dropdowns aktualisieren
+            ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
+              appState.updateDropdownOptions({
+                dropdownElementId: dropdownId,
+                getDataFunction: appState.getPortNameList.bind(appState),
+                updateDataFunction: appState.getPortfolioData.bind(appState),
+                selectedTableName: index === 0 ? port_name : undefined
+              });
+            });
+        
+            // 🛠 Portfolio setzen
+            appState.setSelectedPortTableName(port_name);
+            //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
+
+            handlePortAggData(filteredData, 3, port_name);
+            
+          });
+        
+          // 📤 Erst jetzt senden
+          window.api.send('fetch-table-data', 'Portfolios');
         }
         
         
 
       //MVaR
       function handleMVaRProject(buttonElement, extraParam) {
-        const selectedTableName = appState.getSelectedDealsTableName();
+        const selectedTableName = appState.getSelectedPortTableName();
       
         if (!selectedTableName) {
           throw new Error('No table selected for MVaR processing.');
@@ -819,49 +926,58 @@ if (resetButton) {
           ...extraParam,
         };
       
-        console.log('🚀 Sending payload for py-MVaR:', payload);
+        //console.log('🚀 Sending payload for py-MVaR:', payload);
         window.api.send('start-py-MVaR', payload);
       }
         function handleMVaRComplete(data) {
           if (data.projectName === 'py-MVaR') {
-              console.log('handleProjectResponse', data);
+                  //console.log('handleProjectResponse', data);
       
               appState.setActiveTable('port');  
       
-              const selectedDealsTableName = appState.getSelectedDealsTableName();
-              const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
-              console.log('selectedPortTableName', selectedPortTableName);
+              const port_name = appState.getSelectedPortTableName();
+                  //console.log('port_name', port_name);
       
               // 1. Fetch and handle port data (main portfolio data)
-              appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer0');
+              appState.fetchAndHandlePortData(port_name, 'portDataContainer0');
+
               handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
-      
-              // 2. Aktualisiere die Dropdown-Optionen, damit das neue Portfolio sichtbar wird
-              ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach(dropdownId => {
-                  appState.updateDropdownOptions({
-                      dropdownElementId: dropdownId,
-                      getDataFunction: appState.getCreatedPortData.bind(appState),
-                      updateDataFunction: appState.updatePortDataTable.bind(appState),
-                      updateMvarDataFunction: appState.updateMvarDataTable.bind(appState),
-                      selectedTableName: selectedPortTableName
-                  });
-              });
-      
-              // 3. Rufe handleMVaRData mit den neuesten Daten auf
-              const storedMVaRData = appState.getMvarData();
-              console.log('storedMVaRData', storedMVaRData);
-              if (storedMVaRData && storedMVaRData.length > 0) {
-                  handleMVaRData(storedMVaRData);
-              } else {
-                  console.warn('⚠️ Keine gespeicherten MVaR-Daten gefunden.');
-              }
+
+              fetchAndUpdateMVarData();
+
+
+                const receivedData = appState.getAllPortfolioData();
+                const filtered = receivedData.filter(
+                  row => row.port_name === port_name
+                );
+
+                handlePortAggData(filtered, 3, port_name);
           }
-      }
+        }
+        function fetchAndUpdateMVarData() {
+          //console.log(`fetchAndUpdateMVarData`);
+          //window.api.send('fetch-table-data', 'MarketVaR'); 
+          window.api.receive('MarketVaRData', (receivedData) => {
+              //console.log(`MVaRData:`, receivedData);
+      
+              if (!receivedData || receivedData.length === 0) {
+                  console.warn("⚠️ No new CVaR data received!");
+                  appState.setAllMvarData([]);  // Store empty array to avoid stale data
+                  return;
+              }
+      
+              appState.setAllMvarData(receivedData);
+              //console.log(`AllMvarData:`, appState.getAllMvarData());
+      
+
+          });
+          window.api.send('fetch-table-data', 'MarketVaR'); 
+        }
       
         
       //CVaR
       function handleCVaRProject(buttonElement, extraParam) {
-        const selectedTableName = appState.getSelectedDealsTableName();
+        const port_name = appState.getSelectedPortTableName();
         const CSSzenario = appState.getCSSzenarioData();
       
         if (!CSSzenario) {
@@ -871,93 +987,55 @@ if (resetButton) {
         extraParam.CSSzenario = CSSzenario;
       
         const payload = {
-          tableName: selectedTableName,
+          tableName: port_name,
           ...extraParam,
         };
       
         console.log('🚀 Sending payload for py-CVaR:', payload);
         window.api.send(`start-py-CVaR`, payload);
       }
+          function handleCVaRComplete(data) {
+            if (data.projectName === 'py-CVaR') {
+                    //console.log('✅ CVaR calculation complete:', data);
+        
+                appState.setActiveTable('port');  // Set the active table
+        
+                const port_name = appState.getSelectedPortTableName();
+                    //console.log('📌 Selected Port Table:', port_name);
+        
+                // 1️⃣ Fetch and update the main portfolio data
+                appState.fetchAndHandlePortData(port_name, 'portDataContainer0');
+        
+                // 2️⃣ Ensure the UI reflects that the process is complete
+                handleProjectResponse(document.getElementById('CVaRButton'), data.projectName, data);
+                fetchAndUpdateCVarData();
 
-        //   function handleCVaRComplete(data) {
-        //     if (data.projectName === 'py-CVaR') {
-        //         // console.log('handleProjectResponse', data);
-        
-        //         appState.setActiveTable('port');  // Set the active table to port (adjust if needed)
-        
-        //         const selectedDealsTableName = appState.getSelectedDealsTableName();
-        //         const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
-        //         // console.log('selectedPortTableName', selectedPortTableName);
-        
-        //         // 1. Fetch and handle port data (main portfolio data)
-        //         appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer');
-        //         handleProjectResponse(document.getElementById('CVaRButton'), data.projectName, data);
-        
-        //         // 2. Add the new MVaR-specific entry (if needed)
-        //         const newCVaRDataEntry = { table_name: `CreditVaRData` };
-        //         console.log('newCVaRDataEntry:', newCVaRDataEntry);
-                
-        //         // Ensure setCvarData gets an array
-        //         //appState.setCvarData(newCVaRDataEntry);
-                
-        
-        //         // 3. Refresh the dropdown options to reflect updated MVaR data
-        //         updatePortDropdowns(selectedPortTableName);
-        //     }
-        // }
-        function handleCVaRComplete(data) {
-          if (data.projectName === 'py-CVaR') {
-              console.log('✅ CVaR calculation complete:', data);
-      
-              appState.setActiveTable('port');  // Set the active table
-      
-              const selectedDealsTableName = appState.getSelectedDealsTableName();
-              const selectedPortTableName = selectedDealsTableName.replace('Deals', 'Port');
-              console.log('📌 Selected Port Table:', selectedPortTableName);
-      
-              // 1️⃣ Fetch and update the main portfolio data
-              appState.fetchAndHandlePortData(selectedPortTableName, 'portDataContainer0');
-      
-              // 2️⃣ Ensure the UI reflects that the process is complete
-              handleProjectResponse(document.getElementById('CVaRButton'), data.projectName, data);
-      
-              // 3️⃣ Fetch updated CVaR data and refresh the UI
-              // fetchAndUpdateCVarData();  // ✅ Now updates CVaR when new data is available!
-      
-            //   // 4️⃣ Refresh dropdowns (if necessary)
-            //   ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach(dropdownId => {
-            //     appState.updateDropdownOptions({
-            //         dropdownElementId: dropdownId,
-            //         getDataFunction: appState.getCreatedPortData.bind(appState),
-            //         updateDataFunction: appState.updatePortDataTable.bind(appState),
-            //         selectedTableName: selectedPortTableName
-            //     });
-            // });
-            
-          }
-      }
-      function fetchAndUpdateCVarData() {
-        const CVaRTableName = `CreditVaR`;
-        console.log(`🔄 Fetching updated CVaR Data from ${CVaRTableName}`);
-    
-        window.api.send('fetch-table-data', 'CreditVaR'); 
+                // const receivedData = appState.getAllPortfolioData();
+                // const filtered = receivedData.filter(
+                //   row => row.port_name === port_name
+                // );
 
-    
-        window.api.receive(`${CVaRTableName}Data`, (receivedCVarData) => {
-            console.log(`✅ Updated CVaR Data:`, receivedCVarData);
-    
-            if (!receivedCVarData || receivedCVarData.length === 0) {
-                console.warn("⚠️ No new CVaR data received!");
-                appState.setAllCvarData([]);  // Store empty array to avoid stale data
-                return;
+                // handlePortAggData(filtered, 3, port_name);
             }
-    
-            appState.setAllCvarData(receivedCVarData);
-            console.log(`🔄 UI should now update with`, appState.getAllCvarData());
-    
+          }
+          function fetchAndUpdateCVarData() {
+            
+            window.api.receive('CreditVaRData', (receivedData) => {
+                //console.log(`✅ Updated CVaR Data:`, receivedData);
+        
+                if (!receivedData || receivedData.length === 0) {
+                    console.warn("⚠️ No new CVaR data received!");
+                    appState.setAllCvarData([]);  // Store empty array to avoid stale data
+                    return;
+                }
+        
+                appState.setAllCvarData(receivedData);
+                //console.log(`AllCvarData`, appState.getAllCvarData());
+        
 
-        });
-    }
+            });
+            window.api.send('fetch-table-data', 'CreditVaR'); 
+          }
     
     
       
@@ -987,7 +1065,7 @@ if (resetButton) {
           ...extraParam,
         };
       
-        console.log('🚀 Sending payload for py-ml:', payload);
+        //console.log('🚀 Sending payload for py-ml:', payload);
         window.api.send(`start-py-ml`, payload);
       }
       function handleMLModelSelection(extraParam) {
@@ -1000,7 +1078,7 @@ if (resetButton) {
             throw new Error('Please select a model type for the new model.');
           }
           extraParam.modelType = selectedModelType;
-          console.log(`✅ Selected model type for new model: ${selectedModelType}`);
+          //console.log(`✅ Selected model type for new model: ${selectedModelType}`);
         } else {
           const selectedModel = appState.getMLTrainedModel();
           if (selectedModel) {
@@ -1049,7 +1127,7 @@ if (resetButton) {
           ...extraParam,
         };
       
-        console.log('🚀 Sending payload for py-cspar:', payload);
+        //console.log('🚀 Sending payload for py-cspar:', payload);
         window.api.send(`start-py-cspar`, payload);
       }
 
@@ -1062,7 +1140,7 @@ if (resetButton) {
           ...extraParam,
         };
       
-        console.log(`🚀 Sending payload for ${projectName}:`, payload);
+        //console.log(`🚀 Sending payload for ${projectName}:`, payload);
         window.api.send(`start-${projectName}`, payload);
       }
       function handleProjectResponse(buttonElement, projectName, response) {
@@ -1071,7 +1149,7 @@ if (resetButton) {
         buttonElement.textContent = projectName;
 
         if (response.success) {
-          console.log(`${projectName} executed successfully.`);
+          //console.log(`${projectName} executed successfully.`);
         } else {
           console.error(`Error starting ${projectName}:`, response.error);
         }
@@ -1101,53 +1179,8 @@ if (resetButton) {
   // DEALS
   function handleDealsMainData(receivedData) {
     appState.setAllDealsData(receivedData);
-    console.log('📌 Alle Deals Daten: DealsMain:', receivedData);
+    //console.log('📌 Alle Deals Daten: DealsMain:', receivedData);
 
-    appState.setActiveTable('deals');
-
-    // // 🛠 Alle Portfolionamen aus `port_name` extrahieren
-    // const uniquePortNames = [...new Set(receivedData.map(deal => deal.port_name).filter(name => name))];
-    // const uniquePortfolios = uniquePortNames.map(name => ({ table_name: name }));
-    
-    // // 🔹 Speichere die Portfolios für das Dropdown
-    // appState.setCreatedDealsData(uniquePortfolios, 'createdDealsDropdown');
-    // console.log("📌 Verfügbare Portfolios:", uniquePortfolios);
-    // appState.applyFiltersAndUpdateDropdowns('dealsTables');
-
-
-    // // 🛠 Standard-Portfolio "UNI" setzen, falls noch nichts gewählt wurde
-    // let selectedDealsTableName = appState.getSelectedDealsTableName();
-    // if (!selectedDealsTableName) {
-    //     selectedDealsTableName = "UNI";
-    //     appState.setSelectedDealsTableName(selectedDealsTableName);
-    //     console.log(`🔹 Kein Portfolio gewählt, Standard gesetzt: ${selectedDealsTableName}`);
-    // }
-
-    // // 🔹 Deals für das gewählte Portfolio filtern
-    // const filteredDeals = receivedData.filter(deal => deal.port_name === selectedDealsTableName);
-    // console.log(`📌 Gefilterte Deals für Portfolio '${selectedDealsTableName}':`, filteredDeals);
-
-    // // 🔹 Speichere die gefilterten Deals in `appState`
-    // appState.setDealsData(filteredDeals);
-
-    // // 🔹 UI aktualisieren
-    // appState.applyFiltersAndUpdateDropdowns('deals');
-
-    // // 🔹 Event-Listener für Reset-Button setzen
-    // const dealsResetButton = document.getElementById('dealsResetFiltersButton');
-    // if (dealsResetButton) {
-    //     dealsResetButton.addEventListener('click', () => {
-    //         console.log("🔄 Resetting filters...");
-    //         appState.resetFiltersForActiveTable(receivedData, 'deals');
-    //     });
-    // }
-}
-
-
-  // PORT: Portfolios
-  function handlePortfolioData(receivedData) {
-    appState.setPortfolioData(receivedData);
-      console.log('📌 Alle Portfolio Daten: Portfolios', receivedData);
     appState.setActiveTable('deals');
 
     const dealsResetButton = document.getElementById('dealsResetFiltersButton');
@@ -1155,9 +1188,25 @@ if (resetButton) {
       dealsResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'deals'));
     }
   }
+  
+  // PORT: Portfolios
+  function handlePortfolioData(receivedData) {
+    appState.setAllPortfolioData(receivedData);
+      //console.log('📌 Alle Portfolio Daten: Portfolios', receivedData);
+    appState.setActiveTable('deals');
+
+  // Reset Button
+  const portResetButton = document.getElementById('portResetFiltersButton');
+  if (portResetButton) {
+    portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
+  }
+
+
+  }
+
   // ISSUER
   function handleIssuerData(receivedData) {
-    console.log('IssuerData', receivedData);
+    //console.log('IssuerData', receivedData);
     appState.setActiveTable('issuer');
     appState.setIssuerData(receivedData);
     appState.applyFiltersAndUpdateDropdowns('issuer');
@@ -1170,7 +1219,7 @@ if (resetButton) {
   }
   // PROD
   function handleProdData(receivedData) {
-    console.log('ProdAllData', receivedData);
+    //console.log('ProdAllData', receivedData);
     appState.setActiveTable('prod');
     appState.setProdData(receivedData);
     appState.applyFiltersAndUpdateDropdowns('prod');
@@ -1208,7 +1257,7 @@ if (resetButton) {
 document.getElementById("ratesSelector").addEventListener("change", () => {
     const selectedCurve = document.getElementById("ratesSelector").value;
 
-    console.log(`🔄 Neue Auswahl: ${selectedCurve} → Daten werden aktualisiert`);
+    //console.log(`🔄 Neue Auswahl: ${selectedCurve} → Daten werden aktualisiert`);
 
     // Sende ein Event an `main.js`, um die Daten mit der neuen Spalte zu aktualisieren
     window.api.send('EUSWData-refresh', selectedCurve);
@@ -1233,14 +1282,11 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     // console.log('RankData set in appState', appState.getRankData());
   }
   // MVaR
-  function handleMVaRMainData(receivedData) {
-    console.log('handleMVaRMainData:', receivedData)
+  function handleAllMVaRData(receivedData) {
+      //console.log('handleAllMVaRData:', receivedData)
+    appState.setAllMvarData(receivedData); 
+
     const MVaRTable = handleMVaRData(receivedData);
-    const MVaRDataContainer = document.getElementById('MVaRDataContainer');
-    if (MVaRDataContainer) {
-      MVaRDataContainer.innerHTML = '';
-      MVaRDataContainer.appendChild(MVaRTable);
-    }
 
     const portMVaRDataContainer = document.getElementById('portMVaRDataContainer');
     if (portMVaRDataContainer) {
@@ -1248,11 +1294,27 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
       portMVaRDataContainer.appendChild(MVaRTable.cloneNode(true));
     }
     // updateMVaRChart(receivedData);
-    //appState.updateMvarDataTable(receivedData);
+    appState.updateMvarDataTable(receivedData);
   }
-  
+
+  // EAD
+  function handleAllEADData(receivedData) {
+    //console.log("📊 Received all EAD Data:", receivedData);
+
+    if (!receivedData || receivedData.length === 0) {
+        console.warn("⚠️ No EAD data received!");
+        appState.setAllEADData([]);  // Store empty array
+        return;
+    }
+
+    appState.setAllEADData(receivedData);  // ✅ Store in AllCvarData
+    handleEADMainData(receivedData)
+
+}
+
+  //CVaR
   function handleAllCVaRData(receivedData) {
-    console.log("📊 Received full CVaR Data (new storage):", receivedData);
+    //console.log("📊 Received full CVaR Data (new storage):", receivedData);
 
     if (!receivedData || receivedData.length === 0) {
         console.warn("⚠️ No CVaR data received!");
@@ -1262,6 +1324,21 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
 
     appState.setAllCvarData(receivedData);  // ✅ Store in AllCvarData
     handleCVaRData(receivedData)
+
+}
+
+  //LOSS
+  function handleAllLossData(receivedData) {
+    //console.log("📊 Received full LOSS Data:", receivedData);
+
+    if (!receivedData || receivedData.length === 0) {
+        console.warn("⚠️ No CVaR data received!");
+        appState.setAllLossData([]);  // Store empty array
+        return;
+    }
+
+    appState.setAllLossData(receivedData);  // ✅ Store in AllCvarData
+    handleLossIssuerMainData(receivedData)
 
 }
 
@@ -1330,7 +1407,7 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
   }
 
   function updateTooltips(language) {
-    console.log(`Updating tooltips to language: ${language}`);
+    //console.log(`Updating tooltips to language: ${language}`);
 
     const tooltipEpochs = document.getElementById("tooltip-epochs");
     const tooltipBatchSize = document.getElementById("tooltip-batch-size");
@@ -1349,7 +1426,7 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
   }
 
   function saveEditedData(newData, cleanTableName, uniqueIdentifier) {
-    console.log('FBH saveChanges tableName:', newData, cleanTableName, uniqueIdentifier);
+    //console.log('FBH saveChanges tableName:', newData, cleanTableName, uniqueIdentifier);
     window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
   }
 

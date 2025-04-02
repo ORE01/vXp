@@ -1,7 +1,8 @@
 import { formatNumber, getFormatRules } from '../utils/format.js';
 
 
-function processData(data, selectedTableName) {
+function processData(data, port_name, selectedTableName) {
+  //console.log(`🔍 selectedTableName: ${selectedTableName}`);
   let html = '';
   const formatRules = getFormatRules();
 
@@ -15,18 +16,15 @@ function processData(data, selectedTableName) {
                   'MVaRMain', 
                   'CVaRMain',
                   'EADMain',
-                  'EADMain_rating', 
-                  'sortedLossesMain_rating', 
-                  'sortedLossesIssuerMain_rating', 
-                  'EADMain_market', 
-                  'sortedLossesMain_market', 
-                  'sortedLossesIssuerMain_market',    
-                  'EADMain_norm', 
-                  'sortedLossesMain_norm', 
-                  'sortedLossesIssuerMain_norm', 
-                  'EADMain_marketNorm', 
-                  'sortedLossesMain_marketNorm', 
-                  'sortedLossesIssuerMain_marketNorm', 
+                  'Portfolios',
+                  'MarketVaR',
+                  'CreditVaR',
+                  'PortMain',
+                  'sortedLossesIssuerMain',
+                  'EAD',
+   
+
+
                 ];
 
                 // Exclude all table names that start with "Port"
@@ -52,7 +50,7 @@ function processData(data, selectedTableName) {
   let columnNames = Object.keys(data[0]);
 
   // If table name is EADMain, replace column name NOTIONAL with EAD
-  if (selectedTableName === 'EADMain') {
+  if (selectedTableName === 'EAD') {
     columnNames = columnNames.map(columnName => columnName === 'NOTIONAL' ? 'EAD' : columnName);
   }
 
@@ -71,7 +69,7 @@ function processData(data, selectedTableName) {
   data.forEach((item, rowIndex) => {
     html += '<tr>';
     columnNames.forEach((columnName) => {
-      const dataKey = columnName === 'EAD' && selectedTableName === 'EADMain' ? 'NOTIONAL' : columnName;
+      const dataKey = columnName === 'EAD' && selectedTableName === 'EAD' ? 'NOTIONAL' : columnName;
       let cellValue = item[dataKey]; 
 
       if (formatRules[columnName]) {

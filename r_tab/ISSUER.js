@@ -11,7 +11,7 @@ let filteredIssuerData;
 
 
 export async function handleIssuerData(receivedData, appState) {
-  console.log('Issuer Data:', receivedData);
+  //console.log('Issuer Data:', receivedData);
 
   const issuerDataContainer = document.getElementById('issuerDataContainer');
   issuerData = receivedData;
@@ -22,8 +22,8 @@ export async function handleIssuerData(receivedData, appState) {
     rank = await appState.getRankData();
     // console.log('rank', rank);
   } catch (error) {
-    console.log('Error retrieving rank data:', error.message);
-    console.log('rankData not available yet');
+    //console.log('Error retrieving rank data:', error.message);
+    //console.log('rankData not available yet');
     // Optionally handle the error by setting rank to a default value or returning early
     rank = {}; // Set default rank data or handle as needed
   }
@@ -40,7 +40,7 @@ export async function handleIssuerData(receivedData, appState) {
     // filteredIssuerData = appState.filteredData['issuer']
     
     filteredIssuerData  = receivedData;
-    console.log('filteredIssuerData:', filteredIssuerData);
+    //console.log('filteredIssuerData:', filteredIssuerData);
     
     
     const issuerDataHTML = processData(filteredIssuerData, 'Issuer');
@@ -54,7 +54,7 @@ export async function handleIssuerData(receivedData, appState) {
     const issuerEditButtons = document.querySelectorAll('#issuerDataContainer .edit-button');
     issuerEditButtons.forEach((button) => {
       button.addEventListener('click', (event) => {
-        console.log('filteredIssuerData:', filteredIssuerData);
+        //console.log('filteredIssuerData:', filteredIssuerData);
         event.stopPropagation(); // Stop event propagation
         const tableName = 'Issuer';
         const actionType = 'edit';

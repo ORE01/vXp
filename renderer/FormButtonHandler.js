@@ -435,12 +435,10 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
 
 
 
-        // Get all created portfolio data
-        //         const dealsData = appState.getCreatedDealsData();  // Changed to getCreatedPortData
-        //         console.log('Available rows in Deals:', dealsData);
+
 
         // Get all created portfolio data
-        const dealsData = appState.getDealsData();  // Changed to getCreatedPortData
+        const dealsData = appState.getDealsData();  
         console.log('Available rows in Deals:', dealsData);
 
 

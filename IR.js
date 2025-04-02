@@ -9,7 +9,7 @@ let IRlineChart;
 // Function to handle the IR data
 export function handleIRData(receivedData) {
   const IRData = receivedData;
-  console.log('EUSW:', receivedData);
+  //console.log('EUSW:', receivedData);
   // console.log('Received prodData callback called.');
   // console.log('Received prodData callback called.');
   // console.log('Received prodData callback called.');

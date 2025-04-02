@@ -1,11 +1,15 @@
-import { PortValue, PortPV01, formPortPV01 } from './PORT.js';
 import createBarChart from './charts/BarChart.js';
 
 export function handleIRSensData(portMainData) {
-    // console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
+    //console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
 
-    let portValue = PortValue;
-    let portPV01 = PortPV01;
+    let port_name = appState.getSelectedPortTableName();
+
+    const portValue = portMainData.reduce((sum, row) => sum + (parseFloat(row.NAV) || 0), 0);
+    const portPV01  = portMainData.reduce((sum, row) => sum + (parseFloat(row.PV01) || 0), 0);
+    
+    //console.log('PortValue, PortPV01:', portValue, portPV01 );
+
     let irSensitivitySum = Array(30).fill(0); // Initialize an array to hold the sum of each IR sensitivity column
     
 
@@ -36,7 +40,7 @@ export function handleIRSensData(portMainData) {
     let titleRow = table.insertRow();
     let titleCell = document.createElement('th');
     titleCell.colSpan = 33; // Adjust for the new "Sum" column
-    titleCell.textContent = 'Interest Rate Sensitivity Data';
+    titleCell.textContent = `Interest Rate Sensitivity Data for ${port_name}`;
     titleRow.appendChild(titleCell);
 
     // Add header row for column names
@@ -53,7 +57,7 @@ export function handleIRSensData(portMainData) {
     // Add sums row for PV01partial
     let sumsRow = table.insertRow();
     let sumHeader = sumsRow.insertCell();
-    sumHeader.textContent = 'PV01partial';
+    sumHeader.textContent = 'PV01partial_EUR';
     let totalSumCell = sumsRow.insertCell(); // Total sum for PV01partial
     totalSumCell.textContent = irSensitivitySum.reduce((a, b) => a + b, 0).toFixed(0);
     irSensitivitySum.forEach(sum => {
@@ -66,7 +70,7 @@ export function handleIRSensData(portMainData) {
     let pctHeader = pctRow.insertCell();
     pctHeader.textContent = 'PV01partial_bp';
     let totalPctCell = pctRow.insertCell(); // Total sum for percentages
-    totalPctCell.textContent = `${(formPortPV01 * 1).toFixed(2)}bp`; // Display formPortPV01 as percentage of portPV01
+    totalPctCell.textContent = `${(portPV01/portValue * 10000).toFixed(2)}bp`; // Display formPortPV01 as percentage of portPV01
     irSensitivityPct.forEach(pct => {
         let cell = pctRow.insertCell();
         cell.textContent = pct + 'bp';
@@ -87,7 +91,7 @@ export function handleIRSensData(portMainData) {
         YEARS: `${index + 1}y`, // Convert year index to string label
         PV01: parseFloat(value)  // Assuming pv01PartialPct values are strings with percentages, convert them to float
       }));
-      // console.log(weightedYearsData);
+      // //console.log(weightedYearsData);
     createPV01Chart(weightedYearsData);
 
     // Return the table element for appending to the DOM
