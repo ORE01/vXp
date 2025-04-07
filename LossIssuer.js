@@ -187,14 +187,14 @@ export function handleLossIssuerMainData(receivedData) {
 }
 
 export function setupLossIssuerUI() {
-  let EADMainDataContainer = document.getElementById('EADMainDataContainer');
+  let EADDataContainer = document.getElementById('EADDataContainer');
   const LossIssuerDataContainerRating = document.getElementById('LossIssuerDataContainerRating');
   const LossIssuerDataContainerMarket = document.getElementById('LossIssuerDataContainerMarket');
   const LossIssuerCombinedChartContainer = document.getElementById('LossIssuerCombinedChartContainer'); // NEW
   const LossIssuerCombinedESChartContainer = document.getElementById('LossIssuerCombinedESChartContainer'); // NEW
 
   // Set all containers visible except the combined chart (it stays visible)
-  if (EADMainDataContainer) EADMainDataContainer.style.display = 'block';
+  if (EADDataContainer) EADDataContainer.style.display = 'block';
   if (LossIssuerDataContainerRating) LossIssuerDataContainerRating.style.display = 'block';
   if (LossIssuerDataContainerMarket) LossIssuerDataContainerMarket.style.display = 'block';
 
@@ -221,7 +221,7 @@ export function setupLossIssuerUI() {
     }
     function toggleDisplay(chartType) {
       const dataContainers = {
-        'EAD': 'EADMainDataContainer',
+        'EAD': 'EADDataContainer',
         'LossIssuerRating': 'LossIssuerDataContainerRating',
         'LossIssuerMarket': 'LossIssuerDataContainerMarket',
         'LossIssuerMarketNorm': 'LossIssuerDataContainerMarketNorm'

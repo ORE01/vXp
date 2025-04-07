@@ -50,72 +50,110 @@ export function handleMVarInputData(receivedData) {
   container.appendChild(table);
 }
 
-export function handleMVaRData(receivedData) {
-  appState.setMvarData(receivedData);
+export function handleMVaRData(receivedData, index) {
+  console.log('MVaRData, index:', receivedData, index);
+  const port_name = appState.getSelectedPortTableName();
 
-  let port_name = appState.getSelectedPortTableName();
-  //console.log('handleMVaRData:', receivedData);
-  //console.log('🔍 port_name:', port_name);
+  console.log('port_name:', port_name);
 
-  if (!receivedData || receivedData.length === 0) return null;
+  if (!receivedData || receivedData.length === 0) {
+    noMVaRDataFallback("run MVaR");
+    return;
+  }
 
-  // 1️⃣ Versuche, Daten für das aktuelle Portfolio zu finden
   let filteredData = receivedData.find(dataPoint => dataPoint.port_name === port_name);
 
-  // 2️⃣ Wenn nicht gefunden → versuche 'DEFAULT'
   if (!filteredData) {
-    console.warn(`⚠️ Kein Datensatz für "${port_name}" gefunden. Versuche Fallback auf 'DEFAULT'.`);
-    filteredData = receivedData.find(dataPoint => dataPoint.port_name === 'DEFAULT');
+    noMVaRDataFallback("run MVaR");
+    return;
   }
 
-  // 3️⃣ Wenn auch 'DEFAULT' fehlt → Dummy-Datensatz mit 0
-  if (!filteredData) {
-    console.warn(`⚠️ Auch kein 'DEFAULT'-Eintrag gefunden. Verwende leere 0-Werte.`);
-    filteredData = {
-      port_name: 'DEFAULT',
-      VaR_T_abs: 0,
-      VaR_T_rel: 0,
-      VaR_IR_abs: 0,
-      VaR_IR_rel: 0,
-      VaR_CS_abs: 0,
-      VaR_CS_rel: 0,
-      ES_T_rel: 0,
-      ES_IR_rel: 0,
-      ES_CS_rel: 0,
-      index: 'n/a'
-    };
-  }
+  renderMVaRFullTable(filteredData, 'MVaRDataContainer');
 
-  const MVaRDataContainer = document.getElementById('MVaRDataContainer');
-  let table = document.createElement('table');
+  //renderMVaRRelativeTable(filteredData, 'MVaRDataContainer1');
 
-  if (MVaRDataContainer) {
-    MVaRDataContainer.innerHTML = '';
+  renderMVaRRelativeTableWithIndex(filteredData, index);
+
+  updateMVaRChart(filteredData);
+}
+    function renderMVaRFullTable(data, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    const table = document.createElement('table');
     table.classList.add('MVaRTable');
 
-    updateMVaRChart(filteredData);
-
-    const tableHeaders = ['Portfolio', 'VaR_T_abs', 'VaR_T_rel', 'VaR_IR_abs', 'VaR_IR_rel', 'VaR_CS_abs', 'VaR_CS_rel'];
-    const headerRow = table.insertRow(0);
-    tableHeaders.forEach((headerText, index) => {
-      const cell = headerRow.insertCell(index);
-      cell.textContent = headerText;
+    const headerRow = table.insertRow();
+    ['Label', 'Value'].forEach(text => {
+    const cell = headerRow.insertCell();
+    cell.textContent = text;
     });
 
-    const row = table.insertRow(1);
-    row.insertCell(0).textContent = filteredData.port_name;
-    row.insertCell(1).textContent = formatNumber(0)(filteredData.VaR_T_abs);
-    row.insertCell(2).textContent = formatNumberWithCommas(filteredData.VaR_T_rel);
-    row.insertCell(3).textContent = formatNumber(0)(filteredData.VaR_IR_abs);
-    row.insertCell(4).textContent = formatNumberWithCommas(filteredData.VaR_IR_rel);
-    row.insertCell(5).textContent = formatNumber(0)(filteredData.VaR_CS_abs);
-    row.insertCell(6).textContent = formatNumberWithCommas(filteredData.VaR_CS_rel);
+    const rows = [
+    { label: 'Portfolio', value: data.port_name },
+    { label: 'VaR_T_abs', value: typeof data.VaR_T_abs === 'string' ? data.VaR_T_abs : formatNumber()(data.VaR_T_abs) },
+    { label: 'VaR_T_rel', value: typeof data.VaR_T_rel === 'string' ? data.VaR_T_rel : formatNumberWithCommas(data.VaR_T_rel) },
+    { label: 'VaR_IR_abs', value: typeof data.VaR_IR_abs === 'string' ? data.VaR_IR_abs : formatNumber()(data.VaR_IR_abs) },
+    { label: 'VaR_IR_rel', value: typeof data.VaR_IR_rel === 'string' ? data.VaR_IR_rel : formatNumberWithCommas(data.VaR_IR_rel) },
+    { label: 'VaR_CS_abs', value: typeof data.VaR_CS_abs === 'string' ? data.VaR_CS_abs : formatNumber()(data.VaR_CS_abs) },
+    { label: 'VaR_CS_rel', value: typeof data.VaR_CS_rel === 'string' ? data.VaR_CS_rel : formatNumberWithCommas(data.VaR_CS_rel) }
+    ];
 
-    MVaRDataContainer.appendChild(table);
-  }
+    rows.forEach(({ label, value }) => {
+    const row = table.insertRow();
+    row.insertCell(0).textContent = label;
+    row.insertCell(1).textContent = value;
+    });
 
-  return table;
-}
+    container.appendChild(table);
+    }
+
+    function renderMVaRRelativeTableWithIndex(data, index) {
+      const containerId = `MVaRDataContainer${index}`;
+      const container = document.getElementById(containerId);
+      if (!container) return;
+    
+      // ❗ Prüfen, ob überhaupt sinnvolle Daten vorhanden sind
+      const hasValidData = data && (
+        data.VaR_T_rel !== undefined ||
+        data.VaR_IR_rel !== undefined ||
+        data.VaR_CS_rel !== undefined
+      );
+    
+      if (!hasValidData) {
+        container.innerHTML = ''; // Kein Header, keine Tabelle
+        return;
+      }
+    
+      container.innerHTML = '';
+      const table = document.createElement('table');
+      table.classList.add('MVaRTable');
+    
+      const headerRow = table.insertRow();
+      ['label', 'value'].forEach(text => {
+        const cell = headerRow.insertCell();
+        cell.textContent = text;
+      });
+    
+      const rows = [
+        { label: 'VaR_T_rel', value: formatNumberWithCommas(data.VaR_T_rel) },
+        { label: 'VaR_IR_rel', value: formatNumberWithCommas(data.VaR_IR_rel) },
+        { label: 'VaR_CS_rel', value: formatNumberWithCommas(data.VaR_CS_rel) }
+      ];
+    
+      rows.forEach(({ label, value }) => {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = label;
+        row.insertCell(1).textContent = value;
+      });
+    
+      container.appendChild(table);
+    }
+    
+    
+    
+    
     function updateMVaRChart(MVaRData) {
       //console.log('MVaRData:', MVaRData);
 
@@ -179,10 +217,43 @@ export function handleMVaRData(receivedData) {
       
       
 
+    } 
+    function noMVaRDataFallback(message) {
+      const fallbackData = [
+        { label: 'Portfolio', value: message },
+        { label: 'VaR_T_abs', value: message },
+        { label: 'VaR_T_rel', value: message },
+        { label: 'VaR_IR_abs', value: message },
+        { label: 'VaR_IR_rel', value: message },
+        { label: 'VaR_CS_abs', value: message },
+        { label: 'VaR_CS_rel', value: message }
+      ];
+
+      const relFallback = fallbackData.filter(row => row.label.includes('_rel'));
+
+      const containers = [
+        { element: document.getElementById('MVaRDataContainer'), rows: fallbackData },
+        { element: document.getElementById('MVaRDataContainer1'), rows: relFallback }
+      ];
+
+      containers.forEach(({ element, rows }) => {
+        if (!element) return;
+        element.innerHTML = '';
+        const table = document.createElement('table');
+        table.classList.add('MVaRTable');
+
+        const headerRow = table.insertRow();
+        ['Label', 'Value'].forEach(text => {
+          const cell = headerRow.insertCell();
+          cell.textContent = text;
+        });
+
+        rows.forEach(({ label, value }) => {
+          const row = table.insertRow();
+          row.insertCell(0).textContent = label;
+          row.insertCell(1).textContent = value;
+        });
+
+        element.appendChild(table);
+      });
     }
-
-
-
-
-
-

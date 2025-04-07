@@ -2,7 +2,7 @@ import createBarChart from './charts/BarChart.js';
 
 
 export function createComparisonCharts(portDataMap, destroyPrevious = false) {
-  
+  console.log('portDataMap:', portDataMap)
       // CHARTS: COMPARE
       if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2){
         const containerIds = [
@@ -16,7 +16,7 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
         const chartType = 'bar';
   
         const chartData = extractChartDataFromSavedValues(portDataMap);
-        //console.log('portDataMap:', portDataMap)
+        console.log('portDataMap:', portDataMap)
 
   containerIds.forEach((containerId, index) => {
     const chartName = chartNames[index];
@@ -69,12 +69,14 @@ export function extractChartDataFromSavedValues(savedValues, indexA = 1, indexB 
   const fields = {
     PV01: 'formPortPV01',
     CPV01: 'formPortCPV01',
-    MvarTOT: 'formPortMvarTOT',
-    MvarIR: 'formPortMvarIR',
-    MvarCS: 'formPortMvarCS',
-    CvarRating: 'formPortCvarRating',
-    CvarMarket: 'formPortCvarMarket',
-    CvarNorm: 'formPortCvarNorm',
+
+    MvarTOT: 'formVaR_T_rel',
+    MvarIR: 'formVaR_IR_rel',
+    MvarCS: 'formVaR_CS_rel',
+
+    CvarRating: 'formVaR_rating_rel',
+    CvarMarket: 'formVaR_market_rel',
+    CvarNorm: 'formVaR_norm_rel',
   };
 
   const chartData = {};

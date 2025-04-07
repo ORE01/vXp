@@ -106,11 +106,11 @@
     display: flex;
   }
 
-  #CVaRDataContainer table tr td:first-child,
+  /* #CVaRDataContainer table tr td:first-child,
   #MVaRMainDataContainer table tr td:first-child {
   width: 70px; 
   
-  }
+  } */
 
   .table-wrapper {
     max-height: 300px; 
@@ -204,8 +204,21 @@
   position: relative; /* Ensure proper stacking context */
 }
 
+.data-container table {
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.data-container table th,
+.data-container table td {
+  padding: 6px 12px;
+  text-align: left;
+}
+
+
+
   
-  #portMVaRDataContainer {
+  /* #portMVaRDataContainer {
     background-color: rgb(31, 31, 31);
     z-index: 0;
     width: 380px;
@@ -216,7 +229,7 @@
   #CVaRDataContainer, #MVaRMainDataContainer {
     width: 300px;
     margin-bottom: 20px;
-  }
+  } */
 
   .data-wrapper {
     display: 1;

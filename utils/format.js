@@ -1,12 +1,19 @@
 
 
-export const formatNumber = (decimals, isPercentage = false, multiplyBy100 = false) => (value) => {
-    let number = parseFloat(value);
-    if (multiplyBy100) number *= 100; 
-    const options = { minimumFractionDigits: decimals, maximumFractionDigits: decimals };
-    const formattedNumber = number.toLocaleString('en', options);
-    return isPercentage ? `${formattedNumber}%` : formattedNumber;
+export const formatNumber = (decimals = 0, isPercentage = false, multiplyBy100 = false) => (value) => {
+  let number = parseFloat(value);
+  if (isNaN(number)) return '-';
+  if (multiplyBy100) number *= 100;
+
+  const options = {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
   };
+
+  const formattedNumber = number.toLocaleString('en', options);
+  return isPercentage ? `${formattedNumber}%` : formattedNumber;
+};
+
 
 export function isValidNumber(value) {
   return typeof value === 'number' && !isNaN(value);
@@ -121,4 +128,11 @@ export function formatNumberWithGrouping(value) {
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
+
+export function formatPercentage(value) {
+  const number = parseFloat(value);
+  if (isNaN(number)) return '-';
+  return number.toFixed(2) + '%';
+}
+
 

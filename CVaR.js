@@ -7,27 +7,20 @@ let EADChart;
 let LGDChart;
 let filteredEADMainData = [];
 
-export function handleEADMainData(receivedData) {
+export function handleEADData(receivedData) {
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
   ////console.log('port_name:', port_name);
 
-
-
-
-  const EADMainDataContainer = document.getElementById('EADMainDataContainer');
+  const EADDataContainer = document.getElementById('EADDataContainer');
 
   // 🔍 Daten vorher filtern
   const filtered = receivedData.filter(
     row => row.port_name === port_name && row.pd_flag === 'RATING'
   );
-
-
   ////console.log('filtered:', filtered);
-
-
   const EADMainData = filtered;
 
-  if (EADMainDataContainer && EADMainData) {
+  if (EADDataContainer && EADMainData) {
     let columns = ['ISSUER', 'RANK', 'RATING', 'NOTIONAL', 'LGD', 'PD', 'PD_M', 'PD_M_norm'];
     filteredEADMainData = filterColumnsInData(EADMainData, columns);
     if (EADChart) {EADChart.destroy();}
@@ -37,7 +30,7 @@ export function handleEADMainData(receivedData) {
     filteredEADMainData.sort((a, b) => parseFloat(b.NOTIONAL.replace(/\s/g, '')) - parseFloat(a.NOTIONAL.replace(/\s/g, '')));
 
     const EADMainDataHTML = processData(filteredEADMainData, port_name, 'EAD');
-    EADMainDataContainer.innerHTML = EADMainDataHTML;
+    EADDataContainer.innerHTML = EADMainDataHTML;
 
     // CHARTS:
 
@@ -81,52 +74,86 @@ export function handleEADMainData(receivedData) {
   }
 }
 
-export function handleCVaRData(receivedData) {
-  //console.log(`📌 CVaR Data received:`, receivedData);
+// export function handleCVaRData(receivedData) {
+//   //console.log(`📌 CVaR Data received:`, receivedData);
 
-  let port_name = appState.getSelectedPortTableName();
-  //console.log(`🔍 Filtering for port_name:`, port_name);
+//   let port_name = appState.getSelectedPortTableName();
+//   //console.log(`🔍 Filtering for port_name:`, port_name);
 
-  // Filter by port_name
+//   // Filter by port_name
+//   const filteredByPort = receivedData.filter(item => item.port_name === port_name);
+
+//   appState.setCvarData(filteredByPort);
+
+//   const containerMapping = {
+//     rating: ['CVaR_ratingDataContainer', 'CVaR_ratingDataContainer1'],
+//     market: ['CVaR_marketDataContainer', 'CVaR_marketDataContainer1'],
+//     norm: ['CVaR_normDataContainer', 'CVaR_normDataContainer1'],
+//   };
+  
+
+//   Object.keys(containerMapping).forEach(pd_flag => {
+//       const filteredData = filteredByPort.filter(item => 
+//           item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
+//       );
+//       console.log(`✅ Filtered Data for ${pd_flag}:`, filteredData);
+
+//       const containerIds = containerMapping[pd_flag];
+//       if (!containerIds || filteredData.length === 0) return;
+
+//       const primaryContainer = document.getElementById(containerIds[0]);
+//       if (!primaryContainer) {
+//           console.error(`❌ Container "${containerIds[0]}" not found.`);
+//           return;
+//       }
+
+//       // Populate the first container with a formatted table
+//       populateCVaRTable(primaryContainer, filteredData, port_name);
+
+
+//       if (containerIds.length > 1) {
+//         renderCVaRRelativeTable(filteredData, containerIds[1], pd_flag);
+//       }
+      
+
+//   });
+// }
+
+export function handleCVaRData(receivedData, index) {
+  const port_name = appState.getSelectedPortTableName();
   const filteredByPort = receivedData.filter(item => item.port_name === port_name);
-
   appState.setCvarData(filteredByPort);
 
   const containerMapping = {
-      rating: ['CVaR_ratingDataContainer'],
-      market: ['CVaR_marketDataContainer'],
-      norm: ['CVaR_normDataContainer'],
+    rating: 'CVaR_ratingDataContainer',
+    market: 'CVaR_marketDataContainer',
+    norm: 'CVaR_normDataContainer',
   };
 
+  const combinedRelData = {};
+
   Object.keys(containerMapping).forEach(pd_flag => {
-      const filteredData = filteredByPort.filter(item => 
-          item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
-      );
-      //console.log(`✅ Filtered Data for ${pd_flag}:`, filteredData);
+    const filteredData = filteredByPort.filter(item =>
+      item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
+    );
 
-      const containerIds = containerMapping[pd_flag];
-      if (!containerIds || filteredData.length === 0) return;
-
-      const primaryContainer = document.getElementById(containerIds[0]);
-      if (!primaryContainer) {
-          console.error(`❌ Container "${containerIds[0]}" not found.`);
-          return;
-      }
-
-      // Populate the first container with a formatted table
-      populateCVaRTable(primaryContainer, filteredData, port_name);
-
-      // Clone content into additional containers
-      if (containerIds.length > 1) {
-          containerIds.slice(1).forEach(containerId => {
-              const secondaryContainer = document.getElementById(containerId);
-              if (!secondaryContainer) return;
-              secondaryContainer.innerHTML = "";
-              secondaryContainer.appendChild(primaryContainer.firstElementChild.cloneNode(true));
-          });
-      }
+    const containerId = containerMapping[pd_flag];
+    const container = document.getElementById(containerId);
+    if (container && filteredData.length > 0) {
+      populateCVaRTable(container, filteredData, port_name);
+      combinedRelData[pd_flag] = filteredData;
+    }
   });
+
+  // ✅ Jetzt rendern wir eine kombinierte Übersicht:
+  renderCombinedCVaRRelTable(combinedRelData, index);
+
+  // if (Object.keys(combinedRelData).length === 0) {
+  //   noCVaRDataFallback("run CVaR");
+  // }
+  
 }
+
 
 
     function populateCVaRTable(container, CVaRData, port_name) {
@@ -170,6 +197,122 @@ export function handleCVaRData(receivedData) {
     function formatPercentage(value) {
       return value !== undefined ? (value * 100).toFixed(2) + "%" : "N/A";
     }
+    // function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
+    //   const containerId = `CVaR_allRelativeContainer${index}`;
+    //   console.log('containerId:', containerId)
+
+    //   const container = document.getElementById(containerId);
+    //   if (!container) return;
+    
+    //   container.innerHTML = '';
+    //   const table = document.createElement('table');
+    //   table.classList.add('CVaRTable');
+    
+    //   const headerRow = table.insertRow();
+    //   ['Label', 'Value'].forEach(text => {
+    //     const cell = headerRow.insertCell();
+    //     cell.textContent = text;
+    //   });
+    
+    //   Object.entries(allFilteredDataByPdFlag).forEach(([pd_flag, data]) => {
+    //     const row = data[0];
+    //     if (!row || !('VaR_rel' in row)) return;
+    
+    //     const label = `VaR_${pd_flag.toLowerCase()}_rel`;
+    //     const value = typeof row.VaR_rel === 'string'
+    //       ? row.VaR_rel
+    //       : formatPercentage(row.VaR_rel);
+    
+    //     const r = table.insertRow();
+    //     r.insertCell(0).textContent = label;
+    //     r.insertCell(1).textContent = value;
+    //   });
+    
+    //   container.appendChild(table);
+    // }
+    function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
+      const containerId = `CVaR_allRelativeContainer${index}`;
+      console.log('containerId:', containerId);
+    
+      const container = document.getElementById(containerId);
+      if (!container) return;
+    
+      // ✅ Prüfen, ob überhaupt sinnvolle Daten vorhanden sind
+      const hasValidData = Object.values(allFilteredDataByPdFlag).some(
+        (data) => data?.[0]?.VaR_rel !== undefined
+      );
+    
+      if (!hasValidData) {
+        container.innerHTML = ''; // Kein Header, keine Tabelle
+        return;
+      }
+    
+      // ✅ Jetzt sicher: Es gibt gültige Daten → baue die Tabelle
+      container.innerHTML = '';
+      const table = document.createElement('table');
+      table.classList.add('CVaRTable');
+    
+      const headerRow = table.insertRow();
+      ['label', 'value'].forEach(text => {
+        const cell = headerRow.insertCell();
+        cell.textContent = text;
+      });
+    
+      Object.entries(allFilteredDataByPdFlag).forEach(([pd_flag, data]) => {
+        const row = data[0];
+        if (!row || !('VaR_rel' in row)) return;
+    
+        const label = `VaR_${pd_flag.toLowerCase()}_rel`;
+        const value = typeof row.VaR_rel === 'string'
+          ? row.VaR_rel
+          : formatPercentage(row.VaR_rel);
+    
+        const r = table.insertRow();
+        r.insertCell(0).textContent = label;
+        r.insertCell(1).textContent = value;
+      });
+    
+      container.appendChild(table);
+    }
+    
+
+
+    function noCVaRDataFallback(message) {
+      const fallbackData = [
+        { label: 'VaR_rating_rel', value: message },
+        { label: 'VaR_market_rel', value: message },
+        { label: 'VaR_norm_rel', value: message }
+      ];
+    
+      const containerId = `CVaR_allRelativeContainer${index}`;
+      const container = document.getElementById(containerId);
+
+      if (!container) return;
+    
+      container.innerHTML = '';
+      const table = document.createElement('table');
+      table.classList.add('CVaRTable');
+    
+      const headerRow = table.insertRow();
+      ['Label', 'Value'].forEach(text => {
+        const cell = headerRow.insertCell();
+        cell.textContent = text;
+      });
+    
+      fallbackData.forEach(({ label, value }) => {
+        const row = table.insertRow();
+        row.insertCell(0).textContent = label;
+        row.insertCell(1).textContent = value;
+      });
+    
+      container.appendChild(table);
+    }
+    
+    
+    
+    
+    
+    
 
 
 export { filteredEADMainData};

@@ -296,7 +296,7 @@
 
         <div class="button-wrapper">
           <button id="fairValueButton"class="edit-button">Fair Value</button>
-          <button id="MVaRButton"class="edit-button">VaR</button>
+          <button id="MVaRButton"class="edit-button">MVaR</button>
           <button id="CVaRButton"class="edit-button">CVaR</button>
           
           <button id="portAddButton">PDF</button>
@@ -305,10 +305,11 @@
 
 
         <div class="data-container" id="portAggDataContainer3"></div>
-        <div class="data-container" id="MVaRMainDataContainer"></div>
+        <p>Market VaR:</p>
+        <div class="data-container" id="MVaRDataContainer0"></div>
+        <p>Credit VaR:</p>
+        <div class="data-container" id="CVaR_allRelativeContainer0"></div>
 
-        <!-- <p>Historical Defaults:</p>
-        <div class="data-container" id="CVaR_ratingDataContainer"></div> -->
 
         <p>filtered:</p>
 
@@ -708,7 +709,7 @@
         </div>
 
         <!-- Data containers for EAD, Rating, and Market -->
-        <div class="data-container" id="EADMainDataContainer"></div>
+        <div class="data-container" id="EADDataContainer"></div>
         <div class="data-container" id="LossIssuerDataContainerRating"></div>
         <div class="data-container" id="LossIssuerDataContainerMarket"></div>
         <div class="data-container" id="LossIssuerDataContainerMarketNorm"></div>
@@ -810,6 +811,10 @@
 
 
       <div class="data-container" id="portAggDataContainer1"></div>
+      <p>Market VaR:</p>
+      <div class="data-container" id="MVaRDataContainer1"></div>
+      <p>Credit VaR:</p>
+      <div class="data-container" id="CVaR_allRelativeContainer1"></div>
 
 
     </div>
@@ -829,6 +834,10 @@
       </div>
 
       <div class="data-container" id="portAggDataContainer2"></div>
+      <p>Market VaR:</p>
+      <div class="data-container" id="MVaRDataContainer2"></div>
+      <p>Credit VaR:</p>
+      <div class="data-container" id="CVaR_allRelativeContainer2"></div>
       
 
     </div>
