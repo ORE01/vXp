@@ -2,6 +2,7 @@
 
 import processData from './renderer/dataProcessor.js';
 import createBarChart from './charts/BarChart.js';
+import { formatNumberWithGrouping } from './utils/format.js';
 
 let CPV01Chart; // This will hold the chart instance
 
@@ -32,14 +33,14 @@ export function handleCSSensData(portMainData) {
         let weightedRatings = (CPV01 / portCPV01) * 100; // Calculate the weighted rating as a percentage
         return {
             RATING,
-            'CPV01_EUR': CPV01.toFixed(2),
+            'CPV01_EUR': formatNumberWithGrouping(CPV01),
             'CPV01_bp': `${cpv01Bp.toFixed(2)} bp`,
             'Weighted_Ratings': `${weightedRatings.toFixed(2)}%`
         };
     });
 
     // Assuming processData can handle this data structure
-    const htmlContent = processData(processDataFormat, 'PortMain');
+    const htmlContent = processData(processDataFormat, 'Portfolios');
     const container = document.getElementById('CRSensDataContainer');
     if (container) {
         container.innerHTML = htmlContent;

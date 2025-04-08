@@ -1,7 +1,7 @@
 import { formatNumber, getFormatRules } from '../utils/format.js';
 
 
-function processData(data, port_name, selectedTableName) {
+function processData(data, selectedTableName) {
   //console.log(`🔍 selectedTableName: ${selectedTableName}`);
   let html = '';
   const formatRules = getFormatRules();
@@ -17,6 +17,7 @@ function processData(data, port_name, selectedTableName) {
                   'CVaRMain',
                   'EADMain',
                   'Portfolios',
+                  'PortMain',
                   'MarketVaR',
                   'CreditVaR',
                   'PortMain',

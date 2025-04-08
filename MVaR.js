@@ -56,24 +56,31 @@ export function handleMVaRData(receivedData, index) {
 
   console.log('port_name:', port_name);
 
+  const containerIds = [
+    'MVaRDataContainer',
+    `MVaRDataContainer${index}`
+  ];
+
   if (!receivedData || receivedData.length === 0) {
-    noMVaRDataFallback("run MVaR");
+    containerIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
     return;
   }
 
   let filteredData = receivedData.find(dataPoint => dataPoint.port_name === port_name);
 
   if (!filteredData) {
-    noMVaRDataFallback("run MVaR");
+    containerIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
     return;
   }
 
   renderMVaRFullTable(filteredData, 'MVaRDataContainer');
-
-  //renderMVaRRelativeTable(filteredData, 'MVaRDataContainer1');
-
   renderMVaRRelativeTableWithIndex(filteredData, index);
-
   updateMVaRChart(filteredData);
 }
     function renderMVaRFullTable(data, containerId) {
@@ -108,7 +115,6 @@ export function handleMVaRData(receivedData, index) {
 
     container.appendChild(table);
     }
-
     function renderMVaRRelativeTableWithIndex(data, index) {
       const containerId = `MVaRDataContainer${index}`;
       const container = document.getElementById(containerId);
@@ -150,10 +156,6 @@ export function handleMVaRData(receivedData, index) {
     
       container.appendChild(table);
     }
-    
-    
-    
-    
     function updateMVaRChart(MVaRData) {
       //console.log('MVaRData:', MVaRData);
 
@@ -218,42 +220,3 @@ export function handleMVaRData(receivedData, index) {
       
 
     } 
-    function noMVaRDataFallback(message) {
-      const fallbackData = [
-        { label: 'Portfolio', value: message },
-        { label: 'VaR_T_abs', value: message },
-        { label: 'VaR_T_rel', value: message },
-        { label: 'VaR_IR_abs', value: message },
-        { label: 'VaR_IR_rel', value: message },
-        { label: 'VaR_CS_abs', value: message },
-        { label: 'VaR_CS_rel', value: message }
-      ];
-
-      const relFallback = fallbackData.filter(row => row.label.includes('_rel'));
-
-      const containers = [
-        { element: document.getElementById('MVaRDataContainer'), rows: fallbackData },
-        { element: document.getElementById('MVaRDataContainer1'), rows: relFallback }
-      ];
-
-      containers.forEach(({ element, rows }) => {
-        if (!element) return;
-        element.innerHTML = '';
-        const table = document.createElement('table');
-        table.classList.add('MVaRTable');
-
-        const headerRow = table.insertRow();
-        ['Label', 'Value'].forEach(text => {
-          const cell = headerRow.insertCell();
-          cell.textContent = text;
-        });
-
-        rows.forEach(({ label, value }) => {
-          const row = table.insertRow();
-          row.insertCell(0).textContent = label;
-          row.insertCell(1).textContent = value;
-        });
-
-        element.appendChild(table);
-      });
-    }

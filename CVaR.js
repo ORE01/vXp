@@ -29,7 +29,7 @@ export function handleEADData(receivedData) {
     // Sort the data by the "NOTIONAL" in descending order
     filteredEADMainData.sort((a, b) => parseFloat(b.NOTIONAL.replace(/\s/g, '')) - parseFloat(a.NOTIONAL.replace(/\s/g, '')));
 
-    const EADMainDataHTML = processData(filteredEADMainData, port_name, 'EAD');
+    const EADMainDataHTML = processData(filteredEADMainData, 'EAD');
     EADDataContainer.innerHTML = EADMainDataHTML;
 
     // CHARTS:

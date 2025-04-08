@@ -63,7 +63,7 @@ export function handlePortAggData(receivedData, index, port_name) {
   const portDataAggContainer = document.getElementById(aggContainerId);
   if (portDataAggContainer) {
     const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
-    const portDataHTML = processData(tableData, port_name, tableName);
+    const portDataHTML = processData(tableData, tableName);
     portDataAggContainer.innerHTML = portDataHTML;
   }
   
@@ -107,7 +107,7 @@ export function handlePortProdData(receivedData, index, port_name) {
 
       appState.setFilteredPortData(filteredColumnsPortData);// !!!
 
-    const portDataHTML = processData(filteredColumnsPortData, port_name, tableName);
+    const portDataHTML = processData(filteredColumnsPortData, tableName);
     portDataContainer.innerHTML = portDataHTML;
 
     addTooltipsForTruncatedText(portDataContainer);

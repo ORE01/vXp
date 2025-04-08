@@ -264,10 +264,11 @@ function setupEventListeners() {
               dropdownId: `createdPortDropdown${num}`,
               getDataFunction: appState.getPortNameList,
               updateDataFunction: appState.updatePortDataTable,
-              updateMvarDataFunction: appState.updateMvarDataTable,
-              updateCvarDataFunction: appState.updateCvarDataTable,
+              //updateMvarDataFunction: appState.updateMvarDataTable,
+              //updateCvarDataFunction: appState.updateCvarDataTable,
               setSelectedPortTableName: appState.setSelectedPortTableName,
-              setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`)
+              setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
+              index: parseInt(num) // 🆕 übergeben!
           });
       });
   }
@@ -275,69 +276,122 @@ function setupEventListeners() {
 
   //START PYTHON PROJECTS and so on...:
 
-  function setupDropdown(options) {
-    const {
-        dropdownId,
-        getDataFunction,
-        updateDataFunction,
-        updateMvarDataFunction,
-        updateCvarDataFunction,
-        setSelectedPortTableName,
-        setSelectedDealsTableName, // ✅ Ergänzt
-        setActiveTable
-    } = options;
+//   function setupDropdown(options) {
+//     const {
+//         dropdownId,
+//         getDataFunction,
+//         updateDataFunction,
+//         updateMvarDataFunction,
+//         updateCvarDataFunction,
+//         setSelectedPortTableName,
+//         setSelectedDealsTableName, // ✅ Ergänzt
+//         setActiveTable,
+//         index
+//     } = options;
 
-    let dropdown = document.getElementById(dropdownId);
-    if (dropdown) {
-        dropdown.addEventListener('change', event => {
-            const selectedTableName = event.target.value;
-            console.log(`🔄 Portfolio ausgewählt: ${selectedTableName}`);
+//     let dropdown = document.getElementById(dropdownId);
+//     if (dropdown) {
+//         dropdown.addEventListener('change', event => {
+//             const selectedTableName = event.target.value;
+//             console.log(`🔄 Portfolio ausgewählt: ${selectedTableName} (Index: ${index})`);
 
-            // ✅ DealsTableName setzen
-            if (setSelectedDealsTableName) {
-                appState.setSelectedDealsTableName(selectedTableName);
-                //console.log('📌 DealsTableName gesetzt auf:', appState.getSelectedDealsTableName());
-            }
+//             // ✅ DealsTableName setzen
+//             if (setSelectedDealsTableName) {
+//                 appState.setSelectedDealsTableName(selectedTableName);
+//                 //console.log('📌 DealsTableName gesetzt auf:', appState.getSelectedDealsTableName());
+//             }
 
-            // ✅ PortTableName setzen
-            if (setSelectedPortTableName) {
-                appState.setSelectedPortTableName(selectedTableName);
-                //console.log('port_name:', appState.getSelectedPortTableName());
+//             // ✅ PortTableName setzen
+//             if (setSelectedPortTableName) {
+//                 appState.setSelectedPortTableName(selectedTableName);
+//                 //console.log('port_name:', appState.getSelectedPortTableName());
 
-                // 🛠 EAD-Daten aktualisieren
-                const EADData = appState.getAllEADData();
-                if (EADData && EADData.length > 0) {
-                    handleEADData(EADData);
-                } else {
-                    console.warn('⚠️ Keine gespeicherten EAD-Daten gefunden.');
-                }
+//                 // 🛠 EAD-Daten aktualisieren
+//                 const EADData = appState.getAllEADData();
+//                 if (EADData && EADData.length > 0) {
+//                     handleEADData(EADData);
+//                 } else {
+//                     console.warn('⚠️ Keine gespeicherten EAD-Daten gefunden.');
+//                 }
 
-                // 🛠 LOSS-Daten aktualisieren
-                const LossData = appState.getAllLossData();
-                if (LossData && LossData.length > 0) {
-                    handleLossIssuerMainData(LossData);
-                } else {
-                    console.warn('⚠️ Keine gespeicherten CVaR-Daten gefunden.');
-                }
-            }
+//                 // 🛠 LOSS-Daten aktualisieren
+//                 const LossData = appState.getAllLossData();
+//                 if (LossData && LossData.length > 0) {
+//                     handleLossIssuerMainData(LossData);
+//                 } else {
+//                     console.warn('⚠️ Keine gespeicherten CVaR-Daten gefunden.');
+//                 }
+//             }
 
-            if (setActiveTable) setActiveTable();
+//             if (setActiveTable) setActiveTable();
 
-            // 🛠 Update the dropdown options
-            appState.updateDropdownOptions({
-                dropdownElementId: dropdownId,
-                getDataFunction: getDataFunction.bind(appState),
-                updateDataFunction: updateDataFunction.bind(appState),
-                updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
-                updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
-                selectedTableName: selectedTableName,
-            });
+// // 🛠 Gültigkeit des ausgewählten Namens prüfen
+// const isValid = [...dropdown.options].some(opt => opt.value === selectedTableName);
+// const validTableName = isValid ? selectedTableName : dropdown.options[0].value;
 
-            // 🛠 Fetch and display the data for the selected portfolio
-            //appState.fetchAndHandlePortData(selectedTableName, dropdownId);
-        });
-    }
+// if (!isValid) {
+//     console.warn(`⚠️ '${selectedTableName}' nicht gefunden – verwende stattdessen '${validTableName}'`);
+//     dropdown.value = validTableName;
+// }
+
+// // 🛠 Update the dropdown options mit korrigiertem Wert
+// appState.updateDropdownOptions({
+//     dropdownElementId: dropdownId,
+//     getDataFunction: getDataFunction.bind(appState),
+//     updateDataFunction: updateDataFunction.bind(appState),
+//     updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
+//     updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
+//     selectedTableName: validTableName,
+//     index
+// });
+
+
+//             // 🛠 Fetch and display the data for the selected portfolio
+//             //appState.fetchAndHandlePortData(selectedTableName, dropdownId);
+//         });
+//     }
+// }
+function setupDropdown({
+  dropdownId,
+  getDataFunction,
+  updateDataFunction,
+  updateMvarDataFunction,
+  updateCvarDataFunction,
+  setSelectedPortTableName,
+  setSelectedDealsTableName,
+  setActiveTable,
+  index // 🆕 Hier aufnehmen
+}) {
+  const dropdown = document.getElementById(dropdownId);
+  if (dropdown) {
+    dropdown.addEventListener('change', event => {
+      const selectedTableName = event.target.value;
+      console.log(`🔄 Portfolio ausgewählt: ${selectedTableName} (Index: ${index})`);
+
+      if (setSelectedDealsTableName) {
+        appState.setSelectedDealsTableName(selectedTableName);
+      }
+      if (setSelectedPortTableName) {
+        appState.setSelectedPortTableName(selectedTableName);
+      }
+      if (setActiveTable) {
+        setActiveTable();
+      }
+
+      // 🧠 Jetzt wird der Index korrekt weitergegeben!
+      appState.updateDropdownOptions({
+        dropdownElementId: dropdownId,
+        getDataFunction: getDataFunction.bind(appState),
+        updateDataFunction: updateDataFunction ? updateDataFunction.bind(appState) : undefined,
+        updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
+        updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
+        selectedTableName,
+        index // 🧠 Das war vorher nicht da!
+      });
+    });
+  }
 }
+
 
 
   function setupButtons() {
@@ -795,7 +849,7 @@ function handleSaveSelection() {
               }
             
             const filteredData = receivedData.filter(entry => entry.port_name === port_name);
-            appState.updatePortDataTable(filteredData);
+            appState.updatePortDataTable(filteredData, 0);
             //console.log('✅ Portfolio filteredData:', filteredData, port_name);
         
             // 🛠 Dropdowns aktualisieren
