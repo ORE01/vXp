@@ -98,13 +98,24 @@ export function handleMVaRData(receivedData, index) {
     });
 
     const rows = [
-    { label: 'Portfolio', value: data.port_name },
     { label: 'VaR_T_abs', value: typeof data.VaR_T_abs === 'string' ? data.VaR_T_abs : formatNumber()(data.VaR_T_abs) },
-    { label: 'VaR_T_rel', value: typeof data.VaR_T_rel === 'string' ? data.VaR_T_rel : formatNumberWithCommas(data.VaR_T_rel) },
     { label: 'VaR_IR_abs', value: typeof data.VaR_IR_abs === 'string' ? data.VaR_IR_abs : formatNumber()(data.VaR_IR_abs) },
-    { label: 'VaR_IR_rel', value: typeof data.VaR_IR_rel === 'string' ? data.VaR_IR_rel : formatNumberWithCommas(data.VaR_IR_rel) },
     { label: 'VaR_CS_abs', value: typeof data.VaR_CS_abs === 'string' ? data.VaR_CS_abs : formatNumber()(data.VaR_CS_abs) },
-    { label: 'VaR_CS_rel', value: typeof data.VaR_CS_rel === 'string' ? data.VaR_CS_rel : formatNumberWithCommas(data.VaR_CS_rel) }
+  
+    // 🔵 Absolute Werte – ES
+    { label: 'ES_T_abs', value: typeof data.ES_T_abs === 'string' ? data.ES_T_abs : formatNumber()(data.ES_T_abs) },
+    { label: 'ES_IR_abs', value: typeof data.ES_IR_abs === 'string' ? data.ES_IR_abs : formatNumber()(data.ES_IR_abs) },
+    { label: 'ES_CS_abs', value: typeof data.ES_CS_abs === 'string' ? data.ES_CS_abs : formatNumber()(data.ES_CS_abs) },
+  
+    // 🟢 Relative Werte – VaR
+    { label: 'VaR_T_rel', value: typeof data.VaR_T_rel === 'string' ? data.VaR_T_rel : formatNumberWithCommas(data.VaR_T_rel) },
+    { label: 'VaR_IR_rel', value: typeof data.VaR_IR_rel === 'string' ? data.VaR_IR_rel : formatNumberWithCommas(data.VaR_IR_rel) },
+    { label: 'VaR_CS_rel', value: typeof data.VaR_CS_rel === 'string' ? data.VaR_CS_rel : formatNumberWithCommas(data.VaR_CS_rel) },
+  
+    // 🟢 Relative Werte – ES
+    { label: 'ES_T_rel', value: typeof data.ES_T_rel === 'string' ? data.ES_T_rel : formatNumberWithCommas(data.ES_T_rel) },
+    { label: 'ES_IR_rel', value: typeof data.ES_IR_rel === 'string' ? data.ES_IR_rel : formatNumberWithCommas(data.ES_IR_rel) },
+    { label: 'ES_CS_rel', value: typeof data.ES_CS_rel === 'string' ? data.ES_CS_rel : formatNumberWithCommas(data.ES_CS_rel) }
     ];
 
     rows.forEach(({ label, value }) => {
