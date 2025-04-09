@@ -18,3 +18,7 @@
 2025-04-08T11:59:52.089Z: main_fct: dbPath: C:/Users/Ronald/riskApp/electron_app/files/UNI.db
 2025-04-08T11:59:52.092Z: UserData Path: C:\Users\Ronald\AppData\Roaming\valueXpro
 2025-04-08T11:59:52.138Z: Connected to the database.
+2025-04-09T05:53:09.508Z: main_fct: __dirname: C:\Users\wendlert\Desktop\valueXpro_dev\aktuell\electron_app
+2025-04-09T05:53:09.510Z: main_fct: dbPath: C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db
+2025-04-09T05:53:09.512Z: UserData Path: C:\Users\wendlert\AppData\Roaming\valueXpro
+2025-04-09T05:53:09.639Z: Connected to the database.
