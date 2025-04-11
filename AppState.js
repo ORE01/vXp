@@ -342,7 +342,10 @@ export class AppState {
     }
 
     handleDealsTable(data) {
-        //console.log("Handling deals table data:", data);
+        console.log("Handling deals table data:", data);
+        const deals_data = appState.getDealsData();
+        const deals_name = this.getSelectedDealsTableName();
+        //handleDealsData(deals_data, deals_name )
     }
 
 
@@ -759,10 +762,11 @@ export class AppState {
 
 
     updateDealsDataTable(receivedData) {
-        //console.log('updateDealsDataTable', receivedData);
+        console.log('updateDealsDataTable', receivedData);
         //console.trace("🔍 updateDealsDataTable triggered from:");
         this.setDealsData(receivedData);
         this.applyFiltersAndUpdateDropdowns('deals');
+        this.handleDealsTable(receivedData)
     }
 
     updatePortDataTable(receivedData, index) {

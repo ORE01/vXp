@@ -98,6 +98,7 @@ export function handleMVaRData(receivedData, index) {
     });
 
     const rows = [
+    { label: 'Portfolio', value: data.port_name },
     { label: 'VaR_T_abs', value: typeof data.VaR_T_abs === 'string' ? data.VaR_T_abs : formatNumber()(data.VaR_T_abs) },
     { label: 'VaR_IR_abs', value: typeof data.VaR_IR_abs === 'string' ? data.VaR_IR_abs : formatNumber()(data.VaR_IR_abs) },
     { label: 'VaR_CS_abs', value: typeof data.VaR_CS_abs === 'string' ? data.VaR_CS_abs : formatNumber()(data.VaR_CS_abs) },

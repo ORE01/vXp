@@ -10,3 +10,4 @@ files/
 out temp_folder/
 dist/
 venv/
+logfile.txt

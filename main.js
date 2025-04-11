@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { getAllTableNames, queryDB, updateRecord,  insertDeal, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, handlePythonProgress, insertCSParameter} = require('./main_fct');
+const { getAllTableNames, queryDB, updateRecord,  insertRowInTable, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, handlePythonProgress, insertCSParameter} = require('./main_fct');
 const { formatColumns} = require('./utils/main_format');
 
 
@@ -445,10 +445,10 @@ const updateDataListener = async (event, { cleanTableName, rowIndex, newData, un
 ipcMain.on('update-data', updateDataListener);
 
 ipcMain.on('add-new-row', (event, { newRowData, cleanTableName }) => {
-  //console.log('Event listener triggered in main.js');
-  //console.log('Received data:', newRowData);
+  console.log('Event listener triggered in main.js');
+  console.log('Received data:', newRowData);
 
-  insertDeal(newRowData, cleanTableName, (err) => {
+  insertRowInTable(newRowData, cleanTableName, (err) => {
     if (err) {
       console.error('Error inserting row:', err.message);
       event.reply('add-new-row-error', err.message);
@@ -507,27 +507,6 @@ ipcMain.on('save-deals-selection', async (event, selectionData) => {
   }
 });
 
-// ipcMain.on('save-deals-selection', async (event, selectionData) => {
-//   console.log('selectionData1:', selectionData);
-//   const { port_name, selectedTradeIDs } = selectionData;
-  
-//   try {
-//     // Generiere eindeutige Trade-IDs
-//     const uniqueTradeIDs = selectedTradeIDs.map(id => `${id}_${crypto.randomUUID()}`);
-
-//     // Insert selection into DealsMain mit den neuen IDs
-//     await insertSelection(port_name, uniqueTradeIDs);
-
-//     console.log(`✅ Selection inserted for portfolio: ${port_name}`);
-
-//     // Refresh DealsMain nach Einfügen
-//     refreshTable('DealsMain');
-//   } catch (error) {
-//     console.error('❌ Error handling selection:', error);
-//   }
-// });
-
-
 // DELETE DEALS SELECTION
 ipcMain.on('delete-selected-table', (event, selectedTableName) => {
   //console.log('delete-selected-table:', selectedTableName);
@@ -539,10 +518,10 @@ ipcMain.on('delete-selected-table', (event, selectedTableName) => {
 
 // GET THE DATA FROM ANY TABLE:
 ipcMain.on('fetch-table-data', (event, selectedTableName) => {
-  //console.log('📥 fetch-table-data:', selectedTableName);
+  console.log('📥 fetch-table-data:', selectedTableName);
 
   refreshTable(selectedTableName, (data) => {
-    //console.log(`📤 Sende Daten für Tabelle "${selectedTableName}" zurück`, data);
+    console.log(`📤 Sende Daten für Tabelle "${selectedTableName}" zurück`, data);
 
     // Wichtig: Passender Channel-Name!
     event.reply(`${selectedTableName}`, data);

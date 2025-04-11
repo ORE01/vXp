@@ -118,7 +118,7 @@ function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) 
 
 // erase a row from table
 async function eraseRowFromDB(tableName, uniqueIdentifier) {
-  console.log('tableName to erase row from:', tableName);
+  console.log('row erased from:', tableName);
   // Perform the necessary database operation to erase the row based on the provided parameters
   return new Promise((resolve, reject) => {
     const query = `DELETE FROM ${tableName} WHERE ${uniqueIdentifier.column} = ?`;
@@ -142,26 +142,27 @@ function closeDatabase() {
   });
 }
 
-function insertDeal(data, tableName, callback) {
-  const {
-    INCLUDE,
-    PROD_ID,
-    TRADE_DATE,
-    CATEGORY,
-    NOTIONAL,
-    PRICE_BUY,
-    Depotbank,
-    port_name
-  } = data;
 
-  const insertQuery = `
-    INSERT INTO ${tableName} (
-      INCLUDE, PROD_ID, TRADE_DATE, CATEGORY, NOTIONAL, PRICE_BUY, Depotbank, port_name
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+
+function insertRowInTable(data, tableName, callback) {
+  const dataWithoutTradeId = { ...data };
+  delete dataWithoutTradeId.TRADE_ID; // wichtig!
+  
+  const columnNames = Object.keys(dataWithoutTradeId);
+  const columnValues = Object.values(dataWithoutTradeId);
+  const placeholders = columnNames.map(() => '?').join(', ');
+  
+  const query = `
+    INSERT INTO ${tableName} (${columnNames.join(', ')}) 
+    VALUES (${placeholders})
   `;
-
-  db.run(insertQuery, [INCLUDE, PROD_ID, TRADE_DATE, CATEGORY, NOTIONAL, PRICE_BUY, Depotbank, port_name], callback);
+  
+  db.run(query, columnValues, function (err) {
+    if (err) return callback(err);
+  
+    console.log('✅ Data inserted. New TRADE_ID:', this.lastID);
+    callback(null, this.lastID); // kannst du auch weiterverwenden
+  });
 }
 
 function insertSelection(selectionName, selectedTradeIDs) {
@@ -313,4 +314,4 @@ function insertCSParameter(data, tableName, callback) {
 }
 
 
-module.exports = { getAllTableNames, queryDB, updateRecord,  insertDeal, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, insertCSParameter};
+module.exports = { getAllTableNames, queryDB, updateRecord,  insertRowInTable, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, insertCSParameter};
