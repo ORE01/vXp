@@ -65,33 +65,33 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
 }
 }
 
-export function extractChartDataFromSavedValues(savedValues, indexA = 1, indexB = 2) {
-  const fields = {
-    PV01: 'formPortPV01',
-    CPV01: 'formPortCPV01',
+    function extractChartDataFromSavedValues(savedValues, indexA = 1, indexB = 2) {
+      const fields = {
+        PV01: 'formPortPV01',
+        CPV01: 'formPortCPV01',
 
-    MvarTOT: 'formVaR_T_rel',
-    MvarIR: 'formVaR_IR_rel',
-    MvarCS: 'formVaR_CS_rel',
+        MvarTOT: 'formVaR_T_rel',
+        MvarIR: 'formVaR_IR_rel',
+        MvarCS: 'formVaR_CS_rel',
 
-    CvarRating: 'formVaR_rating_rel',
-    CvarMarket: 'formVaR_market_rel',
-    CvarNorm: 'formVaR_norm_rel',
-  };
+        CvarRating: 'formVaR_rating_rel',
+        CvarMarket: 'formVaR_market_rel',
+        CvarNorm: 'formVaR_norm_rel',
+      };
 
-  const chartData = {};
-  const keyA = `portDataContainer${indexA}`;
-  const keyB = `portDataContainer${indexB}`;
+      const chartData = {};
+      const keyA = `portDataContainer${indexA}`;
+      const keyB = `portDataContainer${indexB}`;
 
-  for (const [key, formId] of Object.entries(fields)) {
-    const valA = parseFloat((savedValues[keyA]?.[formId] || '').replace(',', '.')) || 0;
-    const valB = parseFloat((savedValues[keyB]?.[formId] || '').replace(',', '.')) || 0;
-    const diff = +(valA - valB).toFixed(2);
-    chartData[key] = [valA, valB, diff];
-  }
+      for (const [key, formId] of Object.entries(fields)) {
+        const valA = parseFloat((savedValues[keyA]?.[formId] || '').replace(',', '.')) || 0;
+        const valB = parseFloat((savedValues[keyB]?.[formId] || '').replace(',', '.')) || 0;
+        const diff = +(valA - valB).toFixed(2);
+        chartData[key] = [valA, valB, diff];
+      }
 
-  return chartData;
-}
+      return chartData;
+    }
 
 
 

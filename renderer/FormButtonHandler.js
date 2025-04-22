@@ -2,6 +2,7 @@ import { generateInputFields} from './inputFieldsGenerator.js';
 import { generateCouponInputFields } from './couponInputFieldsGenerator.js';
 import { formatInputFieldValue } from '../utils/format.js';
 import { issuerData } from '../r_tab/ISSUER.js';
+import { appState } from '../renderer.js';
 
 
 export function handleFormAction(event, data, rowIndex, selectedTableName, actionType) {
@@ -54,16 +55,164 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
   
   try {
     const newSelectedTableName = selectedTableName;
-    //console.log('selectedTableName', newSelectedTableName);
+    console.log('selectedTableName', newSelectedTableName);
     const cleanTableName = newSelectedTableName;
     addNewRow(newRowData, cleanTableName);
-    //console.log(`New row added to ${cleanTableName} successfully.`);
+    console.log(`New row added to ${cleanTableName} successfully.`);
     closeModal();
+    //fetchAndUpdateDealsData(cleanTableName)
   } catch (error) {
     displayErrorMessage(`Failed to add new row: ${error.message}`);
   }
   isAddingRow = false;
 };
+
+// export const addSaveButtonHandler = (form, modal, selectedTableName) => {
+//   if (isAddingRow) return;
+//   isAddingRow = true;
+
+//   const newRowData = gatherFormData(form);
+//   const cleanTableName = selectedTableName;
+//   console.log('selectedTableName', cleanTableName);
+
+//   addNewRow(newRowData, cleanTableName)
+//     .then(() => {
+//       console.log(`✅ New row added to ${cleanTableName} successfully.`);
+
+//       closeModal();
+
+//       // Erst jetzt: Daten frisch holen
+//       fetchAndUpdateDealsData(cleanTableName);
+//     })
+//     .catch((error) => {
+//       displayErrorMessage(`❌ Failed to add new row: ${error.message}`);
+//     })
+//     .finally(() => {
+//       isAddingRow = false;
+//     });
+// };
+
+
+function fetchAndUpdateDealsData(tableName) {
+  console.log(`fetchAndUpdateDealsData ${tableName} .`);
+  window.api.receive(tableName, (receivedData) => {
+    if (!receivedData || receivedData.length === 0) {
+      console.warn("⚠️ Keine Deals-Daten empfangen!");
+      appState.setAllDealsData([]);
+      return;
+    }
+    console.log(`window.api.receive ${tableName} .`, receivedData );
+    appState.setAllDealsData(receivedData);
+
+    const port_name = appState.getSelectedDealsTableName();
+    const filteredData = receivedData.filter(entry => entry.port_name === port_name);
+
+    // 🔄 Update UI
+    appState.updateDealsDataTable(filteredData);started
+
+    appState.updateDropdownOptions({
+      dropdownElementId: 'createdDealsDropdown',
+      getDataFunction: appState.getDealsNameList.bind(appState),
+      updateDataFunction: () => appState.updateDealsDataTable(filteredData),
+      selectedTableName: port_name
+    });
+
+    appState.setSelectedDealsTableName(port_name);
+  });
+
+  // Erst danach senden!
+  window.api.send('fetch-table-data', tableName);
+}
+
+
+
+// export const addSaveButtonHandler = (form, modal, selectedTableName) => {
+//   if (isAddingRow) return;
+//   isAddingRow = true;
+
+//   const newRowData = gatherFormData(form);
+//   const cleanTableName = selectedTableName;
+//   console.log('✅ cleanTableName:', cleanTableName);
+
+//   addNewRow(newRowData, cleanTableName)
+//   .then(() => {
+//     console.log('✅ addNewRow erfolgreich abgeschlossen – UI wird aktualisiert');
+//     const port_name = appState.getSelectedDealsTableName();
+    
+//     const AllDeals = appState.getAllDealsData();
+//     const actualDeals = AllDeals.filter(item => item.port_name === port_name);
+//     console.log('✅ addNewRow...newData:', actualDeals);
+  
+//       closeModal();
+
+//       // 🔄 Dropdown + Container aktualisieren
+//       appState.setSelectedDealsTableName(cleanTableName);
+//       appState.updateDropdownOptions({
+//         dropdownElementId: 'createdDealsDropdown',
+//         getDataFunction: appState.getDealsNameList,
+//         updateDataFunction: appState.updateDealsDataTable,
+//         selectedTableName: cleanTableName,
+//       });
+//     })
+//     .catch((error) => {
+//       displayErrorMessage(`Failed to add new row: ${error.message}`);
+//     })
+//     .finally(() => {
+//       isAddingRow = false;
+//     });
+// };
+
+// export const addSaveButtonHandler = (form, modal, selectedTableName) => {
+//   if (isAddingRow) return;
+//   isAddingRow = true;
+
+//   const newRowData = gatherFormData(form);
+//   const cleanTableName = selectedTableName;
+//   console.log('✅ cleanTableName:', cleanTableName);
+
+//   addNewRow(newRowData, cleanTableName)
+//     .then(() => {
+//       console.log('✅ addNewRow erfolgreich abgeschlossen – UI wird aktualisiert');
+//       const port_name = appState.getSelectedDealsTableName();
+
+//       // 1️⃣ Daten neu holen
+//       window.api.send('fetch-table-data', cleanTableName);
+
+//       // 2️⃣ Listener setzen
+//       window.api.receive(cleanTableName, (AllDeals) => {
+//         console.log('📥 Frisch aus der DB:', AllDeals);
+
+//         const actualDeals = AllDeals.filter(item => item.port_name === port_name);
+//         console.log('✅ addNewRow...newData:', actualDeals);
+
+//         closeModal();
+
+//         // 🔄 Dropdown + Container aktualisieren
+//         appState.setSelectedDealsTableName(cleanTableName);
+//         appState.updateDropdownOptions({
+//           dropdownElementId: 'createdDealsDropdown',
+//           getDataFunction: appState.getDealsNameList,
+//           updateDataFunction: () => appState.updateDealsDataTable(actualDeals),
+//           selectedTableName: cleanTableName,
+//         });
+
+//         // 🧠 Manuell den Dropdown triggern
+//         const dropdown = document.getElementById('createdDealsDropdown');
+//         if (dropdown) {
+//           dropdown.value = cleanTableName;
+//           dropdown.dispatchEvent(new Event('change'));
+//         }
+//       });
+//     })
+//     .catch((error) => {
+//       displayErrorMessage(`Failed to add new row: ${error.message}`);
+//     })
+//     .finally(() => {
+//       isAddingRow = false;
+//     });
+// };
+
+
 
 function setupAddOperation(data, selectedTableName) {
   //console.log('data, selectedTableName', data, selectedTableName);
@@ -98,7 +247,11 @@ function setupAddOperation(data, selectedTableName) {
   //console.log('Attaching event listener to saveButton');
 
   saveButtonClone.addEventListener('click', () => addSaveButtonHandler(form, modal, selectedTableName));
+
 }
+
+
+
 
 function setupEditOperation(data, rowIndex, selectedTableName) {
   if (data && data.length > rowIndex) {
