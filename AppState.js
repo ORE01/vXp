@@ -10,6 +10,7 @@ import { handleIRData } from './IR.js';
 import { handleFWDData, handleSwapForwardCurve } from './FORWARDS.js';
 import { handleMVaRData } from './MVaR.js'; 
 import { handleEADData, handleCVaRData } from './CVaR.js'; 
+import { handleLossIssuerMainData } from './LossIssuer.js'; 
 import { createComparisonCharts } from './COMP.js'; 
 import { formatPercentage} from './utils/format.js';
 import { filterColumnsInData } from './renderer/dataProcessor.js';
@@ -426,7 +427,20 @@ export class AppState {
           CSSensDataContainer.innerHTML = '';
           CSSensDataContainer.appendChild(CSSensTable);
         }
-      }
+
+        // 9 EAD aktualisieren
+
+        const EADData = appState.getAllEADData();
+        console.log('📥 EADData:', EADData);
+        appState.handleEADData(EADData);
+
+        // 10 EAD aktualisieren
+
+        const LossData = appState.getAllLossData();
+        console.log('📥 LossData:', LossData);
+        handleLossIssuerMainData(LossData);
+
+      } 
       
       
 
@@ -751,29 +765,31 @@ export class AppState {
         this.applyFiltersAndUpdateDropdowns('deals');
     }
 
-
     updatePortDataTable(receivedData, index) {
-        console.log('📌 updatePortDataTable called with:', receivedData);
+        console.log('📌 updatePortDataTable:', receivedData);
         this.setPortData(receivedData); // ✅ speichert die Daten (global verfügbar)
         this.applyFiltersAndUpdateDropdowns('port');        
         this.handlePortTable(receivedData, index); // 🖼️ zeigt Daten im Container an
       }
       
-      
-      
-    
     updateMvarDataTable(receivedData) {
-        console.log('updateMvarDataTable', receivedData);
+        console.log('📌 updateMvarDataTable', receivedData);
         // console.trace("🔍 updateMvarDataTable triggered from:");
         this.setMvarData(receivedData);
         this.setAllMvarData(receivedData);
     }
 
     updateCvarDataTable(receivedData) {
-        //console.log('updateCvarDataTable', receivedData);
+        console.log('📌 updateCvarDataTable', receivedData);
         this.setCvarData(receivedData);
         this.setAllCvarData(receivedData);
     }
+    updateEADDataTable(receivedData) {
+        console.log('📌 updateEADDataTable', receivedData);
+        //this.setEADData(receivedData);
+        this.setAllEADData(receivedData);
+    }
+    
     
     setSelectedTradeIDs(ids) {
         this.selectedTradeIDs = ids;
@@ -877,7 +893,7 @@ export class AppState {
 
     initDropdownListeners() {
         const dropdowns = this.getAllDropdownElements();
-        console.log('alldropdowns', dropdowns)
+        //console.log('alldropdowns', dropdowns)
         dropdowns.forEach(dropdown => {
             // Check if the listener has already been attached
             if (!dropdown.hasAttribute('data-listener-attached')) {
@@ -1309,6 +1325,7 @@ export class AppState {
         updateDataFunction,
         updateMvarDataFunction,
         updateCvarDataFunction,
+        updateEADDataFunction,
         selectedTableName,
         index,
     }) {
@@ -1354,6 +1371,10 @@ export class AppState {
             if (updateCvarDataFunction) {
                 const filteredCvar = appState.getAllCvarData().filter(entry => entry.port_name === dropdownElement.value);
                 updateCvarDataFunction(filteredCvar, index);
+            }
+            if (updateEADDataFunction) {
+                const filteredEAD = appState.getAllEADData().filter(entry => entry.port_name === dropdownElement.value);
+                updateEADDataFunction(filteredEAD, index);
             }
         } else {
             console.warn(`⚠️ Keine Daten gefunden für '${dropdownElement.value}' (${isPortfolio ? 'Portfolio' : 'Deals'}).`);

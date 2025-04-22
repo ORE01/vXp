@@ -357,6 +357,7 @@ function setupDropdown({
   updateDataFunction,
   updateMvarDataFunction,
   updateCvarDataFunction,
+  updateEADDataFunction,
   setSelectedPortTableName,
   setSelectedDealsTableName,
   setActiveTable,
@@ -385,6 +386,7 @@ function setupDropdown({
         updateDataFunction: updateDataFunction ? updateDataFunction.bind(appState) : undefined,
         updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
         updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
+        updateEADDataFunction: updateEADDataFunction ? updateEADDataFunction.bind(appState) : undefined,
         selectedTableName,
         index // 🧠 Das war vorher nicht da!
       });
@@ -528,7 +530,7 @@ function setupDropdown({
 
 function handleSaveSelection() {
   const port_name = document.getElementById('nameInput').value;
-  const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
+  
 
   //console.log('port_name, tagValues:', port_name, tagValues);
 

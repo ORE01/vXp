@@ -109,7 +109,7 @@ let marketNormData = [];
 // }
 
 export function handleLossIssuerMainData(receivedData) {
-  //console.log('LossIssuer receivedData:', receivedData);
+  console.log('LossIssuer receivedData:', receivedData);
 
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
   //console.log('port_name:', port_name);
@@ -143,7 +143,7 @@ export function handleLossIssuerMainData(receivedData) {
 
     if (LossIssuerDataContainer && filteredData.length > 0) {
       let sortedData = processAndSortLossIssuerData(filteredData);
-      const LossIssuerDataHTML = processData(sortedData, port_name, tableName);
+      const LossIssuerDataHTML = processData(sortedData, tableName);
       LossIssuerDataContainer.innerHTML = LossIssuerDataHTML;
 
       const allRows = LossIssuerDataContainer.querySelectorAll('tr');

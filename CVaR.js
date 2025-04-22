@@ -9,7 +9,7 @@ let filteredEADMainData = [];
 
 export function handleEADData(receivedData) {
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
-  ////console.log('port_name:', port_name);
+  console.log('port_name:', port_name);
 
   const EADDataContainer = document.getElementById('EADDataContainer');
 
@@ -257,20 +257,25 @@ export function handleCVaRData(receivedData, index) {
         const cell = headerRow.insertCell();
         cell.textContent = text;
       });
-    
+      
+      const allowedPdFlags = ['rating', 'market' , 'norm']; // ⬅️ Nur "market" anzeigen. Für alle: einfach [] oder null setzen
+
       Object.entries(allFilteredDataByPdFlag).forEach(([pd_flag, data]) => {
+        if (allowedPdFlags.length > 0 && !allowedPdFlags.includes(pd_flag)) return; // ⛔ Überspringen, wenn nicht erlaubt
+      
         const row = data[0];
         if (!row || !('VaR_rel' in row)) return;
-    
+      
         const label = `VaR_${pd_flag.toLowerCase()}_rel`;
         const value = typeof row.VaR_rel === 'string'
           ? row.VaR_rel
           : formatPercentage(row.VaR_rel);
-    
+      
         const r = table.insertRow();
         r.insertCell(0).textContent = label;
         r.insertCell(1).textContent = value;
       });
+      
     
       container.appendChild(table);
     }
