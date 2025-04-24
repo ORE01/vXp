@@ -90,9 +90,39 @@
     <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
     <button class="tablinks" id="ML_Tab">ML</button> 
     <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+    <button class="tablinks" id="Liquidity_Tab">LIQUIDITY</button> 
     
   </div>
 
+<!-- Modal - Liquidity -->
+<div id="Liquidity_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">LIQUIDITY</h2>
+    </div>
+
+    <div class="data-container" id="liquDataContainer"></div>
+
+    <div class="pv01-chart-container">
+      <canvas id="liquChart"></canvas>
+    </div>
+
+    
+    <!-- <label for="ratesSelector">Select Curve:</label>
+      <select id="ratesSelector">
+        <option value="EUSWAP">EUSWAP</option>
+        <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
+      </select> -->
+
+    
+    <!-- <div id="IRDataContainer"></div>
+    <div class="chart-container">
+      
+      <canvas id="IRlineChart"></canvas>
+    </div> -->
+  </div>
+</div>
 
 <!-- Modal - ISSUER -->
 <div id="ISSUER_Modal" class="table">

@@ -6,6 +6,7 @@ import { handleSwapForwardCurve, handleFWDData } from './FORWARDS.js';
 import { handleProviderData } from './DATAProvider.js'; 
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
+import { handleLiquidityData } from './liquidity.js';
 
 
 import { tooltips } from './ToolTip.js';
@@ -62,6 +63,7 @@ function setupEventListeners() {
   window.api.receive('PortfoliosData', (data) => {
     handlePortNameList(data);
     handlePortfolioData(data);
+    //handleLiquidityData(data);
   });
 
 
@@ -248,87 +250,82 @@ function setupEventListeners() {
       handleTSData(receivedData, modalIndex);
     }
 
-    function setupDropdowns() {
-      // Deals Dropdown
-      setupDropdown({
-          dropdownId: 'createdDealsDropdown',
-          getDataFunction: appState.getDealsNameList,
-          updateDataFunction: appState.updateDealsDataTable,
-          setSelectedDealsTableName: appState.setSelectedDealsTableName,
-          setActiveTable: () => appState.setActiveElementId('dealsDataContainer')
-      });
-  
-      // Portfolio Dropdowns (0, 1, 2)
-      ['0','1', '2'].forEach(num => {
-          setupDropdown({
-              dropdownId: `createdPortDropdown${num}`,
-              getDataFunction: appState.getPortNameList,
-              updateDataFunction: appState.updatePortDataTable,
-              //updateMvarDataFunction: appState.updateMvarDataTable,
-              //updateCvarDataFunction: appState.updateCvarDataTable,
-              setSelectedPortTableName: appState.setSelectedPortTableName,
-              setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
-              index: parseInt(num) // 🆕 übergeben!
-          });
-      });
-  }
-  
+function setupDropdowns() {
+  // Deals Dropdown
+  setupDropdown({
+    dropdownId: 'createdDealsDropdown',
+    getDataFunction: appState.getDealsNameList,
+    updateDataFunction: appState.updateDealsDataTable,
+    setSelectedDealsTableName: appState.setSelectedDealsTableName,
+    setActiveTable: () => appState.setActiveElementId('dealsDataContainer')
+  });
 
+  // Portfolio Dropdowns (0, 1, 2)
+  ['0','1','2'].forEach(num => {
+    setupDropdown({
+      dropdownId: `createdPortDropdown${num}`,
+      getDataFunction: appState.getPortNameList,
+      updateDataFunction: appState.updatePortDataTable,
+      //updateMvarDataFunction: appState.updateMvarDataTable,
+      //updateCvarDataFunction: appState.updateCvarDataTable,
+      setSelectedPortTableName: appState.setSelectedPortTableName,
+      setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
+      index: parseInt(num) // 🆕 übergeben!
+    });
+  });
+}
   //START PYTHON PROJECTS and so on...:
 
-function setupDropdown({
-  dropdownId,
-  getDataFunction,
-  updateDataFunction,
-  updateMvarDataFunction,
-  updateCvarDataFunction,
-  updateEADDataFunction,
-  setSelectedPortTableName,
-  setSelectedDealsTableName,
-  setActiveTable,
-  index // 🆕 Hier aufnehmen
-}) {
-  const dropdown = document.getElementById(dropdownId);
-  if (dropdown) {
-    dropdown.addEventListener('change', event => {
-      const selectedTableName = event.target.value;
-      console.log(`🔄 Portfolio ausgewählt: ${selectedTableName} (Index: ${index})`);
+    function setupDropdown({
+      dropdownId,
+      getDataFunction,
+      updateDataFunction,
+      updateMvarDataFunction,
+      updateCvarDataFunction,
+      updateEADDataFunction,
+      setSelectedPortTableName,
+      setSelectedDealsTableName,
+      setActiveTable,
+      index // 🆕 Hier aufnehmen
+    }) {
+      const dropdown = document.getElementById(dropdownId);
+      if (dropdown) {
+        dropdown.addEventListener('change', event => {
+          const selectedTableName = event.target.value;
+          console.log(`🔄 Portfolio ausgewählt: ${selectedTableName} (Index: ${index})`);
 
-      if (setSelectedDealsTableName) {
-        appState.setSelectedDealsTableName(selectedTableName);
+          if (setSelectedDealsTableName) {
+            appState.setSelectedDealsTableName(selectedTableName);
+          }
+          if (setSelectedPortTableName) {
+            appState.setSelectedPortTableName(selectedTableName);
+          }
+          if (setActiveTable) {
+            setActiveTable();
+          }
+
+          // 🧠 Jetzt wird der Index korrekt weitergegeben!
+          appState.updateDropdownOptions({
+            dropdownElementId: dropdownId,
+            getDataFunction: getDataFunction.bind(appState),
+            updateDataFunction: updateDataFunction ? updateDataFunction.bind(appState) : undefined,
+            updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
+            updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
+            updateEADDataFunction: updateEADDataFunction ? updateEADDataFunction.bind(appState) : undefined,
+            selectedTableName,
+            index // 🧠 Das war vorher nicht da!
+          });
+        });
       }
-      if (setSelectedPortTableName) {
-        appState.setSelectedPortTableName(selectedTableName);
-      }
-      if (setActiveTable) {
-        setActiveTable();
-      }
-
-      // 🧠 Jetzt wird der Index korrekt weitergegeben!
-      appState.updateDropdownOptions({
-        dropdownElementId: dropdownId,
-        getDataFunction: getDataFunction.bind(appState),
-        updateDataFunction: updateDataFunction ? updateDataFunction.bind(appState) : undefined,
-        updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
-        updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
-        updateEADDataFunction: updateEADDataFunction ? updateEADDataFunction.bind(appState) : undefined,
-        selectedTableName,
-        index // 🧠 Das war vorher nicht da!
-      });
-    });
-  }
-}
-
-
-
-  function setupButtons() {
+    }
+function setupButtons() {
   document.getElementById('saveSelectionButton').addEventListener('click', handleSaveSelection);
   document.getElementById('deleteTableButton').addEventListener('click', handleDeleteSelection);
   document.getElementById('inputMVaRSave-button').addEventListener('click', handleSaveClick, { once: true });
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
 
-//PROVIDERS
+  //PROVIDERS
   const providers = [
     { id: 'ecbTab', container: 'inputEcb-container', button: 'ecbAddButton' },
     { id: 'fedTab', container: 'inputFed-container', button: 'fedAddButton' },
@@ -342,7 +339,7 @@ function setupDropdown({
 
 
 
-// PYTHON EXECUTION: Buttons
+  // PYTHON EXECUTION: Buttons
   const projectButtons = [
     { buttonId: 'fairValueButton', projectName: 'py-fairValue' },
     { buttonId: 'MVaRButton', projectName: 'py-MVaR' },
@@ -361,12 +358,12 @@ function setupDropdown({
   });
 
 
-// CMS buttons
+  // CMS buttons
     applyCMSForwardRate('CMSButton1');
     applyCMSForwardRate('CMSButton2');
   
 
-// LANGUAGE toggle buttons
+  // LANGUAGE toggle buttons
     updateTooltips('en'); // Set EN as the default language on load
   
     const langButtons = [
@@ -381,7 +378,7 @@ function setupDropdown({
       });
     });
 
-// THEME TOGGLE button
+  // THEME TOGGLE button
     const themeToggleButton = document.getElementById('themeToggle');
     if (themeToggleButton) {
       themeToggleButton.addEventListener('click', () => {
@@ -428,7 +425,7 @@ function setupDropdown({
     } catch (error) {
         console.error("❌ Error processing created deals data:", error);
     }
-}
+  }
 
 // Created PORT data
   function handlePortNameList(receivedData) {
@@ -451,100 +448,100 @@ function setupDropdown({
   } catch (error) {
       console.error("❌ Error processing created port data:", error);
   }
-}
-
-function handleSaveSelection() {
-  const port_name = document.getElementById('nameInput').value;
-  const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
-
-  //console.log('port_name, tagValues:', port_name, tagValues);
-
-  if (!port_name || tagValues.length === 0) {
-    alert('Please enter a name and select at least one trade ID.');
-    return;
   }
 
-  const filteredData = appState.getFilteredData('deals');
-  const selectedFromTableName = appState.getSelectedDealsTableName();
-  const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
+  function handleSaveSelection() {
+    const port_name = document.getElementById('nameInput').value;
+    const tagValues = document.getElementById('tagInputField').value.split(',').map(tag => tag.trim());
 
-  window.api.send('save-deals-selection', {
-    selectedFromTableName,
-    port_name,
-    tagValues,
-    selectedTradeIDs
-  });
+    //console.log('port_name, tagValues:', port_name, tagValues);
 
-  showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {
-    //console.log('User closed the success confirmation modal.');
-  });
-
-  const newPortfolio = { table_name: port_name };
-  appState.setDealsNameList([...appState.getDealsNameList(), newPortfolio]);
-
-  // ✅ 1. Setze das Dropdown-Filter-Kriterium für applyFilters...
-  appState.dropdownConfig['dealsTables']['createdDealsDropdown'].selection = [port_name];
-
-  // ✅ 2. Filtere und aktualisiere UI
-  appState.applyFiltersAndUpdateDropdowns('dealsTables');
-
-  // ✅ 3. Aktualisiere Dropdown (enthält nun neue Optionen)
-  appState.updateDropdownOptions({
-    dropdownElementId: 'createdDealsDropdown',
-    getDataFunction: appState.getDealsNameList.bind(appState),
-    updateDataFunction: appState.updateDealsDataTable.bind(appState),
-    selectedTableName: port_name
-  });
-
-  // ✅ 4. Setze aktiv die Auswahl im Dropdown im DOM
-  setTimeout(() => {
-    const dropdown = document.getElementById('createdDealsDropdown');
-    if (dropdown) {
-      dropdown.value = port_name;
-      dropdown.dispatchEvent(new Event('change'));
-      //console.log(`🎯 Manuell ausgewählt: '${port_name}' im Dropdown.`);
+    if (!port_name || tagValues.length === 0) {
+      alert('Please enter a name and select at least one trade ID.');
+      return;
     }
-  }, 100);
 
-  // ✅ 5. Setze intern die Auswahl für appState
-  appState.setSelectedDealsTableName(port_name);
-  appState.setSelectedPortTableName(port_name);
+    const filteredData = appState.getFilteredData('deals');
+    const selectedFromTableName = appState.getSelectedDealsTableName();
+    const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
 
-  // ✅ 6. Reset-Button klicken
-  const resetButton = document.getElementById('dealsResetFiltersButton');
-  if (resetButton) resetButton.click();
-}
+    window.api.send('save-deals-selection', {
+      selectedFromTableName,
+      port_name,
+      tagValues,
+      selectedTradeIDs
+    });
+
+    showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {
+      //console.log('User closed the success confirmation modal.');
+    });
+
+    const newPortfolio = { table_name: port_name };
+    appState.setDealsNameList([...appState.getDealsNameList(), newPortfolio]);
+
+    // ✅ 1. Setze das Dropdown-Filter-Kriterium für applyFilters...
+    appState.dropdownConfig['dealsTables']['createdDealsDropdown'].selection = [port_name];
+
+    // ✅ 2. Filtere und aktualisiere UI
+    appState.applyFiltersAndUpdateDropdowns('dealsTables');
+
+    // ✅ 3. Aktualisiere Dropdown (enthält nun neue Optionen)
+    appState.updateDropdownOptions({
+      dropdownElementId: 'createdDealsDropdown',
+      getDataFunction: appState.getDealsNameList.bind(appState),
+      updateDataFunction: appState.updateDealsDataTable.bind(appState),
+      selectedTableName: port_name
+    });
+
+    // ✅ 4. Setze aktiv die Auswahl im Dropdown im DOM
+    setTimeout(() => {
+      const dropdown = document.getElementById('createdDealsDropdown');
+      if (dropdown) {
+        dropdown.value = port_name;
+        dropdown.dispatchEvent(new Event('change'));
+        //console.log(`🎯 Manuell ausgewählt: '${port_name}' im Dropdown.`);
+      }
+    }, 100);
+
+    // ✅ 5. Setze intern die Auswahl für appState
+    appState.setSelectedDealsTableName(port_name);
+    appState.setSelectedPortTableName(port_name);
+
+    // ✅ 6. Reset-Button klicken
+    const resetButton = document.getElementById('dealsResetFiltersButton');
+    if (resetButton) resetButton.click();
+  }
 
   function showMessageBox(message, onClose) {
-          // Create the overlay
-          const overlay = document.createElement('div');
-          overlay.classList.add('confirmation-overlay');
+    // Create the overlay
+    const overlay = document.createElement('div');
+    overlay.classList.add('confirmation-overlay');
 
-          // Create the modal box
-          const modal = document.createElement('div');
-          modal.classList.add('confirmation-modal', 'confirmation-success');
+    // Create the modal box
+    const modal = document.createElement('div');
+    modal.classList.add('confirmation-modal', 'confirmation-success');
 
-          // Add success message
-          const messageElement = document.createElement('p');
-          messageElement.textContent = message;
-          messageElement.classList.add('confirmation-message');
-          modal.appendChild(messageElement);
+    // Add success message
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    messageElement.classList.add('confirmation-message');
+    modal.appendChild(messageElement);
 
-          // OK button
-          const okButton = document.createElement('button');
-          okButton.textContent = 'OK';
-          okButton.classList.add('confirmation-button', 'confirmation-button-green');
+    // OK button
+    const okButton = document.createElement('button');
+    okButton.textContent = 'OK';
+    okButton.classList.add('confirmation-button', 'confirmation-button-green');
 
-          okButton.addEventListener('click', () => {
-              document.body.removeChild(overlay);  // Close the modal
-              if (onClose) onClose();  // Trigger callback if provided
-          });
+    okButton.addEventListener('click', () => {
+        document.body.removeChild(overlay);  // Close the modal
+        if (onClose) onClose();  // Trigger callback if provided
+    });
 
-          // Append button to modal
-          modal.appendChild(okButton);
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-      }
+    // Append button to modal
+    modal.appendChild(okButton);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
 
   function handleDeleteSelection() {
     // console.log('Delete button clicked');
@@ -616,7 +613,7 @@ function handleSaveSelection() {
       alert('Please select a table to delete.');
     }
   }
-        function showConformationBox(message, onConfirm, onCancel) {
+      function showConformationBox(message, onConfirm, onCancel) {
           // Create the overlay
           const overlay = document.createElement('div');
           overlay.classList.add('confirmation-overlay');
