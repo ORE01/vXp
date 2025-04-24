@@ -484,37 +484,37 @@ export function handleSwapForwardCurve(receivedData) {
   );
 }
 
-function calculateSwapForwardCurve(swapRates, years_forward) {
-  const discountFactors = [];
-  const forwardSwapRates = [];
+    function calculateSwapForwardCurve(swapRates, years_forward) {
+      const discountFactors = [];
+      const forwardSwapRates = [];
 
-  // Loop through each swap rate and calculate discount factors
-  swapRates.forEach((swapRate, n) => {
-    const S_n = swapRate / 100; // Convert percentage to decimal
-    let sumDiscountFactors = 0;
+      // Loop through each swap rate and calculate discount factors
+      swapRates.forEach((swapRate, n) => {
+        const S_n = swapRate / 100; // Convert percentage to decimal
+        let sumDiscountFactors = 0;
 
-    // Calculate the sum of previous discount factors
-    for (let i = 0; i < n; i++) {
-      sumDiscountFactors += discountFactors[i];
+        // Calculate the sum of previous discount factors
+        for (let i = 0; i < n; i++) {
+          sumDiscountFactors += discountFactors[i];
+        }
+
+        // Calculate the discount factor for year n+1
+        const D_n = (1 - S_n * sumDiscountFactors) / (1 + S_n);
+        discountFactors.push(D_n);
+
+        // Only calculate the forward swap rate if we are beyond the input start year
+        if (n >= years_forward) {
+          // Calculate the sum of discount factors from D_(years_forward+1) to D_n
+          const sumOfDiscountFactors = discountFactors.slice(years_forward, n + 1).reduce((a, b) => a + b, 0);
+
+          // Calculate forward swap rate using the correct formula
+          const forwardSwapRate = ((discountFactors[years_forward - 1] - D_n) / sumOfDiscountFactors) * 100; // Convert back to percentage
+          forwardSwapRates.push(forwardSwapRate);
+        }
+      });
+
+      //console.log(`Forward Swap Rates (starting from year ${years_forward}):`, forwardSwapRates);
+      return forwardSwapRates;
     }
-
-    // Calculate the discount factor for year n+1
-    const D_n = (1 - S_n * sumDiscountFactors) / (1 + S_n);
-    discountFactors.push(D_n);
-
-    // Only calculate the forward swap rate if we are beyond the input start year
-    if (n >= years_forward) {
-      // Calculate the sum of discount factors from D_(years_forward+1) to D_n
-      const sumOfDiscountFactors = discountFactors.slice(years_forward, n + 1).reduce((a, b) => a + b, 0);
-
-      // Calculate forward swap rate using the correct formula
-      const forwardSwapRate = ((discountFactors[years_forward - 1] - D_n) / sumOfDiscountFactors) * 100; // Convert back to percentage
-      forwardSwapRates.push(forwardSwapRate);
-    }
-  });
-
-  //console.log(`Forward Swap Rates (starting from year ${years_forward}):`, forwardSwapRates);
-  return forwardSwapRates;
-}
 
 
