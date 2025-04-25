@@ -144,7 +144,8 @@ export class AppState {
                 'CouponType': new Set(['ALL']),
                 'CATEGORY': new Set(['ALL']),
                 'RATING': new Set(['ALL']),
-                'MATURITY': new Set(['ALL']),
+                // 'MATURITY': new Set(['ALL']),
+                'MATURITY_YEAR': new Set(['ALL']),
             },
             //Auflistung der Deals die ein Portfolio bilden (nicht deals: TRADE_ID...)
             dealsTables: {
@@ -159,6 +160,10 @@ export class AppState {
             portTables2: {
                 'table_name': new Set(['ALL']),
             },
+            // liqu: {
+            //     'MATURITY': new Set(['ALL']),
+            // },
+
         }
         this.dropdownConfig = {
             issuer: {
@@ -171,8 +176,9 @@ export class AppState {
                 'portCouponTypeDropdown': { dataKey: 'CouponType', selection: ['ALL'] },
                 'portCategoryDropdown': { dataKey: 'CATEGORY', selection: ['ALL'] },
                 'portRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
-                'portMaturityDropdown': { dataKey: 'MATURITY', selection: ['ALL'] },
+                'portMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
                 'portDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
+                'liquMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
             },
             prod: {
                 'prodIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },
@@ -202,7 +208,9 @@ export class AppState {
             portTables2: {
                 'createdPortDropdown2': { dataKey: 'table_name', selection: ['ALL'] },
             },  
-                  
+            // liqu: {
+            //     'liquMaturityDropdown': { dataKey: 'MATURITY', selection: ['ALL'] },
+            // },       
 
         };
         
@@ -247,6 +255,10 @@ export class AppState {
             'DATA_Tab': {
                 default: 'data',
             },
+            'Liquidity_Tab': {
+                default: 'port',
+            },
+
             // You can add more tabs and their default contexts or specific dropdowns as needed
         };
 
@@ -303,6 +315,14 @@ export class AppState {
                 this.handlePortTable(data, 2);
               }
             },
+            // liqu: {
+            //     dropdownConfig: this.dropdownConfig.liqu,
+            //     filtersConfig: this.filtersConfig.liqu,
+            //     dataHandler: (data) => {
+            //       console.log('📥 liqu aufgerufen mit data (port):', data);
+            //       this.handleLiquTable(data, 0);
+            //     }
+            //   },
           };
           
 
@@ -981,6 +1001,7 @@ export class AppState {
                 'portRatingDropdown': 'port',
                 'portMaturityDropdown': 'port',
                 'portDepotbankDropdown': 'port',
+                'liquMaturityDropdown': 'port',
                 
                 'createdDealsDropdown': 'dealsTables',
                 'createdPortDropdown0': 'portTables0',
@@ -988,6 +1009,9 @@ export class AppState {
                 'createdPortDropdown2': 'portTables2',
 
                 'tradeDropdown': 'deals' ,
+
+                // 'liquMaturityDropdown': 'liqu',
+
                 
             };
             return mapping[dropdownId] || null; // Fallback to null if no match is found

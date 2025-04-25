@@ -68,10 +68,18 @@
 .pv01-chart-container {
   width: 400px; /* Set the width */
   height: 300px; /* Set the height */
+  
+}
+
+/* CSS for Liqu container */
+.liqu-chart-container {
+  width: 600px; /* Set the width */
+  height: 380px; /* Set the height */
+  
 }
 
 /* Ensure canvas elements fill their containers */
-.cpv01-chart-container canvas, .pv01-chart-container canvas {
+.cpv01-chart-container canvas, .pv01-chart-container canvas, .liqu-chart-container canvas {
   width: 100% !important;
   height: 100% !important;
 }
@@ -228,3 +236,7 @@ p {
 }
 
 
+/* #liquChart {
+  max-width: 100%;
+  height: 400px;
+} */

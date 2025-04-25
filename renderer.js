@@ -1050,10 +1050,43 @@ function setupButtons() {
   }
   
   // PORT: Portfolios
+  // function handlePortfolioData(receivedData) {
+  //   appState.setAllPortfolioData(receivedData);
+  //     //console.log('📌 Alle Portfolio Daten: Portfolios', receivedData);
+  //   appState.setActiveTable('deals');
+
   function handlePortfolioData(receivedData) {
-    appState.setAllPortfolioData(receivedData);
-      //console.log('📌 Alle Portfolio Daten: Portfolios', receivedData);
+    // Neue Daten mit MATURITY_YEAR hinzufügen
+    // const enhancedData = receivedData.map(item => {
+    //   const maturityDate = new Date(item.MATURITY); // MATURITY wird zu einem Date-Objekt
+    //   const maturityYear = maturityDate.getFullYear(); // Jahr extrahieren
+    //   return {
+    //     ...item,
+    //     MATURITY_YEAR: maturityYear // Neues Feld hinzufügen
+    const enhancedData = receivedData.map(item => {
+      const maturityStr = item.MATURITY || '';
+      const maturityYear = maturityStr.slice(-4); // Letzte 4 Zeichen
+    
+      return {
+        ...item,
+        MATURITY_YEAR: maturityYear
+      };
+    });
+  
+    console.log(
+      '📌 Alle Portfolio Daten: enhanced',
+      enhancedData.map(({ MATURITY, MATURITY_YEAR }) => ({ MATURITY, MATURITY_YEAR }))
+    );
+    
+
+    // Neue Daten in AppState speichern
+    appState.setAllPortfolioData(enhancedData);
+  
+    // Aktive Tabelle setzen
     appState.setActiveTable('deals');
+
+
+  
 
   // Reset Button
   const portResetButton = document.getElementById('portResetFiltersButton');
