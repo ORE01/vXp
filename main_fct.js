@@ -8,6 +8,8 @@ require('dotenv').config();
 
 const {getDatabasePath} = require('./main_path');
 
+const XLSX = require('xlsx');
+
 
 
 // Function to determine if in development environment
@@ -314,4 +316,103 @@ function insertCSParameter(data, tableName, callback) {
 }
 
 
-module.exports = { getAllTableNames, queryDB, updateRecord,  insertRowInTable, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, insertCSParameter};
+async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition = null) {
+  console.log(`[Import] Aktueller Datenbankpfad: ${db.filename}`);
+
+  if (!fs.existsSync(excelPath)) {
+    throw new Error('Excel-Datei nicht gefunden: ' + excelPath);
+  }
+
+  const workbook = XLSX.readFile(excelPath);
+  if (!workbook.SheetNames.includes(sheetName)) {
+    throw new Error(`Sheet "${sheetName}" wurde nicht gefunden.`);
+  }
+
+  const worksheet = workbook.Sheets[sheetName];
+  let data = XLSX.utils.sheet_to_json(worksheet);
+
+  if (data.length === 0) {
+    throw new Error(`Keine Daten in Sheet "${sheetName}".`);
+  }
+
+  data = data.map(row => {
+    const cleanRow = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (key && !key.startsWith('__EMPTY') && key.trim() !== '' && key !== 'TRADE_ID') {
+        cleanRow[key] = value;
+      }
+    }
+    return cleanRow;
+  });
+
+  const columns = Object.keys(data[0]);
+  const placeholders = columns.map(() => '?').join(',');
+  const insertSQL = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
+
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      // 🔥 Falls deleteCondition angegeben ist, dann löschen
+      if (deleteCondition) {
+        const deleteSQL = `DELETE FROM ${tableName} WHERE ${deleteCondition}`;
+        db.run(deleteSQL, function(err) {
+          if (err) {
+            console.error(`❌ Fehler beim Löschen in "${tableName}":`, err.message);
+            return reject(err);
+          }
+          console.log(`🧹 Gelöscht in "${tableName}" mit Bedingung: ${deleteCondition}`);
+          startInsert();
+        });
+      } else {
+        console.log(`ℹ️ Kein deleteCondition für "${tableName}". Direkt importieren.`);
+        startInsert();
+      }
+
+      function startInsert() {
+        const stmt = db.prepare(insertSQL);
+
+        data.forEach((row, index) => {
+          const values = columns.map(col => row[col]);
+          stmt.run(values, function (err) {
+            if (err) {
+              console.error(`❌ Fehler beim Einfügen (Zeile ${index + 1}):`, err.message);
+            } else {
+              console.log(`✅ Zeile ${index + 1} erfolgreich importiert.`);
+            }
+          });
+        });
+
+        stmt.finalize(err => {
+          if (err) {
+            console.error('❌ Fehler beim Finalisieren:', err.message);
+            reject(err);
+          } else {
+            console.log(`✅ Import von "${sheetName}" nach "${tableName}" abgeschlossen.`);
+            resolve();
+          }
+        });
+      }
+    });
+  });
+}
+
+
+
+
+
+
+
+
+
+module.exports = {
+  getAllTableNames,
+  queryDB,
+  updateRecord,
+  insertRowInTable,
+  eraseRowFromDB,
+  closeDatabase,
+  insertSelection,
+  deleteTable,
+  startPythonScriptWithEvent,
+  insertCSParameter,
+  importExcelToSQLite // 👈 hier ergänzen!
+};

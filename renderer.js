@@ -27,6 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+async function handleExcelImport() {
+  try {
+    const result = await window.api.invoke('import-excel-dialog');
+    if (result.success) {
+      alert('Import erfolgreich!');
+    } else {
+      alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
+    }
+  } catch (error) {
+    alert('Fehler beim Import: ' + error.message);
+  }
+}
+
+
+
+
 
 function setupEventListeners() {
 
@@ -323,6 +339,8 @@ function setupButtons() {
   document.getElementById('deleteTableButton').addEventListener('click', handleDeleteSelection);
   document.getElementById('inputMVaRSave-button').addEventListener('click', handleSaveClick, { once: true });
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
+
+  document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
 
 
   //PROVIDERS

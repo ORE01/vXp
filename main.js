@@ -1,6 +1,18 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { getAllTableNames, queryDB, updateRecord,  insertRowInTable, eraseRowFromDB, closeDatabase, insertSelection, deleteTable, startPythonScriptWithEvent, handlePythonProgress, insertCSParameter} = require('./main_fct');
+const { getAllTableNames, 
+        queryDB, 
+        updateRecord,  
+        insertRowInTable, 
+        eraseRowFromDB, 
+        closeDatabase, 
+        insertSelection, 
+        deleteTable, 
+        startPythonScriptWithEvent, 
+        handlePythonProgress, 
+        insertCSParameter, 
+        importExcelToSQLite} = require('./main_fct');
+
 const { formatColumns} = require('./utils/main_format');
 
 
@@ -10,6 +22,34 @@ const { spawn } = require('child_process');
 
 let mainWindow;
 let tableNames;
+
+
+ipcMain.handle('import-excel-dialog', async () => {
+  try {
+    const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
+
+    const mappings = [
+      { sheetName: 'INPUT_DEALS', tableName: 'DealsMain', deleteCondition: "port_name = 'UNI'" },
+      // { sheetName: 'INPUT_BONDS', tableName: 'ProdAll' },
+      // Weitere Mappings hier
+    ];
+
+    for (const { sheetName, tableName, deleteCondition } of mappings) {
+      console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
+      await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition);
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('❌ Fehler beim Excel-Import:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+
+
+
+
 
 function createWindow() {
   // Create the browser window.

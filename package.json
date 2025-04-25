@@ -29,6 +29,7 @@
     }
   },
   "dependencies": {
+    "better-sqlite3": "^11.9.1",
     "chart.js": "^4.4.4",
     "chartjs-adapter-date-fns": "^3.0.0",
     "cubic-spline": "^3.0.3",
@@ -36,7 +37,8 @@
     "dotenv": "^16.3.1",
     "lightweight-charts": "^4.2.0",
     "scipy": "^0.1.4",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "electron": "^30.0.0",
