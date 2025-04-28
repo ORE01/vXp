@@ -316,7 +316,7 @@ function insertCSParameter(data, tableName, callback) {
 }
 
 
-async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition = null) {
+async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition = null, allowedColumns = null) {
   console.log(`[Import] Aktueller Datenbankpfad: ${db.filename}`);
 
   if (!fs.existsSync(excelPath)) {
@@ -338,12 +338,22 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
   data = data.map(row => {
     const cleanRow = {};
     for (const [key, value] of Object.entries(row)) {
-      if (key && !key.startsWith('__EMPTY') && key.trim() !== '' && key !== 'TRADE_ID') {
+      if (
+        key &&
+        !key.startsWith('__EMPTY') &&
+        key.trim() !== '' &&
+        key !== 'TRADE_ID' &&
+        (!allowedColumns || allowedColumns.includes(key))
+      ) {
         cleanRow[key] = value;
       }
     }
     return cleanRow;
   });
+
+  if (data.length === 0) {
+    throw new Error(`Nach dem Filtern keine gültigen Daten mehr in Sheet "${sheetName}".`);
+  }
 
   const columns = Object.keys(data[0]);
   const placeholders = columns.map(() => '?').join(',');
@@ -351,7 +361,6 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
 
   return new Promise((resolve, reject) => {
     db.serialize(() => {
-      // 🔥 Falls deleteCondition angegeben ist, dann löschen
       if (deleteCondition) {
         const deleteSQL = `DELETE FROM ${tableName} WHERE ${deleteCondition}`;
         db.run(deleteSQL, function(err) {
@@ -394,6 +403,7 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
     });
   });
 }
+
 
 
 

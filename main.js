@@ -28,15 +28,28 @@ ipcMain.handle('import-excel-dialog', async () => {
   try {
     const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
 
+    // 👇 Hier direkt dein Mapping einfügen
     const mappings = [
-      { sheetName: 'INPUT_DEALS', tableName: 'DealsMain', deleteCondition: "port_name = 'UNI'" },
-      // { sheetName: 'INPUT_BONDS', tableName: 'ProdAll' },
+      { 
+        sheetName: 'INPUT_DEALS', 
+        tableName: 'DealsMain', 
+        deleteCondition: "port_name = 'UNI'" 
+      },
+      { 
+        sheetName: 'INPUT_BONDS', 
+        tableName: 'ProdAll', 
+        allowedColumns: [
+          'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+          'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+          'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+        ]
+      },
       // Weitere Mappings hier
     ];
 
-    for (const { sheetName, tableName, deleteCondition } of mappings) {
+    for (const { sheetName, tableName, deleteCondition, allowedColumns } of mappings) {
       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
-      await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition);
+      await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns);
     }
 
     return { success: true };
@@ -45,6 +58,7 @@ ipcMain.handle('import-excel-dialog', async () => {
     return { success: false, error: err.message };
   }
 });
+
 
 
 
