@@ -66,5 +66,17 @@ function getDatabasePath() {
     }
 }
 
+function getExcelPath() {
+    const env = process.env.NODE_ENV || 'production'; // Fallback zu 'production'
 
-module.exports = {getDatabasePath };
+    if (env === 'development') {
+        return 'C:/Users/Ronald/riskApp/electron_app/files/UNI_DATA.xlsm';
+    } else if (env === 'thomasdev') {
+        return 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI_DATA.xlsm';
+    } else {
+        throw new Error(`Unknown environment: ${env}`);
+    }
+}
+
+
+module.exports = {getDatabasePath, getExcelPath };

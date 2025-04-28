@@ -15,6 +15,7 @@ const { getAllTableNames,
 
 const { formatColumns} = require('./utils/main_format');
 
+const {getExcelPath} = require('./main_path');
 
 require('dotenv').config();
 
@@ -26,13 +27,19 @@ let tableNames;
 
 ipcMain.handle('import-excel-dialog', async () => {
   try {
-    const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
+    // const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
+    const excelPath = getExcelPath();
+
 
     // 👇 Hier direkt dein Mapping einfügen
     const mappings = [
       { 
         sheetName: 'INPUT_DEALS', 
-        tableName: 'DealsMain', 
+        tableName: 'DealsMain',
+        allowedColumns: [
+          'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
+                        'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
+        ],
         deleteCondition: "port_name = 'UNI'" 
       },
       { 
@@ -42,14 +49,49 @@ ipcMain.handle('import-excel-dialog', async () => {
           'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
           'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+        ],
+        overwriteExisting: false
+      },
+      { 
+        sheetName: 'INPUT_ISSUER', 
+        tableName: 'Issuer', 
+        allowedColumns: [
+          'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
+                         'senior_secured', 'senior_preferred', 'senior_unsecured',
+                         'senior_subordinated', 'junior_subordinated'
         ]
       },
+      { 
+        sheetName: 'INPUT_RANK', 
+        tableName: 'Rank', 
+        allowedColumns: [
+        'RANK', 'STEPS'
+        ]
+      },
+      { 
+        sheetName: 'EUSW', 
+        tableName: 'EUSW', 
+        allowedColumns: [
+        'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
+        ]
+      },
+      { 
+        sheetName: 'INPUT_BONDS_ext', 
+        tableName: 'ProdAll', 
+        allowedColumns: [
+          'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+          'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+          'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK', 'OFFER_DEPOTBANK', 'OFFER_DATE'
+        ],
+        overwriteExisting: true
+      },
+
       // Weitere Mappings hier
     ];
 
-    for (const { sheetName, tableName, deleteCondition, allowedColumns } of mappings) {
+    for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
-      await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns);
+      await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
     }
 
     return { success: true };
