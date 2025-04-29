@@ -52,6 +52,14 @@ ipcMain.handle('import-excel-dialog', async () => {
       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns);
     }
 
+    const tablesToRefresh = ['DealsMain', 'ProdAll'];
+
+    tablesToRefresh.forEach(table => {
+      refreshTable(table, () => {
+        console.log('Refreshed table:', table);
+      });
+    });
+
     return { success: true };
   } catch (err) {
     console.error('❌ Fehler beim Excel-Import:', err);
