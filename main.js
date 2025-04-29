@@ -50,7 +50,7 @@ ipcMain.handle('import-excel-dialog', async () => {
           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
           'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
         ],
-        overwriteExisting: false
+        overwriteExisting: true
       },
       { 
         sheetName: 'INPUT_ISSUER', 
@@ -81,7 +81,7 @@ ipcMain.handle('import-excel-dialog', async () => {
         allowedColumns: [
           'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
-          'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK', 'OFFER_DEPOTBANK', 'OFFER_DATE'
+          'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
         ],
         overwriteExisting: true
       },
@@ -94,16 +94,22 @@ ipcMain.handle('import-excel-dialog', async () => {
       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
     }
 
+    // const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
+
+    // tablesToRefresh.forEach(table => {
+    //   refreshTable(table, () => {
+    //     console.log('Refreshed table:', table);
+    //   });
+    // });
+
+   
+
     return { success: true };
   } catch (err) {
     console.error('❌ Fehler beim Excel-Import:', err);
     return { success: false, error: err.message };
   }
 });
-
-
-
-
 
 
 

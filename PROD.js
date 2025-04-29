@@ -21,7 +21,7 @@ export function handleProdData(receivedData, filtersConfig) {
   prodData = receivedData;
 
   if (prodDataContainer && prodData) {
-    let columns = ['PROD_ID', 'DESCRIPTION', 'CouponType', 'SCHEDULE', 'MATURITY', 'ISSUER', 'RANK', 'RATING_PROD', 'CS_Szenario', 'OFFER_DEPOTBANK', 'OFFER_DATE'];
+    let columns = ['PROD_ID', 'DESCRIPTION', 'CouponType', 'SCHEDULE', 'MATURITY', 'ISSUER', 'RANK', 'RATING_PROD', 'CS_Szenario'];
     
     let filteredProdData = filterColumnsInData(filterProdData(prodData, filtersConfig), columns);
 
