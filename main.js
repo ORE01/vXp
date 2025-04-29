@@ -52,39 +52,42 @@ ipcMain.handle('import-excel-dialog', async () => {
         ],
         overwriteExisting: true
       },
-      { 
-        sheetName: 'INPUT_ISSUER', 
-        tableName: 'Issuer', 
+      {
+        sheetName: 'INPUT_ISSUER',
+        tableName: 'Issuer',
         allowedColumns: [
           'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
-                         'senior_secured', 'senior_preferred', 'senior_unsecured',
-                         'senior_subordinated', 'junior_subordinated'
-        ]
+          'senior_secured', 'senior_preferred', 'senior_unsecured',
+          'senior_subordinated', 'junior_subordinated'
+        ],
+        deleteCondition: "1 = 1"  // <-- This will delete all rows before importing
       },
       { 
         sheetName: 'INPUT_RANK', 
         tableName: 'Rank', 
         allowedColumns: [
         'RANK', 'STEPS'
-        ]
+        ],
+        deleteCondition: "1 = 1" 
       },
       { 
         sheetName: 'EUSW', 
         tableName: 'EUSW', 
         allowedColumns: [
         'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
-        ]
-      },
-      { 
-        sheetName: 'INPUT_BONDS_ext', 
-        tableName: 'ProdAll', 
-        allowedColumns: [
-          'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
-          'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
-          'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
         ],
-        overwriteExisting: true
+        deleteCondition: "1 = 1" 
       },
+      // { 
+      //   sheetName: 'INPUT_BONDS_ext', 
+      //   tableName: 'ProdAll', 
+      //   allowedColumns: [
+      //     'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+      //     'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+      //     'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+      //   ],
+      //   overwriteExisting: true
+      // },
 
       // Weitere Mappings hier
     ];
@@ -94,13 +97,13 @@ ipcMain.handle('import-excel-dialog', async () => {
       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
     }
 
-    // const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
+    const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
 
-    // tablesToRefresh.forEach(table => {
-    //   refreshTable(table, () => {
-    //     console.log('Refreshed table:', table);
-    //   });
-    // });
+    tablesToRefresh.forEach(table => {
+      refreshTable(table, () => {
+        console.log('Refreshed table:', table);
+      });
+    });
 
    
 
