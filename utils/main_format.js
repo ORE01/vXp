@@ -82,6 +82,36 @@ function formatColumns(rows) {
       return formattedRow;
     });
   }
+
+  //Transform Date
+  function cleanAndFormatRow(row, allowedColumns = null) {
+    const cleanRow = {};
   
-module.exports = { formatColumns};
+    for (const [key, value] of Object.entries(row)) {
+      if (
+        key &&
+        !key.startsWith('__EMPTY') &&
+        key.trim() !== '' &&
+        key !== 'TRADE_ID' &&
+        (!allowedColumns || allowedColumns.includes(key))
+      ) {
+        // Dynamische Datumserkennung
+        const keyUpper = key.toUpperCase();
+        const isDateField = ['DATE', 'MATURITY'].some(keyword => keyUpper.includes(keyword));
+  
+        if (isDateField && typeof value === 'number') {
+          const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel Startdatum
+          const date = new Date(excelEpoch.getTime() + value * 86400 * 1000);
+          cleanRow[key] = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        } else {
+          cleanRow[key] = value;
+        }
+      }
+    }
+  
+    return cleanRow;
+  }
+   
+  
+module.exports = { formatColumns, cleanAndFormatRow };
   
