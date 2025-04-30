@@ -84,7 +84,7 @@ function formatColumns(rows) {
   }
 
   //Transform Date
-  function cleanAndFormatRow(row, allowedColumns = null) {
+  function formatDate(row, allowedColumns = null) {
     const cleanRow = {};
   
     for (const [key, value] of Object.entries(row)) {
@@ -111,7 +111,65 @@ function formatColumns(rows) {
   
     return cleanRow;
   }
+
+  function formatNumericFields(row) {
+    // Liste der Felder, die zwingend numerisch sein sollen
+    const numericFields = ['COUPON', 'GEARING', 'FLOOR', 'CAP', 'SPREADS', 'CS_Szenario', 'SCHEDULE', 'TENOR'];
+  
+    for (const key of numericFields) {
+      if (Object.hasOwn(row, key)) {
+        const original = row[key];
+        const numericValue = Number(original);
+  
+        if (original === null || original === '' || isNaN(numericValue)) {
+          row[key] = null;
+        } else {
+          row[key] = numericValue;
+        }
+  
+        // Debug-Ausgabe zur Prüfung
+        console.log(`[DEBUG] Feld: ${key} | Original: ${original} | Neu: ${row[key]} | Typ: ${typeof row[key]}`);
+      }
+    }
+  
+    return row;
+  }
+
+  function formatRow(row, allowedColumns = null) {
+    const numericFields = [
+      'COUPON', 'GEARING', 'FLOOR', 'CAP',
+      'SPREADS', 'CS_Szenario', 'SCHEDULE', 'TENOR'
+    ];
+  
+    const cleanRow = {};
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+  
+    for (const [key, value] of Object.entries(row)) {
+      const trimmedKey = key.trim();
+      if (!trimmedKey || trimmedKey.startsWith('__EMPTY')) continue;
+      if (allowedColumns && !allowedColumns.includes(trimmedKey)) continue;
+  
+      const upperKey = trimmedKey.toUpperCase();
+      const isDate = ['DATE', 'DATUM', 'TRADE_DATE', 'START_DATE', 'MATURITY'].some(k => upperKey.includes(k));
+      const isNumeric = numericFields.includes(trimmedKey);
+  
+      if (isDate && typeof value === 'number') {
+        const date = new Date(excelEpoch.getTime() + value * 86400 * 1000);
+        cleanRow[trimmedKey] = date.toISOString().split('T')[0];
+      } else if (isNumeric) {
+        const num = Number(value);
+        cleanRow[trimmedKey] = !isNaN(num) ? num : null;
+      } else {
+        cleanRow[trimmedKey] = value;
+      }
+    }
+  
+    return cleanRow;
+  }
+  
+  
+  
    
   
-module.exports = { formatColumns, cleanAndFormatRow };
+module.exports = { formatColumns, formatDate, formatNumericFields, formatRow};
   

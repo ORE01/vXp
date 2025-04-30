@@ -10,7 +10,7 @@ const {getDatabasePath} = require('./main_path');
 
 const XLSX = require('xlsx');
 
-const { cleanAndFormatRow } = require('./utils/main_format'); 
+const { formatDate, formatNumericFields, formatRow} = require('./utils/main_format'); 
 
 
 
@@ -338,60 +338,15 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
     throw new Error(`Keine Daten in Sheet "${sheetName}".`);
   }
 
-  // data = data.map(row => {
-  //   const cleanRow = {};
-  //   for (const [key, value] of Object.entries(row)) {
-  //     if (
-  //       key &&
-  //       !key.startsWith('__EMPTY') &&
-  //       key.trim() !== '' &&
-  //       key !== 'TRADE_ID' &&
-  //       (!allowedColumns || allowedColumns.includes(key))
-  //     ) {
-  //       cleanRow[key] = value;
-  //     }
-  //   }
-  //   return cleanRow;
-  // });
 
-  data = data.map(row => cleanAndFormatRow(row, allowedColumns));
+
+  data = data
+  .map(row => formatDate(row, allowedColumns))  // Datumskonvertierung wie bisher
+  // .map(row => formatNumericFields(row));               // neue Nummern-Konvertierung
+
   
-  // data = data.map(row => {
-  //   const cleanRow = {};
-  //   for (const [key, value] of Object.entries(row)) {
-  //     if (
-  //       key &&
-  //       !key.startsWith('__EMPTY') &&
-  //       key.trim() !== '' &&
-  //       key !== 'TRADE_ID' &&
-  //       (!allowedColumns || allowedColumns.includes(key))
-  //     ) {
+  //data = data.map(row => formatRow(row, allowedColumns));
 
-  //       const keyUpper = key.toUpperCase();
-  //       const isDateField = ['DATE', 'DATUM', 'MATURITY'].some(keyword => keyUpper.includes(keyword));
-  
-  //       if (isDateField && typeof value === 'number') {
-  //         const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel Startdatum
-  //         const date = new Date(excelEpoch.getTime() + value * 86400 * 1000);
-  //         cleanRow[key] = date.toISOString().split('T')[0]; // YYYY-MM-DD
-
-  //       } else {
-  //         cleanRow[key] = value;
-  //       }
-
-        // Datumskonvertierung für bestimmte Spalten
-        // if (['START_DATE', 'MATURITY', 'TRADE_DATE'].includes(key) && typeof value === 'number') {
-        //   const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel Startdatum
-        //   const date = new Date(excelEpoch.getTime() + value * 86400 * 1000);
-        //   cleanRow[key] = date.toISOString().split('T')[0]; // YYYY-MM-DD
-        // } else {
-        //   cleanRow[key] = value;
-        // }
-  //     }
-  //   }
-  //   return cleanRow;
-  // });
-  
 
   if (data.length === 0) {
     throw new Error(`Nach dem Filtern keine gültigen Daten mehr in Sheet "${sheetName}".`);
@@ -481,134 +436,6 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
           });
         }
       }
-      
-
-      //letzter Stand 15:46
-      // function startInsert() {
-      //   if (overwriteExisting) {
-      //     // Overwrite-Modus
-      //     data.forEach((row, index) => {
-      //       const prodId = row['PROD_ID'];
-      
-      //       if (prodId) {
-      //         // Zuerst existierende Zeile löschen, dann direkt neue einfügen
-      //         db.run(`DELETE FROM ${tableName} WHERE PROD_ID = ?`, [prodId], function (deleteErr) {
-      //           if (deleteErr) {
-      //             console.error(`❌ Fehler beim Löschen (PROD_ID: ${prodId}):`, deleteErr.message);
-      //             return;
-      //           }
-      
-      //           const insertSQL = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`;
-      //           db.run(insertSQL, columns.map(col => row[col]), function (insertErr) {
-      //             if (insertErr) {
-      //               console.error(`❌ Fehler beim Einfügen (PROD_ID: ${prodId}):`, insertErr.message);
-      //             } else {
-      //               console.log(`✅ Zeile ${index + 1} (PROD_ID: ${prodId}) erfolgreich überschrieben.`);
-      //             }
-      //           });
-      //         });
-      //       } else {
-      //         console.warn(`⚠️ Zeile ${index + 1} hat keine PROD_ID – wird übersprungen.`);
-      //       }
-      //     });
-      
-      //     db.serialize(() => {
-      //       console.log(`✅ Import von "${sheetName}" nach "${tableName}" (mit Überschreiben) abgeschlossen.`);
-      //       resolve();
-      //     });
-      
-      //   } else {
-      //     // Normaler Insert-Modus (ohne Überschreiben)
-      //     const stmt = db.prepare(insertSQL);
-      
-      //     data.forEach((row, index) => {
-      //       const values = columns.map(col => row[col]);
-      //       stmt.run(values, function (err) {
-      //         if (err) {
-      //           console.error(`❌ Fehler beim Einfügen (Zeile ${index + 1}):`, err.message);
-      //         } else {
-      //           console.log(`✅ Zeile ${index + 1} erfolgreich importiert.`);
-      //         }
-      //       });
-      //     });
-      
-      //     stmt.finalize(err => {
-      //       if (err) {
-      //         console.error('❌ Fehler beim Finalisieren:', err.message);
-      //         reject(err);
-      //       } else {
-      //         console.log(`✅ Import von "${sheetName}" nach "${tableName}" abgeschlossen.`);
-      //         resolve();
-      //       }
-      //     });
-      //   }
-      // }
-      
-
-      // function startInsert() {
-      //   const stmtInsert = db.prepare(insertSQL);
-      
-      //   data.forEach((row, index) => {
-      //     const prodId = row['PROD_ID'];
-      
-      //     if (prodId) {
-      //       // Erst löschen, falls vorhanden
-      //       db.run(`DELETE FROM ${tableName} WHERE PROD_ID = ?`, [prodId], function (deleteErr) {
-      //         if (deleteErr) {
-      //           console.error(`❌ Fehler beim Löschen (PROD_ID: ${prodId}):`, deleteErr.message);
-      //         }
-      
-      //         // Danach einfügen
-      //         const values = columns.map(col => row[col]);
-      //         stmtInsert.run(values, function (insertErr) {
-      //           if (insertErr) {
-      //             console.error(`❌ Fehler beim Einfügen (Zeile ${index + 1}):`, insertErr.message);
-      //           } else {
-      //             console.log(`✅ Zeile ${index + 1} (PROD_ID: ${prodId}) erfolgreich überschrieben.`);
-      //           }
-      //         });
-      //       });
-      //     } else {
-      //       console.warn(`⚠️ Zeile ${index + 1} hat keine PROD_ID – wird übersprungen.`);
-      //     }
-      //   });
-      
-      //   stmtInsert.finalize(err => {
-      //     if (err) {
-      //       console.error('❌ Fehler beim Finalisieren:', err.message);
-      //       reject(err);
-      //     } else {
-      //       console.log(`✅ Import von "${sheetName}" nach "${tableName}" abgeschlossen.`);
-      //       resolve();
-      //     }
-      //   });
-      // }
-      
-
-      // function startInsert() {
-      //   const stmt = db.prepare(insertSQL);
-
-      //   data.forEach((row, index) => {
-      //     const values = columns.map(col => row[col]);
-      //     stmt.run(values, function (err) {
-      //       if (err) {
-      //         console.error(`❌ Fehler beim Einfügen (Zeile ${index + 1}):`, err.message);
-      //       } else {
-      //         console.log(`✅ Zeile ${index + 1} erfolgreich importiert.`);
-      //       }
-      //     });
-      //   });
-
-      //   stmt.finalize(err => {
-      //     if (err) {
-      //       console.error('❌ Fehler beim Finalisieren:', err.message);
-      //       reject(err);
-      //     } else {
-      //       console.log(`✅ Import von "${sheetName}" nach "${tableName}" abgeschlossen.`);
-      //       resolve();
-      //     }
-      //   });
-      // }
     });
   });
 }
