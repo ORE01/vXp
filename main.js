@@ -25,20 +25,108 @@ let mainWindow;
 let tableNames;
 
 
-ipcMain.handle('import-excel-dialog', async () => {
+// ipcMain.handle('import-excel-dialog', async () => {
+//   try {
+//     // const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
+//     const excelPath = getExcelPath();
+
+
+//     // 👇 Hier direkt dein Mapping einfügen
+//     const mappings = [
+//       { 
+//         sheetName: 'INPUT_DEALS', 
+//         tableName: 'DealsMain',
+//         allowedColumns: [
+//           'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
+//                         'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
+//         ],
+//         deleteCondition: "port_name = 'UNI'" 
+//       },
+//       { 
+//         sheetName: 'INPUT_BONDS', 
+//         tableName: 'ProdAll', 
+//         allowedColumns: [
+//           'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+//           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+//           'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+//         ],
+//         overwriteExisting: true
+//       },
+//       {
+//         sheetName: 'INPUT_ISSUER',
+//         tableName: 'Issuer',
+//         allowedColumns: [
+//           'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
+//           'senior_secured', 'senior_preferred', 'senior_unsecured',
+//           'senior_subordinated', 'junior_subordinated'
+//         ],
+//         deleteCondition: "1 = 1"  // <-- This will delete all rows before importing
+//       },
+//       { 
+//         sheetName: 'INPUT_RANK', 
+//         tableName: 'Rank', 
+//         allowedColumns: [
+//         'RANK', 'STEPS'
+//         ],
+//         deleteCondition: "1 = 1" 
+//       },
+//       { 
+//         sheetName: 'EUSW', 
+//         tableName: 'EUSW', 
+//         allowedColumns: [
+//         'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
+//         ],
+//         deleteCondition: "1 = 1" 
+//       },
+//       // { 
+//       //   sheetName: 'INPUT_BONDS_ext', 
+//       //   tableName: 'ProdAll', 
+//       //   allowedColumns: [
+//       //     'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+//       //     'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+//       //     'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+//       //   ],
+//       //   overwriteExisting: true
+//       // },
+
+//       // Weitere Mappings hier
+//     ];
+
+//     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
+//       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
+//       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
+//     }
+
+//     const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
+
+//     tablesToRefresh.forEach(table => {
+//       refreshTable(table, () => {
+//         console.log('Refreshed table:', table);
+//       });
+//     });
+
+   
+
+//     return { success: true };
+//   } catch (err) {
+//     console.error('❌ Fehler beim Excel-Import:', err);
+//     return { success: false, error: err.message };
+//   }
+// });
+
+ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
   try {
-    // const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
+    const sheetFilter = options.sheetFilter || null;  // z. B. ['EUSW']
     const excelPath = getExcelPath();
 
-
-    // 👇 Hier direkt dein Mapping einfügen
+    // Mapping der Sheets → Tabellen
     const mappings = [
       { 
         sheetName: 'INPUT_DEALS', 
         tableName: 'DealsMain',
         allowedColumns: [
           'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
-                        'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
+          'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
         ],
         deleteCondition: "port_name = 'UNI'" 
       },
@@ -60,13 +148,13 @@ ipcMain.handle('import-excel-dialog', async () => {
           'senior_secured', 'senior_preferred', 'senior_unsecured',
           'senior_subordinated', 'junior_subordinated'
         ],
-        deleteCondition: "1 = 1"  // <-- This will delete all rows before importing
+        deleteCondition: "1 = 1"
       },
       { 
         sheetName: 'INPUT_RANK', 
         tableName: 'Rank', 
         allowedColumns: [
-        'RANK', 'STEPS'
+          'RANK', 'STEPS'
         ],
         deleteCondition: "1 = 1" 
       },
@@ -74,29 +162,24 @@ ipcMain.handle('import-excel-dialog', async () => {
         sheetName: 'EUSW', 
         tableName: 'EUSW', 
         allowedColumns: [
-        'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
+          'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
         ],
         deleteCondition: "1 = 1" 
-      },
-      // { 
-      //   sheetName: 'INPUT_BONDS_ext', 
-      //   tableName: 'ProdAll', 
-      //   allowedColumns: [
-      //     'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
-      //     'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
-      //     'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
-      //   ],
-      //   overwriteExisting: true
-      // },
-
-      // Weitere Mappings hier
+      }
     ];
 
     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
+      // Falls sheetFilter gesetzt ist → nur gefilterte Sheets importieren
+      if (sheetFilter && !sheetFilter.includes(sheetName)) {
+        console.log(`⏭️ Sheet ${sheetName} wird übersprungen (nicht im Filter enthalten).`);
+        continue;
+      }
+
       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
     }
 
+    // Tabellen nach dem Import aktualisieren
     const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
 
     tablesToRefresh.forEach(table => {
@@ -105,14 +188,14 @@ ipcMain.handle('import-excel-dialog', async () => {
       });
     });
 
-   
-
     return { success: true };
+
   } catch (err) {
     console.error('❌ Fehler beim Excel-Import:', err);
     return { success: false, error: err.message };
   }
 });
+
 
 
 
