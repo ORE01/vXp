@@ -10,7 +10,7 @@ const {getDatabasePath} = require('./main_path');
 
 const XLSX = require('xlsx');
 
-const { formatDate, formatNumericFields, formatRow} = require('./utils/main_format'); 
+const { formatDate } = require('./utils/main_format'); 
 
 
 
@@ -333,6 +333,17 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
 
   const worksheet = workbook.Sheets[sheetName];
   let data = XLSX.utils.sheet_to_json(worksheet);
+
+  // Fehlende Spalten durch NaN ergänzen
+data = data.map(row => {
+  allowedColumns?.forEach(col => {
+    if (!(col in row) || row[col] === '') {
+      row[col] = NaN;
+    }
+  });
+  return row;
+});
+
 
   if (data.length === 0) {
     throw new Error(`Keine Daten in Sheet "${sheetName}".`);

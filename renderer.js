@@ -27,9 +27,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-async function handleExcelImport() {
+// async function handleExcelImport() {
+//   try {
+//     const result = await window.api.invoke('import-excel-dialog');
+//     if (result.success) {
+//       alert('Import erfolgreich!');
+//     } else {
+//       alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
+//     }
+//   } catch (error) {
+//     alert('Fehler beim Import: ' + error.message);
+//   }
+// }
+
+async function handleExcelImport(sheetNames = null) {
   try {
-    const result = await window.api.invoke('import-excel-dialog');
+    const result = await window.api.invoke('import-excel-dialog', {
+      sheetFilter: sheetNames  // Übergabe an main.js
+    });
+
     if (result.success) {
       alert('Import erfolgreich!');
     } else {
@@ -39,7 +55,6 @@ async function handleExcelImport() {
     alert('Fehler beim Import: ' + error.message);
   }
 }
-
 
 
 
@@ -341,7 +356,9 @@ function setupButtons() {
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
   document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
-
+  document.getElementById('importEUSWButton').addEventListener('click', () => {
+    handleExcelImport(['EUSW']);
+  });
 
   //PROVIDERS
   const providers = [
