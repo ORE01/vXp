@@ -116,7 +116,9 @@ let tableNames;
 
 ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
   try {
-    const sheetFilter = options.sheetFilter || null;  // z. B. ['EUSW']
+    // const sheetFilter = options.sheetFilter || null;  // z. B. ['EUSW']
+        // ⚠️ geändert: sichere Prüfung, ob sheetFilter ein Array ist
+    const sheetFilter = Array.isArray(options.sheetFilter) ? options.sheetFilter : null;
     const excelPath = getExcelPath();
 
     // Mapping der Sheets → Tabellen

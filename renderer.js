@@ -355,7 +355,10 @@ function setupButtons() {
   document.getElementById('inputMVaRSave-button').addEventListener('click', handleSaveClick, { once: true });
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
-  document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
+  // document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
+  document.getElementById('importExcelButtonVXP')?.addEventListener('click', () => {
+    handleExcelImport();  // alle Sheets
+  });
   document.getElementById('importEUSWButton').addEventListener('click', () => {
     handleExcelImport(['EUSW']);
   });
