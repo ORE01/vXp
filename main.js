@@ -318,7 +318,6 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
     });
   }
 });
-
 ipcMain.on('start-py-MVaR', async (event, args) => {
   //console.log('start-py-MVaR:', args);
 
@@ -446,6 +445,49 @@ ipcMain.on('start-py-historicData', (event) => {
 
   });
 });
+ipcMain.on('start-py-cspar', async (event, args) => {
+  //console.log('📥 Received arguments for py-cspar:', args);
+
+  const { CSSzenario } = args; // Extract `name` directly
+  if (!CSSzenario) {
+    console.error('❌ Error: Missing CSSzenario argument.');
+    event.reply('project-finished', {
+      success: false,
+      projectName: 'py-cspar',
+      message: 'The "CSSzenario" argument is required.',
+    });
+    return; // Stop execution
+  }
+
+  try {
+    // Call the Python script with the `CSSzenario` argument
+    const pythonArgs = ['--CSSzenario', CSSzenario];
+    //console.log('🚀 Starting Python CSPAR script with arguments:', pythonArgs);
+
+    const result = await startPythonScriptWithEvent(event, 'cspar', 'py-csparData', pythonArgs);
+    //console.log('✅ py-cspar executed successfully with result:', result);
+
+    // Refresh the table
+    const tableToRefresh = 'CSMatrix';
+    refreshTable(tableToRefresh);
+    //console.log(`🔄 Refreshed table: ${tableToRefresh}`);
+
+    // Notify the renderer that the project is complete
+    event.reply('project-finished', {
+      success: true,
+      projectName: 'py-cspar',
+      data: result,
+    });
+  } catch (error) {
+    console.error('❌ Python script execution failed:', error);
+    event.reply('project-finished', {
+      success: false,
+      projectName: 'py-cspar',
+      message: 'Python script execution failed.',
+      error: error.message,
+    });
+  }
+});
 ipcMain.on('start-py-ml', async (event, args) => {
   const {
     tableName,
@@ -539,49 +581,120 @@ ipcMain.on('start-py-ml', async (event, args) => {
     event.reply('project-finished', { success: false, message: 'Python script execution failed.' });
   }
 });
-ipcMain.on('start-py-cspar', async (event, args) => {
-  //console.log('📥 Received arguments for py-cspar:', args);
+// ipcMain.on('start-py-matchColumns', async (event, args) => {
+//   const { inputColumns, targetColumns } = args;
 
-  const { CSSzenario } = args; // Extract `name` directly
-  if (!CSSzenario) {
-    console.error('❌ Error: Missing CSSzenario argument.');
+//   if (!Array.isArray(inputColumns) || !Array.isArray(targetColumns)) {
+//     console.log('📥 Received payload:', args);
+//     console.error('❌ Missing or invalid arguments for matchColumns.');
+//     event.reply('py-matchColumns-complete', {
+//       success: false,
+//       projectName: 'py-matchColumns',
+//       message: 'Arguments "inputColumns" and "targetColumns" must be arrays.'
+//     });
+//     event.reply('project-finished', {
+//       success: false,
+//       projectName: 'py-matchColumns'
+//     });
+//     return;
+//   }
+
+//   try {
+//     const pythonArgs = [
+//       '--aicolumn_input', JSON.stringify(inputColumns),
+//       '--aicolumn_target', JSON.stringify(targetColumns),
+//     ];
+//     const result = await startPythonScriptWithEvent(event, 'aicolumn', 'py-matchColumns', pythonArgs);
+
+//     event.reply('py-matchColumns-complete', {
+//       success: true,
+//       projectName: 'py-matchColumns',
+//       inputColumns,
+//       targetColumns,
+//       result
+//     });
+
+//     event.reply('project-finished', {
+//       success: true,
+//       projectName: 'py-matchColumns'
+//     });
+
+//   } catch (error) {
+//     console.error('❌ Error during matchColumns script:', error);
+
+//     event.reply('py-matchColumns-complete', {
+//       success: false,
+//       projectName: 'py-matchColumns',
+//       error: error.message || error.toString()
+//     });
+
+//     event.reply('project-finished', {
+//       success: false,
+//       projectName: 'py-matchColumns'
+//     });
+//   }
+// });
+
+ipcMain.on('start-py-matchColumns', async (event, args) => {
+  const { inputColumns, productTargetColumns, offerTargetColumns } = args;
+
+  if (
+    !Array.isArray(inputColumns) ||
+    !Array.isArray(productTargetColumns) ||
+    !Array.isArray(offerTargetColumns)
+  ) {
+    console.log('📥 Received payload:', args);
+    console.error('❌ Missing or invalid arguments for matchColumns.');
+    event.reply('py-matchColumns-complete', {
+      success: false,
+      projectName: 'py-matchColumns',
+      message: 'Arguments "inputColumns", "productTargetColumns", and "offerTargetColumns" must be arrays.'
+    });
     event.reply('project-finished', {
       success: false,
-      projectName: 'py-cspar',
-      message: 'The "CSSzenario" argument is required.',
+      projectName: 'py-matchColumns'
     });
-    return; // Stop execution
+    return;
   }
 
   try {
-    // Call the Python script with the `CSSzenario` argument
-    const pythonArgs = ['--CSSzenario', CSSzenario];
-    //console.log('🚀 Starting Python CSPAR script with arguments:', pythonArgs);
+    const pythonArgs = [
+      '--aicolumn_input', JSON.stringify(inputColumns),
+      '--product_targets', JSON.stringify(productTargetColumns),
+      '--offer_targets', JSON.stringify(offerTargetColumns)
+    ];
 
-    const result = await startPythonScriptWithEvent(event, 'cspar', 'py-csparData', pythonArgs);
-    //console.log('✅ py-cspar executed successfully with result:', result);
+    const result = await startPythonScriptWithEvent(event, 'aicolumn', 'py-matchColumns', pythonArgs);
 
-    // Refresh the table
-    const tableToRefresh = 'CSMatrix';
-    refreshTable(tableToRefresh);
-    //console.log(`🔄 Refreshed table: ${tableToRefresh}`);
+    event.reply('py-matchColumns-complete', {
+      success: true,
+      projectName: 'py-matchColumns',
+      result
+    });
 
-    // Notify the renderer that the project is complete
     event.reply('project-finished', {
       success: true,
-      projectName: 'py-cspar',
-      data: result,
+      projectName: 'py-matchColumns'
     });
+
   } catch (error) {
-    console.error('❌ Python script execution failed:', error);
+    console.error('❌ Error during matchColumns script:', error);
+
+    event.reply('py-matchColumns-complete', {
+      success: false,
+      projectName: 'py-matchColumns',
+      error: error.message || error.toString()
+    });
+
     event.reply('project-finished', {
       success: false,
-      projectName: 'py-cspar',
-      message: 'Python script execution failed.',
-      error: error.message,
+      projectName: 'py-matchColumns'
     });
   }
 });
+
+
+
 
 
 

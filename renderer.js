@@ -133,6 +133,8 @@ function setupEventListeners() {
   window.api.receive('py-fairValue-complete', handleFairValueComplete);
   window.api.receive('py-mvar-complete', handleMVaRComplete);
   window.api.receive('py-cvar-complete', handleCVaRComplete);
+  window.api.receive('py-matchColumns-complete', handleAIColumnComplete);
+
   window.api.receive('project-finished', handleProjectFinished);
 
   // TS CLONED
@@ -356,8 +358,9 @@ function setupButtons() {
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
   document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
-  document.getElementById('importEUSWButton').addEventListener('click', () => {
-    handleExcelImport(['EUSW']);
+  document.getElementById('importEUSWButton').addEventListener('click', () => {handleExcelImport(['EUSW']);
+
+  document.getElementById('matchColumnsButton')?.addEventListener('click', () => {handleAIColumnProject();});
   });
 
   //PROVIDERS
@@ -383,6 +386,7 @@ function setupButtons() {
     { buttonId: 'updateHistoricDataButton', projectName: 'py-historicData' },
     { buttonId: 'CSParButton', projectName: 'py-cspar' },
     { buttonId: 'MLButton', projectName: 'py-ml' },
+    { buttonId: 'matchColumnsButton', projectName: 'py-matchColumns' } 
   ];
   
   projectButtons.forEach(({ buttonId, projectName, extraParam }) => {
@@ -703,9 +707,13 @@ function setupButtons() {
 
     try {
         switch (projectName) {
-            case 'py-ml':
-                handleMLProject(extraParam);
+            case 'py-matchColumns':
+                handleAIColumnProject(extraParam);
                 break;
+
+              case 'py-ml':
+                handleMLProject(extraParam);
+                break;    
 
             case 'py-cspar':
                 handleCSParProject(buttonElement, extraParam);
@@ -1025,6 +1033,84 @@ function setupButtons() {
         //console.log('🚀 Sending payload for py-cspar:', payload);
         window.api.send(`start-py-cspar`, payload);
       }
+
+      //AI-COLUMN
+      // function handleAIColumnProject(buttonElement, extraParam = {}) {
+      //   const port_name = appState.getSelectedDealsTableName();
+      
+      //   const inputColumns = ["StartDate", "CouponRate"];
+      //   const targetColumns = ["COUPON", "START_DATE"];
+      
+      //   extraParam.inputColumns = inputColumns;
+      //   extraParam.targetColumns = targetColumns;
+      
+      //   const payload = {
+      //     tableName: port_name,
+      //     ...extraParam,
+      //   };
+      
+      //   console.log("📤 Sending payload for py-matchColumns:", payload);
+      //   window.api.send('start-py-matchColumns', payload);
+      // }
+
+      function handleAIColumnProject(buttonElement, extraParam = {}) {
+        const port_name = appState.getSelectedDealsTableName();
+      
+        // 🧠 Spalten aus dem Excel-Sheet (beispielhaft)
+        const inputColumns = ["StartDate", "CouponRate"];
+      
+        // 🏷 Zielspalten definieren (könntest du auch aus DB holen)
+        const productTargetColumns = ['COUPON', 'START_DATE', 'TICKER', 'MATURITY', 'GEARING'];
+        const offerTargetColumns = ['TRADE_DATE', 'PRICE_BUY', 'PORT_NAME', 'CATEGORY', 'INCLUDE'];
+      
+        const payload = {
+          tableName: port_name,
+          inputColumns,
+          productTargetColumns,
+          offerTargetColumns
+        };
+      
+        console.log("📤 Sending payload for py-matchColumns:", payload);
+        window.api.send('start-py-matchColumns', payload);
+      }
+      
+      
+      
+          function handleAIColumnComplete(data) {
+            if (data.projectName === 'py-matchColumns') {
+              const button = document.getElementById('matchColumnsButton');
+          
+              // Re-enable the button
+              handleProjectResponse(button, data.projectName, data);
+          
+              if (data.success) {
+                // Optionally log or show result
+                console.log('✅ Column matching complete:', data.result);
+          
+                // 🔄 Fetch additional match result data (e.g. from DB or separate table)
+                fetchAndUpdateColumnMatchResults();
+              } else {
+                alert('⚠️ AI column matching failed: ' + (data.error || 'Unknown error'));
+              }
+            }
+          }
+          function fetchAndUpdateColumnMatchResults() {
+            window.api.receive('ColumnMatchesData', (receivedData) => {
+              if (!receivedData || receivedData.length === 0) {
+                console.warn("⚠️ No column match data received.");
+                return;
+              }
+          
+              console.log('✅ Column match result:', receivedData);
+              // You could render this into a table/modal
+            });
+          
+            window.api.send('fetch-table-data', 'ColumnMatches'); // if you use a table for matches
+          }
+      
+      
+      
+      
 
 
       
