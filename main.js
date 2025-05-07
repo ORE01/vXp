@@ -11,9 +11,10 @@ const { getAllTableNames,
         startPythonScriptWithEvent, 
         handlePythonProgress, 
         insertCSParameter, 
-        importExcelToSQLite} = require('./main_fct');
+        importExcelToSQLite, 
+        getAllRowsFromTable} = require('./main_fct');
 
-const { formatColumns} = require('./utils/main_format');
+const { formatColumns, formatDate} = require('./utils/main_format');
 
 const {getExcelPath} = require('./main_path');
 
@@ -25,94 +26,6 @@ let mainWindow;
 let tableNames;
 
 
-// ipcMain.handle('import-excel-dialog', async () => {
-//   try {
-//     // const excelPath = path.join(__dirname, 'files', 'UNI_DATA.xlsm');
-//     const excelPath = getExcelPath();
-
-
-//     // 👇 Hier direkt dein Mapping einfügen
-//     const mappings = [
-//       { 
-//         sheetName: 'INPUT_DEALS', 
-//         tableName: 'DealsMain',
-//         allowedColumns: [
-//           'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
-//                         'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
-//         ],
-//         deleteCondition: "port_name = 'UNI'" 
-//       },
-//       { 
-//         sheetName: 'INPUT_BONDS', 
-//         tableName: 'ProdAll', 
-//         allowedColumns: [
-//           'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
-//           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
-//           'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
-//         ],
-//         overwriteExisting: true
-//       },
-//       {
-//         sheetName: 'INPUT_ISSUER',
-//         tableName: 'Issuer',
-//         allowedColumns: [
-//           'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
-//           'senior_secured', 'senior_preferred', 'senior_unsecured',
-//           'senior_subordinated', 'junior_subordinated'
-//         ],
-//         deleteCondition: "1 = 1"  // <-- This will delete all rows before importing
-//       },
-//       { 
-//         sheetName: 'INPUT_RANK', 
-//         tableName: 'Rank', 
-//         allowedColumns: [
-//         'RANK', 'STEPS'
-//         ],
-//         deleteCondition: "1 = 1" 
-//       },
-//       { 
-//         sheetName: 'EUSW', 
-//         tableName: 'EUSW', 
-//         allowedColumns: [
-//         'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
-//         ],
-//         deleteCondition: "1 = 1" 
-//       },
-//       // { 
-//       //   sheetName: 'INPUT_BONDS_ext', 
-//       //   tableName: 'ProdAll', 
-//       //   allowedColumns: [
-//       //     'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
-//       //     'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
-//       //     'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
-//       //   ],
-//       //   overwriteExisting: true
-//       // },
-
-//       // Weitere Mappings hier
-//     ];
-
-//     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
-//       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
-//       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
-//     }
-
-//     const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
-
-//     tablesToRefresh.forEach(table => {
-//       refreshTable(table, () => {
-//         console.log('Refreshed table:', table);
-//       });
-//     });
-
-   
-
-//     return { success: true };
-//   } catch (err) {
-//     console.error('❌ Fehler beim Excel-Import:', err);
-//     return { success: false, error: err.message };
-//   }
-// });
 
 ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
   try {
@@ -167,7 +80,13 @@ ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
           'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
         ],
         deleteCondition: "1 = 1" 
+      },
+      {
+        sheetName: 'INPUT_LGT',
+        tableName: 'LGT',
+        deleteCondition: "1 = 1"
       }
+      
     ];
 
     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
@@ -583,16 +502,21 @@ ipcMain.on('start-py-ml', async (event, args) => {
     event.reply('project-finished', { success: false, message: 'Python script execution failed.' });
   }
 });
-// ipcMain.on('start-py-matchColumns', async (event, args) => {
-//   const { inputColumns, targetColumns } = args;
 
-//   if (!Array.isArray(inputColumns) || !Array.isArray(targetColumns)) {
+// ipcMain.on('start-py-matchColumns', async (event, args) => {
+//   const { inputColumns, productTargetColumns, offerTargetColumns } = args;
+
+//   if (
+//     !Array.isArray(inputColumns) ||
+//     !Array.isArray(productTargetColumns) ||
+//     !Array.isArray(offerTargetColumns)
+//   ) {
 //     console.log('📥 Received payload:', args);
 //     console.error('❌ Missing or invalid arguments for matchColumns.');
 //     event.reply('py-matchColumns-complete', {
 //       success: false,
 //       projectName: 'py-matchColumns',
-//       message: 'Arguments "inputColumns" and "targetColumns" must be arrays.'
+//       message: 'Arguments "inputColumns", "productTargetColumns", and "offerTargetColumns" must be arrays.'
 //     });
 //     event.reply('project-finished', {
 //       success: false,
@@ -604,15 +528,15 @@ ipcMain.on('start-py-ml', async (event, args) => {
 //   try {
 //     const pythonArgs = [
 //       '--aicolumn_input', JSON.stringify(inputColumns),
-//       '--aicolumn_target', JSON.stringify(targetColumns),
+//       '--product_targets', JSON.stringify(productTargetColumns),
+//       '--offer_targets', JSON.stringify(offerTargetColumns)
 //     ];
+
 //     const result = await startPythonScriptWithEvent(event, 'aicolumn', 'py-matchColumns', pythonArgs);
 
 //     event.reply('py-matchColumns-complete', {
 //       success: true,
 //       projectName: 'py-matchColumns',
-//       inputColumns,
-//       targetColumns,
 //       result
 //     });
 
@@ -640,12 +564,13 @@ ipcMain.on('start-py-ml', async (event, args) => {
 ipcMain.on('start-py-matchColumns', async (event, args) => {
   const { inputColumns, productTargetColumns, offerTargetColumns } = args;
 
+  // 🛑 Validate inputs
   if (
     !Array.isArray(inputColumns) ||
     !Array.isArray(productTargetColumns) ||
     !Array.isArray(offerTargetColumns)
   ) {
-    console.log('📥 Received payload:', args);
+    console.log('📥 Received payload (invalid):', args);
     console.error('❌ Missing or invalid arguments for matchColumns.');
     event.reply('py-matchColumns-complete', {
       success: false,
@@ -660,19 +585,28 @@ ipcMain.on('start-py-matchColumns', async (event, args) => {
   }
 
   try {
+    // ✅ Prepare arguments for Python script
     const pythonArgs = [
       '--aicolumn_input', JSON.stringify(inputColumns),
       '--product_targets', JSON.stringify(productTargetColumns),
       '--offer_targets', JSON.stringify(offerTargetColumns)
     ];
 
+    console.log('🚀 startPythonScriptWithEvent:', pythonArgs);
+
+    // 🔁 Run Python script
     const result = await startPythonScriptWithEvent(event, 'aicolumn', 'py-matchColumns', pythonArgs);
 
+    console.log('✅ Python result received:', result);
+
+    // ✅ Reply with full match results directly
     event.reply('py-matchColumns-complete', {
       success: true,
       projectName: 'py-matchColumns',
-      result
+      product_matches: result.product_matches,
+      offer_matches: result.offer_matches
     });
+    
 
     event.reply('project-finished', {
       success: true,
@@ -694,6 +628,7 @@ ipcMain.on('start-py-matchColumns', async (event, args) => {
     });
   }
 });
+
 
 
 
@@ -895,6 +830,73 @@ function refreshTable(tableName, callback) {
     }
   });
 }
+
+ipcMain.on('import-matched-columns', async (event, args) => {
+  const { sourceTable, targetTable, columnMap, additionalFields = {} } = args;
+
+  console.log(`📥 Import from ${sourceTable} → ${targetTable}`);
+  console.log('🧭 Column map:', columnMap);
+  console.log('🧩 Additional fields:', additionalFields);
+
+  try {
+    const rows = await getAllRowsFromTable(sourceTable);
+    if (!rows || rows.length === 0) {
+      return event.reply('import-matched-columns-complete', {
+        success: false,
+        message: `No data in source table: ${sourceTable}`
+      });
+    }
+
+    let insertedCount = 0;
+    for (const row of rows) {
+      const newRow = {};
+
+      // Mapping der Spalten
+      columnMap.forEach(({ from, to }) => {
+        if (row.hasOwnProperty(from)) {
+          newRow[to] = row[from];
+        }
+      });
+
+      // Füge zusätzliche Felder wie port_name hinzu
+      Object.entries(additionalFields).forEach(([key, value]) => {
+        newRow[key] = value;
+      });
+
+      // Nutze deine bestehende Insert-Logik
+      insertRowInTable(newRow, targetTable, (err) => {
+        if (err) {
+          console.error(`❌ Failed to insert row in ${targetTable}:`, err.message);
+        } else {
+          insertedCount++;
+        }
+      });
+    }
+
+    // Erfolgsmeldung
+    event.reply('import-matched-columns-complete', {
+      success: true,
+      message: `✅ ${insertedCount} Zeilen in "${targetTable}" eingefügt.`,
+    });
+
+    refreshTable(targetTable);
+
+  } catch (err) {
+    console.error('❌ Fehler beim Import:', err);
+    event.reply('import-matched-columns-complete', {
+      success: false,
+      error: err.message || err.toString()
+    });
+  }
+});
+
+
+
+
+
+
+
+
 
 
 

@@ -90,6 +90,13 @@ function setupEventListeners() {
     handleDealsMainData(data);
   });
 
+  window.api.receive('LGTData', (data) => {
+    appState.setOfferData(data); // ✅ hier speichern
+    console.log("📥 LGT-Daten empfangen:", data);
+  });
+  
+
+
   // PORTFOLIO
   window.api.receive('PortfoliosData', (data) => {
     handlePortNameList(data);
@@ -358,10 +365,23 @@ function setupButtons() {
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
   document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
-  document.getElementById('importEUSWButton').addEventListener('click', () => {handleExcelImport(['EUSW']);
+  document.getElementById('importEUSWButton').addEventListener('click', () => {handleExcelImport(['EUSW']);});
+
 
   document.getElementById('matchColumnsButton')?.addEventListener('click', () => {handleAIColumnProject();});
-  });
+  
+  document.getElementById('submitToProductsBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('productMatchesOutput', 'ProdAll');});
+  document.getElementById('submitToOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
+
+
+
+
+
+
+
+
+
+  
 
   //PROVIDERS
   const providers = [
@@ -1056,13 +1076,38 @@ function setupButtons() {
       function handleAIColumnProject(buttonElement, extraParam = {}) {
         const port_name = appState.getSelectedDealsTableName();
       
-        // 🧠 Spalten aus dem Excel-Sheet (beispielhaft)
-        const inputColumns = ["StartDate", "CouponRate"];
+        // 🧠 Extract input columns from LLBData (previously set)
+        const offerData = appState.getOfferData(); // e.g., from INPUT_LLB
+        const inputColumns = offerData && offerData.length > 0
+          ? Object.keys(offerData[0])
+          : [];
       
-        // 🏷 Zielspalten definieren (könntest du auch aus DB holen)
-        const productTargetColumns = ['COUPON', 'START_DATE', 'TICKER', 'MATURITY', 'GEARING'];
-        const offerTargetColumns = ['TRADE_DATE', 'PRICE_BUY', 'PORT_NAME', 'CATEGORY', 'INCLUDE'];
+        // // 🎯 Extract product target columns
+        // const productData = appState.getProdData(); // e.g., from ProdAll
+        // const productTargetColumns = productData && productData.length > 0
+        //   ? Object.keys(productData[0])
+        //   : [];
+
+        const productTargetColumns = [
+          'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+          'COUPON', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+          'ISSUER', 'TICKER', 'RATING_PROD', 'RANK'
+        ]
       
+        // // 🎯 Extract offer target columns
+        // const dealData = appState.getAllDealsData(); // e.g., from DealsMain
+        // const offerTargetColumns = dealData && dealData.length > 0
+        //   ? Object.keys(dealData[0])
+        //   : [];
+
+        const offerTargetColumns= [
+            'PROD_ID', 'PRICE_BUY', 'TRADE_DATE'
+          ]
+
+          displayTargetColumns(productTargetColumns, 'productTargetsOverview');
+          displayTargetColumns(offerTargetColumns, 'offerTargetsOverview');
+      
+        // 🔧 Build payload
         const payload = {
           tableName: port_name,
           inputColumns,
@@ -1073,27 +1118,32 @@ function setupButtons() {
         console.log("📤 Sending payload for py-matchColumns:", payload);
         window.api.send('start-py-matchColumns', payload);
       }
+         
+      function handleAIColumnComplete(data) {
+        if (data.projectName === 'py-matchColumns') {
+          const button = document.getElementById('matchColumnsButton');
+          handleProjectResponse(button, data.projectName, data);
       
+          if (data.success) {
+            console.log('✅ Full match data:', data); // ✅ Log the structure
       
+            const product_matches = data.product_matches || [];
+            const offer_matches = data.offer_matches || [];
+
+            displayMatchTable(product_matches, 'productMatchesOutput');
+            displayMatchTable(offer_matches, 'offerMatchesOutput');
+
+            markPerfectMatches(product_matches, 'productTargetsOverview');
+            markPerfectMatches(offer_matches, 'offerTargetsOverview');
       
-          function handleAIColumnComplete(data) {
-            if (data.projectName === 'py-matchColumns') {
-              const button = document.getElementById('matchColumnsButton');
-          
-              // Re-enable the button
-              handleProjectResponse(button, data.projectName, data);
-          
-              if (data.success) {
-                // Optionally log or show result
-                console.log('✅ Column matching complete:', data.result);
-          
-                // 🔄 Fetch additional match result data (e.g. from DB or separate table)
-                fetchAndUpdateColumnMatchResults();
-              } else {
-                alert('⚠️ AI column matching failed: ' + (data.error || 'Unknown error'));
-              }
-            }
+            fetchAndUpdateColumnMatchResults();
+          } else {
+            alert('⚠️ AI column matching failed: ' + (data.error || 'Unknown error'));
           }
+        }
+      }
+      
+      
           function fetchAndUpdateColumnMatchResults() {
             window.api.receive('ColumnMatchesData', (receivedData) => {
               if (!receivedData || receivedData.length === 0) {
@@ -1107,6 +1157,116 @@ function setupButtons() {
           
             window.api.send('fetch-table-data', 'ColumnMatches'); // if you use a table for matches
           }
+
+          function displayMatchTable(matches, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+          
+            const rows = matches.map((match, index) => {
+              const checked = match.similarity === 1.0 ? 'checked' : '';
+              const checkboxId = `match-checkbox-${containerId}-${index}`;
+              return `
+                <tr>
+                  <td>${match.from}</td>
+                  <td>→</td>
+                  <td>${match.to}</td>
+                  <td>${(match.similarity * 100).toFixed(1)}%</td>
+                  <td>
+                    <input type="checkbox" id="${checkboxId}" data-target="${match.to}" data-target-container="${containerId.includes('product') ? 'productTargetsOverview' : 'offerTargetsOverview'}" ${checked}>
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          
+            container.innerHTML = `
+              <table border="1" cellpadding="5">
+                <thead><tr><th>Input</th><th></th><th>Target</th><th>Similarity</th><th>✔</th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            `;
+          
+            // Add checkbox syncing
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+              cb.addEventListener('change', () => {
+                const targetId = `target-${cb.dataset.target}`;
+                const targetContainer = document.getElementById(cb.dataset.targetContainer);
+                const targetCheckbox = targetContainer?.querySelector(`input[id="${targetId}"]`);
+                if (targetCheckbox) {
+                  targetCheckbox.checked = cb.checked;
+                }
+              });
+            });
+          }
+          
+          function displayTargetColumns(targets, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+          
+            const rows = targets.map(target => `
+              <tr>
+                <td>${target}</td>
+                    <td><input type="checkbox" id="target-${target}"></td>
+              </tr>
+            `).join('');
+          
+            container.innerHTML = `
+              <table border="1" cellpadding="5">
+                <thead><tr><th>Target Column</th><th>Assigned?</th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            `;
+          }
+
+          function markPerfectMatches(matches, containerId) {
+            matches
+              .filter(m => m.similarity === 1.0)
+              .forEach(m => {
+                const checkbox = document.querySelector(`#${containerId} input[id="target-${m.to}"]`);
+                if (checkbox) checkbox.checked = true;
+              });
+          }
+
+          function handleSubmitMatchedColumns(matchContainerId, targetTable, additionalFields = {}) {
+            const matches = collectConfirmedMatches(matchContainerId);
+          
+            // Bei Offers zusätzliche Felder ergänzen
+            if (targetTable === 'DealsMain') {
+              additionalFields = {
+                ...additionalFields,
+                INCLUDE: 1,
+                CATEGORY: '2_lgfr_Anlagevermögen',
+                NOTIONAL: 1000000,
+                Depotbank: additionalFields.port_name || 'LGT'
+              };
+            }
+          
+            window.api.send('import-matched-columns', {
+              sourceTable: 'LGT',
+              targetTable,
+              columnMap: matches,
+              additionalFields
+            });
+          }
+          
+
+          function collectConfirmedMatches(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return [];
+          
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => {
+              const row = cb.closest('tr');
+              return {
+                from: row.cells[0].textContent.trim(),
+                to: row.cells[2].textContent.trim()
+              };
+            });
+          }
+          
+          
+          
+          
       
       
       

@@ -149,26 +149,51 @@ function closeDatabase() {
 
 
 
-function insertRowInTable(data, tableName, callback) {
-  const dataWithoutTradeId = { ...data };
-  delete dataWithoutTradeId.TRADE_ID; // wichtig!
+// function insertRowInTable(data, tableName, callback) {
+//   const dataWithoutTradeId = { ...data };
+//   delete dataWithoutTradeId.TRADE_ID; // wichtig!
   
+//   const columnNames = Object.keys(dataWithoutTradeId);
+//   const columnValues = Object.values(dataWithoutTradeId);
+//   const placeholders = columnNames.map(() => '?').join(', ');
+  
+//   const query = `
+//     INSERT INTO ${tableName} (${columnNames.join(', ')}) 
+//     VALUES (${placeholders})
+//   `;
+  
+//   db.run(query, columnValues, function (err) {
+//     if (err) return callback(err);
+  
+//     console.log('✅ Data inserted. New TRADE_ID:', this.lastID);
+//     callback(null, this.lastID); // kannst du auch weiterverwenden
+//   });
+// }
+
+function insertRowInTable(data, tableName, callback) {
+  // ✨ FORMATIERUNG DER DATEN VORAB
+  const formattedData = formatDate(data); // <- wandelt TRADE_DATE z.B. um
+
+  const dataWithoutTradeId = { ...formattedData };
+  delete dataWithoutTradeId.TRADE_ID; // wichtig!
+
   const columnNames = Object.keys(dataWithoutTradeId);
   const columnValues = Object.values(dataWithoutTradeId);
   const placeholders = columnNames.map(() => '?').join(', ');
-  
+
   const query = `
     INSERT INTO ${tableName} (${columnNames.join(', ')}) 
     VALUES (${placeholders})
   `;
-  
+
   db.run(query, columnValues, function (err) {
     if (err) return callback(err);
-  
+
     console.log('✅ Data inserted. New TRADE_ID:', this.lastID);
-    callback(null, this.lastID); // kannst du auch weiterverwenden
+    callback(null, this.lastID);
   });
 }
+
 
 function insertSelection(selectionName, selectedTradeIDs) {
   return new Promise((resolve, reject) => {
@@ -296,12 +321,19 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
 
           // Handle process close
           pythonProcess.on('close', (code) => {
-              if (code === 0) {
-                  resolve({ success: true, message: "Python script executed successfully." });
-              } else {
-                  reject(new Error(`Python script failed with code ${code}`));
+            if (code === 0) {
+              try {
+                const parsedResult = JSON.parse(scriptOutput);
+                resolve(parsedResult);  // ✅ sends full result from Python back to Electron
+              } catch (err) {
+                console.error('❌ Failed to parse Python output:', scriptOutput);
+                reject(new Error('Failed to parse Python output.'));
               }
+            } else {
+              reject(new Error(`Python script failed with code ${code}`));
+            }
           });
+          
       } catch (error) {
           console.error(`Failed to start Python script: ${error.message}`);
           reject(error);
@@ -335,29 +367,20 @@ async function importExcelToSQLite(excelPath, sheetName, tableName, deleteCondit
   let data = XLSX.utils.sheet_to_json(worksheet);
 
   // Fehlende Spalten durch NaN ergänzen
-data = data.map(row => {
-  allowedColumns?.forEach(col => {
-    if (!(col in row) || row[col] === '') {
-      row[col] = NaN;
-    }
+  data = data.map(row => {
+    allowedColumns?.forEach(col => {
+      if (!(col in row) || row[col] === '') {
+        row[col] = NaN;
+      }
+    });
+    return row;
   });
-  return row;
-});
-
 
   if (data.length === 0) {
     throw new Error(`Keine Daten in Sheet "${sheetName}".`);
   }
 
-
-
-  data = data
-  .map(row => formatDate(row, allowedColumns))  // Datumskonvertierung wie bisher
-  // .map(row => formatNumericFields(row));               // neue Nummern-Konvertierung
-
-  
-  //data = data.map(row => formatRow(row, allowedColumns));
-
+  data = data.map(row => formatDate(row, allowedColumns));
 
   if (data.length === 0) {
     throw new Error(`Nach dem Filtern keine gültigen Daten mehr in Sheet "${sheetName}".`);
@@ -365,66 +388,76 @@ data = data.map(row => {
 
   const columns = Object.keys(data[0]);
   const placeholders = columns.map(() => '?').join(',');
-  const insertSQL = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
+  const insertSQL = `INSERT INTO "${tableName}" (${columns.map(col => `"${col}"`).join(',')}) VALUES (${placeholders})`;
 
   return new Promise((resolve, reject) => {
     db.serialize(() => {
-      if (deleteCondition) {
-        const deleteSQL = `DELETE FROM ${tableName} WHERE ${deleteCondition}`;
-        db.run(deleteSQL, function(err) {
-          if (err) {
-            console.error(`❌ Fehler beim Löschen in "${tableName}":`, err.message);
-            return reject(err);
-          }
-          console.log(`🧹 Gelöscht in "${tableName}" mit Bedingung: ${deleteCondition}`);
+
+      // 🔍 Tabelle prüfen und ggf. erstellen
+      db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [tableName], (err, row) => {
+        if (err) return reject(err);
+
+        if (!row) {
+          const columnDefs = columns.map(col => `"${col}" TEXT`).join(', ');
+          const createSQL = `CREATE TABLE IF NOT EXISTS "${tableName}" (${columns.map(col => `"${col}" TEXT`).join(',')})`;
+
+
+          db.run(createSQL, (err) => {
+            if (err) return reject(err);
+            console.log(`🆕 Tabelle "${tableName}" wurde erstellt.`);
+            proceed();
+          });
+        } else {
+          proceed();
+        }
+      });
+
+      function proceed() {
+        if (deleteCondition) {
+          const deleteSQL = `DELETE FROM ${tableName} WHERE ${deleteCondition}`;
+          db.run(deleteSQL, function (err) {
+            if (err) {
+              console.error(`❌ Fehler beim Löschen in "${tableName}":`, err.message);
+              return reject(err);
+            }
+            console.log(`🧹 Gelöscht in "${tableName}" mit Bedingung: ${deleteCondition}`);
+            startInsert();
+          });
+        } else {
+          console.log(`ℹ️ Kein deleteCondition für "${tableName}". Direkt importieren.`);
           startInsert();
-        });
-      } else {
-        console.log(`ℹ️ Kein deleteCondition für "${tableName}". Direkt importieren.`);
-        startInsert();
+        }
       }
 
       function startInsert() {
         if (overwriteExisting) {
-          db.serialize(() => {
-            const insertSQL = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`;
-      
-            data.forEach((row, index) => {
-              const prodId = row['PROD_ID'];
-      
-              if (prodId) {
-                // 1. Zuerst löschen
-                db.run(`DELETE FROM ${tableName} WHERE PROD_ID = ?`, [prodId], function (deleteErr) {
-                  if (deleteErr) {
-                    console.error(`❌ Fehler beim Löschen (PROD_ID: ${prodId}):`, deleteErr.message);
-                    return;
+          data.forEach((row, index) => {
+            const prodId = row['PROD_ID'];
+
+            if (prodId) {
+              db.run(`DELETE FROM ${tableName} WHERE PROD_ID = ?`, [prodId], function (deleteErr) {
+                if (deleteErr) {
+                  console.error(`❌ Fehler beim Löschen (PROD_ID: ${prodId}):`, deleteErr.message);
+                  return;
+                }
+                console.log(`🧹 Alte Zeile mit PROD_ID ${prodId} gelöscht.`);
+                db.run(insertSQL, columns.map(col => row[col]), function (insertErr) {
+                  if (insertErr) {
+                    console.error(`❌ Fehler beim Einfügen (PROD_ID: ${prodId}):`, insertErr.message);
+                  } else {
+                    console.log(`✅ Neue Zeile für PROD_ID ${prodId} erfolgreich eingefügt.`);
                   }
-                  console.log(`🧹 Alte Zeile mit PROD_ID ${prodId} gelöscht.`);
-      
-                  // 2. Danach einfügen
-                  db.run(insertSQL, columns.map(col => row[col]), function (insertErr) {
-                    if (insertErr) {
-                      console.error(`❌ Fehler beim Einfügen (PROD_ID: ${prodId}):`, insertErr.message);
-                    } else {
-                      console.log(`✅ Neue Zeile für PROD_ID ${prodId} erfolgreich eingefügt.`);
-                    }
-                  });
                 });
-              } else {
-                console.warn(`⚠️ Zeile ${index + 1} hat keine PROD_ID – wird übersprungen.`);
-              }
-            });
+              });
+            } else {
+              console.warn(`⚠️ Zeile ${index + 1} hat keine PROD_ID – wird übersprungen.`);
+            }
           });
-      
-          db.serialize(() => {
-            console.log(`✅ Import abgeschlossen für "${sheetName}" in "${tableName}" (mit Löschen und Neu-Einfügen).`);
-            resolve();
-          });
-      
+
+          console.log(`✅ Import abgeschlossen für "${sheetName}" in "${tableName}" (mit Overwrite).`);
+          resolve();
         } else {
-          // Normales Insert
           const stmt = db.prepare(insertSQL);
-      
           data.forEach((row, index) => {
             const values = columns.map(col => row[col]);
             stmt.run(values, function (err) {
@@ -435,7 +468,7 @@ data = data.map(row => {
               }
             });
           });
-      
+
           stmt.finalize(err => {
             if (err) {
               console.error('❌ Fehler beim Finalisieren:', err.message);
@@ -450,6 +483,19 @@ data = data.map(row => {
     });
   });
 }
+
+
+async function getAllRowsFromTable(tableName) {
+  // Implementiere SQL SELECT * FROM ...
+  // Beispiel mit sqlite3 (promisified):
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows);
+    });
+  });
+}
+
 
 
 
@@ -471,5 +517,6 @@ module.exports = {
   deleteTable,
   startPythonScriptWithEvent,
   insertCSParameter,
-  importExcelToSQLite // 👈 hier ergänzen!
+  importExcelToSQLite,
+  getAllRowsFromTable
 };

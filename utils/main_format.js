@@ -86,6 +86,7 @@ function formatColumns(rows) {
   //Transform Date
   function formatDate(row, allowedColumns = null) {
     const cleanRow = {};
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel epoch = 1899-12-30
   
     for (const [key, value] of Object.entries(row)) {
       if (
@@ -95,14 +96,14 @@ function formatColumns(rows) {
         key !== 'TRADE_ID' &&
         (!allowedColumns || allowedColumns.includes(key))
       ) {
-        // Dynamische Datumserkennung
         const keyUpper = key.toUpperCase();
-        const isDateField = ['DATE', 'MATURITY'].some(keyword => keyUpper.includes(keyword));
+        const isDateField = ['DATE', 'MATURITY', 'START_DATE', 'TRADE_DATE'].some(keyword =>
+          keyUpper.includes(keyword)
+        );
   
         if (isDateField && typeof value === 'number') {
-          const excelEpoch = new Date(Date.UTC(1899, 11, 30)); // Excel Startdatum
           const date = new Date(excelEpoch.getTime() + value * 86400 * 1000);
-          cleanRow[key] = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          cleanRow[key] = date.toISOString().split('T')[0]; // e.g., "2025-04-28"
         } else {
           cleanRow[key] = value;
         }
@@ -111,6 +112,7 @@ function formatColumns(rows) {
   
     return cleanRow;
   }
+  
 
 
   

@@ -881,6 +881,14 @@ export class AppState {
         return this.mlModelType;
     }
 
+    setOfferData(data) {
+        this.offerData = Array.isArray(data) ? data : [];
+    }
+    
+    getOfferData() {
+        return this.offerData || [];
+    }
+
     // Method to add an observer
     addObserver(observerFunction) {
         this.observers.push(observerFunction);
