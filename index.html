@@ -89,8 +89,10 @@
     <button class="tablinks" id="TS_Tab">HIST DATA</button>
     <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
     <button class="tablinks" id="ML_Tab">ML</button> 
+    <button class="tablinks" id="Offers_Tab">OFFERS</button> 
     <button class="tablinks" id="DATA_Tab">UPDATES</button> 
     <button class="tablinks" id="Liquidity_Tab">LIQUIDITY</button> 
+
     
   </div>
 
@@ -833,14 +835,14 @@
                   </div>
 </div>
 
-
-<!-- Modal - UPDATES-->
-<div id="DATA_Modal" class="table">
+<!-- Modal - OFFERS-->
+<div id="Offers_Modal" class="table">
   <div class="table-content">
     <span class="close">&times;</span>
-    <h2>UPDATES</h2>
+    <h2>OFFERS</h2>
     <div class="button-container">
-      <span class="button-label">Products, Deals and Swap-Rates </span>
+
+      <!-- <span class="button-label">Products, Deals and Swap-Rates </span>
       <button id="updateDataExcelButton" class="edit-button">Data from EXCEL</button>
       <span class="button-label">Data from ECB and FED (FRED) This update can take several minutes</span>
       <button id="updateHistoricDataButton" class="edit-button">Historic Data</button>
@@ -849,7 +851,7 @@
       <button id="importExcelButtonVXP" class="edit-button">Excel importieren</button>
 
       <span class="button-label">Nur EUSW importieren</span>
-      <button id="importEUSWButton" class="edit-button">Nur EUSW</button>
+      <button id="importEUSWButton" class="edit-button">Nur EUSW</button> -->
 
       <span class="button-label">Match Columns (AI)</span>
       <button id="matchColumnsButton" class="edit-button">Columns AI</button>
@@ -873,6 +875,50 @@
     </div>
   </div>
 </div>
+
+
+<!-- Modal - UPDATES-->
+<div id="DATA_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>UPDATES</h2>
+    <div class="button-container">
+      <span class="button-label">Products, Deals and Swap-Rates </span>
+      <button id="updateDataExcelButton" class="edit-button">Data from EXCEL</button>
+      <span class="button-label">Data from ECB and FED (FRED) This update can take several minutes</span>
+      <button id="updateHistoricDataButton" class="edit-button">Historic Data</button>
+
+      <span class="button-label">Data from EXCEL via vXp</span>
+      <button id="importExcelButtonVXP" class="edit-button">Excel importieren</button>
+
+      <span class="button-label">Nur EUSW importieren</span>
+      <button id="importEUSWButton" class="edit-button">Nur EUSW</button>
+
+      <!-- <span class="button-label">Match Columns (AI)</span>
+      <button id="matchColumnsButton" class="edit-button">Columns AI</button>
+
+
+      <div id="productTargetsOverview"></div>
+      <button id="submitToProductsBtn" class="edit-button">📥 vXp Products</button>
+
+      <div id="offerTargetsOverview"></div>
+      <button id="submitToOffersBtn" class="edit-button">📥 vXp Offers</button>
+
+
+      <h3>Product Matches</h3>
+      <div id="productMatchesOutput"></div>
+
+      <h3>Offer Matches</h3>
+      <div id="offerMatchesOutput"></div> -->
+
+
+    
+    </div>
+  </div>
+</div>
+
+
+
 
 <!-- Modal - COMPARE PORTFOLIOS-->
 <div id="COMP_Modal" class="table">
