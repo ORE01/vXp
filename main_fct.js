@@ -285,35 +285,31 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
       const env = process.env.NODE_ENV ? process.env.NODE_ENV.trim().toLowerCase() : 'production';
 
       if (env === 'development') {
-        // Standard-Entwicklungsumgebung mit zwei möglichen Pfaden
-        const defaultExecutable = 'C:\\Python312\\python.exe';
-        const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
-    
-        pythonExecutable = defaultExecutable;
-        pythonArgs.unshift(defaultScriptPath);
-    
-    } else if (env === 'thomasdev') {
-        pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
-    
-    } else { 
-        // Standardmäßig Production
-        pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
-    }
-    
-    
+          const defaultExecutable = 'C:\\Python312\\python.exe';
+          const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
+
+          pythonExecutable = defaultExecutable;
+          pythonArgs.unshift(defaultScriptPath);
+
+      } else if (env === 'thomasdev') {
+          pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
+
+      } else {
+          pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
+      }
 
       try {
           const pythonProcess = spawn(pythonExecutable, pythonArgs);
-          let scriptOutput = '';  // Variable to store the collected output
+          let scriptOutput = '';
 
           // Collect stdout data
           pythonProcess.stdout.on('data', (data) => {
               console.log(`stdout: ${data}`);
-              scriptOutput += data.toString();  // Append the data to scriptOutput
+              scriptOutput += data.toString();
               event.sender.send(`${eventType}-output`, data.toString());
           });
 
-          // Collect stderr data (for error logging)
+          // Collect stderr data
           pythonProcess.stderr.on('data', (data) => {
               console.error(`stderr: ${data}`);
               event.sender.send(`${eventType}-error`, data.toString());
@@ -321,25 +317,28 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
 
           // Handle process close
           pythonProcess.on('close', (code) => {
-            if (code === 0) {
-              try {
-                const parsedResult = JSON.parse(scriptOutput);
-                resolve(parsedResult);  // ✅ sends full result from Python back to Electron
-              } catch (err) {
-                console.error('❌ Failed to parse Python output:', scriptOutput);
-                reject(new Error('Failed to parse Python output.'));
+              const match = scriptOutput.match(/___RESULT___({[\s\S]*})/);
+              if (match) {
+                  try {
+                      const parsedResult = JSON.parse(match[1]);
+                      resolve(parsedResult); // ✅ auch wenn code !== 0
+                  } catch (err) {
+                      console.error('❌ JSON parsing failed for matched result:', match[1]);
+                      reject(new Error('Failed to parse extracted JSON result.'));
+                  }
+              } else {
+                  console.error(`❌ No JSON result found. Exit code: ${code}`);
+                  reject(new Error(`Python script failed with code ${code}`));
               }
-            } else {
-              reject(new Error(`Python script failed with code ${code}`));
-            }
           });
-          
+
       } catch (error) {
           console.error(`Failed to start Python script: ${error.message}`);
           reject(error);
       }
   });
 }
+
 
 function insertCSParameter(data, tableName, callback) {
   const query = `INSERT INTO ${tableName} (CSSzenario, a, b, c, d, e, f) VALUES (?, ?, ?, ?, ?, ?, ?)`;
