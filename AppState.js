@@ -258,6 +258,9 @@ export class AppState {
             'Liquidity_Tab': {
                 default: 'port',
             },
+            'Offers_Tab': {
+                default: 'port',
+            },
 
             // You can add more tabs and their default contexts or specific dropdowns as needed
         };
