@@ -114,3 +114,114 @@ export function handlePortProdData(receivedData, index, port_name) {
     addProdIdTooltips(portDataContainer); 
   }
 }
+
+// import { filterColumnsInData } from './renderer/dataProcessor.js';
+// import processData from './renderer/dataProcessor.js';
+// import { handleFormAction } from './renderer/FormButtonHandler.js';
+// import { createComparisonCharts } from './COMP.js';
+// import { appState } from './renderer.js';
+// import { addTooltipsForTruncatedText, addProdIdTooltips } from './utils/tooltips.js';
+// import { handleLiquidityData } from './liquidity.js';
+// import { formatNumberWithGrouping } from './utils/format.js';
+// import { groupDataByColumn } from './utils/grouping.js';
+
+// let tableName = 'Portfolio';
+// let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA', 'PV01', 'CPV01', 'MATURITY_YEAR'];
+// let columnsToShow = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank', 'CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
+
+// const portDataMap = {}; // Speichert Daten pro Container
+
+// // Liest den gewählten Gruppierungsschlüssel aus einem <select id="groupBySelect">
+// function getSelectedGroupBy() {
+//   const select = document.getElementById('groupBySelect');
+//   return select ? select.value : null;
+// }
+
+// export function handlePortAggData(receivedData, index, port_name) {
+//   const elementId = `portDataContainer${index}`;
+//   const aggContainerId = `portAggDataContainer${index}`;
+
+//   if (!portDataMap[elementId]) {
+//     portDataMap[elementId] = {};
+//   }
+
+//   const portData = filterColumnsInData(receivedData, columns);
+
+//   let PortValue = 0;
+//   let PortNotional = 0;
+//   let PortYield = 0;
+//   let PortYieldA = 0;
+//   let PortPV01 = 0;
+//   let PortCPV01 = 0;
+
+//   portData.forEach((dataPoint) => {
+//     PortValue += parseFloat(dataPoint.NAV);
+//     PortNotional += parseFloat(dataPoint.NOTIONAL);
+//     PortYield += parseFloat(dataPoint.ytmPort);
+//     PortYieldA += parseFloat(dataPoint.ytmPortA);
+//     PortPV01 += parseFloat(dataPoint.PV01);
+//     PortCPV01 += parseFloat(dataPoint.CPV01);
+//   });
+
+//   const aggData = {
+//     formPortValue: formatNumberWithGrouping(PortValue) + ' EUR',
+//     formPortNotional: formatNumberWithGrouping(PortNotional) + ' EUR',
+//     formPortYield: (PortYield / PortValue * 100).toFixed(2) + '%',
+//     formPortYieldA: (PortYieldA / PortValue * 100).toFixed(2) + '%',
+//     formPortPV01: (PortPV01 / PortValue * 10000).toFixed(2),
+//     formPortCPV01: (PortCPV01 / PortValue * 10000).toFixed(2)
+//   };
+
+//   appState.setPortAggData(elementId, aggData);
+
+//   const portDataAggContainer = document.getElementById(aggContainerId);
+//   if (portDataAggContainer) {
+//     const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
+//     portDataAggContainer.innerHTML = processData(tableData, tableName);
+//   }
+// }
+
+// function mapPortDataToTableRows(data) {
+//   return [
+//     { label: 'Notional', value: data.formPortNotional },
+//     { label: 'NetAssetValue', value: data.formPortValue },
+//     { label: 'Portfolio Yield', value: data.formPortYield },
+//     { label: 'Portfolio Yield (act)', value: data.formPortYieldA },
+//     { label: 'Interest Rate Sensitivity (PV01)', value: data.formPortPV01 },
+//     { label: 'Credit Spread Sensitivity (CPV01)', value: data.formPortCPV01 },
+//   ];
+// }
+
+// export function handlePortProdData(receivedData, index, port_name) {
+//   const elementId = `portDataContainer${index}`;
+//   const portDataContainer = document.getElementById(elementId);
+//   if (!portDataContainer || !Array.isArray(receivedData) || receivedData.length === 0) {
+//     console.error('Daten fehlen oder Element nicht gefunden');
+//     return;
+//   }
+
+//   // 1) Filter
+//   const filtered = filterColumnsInData(receivedData, columnsToShow);
+//   appState.setFilteredPortData(filtered);
+
+//   // 2) Gruppieren (wenn ausgewählt)
+//   const groupBy = getSelectedGroupBy();
+//   let html = '';
+
+//   if (groupBy) {
+//     const grouped = groupDataByColumn(filtered, groupBy);
+//     for (const [key, rows] of Object.entries(grouped)) {
+//       html += `<div class=\"group-section\">`;
+//       html += `<h3>${key}</h3>`;
+//       html += processData(rows, tableName);
+//       html += `</div>`;
+//     }
+//   } else {
+//     html = processData(filtered, tableName);
+//   }
+
+//   // 3) Rendern + Tooltips
+//   portDataContainer.innerHTML = html;
+//   addTooltipsForTruncatedText(portDataContainer);
+//   addProdIdTooltips(portDataContainer);
+// }

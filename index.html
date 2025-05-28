@@ -98,7 +98,59 @@
 
 <!-- Modal - Liquidity -->
 <div id="Liquidity_Modal" class="table">
-  <!-- <div class="table-content"> -->
+  <span class="close">&times;</span>
+  <div class="portfolio-info">
+    <h2 class="section-header">LIQUIDITY</h2>
+  </div>
+
+  <div id="liquControlsContainer">
+    <div class="data-wrapper">
+      <div class="dropdown-wrapper"> 
+        <div>
+          <p>Select Maturity:</p>
+          <select id="liquMaturityDropdown" multiple class="select-dropdown"></select>
+          <!-- <p>Select Issuer:</p>
+          <select id="liquIssuerDropdown" multiple class="select-dropdown"></select> -->
+        </div>
+      </div>
+    </div>
+    <p>
+      <button id="liquResetFiltersButton" class="reset-FiltersButton">
+        <!-- dein SVG hier -->
+      </button>
+    </p>
+  </div>
+
+  <!-- Tabellen-Container: Fälligkeiten/Kategorien + Emittenten -->
+  <div class="data-container flex">
+    <!-- Pivot-Tabelle Fälligkeiten/Kategorien -->
+    <div id="liquDataContainer" class="flex-1"></div>
+    <!-- Emittenten-Tabelle -->
+    <!-- <div id="issuerDataContainer" class="flex-1 ml-4"></div> -->
+  </div>
+
+  <!-- Chart -->
+  <div class="liqu-chart-container">
+    <canvas id="liquChart"></canvas>
+  </div>
+
+<div class="data-container flex">
+    <!-- Pivot-Tabelle Fälligkeiten/Kategorien -->
+    <!-- <div id="liquDataContainer" class="flex-1"></div> -->
+    <!-- Emittenten-Tabelle -->
+    <div id="issuerDataContainer" class="flex-1 ml-4"></div>
+  </div>
+
+</div>
+
+
+
+<!-- Am Ende deiner Seite, direkt vor </body>, laden wir die Logik -->
+<script type="module" src="./liquidity.js"></script>
+
+
+
+<!-- <div id="Liquidity_Modal" class="table">
     <span class="close">&times;</span>
     <div class="portfolio-info">
       <h2 class="section-header">LIQUIDITY</h2>
@@ -135,23 +187,7 @@
     <div class="liqu-chart-container">
       <canvas id="liquChart"></canvas>
     </div>
-
- 
-    
-    <!-- <label for="ratesSelector">Select Curve:</label>
-      <select id="ratesSelector">
-        <option value="EUSWAP">EUSWAP</option>
-        <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
-      </select> -->
-
-    
-    <!-- <div id="IRDataContainer"></div>
-    <div class="chart-container">
-      
-      <canvas id="IRlineChart"></canvas>
-    </div> -->
-  <!-- </div> -->
-</div>
+</div> -->
 
 <!-- Modal - ISSUER -->
 <div id="ISSUER_Modal" class="table">
