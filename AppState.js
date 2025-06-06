@@ -17,7 +17,6 @@ import { filterColumnsInData } from './renderer/dataProcessor.js';
 import { handleLiquidityData } from './liquidity.js';
 
 import { appState } from './renderer.js';
-// import { handleLiquidityData } from './liquidity.js';
 
 export class AppState {
     constructor() {
