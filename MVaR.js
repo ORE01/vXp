@@ -51,10 +51,10 @@ export function handleMVarInputData(receivedData) {
 }
 
 export function handleMVaRData(receivedData, index) {
-  console.log('MVaRData, index:', receivedData, index);
+  // console.log('MVaRData, index:', receivedData, index);
   const port_name = appState.getSelectedPortTableName();
 
-  console.log('port_name:', port_name);
+  // console.log('port_name:', port_name);
 
   const containerIds = [
     'MVaRDataContainer',

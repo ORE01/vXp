@@ -1,43 +1,73 @@
-/* Hide modal initially */
-#coupon-modal {
-  display: none;
-  justify-content: center;
-  align-items: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  z-index: 1000;
-}
-
-/* Das ist direkt im js code handleCouponData: modal.style.display = 'block'; */
-#coupon-modal.visible {
+.coupon-header, .coupon-row {
   display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 4px;
 }
 
-/* Modal content styling */
-#coupon-modal .modal-content {
-  width: 250px;
-  max-width: 90%;
-  padding: 15px;
-  background: #333;
-  color: #ccc;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-  overflow-y: auto;
+/* Einheitliche Größen */
+.coupon-row input[type="date"],
+.coupon-row input[type="text"],
+.fill-down-btn {
+  height: 24px;
+  line-height: 24px;
+  box-sizing: border-box;
 }
 
-/* Close button styling */
-#coupon-modal .close {
+/* Kein Stretch */
+.coupon-header > div,
+.coupon-row input[type="date"],
+.coupon-row input[type="text"],
+.coupon-row input[type="checkbox"],
+.fill-down-btn {
+  flex-shrink: 0;
+}
+
+/* Spaltenbreiten */
+.col-date {
+  width: 120px;
+}
+.col-fixcf {
+  width: 80px;
+}
+.col-call {
+  width: 50px;
+}
+
+/* Nur die Pfeile bekommen Rahmen */
+.fill-down-btn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.2); /* sanfter weißer Rahmen */
+  border-radius: 4px;
+  background-color: rgba(200, 200, 200, 0.1); /* leicht grauer Hintergrund */
+  color: rgba(255, 255, 255, 0.8); /* heller weißer Pfeil */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  padding: 0;
   cursor: pointer;
-  font-size: 20px;
-  color: white;
-  position: absolute;
-  right: 10px;
-  top: 5px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
+
+.fill-down-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+
+/* Einheitlicher Border-Radius für alle relevanten Felder */
+.coupon-row input.col-date,
+.coupon-row input.col-fixcf,
+.coupon-row input[type="checkbox"],
+.fill-down-btn {
+  border-radius: 6px;
+}
+
+
+
 
 
   

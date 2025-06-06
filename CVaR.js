@@ -9,7 +9,7 @@ let filteredEADMainData = [];
 
 export function handleEADData(receivedData) {
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
-  console.log('port_name:', port_name);
+  // console.log('port_name:', port_name);
 
   const EADDataContainer = document.getElementById('EADDataContainer');
 
@@ -232,7 +232,7 @@ export function handleCVaRData(receivedData, index) {
     // }
     function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
       const containerId = `CVaR_allRelativeContainer${index}`;
-      console.log('containerId:', containerId);
+      // console.log('containerId:', containerId);
     
       const container = document.getElementById(containerId);
       if (!container) return;

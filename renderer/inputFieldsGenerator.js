@@ -150,6 +150,18 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           formRow.appendChild(tickerDropdown);
           return true;
         }
+        case 'CS_Szenario': {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.classList.add('input-field');
+          input.value = rowData[fieldName] ?? ''; // zeigt auch 0 an
+          input.setAttribute('data-field', fieldName);
+        
+          formRow.appendChild(label);
+          formRow.appendChild(input);
+          return true;
+        }
+        
         
 
         default:

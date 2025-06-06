@@ -2,7 +2,7 @@ import createBarChart from './charts/BarChart.js';
 
 
 export function createComparisonCharts(portDataMap, destroyPrevious = false) {
-  console.log('portDataMap:', portDataMap)
+  // console.log('portDataMap:', portDataMap)
       // CHARTS: COMPARE
       if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2){
         const containerIds = [
@@ -16,7 +16,7 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
         const chartType = 'bar';
   
         const chartData = extractChartDataFromSavedValues(portDataMap);
-        console.log('portDataMap:', portDataMap)
+        // console.log('portDataMap:', portDataMap)
 
   containerIds.forEach((containerId, index) => {
     const chartName = chartNames[index];

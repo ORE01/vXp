@@ -14,6 +14,8 @@ import { AppState } from './AppState.js';
 import { initializeTabs } from './utils/tabs.js';
 
 let appState;
+let lastHistButton = null;
+
 
 document.addEventListener('DOMContentLoaded', () => {
   appState = new AppState();
@@ -92,7 +94,7 @@ function setupEventListeners() {
 
   window.api.receive('LGTData', (data) => {
     appState.setOfferData(data); // ✅ hier speichern
-    console.log("📥 LGT-Daten empfangen:", data);
+    // console.log("📥 LGT-Daten empfangen:", data);
   });
   
 
@@ -101,7 +103,7 @@ function setupEventListeners() {
   window.api.receive('PortfoliosData', (data) => {
     handlePortNameList(data);
     handlePortfolioData(data);
-    //handleLiquidityData(data);
+    handleLiquidityData(data);
   });
 
 
@@ -141,6 +143,7 @@ function setupEventListeners() {
   window.api.receive('py-mvar-complete', handleMVaRComplete);
   window.api.receive('py-cvar-complete', handleCVaRComplete);
   window.api.receive('py-matchColumns-complete', handleAIColumnComplete);
+  window.api.receive('py-historicData-complete', handleHistComplete);
 
   window.api.receive('project-finished', handleProjectFinished);
 
@@ -403,10 +406,15 @@ function setupButtons() {
     { buttonId: 'MVaRButton', projectName: 'py-MVaR' },
     { buttonId: 'CVaRButton', projectName: 'py-CVaR' },
     { buttonId: 'updateDataExcelButton', projectName: 'py-excel' },
-    { buttonId: 'updateHistoricDataButton', projectName: 'py-historicData' },
     { buttonId: 'CSParButton', projectName: 'py-cspar' },
     { buttonId: 'MLButton', projectName: 'py-ml' },
-    { buttonId: 'matchColumnsButton', projectName: 'py-matchColumns' } 
+    { buttonId: 'matchColumnsButton', projectName: 'py-matchColumns' },
+
+    { buttonId: 'updateHistoricDataButton', projectName: 'py-historicData' },
+    { buttonId: 'histEcbButton', projectName: 'py-hist' },
+    { buttonId: 'histFedButton', projectName: 'py-hist' },
+    { buttonId: 'histYahooButton', projectName: 'py-hist' },
+    // { buttonId: 'histFinnhubButton', projectName: 'py-hist' }
   ];
   
   projectButtons.forEach(({ buttonId, projectName, extraParam }) => {
@@ -731,7 +739,7 @@ function setupButtons() {
                 handleAIColumnProject(extraParam);
                 break;
 
-              case 'py-ml':
+            case 'py-ml':
                 handleMLProject(extraParam);
                 break;    
 
@@ -750,6 +758,20 @@ function setupButtons() {
             case 'py-MVaR':
                 handleMVaRProject(buttonElement, extraParam);
                 break;
+
+            case 'py-hist':
+              // 💡 Ergänze hier die API je nach Button-ID
+              const apiMap = {
+                histEcbButton: 'ECB',
+                histFedButton: 'FED',
+                histYahooButton: 'Yahoo'
+              };
+              const apiSource = apiMap[buttonElement.id];
+              if (apiSource) extraParam.api = apiSource;
+        
+              handleHistProject(buttonElement, extraParam);
+              break;
+
 
             default:
               let selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
@@ -772,9 +794,7 @@ function setupButtons() {
         buttonElement.textContent = 'Run';
     }
   }
-
-
-  //py-Projects
+      //py-Projects
       //fairvalue
       function handleFairValueProject(buttonElement, extraParam) {
         const port_name = appState.getSelectedDealsTableName();
@@ -798,7 +818,7 @@ function setupButtons() {
         window.api.send(`start-py-fairValue`, payload);
       }
           function handleFairValueComplete(data) {
-            //console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
+            // console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
             if (data.projectName === 'py-fairValue') {
               // 🛠 1️⃣ Setzt die aktive Tabelle auf "deals"
               appState.setActiveTable('deals');
@@ -806,7 +826,7 @@ function setupButtons() {
       
               // 🛠 2️⃣ Holt den Portfolionamen aus Deals
               const port_name = appState.getSelectedDealsTableName();
-              //console.log('🔹 Neues Portfolio:', port_name);
+              // console.log('🔹 Neues Portfolio:', port_name);
       
              // Antwort nur für Button:
               handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
@@ -815,51 +835,55 @@ function setupButtons() {
               fetchAndUpdateFairValueData();
             }
           }
-          function fetchAndUpdateFairValueData() {
-            window.api.receive('PortfoliosData', (receivedData) => {
-              //console.log(`✅ Updated PortfoliosData Data:`, receivedData);
-          
-              if (!receivedData || receivedData.length === 0) {
-                console.warn("⚠️ No new Portfolios data received!");
-                appState.setAllPortfolioData([]);
-                return;
-              }
-          
-              appState.setAllPortfolioData(receivedData);
-              //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
-          
-              // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
-              const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
-                if (!port_name) {
-                  console.warn("⚠️ Kein Portfolio ausgewählt.");
-                  return;
-                }
-              
-              const filteredData = receivedData.filter(entry => entry.port_name === port_name);
-              appState.updatePortDataTable(filteredData, 0);
-              //console.log('✅ Portfolio filteredData:', filteredData, port_name);
-          
-              // 🛠 Dropdowns aktualisieren
-              ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
-                appState.updateDropdownOptions({
-                  dropdownElementId: dropdownId,
-                  getDataFunction: appState.getPortNameList.bind(appState),
-                  updateDataFunction: appState.getPortfolioData.bind(appState),
-                  selectedTableName: index === 0 ? port_name : undefined
-                });
-              });
-          
-              // 🛠 Portfolio setzen
-              appState.setSelectedPortTableName(port_name);
-              //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
+              function fetchAndUpdateFairValueData() {
+                window.api.receive('PortfoliosData', (receivedData) => {
+                // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
+                // Neue Daten mit MATURITY_YEAR hinzufügen
+                  const enhancedData = addMaturityYearToData(receivedData);
 
-              handlePortAggData(filteredData, 3, port_name);
+                  if (!enhancedData || enhancedData.length === 0) {
+                    console.warn("⚠️ No new Portfolios data received!");
+                    appState.setAllPortfolioData([]);
+                    return;
+                  }
               
-            });
-          
-            // 📤 Erst jetzt senden
-            window.api.send('fetch-table-data', 'Portfolios');
-          }
+                  appState.setAllPortfolioData(enhancedData);
+                  //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
+              
+                  // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
+                  const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
+                    if (!port_name) {
+                      console.warn("⚠️ Kein Portfolio ausgewählt.");
+                      return;
+                    }
+                  
+                  const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
+                  appState.updatePortDataTable(filteredData, 0);
+                  //console.log('✅ Portfolio filteredData:', filteredData, port_name);
+              
+                  // 🛠 Dropdowns aktualisieren
+                  ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
+                    appState.updateDropdownOptions({
+                      dropdownElementId: dropdownId,
+                      getDataFunction: appState.getPortNameList.bind(appState),
+                      updateDataFunction: appState.getPortfolioData.bind(appState),
+                      selectedTableName: index === 0 ? port_name : undefined
+                    });
+                  });
+              
+                  // 🛠 Portfolio setzen
+                  // console.log('port_name', port_name);
+                  appState.setSelectedPortTableName(port_name);
+                  appState.setSelectedDealsTableName(port_name);
+                  //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
+
+                  handlePortAggData(filteredData, 3, port_name);
+                  
+                });
+              
+                // 📤 Erst jetzt senden
+                window.api.send('fetch-table-data', 'Portfolios');
+              }
         
       //MVaR
       function handleMVaRProject(buttonElement, extraParam) {
@@ -877,37 +901,37 @@ function setupButtons() {
         //console.log('🚀 Sending payload for py-MVaR:', payload);
         window.api.send('start-py-MVaR', payload);
       }
-      function handleMVaRComplete(data) {
-        if (data.projectName === 'py-MVaR') {
-          appState.setActiveTable('port');
-      
-          const port_name = appState.getSelectedPortTableName();
-          //appState.fetchAndHandlePortData(port_name, 'portDataContainer0');
-      
-          handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
-          fetchAndUpdateMVarData();
-    
-          const mvarDara = appState.getAllMvarData();
-          handleMVaRData(mvarDara, 0);
-        }
-      }
-          function fetchAndUpdateMVarData() {
-            //console.log(`fetchAndUpdateMVarData`);
-            //window.api.send('fetch-table-data', 'MarketVaR'); 
-            window.api.receive('MarketVaRData', (receivedData) => {
-                //console.log(`MVaRData:`, receivedData);
-                if (!receivedData || receivedData.length === 0) {
-                    console.warn("⚠️ No new CVaR data received!");
-                    appState.updateMvarDataTable([]);  // Store empty array to avoid stale data
-                    return;
-                }
-                //appState.setAllMvarData(receivedData);
-                appState.updateMvarDataTable(receivedData);
+          function handleMVaRComplete(data) {
+            if (data.projectName === 'py-MVaR') {
+              appState.setActiveTable('port');
+          
+              const port_name = appState.getSelectedPortTableName();
+              //appState.fetchAndHandlePortData(port_name, 'portDataContainer0');
+          
+              handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
+              fetchAndUpdateMVarData();
         
-
-            });
-            window.api.send('fetch-table-data', 'MarketVaR'); 
+              const mvarDara = appState.getAllMvarData();
+              handleMVaRData(mvarDara, 0);
+            }
           }
+              function fetchAndUpdateMVarData() {
+                //console.log(`fetchAndUpdateMVarData`);
+                //window.api.send('fetch-table-data', 'MarketVaR'); 
+                window.api.receive('MarketVaRData', (receivedData) => {
+                    //console.log(`MVaRData:`, receivedData);
+                    if (!receivedData || receivedData.length === 0) {
+                        console.warn("⚠️ No new CVaR data received!");
+                        appState.updateMvarDataTable([]);  // Store empty array to avoid stale data
+                        return;
+                    }
+                    //appState.setAllMvarData(receivedData);
+                    appState.updateMvarDataTable(receivedData);
+            
+
+                });
+                window.api.send('fetch-table-data', 'MarketVaR'); 
+              }
       //CVaR
       function handleCVaRProject(buttonElement, extraParam) {
         const port_name = appState.getSelectedPortTableName();
@@ -946,24 +970,24 @@ function setupButtons() {
               
             }
           }
-          function fetchAndUpdateCVarData() {
+              function fetchAndUpdateCVarData() {
+                
+                window.api.receive('CreditVaRData', (receivedData) => {
+                    //console.log(`✅ Updated CVaR Data:`, receivedData);
             
-            window.api.receive('CreditVaRData', (receivedData) => {
-                //console.log(`✅ Updated CVaR Data:`, receivedData);
-        
-                if (!receivedData || receivedData.length === 0) {
-                    console.warn("⚠️ No new CVaR data received!");
-                    appState.setAllCvarData([]);  // Store empty array to avoid stale data
-                    return;
-                }
-        
-                appState.setAllCvarData(receivedData);
-                //console.log(`AllCvarData`, appState.getAllCvarData());
-        
+                    if (!receivedData || receivedData.length === 0) {
+                        console.warn("⚠️ No new CVaR data received!");
+                        appState.setAllCvarData([]);  // Store empty array to avoid stale data
+                        return;
+                    }
+            
+                    appState.setAllCvarData(receivedData);
+                    //console.log(`AllCvarData`, appState.getAllCvarData());
+            
 
-            });
-            window.api.send('fetch-table-data', 'CreditVaR'); 
-          }
+                });
+                window.api.send('fetch-table-data', 'CreditVaR'); 
+              }
     
       //ML
       function handleMLProject(extraParam) {
@@ -991,28 +1015,29 @@ function setupButtons() {
         //console.log('🚀 Sending payload for py-ml:', payload);
         window.api.send(`start-py-ml`, payload);
       }
-      function handleMLModelSelection(extraParam) {
-        const newModelCheckbox = document.getElementById('newModelCheckbox').checked;
-        extraParam.newModel = newModelCheckbox;
-      
-        if (newModelCheckbox) {
-          const selectedModelType = appState.getMLModelType();
-          if (!selectedModelType) {
-            throw new Error('Please select a model type for the new model.');
+          function handleMLModelSelection(extraParam) {
+            const newModelCheckbox = document.getElementById('newModelCheckbox').checked;
+            extraParam.newModel = newModelCheckbox;
+          
+            if (newModelCheckbox) {
+              const selectedModelType = appState.getMLModelType();
+              if (!selectedModelType) {
+                throw new Error('Please select a model type for the new model.');
+              }
+              extraParam.modelType = selectedModelType;
+              //console.log(`✅ Selected model type for new model: ${selectedModelType}`);
+            } else {
+              const selectedModel = appState.getMLTrainedModel();
+              if (selectedModel) {
+                extraParam.modelName = selectedModel.modelName || '';
+                extraParam.modelType = selectedModel.modelType || '';
+                extraParam.optimizer = selectedModel.optimizer || null;
+                extraParam.loss = selectedModel.loss || null;
+                extraParam.metrics = selectedModel.metrics || [];
+              }
+            }
           }
-          extraParam.modelType = selectedModelType;
-          //console.log(`✅ Selected model type for new model: ${selectedModelType}`);
-        } else {
-          const selectedModel = appState.getMLTrainedModel();
-          if (selectedModel) {
-            extraParam.modelName = selectedModel.modelName || '';
-            extraParam.modelType = selectedModel.modelType || '';
-            extraParam.optimizer = selectedModel.optimizer || null;
-            extraParam.loss = selectedModel.loss || null;
-            extraParam.metrics = selectedModel.metrics || [];
-          }
-        }
-      }
+      //CS    
       function handleCSParProject(buttonElement, extraParam) {
         const selectedTableName = 'CSParameter';
         const selectedRows = [];
@@ -1053,26 +1078,7 @@ function setupButtons() {
         //console.log('🚀 Sending payload for py-cspar:', payload);
         window.api.send(`start-py-cspar`, payload);
       }
-
-      //AI-COLUMN
-      // function handleAIColumnProject(buttonElement, extraParam = {}) {
-      //   const port_name = appState.getSelectedDealsTableName();
-      
-      //   const inputColumns = ["StartDate", "CouponRate"];
-      //   const targetColumns = ["COUPON", "START_DATE"];
-      
-      //   extraParam.inputColumns = inputColumns;
-      //   extraParam.targetColumns = targetColumns;
-      
-      //   const payload = {
-      //     tableName: port_name,
-      //     ...extraParam,
-      //   };
-      
-      //   console.log("📤 Sending payload for py-matchColumns:", payload);
-      //   window.api.send('start-py-matchColumns', payload);
-      // }
-
+      //AI columns
       function handleAIColumnProject(buttonElement, extraParam = {}) {
         const port_name = appState.getSelectedDealsTableName();
       
@@ -1118,32 +1124,29 @@ function setupButtons() {
         console.log("📤 Sending payload for py-matchColumns:", payload);
         window.api.send('start-py-matchColumns', payload);
       }
-         
-      function handleAIColumnComplete(data) {
-        if (data.projectName === 'py-matchColumns') {
-          const button = document.getElementById('matchColumnsButton');
-          handleProjectResponse(button, data.projectName, data);
-      
-          if (data.success) {
-            console.log('✅ Full match data:', data); // ✅ Log the structure
-      
-            const product_matches = data.product_matches || [];
-            const offer_matches = data.offer_matches || [];
+          function handleAIColumnComplete(data) {
+            if (data.projectName === 'py-matchColumns') {
+              const button = document.getElementById('matchColumnsButton');
+              handleProjectResponse(button, data.projectName, data);
+          
+              if (data.success) {
+                console.log('✅ Full match data:', data); // ✅ Log the structure
+          
+                const product_matches = data.product_matches || [];
+                const offer_matches = data.offer_matches || [];
 
-            displayMatchTable(product_matches, 'productMatchesOutput');
-            displayMatchTable(offer_matches, 'offerMatchesOutput');
+                displayMatchTable(product_matches, 'productMatchesOutput');
+                displayMatchTable(offer_matches, 'offerMatchesOutput');
 
-            markPerfectMatches(product_matches, 'productTargetsOverview');
-            markPerfectMatches(offer_matches, 'offerTargetsOverview');
-      
-            fetchAndUpdateColumnMatchResults();
-          } else {
-            alert('⚠️ AI column matching failed: ' + (data.error || 'Unknown error'));
+                markPerfectMatches(product_matches, 'productTargetsOverview');
+                markPerfectMatches(offer_matches, 'offerTargetsOverview');
+          
+                fetchAndUpdateColumnMatchResults();
+              } else {
+                alert('⚠️ AI column matching failed: ' + (data.error || 'Unknown error'));
+              }
+            }
           }
-        }
-      }
-      
-      
           function fetchAndUpdateColumnMatchResults() {
             window.api.receive('ColumnMatchesData', (receivedData) => {
               if (!receivedData || receivedData.length === 0) {
@@ -1157,7 +1160,6 @@ function setupButtons() {
           
             window.api.send('fetch-table-data', 'ColumnMatches'); // if you use a table for matches
           }
-
           function displayMatchTable(matches, containerId) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -1197,8 +1199,7 @@ function setupButtons() {
                 }
               });
             });
-          }
-          
+          }        
           function displayTargetColumns(targets, containerId) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -1217,7 +1218,6 @@ function setupButtons() {
               </table>
             `;
           }
-
           function markPerfectMatches(matches, containerId) {
             matches
               .filter(m => m.similarity === 1.0)
@@ -1226,7 +1226,6 @@ function setupButtons() {
                 if (checkbox) checkbox.checked = true;
               });
           }
-
           function handleSubmitMatchedColumns(matchContainerId, targetTable, additionalFields = {}) {
             const matches = collectConfirmedMatches(matchContainerId);
           
@@ -1248,8 +1247,6 @@ function setupButtons() {
               additionalFields
             });
           }
-          
-
           function collectConfirmedMatches(containerId) {
             const container = document.getElementById(containerId);
             if (!container) return [];
@@ -1263,19 +1260,49 @@ function setupButtons() {
               };
             });
           }
-          
-          
-          
-          
-      
-      
-      
-      
+      //HIST    
+      function handleHistProject(buttonElement, extraParam) {
 
+        lastHistButton = buttonElement;
 
+        const payload = {
+          //tableName: null, // oder ein tatsächlicher Tabellenname
+          ...extraParam,   // z. B. { api: 'ECB' }
+        };
       
+        window.api.send('start-py-historicData', payload);
+      }
+          function handleHistComplete(data) {
+            if (data.projectName === 'py-historicData') {
+              if (lastHistButton) {
+                handleProjectResponse(lastHistButton, data.projectName, data);
+                lastHistButton = null;  // Optional: aufräumen
+              }
 
-      function sendPayloadToAPI(projectName, tableName, extraParam) {
+              fetchAndUpdateHistData();
+            }
+          }
+              function fetchAndUpdateHistData() {
+                window.api.receive('tblTSData', (receivedData) => {
+                  if (!receivedData || receivedData.length === 0) {
+                    console.warn("⚠️ No HIST data received!");
+                    return;
+                  }
+              
+                  // Update deiner AppState z. B.
+                  //appState.setAllHistData(receivedData);
+              
+                  // Tabelle aktualisieren oder weiterleiten an UI
+                  const latest = receivedData[receivedData.length - 1];
+                  console.log('📊 Latest HIST row:', latest);
+                });
+              
+                window.api.send('fetch-table-data', 'tblTS');
+              }
+          
+      
+  //py-Projects SEND DATA to main       
+  function sendPayloadToAPI(projectName, tableName, extraParam) {
         const payload = {
           tableName,
           ...extraParam,
@@ -1284,6 +1311,23 @@ function setupButtons() {
         //console.log(`🚀 Sending payload for ${projectName}:`, payload);
         window.api.send(`start-${projectName}`, payload);
       }
+  //py-Projects FINISH
+  function handleProjectFinished(data) {
+    const projectButtonMap = {
+      'py-MVaR': 'MVaRButton',
+      'py-CVaR': 'CVaRButton',
+      'py-excel': 'updateDataExcelButton',
+      'py-historicData': 'updateHistoricDataButton',
+      'py-cspar': 'CSParButton',
+      'py-ml': 'MLButton'
+    };
+
+    const buttonId = projectButtonMap[data.projectName];
+    if (buttonId) {
+      //console.log('handleProjectResponse', data);
+      handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
+    }
+  }
       function handleProjectResponse(buttonElement, projectName, response) {
         //console.log('handleProjectResponse', projectName);
         buttonElement.disabled = false;
@@ -1293,25 +1337,6 @@ function setupButtons() {
           //console.log(`${projectName} executed successfully.`);
         } else {
           console.error(`Error starting ${projectName}:`, response.error);
-        }
-      }
-
-
-
-      function handleProjectFinished(data) {
-        const projectButtonMap = {
-          'py-MVaR': 'MVaRButton',
-          'py-CVaR': 'CVaRButton',
-          'py-excel': 'updateDataExcelButton',
-          'py-historicData': 'updateHistoricDataButton',
-          'py-cspar': 'CSParButton',
-          'py-ml': 'MLButton'
-        };
-
-        const buttonId = projectButtonMap[data.projectName];
-        if (buttonId) {
-          //console.log('handleProjectResponse', data);
-          handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
         }
       }
 
@@ -1331,51 +1356,20 @@ function setupButtons() {
   }
   
   // PORT: Portfolios
-  // function handlePortfolioData(receivedData) {
-  //   appState.setAllPortfolioData(receivedData);
-  //     //console.log('📌 Alle Portfolio Daten: Portfolios', receivedData);
-  //   appState.setActiveTable('deals');
-
   function handlePortfolioData(receivedData) {
     // Neue Daten mit MATURITY_YEAR hinzufügen
-    // const enhancedData = receivedData.map(item => {
-    //   const maturityDate = new Date(item.MATURITY); // MATURITY wird zu einem Date-Objekt
-    //   const maturityYear = maturityDate.getFullYear(); // Jahr extrahieren
-    //   return {
-    //     ...item,
-    //     MATURITY_YEAR: maturityYear // Neues Feld hinzufügen
-    const enhancedData = receivedData.map(item => {
-      const maturityStr = item.MATURITY || '';
-      const maturityYear = maturityStr.slice(-4); // Letzte 4 Zeichen
-    
-      return {
-        ...item,
-        MATURITY_YEAR: maturityYear
-      };
-    });
-  
-    console.log(
-      '📌 Alle Portfolio Daten: enhanced',
-      enhancedData.map(({ MATURITY, MATURITY_YEAR }) => ({ MATURITY, MATURITY_YEAR }))
-    );
-    
-
+    const enhancedData = addMaturityYearToData(receivedData);
     // Neue Daten in AppState speichern
     appState.setAllPortfolioData(enhancedData);
   
     // Aktive Tabelle setzen
     appState.setActiveTable('deals');
 
-
-  
-
-  // Reset Button
-  const portResetButton = document.getElementById('portResetFiltersButton');
-  if (portResetButton) {
-    portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
-  }
-
-
+    // Reset Button
+    const portResetButton = document.getElementById('portResetFiltersButton');
+    if (portResetButton) {
+      portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
+    }
   }
 
   // ISSUER
@@ -1474,7 +1468,7 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
 
   //CVaR
   function handleAllCVaRData(receivedData) {
-    console.log("📊 Received full CVaR Data (new storage):", receivedData);
+    // console.log("📊 Received full CVaR Data (new storage):", receivedData);
 
     // if (!receivedData || receivedData.length === 0) {
     //     console.warn("⚠️ No CVaR data received!");
@@ -1590,5 +1584,18 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     //console.log('FBH saveChanges tableName:', newData, cleanTableName, uniqueIdentifier);
     window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
   }
+
+  function addMaturityYearToData(dataArray) {
+  return dataArray.map(item => {
+    const maturityStr = item.MATURITY || '';
+    const maturityYear = maturityStr.slice(-4); // Letzte 4 Zeichen
+
+    return {
+      ...item,
+      MATURITY_YEAR: maturityYear
+    };
+  });
+}
+
 
 export { appState };

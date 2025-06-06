@@ -16,10 +16,10 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
     setupAddOperation(data, selectedTableName);
 
   } else if (actionType === 'edit') {
-    console.log('data',data)
-    console.log('Row Index:', rowIndex);
-    console.log('Data Length:', data.length);
-    console.log('Selected Row Data:', data[rowIndex]); // This should NOT be undefined
+    // console.log('data',data)
+    // console.log('Row Index:', rowIndex);
+    // console.log('Data Length:', data.length);
+    // console.log('Selected Row Data:', data[rowIndex]); // This should NOT be undefined
 
 
 
@@ -55,7 +55,7 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
   
   try {
     const newSelectedTableName = selectedTableName;
-    console.log('selectedTableName', newSelectedTableName);
+    // console.log('selectedTableName', newSelectedTableName);
     const cleanTableName = newSelectedTableName;
     addNewRow(newRowData, cleanTableName);
     console.log(`New row added to ${cleanTableName} successfully.`);
@@ -66,32 +66,6 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
   }
   isAddingRow = false;
 };
-
-// export const addSaveButtonHandler = (form, modal, selectedTableName) => {
-//   if (isAddingRow) return;
-//   isAddingRow = true;
-
-//   const newRowData = gatherFormData(form);
-//   const cleanTableName = selectedTableName;
-//   console.log('selectedTableName', cleanTableName);
-
-//   addNewRow(newRowData, cleanTableName)
-//     .then(() => {
-//       console.log(`✅ New row added to ${cleanTableName} successfully.`);
-
-//       closeModal();
-
-//       // Erst jetzt: Daten frisch holen
-//       fetchAndUpdateDealsData(cleanTableName);
-//     })
-//     .catch((error) => {
-//       displayErrorMessage(`❌ Failed to add new row: ${error.message}`);
-//     })
-//     .finally(() => {
-//       isAddingRow = false;
-//     });
-// };
-
 
 function fetchAndUpdateDealsData(tableName) {
   console.log(`fetchAndUpdateDealsData ${tableName} .`);
@@ -123,96 +97,6 @@ function fetchAndUpdateDealsData(tableName) {
   // Erst danach senden!
   window.api.send('fetch-table-data', tableName);
 }
-
-
-
-// export const addSaveButtonHandler = (form, modal, selectedTableName) => {
-//   if (isAddingRow) return;
-//   isAddingRow = true;
-
-//   const newRowData = gatherFormData(form);
-//   const cleanTableName = selectedTableName;
-//   console.log('✅ cleanTableName:', cleanTableName);
-
-//   addNewRow(newRowData, cleanTableName)
-//   .then(() => {
-//     console.log('✅ addNewRow erfolgreich abgeschlossen – UI wird aktualisiert');
-//     const port_name = appState.getSelectedDealsTableName();
-    
-//     const AllDeals = appState.getAllDealsData();
-//     const actualDeals = AllDeals.filter(item => item.port_name === port_name);
-//     console.log('✅ addNewRow...newData:', actualDeals);
-  
-//       closeModal();
-
-//       // 🔄 Dropdown + Container aktualisieren
-//       appState.setSelectedDealsTableName(cleanTableName);
-//       appState.updateDropdownOptions({
-//         dropdownElementId: 'createdDealsDropdown',
-//         getDataFunction: appState.getDealsNameList,
-//         updateDataFunction: appState.updateDealsDataTable,
-//         selectedTableName: cleanTableName,
-//       });
-//     })
-//     .catch((error) => {
-//       displayErrorMessage(`Failed to add new row: ${error.message}`);
-//     })
-//     .finally(() => {
-//       isAddingRow = false;
-//     });
-// };
-
-// export const addSaveButtonHandler = (form, modal, selectedTableName) => {
-//   if (isAddingRow) return;
-//   isAddingRow = true;
-
-//   const newRowData = gatherFormData(form);
-//   const cleanTableName = selectedTableName;
-//   console.log('✅ cleanTableName:', cleanTableName);
-
-//   addNewRow(newRowData, cleanTableName)
-//     .then(() => {
-//       console.log('✅ addNewRow erfolgreich abgeschlossen – UI wird aktualisiert');
-//       const port_name = appState.getSelectedDealsTableName();
-
-//       // 1️⃣ Daten neu holen
-//       window.api.send('fetch-table-data', cleanTableName);
-
-//       // 2️⃣ Listener setzen
-//       window.api.receive(cleanTableName, (AllDeals) => {
-//         console.log('📥 Frisch aus der DB:', AllDeals);
-
-//         const actualDeals = AllDeals.filter(item => item.port_name === port_name);
-//         console.log('✅ addNewRow...newData:', actualDeals);
-
-//         closeModal();
-
-//         // 🔄 Dropdown + Container aktualisieren
-//         appState.setSelectedDealsTableName(cleanTableName);
-//         appState.updateDropdownOptions({
-//           dropdownElementId: 'createdDealsDropdown',
-//           getDataFunction: appState.getDealsNameList,
-//           updateDataFunction: () => appState.updateDealsDataTable(actualDeals),
-//           selectedTableName: cleanTableName,
-//         });
-
-//         // 🧠 Manuell den Dropdown triggern
-//         const dropdown = document.getElementById('createdDealsDropdown');
-//         if (dropdown) {
-//           dropdown.value = cleanTableName;
-//           dropdown.dispatchEvent(new Event('change'));
-//         }
-//       });
-//     })
-//     .catch((error) => {
-//       displayErrorMessage(`Failed to add new row: ${error.message}`);
-//     })
-//     .finally(() => {
-//       isAddingRow = false;
-//     });
-// };
-
-
 
 function setupAddOperation(data, selectedTableName) {
   //console.log('data, selectedTableName', data, selectedTableName);
@@ -381,19 +265,19 @@ function makeModalDraggable(modalContent) {
 
 
 function setupFormFields(actionType, data, rowIndex, selectedTableName) {
-  console.log('actionType_if:', actionType, data, rowIndex, selectedTableName);
+  // console.log('actionType_if:', actionType, data, rowIndex, selectedTableName);
   const form = modal.querySelector(actionType === 'add' ? 'form' : '#editForm');
   form.innerHTML = ''; // Clear the form fields
 
   
   if (actionType === 'add') {
     // Handle the add operation
-    console.log('actionType_if:', actionType);
+    // console.log('actionType_if:', actionType);
     const emptyRowData = Object.keys(data[0]).reduce((acc, fieldName) => {
         acc[fieldName] = '';
         return acc;
     }, {});
-    console.log('emptyRowData:', emptyRowData);
+    // console.log('emptyRowData:', emptyRowData);
     const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
     emptyRowData['ISSUER'] = uniqueIssuers.length > 0 ? uniqueIssuers[0] : '';
    
@@ -404,7 +288,7 @@ function setupFormFields(actionType, data, rowIndex, selectedTableName) {
 
     const rowData = data[rowIndex];
     const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
-    console.log("selectedTableName, rowData", selectedTableName,rowData);
+    // console.log("selectedTableName, rowData", selectedTableName,rowData);
 
     generateInputFields(rowData, form, uniqueIssuers, selectedTableName);
   }
@@ -414,7 +298,7 @@ function setupFormFields(actionType, data, rowIndex, selectedTableName) {
 
 
 const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () => {
-  console.log("selectedTableName", selectedTableName);
+  // console.log("selectedTableName", selectedTableName);
   // Check if selectedTableName is defined
   if (!selectedTableName) {
     console.error("selectedTableName is undefined.");
@@ -430,7 +314,7 @@ const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () =>
     const cleanTableName = getCleanTableName(selectedTableName);
     const uniqueIdentifier = getUniqueIdentifier(newData, selectedTableName);
     await saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier);
-    console.log(`Changes saved to ${cleanTableName} successfully.`);
+    // console.log(`Changes saved to ${cleanTableName} successfully.`);
     closeModal();
   } catch (error) {
     displayErrorMessage(`Failed to save changes: ${error.message}`);
@@ -535,7 +419,7 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
     // Function to handle erasing related rows from ProdCouponSchedules
     const eraseProdIDFromProdCouponSchedules = async (uniqueIdentifier) => {
       try {
-        console.log('Checking existence in ProdCouponSchedules for:', uniqueIdentifier);
+        // console.log('Checking existence in ProdCouponSchedules for:', uniqueIdentifier);
 
         // Ensure uniqueIdentifier is a string
         let uniqueValue = (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null)
@@ -544,17 +428,17 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
 
         // Get all coupon data
         const couponData = appState.getCouponData();
-        console.log('Available rows in ProdCouponSchedules:', couponData);
+        // console.log('Available rows in ProdCouponSchedules:', couponData);
 
         // Find matching rows
         const matchingRows = couponData.filter(row => {
-          console.log('Checking row:', row);
+          // console.log('Checking row:', row);
           return row.PROD_ID && String(row.PROD_ID).trim() === uniqueValue;
         });
 
         // If matches are found, erase them
         if (matchingRows.length > 0) {
-          console.log(`Found ${matchingRows.length} matching rows in ProdCouponSchedules. Deleting...`);
+          // console.log(`Found ${matchingRows.length} matching rows in ProdCouponSchedules. Deleting...`);
           
           for (const row of matchingRows) {
             if (!row.ID) {
@@ -563,7 +447,7 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
             }
 
             const numericID = Number(String(row.ID).replace(/,/g, ''));
-            console.log(`Deleting row from ProdCouponSchedules where ID = ${numericID}`);
+            // console.log(`Deleting row from ProdCouponSchedules where ID = ${numericID}`);
 
             await eraseRow('ProdCouponSchedules', { column: 'ID', value: numericID });
           }
@@ -640,7 +524,7 @@ function getCleanTableName(tableName) {
 }
 
 function getUniqueIdentifier(newData, selectedTableName) {
-  console.log('newData, selectedTableName:', newData, selectedTableName);
+  // console.log('newData, selectedTableName:', newData, selectedTableName);
   // Determine the column name based on the selected table name
   let uniqueIdentifierColumn;
   
@@ -719,8 +603,8 @@ document.querySelectorAll('.deleteButton').forEach(button => {
 
 export function addNewRow(newRowData, cleanTableName) {
   return new Promise((resolve, reject) => {
-    console.log('FBH in addNewRow newRowData:', newRowData);
-    console.log('FBH in addNewRow cleanTableName:', cleanTableName);
+    // console.log('FBH in addNewRow newRowData:', newRowData);
+    // console.log('FBH in addNewRow cleanTableName:', cleanTableName);
     
     // Send the new row data and table name to the main.js process
     window.api.send('add-new-row', { newRowData, cleanTableName });
@@ -738,7 +622,7 @@ export function addNewRow(newRowData, cleanTableName) {
 }
 
 export function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
-  console.log('FBH saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
+  // console.log('FBH saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
   // Send the update request to the main process
   window.api.send('update-data', { newData, cleanTableName, rowIndex, uniqueIdentifier });
 }
@@ -792,7 +676,7 @@ function setupCouponEditOperation(rowData) {
     return;
   }
 
-  console.log('setupCouponEditOperation data', rowData);
+  // console.log('setupCouponEditOperation data', rowData);
   const modal = document.getElementById('modal');
   const form = document.getElementById('editForm');
   const modalTitle = modal.querySelector('h2');
@@ -819,7 +703,7 @@ function removeCouponButton() {
   const couponButton = document.getElementById('coupon-button');
   if (couponButton) {
       couponButton.remove();
-      console.log("Coupon button removed.");
+      // console.log("Coupon button removed.");
   }
 }
 

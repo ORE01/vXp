@@ -21,7 +21,7 @@ export function handleProdData(receivedData, filtersConfig) {
   prodData = receivedData;
 
   if (prodDataContainer && prodData) {
-    let columns = ['PROD_ID', 'DESCRIPTION', 'CouponType', 'SCHEDULE', 'MATURITY', 'ISSUER', 'RANK', 'RATING_PROD', 'CS_Szenario'];
+    let columns = ['PROD_ID', 'DESCRIPTION', 'CouponType', 'SCHEDULE', 'MATURITY', 'ISSUER', 'RANK', 'RATING_PROD', 'CS_Szenario', 'FINLIB', 'MODEL','METHODE'];
     
     let filteredProdData = filterColumnsInData(filterProdData(prodData, filtersConfig), columns);
 
@@ -182,7 +182,16 @@ function checkCSSzenarioFlag(filteredProdData) {
   }
 
   // Finde alle betroffenen Zeilen
-  const affectedRows = filteredProdData.filter(row => row.CS_Szenario && row.CS_Szenario.trim() !== '' && row.CS_Szenario !== null);
+  const affectedRows = filteredProdData.filter(row =>
+    row.CS_Szenario !== null &&
+    row.CS_Szenario !== undefined &&
+    (
+      typeof row.CS_Szenario === 'number' ||
+      (typeof row.CS_Szenario === 'string' && row.CS_Szenario.trim() !== '')
+    )
+  );
+  
+  
   const affectedProdIds = affectedRows.map(row => row.PROD_ID);
 
   if (affectedProdIds.length > 0) {
@@ -193,7 +202,7 @@ function checkCSSzenarioFlag(filteredProdData) {
       const idsText = affectedProdIds.join(', ');
       document.getElementById('csWarningText').textContent = idsText;
 
-      console.log(`🚨 CS Szenario aktiv für folgende PROD_IDs:`, affectedProdIds);
+      // console.log(`🚨 CS Szenario aktiv für folgende PROD_IDs:`, affectedProdIds);
   } else {
       csWarningContainer.style.visibility = 'hidden'; // Warnung verstecken
       csWarningLight.style.backgroundColor = 'gray';  // Standardfarbe zurücksetzen

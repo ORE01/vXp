@@ -350,22 +350,51 @@ ipcMain.on('start-py-excel', (event) => {
 
   });
 });
-ipcMain.on('start-py-historicData', (event) => {
-  startPythonScriptWithEvent(event, 'hist', 'py-historicData')
-  .then(() => {
-    //console.log('Python script executed successfully_main');
-    const tableName = 'tblTS';
-    refreshTable(tableName); // Assuming refreshTable is a function you've defined
-    //console.log('Python script refreshed_main');
-  })
-  .catch(error => {
-    console.error('Python script execution failed:', error);
-  })
-  .finally(() => {
-    event.reply('project-finished', { success: true, projectName: 'py-historicData' });
+ipcMain.on('start-py-historicData', async (event, args = {}) => {
+  const api = args.api || ''; // z. B. "ECB"
 
-  });
+  const scriptArgs = [];
+  if (api) {
+    scriptArgs.push('--api', api);
+  }
+
+  try {
+    const result = await startPythonScriptWithEvent(event, 'hist', 'py-historicData', scriptArgs);
+
+    const tableName = 'tblTS';
+    refreshTable(tableName);
+
+    event.reply('py-historicData-complete', {
+      success: true,
+      projectName: 'py-historicData',
+      api,
+      result
+    });
+
+    event.reply('project-finished', {
+      success: true,
+      projectName: 'py-hist',
+      buttonId: args.buttonId || 'histButton'  // falls du das vom Frontend übergibst
+    });
+    
+
+  } catch (error) {
+    console.error('Python script execution failed:', error);
+
+    event.reply('py-historicData-complete', {
+      success: false,
+      projectName: 'py-historicData',
+      error: error.message || error.toString(),
+      api
+    });
+
+    event.reply('project-finished', {
+      success: false,
+      projectName: 'py-historicData'
+    });
+  }
 });
+
 ipcMain.on('start-py-cspar', async (event, args) => {
   //console.log('📥 Received arguments for py-cspar:', args);
 
@@ -756,10 +785,10 @@ ipcMain.on('delete-selected-table', (event, selectedTableName) => {
 
 // GET THE DATA FROM ANY TABLE:
 ipcMain.on('fetch-table-data', (event, selectedTableName) => {
-  console.log('📥 fetch-table-data:', selectedTableName);
+  console.log('fetch-table-data:', selectedTableName);
 
   refreshTable(selectedTableName, (data) => {
-    console.log(`📤 Sende Daten für Tabelle "${selectedTableName}" zurück`, data);
+    console.log(`Sende Daten für Tabelle "${selectedTableName}" zurück`, data);
 
     // Wichtig: Passender Channel-Name!
     event.reply(`${selectedTableName}`, data);

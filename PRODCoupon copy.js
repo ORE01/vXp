@@ -169,7 +169,7 @@ function generateEmptyCouponFormData(prodId, startDate, maturity, couponfreq) {
         form.appendChild(createHeaderRow());
     
         data.forEach((item, index) => {
-            form.appendChild(createCouponRow(item, index, data));
+            form.appendChild(createCouponRow(item, index));
         });
     
         return form;
@@ -210,33 +210,8 @@ function createHeaderRow() {
   return headerRow;
 }
 
-function createCouponRow(item, index, receivedData) {
-  const formattedFixCF = item.FIX_CF ? `${(parseFloat(item.FIX_CF) * 100).toFixed(4)}%` : '0.0000%';
-  // const notionalDisplayValue = item.Notional_Formula ? item.Notional_Formula : (item.Notional_Factor ?? '');
-  let notionalDisplayValue = '';
-  let evaluatedValue = item.Notional_Factor;
-
-  if (item.Notional_Formula) {
-    if (item.Notional_Formula.startsWith('=')) {
-      const formula = item.Notional_Formula.slice(1); // remove "="
-
-      const prevItem = index > 0 ? receivedData[index - 1] : {};
-      const context = {
-        prev: parseFloat(prevItem.Notional_Factor) || 0,
-      };
-
-      const result = evaluateFormula(formula, context);
-      evaluatedValue = result;
-      notionalDisplayValue = item.Notional_Formula; // show the formula
-    } else {
-      // not a formula, treat as raw value
-      notionalDisplayValue = item.Notional_Formula;
-      evaluatedValue = parseFloat(item.Notional_Formula);
-    }
-  } else {
-    notionalDisplayValue = item.Notional_Factor ?? '';
-  }
-
+function createCouponRow(item, index) {
+  const formattedFixCF = item.FIX_CF ? `${(parseFloat(item.FIX_CF) * 100).toFixed(2)}%` : '0.00%';
 
   const row = document.createElement('div');
   row.classList.add('coupon-row');
@@ -255,7 +230,7 @@ function createCouponRow(item, index, receivedData) {
     <input type="checkbox" class="col-zero" ${item.ZERO == 1 ? 'checked' : ''} data-field="ZERO" data-row-index="${index}">
     <button type="button" class="fill-down-btn fill-down-zero">🡇</button>
 
-    <input type="text" class="col-fixcf" value="${notionalDisplayValue}" data-field="Notional_Factor" data-row-index="${index}">
+    <input type="text" class="col-fixcf" value="${item.Notional_Factor}" data-field="Notional_Factor" data-row-index="${index}">
     <button type="button" class="fill-down-btn fill-down-Notional_Factor">🡇</button>
   `;
 
@@ -265,7 +240,7 @@ function createCouponRow(item, index, receivedData) {
     let rawValue = event.target.value.replace('%', '');
     if (!isNaN(rawValue) && rawValue !== '') {
       const cursorPosition = event.target.selectionStart;
-      event.target.value = `${parseFloat(rawValue).toFixed(4)}%`;
+      event.target.value = `${parseFloat(rawValue).toFixed(2)}%`;
       event.target.setSelectionRange(cursorPosition, cursorPosition);
     } else {
       event.target.value = '';
@@ -313,7 +288,6 @@ function createCouponRow(item, index, receivedData) {
     }
   });
 
-  // Notional Factor:
   const notionalInput = row.querySelector('[data-field="Notional_Factor"]');
   const fillDownBtn = row.querySelector('.fill-down-Notional_Factor');
 
@@ -332,88 +306,6 @@ function createCouponRow(item, index, receivedData) {
   return row;
 }
 
-// function saveCouponChanges(couponData, couponForm) {
-//   const updatedData = [];
-
-//   const rows = couponForm.querySelectorAll(".coupon-row");
-//   rows.forEach((row, rowIndex) => {
-//     const dateInput = row.querySelector("input[data-field='DATE']");
-//     const fixCFInput = row.querySelector("input[data-field='FIX_CF']");
-//     const callInput = row.querySelector("input[data-field='CALL']");
-//     const zeroInput = row.querySelector("input[data-field='ZERO']");
-//     const notionalInput = row.querySelector("input[data-field='Notional_Factor']"); // ✅ NEU
-
-//     if (!dateInput || !fixCFInput || !callInput || !zeroInput || !notionalInput) {
-//       console.warn(`Row ${rowIndex}: Missing input fields.`);
-//       return;
-//     }
-
-//     const datasetRowIndex = dateInput.dataset.rowIndex;
-//     if (!datasetRowIndex) {
-//       console.error(`Row ${rowIndex}: Missing data-row-index attribute.`);
-//       return;
-//     }
-
-//     let fixCFValue = fixCFInput.value.replace('%', '').trim();
-//     fixCFValue = parseFloat(fixCFValue);
-//     if (!isNaN(fixCFValue)) {
-//       fixCFValue = fixCFValue / 100;
-//     } else {
-//       console.error(`Row ${rowIndex}: Invalid FIX_CF value '${fixCFInput.value}'`);
-//       fixCFValue = null;
-//     }
-
-//     // let notionalValue = parseFloat(notionalInput.value);
-//     // if (isNaN(notionalValue)) {
-//     //   console.error(`Row ${rowIndex}: Invalid Notional_Factor value '${notionalInput.value}'`);
-//     //   notionalValue = null;
-//     // }
-
-//     let notionalFormula = notionalInput.value.trim();
-//     let notionalValue = null;
-
-//     if (notionalFormula.startsWith('=')) {
-//       try {
-//         notionalValue = math.evaluate(notionalFormula.slice(1)); // Formel berechnen
-//       } catch (e) {
-//         console.error(`❌ Fehler bei Formel in Row ${rowIndex}: ${notionalFormula}`, e);
-//         notionalValue = null;
-//       }
-//     } else {
-//       notionalValue = parseFloat(notionalFormula);
-//       if (isNaN(notionalValue)) {
-//         console.error(`Row ${rowIndex}: Ungültiger Notional_Factor '${notionalFormula}'`);
-//         notionalValue = null;
-//       }
-//     }
-
-
-//     const rowData = couponData[datasetRowIndex];
-//     if (!rowData) {
-//       console.warn(`Row ${datasetRowIndex}: No matching data in couponData. Skipping.`);
-//       return;
-//     }
-
-//     const updatedRow = {
-//       ID: rowData.ID,
-//       PROD_ID: rowData.PROD_ID,
-//       DATE: dateInput.value,
-//       FIX_CF: fixCFValue,
-//       CALL: callInput.checked ? 1 : 0,
-//       ZERO: zeroInput.checked ? 1 : 0,
-//       Notional_Factor: notionalValue, // ✅ NEU gespeichert
-//       Notional_Formula: notionalFormula.startsWith('=') ? notionalFormula : null
-//     };
-
-//     updatedData.push(updatedRow);
-//   });
-
-//   updatedData.forEach((row) => {
-//     const uniqueIdentifier = { column: "ID", value: row.ID };
-//     saveChanges(row, "ProdCouponSchedules", null, uniqueIdentifier);
-//   });
-// }
-
 function saveCouponChanges(couponData, couponForm) {
   const updatedData = [];
 
@@ -423,7 +315,7 @@ function saveCouponChanges(couponData, couponForm) {
     const fixCFInput = row.querySelector("input[data-field='FIX_CF']");
     const callInput = row.querySelector("input[data-field='CALL']");
     const zeroInput = row.querySelector("input[data-field='ZERO']");
-    const notionalInput = row.querySelector("input[data-field='Notional_Factor']");
+    const notionalInput = row.querySelector("input[data-field='Notional_Factor']"); // ✅ NEU
 
     if (!dateInput || !fixCFInput || !callInput || !zeroInput || !notionalInput) {
       console.warn(`Row ${rowIndex}: Missing input fields.`);
@@ -436,7 +328,6 @@ function saveCouponChanges(couponData, couponForm) {
       return;
     }
 
-    // FIX_CF verarbeiten
     let fixCFValue = fixCFInput.value.replace('%', '').trim();
     fixCFValue = parseFloat(fixCFValue);
     if (!isNaN(fixCFValue)) {
@@ -446,49 +337,18 @@ function saveCouponChanges(couponData, couponForm) {
       fixCFValue = null;
     }
 
-    // Notional_Factor und Notional_Formula verarbeiten
-    let notionalFormula = notionalInput.value.trim();
-    let notionalValue = null;
-
-    if (notionalFormula.startsWith('=')) {
-      const formulaBody = notionalFormula.slice(1); // entfernt das "="
-
-      // Kontext für math.js – prev = vorheriger Notional_Factor
-      const prevRow = rowIndex > 0 ? couponData[rowIndex - 1] : null;
-      const context = {
-        prev: prevRow ? parseFloat(prevRow.Notional_Factor) || 0 : 0
-      };
-
-      try {
-        notionalValue = math.evaluate(formulaBody, context);
-
-        // ✅ NEU: Berechneten Wert in couponData[rowIndex] eintragen
-        if (!isNaN(notionalValue)) {
-          couponData[rowIndex].Notional_Factor = notionalValue;
-        }
-
-      } catch (e) {
-        console.error(`❌ Fehler bei Formel in Row ${rowIndex}: ${notionalFormula}`, e);
-        notionalValue = null;
-      }
-
-    } else {
-      // Kein "=" → direkter Wert
-      notionalValue = parseFloat(notionalFormula);
-      if (isNaN(notionalValue)) {
-        console.error(`Row ${rowIndex}: Ungültiger Notional_Factor '${notionalFormula}'`);
-        notionalValue = null;
-      }
+    let notionalValue = parseFloat(notionalInput.value);
+    if (isNaN(notionalValue)) {
+      console.error(`Row ${rowIndex}: Invalid Notional_Factor value '${notionalInput.value}'`);
+      notionalValue = null;
     }
 
-    // Ursprüngliche Zeile aus den Originaldaten holen
     const rowData = couponData[datasetRowIndex];
     if (!rowData) {
       console.warn(`Row ${datasetRowIndex}: No matching data in couponData. Skipping.`);
       return;
     }
 
-    // Neue Zeile zusammenstellen
     const updatedRow = {
       ID: rowData.ID,
       PROD_ID: rowData.PROD_ID,
@@ -496,35 +356,17 @@ function saveCouponChanges(couponData, couponForm) {
       FIX_CF: fixCFValue,
       CALL: callInput.checked ? 1 : 0,
       ZERO: zeroInput.checked ? 1 : 0,
-      Notional_Factor: notionalValue,
-      Notional_Formula: notionalFormula.startsWith('=') ? notionalFormula : null
+      Notional_Factor: notionalValue // ✅ NEU gespeichert
     };
 
     updatedData.push(updatedRow);
   });
 
-  // Änderungen speichern
   updatedData.forEach((row) => {
     const uniqueIdentifier = { column: "ID", value: row.ID };
     saveChanges(row, "ProdCouponSchedules", null, uniqueIdentifier);
   });
 }
-
-
-
-function evaluateFormula(expression, context = {}) {
-  const keys = Object.keys(context);
-  const values = Object.values(context);
-
-  try {
-    // Create a function with context keys as parameters
-    return Function(...keys, `'use strict'; return (${expression})`)(...values);
-  } catch (e) {
-    console.warn('Formula evaluation failed:', e.message);
-    return NaN;
-  }
-}
-
 
 
           

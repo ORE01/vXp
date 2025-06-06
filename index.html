@@ -13,6 +13,7 @@
   <link href="./css/messageBox.css" rel="stylesheet">
   <link href="./css/Warnings.css" rel="stylesheet">
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
+  <link href="./css/CouponModal.css" rel="stylesheet">
 
 <!-- Library Imports -->
  
@@ -27,6 +28,9 @@
 
 <!-- Chart.js Annotation Plugin (if you need it) -->
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjs/lib/browser/math.js"></script>
+
 
 
 
@@ -882,40 +886,36 @@
   <div class="table-content">
     <span class="close">&times;</span>
     <h2>UPDATES</h2>
+
     <div class="button-container">
-      <span class="button-label">Products, Deals and Swap-Rates </span>
+      <span class="button-label">Products, Deals and Swap-Rates</span>
       <button id="updateDataExcelButton" class="edit-button">Data from EXCEL</button>
-      <span class="button-label">Data from ECB and FED (FRED) This update can take several minutes</span>
-      <button id="updateHistoricDataButton" class="edit-button">Historic Data</button>
+
+      <span class="button-label">Data from ECB and FED (FRED)<br> This update can take several minutes</span>
+      <button id="updateHistoricDataButton" class="edit-button">Historic Data (All)</button>
+
+      <!-- Neue Einzel-API Buttons -->
+      <span class="button-label">Run only ECB</span>
+      <button id="histEcbButton" class="edit-button">Update ECB</button>
+
+      <span class="button-label">Run only FED</span>
+      <button id="histFedButton" class="edit-button">Update FED</button>
+
+      <span class="button-label">Run only Yahoo</span>
+      <button id="histYahooButton" class="edit-button">Update Yahoo</button>
+
+      <!-- <span class="button-label">Run only Finnhub</span>
+      <button id="histFinnhubButton" class="edit-button">Update Finnhub</button> -->
 
       <span class="button-label">Data from EXCEL via vXp</span>
       <button id="importExcelButtonVXP" class="edit-button">Excel importieren</button>
 
       <span class="button-label">Nur EUSW importieren</span>
       <button id="importEUSWButton" class="edit-button">Nur EUSW</button>
-
-      <!-- <span class="button-label">Match Columns (AI)</span>
-      <button id="matchColumnsButton" class="edit-button">Columns AI</button>
-
-
-      <div id="productTargetsOverview"></div>
-      <button id="submitToProductsBtn" class="edit-button">📥 vXp Products</button>
-
-      <div id="offerTargetsOverview"></div>
-      <button id="submitToOffersBtn" class="edit-button">📥 vXp Offers</button>
-
-
-      <h3>Product Matches</h3>
-      <div id="productMatchesOutput"></div>
-
-      <h3>Offer Matches</h3>
-      <div id="offerMatchesOutput"></div> -->
-
-
-    
     </div>
   </div>
 </div>
+
 
 
 
