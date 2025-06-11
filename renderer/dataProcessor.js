@@ -23,6 +23,7 @@ function processData(data, selectedTableName) {
                   'PortMain',
                   'sortedLossesIssuerMain',
                   'EAD',
+                  'Portfolio',
    
 
 

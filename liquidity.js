@@ -232,6 +232,7 @@ export function handleLiquidityData(filteredData, index, port_name) {
 // ────────────────────────────────────────────────────────────────────────────────
 // 1) Aggregation nach MATURITY_YEAR & CATEGORY
 function aggregateByMaturityAndCategory(data) {
+  //console.log('Liquidity:', data);
   const grouped = {};
   data.forEach(item => {
     const year     = item.MATURITY_YEAR || 'unbekannt';
@@ -242,9 +243,10 @@ function aggregateByMaturityAndCategory(data) {
     grouped[year][category] ??= { MATURITY_YEAR: year, CATEGORY: category, TOTAL_NOTIONAL: 0 };
     grouped[year][category].TOTAL_NOTIONAL += notional;
   });
-
+  //console.log('Liquidity:', grouped);
   return Object.values(grouped)
     .flatMap(catMap => Object.values(catMap));
+    
 }
 
 // 2) Chart-Rendering (gestapeltes Balkendiagramm)

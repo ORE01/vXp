@@ -120,7 +120,10 @@ export function getFormatRules() {
     'LGD': formatNumber(0),
     'LOSS': formatNumber(0),
     'NAV': formatNumber(0),
+    'PV01': formatNumber(0),
     'CPV01': formatNumber(0),
+    'PV01rel': formatNumber(2),
+    'CPV01rel': formatNumber(2),
     'absolute': formatNumber(0),
   };
 }

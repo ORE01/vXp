@@ -839,7 +839,7 @@ function setupButtons() {
                 window.api.receive('PortfoliosData', (receivedData) => {
                 // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
                 // Neue Daten mit MATURITY_YEAR hinzufügen
-                  const enhancedData = addMaturityYearToData(receivedData);
+                  const enhancedData = receivedData    //addMaturityYearToData(receivedData);
 
                   if (!enhancedData || enhancedData.length === 0) {
                     console.warn("⚠️ No new Portfolios data received!");
@@ -1357,11 +1357,8 @@ function setupButtons() {
   
   // PORT: Portfolios
   function handlePortfolioData(receivedData) {
-    // Neue Daten mit MATURITY_YEAR hinzufügen
-    const enhancedData = addMaturityYearToData(receivedData);
-    // Neue Daten in AppState speichern
-    appState.setAllPortfolioData(enhancedData);
-  
+    //Daten in AppState speichern
+    appState.setAllPortfolioData(receivedData);
     // Aktive Tabelle setzen
     appState.setActiveTable('deals');
 
