@@ -90,6 +90,8 @@ function setupEventListeners() {
   window.api.receive('DealsMainData', (data) => {
     handleDealsNameList(data);
     handleDealsMainData(data);
+    
+    // console.log('handleDealsMainData:', data);
   });
 
   window.api.receive('LGTData', (data) => {
@@ -1345,7 +1347,7 @@ function setupButtons() {
   // DEALS
   function handleDealsMainData(receivedData) {
     appState.setAllDealsData(receivedData);
-    //console.log('📌 Alle Deals Daten: DealsMain:', receivedData);
+    // console.log('📌 Alle Deals Daten: DealsMain:', receivedData);
 
     appState.setActiveTable('deals');
 

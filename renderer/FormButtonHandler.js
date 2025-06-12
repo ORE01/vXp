@@ -35,20 +35,13 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
 export function handleCouponFormAction(event, data, rowIndex, actionType) {
   console.log('handleCouponFormAction',  data)
   displayModal(actionType, rowIndex);
-
-  if (actionType === 'add') {
-    setupCouponAddOperation(data);
-  } else if (actionType === 'edit') {
-    const rowData = data[rowIndex];
-    setupCouponEditOperation(data);
-  }
-  
+  setupCouponEditOperation(data);
 }
 
 // let isAddingRow = false;
 let isAddingRow;
 export const addSaveButtonHandler = (form, modal, selectedTableName) => {
-  //console.log('Save button clicked');
+  // console.log('Save button clicked');
   if (isAddingRow) return;
   isAddingRow = true;
   const newRowData = gatherFormData(form);
@@ -58,45 +51,36 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
     // console.log('selectedTableName', newSelectedTableName);
     const cleanTableName = newSelectedTableName;
     addNewRow(newRowData, cleanTableName);
-    console.log(`New row added to ${cleanTableName} successfully.`);
+    // console.log(`New row added to ${cleanTableName} successfully.`);
     closeModal();
-    //fetchAndUpdateDealsData(cleanTableName)
+    fetchAndUpdateDealsData(cleanTableName)
   } catch (error) {
     displayErrorMessage(`Failed to add new row: ${error.message}`);
   }
   isAddingRow = false;
 };
 
-function fetchAndUpdateDealsData(tableName) {
-  console.log(`fetchAndUpdateDealsData ${tableName} .`);
-  window.api.receive(tableName, (receivedData) => {
-    if (!receivedData || receivedData.length === 0) {
-      console.warn("⚠️ Keine Deals-Daten empfangen!");
-      appState.setAllDealsData([]);
-      return;
-    }
-    console.log(`window.api.receive ${tableName} .`, receivedData );
-    appState.setAllDealsData(receivedData);
 
-    const port_name = appState.getSelectedDealsTableName();
-    const filteredData = receivedData.filter(entry => entry.port_name === port_name);
 
-    // 🔄 Update UI
-    appState.updateDealsDataTable(filteredData);started
-
-    appState.updateDropdownOptions({
-      dropdownElementId: 'createdDealsDropdown',
-      getDataFunction: appState.getDealsNameList.bind(appState),
-      updateDataFunction: () => appState.updateDealsDataTable(filteredData),
-      selectedTableName: port_name
+function fetchAndUpdateDealsData(tableName = 'DealsMainData') {
+  // console.log(`🚀 fetchAndUpdateDealsData called for table: ${tableName}`);
+    window.api.receive('DealsMainData', (receivedData) => {
+      // console.log("✅ Received fresh deals data from DB:", receivedData);
+      appState.setAllDealsData(receivedData);
+        const port_name = appState.getSelectedDealsTableName();
+        const filteredData = receivedData.filter(entry => entry.port_name === port_name);
+      appState.updateDropdownOptions({
+        dropdownElementId: 'createdDealsDropdown',
+        getDataFunction: appState.getDealsNameList.bind(appState),
+        updateDataFunction: () => appState.updateDealsDataTable(filteredData),
+        selectedTableName: port_name,
+      });
+      appState.setSelectedDealsTableName(port_name);
     });
-
-    appState.setSelectedDealsTableName(port_name);
-  });
-
-  // Erst danach senden!
-  window.api.send('fetch-table-data', tableName);
+  window.api.send('fetch-table-data', 'DealsMain');
 }
+
+
 
 function setupAddOperation(data, selectedTableName) {
   //console.log('data, selectedTableName', data, selectedTableName);
@@ -322,69 +306,6 @@ const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () =>
 };
 
 let isErasing = false;
-
-
-// export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async () => {
-//   console.log('Erase attempt for:', data);
-//   if (isErasing) return;
-//   isErasing = true;
-
-//   try {
-//     const cleanTableName = getCleanTableName(selectedTableName);
-//     let uniqueIdentifier = getUniqueIdentifier(data, selectedTableName);
-//     console.log('selectedTableName, uniqueIdentifier:', selectedTableName, uniqueIdentifier);
-
-//     // ✅ Keep existing logic for erasing from ProdAll
-//     await eraseRow(cleanTableName, uniqueIdentifier);
-
-//     // ✅ NEW: Also check and erase from ProdCouponSchedules
-//     console.log('Checking existence in ProdCouponSchedules for:', uniqueIdentifier);
-
-//     let uniqueValue = uniqueIdentifier;
-//     if (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null) {
-//       uniqueValue = uniqueIdentifier.value; // Extract actual ID value
-//     }
-//     uniqueValue = String(uniqueValue).trim(); // Ensure it's a string
-
-//     // Get all coupon data
-//     const couponData = appState.getCouponData();
-//     console.log('Available rows in ProdCouponSchedules:', couponData);
-
-//     // Find matching rows
-//     const matchingRows = couponData.filter(row => {
-//       console.log('Checking row:', row); // Debugging log
-//       return row.PROD_ID && String(row.PROD_ID).trim() === uniqueValue;
-//     });
-
-//     if (matchingRows.length > 0) {
-//       console.log(`Found ${matchingRows.length} matching rows in ProdCouponSchedules. Deleting...`);
-//       for (const row of matchingRows) {
-//         console.log('Attempting to delete row:', row);
-
-//         if (!row.ID) {
-//           console.error('❌ ERROR: Row missing ID:', row);
-//           continue; // Skip this row to prevent errors
-//         }
-
-//         // ✅ Convert ID to a number (removing commas if needed)
-//         const numericID = Number(String(row.ID).replace(/,/g, '')); // Removes commas and converts to a number
-//         console.log(`Deleting row from ProdCouponSchedules where ID = ${numericID}`);
-
-//         // ✅ Ensure `eraseRow` receives column + value
-//         await eraseRow('ProdCouponSchedules', { column: 'ID', value: numericID });
-//       }
-//     } else {
-//       console.log('❌ No matching rows found in ProdCouponSchedules.');
-//     }
-
-//     closeModal();
-//   } catch (error) {
-//     console.error('❌ Error in eraseButtonHandler:', error);
-//     displayErrorMessage(`Failed to erase row: ${error.message}`);
-//   } finally {
-//     isErasing = false;
-//   }
-// };
 
 export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async () => {
   console.log('Erase attempt for:', data);

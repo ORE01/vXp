@@ -25,7 +25,7 @@ export function shouldSkipTable(tableName) {
 
 // Generiert Eingabefelder für ein gegebenes `rowData`-Objekt
 export function generateInputFields(rowData, form, uniqueIssuers, selectedTableName) {
-  console.log('Generating input fields for:', selectedTableName);
+  // console.log('Generating input fields for:', selectedTableName);
 
   // Sortiere `uniqueIssuers` alphabetisch (optional)
   uniqueIssuers.sort();
@@ -33,7 +33,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
   Object.keys(rowData).forEach((fieldName) => {
     // Falls das Feld `ISSUER` ist und es für diese Tabelle ignoriert werden soll → Überspringen
     if (fieldName === 'ISSUER' && shouldSkipTable(selectedTableName)) {
-      console.log(`Skipping ISSUER field for table: ${selectedTableName}`);
+      // console.log(`Skipping ISSUER field for table: ${selectedTableName}`);
       return;
     }
 

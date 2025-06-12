@@ -124,6 +124,7 @@ export function getFormatRules() {
     'CPV01': formatNumber(0),
     'PV01rel': formatNumber(2),
     'CPV01rel': formatNumber(2),
+    'CPV01_EUR': formatNumber(2),
     'absolute': formatNumber(0),
   };
 }
