@@ -397,7 +397,7 @@ export class AppState {
         // 1️⃣ Standard-Portfolio-Auswertung
         handlePortAggData(filteredData, index, port_name);
         handlePortProdData(filteredData, index, port_name);
-        //handleLiquidityData(filteredData, index, port_name)
+        handleLiquidityData(filteredData, index, port_name)
       
         // 2️⃣ MVaR-Daten
         const mvarData = this.getAllMvarData();
