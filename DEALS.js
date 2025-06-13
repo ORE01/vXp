@@ -109,7 +109,7 @@ export function handleDealsData(receivedData, dealsTableName) {
       const dealsAddButton = document.getElementById('dealsAddButton');
       dealsAddButton.addEventListener('click', (event) => {
         const actionType = 'add';
-        console.log('DEALS filteredDealsData:', filteredDealsData);
+        // console.log('DEALS filteredDealsData:', filteredDealsData);
         handleFormAction(event, filteredDealsData, null, tableName, actionType);
       });
   }
