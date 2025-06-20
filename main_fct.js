@@ -274,6 +274,17 @@ function deleteTable(selectedTableName, sender) {
   });
 }
 
+//!!!import offers sql-code!!!
+
+function runSQL(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
 function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
   console.log('main_fct: startPythonScriptWithEvent:', args);
 
@@ -517,5 +528,7 @@ module.exports = {
   startPythonScriptWithEvent,
   insertCSParameter,
   importExcelToSQLite,
-  getAllRowsFromTable
+  getAllRowsFromTable,
+  runSQL,
+  db
 };

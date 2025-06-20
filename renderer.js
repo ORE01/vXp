@@ -29,25 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// async function handleExcelImport() {
-//   try {
-//     const result = await window.api.invoke('import-excel-dialog');
-//     if (result.success) {
-//       alert('Import erfolgreich!');
-//     } else {
-//       alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
-//     }
-//   } catch (error) {
-//     alert('Fehler beim Import: ' + error.message);
-//   }
-// }
-
-async function handleExcelImport(sheetNames = null) {
+async function handleExcelImport() {
   try {
-    const result = await window.api.invoke('import-excel-dialog', {
-      sheetFilter: sheetNames  // Übergabe an main.js
-    });
-
+    const result = await window.api.invoke('import-excel-dialog');
     if (result.success) {
       alert('Import erfolgreich!');
     } else {
@@ -57,6 +41,147 @@ async function handleExcelImport(sheetNames = null) {
     alert('Fehler beim Import: ' + error.message);
   }
 }
+
+async function startOfferImport() {
+  try {
+    const result = await window.api.invoke('start-offer-import');
+
+    if (!result.success) {
+      alert("❌ Fehler beim Import: " + result.error);
+      return;
+    }
+
+    const { tempTableName, dealsMainColumns, tempTableColumns } = result;
+
+    alert(`✅ Datei erfolgreich geladen: "${tempTableName}".\nBitte Spalten zuordnen.`);
+
+    // Öffne Matching-UI (als nächster Schritt)
+    showMatchingUI(dealsMainColumns, tempTableColumns, tempTableName);
+
+  } catch (err) {
+    console.error("❌ Unerwarteter Fehler beim Import:", err);
+    alert("❌ Unerwarteter Fehler beim Import: " + err.message);
+  }
+}
+
+
+function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
+  const container = document.getElementById("matchingContainer");
+  container.innerHTML = ""; // vorher leeren
+
+  const usedDealsMainCols = new Set(); // verfolgt bereits genutzte Zuordnungen
+  const dropdowns = []; // Referenz auf alle Dropdowns
+
+  // Erzeuge für jede Spalte der externen Tabelle eine Zeile mit Dropdown
+  tempTableCols.forEach((sourceCol, index) => {
+    const row = document.createElement("div");
+    row.className = "match-row";
+    row.style.marginBottom = "8px";
+
+    const label = document.createElement("span");
+    label.textContent = sourceCol;
+    label.style.display = "inline-block";
+    label.style.width = "200px";
+
+    const select = document.createElement("select");
+    select.dataset.source = sourceCol;
+
+    const defaultOption = document.createElement("option");
+    defaultOption.value = "";
+    defaultOption.textContent = "Nicht zuordnen";
+    select.appendChild(defaultOption);
+
+    // Initiale Optionsliste
+    dealsMainCols.forEach((dealCol) => {
+      const option = document.createElement("option");
+      option.value = dealCol;
+      option.textContent = dealCol;
+      select.appendChild(option);
+    });
+
+    // Beobachte Auswahländerungen
+    select.addEventListener("change", () => {
+      // Update: verwendete Spaltenliste neu berechnen
+      usedDealsMainCols.clear();
+      dropdowns.forEach((d) => {
+        if (d.value) usedDealsMainCols.add(d.value);
+      });
+
+      // Alle Dropdowns neu rendern (außer das aktuelle)
+      dropdowns.forEach((d) => {
+        const currentValue = d.value;
+        const currentSource = d.dataset.source;
+
+        d.innerHTML = "";
+        const optionNone = document.createElement("option");
+        optionNone.value = "";
+        optionNone.textContent = "Nicht zuordnen";
+        d.appendChild(optionNone);
+
+        dealsMainCols.forEach((dealCol) => {
+          // Wenn Spalte schon zugeordnet, dann nur, wenn es die eigene ist
+          if (!usedDealsMainCols.has(dealCol) || dealCol === currentValue) {
+            const option = document.createElement("option");
+            option.value = dealCol;
+            option.textContent = dealCol;
+            d.appendChild(option);
+          }
+        });
+
+        d.value = currentValue; // aktuelle Auswahl wiederherstellen
+      });
+    });
+
+    row.appendChild(label);
+    row.appendChild(select);
+    container.appendChild(row);
+    dropdowns.push(select);
+  });
+
+  // Klick auf "Import starten"
+  document.getElementById("submitMatchingBtn")?.addEventListener("click", () => {
+    const columnMap = [];
+
+    dropdowns.forEach((select) => {
+      const from = select.dataset.source;
+      const to = select.value;
+      if (to) {
+        columnMap.push({ from, to });
+      }
+    });
+
+    if (columnMap.length === 0) {
+      alert("⚠️ Keine Zuordnungen vorgenommen.");
+      return;
+    }
+
+    window.api.send("import-matched-columns", {
+      sourceTable: tempTableName,
+      targetTable: "DealsMain",
+      columnMap,
+      additionalFields: {
+        port_name: tempTableName
+      }
+    });
+  });
+}
+
+
+// async function handleExcelImportAll(sheetNames = null) {
+//   try {
+//     const result = await window.api.invoke('import-excel-dialog-all', {
+//       sheetFilter: sheetNames  // Übergabe an main.js
+//     });
+
+//     if (result.success) {
+//       alert('Import erfolgreich!');
+//     } else {
+//       alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
+//     }
+//   } catch (error) {
+//     alert('Fehler beim Import: ' + error.message);
+//   }
+// }
 
 
 
@@ -377,6 +502,10 @@ function setupButtons() {
   
   document.getElementById('submitToProductsBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('productMatchesOutput', 'ProdAll');});
   document.getElementById('submitToOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
+  // document.getElementById('importOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
+  document.getElementById('importOffersBtn')?.addEventListener('click', () => {startOfferImport();});
+
+
 
 
 

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { getAllTableNames, 
         queryDB, 
@@ -12,6 +12,8 @@ const { getAllTableNames,
         handlePythonProgress, 
         insertCSParameter, 
         importExcelToSQLite, 
+        runSQL,
+        db,
         getAllRowsFromTable} = require('./main_fct');
 
 const { formatColumns, formatDate} = require('./utils/main_format');
@@ -21,6 +23,10 @@ const {getExcelPath} = require('./main_path');
 require('dotenv').config();
 
 const { spawn } = require('child_process');
+
+const XLSX = require('xlsx');
+
+const sqlite3 = require('sqlite3').verbose();
 
 let mainWindow;
 let tableNames;
@@ -117,6 +123,201 @@ ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
   }
 });
 
+
+ipcMain.handle('start-offer-import', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Excel-Datei für Portfolio auswählen',
+      filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }],
+      properties: ['openFile']
+    });
+
+    if (canceled || filePaths.length === 0) {
+      return { success: false, error: 'Keine Datei gewählt.' };
+    }
+
+    const filePath = filePaths[0];
+    const fileName = path.basename(filePath, path.extname(filePath)); // z. B. "myportfolio"
+    const workbook = XLSX.readFile(filePath);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    if (rows.length === 0) {
+      return { success: false, error: 'Excel-Datei enthält keine Daten.' };
+    }
+
+    // Tabelle erstellen und Daten speichern
+    await createTableFromRows(fileName, rows); // ← eigene Funktion, siehe unten
+
+    // Spalten von DealsMain & der neuen Tabelle holen
+    const dealsMainColumns = await getTableColumns('DealsMain');
+    const tempTableColumns = await getTableColumns(fileName);
+
+    return {
+      success: true,
+      tempTableName: fileName,
+      dealsMainColumns,
+      tempTableColumns
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Temporäre Tabelle anlegen für Spaltenvergleich
+async function createTableFromRows(tableName, rows) {
+  const sample = rows[0];
+  const columns = Object.keys(sample);
+
+  const createSQL = `CREATE TABLE IF NOT EXISTS ${tableName} (${columns.map(c => `"${c}" TEXT`).join(", ")})`;
+  await runSQL(createSQL);
+
+  const insertSQL = `INSERT INTO ${tableName} (${columns.map(c => `"${c}"`).join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
+
+  for (const row of rows) {
+    const values = columns.map(c => row[c] ?? null);
+    await runSQL(insertSQL, values);
+  }
+}
+
+// Spalten einer Tabelle lesen
+async function getTableColumns(tableName) {
+  return new Promise((resolve, reject) => {
+    db.all(`PRAGMA table_info(${tableName})`, [], (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows.map(r => r.name));
+    });
+  });
+}
+
+
+ipcMain.on('import-matched-columns', async (event, { sourceTable, targetTable, columnMap, additionalFields }) => {
+  const rows = await getAllRowsFromTable(sourceTable);
+  for (const row of rows) {
+    const newRow = {};
+    columnMap.forEach(({ from, to }) => {
+      newRow[to] = row[from];
+    });
+    Object.entries(additionalFields).forEach(([k, v]) => {
+      newRow[k] = v;
+    });
+    await insertRowInTable(newRow, targetTable, (err) => {
+  if (err) {
+    console.error(`❌ Fehler beim Einfügen in ${targetTable}:`, err);
+  } else {
+    console.log(`✅ Eingefügt in ${targetTable}`);
+  }
+});
+
+  }
+
+  event.reply('import-matched-columns-complete', {
+    success: true,
+    message: `Import abgeschlossen für ${sourceTable}`
+  });
+});
+
+
+
+// ipcMain.handle('import-excel-dialog-offers', async (event, options = {}) => {
+//   try {
+//     // Sichere Prüfung, ob sheetFilter ein Array ist
+//     const sheetFilter = Array.isArray(options.sheetFilter) ? options.sheetFilter : null;
+
+//     // 📂 Zeige Datei-Auswahldialog
+//     const { canceled, filePaths } = await dialog.showOpenDialog({
+//       title: 'Excel-Datei auswählen',
+//       filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }],
+//       properties: ['openFile']
+//     });
+
+//     if (canceled || filePaths.length === 0) {
+//       return { success: false, error: 'Import abgebrochen.' };
+//     }
+
+//     const excelPath = filePaths[0]; // ⬅️ gewählter Pfad statt getExcelPath()
+
+//     // Mapping der Sheets → Tabellen
+//     const mappings = [
+//       { 
+//         sheetName: 'INPUT_DEALS', 
+//         tableName: 'DealsMain',
+//         allowedColumns: [
+//           'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
+//           'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
+//         ],
+//         deleteCondition: "port_name = 'UNI'" 
+//       },
+//       { 
+//         sheetName: 'INPUT_BONDS', 
+//         tableName: 'ProdAll', 
+//         allowedColumns: [
+//           'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+//           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+//           'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+//         ],
+//         overwriteExisting: true
+//       },
+//       {
+//         sheetName: 'INPUT_ISSUER',
+//         tableName: 'Issuer',
+//         allowedColumns: [
+//           'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
+//           'senior_secured', 'senior_preferred', 'senior_unsecured',
+//           'senior_subordinated', 'junior_subordinated'
+//         ],
+//         deleteCondition: "1 = 1"
+//       },
+//       { 
+//         sheetName: 'INPUT_RANK', 
+//         tableName: 'Rank', 
+//         allowedColumns: [
+//           'RANK', 'STEPS'
+//         ],
+//         deleteCondition: "1 = 1" 
+//       },
+//       { 
+//         sheetName: 'EUSW', 
+//         tableName: 'EUSW', 
+//         allowedColumns: [
+//           'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
+//         ],
+//         deleteCondition: "1 = 1" 
+//       },
+//       {
+//         sheetName: 'INPUT_LGT',
+//         tableName: 'LGT',
+//         deleteCondition: "1 = 1"
+//       }
+//     ];
+
+//     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
+//       // Falls sheetFilter gesetzt ist → nur gefilterte Sheets importieren
+//       if (sheetFilter && !sheetFilter.includes(sheetName)) {
+//         console.log(`⏭️ Sheet ${sheetName} wird übersprungen (nicht im Filter enthalten).`);
+//         continue;
+//       }
+
+//       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
+//       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
+//     }
+
+//     // Tabellen nach dem Import aktualisieren
+//     const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
+
+//     tablesToRefresh.forEach(table => {
+//       refreshTable(table, () => {
+//         console.log('Refreshed table:', table);
+//       });
+//     });
+
+//     return { success: true };
+
+//   } catch (err) {
+//     console.error('❌ Fehler beim Excel-Import:', err);
+//     return { success: false, error: err.message };
+//   }
+// });
 
 
 
@@ -860,6 +1061,7 @@ function refreshTable(tableName, callback) {
   });
 }
 
+// Import Columns
 ipcMain.on('import-matched-columns', async (event, args) => {
   const { sourceTable, targetTable, columnMap, additionalFields = {} } = args;
 
