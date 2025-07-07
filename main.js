@@ -1121,7 +1121,7 @@ ipcMain.on('import-matched-columns', async (event, args) => {
     // Erfolgsmeldung
     event.reply('import-matched-columns-complete', {
       success: true,
-      message: `✅ ${insertedCount} Zeilen in "${targetTable}" eingefügt.`,
+      message: `✅ Zeilen in "${targetTable}" eingefügt.`,
     });
 
     refreshTable(targetTable);
