@@ -253,9 +253,12 @@
     margin-bottom: 20px; /* Adjust as needed for spacing */
   }
   #COMP_Modal .data-wrapper {
-    height: 250px; /* Adjust the height value as needed */
-    overflow-y: auto; /* Optional: adds a vertical scrollbar if content overflows */
+    height: 250px;
+    overflow-y: auto; 
   }
+
+
+
 
   #epochsInput {
     display: block; /* Ensure block behavior for full control */

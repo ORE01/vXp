@@ -17,6 +17,7 @@ export function initializeTabs() {
       'CS_Tab',
       'Liquidity_Tab',
       'Offers_Tab',
+      'SUMMARY_Tab',
     ];
     const modalIds = [
       'DEALS_Modal', 
@@ -36,6 +37,7 @@ export function initializeTabs() {
       'CS_Modal',
       'Liquidity_Modal',
       'Offers_Modal',
+      'SUMMARY_Modal',
     ];
   
     const tables = document.querySelectorAll('.table');

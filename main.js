@@ -438,7 +438,7 @@ getAllTableNames((err, receivedTableNames) => {
     //console.log('receivedTableNames:', receivedTableNames);
 
     // Filter out excluded table names
-    const excludedTableNames = ['sqlite_sequence', 'Instruments', 'PDMain', 'MVaRMainDist' , 'sortedLossesIndicesMain']; // Add any other names you want to exclude
+    const excludedTableNames = ['sqlite_sequence', 'Instruments', 'PDMain', 'sortedLossesIndicesMain']; // Add any other names you want to exclude
     tableNames = receivedTableNames.filter(tableName => !excludedTableNames.includes(tableName));
     
     sendDataToRenderer(tableNames);
@@ -505,9 +505,7 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
   }
 });
 ipcMain.on('start-py-MVaR', async (event, args) => {
-  //console.log('start-py-MVaR:', args);
-
-  const { tableName } = args;
+  const { tableName, selectedInterval } = args;
   const tablesToRefresh = ['MarketVaR'];
 
   if (!tableName) {
@@ -520,11 +518,26 @@ ipcMain.on('start-py-MVaR', async (event, args) => {
     return;
   }
 
-  startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', ['--table', tableName])
+  if (!selectedInterval) {
+    console.error('❌ Missing required argument: "selectedInterval".');
+    event.reply('py-mvar-complete', {
+      success: false,
+      projectName: 'py-MVaR',
+      message: '"selectedInterval" is required.',
+    });
+    return;
+  }
+
+  console.log('🚀 Received start-py-MVaR with tableName:', tableName, 'and selectedInterval:', selectedInterval);
+
+  // Baue Argumente für Python-Skript: z.B. --table <tableName> --scenario <selectedInterval>
+  const pythonArgs = ['--table', tableName, '--intervalName', selectedInterval];
+
+  startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', pythonArgs)
     .then(() => {
       //console.log('Python script executed successfully');
 
-      // Non-blocking refresh like CVaR
+      // Non-blocking refresh
       tablesToRefresh.forEach(table => {
         refreshTable(table, () => {
           //console.log('Refreshed table:', table);
@@ -537,11 +550,11 @@ ipcMain.on('start-py-MVaR', async (event, args) => {
       console.error('❌ Python script execution failed:', error);
     })
     .finally(() => {
-      event.reply('py-mvar-complete', { success: true, projectName: 'py-MVaR' });  // Add this line
-      event.reply('project-finished', { success: true, projectName: 'py-MVaR' });  // Keep if needed for other handlers
+      event.reply('py-mvar-complete', { success: true, projectName: 'py-MVaR' });
+      event.reply('project-finished', { success: true, projectName: 'py-MVaR' });
     });
-    
 });
+
 ipcMain.on('start-py-CVaR', async (event, args) => {
   //console.log('start-py-CVaR:', args);
 
@@ -989,6 +1002,7 @@ ipcMain.on('add-new-row', (event, { newRowData, cleanTableName }) => {
       event.reply('add-new-row-success');
       refreshTable(cleanTableName);
       refreshTable('DealsMain');
+      refreshTable('MVarInput_2');
     }
   });
 });

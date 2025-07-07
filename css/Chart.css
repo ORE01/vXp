@@ -5,10 +5,9 @@
     align-items: flex-start;
   }
   
-  .data-container {
-    /* Your existing styles for .data-container */
-    flex: 1; /* Make the .data-container occupy all the available width */
-  }
+  /* .data-container {
+    flex: 1;
+  } */
   
   .chart-container {
     width: 100%; /* Ensure full width */
@@ -28,17 +27,27 @@
     height: 500px;
   }
 
+
+
+
+
   .chart-container-inner {
     display: flex;
     align-items: center; /* Vertically aligns the chart and traffic light */
     justify-content: flex-start; /* Ensures elements align horizontally */
     gap: 20px; /* Adds space between the chart and traffic light */
-    min-height: 400px;
+    min-height: 200px;
+    max-width: 250px; 
   }
   
   .chart-container-inner.active {
     /* Your existing styles for the active chart container */
     display: block;
+  }
+    .chart-container-inner canvas {
+  width: 300px;        /* gewünschte Breite */
+  height: auto;        /* hält Seitenverhältnis */
+  max-width: 100%;     /* passt sich kleineren Viewports an */
   }
 
   #MVaRChart{
@@ -208,13 +217,13 @@
 #LossIssuerCombinedChartContainer, 
 #LossIssuerCombinedESChartContainer {
   width: 100%; /* Full width of the parent container */
-  max-width: 1200px; /* Set a maximum width to prevent it from stretching too much */
-  height: 600px; /* Fixed height for the container */
+  max-width: 800px; /* Set a maximum width to prevent it from stretching too much */
+  height: 400px; /* Fixed height for the container */
   display: flex; /* Flex to ensure content fills the space */
   justify-content: center; /* Center the canvas horizontally */
   align-items: center; /* Center the canvas vertically */
   margin: 0 auto; /* Center the container itself */
-  margin-bottom: 40px; /* Adds space between the two chart containers */
+  margin-bottom: 100px; /* Adds space between the two chart containers */
 }
 
 #LossIssuerCombinedChartContainer {
@@ -240,3 +249,78 @@ p {
   max-width: 100%;
   height: 400px;
 } */
+
+.chart-section {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 2px solid #ccc;
+}
+
+.section-header {
+  font-size: 20px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.summary-charts-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;                   /* Consistent spacing between charts */
+  justify-content: center;     /* Center charts in their section */
+}
+
+.chart-block {
+  width: 300px;        /* fixes the block size */
+  height: 330px;       /* enough for heading + pie + legend */
+  overflow: hidden;    /* prevent overflow from legend */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  margin: 10px;
+}
+.pieChart {
+  width: 100%;         /* fill parent .chart-block width */
+  height: 250px;       /* fixed height for consistency */
+}
+
+
+
+
+.yield-chart-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.euswapYieldChartContainer {
+  width: 640px;
+}
+.subsection {
+  margin-top: 30px;
+}
+
+.subsection-title {
+  text-align: center;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+#prodSummaryChartContainer {
+  max-width: 700px; /* Begrenze die Breite */
+  margin: 0 auto;   /* zentriere das Diagramm */
+}
+
+#prodSummaryChart {
+  width: 100% !important;  /* passt sich dem Container an */
+  height: auto !important;
+}
+
+
+
+
+
+
+
+

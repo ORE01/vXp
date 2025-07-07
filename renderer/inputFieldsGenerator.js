@@ -8,10 +8,11 @@ const tableHandlers = {
   ProdAll: handleProdAllFields,
   Deals: handleDealsFields,
   CSParameter: handleCSParameterFields,
+  //MVarInput_2: handleMVarInput,
 };
 
 // ISSUER-Feld PROBLEM:
-export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter','Portfolios']);
+export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter','Portfolios', 'MVaRInput_2']);
 
 // ISSUER-Feld PROBLEM:
 export function shouldSkipTable(tableName) {
@@ -241,28 +242,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           return false; // Return false if no case matches
       }
     }   
-    // function handleCSParameterFields(fieldName, rowData, formRow, label) {
-    //   console.log('rowData', rowData);
-    //   switch (true) {
-    //     case ['a', 'b', 'c', 'd', 'Shift_%', 'Shift_bp'].includes(fieldName): {
-    //       // Use the value from rowData or default to an empty string if undefined
-    //       const input = document.createElement('input');
-    //       input.type = 'text';
-    //       input.value = rowData[fieldName] ?? ''; // Retain the value from rowData
-    //       input.setAttribute('data-field', fieldName);
-    //       input.classList.add('input-field');
-    //       input.disabled = true; // Make the input uneditable
-    
-    //       formRow.appendChild(label);
-    //       formRow.appendChild(input);
-    //       return true;
-    //     }
-    
-    
-    //     default:
-    //       return false; // Return false if no case matches
-    //   }
-    // }
+
     function handleCSParameterFields(fieldName, rowData, formRow, label) {
       console.log('rowData', rowData);
       switch (true) {
@@ -284,6 +264,8 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           return false;
       }
     }
+
+    //function handleMVarInput()
     
     
 

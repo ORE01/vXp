@@ -15,7 +15,7 @@ let columnsToShow = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponTy
 const portDataMap = {}; // Speichert Daten pro Container
 
 export function handlePortAggData(receivedData, index, port_name) {
-  //console.log('portData:', receivedData);
+  console.log('portData:', receivedData);
   const elementId = `portDataContainer${index}`;
   const aggContainerId = `portAggDataContainer${index}`;
 
@@ -25,6 +25,7 @@ export function handlePortAggData(receivedData, index, port_name) {
   }
 
   const portData = filterColumnsInData(receivedData, columns);
+  console.log('portData:', portData);
 
   let PortValue = 0;
   let PortNotional = 0;
@@ -59,16 +60,23 @@ export function handlePortAggData(receivedData, index, port_name) {
 
 
 
-  // in die AggContainer schreiben:
-  const portDataAggContainer = document.getElementById(aggContainerId);
-  if (portDataAggContainer) {
-    const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
-    const portDataHTML = processData(tableData, tableName);
-    portDataAggContainer.innerHTML = portDataHTML;
-  }
-  
-      // createComparisonCharts(portDataMap);
+// in die AggContainer schreiben:
+const portDataAggContainer = document.getElementById(aggContainerId);
+if (portDataAggContainer) {
+  const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
+  console.log('🔎 tableData:', tableData);
+
+  const portDataHTML = processData(tableData, tableName);
+  console.log('🛠 Generated HTML from processData:', portDataHTML);
+
+  portDataAggContainer.innerHTML = portDataHTML;
+  console.log('✅ Container innerHTML after insert:', portDataAggContainer.innerHTML);
 }
+
+}
+
+
+
     function mapPortDataToTableRows(data) {
       return [
         { label: 'Notional', value: data.formPortNotional },
@@ -103,7 +111,7 @@ export function handlePortProdData(receivedData, index, port_name) {
   
   if (portDataContainer && portData) {
     let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
-      //console.log("filteredColumnsPortData:", filteredColumnsPortData);
+      console.log("filteredColumnsPortData:", filteredColumnsPortData);
 
       appState.setFilteredPortData(filteredColumnsPortData);// !!!
 

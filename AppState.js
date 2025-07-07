@@ -15,11 +15,16 @@ import { createComparisonCharts } from './COMP.js';
 import { formatPercentage} from './utils/format.js';
 import { filterColumnsInData } from './renderer/dataProcessor.js';
 import { handleLiquidityData } from './liquidity.js';
+import { handleSummaryRMData } from './SummaryMarketRM.js';
+import { handleSummaryNotionalData } from './SummaryNotional.js';
+import { handleSummaryYieldData } from './SummaryYield.js';
 
 import { appState } from './renderer.js';
 
 export class AppState {
     constructor() {
+        this.euswData= [];
+        this.tblTSData = [];
         this.availableDealsTablesData = {}; 
         this.availableDealsTablesArray = [];
         
@@ -47,7 +52,10 @@ export class AppState {
         this.allDealsData = [];
 
         this.rankData = null;
+
+        this.mvarInputData = null;
         this.mvarData = null,
+        this.mvarDistData = [],
         this.mlModel = null; 
 
         this.CSSzenarioData = 'default';
@@ -379,99 +387,107 @@ export class AppState {
 
 // PORFOLIOS:
     handlePortTable(data, index) {
-    //index = 1;
-    // console.log("Port table data:", index, data);
-    // console.trace("handlePortTable:");
-    
-    if (!Array.isArray(data) || data.length === 0) {
-        //console.warn(`⚠️ Kein gültiges Portfoliodaten-Array empfangen für Index ${index}:`, data);
-        return;
-    }
-    
-    const port_name = this.getSelectedPortTableName();
-    const filteredData = data.filter(item => item.port_name === port_name);
-    
-    if (filteredData.length === 0) {
-        //console.warn(`⚠️ Keine Daten für Portfolio "${port_name}" bei Index ${index} gefunden.`);
-        return;
-    }
-    
-    // 1️⃣ Portfolios: Standart-Auswertung
-    handlePortAggData(filteredData, index, port_name);
-    handlePortProdData(filteredData, index, port_name);
-    handleLiquidityData(filteredData, index, port_name)
-    
-    // 2️⃣ MVaR-Daten
-    const mvarData = this.getAllMvarData();
-    const filteredMvarData = mvarData.filter(item => item.port_name === port_name);
-    // console.log("mvarData:", mvarData, index);
-    handleMVaRData(mvarData, index); 
-    
-    // 3️⃣ CVaR-Daten
-    const cvarData = this.getAllCvarData();
-    const filteredCvarData = cvarData.filter(item => item.port_name === port_name);
-    handleCVaRData(cvarData, index);
-    
-    // 4️⃣ Kombinieren der Daten in portDataMap
-    const elementId = `portDataContainer${index}`;
-    const portfolioData = this.getPortAggData(elementId) || {};
-    
-    // 4a. MVaR 
-    if (filteredMvarData?.length > 0) {
-        const mvar = filteredMvarData[0];
-        this.setPortAggData(elementId, {
-        formVaR_T_rel: formatPercentage(mvar.VaR_T_rel),
-        formVaR_IR_rel: formatPercentage(mvar.VaR_IR_rel),
-        formVaR_CS_rel: formatPercentage(mvar.VaR_CS_rel),
-        });
-    }
-    
-    // 4b. CVaR 
-    if (filteredCvarData.length > 0) {
-        const cvarValues = {};
-        filteredCvarData.forEach(entry => {
-        if (!entry.pd_flag || !entry.VaR_rel) return;
-        const key = `formVaR_${entry.pd_flag.toLowerCase()}_rel`;
-        cvarValues[key] = formatPercentage(entry.VaR_rel);
-        });
-        this.setPortAggData(elementId, cvarValues);
-    }
-    
-    // 5️⃣ Vergleichscharts aktualisieren
-    createComparisonCharts(this.portDataMap, false);
-    
-    // 6️⃣ SPEZIAL-FALL: Originaldaten für Vergleich in Container 3
-    const OriPortData = this.getAllPortfolioData();
-    const filteredOriginalData = OriPortData.filter(item => item.port_name === port_name);
-    handlePortAggData(filteredOriginalData, 3, port_name);
-    
-    // 7️⃣ IRSens aktualisieren
-    const IRSensTable = this.handleIRSensData(filteredOriginalData);
-    const IRSensDataContainer = document.getElementById('IRSensDataContainer');
-    if (IRSensDataContainer) {
-        IRSensDataContainer.innerHTML = '';
-        IRSensDataContainer.appendChild(IRSensTable);
-    }
-    
-    // 8️⃣ CSSens aktualisieren
-    const CSSensTable = this.handleCSSensData(filteredOriginalData);
-    const CSSensDataContainer = document.getElementById('CSSensDataContainer');
-    if (CSSensDataContainer) {
-        CSSensDataContainer.innerHTML = '';
-        CSSensDataContainer.appendChild(CSSensTable);
-    }
+        //index = 1;
+        // console.log("Port table data:", index, data);
+        //console.trace("handlePortTable:");
+        
+        if (!Array.isArray(data) || data.length === 0) {
+            //console.warn(`⚠️ Kein gültiges Portfoliodaten-Array empfangen für Index ${index}:`, data);
+            return;
+        }
 
-    // 9 EAD aktualisieren
+        const port_name = this.getSelectedPortTableName();
+        const filteredData = data.filter(item => item.port_name === port_name);
+        
+        if (filteredData.length === 0) {
+            //console.warn(`⚠️ Keine Daten für Portfolio "${port_name}" bei Index ${index} gefunden.`);
+            return;
+        }
+        
+        // 1️⃣ Portfolios: Standart-Auswertung
+        handlePortAggData(filteredData, index, port_name);
+        console.log("handlePortAggData:", filteredData, index, port_name);
+        handlePortProdData(filteredData, index, port_name);
+        handleLiquidityData(filteredData, index, port_name);
+        
+        handleSummaryNotionalData(filteredData, index, port_name);
+        handleSummaryYieldData(filteredData, index, port_name);
 
-    const EADData = appState.getAllEADData();
-    // console.log('📥 EADData:', EADData);
-    appState.handleEADData(EADData);
+        handleSummaryRMData(filteredData, index, port_name);
 
-    // 10 EAD aktualisieren
+        
+        // 2️⃣ MVaR-Daten
+        const mvarData = this.getAllMvarData();
+        const filteredMvarData = mvarData.filter(item => item.port_name === port_name);
+        // console.log("mvarData:", mvarData, index);
+        handleMVaRData(mvarData, index); 
+        
+        // 3️⃣ CVaR-Daten
+        const cvarData = this.getAllCvarData();
+        const filteredCvarData = cvarData.filter(item => item.port_name === port_name);
+        handleCVaRData(cvarData, index);
+        
+        // 4️⃣ Kombinieren der Daten in portDataMap
+        const elementId = `portDataContainer${index}`;
+        const portfolioData = this.getPortAggData(elementId) || {};
+        console.log("portfolioData:", portfolioData);
+        
+        // 4a. MVaR 
+        if (filteredMvarData?.length > 0) {
+            const mvar = filteredMvarData[0];
+            this.setPortAggData(elementId, {
+            formVaR_T_rel: formatPercentage(mvar.VaR_T_rel),
+            formVaR_IR_rel: formatPercentage(mvar.VaR_IR_rel),
+            formVaR_CS_rel: formatPercentage(mvar.VaR_CS_rel),
+            });
+        }
+        
+        // 4b. CVaR 
+        if (filteredCvarData.length > 0) {
+            const cvarValues = {};
+            filteredCvarData.forEach(entry => {
+            if (!entry.pd_flag || !entry.VaR_rel) return;
+            const key = `formVaR_${entry.pd_flag.toLowerCase()}_rel`;
+            cvarValues[key] = formatPercentage(entry.VaR_rel);
+            });
+            this.setPortAggData(elementId, cvarValues);
+        }
+        
+        // 5️⃣ Vergleichscharts aktualisieren
+        createComparisonCharts(this.portDataMap, false);
+        
+        // 6️⃣ SPEZIAL-FALL: Originaldaten für Vergleich in Container 3
+        const OriPortData = this.getAllPortfolioData();
+        const filteredOriginalData = OriPortData.filter(item => item.port_name === port_name);
+        handlePortAggData(filteredOriginalData, 3, port_name);
+        
+        // 7️⃣ IRSens aktualisieren
+        const IRSensTable = this.handleIRSensData(filteredOriginalData);
+        const IRSensDataContainer = document.getElementById('IRSensDataContainer');
+        if (IRSensDataContainer) {
+            IRSensDataContainer.innerHTML = '';
+            IRSensDataContainer.appendChild(IRSensTable);
+        }
+        
+        // 8️⃣ CSSens aktualisieren
+        const CSSensTable = this.handleCSSensData(filteredOriginalData);
+        const CSSensDataContainer = document.getElementById('CSSensDataContainer');
+        if (CSSensDataContainer) {
+            CSSensDataContainer.innerHTML = '';
+            CSSensDataContainer.appendChild(CSSensTable);
+        }
 
-    const LossData = appState.getAllLossData();
-    // console.log('📥 LossData:', LossData);
-    handleLossIssuerMainData(LossData);
+        // 9 EAD aktualisieren
+
+        const EADData = appState.getAllEADData();
+        // console.log('📥 EADData:', EADData);
+        appState.handleEADData(EADData);
+
+        // 10 EAD aktualisieren
+
+        const LossData = appState.getAllLossData();
+        // console.log('📥 LossData:', LossData);
+        handleLossIssuerMainData(LossData);
 
     } 
     
@@ -483,6 +499,33 @@ export class AppState {
         }
         return true;
     }
+
+    // ✅ Setter for EUSW data
+    setEUSWData(data) {
+        this.euswData = data;
+    }
+
+    // ✅ Getter for EUSW data
+    getEUSWData() {
+        return this.euswData;
+    }
+
+    // ✅ Setter for EUSW data
+    setTblTSData(data) {
+        this.tblTSData = data;
+    }
+
+    // ✅ Getter for EUSW data
+    getTblTSData() {
+        return this.tblTSData;
+    }
+
+
+
+
+
+
+
     // Method to update active table
     setActiveTable(tableType) {
         this.currentActiveTable = tableType;
@@ -592,7 +635,15 @@ export class AppState {
     }
       
     
-
+    setMvarInputData(data) {
+        //console.log('setMvarInputData:', data)
+        this.mvarInputData = data;
+        // this.notifyObservers(); 
+    }
+    getMvarInputData() {
+        return this.mvarInputData;
+        
+    }
     setMvarData(data) {
         //console.log('setMvarData:', data)
         this.mvarData = data;
@@ -602,6 +653,17 @@ export class AppState {
         return this.mvarData;
         
     }
+
+    setMvarDistData(data) {
+        //console.log('setMvarData:', data)
+        this.mvarDistData = data;
+        // this.notifyObservers(); 
+    }
+    getMvarDistData() {
+        return this.mvarDistData;
+        
+    }
+
     setCvarData(data) {
         this.cvarData = data;
         //console.log('setCvarData:', data)
@@ -793,22 +855,31 @@ export class AppState {
     }
 
     updatePortDataTable(receivedData, index) {
-        console.log('📌 updatePortDataTable:', receivedData);
+        //console.log('📌 updatePortDataTable:', receivedData);
         this.setPortData(receivedData); // ✅ speichert die Daten (global verfügbar)
         this.applyFiltersAndUpdateDropdowns('port');        
-        this.handlePortTable(receivedData, index); // 🖼️ zeigt Daten im Container an
+        //this.handlePortTable(receivedData, index); // 🖼️ zeigt Daten im Container an
       }
       
     updateMvarDataTable(receivedData, index) {
-        console.log('📌 updateMvarDataTable', receivedData);
+        // console.log('📌 updateMvarDataTable', receivedData);
         // console.trace("🔍 updateMvarDataTable triggered from:");
     
         this.setMvarData(receivedData);
         this.setAllMvarData(receivedData);
         const mvarData = this.getAllMvarData();
         
-        // console.log("mvarData:", mvarData, index);
+        console.log("mvarData:", mvarData, index);
         handleMVaRData(mvarData, index); 
+
+    }
+
+        updateMvarDistData(receivedData, index, port_name ) {
+        console.log('📌 updateMvarDistData', receivedData);
+        // console.trace("🔍 updateMvarDataTable triggered from:");
+    
+        this.setMvarDistData(receivedData);
+        handleSummaryRMData(receivedData, 0, port_name);
 
     }
 
@@ -1236,7 +1307,7 @@ export class AppState {
     
     
     fetchAndHandlePortData(tableName, dropdownId) {
-        // console.log(`🔍 Fetching Portfolio Data from appState for: ${tableName}`);
+        console.log(`🔍 Fetching Portfolio Data from appState for: ${tableName}`);
     
         // ✅ Daten direkt aus `appState` holen
         const allPortfolios = appState.getAllPortfolioData();
@@ -1265,7 +1336,7 @@ export class AppState {
             default: containerId = 'portDataContainer0';
         }
     
-        //console.log(`📌 Aktualisiere Container: ${containerId} mit Daten für: ${tableName}`);
+        console.log(`📌 Aktualisiere Container: ${containerId} mit Daten für: ${tableName}`);
     
         // 🔹 Aktives Element setzen & Daten aktualisieren
         this.setActiveElementId(containerId);
