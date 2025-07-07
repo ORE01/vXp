@@ -23,11 +23,20 @@ export function handleLiquidityData(filteredData, index, port_name) {
   }, 0);
 
   // 3) Emittenten-Tabelle
-  const issuerContainer = document.getElementById('issuerDataContainer');
+  const issuerContainer = document.getElementById('issuerDataContainerLiqu');
   if (issuerContainer) {
     const issuers = aggregateByIssuer(filteredData);
     issuerContainer.innerHTML = generateIssuerTable(issuers);
   }
+
+// document.addEventListener('DOMContentLoaded', () => {
+//   const issuerContainer = document.getElementById('issuerDataContainerLiqu');
+//   if (issuerContainer) {
+//     const issuers = aggregateByIssuer(filteredData);
+//     issuerContainer.innerHTML = generateIssuerTable(issuers);
+//   }
+// });
+
 
   // 4) Filter-Reset
   const resetBtn = document.getElementById('liquResetFiltersButton');
@@ -175,3 +184,6 @@ function generatePivotTable(data) {
   html += `</tbody></table>`;
   return html;
 }
+
+
+// export { issuerDataContainerLiqu };

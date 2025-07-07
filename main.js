@@ -124,11 +124,56 @@ ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
 });
 
 
-ipcMain.handle('start-offer-import', async () => {
+// ipcMain.handle('start-offer-import', async () => {
+//   try {
+//     const { canceled, filePaths } = await dialog.showOpenDialog({
+//       title: 'Excel-Datei für Portfolio auswählen',
+//       filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls', 'xlsm'] }],
+//       properties: ['openFile']
+//     });
+
+//     if (canceled || filePaths.length === 0) {
+//       return { success: false, error: 'Keine Datei gewählt.' };
+//     }
+
+//     const filePath = filePaths[0];
+//     const fileName = path.basename(filePath, path.extname(filePath)); // z. B. "myportfolio"
+//     const workbook = XLSX.readFile(filePath);
+//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
+//     const rows = XLSX.utils.sheet_to_json(sheet);
+
+//     if (rows.length === 0) {
+//       return { success: false, error: 'Excel-Datei enthält keine Daten.' };
+//     }
+
+//     // Tabelle erstellen und Daten speichern
+//     await createTableFromRows(fileName, rows); // ← eigene Funktion, siehe unten
+
+//     // Spalten von ProdAll & der neuen Tabelle holen
+//     const prodAllColumns = await getTableColumns('ProdAll');
+//     const tempTableColumns = await getTableColumns(fileName);
+
+//     return {
+//       success: true,
+//       tempTableName: fileName,
+//       prodAllColumns,
+//       tempTableColumns
+//     };
+//   } catch (err) {
+//     return { success: false, error: err.message };
+//   }
+// });
+
+
+
+// Temporäre Tabelle anlegen für Spaltenvergleich
+
+// 1. Schritt: Datei auswählen und Sheetnamen zurückgeben
+ipcMain.handle('select-excel-file', async () => {
   try {
     const { canceled, filePaths } = await dialog.showOpenDialog({
-      title: 'Excel-Datei für Portfolio auswählen',
-      filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls'] }],
+      title: 'Excel-Datei auswählen',
+      filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls', 'xlsm'] }],
       properties: ['openFile']
     });
 
@@ -137,26 +182,45 @@ ipcMain.handle('start-offer-import', async () => {
     }
 
     const filePath = filePaths[0];
-    const fileName = path.basename(filePath, path.extname(filePath)); // z. B. "myportfolio"
     const workbook = XLSX.readFile(filePath);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const sheetNames = workbook.SheetNames; // Alle Tabellenblattnamen
+
+    return {
+      success: true,
+      filePath,
+      sheetNames
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// 2. Schritt: konkretes Sheet verarbeiten und Tabelle erstellen
+ipcMain.handle('import-excel-offer-sheet', async (event, { filePath, sheetName }) => {
+  try {
+    const fileName = path.basename(filePath, path.extname(filePath));
+    const workbook = XLSX.readFile(filePath);
+
+    if (!workbook.Sheets[sheetName]) {
+      return { success: false, error: 'Ausgewähltes Tabellenblatt existiert nicht.' };
+    }
+
+    const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet);
 
     if (rows.length === 0) {
-      return { success: false, error: 'Excel-Datei enthält keine Daten.' };
+      return { success: false, error: 'Das Tabellenblatt enthält keine Daten.' };
     }
 
-    // Tabelle erstellen und Daten speichern
-    await createTableFromRows(fileName, rows); // ← eigene Funktion, siehe unten
+    await createTableFromRows(fileName, rows);
 
-    // Spalten von DealsMain & der neuen Tabelle holen
-    const dealsMainColumns = await getTableColumns('DealsMain');
+    const prodAllColumns = await getTableColumns('ProdAll');
     const tempTableColumns = await getTableColumns(fileName);
 
     return {
       success: true,
       tempTableName: fileName,
-      dealsMainColumns,
+      prodAllColumns,
       tempTableColumns
     };
   } catch (err) {
@@ -164,7 +228,7 @@ ipcMain.handle('start-offer-import', async () => {
   }
 });
 
-// Temporäre Tabelle anlegen für Spaltenvergleich
+
 async function createTableFromRows(tableName, rows) {
   const sample = rows[0];
   const columns = Object.keys(sample);

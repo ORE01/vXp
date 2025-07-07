@@ -1,18 +1,61 @@
+// Funktion ohne Auswahl Tabellenblatt
+// export async function startOfferImport() {
+//   try {
+//     const result = await window.api.invoke('start-offer-import');
+
+//     if (!result.success) {
+//       alert("❌ Fehler beim Import: " + result.error);
+//       return;
+//     }
+
+//     const { tempTableName, prodAllColumns, tempTableColumns } = result;
+
+//     alert(`✅ Datei erfolgreich geladen: "${tempTableName}".\nBitte Spalten zuordnen.`);
+
+//     // Öffne Matching-UI (als nächster Schritt)
+//     showMatchingUI(prodAllColumns, tempTableColumns, tempTableName);
+
+//   } catch (err) {
+//     console.error("❌ Unerwarteter Fehler beim Import:", err);
+//     alert("❌ Unerwarteter Fehler beim Import: " + err.message);
+//   }
+// }
+
 export async function startOfferImport() {
   try {
-    const result = await window.api.invoke('start-offer-import');
+    // 1. Datei auswählen & Sheetnamen abrufen
+    const fileResult = await window.api.invoke('select-excel-file');
 
-    if (!result.success) {
-      alert("❌ Fehler beim Import: " + result.error);
+    if (!fileResult.success) {
+      alert("❌ Fehler beim Öffnen der Datei: " + fileResult.error);
       return;
     }
 
-    const { tempTableName, dealsMainColumns, tempTableColumns } = result;
+    const { filePath, sheetNames } = fileResult;
+
+    // 2. Sheet-Auswahl anzeigen
+    const selectedSheet = await showSheetSelectionDialog(sheetNames);
+
+    if (!selectedSheet) {
+      alert("⚠️ Kein Tabellenblatt gewählt.");
+      return;
+    }
+
+    // 3. Gewähltes Sheet importieren
+    const importResult = await window.api.invoke('import-excel-offer-sheet', {
+      filePath,
+      sheetName: selectedSheet
+    });
+
+    if (!importResult.success) {
+      alert("❌ Fehler beim Import: " + importResult.error);
+      return;
+    }
+
+    const { tempTableName, prodAllColumns, tempTableColumns } = importResult;
 
     alert(`✅ Datei erfolgreich geladen: "${tempTableName}".\nBitte Spalten zuordnen.`);
-
-    // Öffne Matching-UI (als nächster Schritt)
-    showMatchingUI(dealsMainColumns, tempTableColumns, tempTableName);
+    showMatchingUI(prodAllColumns, tempTableColumns, tempTableName);
 
   } catch (err) {
     console.error("❌ Unerwarteter Fehler beim Import:", err);
@@ -20,11 +63,79 @@ export async function startOfferImport() {
   }
 }
 
-function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
+async function showSheetSelectionDialog(sheetNames) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("div");
+    dialog.id = "sheetDialog";
+    dialog.style.position = "fixed";
+    dialog.style.top = "50%";
+    dialog.style.left = "50%";
+    dialog.style.transform = "translate(-50%, -50%)";
+    dialog.style.backgroundColor = "#fff";
+    dialog.style.padding = "20px";
+    dialog.style.border = "1px solid #ccc";
+    dialog.style.zIndex = "10000";
+    dialog.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+    dialog.style.minWidth = "300px";
+    dialog.style.textAlign = "center";
+    dialog.style.borderRadius = "8px";
+
+    const label = document.createElement("label");
+    label.textContent = "Tabellenblatt auswählen:";
+    label.style.display = "block";
+    label.style.marginBottom = "10px";
+    label.style.fontWeight = "bold";
+    dialog.appendChild(label);
+
+    const select = document.createElement("select");
+    select.style.padding = "5px";
+    select.style.width = "100%";
+    sheetNames.forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.appendChild(option);
+    });
+    dialog.appendChild(select);
+
+    const buttonContainer = document.createElement("div");
+    buttonContainer.style.marginTop = "15px";
+    buttonContainer.style.display = "flex";
+    buttonContainer.style.justifyContent = "space-between";
+
+    const okBtn = document.createElement("button");
+    okBtn.textContent = "OK";
+    okBtn.style.padding = "6px 12px";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Abbrechen";
+    cancelBtn.style.padding = "6px 12px";
+
+    buttonContainer.appendChild(okBtn);
+    buttonContainer.appendChild(cancelBtn);
+    dialog.appendChild(buttonContainer);
+
+    document.body.appendChild(dialog);
+
+    okBtn.addEventListener("click", () => {
+      const selected = select.value;
+      document.body.removeChild(dialog);
+      resolve(selected);
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      document.body.removeChild(dialog);
+      resolve(null);
+    });
+  });
+}
+
+
+function showMatchingUI(prodAllCols, tempTableCols, tempTableName) {
   const container = document.getElementById("matchingContainer");
   container.innerHTML = ""; // vorher leeren
 
-  const usedDealsMainCols = new Set(); // verfolgt bereits genutzte Zuordnungen
+  const useprodAllCols = new Set(); // verfolgt bereits genutzte Zuordnungen
   const dropdowns = []; // Referenz auf alle Dropdowns
 
   // Erzeuge für jede Spalte der externen Tabelle eine Zeile mit Dropdown
@@ -47,7 +158,7 @@ function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
     select.appendChild(defaultOption);
 
     // Initiale Optionsliste
-    dealsMainCols.forEach((dealCol) => {
+    prodAllCols.forEach((dealCol) => {
       const option = document.createElement("option");
       option.value = dealCol;
       option.textContent = dealCol;
@@ -57,9 +168,9 @@ function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
     // Beobachte Auswahländerungen
     select.addEventListener("change", () => {
       // Update: verwendete Spaltenliste neu berechnen
-      usedDealsMainCols.clear();
+      usedProdAllCols.clear();
       dropdowns.forEach((d) => {
-        if (d.value) usedDealsMainCols.add(d.value);
+        if (d.value) usedProdAllCols.add(d.value);
       });
 
       // Alle Dropdowns neu rendern (außer das aktuelle)
@@ -73,9 +184,9 @@ function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
         optionNone.textContent = "Nicht zuordnen";
         d.appendChild(optionNone);
 
-        dealsMainCols.forEach((dealCol) => {
+        prodAllCols.forEach((dealCol) => {
           // Wenn Spalte schon zugeordnet, dann nur, wenn es die eigene ist
-          if (!usedDealsMainCols.has(dealCol) || dealCol === currentValue) {
+          if (!usedProdAllCols.has(dealCol) || dealCol === currentValue) {
             const option = document.createElement("option");
             option.value = dealCol;
             option.textContent = dealCol;
@@ -112,7 +223,7 @@ function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
 
     window.api.send("import-matched-columns", {
       sourceTable: tempTableName,
-      targetTable: "DealsMain",
+      targetTable: "ProdAll",
       columnMap,
       additionalFields: {
         port_name: tempTableName
