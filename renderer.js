@@ -7,6 +7,8 @@ import { handleProviderData } from './DATAProvider.js';
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
 import { handleLiquidityData } from './liquidity.js';
+import { handleSummaryRMData } from './SummaryMarketRM.js';
+
 
 
 import { tooltips } from './ToolTip.js';
@@ -240,6 +242,10 @@ function setupEventListeners() {
   // MVaR
   window.api.receive('MarketVaRData', handleAllMVaRData);
 
+  // MVaR_Distribution
+  //window.api.receive('MVaRMainDistData', handleMvarDistData);
+  window.api.receive('MVaRMainDistData', (data) => handleMvarDistData(data));
+
   // EAD
   window.api.receive('EADData', (data) => handleAllEADData(data));
 
@@ -436,7 +442,7 @@ function setupDropdowns() {
       dropdownId: `createdPortDropdown${num}`,
       getDataFunction: appState.getPortNameList,
       updateDataFunction: appState.updatePortDataTable,
-      //updateMvarDataFunction: appState.updateMvarDataTable,
+      updateMvarDistDataFunction: appState.updateMvarDistData,
       //updateCvarDataFunction: appState.updateCvarDataTable,
       setSelectedPortTableName: appState.setSelectedPortTableName,
       setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
@@ -491,7 +497,7 @@ function setupDropdowns() {
 function setupButtons() {
   document.getElementById('saveSelectionButton').addEventListener('click', handleSaveSelection);
   document.getElementById('deleteTableButton').addEventListener('click', handleDeleteSelection);
-  document.getElementById('inputMVaRSave-button').addEventListener('click', handleSaveClick, { once: true });
+  // document.getElementById('inputMVaRSave-button').addEventListener('click', handleSaveClick, { once: true });
   document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
   document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
@@ -531,10 +537,12 @@ function setupButtons() {
 
 
 
-  // PYTHON EXECUTION: Buttons
+  // PYTHON EXECUTION:
+  // Standard Buttons
   const projectButtons = [
     { buttonId: 'fairValueButton', projectName: 'py-fairValue' },
-    { buttonId: 'MVaRButton', projectName: 'py-MVaR' },
+    // { buttonId: 'MVaRButton', projectName: 'py-MVaR' },
+    // { buttonId: 'mvaRDistButton', projectName: 'py-MVaR' },
     { buttonId: 'CVaRButton', projectName: 'py-CVaR' },
     { buttonId: 'updateDataExcelButton', projectName: 'py-excel' },
     { buttonId: 'CSParButton', projectName: 'py-cspar' },
@@ -554,6 +562,26 @@ function setupButtons() {
       handleProjectButtonClick(button, projectName, extraParam)
     );
   });
+  // Special Buttons: mit Radio-Select (wird im dataProcessor.js dynamisch erzeugt!)
+    // MVaR-Buttons: Beide Buttons mit Szenario
+    ['mvaRDistButton'].forEach((buttonId) => {
+      const button = document.getElementById(buttonId);
+      if (button) {
+        button.addEventListener('click', (event) => {
+          const selectedRadio = document.querySelector('.scenario-radio:checked');
+          if (!selectedRadio) {
+            alert('Select a Timeperiode!');
+            return;
+          }
+          const selectedInterval = selectedRadio.getAttribute('data-interval');
+          console.log('✅ Selected scenario:', selectedInterval);
+
+          handleProjectButtonClick(event.target, 'py-MVaR', { selectedInterval });
+        });
+      }
+    });
+
+
 
 
   // CMS buttons
@@ -1016,22 +1044,26 @@ function setupButtons() {
                 window.api.send('fetch-table-data', 'Portfolios');
               }
         
-      //MVaR
       function handleMVaRProject(buttonElement, extraParam) {
         const selectedTableName = appState.getSelectedPortTableName();
-      
+
         if (!selectedTableName) {
           throw new Error('No table selected for MVaR processing.');
         }
-      
+
+        if (!extraParam.selectedInterval) {
+          throw new Error('No scenario selected. Bitte wähle ein Szenario mit dem Radio-Button aus.');
+        }
+
         const payload = {
           tableName: selectedTableName,
-          ...extraParam,
+          selectedInterval: extraParam.selectedInterval, // nur der Intervall-Name
         };
-      
-        //console.log('🚀 Sending payload for py-MVaR:', payload);
+
+        console.log('🚀 Sending payload for py-MVaR:', payload);
         window.api.send('start-py-MVaR', payload);
       }
+
           function handleMVaRComplete(data) {
             if (data.projectName === 'py-MVaR') {
               appState.setActiveTable('port');
@@ -1039,30 +1071,66 @@ function setupButtons() {
               const port_name = appState.getSelectedPortTableName();
               //appState.fetchAndHandlePortData(port_name, 'portDataContainer0');
           
-              handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
-              fetchAndUpdateMVarData();
+              // handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
+              handleProjectResponse(document.getElementById('mvaRDistButton'), data.projectName, data);
+              fetchAndUpdateMVarData(port_name);
         
-              const mvarDara = appState.getAllMvarData();
-              handleMVaRData(mvarDara, 0);
+              const mvarData = appState.getAllMvarData();
+              handleMVaRData(mvarData, 0);
+
+
+              const mvarDistData = appState.getMvarDistData();
+              handleSummaryRMData(mvarDistData, 0, port_name);
             }
           }
-              function fetchAndUpdateMVarData() {
-                //console.log(`fetchAndUpdateMVarData`);
-                //window.api.send('fetch-table-data', 'MarketVaR'); 
-                window.api.receive('MarketVaRData', (receivedData) => {
-                    //console.log(`MVaRData:`, receivedData);
-                    if (!receivedData || receivedData.length === 0) {
-                        console.warn("⚠️ No new CVaR data received!");
-                        appState.updateMvarDataTable([]);  // Store empty array to avoid stale data
-                        return;
-                    }
-                    //appState.setAllMvarData(receivedData);
-                    appState.updateMvarDataTable(receivedData);
+              // function fetchAndUpdateMVarData() {
+              //   console.log(`fetchAndUpdateMVarData`);
+              //   //window.api.send('fetch-table-data', 'MarketVaR'); 
+              //   window.api.receive('MarketVaRData', (receivedData) => {
+              //       console.log(`MVaRData:`, receivedData);
+              //       if (!receivedData || receivedData.length === 0) {
+              //           console.warn("⚠️ No new CVaR data received!");
+              //           appState.updateMvarDataTable([]);  // Store empty array to avoid stale data
+              //           return;
+              //       }
+              //       //appState.setAllMvarData(receivedData);
+              //       appState.updateMvarDataTable(receivedData);
             
 
-                });
-                window.api.send('fetch-table-data', 'MarketVaR'); 
-              }
+              //   });
+              //   window.api.send('fetch-table-data', 'MarketVaR'); 
+              // }
+
+function fetchAndUpdateMVarData(port_name) {
+  console.log(`fetchAndUpdateMVarData`);
+
+  // ✅ Listen for MarketVaR data
+  window.api.receive('MarketVaRData', (receivedData) => {
+    console.log(`MVaRData:`, receivedData);
+    if (!receivedData || receivedData.length === 0) {
+      console.warn("⚠️ No new MarketVaR data received!");
+      appState.updateMvarDataTable([]); // Store empty array
+    } else {
+      appState.updateMvarDataTable(receivedData,);
+    }
+  });
+
+  // ✅ Listen for MarketVaRMainDist data
+  window.api.receive('MVaRMainDistData', (receivedData) => {
+    console.log(`MVaRMainDistData:`, receivedData);
+    if (!receivedData || receivedData.length === 0) {
+      console.warn("⚠️ No new MarketVaRMainDist data received!");
+      appState.updateMvarDistData([]); // Store empty array
+    } else {
+      appState.updateMvarDistData(receivedData, 0, port_name);
+    }
+  });
+
+  // ✅ Request both tables from the backend
+  window.api.send('fetch-table-data', 'MarketVaR');
+  window.api.send('fetch-table-data', 'MVaRMainDist');
+}
+
       //CVaR
       function handleCVaRProject(buttonElement, extraParam) {
         const port_name = appState.getSelectedPortTableName();
@@ -1445,7 +1513,8 @@ function setupButtons() {
   //py-Projects FINISH
   function handleProjectFinished(data) {
     const projectButtonMap = {
-      'py-MVaR': 'MVaRButton',
+      // 'py-MVaR': 'MVaRButton',
+      'py-MVaR': 'mvaRDistButton',
       'py-CVaR': 'CVaRButton',
       'py-excel': 'updateDataExcelButton',
       'py-historicData': 'updateHistoricDataButton',
@@ -1461,8 +1530,25 @@ function setupButtons() {
   }
       function handleProjectResponse(buttonElement, projectName, response) {
         //console.log('handleProjectResponse', projectName);
+
+      const projectLabels = {
+        'py-fairValue': 'Fair Value',
+        'py-MVaR': 'P/L Dist',
+        'py-CVaR': 'Credit VaR',
+        'py-ml': 'Machine Learning',
+        'py-excel': 'Excel Update',
+        'py-cspar': 'CS Parser',
+        'py-matchColumns': 'Match Columns',
+        'py-historicData': 'Historic Data',
+        'py-hist': 'Historical Update',
+        // add more mappings as needed
+      };
+
+
+
+
         buttonElement.disabled = false;
-        buttonElement.textContent = projectName;
+        buttonElement.textContent = projectLabels[projectName] || 'Unknown';
 
         if (response.success) {
           //console.log(`${projectName} executed successfully.`);
@@ -1533,6 +1619,7 @@ function setupButtons() {
   // }
   // IR
   function handleEUSWData(data) {
+    appState.setEUSWData(data);
     const selectedCurve = document.getElementById("ratesSelector").value;
 
     // Setze RATES auf die gewählte Spalte
@@ -1590,6 +1677,23 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
       portMVaRDataContainer.innerHTML = '';
       portMVaRDataContainer.appendChild(MVaRTable.cloneNode(true));
     }
+    // updateMVaRChart(receivedData);
+    //appState.updateMvarDataTable(receivedData);
+  }
+
+    // MVaR
+  function handleMvarDistData(receivedData) {
+      console.log('handleMvarDistData:', receivedData)
+    appState.setMvarDistData(receivedData); 
+
+    
+    // const MVaRTable = handleMVaRData(receivedData, 0);
+
+    // const portMVaRDataContainer = document.getElementById('portMVaRDataContainer');
+    // if (portMVaRDataContainer) {
+    //   portMVaRDataContainer.innerHTML = '';
+    //   portMVaRDataContainer.appendChild(MVaRTable.cloneNode(true));
+    // }
     // updateMVaRChart(receivedData);
     //appState.updateMvarDataTable(receivedData);
   }

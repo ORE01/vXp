@@ -23,7 +23,7 @@ export function handleLiquidityData(filteredData, index, port_name) {
   }, 0);
 
   // 3) Emittenten-Tabelle
-  const issuerContainer = document.getElementById('issuerDataContainer');
+  const issuerContainer = document.getElementById('liquDataContainer');
   if (issuerContainer) {
     const issuers = aggregateByIssuer(filteredData);
     issuerContainer.innerHTML = generateIssuerTable(issuers);

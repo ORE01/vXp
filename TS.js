@@ -10,6 +10,8 @@ const chartInstances = {};
 
 export function handleTSData(receivedData, modalIndex) {
   //console.log('receivedData', receivedData);
+  appState.setTblTSData(receivedData);
+
   const checkboxContainer = document.getElementById(`checkboxContainer_${modalIndex}`);
   const targetCheckboxContainer = document.getElementById('targetCheckboxContainer'); // Single target container
   const loadButton = document.getElementById(`loadButton_${modalIndex}`);

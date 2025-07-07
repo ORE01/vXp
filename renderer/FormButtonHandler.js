@@ -51,7 +51,7 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
     // console.log('selectedTableName', newSelectedTableName);
     const cleanTableName = newSelectedTableName;
     addNewRow(newRowData, cleanTableName);
-    // console.log(`New row added to ${cleanTableName} successfully.`);
+    console.log(`New row added to ${cleanTableName} successfully.`);
     closeModal();
     fetchAndUpdateDealsData(cleanTableName)
   } catch (error) {
@@ -61,7 +61,24 @@ export const addSaveButtonHandler = (form, modal, selectedTableName) => {
 };
 
 
-
+// function fetchAndUpdateDealsData(tableName) {
+//   console.log(`🚀 fetchAndUpdateDealsData called for table: ${tableName}`);
+//     window.api.receive(tableName + 'Data', (receivedData) => {
+//       // console.log("✅ Received fresh deals data from DB:", receivedData);
+//       appState.setAllDealsData(receivedData);
+//         const port_name = appState.getSelectedDealsTableName();
+//         const filteredData = receivedData.filter(entry => entry.port_name === port_name);
+//       appState.updateDropdownOptions({
+//         dropdownElementId: 'createdDealsDropdown',
+//         getDataFunction: appState.getDealsNameList.bind(appState),
+//         updateDataFunction: () => appState.updateDealsDataTable(filteredData),
+//         selectedTableName: port_name,
+//       });
+//       appState.setSelectedDealsTableName(port_name);
+//     });
+//   window.api.send('fetch-table-data', tableName);
+// }
+// die funktion ist nur für DealsMainData!!!!
 function fetchAndUpdateDealsData(tableName = 'DealsMainData') {
   // console.log(`🚀 fetchAndUpdateDealsData called for table: ${tableName}`);
     window.api.receive('DealsMainData', (receivedData) => {
@@ -79,6 +96,8 @@ function fetchAndUpdateDealsData(tableName = 'DealsMainData') {
     });
   window.api.send('fetch-table-data', 'DealsMain');
 }
+
+
 
 
 
@@ -149,7 +168,7 @@ function setupEditOperation(data, rowIndex, selectedTableName) {
 
 
 
-function gatherFormData(form) {
+export function gatherFormData(form) {
   // Log the form being passed to verify it's the expected one
   //console.log('Form passed to gatherFormData:', form);
 
@@ -174,7 +193,7 @@ function gatherFormData(form) {
 }
 
 
-function displayModal(actionType, rowIndex = null) {
+export function displayModal(actionType, rowIndex = null) {
   const modal = document.getElementById('modal');
   const modalContent = modal.querySelector('.modal-content');
   const modalTitle = modal.querySelector('h2');
@@ -248,7 +267,7 @@ function makeModalDraggable(modalContent) {
 
 
 
-function setupFormFields(actionType, data, rowIndex, selectedTableName) {
+export function setupFormFields(actionType, data, rowIndex, selectedTableName) {
   // console.log('actionType_if:', actionType, data, rowIndex, selectedTableName);
   const form = modal.querySelector(actionType === 'add' ? 'form' : '#editForm');
   form.innerHTML = ''; // Clear the form fields
@@ -476,6 +495,8 @@ function getUniqueIdentifier(newData, selectedTableName) {
             uniqueIdentifierColumn = 'ID'; 
           case 'EUSW': 
             uniqueIdentifierColumn = 'YEAR'; 
+          case 'MVaRInput_2': 
+            uniqueIdentifierColumn = 'id';   
             break;   
           // Add more cases as needed for different tables
           default:
@@ -497,7 +518,7 @@ function getUniqueIdentifier(newData, selectedTableName) {
 }
 
 
-function closeModal() {
+export function closeModal() {
   const modal = document.getElementById('modal');
   if (modal) {
     modal.style.display = 'none';
@@ -522,25 +543,45 @@ document.querySelectorAll('.deleteButton').forEach(button => {
   });
 });
 
+// export function addNewRow(newRowData, cleanTableName) {
+//   return new Promise((resolve, reject) => {
+//     // console.log('FBH in addNewRow newRowData:', newRowData);
+//     // console.log('FBH in addNewRow cleanTableName:', cleanTableName);
+    
+//     // Send the new row data and table name to the main.js process
+//     window.api.send('add-new-row', { newRowData, cleanTableName });
+//     newRowData = {}; 
+//     // Listen for the response from the main process
+//     window.api.receive('add-new-row-success', () => {
+//       newRowData = {}; 
+//       resolve(); // Resolve the promise after successful addition
+//     });
+//     // Handle any errors from the main process
+//     window.api.receive('add-new-row-error', (error) => {
+//       reject(new Error(error.message)); // Reject the promise with the error
+//     });
+//   });
+// }
+
 export function addNewRow(newRowData, cleanTableName) {
   return new Promise((resolve, reject) => {
-    // console.log('FBH in addNewRow newRowData:', newRowData);
-    // console.log('FBH in addNewRow cleanTableName:', cleanTableName);
-    
-    // Send the new row data and table name to the main.js process
+    // Sende den Insert-Request an main.js
     window.api.send('add-new-row', { newRowData, cleanTableName });
-    newRowData = {}; 
-    // Listen for the response from the main process
-    window.api.receive('add-new-row-success', () => {
-      newRowData = {}; 
-      resolve(); // Resolve the promise after successful addition
+
+    // Reagiere einmalig auf Erfolg
+    window.api.once('add-new-row-success', () => {
+      console.log('✅ Neue Zeile erfolgreich hinzugefügt.');
+      resolve();
     });
-    // Handle any errors from the main process
-    window.api.receive('add-new-row-error', (error) => {
-      reject(new Error(error.message)); // Reject the promise with the error
+
+    // Reagiere einmalig auf Fehler
+    window.api.once('add-new-row-error', (error) => {
+      console.error('❌ Fehler beim Hinzufügen:', error.message);
+      reject(new Error(error.message));
     });
   });
 }
+
 
 export function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
   // console.log('FBH saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
@@ -567,29 +608,6 @@ function displayErrorMessage(message) {
 }
 
 
-
-
-
-// function setupCouponAddOperation(data) {
-//   const modal = document.getElementById('modal');
-//   const form = document.getElementById('editForm');
-//   const modalTitle = modal.querySelector('h2');
-
-//   // Reset form and modal title
-//   form.innerHTML = '';
-//   modalTitle.textContent = 'Add New Coupon Row';
-
-//   // Create an empty template for a new row
-//   const emptyRow = { DATE: '', FIX_CF: '' };
-
-//   generateInputFields(emptyRow, form, [], 'ProdCouponSchedules');
-
-//   // Configure save button
-//   const saveButton = document.getElementById('saveButton');
-//   const newSaveButton = saveButton.cloneNode(true);
-//   saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-//   newSaveButton.addEventListener('click', () => addSaveButtonHandler(form, modal, 'ProdCouponSchedules'));
-// }
 
 function setupCouponEditOperation(rowData) {
   if (!rowData) {

@@ -11,7 +11,7 @@ let filteredIssuerData;
 
 
 export async function handleIssuerData(receivedData, appState) {
-  //console.log('Issuer Data:', receivedData);
+  console.log('Issuer Data:', receivedData);
 
   const issuerDataContainer = document.getElementById('issuerDataContainer');
   issuerData = receivedData;

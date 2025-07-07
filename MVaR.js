@@ -1,60 +1,173 @@
+import processData from './renderer/dataProcessor.js';
 import createBarChart from './charts/BarChart.js';
 import { appState } from './renderer.js';
 import { formatNumber, formatNumberWithCommas } from './utils/format.js';
+import { handleFormAction, setupFormFields , saveChanges, displayModal, gatherFormData,addNewRow, closeModal} from './renderer/FormButtonHandler.js';
 
 let MVaRChart;
 //INPUT!
+
+// export function handleMVarInputData(receivedData) {
+//   function createTable(data) {
+//     const table = document.createElement('table');
+//     const headers = Object.keys(data[0]);
+
+//     const headerRow = document.createElement('tr');
+//     headers.forEach((header) => {
+//       const th = document.createElement('th');
+//       th.textContent = header;
+//       headerRow.appendChild(th);
+//     });
+//     table.appendChild(headerRow);
+
+//     data.forEach((row) => {
+//       const tableRow = document.createElement('tr');
+//       headers.forEach((header) => {
+//         const cell = document.createElement('td');
+//         cell.textContent = row[header];
+//         cell.setAttribute('contentEditable', 'true');
+//         tableRow.appendChild(cell);
+//       });
+//       table.appendChild(tableRow);
+//     });
+
+//     return table;
+//   }
+
+//   const container = document.getElementById('inputMVaR-container');
+//   while (container.firstChild) container.removeChild(container.firstChild);
+//   const table = createTable(receivedData);
+//   container.appendChild(table);
+
+//   appState.setMvarInputData(receivedData);
+
+//   const mvarAddButton = document.getElementById('mvarAddButton');
+//   if (mvarAddButton) {
+//     mvarAddButton.addEventListener('click', (event) => {
+//       event.preventDefault();
+//       const tableName = 'MVaRInput_2';
+//       const actionType = 'add';
+
+//       displayModal(actionType, null); // öffnet Modal
+
+//       const form = document.getElementById('editForm');
+//       if (!form) {
+//         console.error("❌ Das Formular-Element (#editForm) wurde nicht gefunden!");
+//         return;
+//       }
+
+//       setupFormFields(actionType, receivedData, null, tableName);
+
+//       // Save-Button: NUR HIER gatherFormData & addNewRow
+//       const saveButton = document.getElementById('saveButton');
+//       const saveClone = saveButton.cloneNode(true);
+//       saveButton.parentNode.replaceChild(saveClone, saveButton);
+
+//       saveClone.addEventListener('click', () => {
+//         const newRowData = gatherFormData(form);
+//         addNewRow(newRowData, tableName)
+//           .then(() => {
+//             console.log(`✅ New row added to ${tableName} successfully.`);
+//             closeModal();
+//             fetchAndUpdateMVarDataInputData();
+//           })
+//           .catch((error) => {
+//             console.error(`❌ Fehler beim Hinzufügen: ${error.message}`);
+//           });
+//       });
+//     });
+//   }
+
+//   const mvarEditButtons = document.querySelectorAll('#inputMVaR-container .edit-button');
+//   mvarEditButtons.forEach((button) => {
+//     button.addEventListener('click', (event) => {
+//       event.stopPropagation();
+//       const actionType = 'edit';
+//       const rowIndex = parseInt(button.getAttribute('data-row'), 10);
+//       handleFormAction(event, appState.mvarInputData, rowIndex, 'MVaRInput_2', actionType);
+//     });
+//   });
+
+
+// }
+
 export function handleMVarInputData(receivedData) {
-  // console.log('MVaR.js, receivedData:', receivedData);
-  // Define a function to create an HTML table from the data
-  function createTable(data) {
-    const table = document.createElement('table');
-    const headers = Object.keys(data[0]);
+  const container = document.getElementById('inputMVaR-container');
+  while (container.firstChild) container.removeChild(container.firstChild);
 
-    // Create the table headers
-    const headerRow = document.createElement('tr');
-    headers.forEach((header) => {
-      const th = document.createElement('th');
-      th.textContent = header;
-      headerRow.appendChild(th);
-    });
-    table.appendChild(headerRow);
+  // ✅ Nutze processData, um die Tabelle samt Edit-Spalte zu generieren
+  const htmlTable = processData(receivedData, 'MVaRInput_2');
+  container.innerHTML = htmlTable;
 
-    // Populate the table with data
-    data.forEach((row) => {
-      const tableRow = document.createElement('tr');
-      headers.forEach((header) => {
-        const cell = document.createElement('td');
-        const cellValue = row[header];
-        cell.textContent = cellValue;
-        cell.setAttribute('contentEditable', 'true'); // Make cell editable
-        tableRow.appendChild(cell);
-      });
+  // AppState aktualisieren
+  appState.setMvarInputData(receivedData);
 
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
+  // ✅ Add-Button Setup
+  const mvarAddButton = document.getElementById('mvarAddButton');
+  if (mvarAddButton) {
+    mvarAddButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      const tableName = 'MVaRInput_2';
+      const actionType = 'add';
+
+      displayModal(actionType, null);
+
+      const form = document.getElementById('editForm');
+      if (!form) {
+        console.error("❌ Das Formular-Element (#editForm) wurde nicht gefunden!");
+        return;
       }
-      
-      table.appendChild(tableRow);
+
+      setupFormFields(actionType, receivedData, null, tableName);
+
+      const saveButton = document.getElementById('saveButton');
+      const saveClone = saveButton.cloneNode(true);
+      saveButton.parentNode.replaceChild(saveClone, saveButton);
+
+      saveClone.addEventListener('click', () => {
+        const newRowData = gatherFormData(form);
+        addNewRow(newRowData, tableName)
+          .then(() => {
+            console.log(`✅ New row added to ${tableName} successfully.`);
+            closeModal();
+            fetchAndUpdateMVarDataInputData();
+          })
+          .catch((error) => {
+            console.error(`❌ Fehler beim Hinzufügen: ${error.message}`);
+          });
+      });
     });
-
-    return table;
   }
- 
 
-  // Get a reference to the table container element
-  const container = document.getElementById('inputMVaR-container'); // Replace with your container element's ID
-
-  // Create and append the table to the container
-  const table = createTable(receivedData);
-  container.appendChild(table);
+  // ✅ Edit-Buttons Setup
+  const mvarEditButtons = document.querySelectorAll('#inputMVaR-container .edit-button');
+  mvarEditButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const actionType = 'edit';
+      const rowIndex = parseInt(button.getAttribute('data-row'), 10);
+      handleFormAction(event, appState.mvarInputData, rowIndex, 'MVaRInput_2', actionType);
+    });
+  });
 }
 
+
+function fetchAndUpdateMVarDataInputData(tableName = 'MVaRInput_2') {
+  console.log(`🚀 fetchAndUpdateMVarDataInputData called for table: ${tableName}`);
+
+  window.api.send('fetch-table-data', tableName);  // nur der String!
+}
+
+
+
+
+
+
 export function handleMVaRData(receivedData, index) {
-  // console.log('MVaRData, index:', receivedData, index);
+  console.log('MVaRData, index:', receivedData, index);
   const port_name = appState.getSelectedPortTableName();
 
-  // console.log('port_name:', port_name);
+  console.log('port_name:', port_name);
 
   const containerIds = [
     'MVaRDataContainer',
@@ -136,8 +249,9 @@ export function handleMVaRData(receivedData, index) {
       const hasValidData = data && (
         data.VaR_T_rel !== undefined ||
         data.VaR_IR_rel !== undefined ||
-        data.VaR_CS_rel !== undefined
-      );
+        data.VaR_CS_rel !== undefined ||
+        data.ES_T_rel !== undefined
+      ); 
     
       if (!hasValidData) {
         container.innerHTML = ''; // Kein Header, keine Tabelle
@@ -155,9 +269,10 @@ export function handleMVaRData(receivedData, index) {
       });
     
       const rows = [
-        { label: 'VaR_T_rel', value: formatNumberWithCommas(data.VaR_T_rel) },
-        { label: 'VaR_IR_rel', value: formatNumberWithCommas(data.VaR_IR_rel) },
-        { label: 'VaR_CS_rel', value: formatNumberWithCommas(data.VaR_CS_rel) }
+        { label: 'Total VaR', value: formatNumberWithCommas(data.VaR_T_rel) },
+        { label: 'Total ES', value: formatNumberWithCommas(data.ES_T_rel) },
+        // { label: 'VaR_IR_rel', value: formatNumberWithCommas(data.VaR_IR_rel) },
+        // { label: 'VaR_CS_rel', value: formatNumberWithCommas(data.VaR_CS_rel) }
       ];
     
       rows.forEach(({ label, value }) => {

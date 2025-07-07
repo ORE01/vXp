@@ -1,3 +1,7 @@
+import { getColorFromPalette } from '../utils/colors.js';
+
+
+
 let chartInstance = null;
 let futurePredictionsChartInstance = null;
 let FWDlineChartInstance;
@@ -301,23 +305,23 @@ function parseDateString(dateString) {
 }
 
 // Function to get color from the color palette based on the index
-function getColorFromPalette(index) {
-  const colorPalette = [
-    "rgba(255, 255, 0, 1)",     // Bright Yellow
-    "rgba(255, 87, 34, 1)",     // Bright Red-Orange
-    "rgba(255, 193, 7, 1)",     // Bright Yellow-Orange
-    "rgba(0, 255, 255, 1)",     // Bright Cyan
-    "rgba(173, 255, 47, 1)",    // Bright Green
-    "rgba(255, 105, 180, 1)",   // Hot Pink
-    "rgba(75, 0, 130, 1)",      // Indigo
-    "rgba(255, 140, 0, 1)",     // Dark Orange
-    "rgba(0, 191, 255, 1)",     // Deep Sky Blue
-    "rgba(50, 205, 50, 1)",     // Lime Green
-  ];
+// function getColorFromPalette(index) {
+//   const colorPalette = [
+//     "rgba(255, 255, 0, 1)",     // Bright Yellow
+//     "rgba(255, 87, 34, 1)",     // Bright Red-Orange
+//     "rgba(255, 193, 7, 1)",     // Bright Yellow-Orange
+//     "rgba(0, 255, 255, 1)",     // Bright Cyan
+//     "rgba(173, 255, 47, 1)",    // Bright Green
+//     "rgba(255, 105, 180, 1)",   // Hot Pink
+//     "rgba(75, 0, 130, 1)",      // Indigo
+//     "rgba(255, 140, 0, 1)",     // Dark Orange
+//     "rgba(0, 191, 255, 1)",     // Deep Sky Blue
+//     "rgba(50, 205, 50, 1)",     // Lime Green
+//   ];
 
-  // Wrap around the palette if the index exceeds its length
-  return colorPalette[index % colorPalette.length];
-}
+//   // Wrap around the palette if the index exceeds its length
+//   return colorPalette[index % colorPalette.length];
+// }
 
 export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);

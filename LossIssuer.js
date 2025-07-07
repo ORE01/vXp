@@ -279,19 +279,19 @@ export function createCombinedLossIssuerChart(ratingData, marketData, marketNorm
       labels: allConvIValues, 
       datasets: [
         { 
-          label: 'Losses from Rating',
+          label: 'Historic Loss',
           data: ratingValues, 
           backgroundColor: ratingBarColors, 
           borderColor: ratingBarColors, 
         },
         { 
-          label: 'Losses from Market',
+          label: 'Market Implied Loss',
           data: marketValues, 
           backgroundColor: marketBarColors, 
           borderColor: marketBarColors, 
         },
         { 
-          label: 'Losses from Market Norm',
+          label: 'Risk Adjusted Loss',
           data: marketNormValues, 
           backgroundColor: marketNormBarColors, 
           borderColor: marketNormBarColors, 
@@ -299,6 +299,8 @@ export function createCombinedLossIssuerChart(ratingData, marketData, marketNorm
       ] 
     }, 
     options: {
+      responsive: false,            // ⬅️ deaktiviert automatisches Anpassen
+      maintainAspectRatio: false,   // ⬅️ erlaubt, Breite/Höhe frei zu setzen
       indexAxis: 'x', 
       scales: {
         x: {
