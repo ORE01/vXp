@@ -31,6 +31,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/mathjs/lib/browser/math.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+
   <title>ValuationXpro</title>
 </head>
 <body>
@@ -198,7 +202,8 @@
       <h3 class="section-header">Credit Profit/Loss Distribution</h3>
       
               <div class="button-wrapper">
-                <button id="cvaRDistButton"class="edit-button">P/L Dist</button>
+                <!-- <button id="cvaRDistButton"class="edit-button">P/L Dist</button> -->
+                <button id="CVaRButton"class="edit-button">P/L Dist</button>
               </div>
 
                         <p>Credit Value at Risk/Expected Shortfall:</p>
@@ -484,9 +489,9 @@
           <div class="button-wrapper">
             <button id="fairValueButton"class="edit-button">Fair Value</button>
             <!-- <button id="MVaRButton"class="edit-button">MVaR</button> -->
-            <button id="CVaRButton"class="edit-button">CVaR</button>
+            <!-- <button id="CVaRButton"class="edit-button">CVaR</button> -->
             
-            <button id="portAddButton">PDF</button>
+            <button id="offerPDFButton"class="edit-button">Offer PDF</button>
         
           </div>
 
@@ -527,6 +532,11 @@
           <div>
             <p>Select Rating:</p>
             <select id="portRatingDropdown" multiple class="select-dropdown"></select>
+            </select>
+          </div>
+          <div>
+            <p>Select Rank:</p>
+            <select id="portRankDropdown" multiple class="select-dropdown"></select>
             </select>
           </div>
           <div>
