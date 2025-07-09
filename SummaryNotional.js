@@ -307,9 +307,16 @@ export function generateOfferPDF(filteredData) {
     theme: 'striped',
   });
 
-  // Download starten
+  // PDF speichern
   doc.save('Produktangebot.pdf');
 }
+
+
+
+
+
+
+
 
 
 
