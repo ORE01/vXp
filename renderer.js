@@ -9,6 +9,7 @@ import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js';
 import { handleLiquidityData } from './liquidity.js';
 import { handleSummaryRMData } from './SummaryMarketRM.js';
 import { startOfferImport } from './offers.js';
+import { generateOfferPDF } from './SummaryNotional.js';
 
 
 
@@ -346,6 +347,27 @@ function setupEventListeners() {
           warningContainer.style.visibility = "hidden"; // Verstecke die Warnung
       }
   });
+
+
+  // Angebot-Export (PDF)
+const offerPDFButton = document.getElementById('offerPDFButton');
+if (offerPDFButton) {
+  offerPDFButton.addEventListener('click', () => {
+    const data = appState.getFilteredPortData();
+
+    if (!data || data.length === 0) {
+      alert('❌ Keine Angebotsdaten verfügbar!');
+      return;
+    }
+
+    try {
+      generateOfferPDF(data);
+    } catch (error) {
+      console.error('Fehler beim PDF-Export:', error);
+    }
+  });
+}
+
 }
     function setupDataProvider(eventNames, handler) {
       eventNames.forEach(([eventName, type]) => {

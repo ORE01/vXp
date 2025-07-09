@@ -1,6 +1,7 @@
 import { getColorForPieChart, getColorFromPalette} from './utils/colors.js';
 import processData from './renderer/dataProcessor.js';
 import { appState } from './renderer.js';
+const { jsPDF } = window.jspdf;
 
 let tableName = 'Portfolio';
 
@@ -80,6 +81,9 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
     
     drawPieChartByColumn(filteredData, column);
     drawProdSummaryChart(filteredData);
+    const productData = extractProductOfferData(filteredData);
+    console.table(productData);
+
 
 
   });
@@ -90,8 +94,6 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
         drawPieChartByColumn(filteredData, column);
     });
   });
-
-  
 }
     function drawPieChartByColumn(filteredData, columnName) {
       const valueType = document.getElementById('valueSelector').value; // NAV oder NOTIONAL
@@ -198,7 +200,8 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
 
         // 🔥 Mapping in Array konvertieren und nach NOTIONAL absteigend sortieren
         const sortedData = Object.entries(prodMap)
-          .sort((a, b) => b[1].notional - a[1].notional); 
+          .sort((a, b) => b[1].notional - a[1].notional)
+          .slice(0, 5); // 👈 Nur die Top 5
 
         const prodIds = sortedData.map(([prodId]) => prodId);
         const notionals = sortedData.map(([, values]) => values.notional);
@@ -258,6 +261,58 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
         }
       });
     }
+
+
+function extractProductOfferData(filteredData) {
+  if (!filteredData || !Array.isArray(filteredData)) return [];
+
+  return filteredData.map(entry => {
+    const rawPrice = entry.clean_price || '';
+    const cleanText = typeof rawPrice === 'string'
+      ? rawPrice.replace(/<[^>]*>/g, '').replace('%', '').trim()
+      : rawPrice.toString();
+
+    return {
+      PROD_ID: entry.PROD_ID || '',
+      DESCRIPTION: (entry.DESCRIPTION || '').toString().substring(0, 100), // optional kürzen
+      COUPON: entry.COUPON != null ? entry.COUPON.toString() : '',
+      CLEAN_PRICE: cleanText,
+    };
+  });
+}
+
+export function generateOfferPDF(filteredData) {
+  const doc = new jsPDF();
+  const offers = extractProductOfferData(filteredData);
+
+  // Titel
+  doc.setFontSize(18);
+  doc.text('Angebot: Produktübersicht', 14, 20);
+
+  // Tabelle vorbereiten
+  const tableData = offers.map(item => [
+    item.PROD_ID,
+    item.DESCRIPTION,
+    item.COUPON,
+    item.CLEAN_PRICE
+  ]);
+
+  // Tabelle erzeugen
+  doc.autoTable({
+    head: [['Produkt-ID', 'Beschreibung', 'Coupon', 'Kurs']],
+    body: tableData,
+    startY: 30,
+    styles: { cellPadding: 2, fontSize: 10 },
+    headStyles: { fillColor: [70, 192, 230] },
+    theme: 'striped',
+  });
+
+  // Download starten
+  doc.save('Produktangebot.pdf');
+}
+
+
+
 
 
 

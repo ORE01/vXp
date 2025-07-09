@@ -153,6 +153,7 @@ export class AppState {
                 'RATING': new Set(['ALL']),
                 // 'MATURITY': new Set(['ALL']),
                 'MATURITY_YEAR': new Set(['ALL']),
+                'RANK': new Set(['ALL']),
             },
             //Auflistung der Deals die ein Portfolio bilden (nicht deals: TRADE_ID...)
             dealsTables: {
@@ -184,6 +185,7 @@ export class AppState {
                 'portCategoryDropdown': { dataKey: 'CATEGORY', selection: ['ALL'] },
                 'portRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
                 'portMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
+                'portRankDropdown': { dataKey: 'RANK', selection: ['ALL'] },
                 'portDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
                 'liquMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
             },
@@ -1079,6 +1081,7 @@ export class AppState {
                 'portCategoryDropdown': 'port',
                 'portRatingDropdown': 'port',
                 'portMaturityDropdown': 'port',
+                'portRankDropdown': 'port',
                 'portDepotbankDropdown': 'port',
                 'liquMaturityDropdown': 'port',
                 
