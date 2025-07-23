@@ -8,7 +8,7 @@ import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handl
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
 import { handleLiquidityData } from './liquidity.js';
 import { handleSummaryRMData } from './SummaryMarketRM.js';
-import { startOfferImport } from './offers.js';
+import { startOfferImport, handleSubmitMatching } from './offers.js';
 import { generateOfferPDF} from './SummaryNotional.js';
 import { generateRiskPDF } from './SummaryRiskPDF.js';
 
@@ -553,6 +553,12 @@ function setupButtons() {
   document.getElementById('submitToOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
   // document.getElementById('importOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
   document.getElementById('importOffersBtn')?.addEventListener('click', () => {startOfferImport();});
+  // document.getElementById('importOffersIssuerBtn')?.addEventListener('click', () => {showIssuerMatching();});
+  // document.getElementById('importOffersProdBtn')?.addEventListener('click', () => {checkAndInsertProducts();});
+  // document.getElementById('submitMatchingBtn')?.addEventListener('click', () => {checkAndInsertProducts();});
+  document.getElementById("submitMatchingBtn")?.addEventListener("click", () => {handleSubmitMatching();
+});
+
 
 
 
