@@ -9,7 +9,7 @@ import { formatNumberWithGrouping } from './utils/format.js';
 
 
 let tableName = 'Portfolio'
-let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR'];
+let columns = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR','TtM'];
 let columnsToShow = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'clean_price', 'C_SPREAD', 'NOTIONAL', 'PRICE_BUY', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
      
 const portDataMap = {}; // Speichert Daten pro Container
@@ -111,9 +111,10 @@ export function handlePortProdData(receivedData, index, port_name) {
   
   if (portDataContainer && portData) {
     let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
-      console.log("filteredColumnsPortData:", filteredColumnsPortData);
+    let filteredPortData = filterColumnsInData(receivedData, columns); //!!!!! nach Porfolioname
+      console.log("filteredPortData:", filteredPortData);
 
-      appState.setFilteredPortData(filteredColumnsPortData);// !!!
+      appState.setFilteredPortData(filteredPortData);// !!!
 
     const portDataHTML = processData(filteredColumnsPortData, tableName);
     portDataContainer.innerHTML = portDataHTML;

@@ -23,6 +23,7 @@ import { appState } from './renderer.js';
 
 export class AppState {
     constructor() {
+        this.customerData = null;
         this.euswData= [];
         this.tblTSData = [];
         this.availableDealsTablesData = {}; 
@@ -500,6 +501,19 @@ export class AppState {
             if (arr1[i] !== arr2[i]) return false;
         }
         return true;
+    }
+
+    setCustomerData(data) {
+        this.customerData = data;
+    }
+
+    getCustomerData() {
+        return this.customerData;
+    }
+
+    updateCustomerField(key, value) {
+        if (!this.customerData) this.customerData = {};
+        this.customerData[key] = value;
     }
 
     // ✅ Setter for EUSW data

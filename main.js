@@ -13,6 +13,7 @@ const { getAllTableNames,
         insertCSParameter, 
         importExcelToSQLite, 
         runSQL,
+        updateCustomerTexts,
         db,
         getAllRowsFromTable} = require('./main_fct');
 
@@ -746,64 +747,6 @@ ipcMain.on('start-py-ml', async (event, args) => {
   }
 });
 
-// ipcMain.on('start-py-matchColumns', async (event, args) => {
-//   const { inputColumns, productTargetColumns, offerTargetColumns } = args;
-
-//   if (
-//     !Array.isArray(inputColumns) ||
-//     !Array.isArray(productTargetColumns) ||
-//     !Array.isArray(offerTargetColumns)
-//   ) {
-//     console.log('📥 Received payload:', args);
-//     console.error('❌ Missing or invalid arguments for matchColumns.');
-//     event.reply('py-matchColumns-complete', {
-//       success: false,
-//       projectName: 'py-matchColumns',
-//       message: 'Arguments "inputColumns", "productTargetColumns", and "offerTargetColumns" must be arrays.'
-//     });
-//     event.reply('project-finished', {
-//       success: false,
-//       projectName: 'py-matchColumns'
-//     });
-//     return;
-//   }
-
-//   try {
-//     const pythonArgs = [
-//       '--aicolumn_input', JSON.stringify(inputColumns),
-//       '--product_targets', JSON.stringify(productTargetColumns),
-//       '--offer_targets', JSON.stringify(offerTargetColumns)
-//     ];
-
-//     const result = await startPythonScriptWithEvent(event, 'aicolumn', 'py-matchColumns', pythonArgs);
-
-//     event.reply('py-matchColumns-complete', {
-//       success: true,
-//       projectName: 'py-matchColumns',
-//       result
-//     });
-
-//     event.reply('project-finished', {
-//       success: true,
-//       projectName: 'py-matchColumns'
-//     });
-
-//   } catch (error) {
-//     console.error('❌ Error during matchColumns script:', error);
-
-//     event.reply('py-matchColumns-complete', {
-//       success: false,
-//       projectName: 'py-matchColumns',
-//       error: error.message || error.toString()
-//     });
-
-//     event.reply('project-finished', {
-//       success: false,
-//       projectName: 'py-matchColumns'
-//     });
-//   }
-// });
-
 ipcMain.on('start-py-matchColumns', async (event, args) => {
   const { inputColumns, productTargetColumns, offerTargetColumns } = args;
 
@@ -1134,6 +1077,32 @@ ipcMain.on('import-matched-columns', async (event, args) => {
     });
   }
 });
+
+
+
+
+ipcMain.on('update-customer-texts', async (event, { customer_id, pdf_header, pdf_footer }) => {
+  console.log('📥 Event erhalten:', customer_id, pdf_header, pdf_footer);
+
+  try {
+    await updateCustomerTexts(db, customer_id, pdf_header, pdf_footer);
+    console.log(`✅ PDF-Texte für Kunde ${customer_id} gespeichert.`);
+
+    // ⬇️ Tabelle 'Customer' aktualisieren
+    refreshTable('Customer', () => {
+      console.log('🔄 Customer-Tabelle refreshed (main.js)');
+      event.reply('update-customer-texts-success');
+    });
+
+  } catch (err) {
+    console.error('❌ Fehler beim Speichern:', err.message);
+    event.reply('update-customer-texts-error', err.message);
+  }
+});
+
+
+
+
 
 
 

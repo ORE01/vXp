@@ -9,8 +9,9 @@ import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js';
 import { handleLiquidityData } from './liquidity.js';
 import { handleSummaryRMData } from './SummaryMarketRM.js';
 import { startOfferImport } from './offers.js';
-import { generateOfferPDF} from './SummaryNotional.js';
-import { generateRiskPDF } from './SummaryRiskPDF.js';
+import { generateOfferPDF} from './PDF/OfferPDF.js';
+import { generateRiskPDF } from './PDF/RiskPDF.js';
+import { createRatesLineChart } from './charts/LineChart.js';
 
 
 
@@ -47,151 +48,11 @@ async function handleExcelImport() {
   }
 }
 
-// async function startOfferImport() {
-//   try {
-//     const result = await window.api.invoke('start-offer-import');
-
-//     if (!result.success) {
-//       alert("❌ Fehler beim Import: " + result.error);
-//       return;
-//     }
-
-//     const { tempTableName, dealsMainColumns, tempTableColumns } = result;
-
-//     alert(`✅ Datei erfolgreich geladen: "${tempTableName}".\nBitte Spalten zuordnen.`);
-
-//     // Öffne Matching-UI (als nächster Schritt)
-//     showMatchingUI(dealsMainColumns, tempTableColumns, tempTableName);
-
-//   } catch (err) {
-//     console.error("❌ Unerwarteter Fehler beim Import:", err);
-//     alert("❌ Unerwarteter Fehler beim Import: " + err.message);
-//   }
-// }
-
-
-// function showMatchingUI(dealsMainCols, tempTableCols, tempTableName) {
-//   const container = document.getElementById("matchingContainer");
-//   container.innerHTML = ""; // vorher leeren
-
-//   const usedDealsMainCols = new Set(); // verfolgt bereits genutzte Zuordnungen
-//   const dropdowns = []; // Referenz auf alle Dropdowns
-
-//   // Erzeuge für jede Spalte der externen Tabelle eine Zeile mit Dropdown
-//   tempTableCols.forEach((sourceCol, index) => {
-//     const row = document.createElement("div");
-//     row.className = "match-row";
-//     row.style.marginBottom = "8px";
-
-//     const label = document.createElement("span");
-//     label.textContent = sourceCol;
-//     label.style.display = "inline-block";
-//     label.style.width = "200px";
-
-//     const select = document.createElement("select");
-//     select.dataset.source = sourceCol;
-
-//     const defaultOption = document.createElement("option");
-//     defaultOption.value = "";
-//     defaultOption.textContent = "Nicht zuordnen";
-//     select.appendChild(defaultOption);
-
-//     // Initiale Optionsliste
-//     dealsMainCols.forEach((dealCol) => {
-//       const option = document.createElement("option");
-//       option.value = dealCol;
-//       option.textContent = dealCol;
-//       select.appendChild(option);
-//     });
-
-//     // Beobachte Auswahländerungen
-//     select.addEventListener("change", () => {
-//       // Update: verwendete Spaltenliste neu berechnen
-//       usedDealsMainCols.clear();
-//       dropdowns.forEach((d) => {
-//         if (d.value) usedDealsMainCols.add(d.value);
-//       });
-
-//       // Alle Dropdowns neu rendern (außer das aktuelle)
-//       dropdowns.forEach((d) => {
-//         const currentValue = d.value;
-//         const currentSource = d.dataset.source;
-
-//         d.innerHTML = "";
-//         const optionNone = document.createElement("option");
-//         optionNone.value = "";
-//         optionNone.textContent = "Nicht zuordnen";
-//         d.appendChild(optionNone);
-
-//         dealsMainCols.forEach((dealCol) => {
-//           // Wenn Spalte schon zugeordnet, dann nur, wenn es die eigene ist
-//           if (!usedDealsMainCols.has(dealCol) || dealCol === currentValue) {
-//             const option = document.createElement("option");
-//             option.value = dealCol;
-//             option.textContent = dealCol;
-//             d.appendChild(option);
-//           }
-//         });
-
-//         d.value = currentValue; // aktuelle Auswahl wiederherstellen
-//       });
-//     });
-
-//     row.appendChild(label);
-//     row.appendChild(select);
-//     container.appendChild(row);
-//     dropdowns.push(select);
-//   });
-
-//   // Klick auf "Import starten"
-//   document.getElementById("submitMatchingBtn")?.addEventListener("click", () => {
-//     const columnMap = [];
-
-//     dropdowns.forEach((select) => {
-//       const from = select.dataset.source;
-//       const to = select.value;
-//       if (to) {
-//         columnMap.push({ from, to });
-//       }
-//     });
-
-//     if (columnMap.length === 0) {
-//       alert("⚠️ Keine Zuordnungen vorgenommen.");
-//       return;
-//     }
-
-//     window.api.send("import-matched-columns", {
-//       sourceTable: tempTableName,
-//       targetTable: "DealsMain",
-//       columnMap,
-//       additionalFields: {
-//         port_name: tempTableName
-//       }
-//     });
-//   });
-// }
-
-
-// async function handleExcelImportAll(sheetNames = null) {
-//   try {
-//     const result = await window.api.invoke('import-excel-dialog-all', {
-//       sheetFilter: sheetNames  // Übergabe an main.js
-//     });
-
-//     if (result.success) {
-//       alert('Import erfolgreich!');
-//     } else {
-//       alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
-//     }
-//   } catch (error) {
-//     alert('Fehler beim Import: ' + error.message);
-//   }
-// }
-
-
-
-
 function setupEventListeners() {
+
+// CUSTOMER-Data
+  window.api.receive('CustomerData', handleCustomerData);
+
 
   // FI-Market Data
   window.api.receive('EUSWData', handleEUSWData);
@@ -350,8 +211,50 @@ function setupEventListeners() {
   });
 
 
-  // Angebot-Export (PDF)
+//   // Angebot-Export (PDF)
+// const offerPDFButton = document.getElementById('offerPDFButton');
+// const modal = document.getElementById('pdfTextModal');
+// const confirmBtn = document.getElementById('confirmPDF');
+// const cancelBtn = document.getElementById('cancelPDF');
+
+// if (offerPDFButton) {
+//   offerPDFButton.addEventListener('click', () => {
+//     const data = appState.getFilteredPortData();
+
+//     if (!data || data.length === 0) {
+//       alert('❌ Keine Angebotsdaten verfügbar!');
+//       return;
+//     }
+
+//     // Öffne Eingabemaske
+//     modal.style.display = 'block';
+
+//     // Bestätigungsbutton: PDF generieren
+//     confirmBtn.onclick = () => {
+//       const header = document.getElementById('headerText').value;
+//       const footer = document.getElementById('footerText').value;
+//       modal.style.display = 'none';
+
+//       try {
+//         generateOfferPDF(data, header, footer);
+//       } catch (error) {
+//         console.error('Fehler beim PDF-Export:', error);
+//       }
+//     };
+
+//     // Abbrechen
+//     cancelBtn.onclick = () => {
+//       modal.style.display = 'none';
+//     };
+//   });
+// }
+
+// Angebot-Export (PDF)
 const offerPDFButton = document.getElementById('offerPDFButton');
+const modal = document.getElementById('pdfTextModal');
+const confirmBtn = document.getElementById('confirmPDF');
+const cancelBtn = document.getElementById('cancelPDF');
+
 if (offerPDFButton) {
   offerPDFButton.addEventListener('click', () => {
     const data = appState.getFilteredPortData();
@@ -361,15 +264,49 @@ if (offerPDFButton) {
       return;
     }
 
-    try {
-      generateOfferPDF(data);
-    } catch (error) {
-      console.error('Fehler beim PDF-Export:', error);
+    const customerArr = appState.getCustomerData();
+    const customer = Array.isArray(customerArr) ? customerArr[0] : customerArr;
+
+    if (customer) {
+      document.getElementById('headerText').value = customer.pdf_header || '';
+      document.getElementById('footerText').value = customer.pdf_footer || '';
     }
+
+    modal.style.display = 'block';
+
+    confirmBtn.onclick = async () => {
+      const header = document.getElementById('headerText').value;
+      const footer = document.getElementById('footerText').value;
+      modal.style.display = 'none';
+
+      const customerArr = appState.getCustomerData();
+      const customer = Array.isArray(customerArr) ? customerArr[0] : customerArr;
+
+      if (customer && customer.id) {
+        console.log('📤 Sende update-customer-texts:', customer.id, header, footer);
+        window.api.send('update-customer-texts', {
+          customer_id: customer.id,
+          pdf_header: header,
+          pdf_footer: footer
+        });
+      }
+
+      const data = appState.getFilteredPortData();
+      await generateOfferPDF(data, header, footer); // Chart wird intern gerendert
+    };
+
+    cancelBtn.onclick = () => {
+      modal.style.display = 'none';
+    };
   });
 }
 
-  // Angebot-Export (PDF)
+
+
+
+
+
+  // RISK-Export (PDF)
 const riskPDFButton = document.getElementById('riskPDFButton');
 if (riskPDFButton) {
   riskPDFButton.addEventListener('click', () => {
@@ -672,6 +609,10 @@ function setupButtons() {
       providerButton.style.display = isActive ? 'block' : 'none';
     });
   }
+
+
+
+
 
   // PORTFOLIO
   function handleDealsNameList(receivedData) {
@@ -1599,6 +1540,14 @@ function fetchAndUpdateMVarData(port_name) {
           console.error(`Error starting ${projectName}:`, response.error);
         }
       }
+
+
+  //CUSTOMER
+    function handleCustomerData(data) {
+      console.log('Empfangene Kundendaten:', data);
+      appState.setCustomerData(data);
+      
+    }
 
 
 

@@ -1,6 +1,7 @@
 import { getColorForPieChart, getColorFromPalette} from './utils/colors.js';
 import processData from './renderer/dataProcessor.js';
 import { appState } from './renderer.js';
+
 const { jsPDF } = window.jspdf;
 
 let tableName = 'Portfolio';
@@ -81,11 +82,6 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
     
     drawPieChartByColumn(filteredData, column);
     drawProdSummaryChart(filteredData);
-    const productData = extractProductOfferData(filteredData);
-    console.table(productData);
-
-
-
   });
 
     // ⬇️ Hier Event-Listener ergänzen:
@@ -261,55 +257,6 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
         }
       });
     }
-
-
-function extractProductOfferData(filteredData) {
-  if (!filteredData || !Array.isArray(filteredData)) return [];
-
-  return filteredData.map(entry => {
-    const rawPrice = entry.clean_price || '';
-    const cleanText = typeof rawPrice === 'string'
-      ? rawPrice.replace(/<[^>]*>/g, '').replace('%', '').trim()
-      : rawPrice.toString();
-
-    return {
-      PROD_ID: entry.PROD_ID || '',
-      DESCRIPTION: (entry.DESCRIPTION || '').toString().substring(0, 100), // optional kürzen
-      COUPON: entry.COUPON != null ? entry.COUPON.toString() : '',
-      CLEAN_PRICE: cleanText,
-    };
-  });
-}
-
-export function generateOfferPDF(filteredData) {
-  const doc = new jsPDF();
-  const offers = extractProductOfferData(filteredData);
-
-  // Titel
-  doc.setFontSize(18);
-  doc.text('Angebot: Produktübersicht', 14, 20);
-
-  // Tabelle vorbereiten
-  const tableData = offers.map(item => [
-    item.PROD_ID,
-    item.DESCRIPTION,
-    item.COUPON,
-    item.CLEAN_PRICE
-  ]);
-
-  // Tabelle erzeugen
-  doc.autoTable({
-    head: [['Produkt-ID', 'Beschreibung', 'Coupon', 'Kurs']],
-    body: tableData,
-    startY: 30,
-    styles: { cellPadding: 2, fontSize: 10 },
-    headStyles: { fillColor: [70, 192, 230] },
-    theme: 'striped',
-  });
-
-  // PDF speichern
-  doc.save('Produktangebot.pdf');
-}
 
 
 

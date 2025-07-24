@@ -1252,6 +1252,40 @@
   </div>
 
 
+
+  <!-- PDF-OFFER-TEXTE -->
+<div id="pdfTextModal" class="modal">
+  <div class="modal-content draggable">
+    <span class="close" id="closePDFModal">&times;</span>
+    <h3>PDF-Begleittexte eingeben</h3>
+
+    <div class="form-row">
+      <label class="label" for="headerText">Text oben:</label>
+      <textarea id="headerText" class="input-field" rows="3"></textarea>
+    </div>
+
+    <div class="form-row">
+      <label class="label" for="footerText">Text unten:</label>
+      <textarea id="footerText" class="input-field" rows="3"></textarea>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <button id="confirmPDF" class="btn" style="background-color: #4CAF50; color: white;">PDF erzeugen</button>
+      <button id="cancelPDF" class="btn" style="background-color: #800000; color: white;">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- unsichtbarer IR chart für pdf -->
+<canvas id="IRlineChartExport" width="400" height="200" style="display:none;"></canvas>
+<canvas id="ProductCurveExport" width="400" height="200" style="display:none;"></canvas>
+
+
+
+
+
+
   <script src="renderer.js" type="module"></script>
   <script src="trafficLight.js"></script>
   <script type="module" src="./liquidity.js"></script>

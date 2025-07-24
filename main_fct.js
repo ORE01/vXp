@@ -506,6 +506,24 @@ async function getAllRowsFromTable(tableName) {
   });
 }
 
+function updateCustomerTexts(db, customer_id, pdf_header, pdf_footer) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE Customer
+      SET pdf_header = ?, pdf_footer = ?
+      WHERE id = ?
+    `;
+    db.run(sql, [pdf_header, pdf_footer, customer_id], function (err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+
 
 
 
@@ -530,5 +548,6 @@ module.exports = {
   importExcelToSQLite,
   getAllRowsFromTable,
   runSQL,
+  updateCustomerTexts,
   db
 };
