@@ -490,6 +490,12 @@ function setupButtons() {
   document.getElementById('submitToOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
   // document.getElementById('importOffersBtn')?.addEventListener('click', () => {handleSubmitMatchedColumns('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' });});
   document.getElementById('importOffersBtn')?.addEventListener('click', () => {startOfferImport();});
+  // document.getElementById('importOffersIssuerBtn')?.addEventListener('click', () => {showIssuerMatching();});
+  // document.getElementById('importOffersProdBtn')?.addEventListener('click', () => {checkAndInsertProducts();});
+  // document.getElementById('submitMatchingBtn')?.addEventListener('click', () => {checkAndInsertProducts();});
+  document.getElementById("submitMatchingBtn")?.addEventListener("click", () => {handleSubmitMatching();
+});
+
 
 
 
