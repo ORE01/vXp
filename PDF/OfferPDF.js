@@ -5,14 +5,30 @@ export async function generateOfferPDF(filteredData, headerText = '', footerText
   const doc = new jsPDF();
   const offers = extractProductOfferData(filteredData);
 
+  let currentY = 20;
+
+  // Schriftfarbe auf Dunkelgrau setzen
+  doc.setTextColor(51, 51, 51);
+
   // Titel
   doc.setFontSize(18);
-  doc.text('Angebot: Produktübersicht', 14, 20);
+  doc.text('Angebot:', 14, currentY);
+  currentY += 10;
 
-  // Header-Text
+  // Header-Text dynamisch
   doc.setFontSize(12);
-  if (headerText) {
-    doc.text(headerText, 14, 28);
+  if (headerText?.trim()) {
+    const headerLines = doc.splitTextToSize(headerText, 180);
+    const headerHeight = headerLines.length * 5 + 2;
+
+    if (currentY + headerHeight > doc.internal.pageSize.getHeight()) {
+      doc.addPage();
+      currentY = 20;
+      doc.setTextColor(51, 51, 51);
+    }
+
+    doc.text(headerLines, 14, currentY);
+    currentY += headerHeight;
   }
 
   // Tabelle vorbereiten
@@ -28,24 +44,45 @@ export async function generateOfferPDF(filteredData, headerText = '', footerText
   doc.autoTable({
     head: [['Produkt-ID', 'Beschreibung', 'Kurs', 'Laufzeit', 'Rendite', 'Spread']],
     body: tableData,
-    startY: 35,
-    styles: { cellPadding: 2, fontSize: 10 },
-    headStyles: { fillColor: [70, 192, 230] },
+    startY: currentY + 5,
+    styles: {
+      cellPadding: 2,
+      fontSize: 10,
+      textColor: [51, 51, 51] // Tabelleninhalt auch dunkelgrau
+    },
+    headStyles: {
+      fillColor: [70, 192, 230],
+      textColor: 255 // Weißer Tabellenkopf
+    },
     theme: 'striped',
   });
 
-  let yAfterTable = doc.lastAutoTable.finalY + 10;
+  // Nach der Tabelle
+  currentY = doc.lastAutoTable.finalY + 10;
 
-  if (footerText) {
-    doc.setFontSize(11);
-    doc.text(footerText, 14, yAfterTable);
-    yAfterTable += 10;
+  // Footer-Text dynamisch
+  doc.setFontSize(11);
+  if (footerText?.trim()) {
+    const footerLines = doc.splitTextToSize(footerText, 180);
+    const footerHeight = footerLines.length * 5 + 2;
+
+    if (currentY + footerHeight > doc.internal.pageSize.getHeight()) {
+      doc.addPage();
+      currentY = 20;
+      doc.setTextColor(51, 51, 51);
+    }
+
+    doc.text(footerLines, 14, currentY);
+    currentY += footerHeight;
   }
 
-  await drawSwapChartToPDF(filteredData, yAfterTable, doc);
+  // Chart zeichnen
+  await drawSwapChartToPDF(filteredData, currentY, doc);
 
   doc.save('Produktangebot.pdf');
 }
+
+
 
 async function drawSwapChartToPDF(filteredData, startY, doc) {
   const euswData = window.appState.getEUSWData?.();
@@ -65,7 +102,9 @@ async function drawSwapChartToPDF(filteredData, startY, doc) {
         const rawYTM = entry.ytm;
 
         const ttm = typeof rawTtM === 'number' ? rawTtM : parseFloat(rawTtM);
-        const ytm = parseFloat((rawYTM || '').toString().replace('%', '').trim());
+        //const ytm = parseFloat((rawYTM || '').toString().replace('%', '').trim());
+        const ytm = typeof entry.ytm === 'number' ? entry.ytm : parseFloat(entry.ytm);
+        console.log('ytm:', ytm)
 
         if (isNaN(ttm) || isNaN(ytm)) return null;
 
@@ -145,7 +184,12 @@ async function drawSwapChartToPDF(filteredData, startY, doc) {
 }
 
 
-// Hilfsfunktion: Formatiert die Rohdaten
+
+
+
+
+
+
 function extractProductOfferData(filteredData) {
   if (!filteredData || !Array.isArray(filteredData)) return [];
 
@@ -170,5 +214,7 @@ function extractProductOfferData(filteredData) {
     };
   });
 }
+
+
 
 

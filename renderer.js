@@ -11,6 +11,7 @@ import { handleSummaryRMData } from './SummaryMarketRM.js';
 import { startOfferImport } from './offers.js';
 import { generateOfferPDF} from './PDF/OfferPDF.js';
 import { generateRiskPDF } from './PDF/RiskPDF.js';
+import { handleSubmitMatching } from './offers.js';
 import { createRatesLineChart } from './charts/LineChart.js';
 
 
@@ -35,18 +36,31 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-async function handleExcelImport() {
-  try {
-    const result = await window.api.invoke('import-excel-dialog');
-    if (result.success) {
-      alert('Import erfolgreich!');
-    } else {
-      alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
-    }
-  } catch (error) {
-    alert('Fehler beim Import: ' + error.message);
-  }
+// async function handleExcelImport() {
+//   try {
+//     const result = await window.api.invoke('import-excel-dialog');
+//     if (result.success) {
+//       alert('Import erfolgreich!');
+//     } else {
+//       alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
+//     }
+//   } catch (error) {
+//     alert('Fehler beim Import: ' + error.message);
+//   }
+// }
+
+function handleExcelImport() {
+  window.api.send('import-excel-dialog');
+
+  window.api.once('import-excel-dialog-success', () => {
+    alert('Import erfolgreich!');
+  });
+
+  window.api.once('import-excel-dialog-error', (_, error) => {
+    alert('Import fehlgeschlagen: ' + (error || 'Unbekannter Fehler'));
+  });
 }
+
 
 function setupEventListeners() {
 

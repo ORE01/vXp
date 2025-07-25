@@ -534,6 +534,7 @@ function updateCustomerTexts(db, customer_id, pdf_header, pdf_footer) {
 
 
 
+
 module.exports = {
   getAllTableNames,
   queryDB,
