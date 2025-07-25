@@ -8,10 +8,10 @@ import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handl
 import { handleLossIssuerMainData, setupLossIssuerUI } from './LossIssuer.js'; 
 import { handleLiquidityData } from './liquidity.js';
 import { handleSummaryRMData } from './SummaryMarketRM.js';
-import { startOfferImport } from './offers.js';
+import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './offers.js';
 import { generateOfferPDF} from './PDF/OfferPDF.js';
 import { generateRiskPDF } from './PDF/RiskPDF.js';
-import { handleSubmitMatching } from './offers.js';
+// import { handleSubmitMatching } from './offers.js';
 import { createRatesLineChart } from './charts/LineChart.js';
 
 
@@ -507,8 +507,9 @@ function setupButtons() {
   // document.getElementById('importOffersIssuerBtn')?.addEventListener('click', () => {showIssuerMatching();});
   // document.getElementById('importOffersProdBtn')?.addEventListener('click', () => {checkAndInsertProducts();});
   // document.getElementById('submitMatchingBtn')?.addEventListener('click', () => {checkAndInsertProducts();});
-  document.getElementById("submitMatchingBtn")?.addEventListener("click", () => {handleSubmitMatching();
-});
+  document.getElementById("submitMatchingBtn")?.addEventListener("click", () => {handleSubmitMatching();});
+  document.getElementById("btnQuickImport")?.addEventListener("click", () => {  quickImportWithStandardMapping();});
+
 
 
 

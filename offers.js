@@ -77,6 +77,101 @@ export async function startOfferImport() {
   }
 }
 
+//Schnellimport (Testdaten LLB)
+export async function quickImportWithStandardMapping() {
+  try {
+    // 📁 Datei wählen
+    const fileResult = await window.api.invoke("select-excel-file");
+    if (!fileResult.success) {
+      alert("❌ Fehler beim Öffnen der Datei: " + fileResult.error);
+      return;
+    }
+
+    const selectedSheet = await showSheetSelectionDialog(fileResult.sheetNames);
+    if (!selectedSheet) {
+      alert("⚠️ Kein Tabellenblatt gewählt.");
+      return;
+    }
+
+    // 📥 Excel-Sheet importieren
+    const importResult = await window.api.invoke('import-excel-offer-sheet-quick', {
+      filePath: fileResult.filePath,
+      sheetName: selectedSheet,
+      overwrite: true
+    });
+
+
+    if (!importResult.success) {
+      alert("❌ Fehler beim Import: " + importResult.error);
+      return;
+    }
+
+    const tableName = importResult.tempTableName;
+
+    // ✅ Standard-Mapping definieren
+    const columnMap = [
+      { from: "PROD_ID", to: "PROD_ID" },
+      { from: "SECURITY_DES", to: "DESCRIPTION" },
+      { from: "ISSUER", to: "ISSUER" },
+      { from: "TICKER", to: "TICKER" },
+      { from: "MATURITY", to: "MATURITY" },
+      { from: "COUPON", to: "COUPON" },
+      { from: "PAYMENT_RANK", to: "RANK" },
+      { from: "RTG_SP", to: "RATING" },
+      { from: "CPN_FREQ", to: "TENOR" },
+      { from: "CPN_TYP", to: "CouponType" },
+      { from: "PRISE ASK", to: "PRICE_BUY" }  // Für Deals wichtig
+    ];
+
+    const columnMapDeals = columnMap.filter(col =>
+      ["PROD_ID", "PRICE_BUY"].includes(col.to)
+    );
+
+    // 🔄 Matched Columns an Server schicken
+    window.api.send("import-matched-columns", {
+      sourceTable: tableName,
+      targetTable: "DealsMain",
+      columnMap,
+      additionalFields: { port_name: tableName }
+    });
+
+    // 🚀 Verarbeitung starten
+    const issuerCheck = await window.api.invoke("check-and-insert-issuers", {
+      tableName,
+      columnMap
+    });
+    if (!issuerCheck.success) throw new Error(issuerCheck.error);
+
+    const prodCheck = await window.api.invoke("check-and-insert-products", {
+      tableName,
+      columnMap
+    });
+    if (!prodCheck.success) throw new Error(prodCheck.error);
+
+    const dealsInsert = await window.api.invoke("create-deals-from-import", {
+      tableName,
+      fileName: tableName,
+      columnMap: columnMapDeals
+    });
+    if (!dealsInsert.success) throw new Error(dealsInsert.error);
+
+    // 🧾 Zusammenfassung anzeigen
+    let summary = `✅ ${prodCheck.insertedCount} neue Produkte importiert.\n`;
+    summary += `✅ ${dealsInsert.insertedCount} Produkte in Portfolio eingefügt.\n`;
+    if (prodCheck.rankWarnings?.length) {
+      summary += `\n⚠️ RANK manuell prüfen für:\n${prodCheck.rankWarnings.join(", ")}`;
+    }
+
+    alert(summary);
+
+  } catch (err) {
+    console.error("❌ Fehler beim Schnellimport:", err);
+    alert("❌ Fehler beim Schnellimport: " + err.message);
+  }
+}
+
+
+
 // zeigt den Dialog mit „Ersetzen“, „Bestehende verwenden“, „Abbrechen“
 async function showTableConflictDialog(tableName) {
   return new Promise((resolve) => {
@@ -205,9 +300,6 @@ async function showSheetSelectionDialog(sheetNames) {
     });
   });
 }
-
-
-
 
 
 function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
