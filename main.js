@@ -397,69 +397,6 @@ ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap 
   }
 });
 
-// ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap }) => {
-//   try {
-//     const tickerCol = columnMap.find(m => m.to === "TICKER")?.from;
-//     const issuerCol = columnMap.find(m => m.to === "ISSUER")?.from;
-//     const ratingCol = columnMap.find(m => m.to === "RATING")?.from;
-
-//     if (!tickerCol || !issuerCol || !ratingCol) {
-//       throw new Error("Erforderliche Spalten für den Issuer-Check wurden nicht vollständig zugeordnet.");
-//     }
-
-//     const sql = `
-//       SELECT DISTINCT "${tickerCol}" AS TICKER, "${issuerCol}" AS ISSUER, "${ratingCol}" AS RATING 
-//       FROM "${tableName}" 
-//       WHERE "${tickerCol}" IS NOT NULL
-//     `;
-
-//     const rows = await new Promise((resolve, reject) => {
-//       db.all(sql, [], (err, rows) => {
-//         if (err) reject(err);
-//         else resolve(rows);
-//       });
-//     });
-
-//     for (const row of rows) {
-//       const { TICKER, ISSUER, RATING } = row;
-
-//       const existing = await new Promise((resolve, reject) => {
-//         db.get(`SELECT * FROM Issuer WHERE TICKER = ?`, [TICKER], (err, result) => {
-//           if (err) reject(err);
-//           else resolve(result);
-//         });
-//       });
-
-//       if (!existing) {
-//         const insertSQL = `
-//           INSERT INTO Issuer 
-//           ("INCLUDE", "ISSUER", "TICKER", "RATING", "senior_unsecured") 
-//           VALUES (?, ?, ?, ?, ?)
-//         `;
-//         await runSQL(insertSQL, [1, ISSUER, TICKER, RATING, RATING]);
-//         console.log(`✅ Neuer Issuer eingefügt: ${ISSUER} (${TICKER})`);
-//       } else {
-//         console.log(`🔁 Issuer bereits vorhanden: ${ISSUER} (${TICKER})`);
-//       }
-//     }
-
-//     // ⏳ Refresh muss in Promise gewrappt werden, damit await funktioniert
-//     await new Promise((resolve) => {
-//       refreshTable('Issuer', () => {
-//         console.log('🔄 Issuer-Tabelle refreshed (main.js)');
-//         resolve();
-//       });
-//     });
-
-//     return { success: true };
-
-//   } catch (err) {
-//     console.error("❌ Fehler beim Prüfen/Einfügen der Issuer:", err);
-//     return { success: false, error: err.message };
-//   }
-// });
-
-
 ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap }) => {
   try {
     const prodIdCol     = columnMap.find(m => m.to === "PROD_ID")?.from;

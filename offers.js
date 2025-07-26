@@ -307,76 +307,6 @@ function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
   });
 }
 
-// export async function handleSubmitMatching() {
-//   const dropdowns = Array.from(document.querySelectorAll(".match-row select"));
-//   const columnMap = [];
-
-//   dropdowns.forEach((select) => {
-//     const from = select.dataset.source;
-//     const to = select.value;
-//     if (to) {
-//       columnMap.push({ from: from.trim(), to: to.trim() });
-//     }
-//   });
-
-//   if (columnMap.length === 0) {
-//     alert("⚠️ Keine Zuordnungen vorgenommen.");
-//     return;
-//   }
-
-//   const tempTableName = document.getElementById("matchingContainer")?.dataset.table;
-//   if (!tempTableName) {
-//     alert("❌ Fehler: Tabellenname nicht gefunden.");
-//     return;
-//   }
-
-//   window.api.send("import-matched-columns", {
-//     sourceTable: tempTableName,
-//     targetTable: "DealsMain",
-//     columnMap,
-//     additionalFields: {
-//       port_name: tempTableName
-//     }
-//   });
-
-//   try {
-//     // 🧱 ISSUER einfügen
-//     const issuerCheck = await window.api.invoke("check-and-insert-issuers", {
-//       tableName: tempTableName,
-//       columnMap
-//     });
-//     if (!issuerCheck.success) throw new Error(issuerCheck.error);
-
-//     // 📦 PRODUCTS einfügen
-//     const prodCheck = await window.api.invoke("check-and-insert-products", {
-//       tableName: tempTableName,
-//       columnMap
-//     });
-//     if (!prodCheck.success) throw new Error(prodCheck.error);
-
-//     // 💰 DEALS erstellen
-//     const dealsInsert = await window.api.invoke("create-deals-from-import", {
-//       tableName: tempTableName,
-//       fileName: tempTableName,
-//       columnMap
-//     });
-//     if (!dealsInsert.success) throw new Error(dealsInsert.error);
-
-//     // ✅ Zusammenfassung anzeigen
-//     let summary = `✅ ${prodCheck.insertedCount} neue Produkte importiert.\n`;
-//     summary += `✅ ${dealsInsert.insertedCount} Produkte in neues Portfolio eingefügt.\n`;
-
-//     if (prodCheck.rankWarnings && prodCheck.rankWarnings.length > 0) {
-//       summary += `\n⚠️ RANK manuell prüfen für:\n` + prodCheck.rankWarnings.join(", ");
-//     }
-
-//     alert(summary);
-//   } catch (err) {
-//     console.error("❌ Fehler beim Importprozess:", err);
-//     alert("❌ Fehler: " + err.message);
-//   }
-// }
-
 export async function handleSubmitMatching() {
   const dropdowns = Array.from(document.querySelectorAll(".match-row select"));
   const columnMap = [];
@@ -400,12 +330,6 @@ export async function handleSubmitMatching() {
     return;
   }
 
-  // ✅ Nur erlaubte Felder für Deals
-  const allowedDealsColumns = ["PROD_ID", "PRICE_BUY"];
-  const columnMapDeals = columnMap.filter(col =>
-    allowedDealsColumns.includes(col.to)
-  );
-
   window.api.send("import-matched-columns", {
     sourceTable: tempTableName,
     targetTable: "DealsMain",
@@ -416,25 +340,29 @@ export async function handleSubmitMatching() {
   });
 
   try {
+    // 🧱 ISSUER einfügen
     const issuerCheck = await window.api.invoke("check-and-insert-issuers", {
       tableName: tempTableName,
       columnMap
     });
     if (!issuerCheck.success) throw new Error(issuerCheck.error);
 
+    // 📦 PRODUCTS einfügen
     const prodCheck = await window.api.invoke("check-and-insert-products", {
       tableName: tempTableName,
       columnMap
     });
     if (!prodCheck.success) throw new Error(prodCheck.error);
 
+    // 💰 DEALS erstellen
     const dealsInsert = await window.api.invoke("create-deals-from-import", {
       tableName: tempTableName,
       fileName: tempTableName,
-      columnMap: columnMapDeals // ✅ Nur valide Felder für Deals!
+      columnMap
     });
     if (!dealsInsert.success) throw new Error(dealsInsert.error);
 
+    // ✅ Zusammenfassung anzeigen
     let summary = `✅ ${prodCheck.insertedCount} neue Produkte importiert.\n`;
     summary += `✅ ${dealsInsert.insertedCount} Produkte in neues Portfolio eingefügt.\n`;
 
@@ -448,7 +376,6 @@ export async function handleSubmitMatching() {
     alert("❌ Fehler: " + err.message);
   }
 }
-
 
 
 
