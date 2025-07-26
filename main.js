@@ -292,6 +292,55 @@ ipcMain.handle('import-excel-offer-sheet', async (event, { filePath, sheetName, 
   }
 });
 
+//nur für Schnellimport (Testdatei LLB)
+ipcMain.handle('import-excel-offer-sheet-quick', async (event, { filePath, sheetName, overwrite = true }) => {
+  try {
+    const fileName = path.basename(filePath, path.extname(filePath));
+    const xlsx = require("xlsx"); // explizit importieren, falls nicht global
+
+    const workbook = xlsx.readFile(filePath);
+    if (!workbook.Sheets[sheetName]) {
+      return { success: false, error: 'Ausgewähltes Tabellenblatt existiert nicht.' };
+    }
+
+    const sheet = workbook.Sheets[sheetName];
+
+    // ❗Header korrekt interpretieren
+    const rows = xlsx.utils.sheet_to_json(sheet, {
+      header: 0,       // erste Zeile = Spaltennamen
+      defval: "",      // leere Zellen explizit als "" setzen
+      raw: false       // konvertiert z. B. Excel-Daten richtig
+    });
+
+    if (rows.length === 0) {
+      return { success: false, error: 'Das Tabellenblatt enthält keine Daten.' };
+    }
+
+    // Tabelle ggf. löschen
+    if (overwrite) {
+      await runSQL(`DROP TABLE IF EXISTS "${fileName}"`);
+    }
+
+    // Tabelle aus vollständigen Zeilen erstellen
+    await createTableFromRows(fileName, rows);
+
+    const PortfoliosColumns = await getTableColumns("Portfolios");
+    const tempTableColumns = await getTableColumns(fileName);
+
+    return {
+      success: true,
+      tempTableName: fileName,
+      PortfoliosColumns,
+      tempTableColumns
+    };
+
+  } catch (err) {
+    console.error("❌ Fehler beim Schnellimport:", err);
+    return { success: false, error: err.message };
+  }
+});
+
+
 
 async function createTableFromRows(tableName, rows) {
   const sample = rows[0];
