@@ -36,34 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-async function handleExcelImport() {
-  try {
-    const result = await window.api.invoke('import-excel-dialog');
-
-    if (result.success) {
-      window.api.send('show-message-box', {
-        type: 'info',
-        title: 'Import erfolgreich',
-        message: 'Die Excel-Daten wurden erfolgreich importiert.',
-      });
-    } else {
-      window.api.send('show-message-box', {
-        type: 'error',
-        title: 'Import fehlgeschlagen',
-        message: result.error || 'Unbekannter Fehler beim Import.',
-      });
-    }
-  } catch (error) {
-    window.api.send('show-message-box', {
-      type: 'error',
-      title: 'Fehler',
-      message: 'Fehler beim Import: ' + error.message,
-    });
-  }
-}
-
-
-
 function setupEventListeners() {
 
 // CUSTOMER-Data
@@ -1778,6 +1750,33 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     }
     return editedData;
   }
+  
+//EXCEL IMPORT
+  async function handleExcelImport() {
+  try {
+    const result = await window.api.invoke('import-excel-dialog');
+
+    if (result.success) {
+      window.api.send('show-message-box', {
+        type: 'info',
+        title: 'Import erfolgreich',
+        message: 'Die Excel-Daten wurden erfolgreich importiert.',
+      });
+    } else {
+      window.api.send('show-message-box', {
+        type: 'error',
+        title: 'Import fehlgeschlagen',
+        message: result.error || 'Unbekannter Fehler beim Import.',
+      });
+    }
+  } catch (error) {
+    window.api.send('show-message-box', {
+      type: 'error',
+      title: 'Fehler',
+      message: 'Fehler beim Import: ' + error.message,
+    });
+  }
+}
 
 
 
@@ -1818,18 +1817,6 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     //console.log('FBH saveChanges tableName:', newData, cleanTableName, uniqueIdentifier);
     window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
   }
-
-  function addMaturityYearToData(dataArray) {
-  return dataArray.map(item => {
-    const maturityStr = item.MATURITY || '';
-    const maturityYear = maturityStr.slice(-4); // Letzte 4 Zeichen
-
-    return {
-      ...item,
-      MATURITY_YEAR: maturityYear
-    };
-  });
-}
 
 
 export { appState };

@@ -94,7 +94,7 @@ import { formatNumber, getFormatRules } from '../utils/format.js';
 // }
 
 function processData(data, selectedTableName, columnLabelMap = {}) {
-  console.log(`🔍 selectedTableName: ${selectedTableName}`);
+  //console.log(`🔍 selectedTableName: ${selectedTableName}`);
   let html = '';
   const formatRules = getFormatRules();
 
@@ -208,7 +208,7 @@ function processData(data, selectedTableName, columnLabelMap = {}) {
 
         // Function to filter columns in the data array. Is used in PORT and PROD...
         function filterColumnsInData(data, columnsToShow) {
-          console.log('filterColumnsInData:', data);
+          //console.log('filterColumnsInData:', data);
           // console.log('filterColumnsInData:', columnsToShow);
           return data.map((row) => {
             return columnsToShow.reduce((obj, column) => {
