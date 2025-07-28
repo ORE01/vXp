@@ -488,6 +488,10 @@ function setupDropdowns() {
         });
       }
     }
+
+
+
+    
 function setupButtons() {
   document.getElementById('saveSelectionButton').addEventListener('click', handleSaveSelection);
   document.getElementById('deleteTableButton').addEventListener('click', handleDeleteSelection);
@@ -1022,7 +1026,8 @@ function setupButtons() {
                     }
                   
                   const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
-                  appState.updatePortDataTable(filteredData, 0);
+                  //appState.updatePortDataTable(filteredData, 0);
+                  appState.updatePortDataTable(filteredData);
                   //console.log('✅ Portfolio filteredData:', filteredData, port_name);
               
                   // 🛠 Dropdowns aktualisieren

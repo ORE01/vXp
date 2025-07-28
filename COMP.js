@@ -4,7 +4,14 @@ import createBarChart from './charts/BarChart.js';
 export function createComparisonCharts(portDataMap, destroyPrevious = false) {
   console.log('portDataMap1:', portDataMap)
       // CHARTS: COMPARE
-      if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2){
+      // if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2){
+      //   const containerIds = [
+      //     'compChartContainer1', 'compChartContainer2', 'compChartContainer3',
+      //     'compChartContainer4', 'compChartContainer5', 'compChartContainer6',
+      //     'compChartContainer7', 'compChartContainer8'
+      //   ];
+
+      if (portDataMap.portDataContainer0 && portDataMap.portDataContainer3){
         const containerIds = [
           'compChartContainer1', 'compChartContainer2', 'compChartContainer3',
           'compChartContainer4', 'compChartContainer5', 'compChartContainer6',

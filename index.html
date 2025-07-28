@@ -1017,82 +1017,69 @@
   </div>
 
   <!-- Modal - COMPARE PORTFOLIOS-->
-  <div id="COMP_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2>COMPARE PORTFOLIOS</h2>
-    </div>
+<div id="COMP_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <h2>COMPARE PORTFOLIOS</h2>
+  </div>
 
-    <!-- Portfolio Dropdown -->
-    <h2 class="small-section-header">Select Portfolio 1</h2>
-
-
-    <div class="portfolio-comparison-container" >
-      <div class="portfolio-details-container">
-
-        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <select id="createdPortDropdown1" class="deals-dropdown" style="color: #f9f9f9;"></select> 
-        </div>
-
-
-        <div class="data-container" id="portAggDataContainer1"></div>
-        <p>Market VaR:</p>
-        <div class="data-container" id="MVaRDataContainer1"></div>
-        <p>Credit VaR:</p>
-        <div class="data-container" id="CVaR_allRelativeContainer1"></div>
-
-
+  <!-- Portfolio 1 -->
+  <h2 class="small-section-header">Select Portfolio 1</h2>
+  <div class="portfolio-comparison-container">
+    <div class="portfolio-details-container">
+      <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+        <select id="createdPortDropdown1" class="deals-dropdown" style="color: #f9f9f9;"></select>
       </div>
+      <div class="data-container" id="portAggDataContainer1"></div>
+      <p>Market VaR:</p>
+      <div class="data-container" id="MVaRDataContainer1"></div>
+      <p>Credit VaR:</p>
+      <div class="data-container" id="CVaR_allRelativeContainer1"></div>
+    </div>
     <div class="data-wrapper">
       <div class="data-container" id="portDataContainer1"></div>
     </div>
   </div>
 
-    <h2 class="small-section-header">Select Portfolio 2</h2>
-
-
-    <div class="portfolio-comparison-container" >
-      <div class="portfolio-details-container">
-
-        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-          <select id="createdPortDropdown2" class="deals-dropdown" style="color: #f9f9f9;"></select> 
-        </div>
-
-        <div class="data-container" id="portAggDataContainer2"></div>
-        <p>Market VaR:</p>
-        <div class="data-container" id="MVaRDataContainer2"></div>
-        <p>Credit VaR:</p>
-        <div class="data-container" id="CVaR_allRelativeContainer2"></div>
-        
-
+  <!-- Portfolio 2 -->
+  <h2 class="small-section-header">Select Portfolio 2</h2>
+  <div class="portfolio-comparison-container">
+    <div class="portfolio-details-container">
+      <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+        <select id="createdPortDropdown2" class="deals-dropdown" style="color: #f9f9f9;"></select>
       </div>
-      <div class="data-wrapper">
-        <div class="data-container" id="portDataContainer2"></div>
-      </div>
+      <div class="data-container" id="portAggDataContainer2"></div>
+      <p>Market VaR:</p>
+      <div class="data-container" id="MVaRDataContainer2"></div>
+      <p>Credit VaR:</p>
+      <div class="data-container" id="CVaR_allRelativeContainer2"></div>
     </div>
-    
-    <!-- Group 1: -->
-    <div class="chart-group">
-      <div id="compChartContainer1" class="comp-chart-container"></div>
-      <div id="compChartContainer2" class="comp-chart-container"></div>
-      
-    </div>
-
-    <!-- Group 2: -->
-    <div class="chart-group">
-      <div id="compChartContainer3" class="comp-chart-container"></div>
-      <div id="compChartContainer4" class="comp-chart-container"></div>
-      <div id="compChartContainer5" class="comp-chart-container"></div>
-
-  <!-- Group 3: -->
-    </div>
-    <div class="chart-group">
-      <div id="compChartContainer6" class="comp-chart-container"></div>
-      <div id="compChartContainer7" class="comp-chart-container"></div>
-      <div id="compChartContainer8" class="comp-chart-container"></div>
+    <div class="data-wrapper">
+      <div class="data-container" id="portDataContainer2"></div>
     </div>
   </div>
+
+  <!-- Group 1 Charts -->
+  <div class="chart-group">
+    <div id="compChartContainer1" class="comp-chart-container"></div>
+    <div id="compChartContainer2" class="comp-chart-container"></div>
   </div>
+
+  <!-- Group 2 Charts -->
+  <div class="chart-group">
+    <div id="compChartContainer3" class="comp-chart-container"></div>
+    <div id="compChartContainer4" class="comp-chart-container"></div>
+    <div id="compChartContainer5" class="comp-chart-container"></div>
+  </div>
+
+  <!-- Group 3 Charts -->
+  <div class="chart-group">
+    <div id="compChartContainer6" class="comp-chart-container"></div>
+    <div id="compChartContainer7" class="comp-chart-container"></div>
+    <div id="compChartContainer8" class="comp-chart-container"></div>
+  </div>
+</div>
+
 
   <!-- Modal - ML -->
   <div id="ML_Modal" class="table">

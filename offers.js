@@ -2,47 +2,43 @@
 
 export async function startOfferImport() {
   try {
-    // 1. Datei auswählen & Sheetnamen abrufen
     const fileResult = await window.api.invoke('select-excel-file');
 
     if (!fileResult.success) {
-      alert("❌ Fehler beim Öffnen der Datei: " + fileResult.error);
+      await showCustomAlert("❌ Fehler beim Öffnen der Datei: " + fileResult.error);
       return;
     }
 
     const { filePath, sheetNames } = fileResult;
 
-    // 2. Sheet-Auswahl anzeigen
     const selectedSheet = await showSheetSelectionDialog(sheetNames);
 
     if (!selectedSheet) {
-      alert("⚠️ Kein Tabellenblatt gewählt.");
+      await showCustomAlert("⚠️ Kein Tabellenblatt gewählt.");
       return;
     }
 
-    // 3. Versuche Import → prüfe auf vorhandene Tabelle
     let importResult = await window.api.invoke('import-excel-offer-sheet', {
       filePath,
       sheetName: selectedSheet
     });
 
-    // 4. Wenn Tabelle schon existiert → Nutzer fragen
     if (importResult.tableExists) {
       const userChoice = await showTableConflictDialog(importResult.tempTableName);
 
       if (userChoice === "cancel") {
-        alert("❌ Import abgebrochen.");
+        await showCustomAlert("❌ Import abgebrochen.");
         return;
       }
 
       if (userChoice === "useExisting") {
-        alert("📂 Bestehende Tabelle wird verwendet.");
+        await showCustomAlert("📂 Bestehende Tabelle wird verwendet.");
         const PortfoliosColumns = await window.api.invoke('get-table-columns', { tableName: importResult.tempTableName });
         const tempTableColumns = await window.api.invoke('get-table-columns', { tableName: importResult.tempTableName });
 
         showMatchingUI(PortfoliosColumns, tempTableColumns, importResult.tempTableName);
 
-         const rows = await window.api.invoke('get-table-rows', { tableName: importResult.tempTableName });
+        const rows = await window.api.invoke('get-table-rows', { tableName: importResult.tempTableName });
         console.log("📊 Inhalt der bestehenden Tabelle:", rows);
         return;
       }
@@ -53,81 +49,79 @@ export async function startOfferImport() {
           sheetName: selectedSheet,
           overwrite: true
         });
+
         if (importResult.success) {
-        const rows = await window.api.invoke('get-table-rows', { tableName: importResult.tempTableName });
-        console.log("📊 Tabelle nach Ersetzen:", rows);
+          const rows = await window.api.invoke('get-table-rows', { tableName: importResult.tempTableName });
+          console.log("📊 Tabelle nach Ersetzen:", rows);
         }
       }
     }
 
-    // 5. Import prüfen & Matching starten
     if (!importResult.success) {
-      alert("❌ Fehler beim Import: " + importResult.error);
+      await showCustomAlert("❌ Fehler beim Import: " + importResult.error);
       return;
     }
 
     const { tempTableName, PortfoliosColumns, tempTableColumns } = importResult;
 
-    alert(`✅ Datei erfolgreich geladen: "${tempTableName}".\nBitte Spalten zuordnen.`);
+    await showCustomAlert(`✅ Datei erfolgreich geladen: "${tempTableName}".\nBitte Spalten zuordnen.`);
     showMatchingUI(PortfoliosColumns, tempTableColumns, tempTableName);
 
   } catch (err) {
     console.error("❌ Unerwarteter Fehler beim Import:", err);
-    alert("❌ Unerwarteter Fehler beim Import: " + err.message);
+    await showCustomAlert("❌ Unerwarteter Fehler beim Import: " + err.message);
   }
 }
+
 
 //Schnellimport (Testdaten LLB)
 export async function quickImportWithStandardMapping() {
   try {
-    // 📁 Datei wählen
     const fileResult = await window.api.invoke("select-excel-file");
     if (!fileResult.success) {
-      alert("❌ Fehler beim Öffnen der Datei: " + fileResult.error);
+      await showCustomAlert("❌ Fehler beim Öffnen der Datei: " + fileResult.error);
       return;
     }
 
     const selectedSheet = await showSheetSelectionDialog(fileResult.sheetNames);
     if (!selectedSheet) {
-      alert("⚠️ Kein Tabellenblatt gewählt.");
+      await showCustomAlert("⚠️ Kein Tabellenblatt gewählt.");
       return;
     }
 
-    // 📥 Excel-Sheet importieren
     const importResult = await window.api.invoke('import-excel-offer-sheet-quick', {
       filePath: fileResult.filePath,
       sheetName: selectedSheet,
       overwrite: true
     });
 
-
     if (!importResult.success) {
-      alert("❌ Fehler beim Import: " + importResult.error);
+      await showCustomAlert("❌ Fehler beim Import: " + importResult.error);
       return;
     }
 
     const tableName = importResult.tempTableName;
 
-    // ✅ Standard-Mapping definieren
     const columnMap = [
       { from: "PROD_ID", to: "PROD_ID" },
       { from: "SECURITY_DES", to: "DESCRIPTION" },
       { from: "ISSUER", to: "ISSUER" },
       { from: "TICKER", to: "TICKER" },
       { from: "MATURITY", to: "MATURITY" },
-      { from: "COUPON", to: "COUPON" },
+      { from: "CPN", to: "COUPON" },
       { from: "PAYMENT_RANK", to: "RANK" },
       { from: "RTG_SP", to: "RATING" },
       { from: "CPN_FREQ", to: "TENOR" },
-      { from: "CPN_TYP", to: "CouponType" },
-      { from: "PRISE ASK", to: "PRICE_BUY" }  // Für Deals wichtig
+      { value: "FIX", to: "CouponType" },
+      { from: "ISSUE_DT", to: "START_DATE" },
+      { from: "PX_ASK", to: "PRICE_BUY" },
+      { from: "Product_Rating", to: "RATING_PROD" },
     ];
 
     const columnMapDeals = columnMap.filter(col =>
       ["PROD_ID", "PRICE_BUY"].includes(col.to)
     );
 
-    // 🔄 Matched Columns an Server schicken
     window.api.send("import-matched-columns", {
       sourceTable: tableName,
       targetTable: "DealsMain",
@@ -135,7 +129,6 @@ export async function quickImportWithStandardMapping() {
       additionalFields: { port_name: tableName }
     });
 
-    // 🚀 Verarbeitung starten
     const issuerCheck = await window.api.invoke("check-and-insert-issuers", {
       tableName,
       columnMap
@@ -155,18 +148,17 @@ export async function quickImportWithStandardMapping() {
     });
     if (!dealsInsert.success) throw new Error(dealsInsert.error);
 
-    // 🧾 Zusammenfassung anzeigen
     let summary = `✅ ${prodCheck.insertedCount} neue Produkte importiert.\n`;
     summary += `✅ ${dealsInsert.insertedCount} Produkte in Portfolio eingefügt.\n`;
     if (prodCheck.rankWarnings?.length) {
       summary += `\n⚠️ RANK manuell prüfen für:\n${prodCheck.rankWarnings.join(", ")}`;
     }
 
-    alert(summary);
+    await showCustomAlert(summary);
 
   } catch (err) {
     console.error("❌ Fehler beim Schnellimport:", err);
-    alert("❌ Fehler beim Schnellimport: " + err.message);
+    await showCustomAlert("❌ Fehler beim Schnellimport: " + err.message);
   }
 }
 
@@ -412,13 +404,13 @@ export async function handleSubmitMatching() {
   });
 
   if (columnMap.length === 0) {
-    alert("⚠️ Keine Zuordnungen vorgenommen.");
+    await showCustomAlert("⚠️ Keine Zuordnungen vorgenommen.");
     return;
   }
 
   const tempTableName = document.getElementById("matchingContainer")?.dataset.table;
   if (!tempTableName) {
-    alert("❌ Fehler: Tabellenname nicht gefunden.");
+    await showCustomAlert("❌ Fehler: Tabellenname nicht gefunden.");
     return;
   }
 
@@ -432,21 +424,18 @@ export async function handleSubmitMatching() {
   });
 
   try {
-    // 🧱 ISSUER einfügen
     const issuerCheck = await window.api.invoke("check-and-insert-issuers", {
       tableName: tempTableName,
       columnMap
     });
     if (!issuerCheck.success) throw new Error(issuerCheck.error);
 
-    // 📦 PRODUCTS einfügen
     const prodCheck = await window.api.invoke("check-and-insert-products", {
       tableName: tempTableName,
       columnMap
     });
     if (!prodCheck.success) throw new Error(prodCheck.error);
 
-    // 💰 DEALS erstellen
     const dealsInsert = await window.api.invoke("create-deals-from-import", {
       tableName: tempTableName,
       fileName: tempTableName,
@@ -454,7 +443,6 @@ export async function handleSubmitMatching() {
     });
     if (!dealsInsert.success) throw new Error(dealsInsert.error);
 
-    // ✅ Zusammenfassung anzeigen
     let summary = `✅ ${prodCheck.insertedCount} neue Produkte importiert.\n`;
     summary += `✅ ${dealsInsert.insertedCount} Produkte in neues Portfolio eingefügt.\n`;
 
@@ -462,13 +450,46 @@ export async function handleSubmitMatching() {
       summary += `\n⚠️ RANK manuell prüfen für:\n` + prodCheck.rankWarnings.join(", ");
     }
 
-    alert(summary);
+    await showCustomAlert(summary);
   } catch (err) {
     console.error("❌ Fehler beim Importprozess:", err);
-    alert("❌ Fehler: " + err.message);
+    await showCustomAlert("❌ Fehler: " + err.message);
   }
 }
 
+
+function showCustomAlert(message) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("div");
+    dialog.style.position = "fixed";
+    dialog.style.top = "50%";
+    dialog.style.left = "50%";
+    dialog.style.transform = "translate(-50%, -50%)";
+    dialog.style.backgroundColor = "#fff";
+    dialog.style.padding = "20px";
+    dialog.style.border = "1px solid #ccc";
+    dialog.style.zIndex = "10000";
+    dialog.style.boxShadow = "0 0 10px rgba(0,0,0,0.3)";
+    dialog.style.borderRadius = "8px";
+    dialog.style.minWidth = "300px";
+    dialog.style.textAlign = "center";
+
+    const msg = document.createElement("div");
+    msg.textContent = message;
+    msg.style.marginBottom = "15px";
+    dialog.appendChild(msg);
+
+    const okBtn = document.createElement("button");
+    okBtn.textContent = "OK";
+    okBtn.onclick = () => {
+      document.body.removeChild(dialog);
+      resolve();
+    };
+    dialog.appendChild(okBtn);
+
+    document.body.appendChild(dialog);
+  });
+}
 
 
 

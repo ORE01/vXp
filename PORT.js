@@ -1,10 +1,7 @@
 import { filterColumnsInData } from './renderer/dataProcessor.js';
 import processData from './renderer/dataProcessor.js';
-import { handleFormAction } from './renderer/FormButtonHandler.js';
-import { createComparisonCharts} from './COMP.js';
 import { appState } from './renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from './utils/tooltips.js';
-import { handleLiquidityData } from './liquidity.js';
 import { formatNumberWithGrouping } from './utils/format.js';
 
 

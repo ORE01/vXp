@@ -390,11 +390,64 @@ ipcMain.handle('get-table-rows', async (event, { tableName }) => {
     });
   });
 });
-
+// ISSUER:
 //prüft alle importierten Issuer und legt sie bei Bedarf neu an
+// ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap }) => {
+//   try {
+//     // Dynamische Spaltenzuordnung aus der Zuordnungstabelle
+//     const tickerCol = columnMap.find(m => m.to === "TICKER")?.from;
+//     const issuerCol = columnMap.find(m => m.to === "ISSUER")?.from;
+//     const ratingCol = columnMap.find(m => m.to === "RATING")?.from;
+
+//     if (!tickerCol || !issuerCol || !ratingCol) {
+//       throw new Error("Erforderliche Spalten für den Issuer-Check wurden nicht vollständig zugeordnet.");
+//     }
+
+//     const sql = `
+//       SELECT DISTINCT "${tickerCol}" AS TICKER, "${issuerCol}" AS ISSUER, "${ratingCol}" AS RATING 
+//       FROM "${tableName}" 
+//       WHERE "${tickerCol}" IS NOT NULL
+//     `;
+
+//     const rows = await new Promise((resolve, reject) => {
+//       db.all(sql, [], (err, rows) => {
+//         if (err) reject(err);
+//         else resolve(rows);
+//       });
+//     });
+
+//     for (const row of rows) {
+//       const { TICKER, ISSUER, RATING } = row;
+
+//       const existing = await new Promise((resolve, reject) => {
+//         db.get(`SELECT * FROM Issuer WHERE TICKER = ?`, [TICKER], (err, result) => {
+//           if (err) reject(err);
+//           else resolve(result);
+//         });
+//       });
+
+//       if (!existing) {
+//         const insertSQL = `
+//           INSERT INTO Issuer 
+//           ("INCLUDE", "ISSUER", "TICKER", "RATING", "senior_unsecured") 
+//           VALUES (?, ?, ?, ?, ?)
+//         `;
+//         await runSQL(insertSQL, [1, ISSUER, TICKER, RATING, RATING]);
+//         console.log(`✅ Neuer Issuer eingefügt: ${ISSUER} (${TICKER})`);
+//       } else {
+//         console.log(`🔁 Issuer bereits vorhanden: ${ISSUER} (${TICKER})`);
+//       }
+//     }
+
+//     return { success: true };
+//   } catch (err) {
+//     console.error("❌ Fehler beim Prüfen/Einfügen der Issuer:", err);
+//     return { success: false, error: err.message };
+//   }
+// });
+
 ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap }) => {
   try {
-    // Dynamische Spaltenzuordnung aus der Zuordnungstabelle
     const tickerCol = columnMap.find(m => m.to === "TICKER")?.from;
     const issuerCol = columnMap.find(m => m.to === "ISSUER")?.from;
     const ratingCol = columnMap.find(m => m.to === "RATING")?.from;
@@ -416,6 +469,8 @@ ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap 
       });
     });
 
+    let inserted = false;
+
     for (const row of rows) {
       const { TICKER, ISSUER, RATING } = row;
 
@@ -434,9 +489,15 @@ ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap 
         `;
         await runSQL(insertSQL, [1, ISSUER, TICKER, RATING, RATING]);
         console.log(`✅ Neuer Issuer eingefügt: ${ISSUER} (${TICKER})`);
+        inserted = true;
       } else {
         console.log(`🔁 Issuer bereits vorhanden: ${ISSUER} (${TICKER})`);
       }
+    }
+
+    // ⬇️ Direkt Backend-Refresh aufrufen
+    if (inserted) {
+      refreshTable("Issuer");
     }
 
     return { success: true };
@@ -445,6 +506,173 @@ ipcMain.handle('check-and-insert-issuers', async (event, { tableName, columnMap 
     return { success: false, error: err.message };
   }
 });
+
+// PRODUCT:
+// ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap }) => {
+//   try {
+//     const prodIdCol     = columnMap.find(m => m.to === "PROD_ID")?.from;
+//     const descCol       = columnMap.find(m => m.to === "DESCRIPTION")?.from;
+//     const tickerCol     = columnMap.find(m => m.to === "TICKER")?.from;
+//     const maturityCol   = columnMap.find(m => m.to === "MATURITY")?.from;
+//     const couponCol     = columnMap.find(m => m.to === "COUPON")?.from;
+//     const rankCol       = columnMap.find(m => m.to === "RANK")?.from;
+//     const ratingProdCol = columnMap.find(m => m.to === "RATING_PROD")?.from;
+//     const tenorCol      = columnMap.find(m => m.to === "TENOR")?.from;
+//     const startDateCol  = columnMap.find(m => m.to === "START_DATE")?.from;
+
+//     if (!prodIdCol || !descCol || !tickerCol) {
+//       throw new Error("Erforderliche Spalten (PROD_ID, DESCRIPTION, TICKER) wurden nicht vollständig zugeordnet.");
+//     }
+
+//     const safeCol = (col, alias) => col ? `"${col}" AS ${alias}` : `'' AS ${alias}`;
+
+//     const sql = `
+//       SELECT DISTINCT 
+//         ${safeCol(prodIdCol,     'PROD_ID')},
+//         ${safeCol(descCol,       'DESCRIPTION')},
+//         ${safeCol(tickerCol,     'TICKER')},
+//         ${safeCol(maturityCol,   'MATURITY')},
+//         ${safeCol(couponCol,     'COUPON')},
+//         ${safeCol(rankCol,       'RANK')},
+//         ${safeCol(ratingProdCol, 'RATING_PROD')},
+//         ${safeCol(tenorCol,      'TENOR')},
+//         ${safeCol(startDateCol,  'START_DATE')}
+//       FROM "${tableName}"
+//       WHERE "${prodIdCol}" IS NOT NULL
+//     `;
+
+//     const rows = await new Promise((resolve, reject) => {
+//       db.all(sql, [], (err, rows) => {
+//         if (err) reject(err);
+//         else resolve(rows);
+//       });
+//     });
+
+//     const rankMapping = {
+//       "senior secured": "senior_secured",
+//       "secured": "senior_secured",
+//       "senior preferred": "senior_preferred",
+//       "senior pref.": "senior_preferred",
+//       "sr preferred": "senior_preferred",
+//       "senior unsecured": "senior_unsecured",
+//       "sr unsecured": "senior_unsecured",
+//       "unsecured": "senior_unsecured",
+//       "senior": "senior_unsecured",
+//       "plain vanilla": "senior_unsecured",
+//       "senior subordinated": "senior_subordinated",
+//       "subordinated": "senior_subordinated",
+//       "subord.": "senior_subordinated",
+//       "junior subordinated": "junior_subordinated",
+//     };
+
+//     const unmappedRanks = new Set();
+//     const unmappedProdIds = new Map();
+//     let insertedCount = 0;
+
+//     for (const row of rows) {
+//       const { PROD_ID, TICKER } = row;
+
+//       const matchedIssuer = await new Promise((resolve, reject) => {
+//         db.get(`SELECT ISSUER FROM Issuer WHERE TICKER = ?`, [TICKER], (err, result) => {
+//           if (err) reject(err);
+//           else resolve(result?.ISSUER || null);
+//         });
+//       });
+
+//       const formatDate = (val) => {
+//         if (!val) return "";
+//         if (typeof val === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(val)) {
+//           const [d, m, y] = val.split('.');
+//           return `${y}-${m}-${d}`;
+//         } else if (val instanceof Date) {
+//           return val.toISOString().split('T')[0];
+//         } else {
+//           return val;
+//         }
+//       };
+
+//       row.MATURITY = formatDate(row.MATURITY);
+//       row.START_DATE = formatDate(row.START_DATE);
+
+//       if (typeof row.COUPON === "string") {
+//         row.COUPON = parseFloat(row.COUPON.replace(",", "."));
+//       }
+//       if (typeof row.COUPON === "number") {
+//         row.COUPON = row.COUPON / 100;
+//       }
+
+//       const rawRank = row.RANK?.toLowerCase().trim() || "";
+//       const normalizedRank = rankMapping[rawRank] || null;
+
+//       if (!normalizedRank && rawRank) {
+//         unmappedRanks.add(rawRank);
+//         if (!unmappedProdIds.has(rawRank)) {
+//           unmappedProdIds.set(rawRank, []);
+//         }
+//         unmappedProdIds.get(rawRank).push(PROD_ID);
+//       }
+
+//       // Fallbacks
+//       row.DESCRIPTION   = row.DESCRIPTION   ?? "";
+//       row.MATURITY      = row.MATURITY      ?? "";
+//       row.START_DATE    = row.START_DATE    ?? "";
+//       row.COUPON        = row.COUPON        ?? "";
+//       row.TICKER        = row.TICKER        ?? "";
+//       row.RATING_PROD   = (row.RATING_PROD === undefined || row.RATING_PROD === null || row.RATING_PROD === "Product_Rating") ? "" : row.RATING_PROD;
+//       row.TENOR         = row.TENOR         ?? "";
+
+//       const exists = await new Promise((resolve, reject) => {
+//         db.get(`SELECT 1 FROM ProdAll WHERE PROD_ID = ?`, [PROD_ID], (err, found) => {
+//           if (err) reject(err);
+//           else resolve(!!found);
+//         });
+//       });
+
+//       if (!exists) {
+//         const insertSQL = `
+//           INSERT INTO ProdAll 
+//           ("INCLUDE", "PROD_ID", "DESCRIPTION", "ISSUER", "MATURITY", "START_DATE", "COUPON", "RANK", "TICKER", "RATING_PROD", "TENOR", "CouponType")
+//           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+//         `;
+
+//         await runSQL(insertSQL, [
+//           1,
+//           PROD_ID || "",
+//           row.DESCRIPTION,
+//           matchedIssuer || "",
+//           row.MATURITY,
+//           row.START_DATE,
+//           row.COUPON,
+//           normalizedRank,
+//           row.TICKER,
+//           row.RATING_PROD,
+//           row.TENOR,
+//           "FIX"
+//         ]);
+
+//         insertedCount++;
+//         console.log(`➕ Produkt eingefügt: ${PROD_ID}`);
+//       } else {
+//         console.log(`✔️ Produkt vorhanden: ${PROD_ID}`);
+//       }
+//     }
+
+//     if (unmappedRanks.size > 0) {
+//       const details = Array.from(unmappedProdIds.entries())
+//         .map(([rank, prodIds]) => `❓ "${rank}" → ${prodIds.join(", ")}`)
+//         .join("\n");
+
+//       const message = `⚠️ Unbekannte RANK-Werte erkannt!\nDiese Produkte wurden mit leerem RANK importiert:\n\n${details}`;
+//       event.sender.send("show-rank-warning", message);
+//     }
+
+//     return { success: true, insertedCount };
+
+//   } catch (err) {
+//     console.error("❌ Fehler beim Einfügen der Produkte:", err);
+//     return { success: false, error: err.message };
+//   }
+// });
 
 ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap }) => {
   try {
@@ -456,21 +684,25 @@ ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap
     const rankCol       = columnMap.find(m => m.to === "RANK")?.from;
     const ratingProdCol = columnMap.find(m => m.to === "RATING_PROD")?.from;
     const tenorCol      = columnMap.find(m => m.to === "TENOR")?.from;
+    const startDateCol  = columnMap.find(m => m.to === "START_DATE")?.from;
 
     if (!prodIdCol || !descCol || !tickerCol) {
       throw new Error("Erforderliche Spalten (PROD_ID, DESCRIPTION, TICKER) wurden nicht vollständig zugeordnet.");
     }
 
+    const safeCol = (col, alias) => col ? `"${col}" AS ${alias}` : `'' AS ${alias}`;
+
     const sql = `
       SELECT DISTINCT 
-        "${prodIdCol}"     AS PROD_ID, 
-        "${descCol}"       AS DESCRIPTION, 
-        "${tickerCol}"     AS TICKER, 
-        "${maturityCol}"   AS MATURITY, 
-        "${couponCol}"     AS COUPON, 
-        "${rankCol}"       AS RANK, 
-        "${ratingProdCol}" AS RATING_PROD,
-        "${tenorCol}"      AS TENOR
+        ${safeCol(prodIdCol,     'PROD_ID')},
+        ${safeCol(descCol,       'DESCRIPTION')},
+        ${safeCol(tickerCol,     'TICKER')},
+        ${safeCol(maturityCol,   'MATURITY')},
+        ${safeCol(couponCol,     'COUPON')},
+        ${safeCol(rankCol,       'RANK')},
+        ${safeCol(ratingProdCol, 'RATING_PROD')},
+        ${safeCol(tenorCol,      'TENOR')},
+        ${safeCol(startDateCol,  'START_DATE')}
       FROM "${tableName}"
       WHERE "${prodIdCol}" IS NOT NULL
     `;
@@ -482,7 +714,6 @@ ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap
       });
     });
 
-    // 💡 Mapping erlaubter RANKs
     const rankMapping = {
       "senior secured": "senior_secured",
       "secured": "senior_secured",
@@ -500,17 +731,13 @@ ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap
       "junior subordinated": "junior_subordinated",
     };
 
-
-    const unknownRanks = [];
     const unmappedRanks = new Set();
     const unmappedProdIds = new Map();
-
     let insertedCount = 0;
 
     for (const row of rows) {
       const { PROD_ID, TICKER } = row;
 
-      // 🔄 ISSUER aus Issuer-Tabelle via TICKER
       const matchedIssuer = await new Promise((resolve, reject) => {
         db.get(`SELECT ISSUER FROM Issuer WHERE TICKER = ?`, [TICKER], (err, result) => {
           if (err) reject(err);
@@ -518,17 +745,28 @@ ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap
         });
       });
 
-      // MATURITY formatieren
-      if (row.MATURITY) {
-        if (typeof row.MATURITY === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(row.MATURITY)) {
-          const [d, m, y] = row.MATURITY.split('.');
-          row.MATURITY = `${y}-${m}-${d}`;
-        } else if (row.MATURITY instanceof Date) {
-          row.MATURITY = row.MATURITY.toISOString().split('T')[0];
+      const formatDate = (val) => {
+        if (!val) return "";
+        if (typeof val === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(val)) {
+          const [d, m, y] = val.split('.');
+          return `${y}-${m}-${d}`;
+        } else if (val instanceof Date) {
+          return val.toISOString().split('T')[0];
+        } else {
+          return val;
         }
+      };
+
+      row.MATURITY = formatDate(row.MATURITY);
+      row.START_DATE = formatDate(row.START_DATE);
+
+      if (typeof row.COUPON === "string") {
+        row.COUPON = parseFloat(row.COUPON.replace(",", "."));
+      }
+      if (typeof row.COUPON === "number") {
+        row.COUPON = row.COUPON / 100;
       }
 
-      // RANK normalisieren
       const rawRank = row.RANK?.toLowerCase().trim() || "";
       const normalizedRank = rankMapping[rawRank] || null;
 
@@ -537,8 +775,17 @@ ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap
         if (!unmappedProdIds.has(rawRank)) {
           unmappedProdIds.set(rawRank, []);
         }
-        unmappedProdIds.get(rawRank).push(row.PROD_ID);
+        unmappedProdIds.get(rawRank).push(PROD_ID);
       }
+
+      // Fallbacks
+      row.DESCRIPTION   = row.DESCRIPTION   ?? "";
+      row.MATURITY      = row.MATURITY      ?? "";
+      row.START_DATE    = row.START_DATE    ?? "";
+      row.COUPON        = row.COUPON        ?? "";
+      row.TICKER        = row.TICKER        ?? "";
+      row.RATING_PROD   = (row.RATING_PROD === undefined || row.RATING_PROD === null || row.RATING_PROD === "Product_Rating") ? "" : row.RATING_PROD;
+      row.TENOR         = row.TENOR         ?? "";
 
       const exists = await new Promise((resolve, reject) => {
         db.get(`SELECT 1 FROM ProdAll WHERE PROD_ID = ?`, [PROD_ID], (err, found) => {
@@ -550,51 +797,121 @@ ipcMain.handle('check-and-insert-products', async (event, { tableName, columnMap
       if (!exists) {
         const insertSQL = `
           INSERT INTO ProdAll 
-          ("INCLUDE", "PROD_ID", "DESCRIPTION", "ISSUER", "MATURITY", "COUPON", "RANK", "TICKER", "RATING_PROD", "TENOR")
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ("INCLUDE", "PROD_ID", "DESCRIPTION", "ISSUER", "MATURITY", "START_DATE", "COUPON", "RANK", "TICKER", "RATING_PROD", "TENOR", "CouponType")
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         await runSQL(insertSQL, [
           1,
-          row.PROD_ID || "",
-          row.DESCRIPTION || "",
+          PROD_ID || "",
+          row.DESCRIPTION,
           matchedIssuer || "",
-          row.MATURITY || "",
-          row.COUPON || "",
+          row.MATURITY,
+          row.START_DATE,
+          row.COUPON,
           normalizedRank,
-          row.TICKER || "",
-          row.RATING_PROD || "",
-          row.TENOR || ""
+          row.TICKER,
+          row.RATING_PROD,
+          row.TENOR,
+          "FIX"
         ]);
 
         insertedCount++;
-        console.log(`➕ Produkt eingefügt: ${row.PROD_ID}`);
+        console.log(`➕ Produkt eingefügt: ${PROD_ID}`);
       } else {
-        console.log(`✔️ Produkt vorhanden: ${row.PROD_ID}`);
+        console.log(`✔️ Produkt vorhanden: ${PROD_ID}`);
       }
+    }
+
+    // 🌀 Tabelle nur aktualisieren, wenn neue Produkte eingefügt wurden
+    if (insertedCount > 0 && typeof refreshTable === "function") {
+      refreshTable("ProdAll");
     }
 
     if (unmappedRanks.size > 0) {
       const details = Array.from(unmappedProdIds.entries())
-        .map(([rank, prodIds]) => `❓ \"${rank}\" → ${prodIds.join(", ")}`)
+        .map(([rank, prodIds]) => `❓ "${rank}" → ${prodIds.join(", ")}`)
         .join("\n");
 
       const message = `⚠️ Unbekannte RANK-Werte erkannt!\nDiese Produkte wurden mit leerem RANK importiert:\n\n${details}`;
-
       event.sender.send("show-rank-warning", message);
     }
 
-    return {
-    success: true,
-    insertedCount,
-    rankWarnings: unknownRanks.map(r => `${r.prodId} (${r.originalRank})`)
-    };
+    return { success: true, insertedCount };
 
   } catch (err) {
     console.error("❌ Fehler beim Einfügen der Produkte:", err);
     return { success: false, error: err.message };
   }
 });
+
+
+
+
+
+
+//DEALS:
+// ipcMain.handle("create-deals-from-import", async (event, { tableName, columnMap }) => {
+//   try {
+//     // 🧼 Vor dem Einfügen: vorhandene Deals mit gleichem port_name löschen
+//     await new Promise((resolve, reject) => {
+//       const deleteSQL = `DELETE FROM DealsMain WHERE port_name = ?`;
+//       db.run(deleteSQL, [tableName], function (err) {
+//         if (err) {
+//           console.error("❌ Fehler beim Löschen alter Deals:", err);
+//           reject(err);
+//         } else {
+//           console.log(`🗑️ Vorherige Einträge mit port_name = ${tableName} wurden gelöscht.`);
+//           resolve();
+//         }
+//       });
+//     });
+
+//     // 🔍 PRICE_BUY-Zuordnung ermitteln
+//     const priceBuyCol = columnMap.find(m => m.to === "PRICE_BUY")?.from;
+
+//     // 📥 Alle Zeilen aus der Import-Tabelle
+//     const rows = await getAllRowsFromTable(tableName);
+
+//     const validRows = rows.filter(r => r.PROD_ID);
+//     let insertedCount = 0;
+
+//     for (const row of validRows) {
+//       const newRow = {
+//         INCLUDE: 1,
+//         PROD_ID: row.PROD_ID,
+//         TRADE_DATE: new Date().toISOString().split("T")[0],
+//         CATEGORY: "2_lgfr_Anlagevermögen",
+//         NOTIONAL: 1000000,
+//         PRICE_BUY: priceBuyCol ? row[priceBuyCol] : null,
+//         Depotbank: extractDepotbank(tableName),
+//         port_name: tableName
+//       };
+
+//       await new Promise((resolve, reject) => {
+//         insertRowInTable(newRow, "DealsMain", (err, lastId) => {
+//           if (err) {
+//             console.error("❌ Fehler beim Insert in DealsMain:", err);
+//             reject(err);
+//           } else {
+//             console.log("✅ Deal eingefügt mit ID", lastId);
+//             insertedCount++;
+//             resolve(lastId);
+//           }
+//         });
+//       });
+//     }
+
+//     return {
+//       success: true,
+//       insertedCount
+//     };
+
+//   } catch (err) {
+//     console.error("❌ Fehler beim Erstellen von Deals:", err);
+//     return { success: false, error: err.message };
+//   }
+// });
 
 ipcMain.handle("create-deals-from-import", async (event, { tableName, columnMap }) => {
   try {
@@ -647,6 +964,11 @@ ipcMain.handle("create-deals-from-import", async (event, { tableName, columnMap 
       });
     }
 
+    // ✅ Nach dem Einfügen: Tabelle neu laden (nur bei Erfolg)
+    if (insertedCount > 0 && typeof refreshTable === "function") {
+      refreshTable("DealsMain");
+    }
+
     return {
       success: true,
       insertedCount
@@ -657,6 +979,9 @@ ipcMain.handle("create-deals-from-import", async (event, { tableName, columnMap 
     return { success: false, error: err.message };
   }
 });
+
+
+
 
 
 
