@@ -12,7 +12,7 @@ let columnsToShow = ['PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponTy
 const portDataMap = {}; // Speichert Daten pro Container
 
 export function handlePortAggData(receivedData, index, port_name) {
-  console.log('portData:', receivedData);
+  // console.log('portData:', receivedData);
   const elementId = `portDataContainer${index}`;
   const aggContainerId = `portAggDataContainer${index}`;
 
@@ -22,7 +22,7 @@ export function handlePortAggData(receivedData, index, port_name) {
   }
 
   const portData = filterColumnsInData(receivedData, columns);
-  console.log('portData:', portData);
+  // console.log('portData:', portData);
 
   let PortValue = 0;
   let PortNotional = 0;
@@ -61,13 +61,13 @@ export function handlePortAggData(receivedData, index, port_name) {
 const portDataAggContainer = document.getElementById(aggContainerId);
 if (portDataAggContainer) {
   const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
-  console.log('🔎 tableData:', tableData);
+  // console.log('🔎 tableData:', tableData);
 
   const portDataHTML = processData(tableData, tableName);
-  console.log('🛠 Generated HTML from processData:', portDataHTML);
+  // console.log('🛠 Generated HTML from processData:', portDataHTML);
 
   portDataAggContainer.innerHTML = portDataHTML;
-  console.log('✅ Container innerHTML after insert:', portDataAggContainer.innerHTML);
+  // console.log('✅ Container innerHTML after insert:', portDataAggContainer.innerHTML);
 }
 
 }
@@ -109,7 +109,7 @@ export function handlePortProdData(receivedData, index, port_name) {
   if (portDataContainer && portData) {
     let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
     let filteredPortData = filterColumnsInData(receivedData, columns); //!!!!! nach Porfolioname
-      console.log("filteredPortData:", filteredPortData);
+      // console.log("filteredPortData:", filteredPortData);
 
       appState.setFilteredPortData(filteredPortData);// !!!
 

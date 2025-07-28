@@ -36,30 +36,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// async function handleExcelImport() {
-//   try {
-//     const result = await window.api.invoke('import-excel-dialog');
-//     if (result.success) {
-//       alert('Import erfolgreich!');
-//     } else {
-//       alert('Import fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
-//     }
-//   } catch (error) {
-//     alert('Fehler beim Import: ' + error.message);
-//   }
-// }
+async function handleExcelImport() {
+  try {
+    const result = await window.api.invoke('import-excel-dialog');
 
-function handleExcelImport() {
-  window.api.send('import-excel-dialog');
-
-  window.api.once('import-excel-dialog-success', () => {
-    alert('Import erfolgreich!');
-  });
-
-  window.api.once('import-excel-dialog-error', (_, error) => {
-    alert('Import fehlgeschlagen: ' + (error || 'Unbekannter Fehler'));
-  });
+    if (result.success) {
+      window.api.send('show-message-box', {
+        type: 'info',
+        title: 'Import erfolgreich',
+        message: 'Die Excel-Daten wurden erfolgreich importiert.',
+      });
+    } else {
+      window.api.send('show-message-box', {
+        type: 'error',
+        title: 'Import fehlgeschlagen',
+        message: result.error || 'Unbekannter Fehler beim Import.',
+      });
+    }
+  } catch (error) {
+    window.api.send('show-message-box', {
+      type: 'error',
+      title: 'Fehler',
+      message: 'Fehler beim Import: ' + error.message,
+    });
+  }
 }
+
 
 
 function setupEventListeners() {
@@ -1093,53 +1095,35 @@ function setupButtons() {
               handleSummaryRMData(mvarDistData, 0, port_name);
             }
           }
-              // function fetchAndUpdateMVarData() {
-              //   console.log(`fetchAndUpdateMVarData`);
-              //   //window.api.send('fetch-table-data', 'MarketVaR'); 
-              //   window.api.receive('MarketVaRData', (receivedData) => {
-              //       console.log(`MVaRData:`, receivedData);
-              //       if (!receivedData || receivedData.length === 0) {
-              //           console.warn("⚠️ No new CVaR data received!");
-              //           appState.updateMvarDataTable([]);  // Store empty array to avoid stale data
-              //           return;
-              //       }
-              //       //appState.setAllMvarData(receivedData);
-              //       appState.updateMvarDataTable(receivedData);
-            
+              function fetchAndUpdateMVarData(port_name) {
+                console.log(`fetchAndUpdateMVarData`);
 
-              //   });
-              //   window.api.send('fetch-table-data', 'MarketVaR'); 
-              // }
+                // ✅ Listen for MarketVaR data
+                window.api.receive('MarketVaRData', (receivedData) => {
+                  console.log(`MVaRData:`, receivedData);
+                  if (!receivedData || receivedData.length === 0) {
+                    console.warn("⚠️ No new MarketVaR data received!");
+                    appState.updateMvarDataTable([]); // Store empty array
+                  } else {
+                    appState.updateMvarDataTable(receivedData,);
+                  }
+                });
 
-function fetchAndUpdateMVarData(port_name) {
-  console.log(`fetchAndUpdateMVarData`);
+                // ✅ Listen for MarketVaRMainDist data
+                window.api.receive('MVaRMainDistData', (receivedData) => {
+                  console.log(`MVaRMainDistData:`, receivedData);
+                  if (!receivedData || receivedData.length === 0) {
+                    console.warn("⚠️ No new MarketVaRMainDist data received!");
+                    appState.updateMvarDistData([]); // Store empty array
+                  } else {
+                    appState.updateMvarDistData(receivedData, 0, port_name);
+                  }
+                });
 
-  // ✅ Listen for MarketVaR data
-  window.api.receive('MarketVaRData', (receivedData) => {
-    console.log(`MVaRData:`, receivedData);
-    if (!receivedData || receivedData.length === 0) {
-      console.warn("⚠️ No new MarketVaR data received!");
-      appState.updateMvarDataTable([]); // Store empty array
-    } else {
-      appState.updateMvarDataTable(receivedData,);
-    }
-  });
-
-  // ✅ Listen for MarketVaRMainDist data
-  window.api.receive('MVaRMainDistData', (receivedData) => {
-    console.log(`MVaRMainDistData:`, receivedData);
-    if (!receivedData || receivedData.length === 0) {
-      console.warn("⚠️ No new MarketVaRMainDist data received!");
-      appState.updateMvarDistData([]); // Store empty array
-    } else {
-      appState.updateMvarDistData(receivedData, 0, port_name);
-    }
-  });
-
-  // ✅ Request both tables from the backend
-  window.api.send('fetch-table-data', 'MarketVaR');
-  window.api.send('fetch-table-data', 'MVaRMainDist');
-}
+                // ✅ Request both tables from the backend
+                window.api.send('fetch-table-data', 'MarketVaR');
+                window.api.send('fetch-table-data', 'MVaRMainDist');
+              }
 
       //CVaR
       function handleCVaRProject(buttonElement, extraParam) {

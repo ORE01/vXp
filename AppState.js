@@ -1015,7 +1015,7 @@ export class AppState {
     }
 
     updatePortDataTable(receivedData) {
-        console.log('📌 updatePortDataTable:', receivedData);
+        //console.log('📌 updatePortDataTable:', receivedData);
         this.setPortData(receivedData); // ✅ speichert die Daten (global verfügbar)
         this.applyFiltersAndUpdateDropdowns('port');        
       }
@@ -1042,7 +1042,7 @@ export class AppState {
         this.setAllMvarData(receivedData);
         const mvarData = this.getAllMvarData();
         
-        console.log("mvarData:", mvarData, index);
+        //console.log("mvarData:", mvarData, index);
         handleMVaRData(mvarData, index); 
 
     }
@@ -1432,7 +1432,7 @@ export class AppState {
             console.error(`⚠️ Dropdown element '${dropdownElementId}' not found.`);
             return;
         }
-        console.log('updateDropdownOptions, index:', index)
+        //console.log('updateDropdownOptions, index:', index)
         this.setPortIndex(index);
         
         const data = getDataFunction();
@@ -1460,7 +1460,7 @@ export class AppState {
         const isPortfolio = dropdownElementId.startsWith('createdPortDropdown');
         const allData = isPortfolio ? appState.getAllPortfolioData() : appState.getAllDealsData();
         const filteredData = allData.filter(entry => entry.port_name === dropdownElement.value);
-        console.log('filteredData:', filteredData)
+        //console.log('filteredData:', filteredData)
     
         if (filteredData.length > 0) {
             if (updateDataFunction) updateDataFunction(filteredData, index);
