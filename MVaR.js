@@ -7,90 +7,6 @@ import { handleFormAction, setupFormFields , saveChanges, displayModal, gatherFo
 let MVaRChart;
 //INPUT!
 
-// export function handleMVarInputData(receivedData) {
-//   function createTable(data) {
-//     const table = document.createElement('table');
-//     const headers = Object.keys(data[0]);
-
-//     const headerRow = document.createElement('tr');
-//     headers.forEach((header) => {
-//       const th = document.createElement('th');
-//       th.textContent = header;
-//       headerRow.appendChild(th);
-//     });
-//     table.appendChild(headerRow);
-
-//     data.forEach((row) => {
-//       const tableRow = document.createElement('tr');
-//       headers.forEach((header) => {
-//         const cell = document.createElement('td');
-//         cell.textContent = row[header];
-//         cell.setAttribute('contentEditable', 'true');
-//         tableRow.appendChild(cell);
-//       });
-//       table.appendChild(tableRow);
-//     });
-
-//     return table;
-//   }
-
-//   const container = document.getElementById('inputMVaR-container');
-//   while (container.firstChild) container.removeChild(container.firstChild);
-//   const table = createTable(receivedData);
-//   container.appendChild(table);
-
-//   appState.setMvarInputData(receivedData);
-
-//   const mvarAddButton = document.getElementById('mvarAddButton');
-//   if (mvarAddButton) {
-//     mvarAddButton.addEventListener('click', (event) => {
-//       event.preventDefault();
-//       const tableName = 'MVaRInput_2';
-//       const actionType = 'add';
-
-//       displayModal(actionType, null); // öffnet Modal
-
-//       const form = document.getElementById('editForm');
-//       if (!form) {
-//         console.error("❌ Das Formular-Element (#editForm) wurde nicht gefunden!");
-//         return;
-//       }
-
-//       setupFormFields(actionType, receivedData, null, tableName);
-
-//       // Save-Button: NUR HIER gatherFormData & addNewRow
-//       const saveButton = document.getElementById('saveButton');
-//       const saveClone = saveButton.cloneNode(true);
-//       saveButton.parentNode.replaceChild(saveClone, saveButton);
-
-//       saveClone.addEventListener('click', () => {
-//         const newRowData = gatherFormData(form);
-//         addNewRow(newRowData, tableName)
-//           .then(() => {
-//             console.log(`✅ New row added to ${tableName} successfully.`);
-//             closeModal();
-//             fetchAndUpdateMVarDataInputData();
-//           })
-//           .catch((error) => {
-//             console.error(`❌ Fehler beim Hinzufügen: ${error.message}`);
-//           });
-//       });
-//     });
-//   }
-
-//   const mvarEditButtons = document.querySelectorAll('#inputMVaR-container .edit-button');
-//   mvarEditButtons.forEach((button) => {
-//     button.addEventListener('click', (event) => {
-//       event.stopPropagation();
-//       const actionType = 'edit';
-//       const rowIndex = parseInt(button.getAttribute('data-row'), 10);
-//       handleFormAction(event, appState.mvarInputData, rowIndex, 'MVaRInput_2', actionType);
-//     });
-//   });
-
-
-// }
-
 export function handleMVarInputData(receivedData) {
   const container = document.getElementById('inputMVaR-container');
   while (container.firstChild) container.removeChild(container.firstChild);
@@ -128,7 +44,7 @@ export function handleMVarInputData(receivedData) {
         const newRowData = gatherFormData(form);
         addNewRow(newRowData, tableName)
           .then(() => {
-            console.log(`✅ New row added to ${tableName} successfully.`);
+            // console.log(`✅ New row added to ${tableName} successfully.`);
             closeModal();
             fetchAndUpdateMVarDataInputData();
           })
@@ -153,7 +69,7 @@ export function handleMVarInputData(receivedData) {
 
 
 function fetchAndUpdateMVarDataInputData(tableName = 'MVaRInput_2') {
-  console.log(`🚀 fetchAndUpdateMVarDataInputData called for table: ${tableName}`);
+  // console.log(`🚀 fetchAndUpdateMVarDataInputData called for table: ${tableName}`);
 
   window.api.send('fetch-table-data', tableName);  // nur der String!
 }
@@ -164,10 +80,10 @@ function fetchAndUpdateMVarDataInputData(tableName = 'MVaRInput_2') {
 
 
 export function handleMVaRData(receivedData, index) {
-  console.log('MVaRData, index:', receivedData, index);
+  // console.log('MVaRData, index:', receivedData, index);
   const port_name = appState.getSelectedPortTableName();
 
-  console.log('port_name:', port_name);
+  // console.log('port_name:', port_name);
 
   const containerIds = [
     'MVaRDataContainer',

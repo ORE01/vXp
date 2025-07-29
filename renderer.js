@@ -1574,18 +1574,49 @@ function setupButtons() {
     }
   }
   // PROD
-  function handleProdData(receivedData) {
-    //console.log('ProdAllData', receivedData);
-    appState.setActiveTable('prod');
-    appState.setProdData(receivedData);
-    appState.applyFiltersAndUpdateDropdowns('prod');
-    appState.tableConfigs[appState.currentActiveTable];
+  // function handleProdData(receivedData) {
+  //   console.log('ProdAllData', receivedData);
+  //   appState.setActiveTable('prod');
+  //   appState.setProdData(receivedData);
+  //   appState.applyFiltersAndUpdateDropdowns('prod');
+  //   appState.tableConfigs[appState.currentActiveTable];
 
-    const prodResetButton = document.getElementById('prodResetFiltersButton');
-    if (prodResetButton) {
-      prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'prod'));
-    }
+  //   const prodResetButton = document.getElementById('prodResetFiltersButton');
+  //   if (prodResetButton) {
+  //     prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'prod'));
+  //   }
+  // }
+
+  function handleProdData(receivedData) {
+  // TICKER → ISSUER Zuordnung holen
+  const issuerData = appState.getIssuerData(); // enthält z. B. [{ TICKER: "TAAA", ISSUER: "Tesla Inc." }, ...]
+
+  // Mapping erstellen
+  const tickerToIssuerMap = {};
+  issuerData.forEach(entry => {
+    tickerToIssuerMap[entry.TICKER] = entry.ISSUER;
+  });
+
+  // Produkte durchgehen und ISSUER aktualisieren
+  const updatedData = receivedData.map(prod => {
+    const matchedIssuer = tickerToIssuerMap[prod.TICKER] || null;
+    return {
+      ...prod,
+      ISSUER: matchedIssuer  // ersetzt alten ISSUER
+    };
+  });
+
+  // Weiter wie bisher
+  appState.setActiveTable('prod');
+  appState.setProdData(updatedData);
+  appState.applyFiltersAndUpdateDropdowns('prod');
+
+  const prodResetButton = document.getElementById('prodResetFiltersButton');
+  if (prodResetButton) {
+    prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(updatedData, 'prod'));
   }
+}
+
   // PRODCouponData
   // function handleCouponData(receivedData) {
   //   console.log('CouponData', receivedData);
@@ -1750,7 +1781,7 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     }
     return editedData;
   }
-  
+
 //EXCEL IMPORT
   async function handleExcelImport() {
   try {

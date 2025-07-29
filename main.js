@@ -1534,6 +1534,7 @@ const updateDataListener = async (event, { cleanTableName, rowIndex, newData, un
         //console.log('Update:', cleanTableName, newData, uniqueIdentifier);
         //console.log('Update success');
         refreshTable(cleanTableName);
+        refreshTable('ProdAll');
       }
     });
   } catch (error) {

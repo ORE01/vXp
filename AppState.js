@@ -689,8 +689,15 @@ export class AppState {
 
     setIssuerData(data) {      
         this.issuerData = data;
-        // this.notifyObservers(); 
     }
+
+    getIssuerData() {
+    return this.issuerData;
+}
+
+
+
+
     setRankData(data) {      
         this.rankData = data;
         // this.notifyObservers(); 

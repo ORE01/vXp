@@ -15,7 +15,7 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
 
   //DATA:
   const portfolioData = appState.getPortAggData(elementId) || {};
-      console.log('portfolioData:', portfolioData);
+    // console.log('portfolioData:', portfolioData);
 
   //TABLE:  Notional and NAV:
   const tableData = mapPortDataToTableRows(portfolioData);

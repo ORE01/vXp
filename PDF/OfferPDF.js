@@ -77,9 +77,11 @@ export async function generateOfferPDF(filteredData, headerText = '', footerText
   }
 
   // Chart zeichnen
-  await drawSwapChartToPDF(filteredData, currentY, doc);
+  //await drawSwapChartToPDF(filteredData, currentY, doc);
 
-  doc.save('Produktangebot.pdf');
+  await addChartToPDF('euswapProductYieldChart', doc, 14, currentY, 180, 90);
+
+      doc.save('Produktangebot.pdf');
 }
 
 
@@ -215,6 +217,96 @@ function extractProductOfferData(filteredData) {
   });
 }
 
+
+/**
+ * Fügt einen scharfen Chart aus einem bestehenden Canvas in ein jsPDF-Dokument ein.
+ *
+ * @param {string} sourceCanvasId - ID des Canvas mit dem originalen Chart
+ * @param {jsPDF} doc - Instanz von jsPDF
+ * @param {number} posX - X-Position im PDF (mm)
+ * @param {number} posY - Y-Position im PDF (mm)
+ * @param {number} widthMm - Breite im PDF (mm)
+ * @param {number} heightMm - Höhe im PDF (mm)
+ */
+export async function addChartToPDF(sourceCanvasId, doc, posX, posY, widthMm, heightMm) {
+  const sourceCanvas = document.getElementById(sourceCanvasId);
+  if (!sourceCanvas) {
+    console.warn(`Canvas '${sourceCanvasId}' nicht gefunden – kein Chart eingefügt.`);
+    return;
+  }
+
+  const chartInstance = Chart.getChart(sourceCanvas);
+  if (!chartInstance) {
+    console.warn(`Kein Chart-Objekt auf Canvas '${sourceCanvasId}' gefunden.`);
+    return;
+  }
+
+  const originalData = chartInstance.data;
+  const originalOptions = chartInstance.options;
+
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.style.display = 'none';
+  document.body.appendChild(exportCanvas);
+
+  const dpr = window.devicePixelRatio || 2;
+  const pxWidth = widthMm * 4;
+  const pxHeight = heightMm * 4;
+
+  exportCanvas.width = pxWidth * dpr;
+  exportCanvas.height = pxHeight * dpr;
+  exportCanvas.style.width = `${pxWidth}px`;
+  exportCanvas.style.height = `${pxHeight}px`;
+
+  const ctx = exportCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const exportChart = new Chart(ctx, {
+    type: chartInstance.config.type,
+    data: originalData,
+    options: {
+      ...originalOptions,
+      responsive: false,
+      animation: false,
+      plugins: {
+        ...originalOptions.plugins,
+        legend: {
+          ...originalOptions.plugins?.legend,
+          labels: { font: { size: 12 } }
+        },
+        tooltip: {
+          ...originalOptions.plugins?.tooltip,
+          bodyFont: { size: 11 }
+        }
+      },
+      scales: {
+        x: {
+          ...originalOptions.scales?.x,
+          ticks: { ...originalOptions.scales?.x?.ticks, font: { size: 12 } },
+          title: { ...originalOptions.scales?.x?.title, font: { size: 14 } }
+        },
+        y: {
+          ...originalOptions.scales?.y,
+          ticks: { ...originalOptions.scales?.y?.ticks, font: { size: 12 } },
+          title: { ...originalOptions.scales?.y?.title, font: { size: 14 } }
+        }
+      }
+    }
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  const chartImage = exportCanvas.toDataURL('image/png');
+
+  if (posY + heightMm > doc.internal.pageSize.getHeight()) {
+    doc.addPage();
+    posY = 20;
+  }
+
+  doc.addImage(chartImage, 'PNG', posX, posY, widthMm, heightMm);
+
+  exportChart.destroy();
+  exportCanvas.remove();
+}
 
 
 
