@@ -36,58 +36,130 @@ let tableNames;
 
 
 // IMPORT
+// ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
+//   try {
+//     // const sheetFilter = options.sheetFilter || null;  // z. B. ['EUSW']
+//         // ⚠️ geändert: sichere Prüfung, ob sheetFilter ein Array ist
+//     const sheetFilter = Array.isArray(options.sheetFilter) ? options.sheetFilter : null;
+//     const excelPath = getExcelPath();
+
+//     // Mapping der Sheets → Tabellen
+//     const mappings = [
+//       { 
+//         sheetName: 'INPUT_DEALS', 
+//         tableName: 'DealsMain',
+//         allowedColumns: [
+//           'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
+//           'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
+//         ],
+//         deleteCondition: "port_name = 'UNI'" 
+//       },
+//       { 
+//         sheetName: 'INPUT_BONDS', 
+//         tableName: 'ProdAll', 
+//         allowedColumns: [
+//           'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
+//           'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
+//           'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
+//         ],
+//         overwriteExisting: true
+//       },
+//       {
+//         sheetName: 'INPUT_ISSUER',
+//         tableName: 'Issuer',
+//         allowedColumns: [
+//           'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
+//           'senior_secured', 'senior_preferred', 'senior_unsecured',
+//           'senior_subordinated', 'junior_subordinated'
+//         ],
+//         deleteCondition: "1 = 1"
+//       },
+//       { 
+//         sheetName: 'INPUT_RANK', 
+//         tableName: 'Rank', 
+//         allowedColumns: [
+//           'RANK', 'STEPS'
+//         ],
+//         deleteCondition: "1 = 1" 
+//       },
+//       { 
+//         sheetName: 'EUSW', 
+//         tableName: 'EUSW', 
+//         allowedColumns: [
+//           'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
+//         ],
+//         deleteCondition: "1 = 1" 
+//       },
+//       {
+//         sheetName: 'INPUT_LGT',
+//         tableName: 'LGT',
+//         deleteCondition: "1 = 1"
+//       }
+      
+//     ];
+
+//     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
+//       // Falls sheetFilter gesetzt ist → nur gefilterte Sheets importieren
+//       if (sheetFilter && !sheetFilter.includes(sheetName)) {
+//         console.log(`⏭️ Sheet ${sheetName} wird übersprungen (nicht im Filter enthalten).`);
+//         continue;
+//       }
+
+//       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
+//       await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
+//     }
+
+//     // Tabellen nach dem Import aktualisieren
+//     const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
+
+//     tablesToRefresh.forEach(table => {
+//       refreshTable(table, () => {
+//         console.log('Refreshed table:', table);
+//       });
+//     });
+
+//     return { success: true };
+
+//   } catch (err) {
+//     console.error('❌ Fehler beim Excel-Import:', err);
+//     return { success: false, error: err.message };
+//   }
+// });
+
 ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
   try {
-    // const sheetFilter = options.sheetFilter || null;  // z. B. ['EUSW']
-        // ⚠️ geändert: sichere Prüfung, ob sheetFilter ein Array ist
     const sheetFilter = Array.isArray(options.sheetFilter) ? options.sheetFilter : null;
     const excelPath = getExcelPath();
 
-    // Mapping der Sheets → Tabellen
     const mappings = [
       { 
         sheetName: 'INPUT_DEALS', 
         tableName: 'DealsMain',
-        allowedColumns: [
-          'INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL',
-          'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'
-        ],
+        allowedColumns: ['INCLUDE', 'TRADE_ID', 'PROD_ID', 'CATEGORY', 'NOTIONAL', 'PRICE_BUY', 'TRADE_DATE', 'Depotbank', 'port_name'],
         deleteCondition: "port_name = 'UNI'" 
       },
       { 
         sheetName: 'INPUT_BONDS', 
         tableName: 'ProdAll', 
-        allowedColumns: [
-          'INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY',
-          'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR',
-          'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'
-        ],
+        allowedColumns: ['INCLUDE', 'PROD_ID', 'DESCRIPTION', 'START_DATE', 'MATURITY', 'COUPON', 'SCHEDULE', 'GEARING', 'SPREADS', 'CAP', 'FLOOR', 'TENOR', 'CouponType', 'ISSUER', 'TICKER', 'CS_Szenario', 'RATING_PROD', 'RANK'],
         overwriteExisting: true
       },
       {
         sheetName: 'INPUT_ISSUER',
         tableName: 'Issuer',
-        allowedColumns: [
-          'INCLUDE', 'ISSUER', 'TICKER', 'RATING',
-          'senior_secured', 'senior_preferred', 'senior_unsecured',
-          'senior_subordinated', 'junior_subordinated'
-        ],
-        deleteCondition: "1 = 1"
+        allowedColumns: ['INCLUDE', 'ISSUER', 'TICKER', 'RATING', 'senior_secured', 'senior_preferred', 'senior_unsecured', 'senior_subordinated', 'junior_subordinated']
+        // ❌ Kein deleteCondition mehr
       },
       { 
         sheetName: 'INPUT_RANK', 
         tableName: 'Rank', 
-        allowedColumns: [
-          'RANK', 'STEPS'
-        ],
+        allowedColumns: ['RANK', 'STEPS'],
         deleteCondition: "1 = 1" 
       },
       { 
         sheetName: 'EUSW', 
         tableName: 'EUSW', 
-        allowedColumns: [
-          'instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'
-        ],
+        allowedColumns: ['instrument', 'YEAR', 'EUSWAP', 'EUSWAP_SZ1'],
         deleteCondition: "1 = 1" 
       },
       {
@@ -95,24 +167,64 @@ ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
         tableName: 'LGT',
         deleteCondition: "1 = 1"
       }
-      
     ];
 
     for (const { sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting } of mappings) {
-      // Falls sheetFilter gesetzt ist → nur gefilterte Sheets importieren
       if (sheetFilter && !sheetFilter.includes(sheetName)) {
         console.log(`⏭️ Sheet ${sheetName} wird übersprungen (nicht im Filter enthalten).`);
         continue;
       }
 
       console.log(`🚀 Importiere ${sheetName} → ${tableName}`);
-      await importExcelToSQLite(excelPath, sheetName, tableName, deleteCondition, allowedColumns, overwriteExisting);
+
+      if (sheetName === 'INPUT_ISSUER') {
+        const workbook = XLSX.readFile(excelPath);
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        for (const row of rows) {
+          const ticker = row.TICKER?.trim();
+          if (!ticker) continue;
+
+          const exists = await new Promise((resolve, reject) => {
+            db.get(`SELECT 1 FROM Issuer WHERE TICKER = ?`, [ticker], (err, result) => {
+              if (err) reject(err);
+              else resolve(!!result);
+            });
+          });
+
+          if (exists) {
+            await runSQL(`DELETE FROM Issuer WHERE TICKER = ?`, [ticker]);
+            console.log(`♻️ Vorhandener Issuer mit TICKER ${ticker} gelöscht.`);
+          }
+
+          const columns = allowedColumns.filter(col => row[col] !== undefined);
+          const placeholders = columns.map(() => "?").join(",");
+          const values = columns.map(col => row[col]);
+
+          const insertSQL = `
+            INSERT INTO Issuer (${columns.join(",")})
+            VALUES (${placeholders})
+          `;
+          await runSQL(insertSQL, values);
+          console.log(`✅ Neuer Issuer eingefügt: ${ticker}`);
+        }
+
+        continue; // 👉 kein Standard-Import für dieses Sheet
+      }
+
+      // ⏩ Standardimport für alle anderen Tabellen
+      await importExcelToSQLite(
+        excelPath,
+        sheetName,
+        tableName,
+        deleteCondition,
+        allowedColumns,
+        overwriteExisting
+      );
     }
 
-    // Tabellen nach dem Import aktualisieren
-    const tablesToRefresh = ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'];
-
-    tablesToRefresh.forEach(table => {
+    ['DealsMain', 'ProdAll', 'EUSW', 'Issuer'].forEach(table => {
       refreshTable(table, () => {
         console.log('Refreshed table:', table);
       });
@@ -125,6 +237,7 @@ ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
     return { success: false, error: err.message };
   }
 });
+
 
 
 // ipcMain.handle('start-offer-import', async () => {
