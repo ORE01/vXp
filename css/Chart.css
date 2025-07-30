@@ -318,6 +318,18 @@ p {
 }
 
 
+#yieldChartSection {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+#durationChartSection {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+}
+
 
 
 
