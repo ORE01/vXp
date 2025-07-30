@@ -2,7 +2,7 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   console.log('RiskMangementData', filteredData, index, port_name);
 
 const mvarAggData = appState.getAllMvarData();
-console.log('All mvarAggData:', mvarAggData);
+// console.log('All mvarAggData:', mvarAggData);
 
 // ✅ Find the entry matching the current portfolio
 const matchingEntry = mvarAggData.find(item => item.port_name === port_name);
@@ -14,7 +14,7 @@ if (!matchingEntry) {
   if (typeof varTRel !== 'number' || isNaN(varTRel)) {
     console.warn(`VaR_T_rel for ${port_name} is invalid:`, varTRel);
   } else {
-    console.log(`Using VaR_T_rel for ${port_name}:`, varTRel);
+    // console.log(`Using VaR_T_rel for ${port_name}:`, varTRel);
     // ✅ Place your annotation/chart code using varTRel here
   }
 
@@ -22,8 +22,8 @@ if (!matchingEntry) {
 
 
   const mvarDistData = appState.getMvarDistData();
-  console.log('mvarAggData', mvarAggData);
-  console.log('mvarDistData', mvarDistData);
+  // console.log('mvarAggData', mvarAggData);
+  // console.log('mvarDistData', mvarDistData);
 
 
   //NAV VAlue:
@@ -31,13 +31,13 @@ if (!matchingEntry) {
     const OriPortData = appState.getAllPortfolioData();
     const filteredOriginalData = OriPortData.filter(item => item.port_name === port_name);
     //handlePortAggData(filteredOriginalData, 3, port_name);
-    console.log('filteredOriginalData', filteredOriginalData);
+    // console.log('filteredOriginalData', filteredOriginalData);
     const portNav = filteredOriginalData.reduce((sum, item) => {
     const navValue = parseFloat(item.NAV?.toString().replace(/[^\d.-]/g, '') || 0);
     return sum + navValue;
   }, 0);
 
-  console.log('portNav', portNav);
+  // console.log('portNav', portNav);
 
   //2)
     // const elementId = `portDataContainer${0}`;
@@ -111,7 +111,7 @@ if (!matchingEntry) {
 
     // ✅ Attach click listener directly
     button.addEventListener('click', () => {
-      console.log('MVaR button clicked!');
+      // console.log('MVaR button clicked!');
       handleSummaryRMData(filteredData, index, port_name);  // or another function if you prefer
     });
 
