@@ -24,6 +24,7 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
   const yieldCurve = transformTSDataToEUSWFormat(latestRow);
   const pastYieldCurve = transformTSDataToEUSWFormat(fiveYearsAgoRow);
 
+  console.log('portfolioData:', portfolioData);
 //   console.log('EUSWData:', EUSWData);
 //   console.log('yieldCurve:', yieldCurve);
 //   console.log('pastYieldCurve:', pastYieldCurve);
@@ -31,12 +32,14 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
   
 // CHART: line chart
     const portfolioYield = portfolioData.formPortYield; // e.g., "1.91%"
-    const portTtM = -portfolioData.formPortPV01;
+    const portTtM = parseFloat(portfolioData.formPortTtM); // oder wie immer dein echtes TtM-Feld heißt
+
     if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
     //   drawPortfolioVsYieldCurvesChart(portfolioYield, portTtM, yieldCurve, pastYieldCurve, EUSWData);
     //   drawProductYieldVsEUSWChart(filteredData, yieldCurve, pastYieldCurve) 
 
-drawYieldVsEUSWChart({
+//1) PortYield vs Maturity
+drawYieldVsTimeChart({
   targetId: 'euswapPortfolioYieldChart',
   heading: 'Portfolio Yield vs Maturity',
   yieldCurve,
@@ -47,8 +50,8 @@ drawYieldVsEUSWChart({
 
 
 
-
-drawYieldVsEUSWChart({
+//2) ProductYield vs Maturity
+drawYieldVsTimeChart({
   targetId: 'euswapProductYieldChart',
   heading: 'Product Yields vs Maturity',
   yieldCurve,
@@ -57,49 +60,41 @@ drawYieldVsEUSWChart({
   points: filteredData // mit .TtM, .ytm, .PROD_ID
 });
 
+// 📈 1. Dauer-Kurven aus Swap-Daten ableiten
 const durationCurve = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
 const durationCurvePast = pastYieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
 const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
 
-
-// 📦 Neuen Container unter den oberen beiden Charts erzeugen
+// 📦 2. Chart-Container für Duration-Chart erzeugen
 let chartSection = document.getElementById('yieldChartSection');
 let durationSection = document.getElementById('durationChartSection');
 
 if (!durationSection) {
   durationSection = document.createElement('div');
   durationSection.id = 'durationChartSection';
-  durationSection.style.marginTop = '40px'; // Abstand zu den oberen Charts
-  chartSection.parentElement.appendChild(durationSection); // füge es unterhalb ein
+  durationSection.style.marginTop = '40px';
+  chartSection.parentElement.appendChild(durationSection);
 }
 
-// Ziel-ID für dritten ChartContainer auf den neuen Bereich setzen
-const durationTargetId = 'durationSwapChart';
-const portfolioPoint = {
-  YEAR: portTtM + 'Y',
-  RATES: portfolioYield
-};
+// 📌 3. Portfolio-Duration und -Yield direkt verwenden
+const portfolioDuration = Math.abs(parseFloat(portfolioData.formPortPV01)); // direkt aus formPortPV01
+const portfolioYieldValue = parseFloat(portfolioYield.replace('%', ''));
 
-const durationPortfolioPoint = swapPointToDurationAsYearRate(portfolioPoint);
-const durationPoints = durationPortfolioPoint
-  ? [{
-      x: parseFloat(durationPortfolioPoint.YEAR.replace('Y', '')),
-      y: parseFloat(durationPortfolioPoint.RATES.replace('%', ''))
-    }]
-  : [];
+const durationPoints = (!isNaN(portfolioDuration) && !isNaN(portfolioYieldValue)) ? [{
+  x: portfolioDuration,
+  y: portfolioYieldValue
+}] : [];
 
-
-
-
-
-drawYieldVsEUSWChart({
-  targetId: durationTargetId,
+// 📊 4. Portfolio Yield vs Duration
+drawYieldVsTimeChart({
+  targetId: 'durationSwapChart',
   heading: 'Portfolio Yield vs Duration',
   yieldCurve: durationCurve,
   pastYieldCurve: durationCurvePast,
   euswDataOriginal: durationEUSWData,
   points: durationPoints
 });
+
 
 // 📌 Dauer-basierte Produktpunkte aus filteredData ableiten
 const productDurationPoints = filteredData.map(entry => {
@@ -128,8 +123,8 @@ if (!durationProductSection) {
   chartSection.parentElement.appendChild(durationProductSection);
 }
 
-// 🔍 Chart anzeigen
-drawYieldVsEUSWChart({
+//4) ProductYield vs Duration
+drawYieldVsTimeChart({
   targetId: 'durationProductYieldChart',
   heading: 'Product Yields vs Duration',
   yieldCurve: durationCurve,
@@ -137,39 +132,15 @@ drawYieldVsEUSWChart({
   euswDataOriginal: durationEUSWData,
   points: productDurationPoints // enthält x, y, PROD_ID
 });
-
-
-
-    }
+  }
 }
 
 
 
 
-        function transformTSDataToEUSWFormat(tsRow) {
-        const maturityMap = {
-            EU_1Y: '1Y',
-            EU_5Y: '5Y',
-            EU_10Y: '10Y',
-            EU_20Y: '20Y'
-        };
 
-        return Object.entries(maturityMap)
-            .map(([key, yearLabel]) => {
-            const rawValue = tsRow[key];
-            const cleanValue = rawValue?.trim();
 
-            if (!cleanValue || isNaN(parseFloat(cleanValue))) return null;
-
-            return {
-                YEAR: yearLabel,
-                RATES: cleanValue.includes('%') ? cleanValue : `${cleanValue}%`
-            };
-            })
-            .filter(Boolean);
-        }
-
-function drawYieldVsEUSWChart({
+function drawYieldVsTimeChart({
   targetId = 'euswapYieldChart',
   heading = 'Yield vs EU Yield Curve',
   yieldCurve = [],
@@ -344,67 +315,103 @@ const productDatasets = !isSinglePoint ? points.map((entry, index) => {
           max: maxY
         }
       },
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: {
-            font: { size: 14 },
-            filter: legendItem => {
-              const label = legendItem.text;
-              return !(points?.some?.(entry => entry.PROD_ID === label));
-            }
-          }
-        },
-        tooltip: {
-        callbacks: {
-            label: context =>
-            context.dataset.label === 'Portfolio Yield'
-                ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-                : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-        },
-        bodyFont: { size: 13 }
-        }
-
+plugins: {
+  title: {
+    display: true,
+    text: heading, // der dynamisch übergebene Titel
+    font: {
+      size: 16,
+      weight: 'bold'
+    },
+    color: '#fff',   
+    padding: {
+      top: 10,
+      bottom: 15
+    }
+  },
+  legend: {
+    position: 'top',
+    labels: {
+      font: { size: 14 },
+      filter: legendItem => {
+        const label = legendItem.text;
+        return !(points?.some?.(entry => entry.PROD_ID === label));
       }
+    }
+  },
+  tooltip: {
+    callbacks: {
+      label: context =>
+        context.dataset.label === 'Portfolio Yield'
+          ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+          : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+    },
+    bodyFont: { size: 13 }
+  }
+}
+
     }
   });
 }
 
-/**
- * Setzt ein Canvas für HiDPI-Rendering mit einheitlicher Größe auf.
- * @param {HTMLCanvasElement} canvas - Das Canvas-Element
- * @param {number} widthPx - Sichtbare Breite in Pixel (z. B. 600)
- * @param {number} heightPx - Sichtbare Höhe in Pixel (z. B. 300)
- */
-export function setupHiDPICanvas(canvas, widthPx, heightPx) {
-  const dpr = window.devicePixelRatio || 2;
+      /**
+       * Setzt ein Canvas für HiDPI-Rendering mit einheitlicher Größe auf.
+       * @param {HTMLCanvasElement} canvas - Das Canvas-Element
+       * @param {number} widthPx - Sichtbare Breite in Pixel (z. B. 600)
+       * @param {number} heightPx - Sichtbare Höhe in Pixel (z. B. 300)
+       */
+      export function setupHiDPICanvas(canvas, widthPx, heightPx) {
+        const dpr = window.devicePixelRatio || 2;
 
-  canvas.width = widthPx * dpr;
-  canvas.height = heightPx * dpr;
-  canvas.style.width = `${widthPx}px`;
-  canvas.style.height = `${heightPx}px`;
+        canvas.width = widthPx * dpr;
+        canvas.height = heightPx * dpr;
+        canvas.style.width = `${widthPx}px`;
+        canvas.style.height = `${heightPx}px`;
 
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  return ctx;
-}
+        return ctx;
+      }
+
+      function transformTSDataToEUSWFormat(tsRow) {
+      const maturityMap = {
+          EU_1Y: '1Y',
+          EU_5Y: '5Y',
+          EU_10Y: '10Y',
+          EU_20Y: '20Y'
+      };
+
+      return Object.entries(maturityMap)
+          .map(([key, yearLabel]) => {
+          const rawValue = tsRow[key];
+          const cleanValue = rawValue?.trim();
+
+          if (!cleanValue || isNaN(parseFloat(cleanValue))) return null;
+
+          return {
+              YEAR: yearLabel,
+              RATES: cleanValue.includes('%') ? cleanValue : `${cleanValue}%`
+          };
+          })
+          .filter(Boolean);
+      }
 
 
-function swapPointToDurationAsYearRate(point) {
-  const T = parseFloat(point.YEAR?.replace('Y', ''));
-  const r = parseFloat(point.RATES?.replace('%', '')) / 100;
+      function swapPointToDurationAsYearRate(point) {
+        const T = parseFloat(point.YEAR?.replace('Y', ''));
+        const r = parseFloat(point.RATES?.replace('%', '')) / 100;
 
-  if (isNaN(T) || isNaN(r) || r === 0) return null;
+        if (isNaN(T) || isNaN(r) || r === 0) return null;
 
-  const duration = (1 - Math.pow(1 + r, -T)) / r;
-  const rate = (r * 100).toFixed(2) + '%';
+        const duration = (1 - Math.pow(1 + r, -T)) / r;
+        const rate = (r * 100).toFixed(2) + '%';
 
-  return {
-    YEAR: duration.toFixed(2) + 'Y',
-    RATES: rate
-  };
-}
+        return {
+          YEAR: duration.toFixed(2) + 'Y',
+          RATES: rate
+        };
+      }
 
 
 

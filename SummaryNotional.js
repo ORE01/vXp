@@ -1,6 +1,12 @@
 import { getColorForPieChart, getColorFromPalette} from './utils/colors.js';
 import processData from './renderer/dataProcessor.js';
 import { appState } from './renderer.js';
+//import { setupHiDPICanvas } from './utils/chartUtils.js'; // Pfad anpassen!
+import { setupHiDPICanvas } from './SummaryYield.js'; // Pfad anpassen!
+import { getFormatRules } from './utils/format.js';
+
+
+
 
 const { jsPDF } = window.jspdf;
 
@@ -9,15 +15,10 @@ let tableName = 'Portfolio';
 export function handleSummaryNotionalData(filteredData, index, port_name) {
   console.log('summaryData:', filteredData);
 
-  // You intentionally use hardcoded values here
   const elementId = `portDataContainer${0}`;
   const aggContainerId = `portAggDataContainer${5}`;
 
-  //DATA:
   const portfolioData = appState.getPortAggData(elementId) || {};
-    // console.log('portfolioData:', portfolioData);
-
-  //TABLE:  Notional and NAV:
   const tableData = mapPortDataToTableRows(portfolioData);
   const html = processData(tableData, tableName);
 
@@ -26,42 +27,33 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
     summaryContainer.innerHTML = html;
   }
 
-  //CHARTS:
+  // Neue zentrale Chart-Grid-ID
+  const pieChartGridId = 'pieChartGrid';
+  const chartGrid = document.getElementById(pieChartGridId);
+  if (chartGrid) {
+    chartGrid.innerHTML = ''; // Grid leeren
+  }
+
   const columnsToChart = ['ISSUER', 'RATING', 'RANK', 'RATINGres', 'CATEGORY', 'CouponType', 'Depotbank'];
 
   const columnDisplayNames = {
     ISSUER: "Issuer",
     RATING: "Issuer General Rating",
     RANK: "Issuer Capital Structure",
-    RATINGres: "Product Ratings ",
+    RATINGres: "Product Ratings",
     CATEGORY: "Product Categories",
     Depotbank: "Depot Bank",
     CouponType: "General Coupon Type"
   };
 
-  // Clear each group container
-  document.getElementById('issuerCharts').innerHTML = '';
-  document.getElementById('productCharts').innerHTML = '';
-  document.getElementById('generalCharts').innerHTML = '';
-
-
   columnsToChart.forEach((column) => {
     const canvasId = `${column.toLowerCase()}PieChart`;
     const displayName = columnDisplayNames[column] || column;
 
-    // Determine which group to use
-    let groupContainerId;
-        if (['ISSUER', 'RATING', 'RANK'].includes(column)) {
-          groupContainerId = 'issuerCharts';
-        } else if (['RATINGres', 'CATEGORY', 'CouponType'].includes(column)) {
-          groupContainerId = 'productCharts';
-        } else {
-          groupContainerId = 'generalCharts';
-        }
+    // Neue zentrale Container-Nutzung
+    const container = chartGrid;
+    if (!container) return;
 
-    const container = document.getElementById(groupContainerId);
-
-    // Create section
     const section = document.createElement('div');
     section.className = 'chart-block';
 
@@ -79,90 +71,112 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
     section.appendChild(canvas);
     container.appendChild(section);
 
-    
     drawPieChartByColumn(filteredData, column);
-    drawProdSummaryChart(filteredData);
   });
 
-    // ⬇️ Hier Event-Listener ergänzen:
-    document.getElementById('valueSelector').addEventListener('change', () => {
-      columnsToChart.forEach(column => {
-        drawPieChartByColumn(filteredData, column);
+  // Value-Selector reagiert neu zeichnen
+  document.getElementById('valueSelector').addEventListener('change', () => {
+    columnsToChart.forEach(column => {
+      drawPieChartByColumn(filteredData, column);
     });
   });
 }
-    function drawPieChartByColumn(filteredData, columnName) {
-      const valueType = document.getElementById('valueSelector').value; // NAV oder NOTIONAL
 
-      const { labels, values } = getValuesByColumn(filteredData, columnName, valueType);
+function drawPieChartByColumn(filteredData, columnName) {
+  const valueType = document.getElementById('valueSelector').value;
 
-      const canvasId = `${columnName.toLowerCase()}PieChart`;
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) {
-        console.warn(`Canvas with ID ${canvasId} not found.`);
-        return;
-      }
+  const { labels, values } = getValuesByColumn(filteredData, columnName, valueType);
+  const canvasId = `${columnName.toLowerCase()}PieChart`;
 
-      if (canvas.chartInstance) {
-        canvas.chartInstance.destroy();
-      }
+  const oldCanvas = document.getElementById(canvasId);
+  if (!oldCanvas) {
+    console.warn(`Canvas with ID ${canvasId} not found.`);
+    return;
+  }
 
-      canvas.width = 250;
-      canvas.height = 250;
-      canvas.style.width = '250px';
-      canvas.style.height = '250px';
+  const container = oldCanvas.parentNode;
 
-      const ctx = canvas.getContext('2d');
-      const colors = labels.map((_, index) => getColorForPieChart(index));
+  // altes Canvas entfernen
+  oldCanvas.remove();
 
-      canvas.chartInstance = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels,
-          datasets: [{
-            label: `${valueType} by ${columnName}`,
-            data: values,
-            backgroundColor: colors.map(c => c.backgroundColor),
-            borderColor: colors.map(c => c.borderColor),
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: false,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'left',
-              labels: { boxWidth: 10, font: { size: 9 }, maxWidth: 280, padding: 4 }
+  // neues Canvas erzeugen
+  const newCanvas = document.createElement('canvas');
+  newCanvas.id = canvasId;
+  newCanvas.className = 'pieChart';
+  container.appendChild(newCanvas);
+
+  // HiDPI-Skalierung
+  const ctx = setupHiDPICanvas(newCanvas, 250, 250);
+  const colors = labels.map((_, index) => getColorForPieChart(index));
+
+  newCanvas.chartInstance = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        label: `${valueType} by ${columnName}`,
+        data: values,
+        backgroundColor: colors.map(c => c.backgroundColor),
+        borderColor: colors.map(c => c.borderColor),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
+      devicePixelRatio: 1,
+      plugins: {
+        legend: {
+          position: 'left',
+          labels: {
+            boxWidth: 10,
+            font: {
+              size: 9,
+              weight: 'normal'
             },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  const total = values.reduce((a, b) => a + b, 0);
-                  const value = context.parsed;
-                  const percentage = ((value / total) * 100).toFixed(2);
-                  return `${context.label}: ${value} (${percentage}%)`;
-                }
-              }
+            padding: 4
+          }
+        },
+        tooltip: {
+          bodyFont: { size: 10 },
+          callbacks: {
+            label: function (context) {
+              const total = values.reduce((a, b) => a + b, 0);
+              const value = context.parsed;
+              const percentage = ((value / total) * 100).toFixed(2);
+              return `${context.label}: ${getFormatRules()[valueType]?.(value)} € (${percentage}%)`;
+
             }
           }
         }
-      });
+      }
     }
-        function getValuesByColumn(data, columnName, valueType = 'NAV') {
-          const map = {};
+  });
+}
 
-          data.forEach(entry => {
-            const key = entry[columnName] || 'Unknown';
-            const value = parseFloat(entry[valueType]) || 0;  // dynamisch: NAV oder NOTIONAL
-            map[key] = (map[key] || 0) + value;
-          });
 
-          return {
-            labels: Object.keys(map),
-            values: Object.values(map)
-          };
-        }
+
+
+
+      function getValuesByColumn(data, columnName, valueType = 'NAV') {
+        const map = {};
+
+        data.forEach(entry => {
+          const key = entry[columnName] || 'Unknown';
+          const value = parseFloat(entry[valueType]) || 0;
+          map[key] = (map[key] || 0) + value;
+        });
+
+        // Einträge sortieren (absteigend nach Wert)
+        const sorted = Object.entries(map)
+          .sort((a, b) => b[1] - a[1]);
+
+        return {
+          labels: sorted.map(([key]) => key),
+          values: sorted.map(([, value]) => value)
+        };
+      }
+
 
 
 
@@ -206,7 +220,9 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
         const notionalColor = getColorForPieChart(0);
         const navColor = getColorForPieChart(1);
 
-        const ctx = document.getElementById('prodSummaryChart').getContext('2d');
+        const canvas = document.getElementById('prodSummaryChart');
+        const ctx = setupHiDPICanvas(canvas, 600, 400); // oder was auch immer du brauchst
+
 
         if (ctx.chartInstance) {
           ctx.chartInstance.destroy();
