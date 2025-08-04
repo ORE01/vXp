@@ -120,105 +120,96 @@
 
 
   <!-- 🧩 Notional/NAV categories -->
-    <div class="subsection">
+    <!-- <div class="subsection">
       <h4 class="subsection-title">Notional/NAV per Product</h4>
         <div id="prodSummaryChartContainer">
           <canvas id="prodSummaryChart"></canvas>
         </div>
-    </div>
+    </div> -->
 
-  <!-- 📊 Pie Charts Section -->
-  <div class="chart-section" style="margin-bottom: 50px;">
-    <h3 class="section-header">Portfolio Breakdown</h3>
+<!-- 📊 Pie Charts Section -->
+<div class="chart-section" style="margin-bottom: 50px;">
+  <h3 class="section-header">Portfolio Breakdown</h3>
 
-    <!-- 🏢 Issuer-related -->
-    <div class="subsection">
-      <h4 class="subsection-title">Issuer</h4>
-      <div id="issuerCharts" class="summary-charts-wrapper"></div>
-    </div>
-
-    <!-- 📦 Product-related -->
-    <div class="subsection">
-      <h4 class="subsection-title">Products</h4>
-      <div id="productCharts" class="summary-charts-wrapper"></div>
-    </div>
-
-    <!-- 🧩 General categories -->
-    <div class="subsection">
-      <h4 class="subsection-title">General</h4>
-      <div id="generalCharts" class="summary-charts-wrapper"></div>
-    </div>
+  <div id="pieChartGrid" class="pie-chart-grid">
+    <!-- Hier fügt dein JS die Chart-Boxen automatisch ein -->
   </div>
+</div>
+
 
 
 
       <!-- 📈 Line Chart Section (ALWAYS BELOW) -->
       <div class="chart-section">
         <h3 class="section-header">Performance</h3>
-        <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
-          <div class="euswapYieldChartContainer">
-            <!-- <canvas id="euswapYieldChart"></canvas> -->
+          <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
+            <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
+              <div class="chart-box"><canvas id="euswapPortfolioYieldChart"></canvas></div>
+              <div class="chart-box"><canvas id="euswapProductYieldChart"></canvas></div>
+              <div class="chart-box"><canvas id="durationSwapChart"></canvas></div>
+              <div class="chart-box"><canvas id="durationProductYieldChart"></canvas></div>
+            </div>
           </div>
-        </div>
       </div>
 
-    <!-- 📉 P/L MARKET Distribution Section -->
-    <div class="chart-section" style="margin-top: 50px;">
-      <h3 class="section-header">Market Profit/Loss Distribution</h3>
+<!-- 📉 P/L MARKET Distribution Section -->
+<div class="chart-section" style="margin-top: 50px;">
+  <h3 class="section-header">Market Profit/Loss Distribution</h3>
 
-
-            <div class="left-part">
-        <div class="data-wrapper">
-          <div id="inputMVaR-container"></div>
-          
-          <button id="mvarAddButton" class="edit-button">Add Entry</button>
-
-          <!-- <button id="inputMVaRSave-button" class="edit-button">Save Changes</button> -->
-        </div>
-      </div>
-
-              <div class="button-wrapper">
-                <button id="mvaRDistButton"class="edit-button">Profit/Loss Dist</button>
-              </div>
-
-                        <p>Market Value at Risk/Expected Shortfall:</p>
-          <div class="data-container" id="MVaRDataContainer0"></div>
-
-
-      <div id="riskDistChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
-        <div class="plMvarDistChartContainer" style="width: 100%; max-width: 900px;">
-          <canvas id="plMvarDistChart"></canvas>
-        </div>
-      </div>
+  <div class="left-part">
+    <div class="data-wrapper">
+      <div id="inputMVaR-container"></div>
+      <button id="mvarAddButton" class="edit-button">Add Entry</button>
     </div>
+  </div>
+
+  <div class="button-wrapper">
+    <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
+  </div>
+
+  <p>Market Value at Risk/Expected Shortfall:</p>
+  <div class="data-container" id="MVaRDataContainer0"></div>
+
+  <!-- ⬇️ Side-by-side grid with reversed chart order -->
+  <div class="chart-2x1-row">
+    <div class="chart-box">
+      <canvas id="tsEU1YChart"></canvas> <!-- now on the left -->
+    </div>
+    <div class="chart-box">
+      <canvas id="plMvarDistChart"></canvas> <!-- now on the right -->
+    </div>
+  </div>
+</div>
 
 
-      <!-- 📉 P/L CREDIT Distribution Section -->
-    <div class="chart-section" style="margin-top: 50px;">
-      <h3 class="section-header">Credit Profit/Loss Distribution</h3>
-      
-              <div class="button-wrapper">
-                <!-- <button id="cvaRDistButton"class="edit-button">P/L Dist</button> -->
-                <button id="CVaRButton"class="edit-button">P/L Dist</button>
-              </div>
 
-                        <p>Credit Value at Risk/Expected Shortfall:</p>
-          <div class="data-container" id="CVaR_allRelativeContainer0"></div>
 
-                  <!-- Chart for Loss Issuer Combined (NEW) -->
-    <div id="LossIssuerCombinedChartContainer" class="chart-container-inner">
-      <p>Value at Risk:</p>
+
+
+
+
+ <!-- 📉 P/L CREDIT Distribution Section -->
+<div class="chart-section" style="margin-top: 50px;">
+  <h3 class="section-header">Credit Profit/Loss Distribution</h3>
+
+  <div class="button-wrapper">
+    <button id="CVaRButton" class="edit-button">P/L Dist</button>
+  </div>
+
+  <p>Credit Value at Risk/Expected Shortfall:</p>
+  <div class="data-container" id="CVaR_allRelativeContainer0"></div>
+
+  <!-- 🆕 2x1 Grid -->
+  <div class="chart-2x1-row">
+    <div class="chart-box">
+      <p style="text-align: center;">Value at Risk:</p>
       <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
-
     </div>
+    <div class="chart-box">
+      <p style="text-align: center;">Expected Shortfall:</p>
+      <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
 
-      <!-- Chart for Loss Issuer Combined (NEW) -->
-    <div id="LossIssuerCombinedESChartContainer" class="chart-container-inner">
-      <p>Expected Shortfall:</p>
-      <canvas id="LossIssuerCombinedESChart"width="200" height="100"></canvas>
-
-      
-      <div class="traffic-light-wrapper">
+      <div class="traffic-light-wrapper" style="margin-top: 10px;">
         <div class="traffic-light">
           <div id="red" class="light red"></div>
           <div id="yellow" class="light yellow"></div>
@@ -226,15 +217,10 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-
-
-
-    </div>
-
-
-
-    </div>
+  </div>
   </div>
 
   <!-- Modal - Liquidity -->

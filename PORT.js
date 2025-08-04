@@ -30,6 +30,7 @@ export function handlePortAggData(receivedData, index, port_name) {
   let PortYieldA = 0;
   let PortPV01 = 0;
   let PortCPV01 = 0;
+  let PortTtM = 0;
 
   // Aggregate NOTIONAL und NAV für das aktuelle Dropdown
   portData.forEach((dataPoint) => {
@@ -39,6 +40,7 @@ export function handlePortAggData(receivedData, index, port_name) {
     PortYieldA += parseFloat(dataPoint.ytmPortA);
     PortPV01 += parseFloat(dataPoint.PV01);
     PortCPV01 += parseFloat(dataPoint.CPV01);
+    PortTtM += parseFloat(dataPoint.TtM)*parseFloat(dataPoint.NOTIONAL);
   });
 
 
@@ -46,10 +48,11 @@ export function handlePortAggData(receivedData, index, port_name) {
   const aggData = {
     formPortValue: formatNumberWithGrouping(PortValue) + " EUR",
     formPortNotional: formatNumberWithGrouping(PortNotional) + " EUR",
-    formPortYield: (PortYield / PortValue * 100).toFixed(2) + "%",
-    formPortYieldA: (PortYieldA / PortValue * 100).toFixed(2) + "%",
-    formPortPV01: (PortPV01 / PortValue * 10000).toFixed(2),
-    formPortCPV01: (PortCPV01 / PortValue * 10000).toFixed(2)
+    formPortYield: (PortYield / PortNotional * 100).toFixed(2) + "%",
+    formPortYieldA: (PortYieldA / PortNotional * 100).toFixed(2) + "%",
+    formPortPV01: (PortPV01 / PortNotional * 10000).toFixed(2),
+    formPortCPV01: (PortCPV01 / PortNotional * 10000).toFixed(2),
+    formPortTtM: (PortTtM / PortNotional).toFixed(2)
   };
   
   appState.setPortAggData(elementId, aggData);
