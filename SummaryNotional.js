@@ -85,7 +85,7 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
 function drawPieChartByColumn(filteredData, columnName) {
   const valueType = document.getElementById('valueSelector').value;
 
-  const { labels, values } = getValuesByColumn(filteredData, columnName, valueType);
+  const { labels: rawLabels, values } = getValuesByColumn(filteredData, columnName, valueType);
   const canvasId = `${columnName.toLowerCase()}PieChart`;
 
   const oldCanvas = document.getElementById(canvasId);
@@ -106,13 +106,20 @@ function drawPieChartByColumn(filteredData, columnName) {
   container.appendChild(newCanvas);
 
   // HiDPI-Skalierung
-  const ctx = setupHiDPICanvas(newCanvas, 250, 250);
-  const colors = labels.map((_, index) => getColorForPieChart(index));
+  const ctx = setupHiDPICanvas(newCanvas, 420, 250); // breiter
+
+  const colors = rawLabels.map((_, index) => getColorForPieChart(index));
+
+  // 🔢 Labels mit Prozenten vorbereiten
+  const total = values.reduce((a, b) => a + b, 0);
+// ✅ Nur die rohen Labels
+const labels = rawLabels;
+
 
   newCanvas.chartInstance = new Chart(ctx, {
     type: 'pie',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
         label: `${valueType} by ${columnName}`,
         data: values,
@@ -126,26 +133,51 @@ function drawPieChartByColumn(filteredData, columnName) {
       maintainAspectRatio: false,
       devicePixelRatio: 1,
       plugins: {
-        legend: {
-          position: 'left',
-          labels: {
-            boxWidth: 10,
-            font: {
-              size: 9,
-              weight: 'normal'
-            },
-            padding: 4
-          }
-        },
+legend: {
+  position: 'right',
+  align: 'center',
+  labels: {
+    color: '#666',
+    boxWidth: 10,
+    font: {
+      size: 9,
+      weight: 'normal'
+    },
+    padding: 6,
+generateLabels: function (chart) {
+  const data = chart.data;
+  const dataset = data.datasets[0];
+  const total = dataset.data.reduce((a, b) => a + b, 0);
+
+  return data.labels
+    .map((label, i) => {
+      const value = dataset.data[i];
+      const percentage = ((value / total) * 100).toFixed(1);
+
+      return {
+        text: `${label}: ${percentage}%`,
+        fillStyle: dataset.backgroundColor[i],
+        strokeStyle: dataset.borderColor[i],
+        fontColor: '#666', // ✅ Chart.js v2
+        color: '#666',     // ✅ Chart.js v3+
+        lineWidth: dataset.borderWidth,
+        hidden: chart.getDataVisibility(i) === false,
+        index: i
+      };
+    })
+    .slice(0, 15);
+},
+
+  }
+},
+
         tooltip: {
           bodyFont: { size: 10 },
           callbacks: {
             label: function (context) {
-              const total = values.reduce((a, b) => a + b, 0);
               const value = context.parsed;
               const percentage = ((value / total) * 100).toFixed(2);
-              return `${context.label}: ${getFormatRules()[valueType]?.(value)} € (${percentage}%)`;
-
+              return `${rawLabels[context.dataIndex]}: ${getFormatRules()[valueType]?.(value)} € (${percentage}%)`;
             }
           }
         }
@@ -153,6 +185,9 @@ function drawPieChartByColumn(filteredData, columnName) {
     }
   });
 }
+
+
+
 
 
 
@@ -192,87 +227,6 @@ function drawPieChartByColumn(filteredData, columnName) {
     }
 
 
-    function drawProdSummaryChart(filteredData) {
-      const prodMap = {};
-
-      filteredData.forEach(entry => {
-        const prodId = entry.PROD_ID || 'Unknown';
-        const notional = parseFloat(entry.NOTIONAL) || 0;
-        const nav = parseFloat(entry.NAV) || 0;
-
-        if (!prodMap[prodId]) {
-          prodMap[prodId] = { notional: 0, nav: 0 };
-        }
-
-        prodMap[prodId].notional += notional;
-        prodMap[prodId].nav += nav;
-      });
-
-        // 🔥 Mapping in Array konvertieren und nach NOTIONAL absteigend sortieren
-        const sortedData = Object.entries(prodMap)
-          .sort((a, b) => b[1].notional - a[1].notional)
-          .slice(0, 5); // 👈 Nur die Top 5
-
-        const prodIds = sortedData.map(([prodId]) => prodId);
-        const notionals = sortedData.map(([, values]) => values.notional);
-        const navs = sortedData.map(([, values]) => values.nav);
-
-        const notionalColor = getColorForPieChart(0);
-        const navColor = getColorForPieChart(1);
-
-        const canvas = document.getElementById('prodSummaryChart');
-        const ctx = setupHiDPICanvas(canvas, 600, 400); // oder was auch immer du brauchst
-
-
-        if (ctx.chartInstance) {
-          ctx.chartInstance.destroy();
-        }
-
-      ctx.chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: prodIds,
-          datasets: [
-            {
-              label: 'Notional',
-              data: notionals,
-              backgroundColor: notionalColor.backgroundColor,
-              borderColor: notionalColor.borderColor,
-              borderWidth: 1
-            },
-            {
-              label: 'NAV',
-              data: navs,
-              backgroundColor: navColor.backgroundColor,
-              borderColor: navColor.borderColor,
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          plugins: {
-            legend: { position: 'top' },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  return `${context.dataset.label}: ${context.parsed.y}`;
-                }
-              }
-            }
-          },
-          responsive: true,
-          scales: {
-            x: {
-              title: { display: true, text: 'PROD_ID' }
-            },
-            y: {
-              title: { display: true, text: 'Value' },
-              beginAtZero: true
-            }
-          }
-        }
-      });
-    }
 
 
 

@@ -38,6 +38,13 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
     //   drawPortfolioVsYieldCurvesChart(portfolioYield, portTtM, yieldCurve, pastYieldCurve, EUSWData);
     //   drawProductYieldVsEUSWChart(filteredData, yieldCurve, pastYieldCurve) 
 
+insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs Maturity' });
+insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yields vs Maturity' });
+insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs Duration' });
+insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yields vs Duration' });
+
+
+
 //1) PortYield vs Maturity
 drawYieldVsTimeChart({
   targetId: 'euswapPortfolioYieldChart',
@@ -317,7 +324,7 @@ const productDatasets = !isSinglePoint ? points.map((entry, index) => {
       },
 plugins: {
   title: {
-    display: true,
+    display: false,
     text: heading, // der dynamisch übergebene Titel
     font: {
       size: 16,
@@ -412,6 +419,26 @@ plugins: {
           RATES: rate
         };
       }
+      
+
+function insertHeadingIntoExistingChartBox({ canvasId, title }) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const chartBox = canvas.closest('.chart-box');
+  if (!chartBox) return;
+
+  // Prüfe, ob ein Titel schon existiert
+  const existingHeading = chartBox.querySelector('h3');
+  if (existingHeading) return;
+
+  const heading = document.createElement('h3');
+  heading.textContent = title;
+  heading.style.textAlign = 'center';
+  heading.style.marginBottom = '10px';
+
+  chartBox.insertBefore(heading, canvas);
+}
 
 
 

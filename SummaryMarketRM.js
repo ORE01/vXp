@@ -1,7 +1,184 @@
 import { getColorFromPalette } from './utils/colors.js';
 
 // 📊 Main function
+// export function handleSummaryRMData(filteredData, index, port_name) {
+//   const elementId = `portDataContainer${0}`;
+//   const portfolioData = appState.getPortAggData(elementId) || {};
+
+//   let startValue = 100; 
+//   let portValueRel = 1;
+
+//   // 🧮 Verhältnis berechnen, wenn Daten da sind
+//   const portValue = parseFloat(portfolioData.formPortValue.replace(/[^\d.-]/g, '').replace(',', ''));
+//   const portNotional = parseFloat(portfolioData.formPortNotional.replace(/[^\d.-]/g, '').replace(',', ''));
+
+
+//   if (!isNaN(portValue) && !isNaN(portNotional) && portNotional !== 0) {
+//     portValueRel = portValue / portNotional;
+//     startValue = portValueRel * 100;
+
+//     console.log(`📊 portValueRel = ${portValueRel.toFixed(4)} (${startValue.toFixed(2)}%)`);
+//     console.log(`📊 portValue = ${portValue}`);
+//     console.log(`📊 portNotional = ${portNotional}`);
+//   } else {
+//     console.warn("Missing or invalid data for portValueRel calculation");
+//   }
+
+//   const mvarAggData = appState.getAllMvarData();
+//   const matchingEntry = mvarAggData.find(item => item.port_name === port_name);
+//   if (!matchingEntry || typeof matchingEntry.VaR_T_rel !== 'number') {
+//     console.warn(`No valid VaR data for portfolio: ${port_name}`);
+//     return;
+//   }
+//   const varTRel = matchingEntry.VaR_T_rel;
+
+//   const mvarDistData = appState.getMvarDistData();
+//   const OriPortData = appState.getAllPortfolioData();
+//   const portNav = OriPortData.filter(item => item.port_name === port_name)
+//     .reduce((sum, item) => sum + parseFloat(item.NAV?.toString().replace(/[^\d.-]/g, '') || 0), 0);
+
+//   const plValues = mvarDistData.map(row => row["P/L"] / portNav * 100);
+//   if (plValues.length === 0) return console.warn("No P/L data");
+
+
+  
+//   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
+
+//   const targetValue = portValueRel * 100;
+
+// const highlightedBinIndex = histogram.labels.findIndex(label => {
+//   const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
+//   return targetValue >= startStr && targetValue <= endStr;
+// });
+
+// const backgroundColors = histogram.bins.map((_, i) =>
+//   i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
+// );
+// const borderColors = histogram.bins.map((_, i) =>
+//   i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
+// );
+
+
+  
+//   // Chart container setup
+//   let chartContainer = document.getElementById('riskDistChartSection');
+//   if (!chartContainer) {
+//     const summaryModal = document.getElementById('SUMMARY_Modal') || document.body;
+//     chartContainer = document.createElement('div');
+//     chartContainer.id = 'riskDistChartSection';
+//     chartContainer.className = 'chart-section';
+
+//     const heading = document.createElement('h3');
+//     heading.className = 'section-header';
+//     heading.textContent = 'Market P/L Distribution';
+
+//     const buttonWrapper = document.createElement('div');
+//     buttonWrapper.className = 'button-wrapper';
+
+//     const button = document.createElement('button');
+//     button.id = 'mvaRDistButton';
+//     button.className = 'edit-button';
+//     button.textContent = 'Update MVaR';
+//     button.addEventListener('click', () => handleSummaryRMData(filteredData, index, port_name));
+
+//     const canvas = document.createElement('canvas');
+//     canvas.id = 'plMvarDistChart';
+//     canvas.width = 900;
+//     canvas.height = 500;
+
+//     buttonWrapper.appendChild(button);
+//     chartContainer.appendChild(heading);
+//     chartContainer.appendChild(buttonWrapper);
+//     chartContainer.appendChild(canvas);
+//     summaryModal.appendChild(chartContainer);
+//   }
+
+//   // Chart render
+//   const ctx = document.getElementById('plMvarDistChart').getContext('2d');
+//   if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
+
+//   window.plMvarDistChartInstance = new Chart(ctx, {
+//     type: 'bar',
+//     data: {
+//       labels: histogram.labels,
+// datasets: [{
+//   label: 'Frequency',
+//   data: histogram.bins,
+//   backgroundColor: backgroundColors,
+//   borderColor: borderColors,
+//   borderWidth: 1
+// }]
+
+//     },
+//     options: {
+//       responsive: true,
+//       maintainAspectRatio: false,
+//       indexAxis: 'y',
+//       scales: {
+//         x: {
+//           title: { display: true, text: 'Frequency' },
+//           ticks: { beginAtZero: true }
+//         },
+//         y: {
+//           title: { display: true, text: 'P/L as % of NAV' },
+//           reverse: true
+//         }
+//       },
+//       plugins: {
+//         legend: { display: false },
+// tooltip: {
+//   callbacks: {
+//     label: context => {
+//       const val = context.raw?.y;
+//       return `${context.dataset.label}: ${val.toFixed(2)}%`;
+//     }
+//   }
+// },
+
+//         annotation: {
+//           annotations: {
+//             varLine: {
+//               type: 'line',
+//               yMin: varTRel,
+//               yMax: varTRel,
+//               borderColor: 'red',
+//               borderWidth: 2,
+//               label: {
+//                 display: true,
+//                 content: `VaR (${varTRel.toFixed(2)}%)`,
+//                 color: 'red',
+//                 position: 'start',
+//                 font: { weight: 'bold' }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//   });
+
+
+//   drawCMBChart(startValue);
+// }
+
 export function handleSummaryRMData(filteredData, index, port_name) {
+  const elementId = `portDataContainer${0}`;
+  const portfolioData = appState.getPortAggData(elementId) || {};
+
+  let portValueRel = 1;
+  let portfolioEndValue = 100;
+
+  const portValue = parseFloat(portfolioData.formPortValue.replace(/[^\d.-]/g, '').replace(',', ''));
+  const portNotional = parseFloat(portfolioData.formPortNotional.replace(/[^\d.-]/g, '').replace(',', ''));
+
+  if (!isNaN(portValue) && !isNaN(portNotional) && portNotional !== 0) {
+    portValueRel = portValue / portNotional;
+    portfolioEndValue = portValueRel * 100;
+    console.log(`📊 portValueRel = ${portValueRel.toFixed(4)} (${portfolioEndValue.toFixed(2)}%)`);
+  } else {
+    console.warn("Missing or invalid data for portValueRel calculation");
+  }
+
   const mvarAggData = appState.getAllMvarData();
   const matchingEntry = mvarAggData.find(item => item.port_name === port_name);
   if (!matchingEntry || typeof matchingEntry.VaR_T_rel !== 'number') {
@@ -18,31 +195,55 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   const plValues = mvarDistData.map(row => row["P/L"] / portNav * 100);
   if (plValues.length === 0) return console.warn("No P/L data");
 
-  const histogram = createHistogramData(plValues);
-  
-  // Chart container setup
-  let chartContainer = document.getElementById('riskDistChartSection');
+  // 🧱 DOM sicherstellen
+  ensureChartContainerExists(
+    'riskDistChartSection',
+    'plMvarDistChart',
+    'Market P/L Distribution',
+    'mvaRDistButton',
+    'Update MVaR',
+    () => handleSummaryRMData(filteredData, index, port_name)
+  );
+
+  // 📊 HISTOGRAM:
+  const { data, options } = createMvarHistogramConfig(plValues, portValueRel, varTRel);
+  const ctx = document.getElementById('plMvarDistChart').getContext('2d');
+  if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
+
+  window.plMvarDistChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data,
+    options
+  });
+
+  // 📈 CMBChart:
+  drawCMBChart(portfolioEndValue);
+}
+
+export function ensureChartContainerExists(containerId, canvasId, title, buttonId, buttonText, onClick) {
+  let chartContainer = document.getElementById(containerId);
   if (!chartContainer) {
-    const summaryModal = document.getElementById('SUMMARY_Modal') || document.body;
+    const parent = document.getElementById('SUMMARY_Modal') || document.body;
+
     chartContainer = document.createElement('div');
-    chartContainer.id = 'riskDistChartSection';
+    chartContainer.id = containerId;
     chartContainer.className = 'chart-section';
 
     const heading = document.createElement('h3');
     heading.className = 'section-header';
-    heading.textContent = 'Market P/L Distribution';
+    heading.textContent = title;
 
     const buttonWrapper = document.createElement('div');
     buttonWrapper.className = 'button-wrapper';
 
     const button = document.createElement('button');
-    button.id = 'mvaRDistButton';
+    button.id = buttonId;
     button.className = 'edit-button';
-    button.textContent = 'Update MVaR';
-    button.addEventListener('click', () => handleSummaryRMData(filteredData, index, port_name));
+    button.textContent = buttonText;
+    button.addEventListener('click', onClick);
 
     const canvas = document.createElement('canvas');
-    canvas.id = 'plMvarDistChart';
+    canvas.id = canvasId;
     canvas.width = 900;
     canvas.height = 500;
 
@@ -50,22 +251,35 @@ export function handleSummaryRMData(filteredData, index, port_name) {
     chartContainer.appendChild(heading);
     chartContainer.appendChild(buttonWrapper);
     chartContainer.appendChild(canvas);
-    summaryModal.appendChild(chartContainer);
+    parent.appendChild(chartContainer);
   }
+}
 
-  // Chart render
-  const ctx = document.getElementById('plMvarDistChart').getContext('2d');
-  if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
 
-  window.plMvarDistChartInstance = new Chart(ctx, {
-    type: 'bar',
+export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
+  const histogram = createHistogramDataAdjusted(plValues, portValueRel);
+  const targetValue = portValueRel * 100;
+
+  const highlightedBinIndex = histogram.labels.findIndex(label => {
+    const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
+    return targetValue >= startStr && targetValue <= endStr;
+  });
+
+  const backgroundColor = histogram.bins.map((_, i) =>
+    i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
+  );
+  const borderColor = histogram.bins.map((_, i) =>
+    i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
+  );
+
+  return {
     data: {
       labels: histogram.labels,
       datasets: [{
         label: 'Frequency',
         data: histogram.bins,
-        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor,
+        borderColor,
         borderWidth: 1
       }]
     },
@@ -87,7 +301,10 @@ export function handleSummaryRMData(filteredData, index, port_name) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: context => `Count: ${context.parsed.x}`
+            label: context => {
+              const val = context.raw?.y;
+              return `${context.dataset.label}: ${val?.toFixed(2)}%`;
+            }
           }
         },
         annotation: {
@@ -110,40 +327,52 @@ export function handleSummaryRMData(filteredData, index, port_name) {
         }
       }
     }
-  });
-
-
-  drawCMBChart();
+  };
 }
 
-// 🔧 Utility: Create histogram from P/L values
-export function createHistogramData(values, numBins = 50) {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+export function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
+  // 1. In absolute Performance umrechnen
+  const adjusted = values.map(v => portValueRel * (1 + v / 100)); // z. B. -2% → 0.97
+
+  // 2. Basiswerte
+  const avg = adjusted.reduce((sum, v) => sum + v, 0) / adjusted.length;
+  const spread = Math.max(...adjusted) - Math.min(...adjusted);
+  const padding = spread * 0.2; // ⬅️ Optional: Padding für Symmetrie
+
+  // 3. Symmetrischer Bereich um avg
+  const min = avg - spread / 2 - padding;
+  const max = avg + spread / 2 + padding;
   const binWidth = (max - min) / numBins;
+
   const bins = Array(numBins).fill(0);
 
-  values.forEach(v => {
+  // 4. Zählen
+  adjusted.forEach(v => {
     const binIndex = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
     bins[binIndex]++;
   });
 
+  // 5. Labels generieren als Prozent (% vom NAV)
   const labels = bins.map((_, i) => {
-    const start = (min + i * binWidth).toFixed(2) + '%';
-    const end = (min + (i + 1) * binWidth).toFixed(2) + '%';
-    return `${start} - ${end}`;
+    const start = ((min + i * binWidth) * 100).toFixed(2);
+    const end = ((min + (i + 1) * binWidth) * 100).toFixed(2);
+    return `${start}% – ${end}%`;
   });
 
   return { labels, bins };
 }
 
 
+
 export function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Chart', pointRadius = 0) {
   const canvasElement = document.getElementById(chartName);
-
   if (!canvasElement) {
     console.error(`Canvas element with ID "${chartName}" not found.`);
     return null;
+  }
+
+  if (window[chartName + 'Instance']) {
+    window[chartName + 'Instance'].destroy();
   }
 
   const ctx = canvasElement.getContext("2d");
@@ -152,25 +381,57 @@ export function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Ch
     return null;
   }
 
-  const allDatasets = datasets.map((dataset, index) => ({
-    label: dataset.label,
-    data: dataset.data.map(dataPoint => ({
-      x: dataPoint.x,
-      y: dataPoint.y,
-      originalY: dataPoint.originalY
-    })),
-    fill: false,
-    borderColor: dataset.borderColor || getColorFromPalette(index),
-    backgroundColor: dataset.backgroundColor || 'transparent',
-    tension: dataset.tension ?? 0.1,
-    pointRadius: dataset.pointRadius ?? pointRadius,
-    borderWidth: 1,
-    spanGaps: false,
-    borderDash: dataset.borderDash || [],
-    yAxisID: dataset.yAxisID || 'y' // ➕ Support für sekundäre Achse
-  }));
+  const markerDatasets = datasets.filter(d => d.pointStyle === 'circle');
+  const regularDatasets = datasets.filter(d => d.pointStyle !== 'circle');
 
-  return new Chart(ctx, {
+  const allDatasets = [
+    ...regularDatasets.map((dataset, index) => ({
+      label: dataset.label,
+      data: dataset.data.map(dataPoint => ({
+        x: dataPoint.x,
+        y: dataPoint.y,
+        originalY: dataPoint.originalY
+      })),
+      fill: false,
+      borderColor: dataset.borderColor || getColorFromPalette(index),
+      backgroundColor: dataset.backgroundColor || 'transparent',
+      tension: dataset.tension ?? 0.1,
+      pointRadius: dataset.pointRadius ?? pointRadius,
+      borderWidth: 1,
+      spanGaps: false,
+      borderDash: dataset.borderDash || [],
+      yAxisID: 'y'
+    })),
+    ...markerDatasets.map(marker => ({
+      label: marker.label,
+      data: marker.data,
+      showLine: false,
+      pointRadius: marker.pointRadius ?? 5,
+      pointStyle: marker.pointStyle ?? 'circle',
+      pointBackgroundColor: marker.pointBackgroundColor ?? 'red',
+      pointBorderColor: marker.pointBorderColor ?? 'red',
+      borderColor: 'transparent',
+      backgroundColor: 'transparent',
+      yAxisID: 'y'
+    }))
+  ];
+
+  // 🧠 Zielwert aus Marker-Dataset holen (z. B. 100)
+  const targetMarker = markerDatasets.find(m => m.data?.[0]?.y != null);
+  const targetY = targetMarker?.data?.[0]?.y ?? 100;
+
+  // 📊 Alle Y-Werte extrahieren (ohne Marker)
+  const allYValues = regularDatasets.flatMap(ds => ds.data.map(p => p.y));
+  const minY = Math.min(...allYValues);
+  const maxY = Math.max(...allYValues);
+  const spread = Math.max(Math.abs(targetY - minY), Math.abs(targetY - maxY));
+  const padding = spread * 0.15;
+
+  const yMin = targetY - spread - padding;
+  const yMax = targetY + spread + padding;
+
+  // ✅ Neuen Chart erstellen
+  const newChart = new Chart(ctx, {
     type: "line",
     data: {
       labels: datasets[0].data.map(d => d.x),
@@ -192,31 +453,26 @@ export function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Ch
             text: "Date"
           },
           type: 'category',
-          time: {
-            unit: 'month'
-          }
         },
         y: {
-          title: { display: true, text: "Swap Rate (%)" },
+          title: {
+            display: true,
+            text: "Value Development (%)"
+          },
           ticks: {
             callback: val => `${val.toFixed(2)}%`
-          }
-        },
-        yBond: {
-          position: 'right',
-          title: { display: true, text: "CMB Value (€)" },
-          grid: { drawOnChartArea: false },
-          ticks: {
-            callback: val => `€${val.toFixed(2)}`
-          }
+          },
+          min: yMin,
+          max: yMax
         }
       },
       plugins: {
         tooltip: {
+          filter: context => !context.dataset.label?.includes('Current Portfolio Value'),
           callbacks: {
             label: context => {
-              const val = context.raw?.originalY;
-              return `${context.dataset.label}: ${typeof val === 'number' ? val.toFixed(2) : 'N/A'}`;
+              const val = context.raw?.y;
+              return `${context.dataset.label}: ${val.toFixed(2)}%`;
             }
           }
         },
@@ -232,7 +488,11 @@ export function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Ch
       }
     }
   });
+
+  window[chartName + 'Instance'] = newChart;
+  return newChart;
 }
+
 
 
 export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
@@ -249,7 +509,7 @@ export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
 
     const diff = currRate - prevRate;
     const impact = diff * pv01;
-    currentValue -= impact; // negative impact = loss → ↓ value
+    currentValue *= (1 - impact / 100);
 
     result.push({
       x: curr.DATE || curr.date,
@@ -261,24 +521,34 @@ export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
   return result;
 }
 
-// 📉 Main chart function for synthetic bond value
-export function drawCMBChart() {
-  if (window.tsEU1YChartInstance instanceof Chart) {
-    window.tsEU1YChartInstance.destroy();
-  }
 
+
+// 📉 Main chart function for synthetic bond value
+export function drawCMBChart(targetEndValue = 100) {
   const tsData = appState.getTblTSData();
   const testTtM = 5;
-  const testPV01 = 4.7;
-  const portfolioPV01 = 5.2;
+  const testPV01 = 5;
+  const portfolioPV01 = 1;
 
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  const tsFiltered = tsData.filter(d => new Date(d.DATE || d.date) >= threeYearsAgo);
+
+  const rawSynthetic = computeCMBValueCurve(tsFiltered, testTtM, testPV01);
+  const rawPortfolio = computeCMBValueCurve(tsFiltered, testTtM, portfolioPV01);
+
+  const syntheticData = normalizeCurveToEndValue(rawSynthetic, targetEndValue);
+  const portfolioData = normalizeCurveToEndValue(rawPortfolio, targetEndValue);
+
+  const allYValues = [...syntheticData, ...portfolioData].map(p => p.y);
+  const ySpread = Math.max(...allYValues) - Math.min(...allYValues);
+  const yPadding = ySpread * 0.1; // etwas Luft
+  const yMax = targetEndValue + ySpread / 2 + yPadding;
+  const yMin = targetEndValue - ySpread / 2 - yPadding;
 
   const cmbValueDataset = {
     label: `Synthetic CMB (${testTtM}Y)`,
-    data: computeCMBValueCurve(tsData, testTtM, testPV01)
-      .filter(d => new Date(d.x) >= threeYearsAgo),
+    data: syntheticData,
     borderColor: 'purple',
     backgroundColor: 'rgba(128, 0, 128, 0.2)',
     tension: 0.1,
@@ -287,21 +557,47 @@ export function drawCMBChart() {
 
   const portfolioValueDataset = {
     label: `Portfolio (CMB ${testTtM}Y)`,
-    data: computeCMBValueCurve(tsData, testTtM, portfolioPV01)
-      .filter(d => new Date(d.x) >= threeYearsAgo),
+    data: portfolioData,
     borderColor: 'teal',
     backgroundColor: 'rgba(0, 128, 128, 0.2)',
     tension: 0.1,
     pointRadius: 0
   };
 
+  const lastPoint = syntheticData[syntheticData.length - 1];
+
+  const endMarker = {
+    label: `Current Portfolio Value (${targetEndValue.toFixed(2)}%)`,
+    data: [{ x: lastPoint.x, y: targetEndValue }],
+    pointRadius: 5,
+    pointStyle: 'circle',
+    pointBackgroundColor: 'red',
+    pointBorderColor: 'red',
+    showLine: false,
+    borderColor: 'red',
+    backgroundColor: 'red',
+  };
+
+  // 🔄 Chart generieren
   window.tsEU1YChartInstance = createSimpleLineChart(
-    [cmbValueDataset, portfolioValueDataset],
+    [cmbValueDataset, portfolioValueDataset, endMarker],
     'tsEU1YChart',
     'Synthetic Bond vs. Portfolio',
-    0
+    0,
+    { // 👉 Neuer Parameter: optionsOverride
+      scales: {
+        y: {
+          min: yMin,
+          max: yMax,
+          title: { display: true, text: 'Normalized Value (%)' },
+        }
+      }
+    }
   );
 }
+
+
+
 
 
 
@@ -337,6 +633,20 @@ export function interpolateSwapRateDynamic(row, targetYear) {
   const t = (targetYear - lower.year) / (upper.year - lower.year);
   return lower.rate + t * (upper.rate - lower.rate);
 }
+
+function normalizeCurveToEndValue(curve, targetEndValue) {
+  if (!curve.length) return curve;
+
+  const lastY = curve[curve.length - 1].y;
+  const factor = targetEndValue / lastY;
+
+  return curve.map(point => ({
+    ...point,
+    y: point.y * factor
+  }));
+}
+
+
 
 
 
