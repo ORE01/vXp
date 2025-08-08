@@ -170,6 +170,8 @@ export function handleSummaryRMData(filteredData, index, port_name) {
 
   const portValue = parseFloat(portfolioData.formPortValue.replace(/[^\d.-]/g, '').replace(',', ''));
   const portNotional = parseFloat(portfolioData.formPortNotional.replace(/[^\d.-]/g, '').replace(',', ''));
+  const portPV01 = parseFloat(portfolioData.formPortPV01.replace(/[^\d.-]/g, '').replace(',', ''));
+  console.log(`📊 portPV01 = ${portPV01}`);
 
   if (!isNaN(portValue) && !isNaN(portNotional) && portNotional !== 0) {
     portValueRel = portValue / portNotional;
@@ -217,7 +219,7 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   });
 
   // 📈 CMBChart:
-  drawCMBChart(portfolioEndValue);
+  drawCMBChart(portfolioEndValue, portPV01, 5);
 }
 
 export function ensureChartContainerExists(containerId, canvasId, title, buttonId, buttonText, onClick) {
@@ -509,7 +511,7 @@ export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
 
     const diff = currRate - prevRate;
     const impact = diff * pv01;
-    currentValue *= (1 - impact / 100);
+    currentValue *= (1 + impact / 100);
 
     result.push({
       x: curr.DATE || curr.date,
@@ -524,11 +526,18 @@ export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
 
 
 // 📉 Main chart function for synthetic bond value
-export function drawCMBChart(targetEndValue = 100) {
+export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
   const tsData = appState.getTblTSData();
-  const testTtM = 5;
-  const testPV01 = 5;
-  const portfolioPV01 = 1;
+  // console.log('tsData:', tsData)
+  // const testTtM = 5;
+
+    
+    const testCurr = tsData[tsData.length - 1];
+    const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM)/100;
+    console.log('testCurrRate:', testCurrRate)
+  
+  const testPV01 = -testTtM/(1 + testCurrRate);
+  const portfolioPV01 = portPV01;
 
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);

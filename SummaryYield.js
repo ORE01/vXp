@@ -261,7 +261,8 @@ const productDatasets = !isSinglePoint ? points.map((entry, index) => {
       backgroundColor: 'rgba(255, 159, 64, 0.2)',
       borderDash: [5, 5],
       tension: 0.3,
-      pointRadius: 3
+      pointRadius: 3,
+      hidden: true
     },
     {
       label: 'EU Swap',

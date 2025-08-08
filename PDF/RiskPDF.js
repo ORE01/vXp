@@ -62,10 +62,27 @@ export function generateRiskPDF(filteredData) {
   doc.text('Table of Contents', 14, 20);
   doc.setFontSize(11);
 
-  tocEntries.forEach((entry, index) => {
-    const indent = (entry.level - 1) * 5;
-    doc.text(`${entry.title} ............................................. ${entry.page + 1}`, 20 + indent, 30 + index * 8);
-  });
+tocEntries.forEach((entry, index) => {
+  const indent = (entry.level - 1) * 5;
+  const lineY = 30 + index * 8;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginLeft = 20 + indent;
+  const marginRight = 20;
+  const maxLineWidth = pageWidth - marginLeft - marginRight;
+
+  const pageText = (entry.page + 1).toString();
+  const pageTextWidth = doc.getTextWidth(pageText);
+
+  const titleText = entry.title;
+  const titleTextWidth = doc.getTextWidth(titleText);
+
+  // Abstand zwischen Titel und Seitenzahl
+  const dotsWidth = maxLineWidth - titleTextWidth - pageTextWidth;
+  const dots = '.'.repeat(Math.floor(dotsWidth / doc.getTextWidth('.')));
+
+  doc.text(`${titleText} ${dots} ${pageText}`, marginLeft, lineY);
+});
+
 
   doc.save('Risk.pdf');
 }
@@ -154,9 +171,6 @@ function drawPieChartsSection(doc, filteredData) {
 
   doc.addPage();
 }
-
-
-
 //PERFORMANCE:
 function drawPerformanceSection(doc) {
   const chartIds = [
@@ -314,9 +328,6 @@ function drawMarketDataSection(doc, addTOCEntry) {
 
   doc.addPage();
 }
-
-
-
 //ANHANG:
 function drawProductTableSection(doc, filteredData) {
   const riskData = extractProductRiskData(filteredData);
@@ -340,6 +351,9 @@ function drawProductTableSection(doc, filteredData) {
     theme: 'striped',
   });
 }
+
+
+
 
 function extractProductRiskData(filteredData) {
   if (!filteredData || !Array.isArray(filteredData)) return [];
