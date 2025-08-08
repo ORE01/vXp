@@ -271,19 +271,37 @@ p {
 
 .pie-chart-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
   gap: 20px;
-  justify-items: center;
-  max-width: 1300px;
+  justify-content: center;
   margin: 0 auto;
+  max-width: 1600px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
 }
+
+
+@media (max-width: 1000px) {
+  .pie-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+
+
+
 
 .chart-block {
   width: 100%;
-  max-width: 350px;
-  aspect-ratio: 1 / 1;
-  background: #2a2a2a;
+  max-width: 500px; /* passt zum minmax() oben */
+  box-sizing: border-box;
+  overflow: hidden; /* Verhindert Ausdehnung */
+  min-height: 360px;
   padding: 20px;
+  background: #2a2a2a;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   color: #fff;
@@ -294,9 +312,12 @@ p {
 }
 
 
+
+
+
 .pieChart {
   width: 100%;         /* fill parent .chart-block width */
-  height: 250px;       /* fixed height for consistency */
+  height: 280px;       /* fixed height for consistency */
 }
 
 /* Performance Charts */
@@ -362,6 +383,16 @@ canvas {
     grid-template-columns: 1fr;
   }
 }
+
+.yield-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* oder 1, 2, 3 Spalten je nach Bedarf */
+  gap: 30px;
+  max-width: 1200px;
+  margin: 40px auto;
+  justify-items: center;
+}
+
 
 
 
