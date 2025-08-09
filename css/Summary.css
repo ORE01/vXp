@@ -1,0 +1,179 @@
+
+  /* --- Grundlayout Modal-Inhalt --- */
+#SUMMARY_Modal .table-content {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;          /* ⬅️ neu */
+}
+
+
+  /* Container linksbündig machen */
+#SUMMARY_Modal .chart-section {
+  display: block !important;   /* falls vorher grid/flex + center */
+  text-align: left !important; /* falls text-align:center gesetzt war */
+  align-self: flex-start !important; /* falls parent ein flex container ist */
+  width: 100%;
+}
+
+
+  /* Backdrop NUR innerhalb des Modals */
+  .sub-panel-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+    z-index: 1050;
+  }
+  .sub-panel-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Slide-in Panel rechts */
+  .sub-panel {
+    position: absolute;
+    top: 0;
+    right: -100%;
+    width: calc(100% - 260px); /* 240px Buttons + 20px Abstand */
+    max-width: none;  
+      height: 100vh;           /* volle Höhe des Viewports */
+  max-height: 100vh; 
+    background: #333;
+    border-left: 1px solid #e6e6e6;
+    box-shadow: -12px 0 24px rgba(0,0,0,.15);
+    transition: right .28s ease;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+  }
+  .sub-panel.open { right: 0; }
+
+  /* Panel-Header */
+  .sub-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+  }
+  .sub-panel-title { font-size: 18px; font-weight: 600; }
+  .sub-panel-close {
+    border: 0; background: transparent; font-size: 24px; line-height: 1; cursor: pointer;
+  }
+
+  /* Panel-Body scrollt separat */
+  .sub-panel-body { flex: 1;  overflow: auto; padding: 16px; }
+
+  /* Trigger-Buttons für Sections */
+/* Trigger-Buttons für Sections - schmaler + linksbündig */
+/* Kompaktere Section-Trigger passend zur Toolbar */
+.section-trigger {
+  display: inline-flex;
+  align-items: center;       /* sorgt für vertikale Zentrierung */
+  justify-content: space-between;
+  gap: 6px;
+
+  font-size: 13px;
+  font-weight: normal;
+  color: inherit;
+  line-height: 1;            /* verhindert "zu hoch" Effekt */
+  padding: 0 8px;            /* nur horizontaler Innenabstand */
+
+  background-color: #555;
+  border: 1px solid #777;
+  border-radius: 4px;
+
+  height: 28px;
+  min-width: auto;
+  max-width: 200px;
+}
+
+.section-trigger .section-header {
+  font-size: 13px;
+  font-weight: normal;
+  color: inherit;
+  position: relative;
+  top: 1px;                   /* feine optische Korrektur nach unten */
+}
+
+.section-trigger .chev {
+  font-size: 11px;
+  color: inherit;
+  position: relative;
+  top: 1px;                   /* Pfeil mit verschieben */
+}
+
+
+
+
+  /* Optionale kosmetik für chart-sections (Trigger-Reihen) */
+  #SUMMARY_Modal .chart-section { margin: 12px 0; }
+
+  /* Nur innerhalb des Slide-ins "panel-market" alles wieder auf normal setzen */
+#panel-market .sub-panel-body,
+#panel-market .toolbar,
+#panel-market .data-container,
+#panel-market .chart-2x1-row {
+  position: static !important;
+  float: none !important;
+}
+
+
+#panel-market .data-wrapper {
+  position: static !important;   /* hebt evtl. absolute/fixed auf */
+  float: none !important;
+  margin: 0 !important;
+  inset: auto !important;        /* falls top/right/bottom/left gesetzt waren */
+  transform: none !important;    /* falls irgendwas verschoben wurde */
+}
+
+/* Toolbar als Reihe */
+#panel-market .toolbar {
+  display: flex !important;
+  align-items: flex-start;     /* obere Kante bündig */
+  gap: 10px;
+  flex-wrap: nowrap;           /* NICHT umbrechen */
+}
+
+
+/* Buttons rechts daneben, schmal halten */
+#panel-market .toolbar .edit-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  height: 32px;                /* optional: einheitliche Höhe */
+  line-height: 32px;           /* falls pure-text Buttons */
+  padding: 0 10px;
+}
+
+/* Schmale Container: block + kein float, linksbündig */
+#panel-market #MVaRDataContainer0,
+#panel-credit #CVaR_allRelativeContainer0 {
+  max-width: 500px;
+  margin: 0 0 14px 0;
+  display: block;     /* wichtig */
+  float: none;        /* killt alte Floats */
+}
+
+/* Stelle sicher, dass die Chart-Zeile neu unterhalb startet */
+#panel-market .chart-2x1-row,
+#panel-credit .chart-2x1-row {
+  clear: both;        /* falls vorher Floats aktiv waren */
+}
+
+#panel-market .toolbar .section-trigger {
+  align-self: center !important;   /* überschreibt flex-start sicher */
+}
+
+
+
+
+
+
+
+
+
+  
+

@@ -14,6 +14,7 @@
   <link href="./css/Warnings.css" rel="stylesheet">
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
   <link href="./css/CouponModal.css" rel="stylesheet">
+  <link href="./css/Summary.css" rel="stylesheet">
 
   <!-- Library Imports -->
   
@@ -98,132 +99,267 @@
 
 
 
-  <!-- Modal - SUMMARY -->
-  <div id="SUMMARY_Modal" class="table">
-    <div class="table-content" style="display: block;"> <!-- 👈 Force vertical stacking -->
 
-      <span class="close">&times;</span>
 
-      <!-- Summary Section Header -->
-      <div class="portfolio-info">
-        <h2 class="section-header">SUMMARY</h2>
-        <div class="data-wrapper">
-          <div class="data-container" id="portAggDataContainer5"></div>
+<div id="SUMMARY_Modal" class="table">
+  <div class="table-content" style="display: block;"> <!-- 👈 Force vertical stacking -->
 
-          <select id="valueSelector">
-              <option value="NAV">NAV</option>
-              <option value="NOTIONAL">Notional</option>
-          </select>
+    <span class="close">&times;</span>
 
-        </div>
+    <!-- Summary Section Header -->
+    <div class="portfolio-info">
+      <h2 class="section-header">SUMMARY</h2>
+      <div class="data-wrapper">
+        <div class="data-container" id="portAggDataContainer5"></div>
 
-        
+        <select id="valueSelector">
+          <option value="NAV">NAV</option>
+          <option value="NOTIONAL">Notional</option>
+        </select>
       </div>
+    </div>
 
+    <!-- ===== Trigger-Reihen statt Inhalt ===== -->
 
-  <!-- 🧩 Notional/NAV categories -->
-    <!-- <div class="subsection">
-      <h4 class="subsection-title">Notional/NAV per Product</h4>
-        <div id="prodSummaryChartContainer">
-          <canvas id="prodSummaryChart"></canvas>
+    <!-- 📊 Portfolio Breakdown – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-breakdown" aria-controls="panel-breakdown" aria-expanded="false">
+        <span class="section-header">Portfolio Breakdown</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📈 Performance – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
+        <span class="section-header">Performance</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Market P/L – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
+        <span class="section-header">Market Risk</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Credit P/L – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
+        <span class="section-header">Credit Risk</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop innerhalb des Modals -->
+    <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
+
+    <!-- ========= PANELS am Ende ========= -->
+
+    <!-- Panel: Breakdown -->
+    <div id="panel-breakdown" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-breakdown-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-breakdown-title" class="sub-panel-title">Portfolio Breakdown</div>
+        <button class="sub-panel-close" data-close="panel-breakdown" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <!-- ⬇️ dein ursprünglicher Breakdown-Inhalt (IDs bleiben) -->
+        <div id="pieChartGrid" class="pie-chart-grid">
+          <!-- JS fügt hier Chart-Boxen ein -->
         </div>
-    </div> -->
+      </div>
+    </div>
 
-<!-- 📊 Pie Charts Section -->
-<div class="chart-section" style="margin-bottom: 50px;">
-  <h3 class="section-header">Portfolio Breakdown</h3>
+    <!-- Panel: Performance -->
+    <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-performance-title" class="sub-panel-title">Performance</div>
+        <button class="sub-panel-close" data-close="panel-performance" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
+          <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
+            <div class="chart-box"><canvas id="euswapPortfolioYieldChart"></canvas></div>
+            <div class="chart-box"><canvas id="euswapProductYieldChart"></canvas></div>
+            <div class="chart-box"><canvas id="durationSwapChart"></canvas></div>
+            <div class="chart-box"><canvas id="durationProductYieldChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <div id="pieChartGrid" class="pie-chart-grid">
-    <!-- Hier fügt dein JS die Chart-Boxen automatisch ein -->
+    <!-- Panel: Market P/L -->
+<div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
+    <button class="sub-panel-close" data-close="panel-market" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- 1) INPUT OBEN -->
+    <div class="button-wrapper">
+      <!-- <div id="inputMVaR-container"></div> -->
+      <!-- <button id="mvarAddButton" class="edit-button">Add Entry</button> -->
+      <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
+    </div>
+
+
+    <!-- 2) MVaR/ES Daten DARUNTER -->
+    <p style="margin: 6px 0 4px;">Market Value at Risk / Expected Shortfall:</p>
+    <div class="data-container" id="MVaRDataContainer0" style="margin-bottom:14px;"></div>
+
+    <!-- 3) CHARTS NEBENEINANDER -->
+    <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap;">
+      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+        <canvas id="tsEU1YChart"></canvas>
+      </div>
+      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+        <canvas id="plMvarDistChart"></canvas>
+      </div>
+    </div>
   </div>
 </div>
 
 
 
+    <!-- Panel: Credit P/L -->
+    <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-credit-title" class="sub-panel-title">Credit Profit/Loss Distribution</div>
+        <button class="sub-panel-close" data-close="panel-credit" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <div class="button-wrapper">
+          <button id="CVaRButton" class="edit-button">Profit/Loss Dist</button>
+        </div>
 
-      <!-- 📈 Line Chart Section (ALWAYS BELOW) -->
-      <div class="chart-section">
-        <h3 class="section-header">Performance</h3>
-          <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
-            <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
-              <div class="chart-box"><canvas id="euswapPortfolioYieldChart"></canvas></div>
-              <div class="chart-box"><canvas id="euswapProductYieldChart"></canvas></div>
-              <div class="chart-box"><canvas id="durationSwapChart"></canvas></div>
-              <div class="chart-box"><canvas id="durationProductYieldChart"></canvas></div>
+        <p>Credit Value at Risk/Expected Shortfall:</p>
+        <div class="data-container" id="CVaR_allRelativeContainer0"></div>
+
+        <!-- 2x1 Grid -->
+        <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap;">
+          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+            <p style="text-align: center;">Value at Risk:</p>
+            <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
+          </div>
+          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+            <p style="text-align: center;">Expected Shortfall:</p>
+            <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
+
+            <div class="traffic-light-wrapper" style="margin-top: 10px;">
+              <div class="traffic-light">
+                <div id="red" class="light red"></div>
+                <div id="yellow" class="light yellow"></div>
+                <div id="green" class="light green"></div>
+              </div>
             </div>
           </div>
-      </div>
-
-<!-- 📉 P/L MARKET Distribution Section -->
-<div class="chart-section" style="margin-top: 50px;">
-  <h3 class="section-header">Market Profit/Loss Distribution</h3>
-
-  <div class="left-part">
-    <div class="data-wrapper">
-      <div id="inputMVaR-container"></div>
-      <button id="mvarAddButton" class="edit-button">Add Entry</button>
-    </div>
-  </div>
-
-  <div class="button-wrapper">
-    <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
-  </div>
-
-  <p>Market Value at Risk/Expected Shortfall:</p>
-  <div class="data-container" id="MVaRDataContainer0"></div>
-
-  <!-- ⬇️ Side-by-side grid with reversed chart order -->
-  <div class="chart-2x1-row">
-    <div class="chart-box">
-      <canvas id="tsEU1YChart"></canvas> <!-- now on the left -->
-    </div>
-    <div class="chart-box">
-      <canvas id="plMvarDistChart"></canvas> <!-- now on the right -->
-    </div>
-  </div>
-</div>
-
-
-
-
-
-
-
-
- <!-- 📉 P/L CREDIT Distribution Section -->
-<div class="chart-section" style="margin-top: 50px;">
-  <h3 class="section-header">Credit Profit/Loss Distribution</h3>
-
-  <div class="button-wrapper">
-    <button id="CVaRButton" class="edit-button">P/L Dist</button>
-  </div>
-
-  <p>Credit Value at Risk/Expected Shortfall:</p>
-  <div class="data-container" id="CVaR_allRelativeContainer0"></div>
-
-  <!-- 🆕 2x1 Grid -->
-  <div class="chart-2x1-row">
-    <div class="chart-box">
-      <p style="text-align: center;">Value at Risk:</p>
-      <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
-    </div>
-    <div class="chart-box">
-      <p style="text-align: center;">Expected Shortfall:</p>
-      <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
-
-      <div class="traffic-light-wrapper" style="margin-top: 10px;">
-        <div class="traffic-light">
-          <div id="red" class="light red"></div>
-          <div id="yellow" class="light yellow"></div>
-          <div id="green" class="light green"></div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-  </div>
-  </div>
+  </div><!-- /table-content -->
+</div><!-- /SUMMARY_Modal -->
+
+<script>
+  (function() {
+    const container = document.querySelector('#SUMMARY_Modal .table-content');
+    const backdrop  = document.getElementById('subPanelBackdrop');
+
+    function openPanel(id) {
+      const panel = document.getElementById(id);
+      if (!panel) return;
+      panel.hidden = false;
+      // Force layout vor Transition
+      panel.getBoundingClientRect();
+      panel.classList.add('open');
+      backdrop.hidden = false;
+      backdrop.classList.add('show');
+
+      const trigger = container.querySelector(`.section-trigger[data-panel="${id}"]`);
+      trigger?.setAttribute('aria-expanded', 'true');
+
+      // Nach Slide-In Charts sauber resizen/updaten
+      const onDone = (e) => {
+        if (e.propertyName !== 'right') return; // Transition-Ende des Panels
+        resizeChartsIn(panel);
+        panel.removeEventListener('transitionend', onDone);
+      };
+      panel.addEventListener('transitionend', onDone);
+
+      document.addEventListener('keydown', onEscClose);
+    }
+
+    function closePanel(id) {
+      const panel = document.getElementById(id);
+      if (!panel || panel.hidden) return;
+      panel.classList.remove('open');
+      backdrop.classList.remove('show');
+
+      const trigger = container.querySelector(`.section-trigger[data-panel="${id}"]`);
+      trigger?.setAttribute('aria-expanded', 'false');
+
+      const onDone = (e) => {
+        if (e.propertyName !== 'right') return;
+        panel.hidden = true;
+        const anyOpen = !!container.querySelector('.sub-panel.open');
+        if (!anyOpen) backdrop.hidden = true;
+        panel.removeEventListener('transitionend', onDone);
+      };
+      panel.addEventListener('transitionend', onDone);
+
+      document.removeEventListener('keydown', onEscClose);
+    }
+
+    function onEscClose(e) {
+      if (e.key === 'Escape') {
+        const open = container.querySelector('.sub-panel.open');
+        if (open) closePanel(open.id);
+      }
+    }
+
+    // Clicks: Trigger öffnen
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.section-trigger');
+      if (!btn) return;
+      openPanel(btn.dataset.panel);
+    });
+
+    // Clicks: Panel schließen
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.sub-panel-close');
+      if (!btn) return;
+      closePanel(btn.dataset.close);
+    });
+
+    // Backdrop klick -> aktuell offenes Panel schließen
+    backdrop?.addEventListener('click', () => {
+      const open = container.querySelector('.sub-panel.open');
+      if (open) closePanel(open.id);
+    });
+
+    // Chart-Resize/Update wenn Panel sichtbar wird
+    function resizeChartsIn(root) {
+      const canvases = root.querySelectorAll('canvas');
+      canvases.forEach((cv) => {
+        try {
+          // Chart.js v3/v4
+          const chart = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : (cv._chart || null);
+          if (chart?.resize) chart.resize();
+          if (chart?.update) chart.update('none');
+        } catch (err) {
+          console.warn('Chart resize failed for', cv?.id, err);
+        }
+      });
+      // Falls du Panels lazy befüllst/renderst, ruf hier deine Render-Funktionen auf.
+      // Beispiel:
+      // if (!window.euswapPortfolioYieldChartInstance) renderPerformanceCharts();
+    }
+  })();
+</script>
+
 
   <!-- Modal - Liquidity -->
   <div id="Liquidity_Modal" class="table">
@@ -831,13 +967,14 @@
       <h2 class="section-header">MARKET VaR</h2>
 
       <!-- Left Part (Tables) -->
-      <!-- <div class="left-part">
+      <div class="left-part">
         <div class="data-wrapper">
           <div id="inputMVaR-container"></div>
           <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
+          <button id="mvarAddButton" class="edit-button">Add Entry</button>
           <div class="data-container" id="MVaRDataContainer"></div>
         </div>
-      </div> -->
+      </div>
         <div class="data-container" id="MVaRDataContainer"></div>
       <!-- Right Part (Chart) -->
       <div class="right-part">
