@@ -3,35 +3,39 @@ import { createRatesLineChart } from '../charts/LineChart.js';
 
 export async function generateOfferPDF(filteredData, headerText = '', footerText = '') {
   const doc = new jsPDF();
-  const offers = extractProductOfferData(filteredData);
+  const totalPagesExp = '{total_pages_count_string}';
+
+  const tocEntries = [];
+  const sectionCounters = [];
+
+  function addTOCEntry(title, page, level = 1) {
+    while (sectionCounters.length < level) sectionCounters.push(0);
+    sectionCounters[level - 1]++;
+    for (let i = level; i < sectionCounters.length; i++) sectionCounters[i] = 0;
+
+    const sectionNumber = sectionCounters.slice(0, level).join('.');
+    tocEntries.push({ title: `${sectionNumber}. ${title}`, page, level });
+  }
 
   let currentY = 20;
-
-  // Schriftfarbe auf Dunkelgrau setzen
   doc.setTextColor(51, 51, 51);
 
-  // Titel
+  // 📌 HEADER
   doc.setFontSize(18);
   doc.text('Angebot:', 14, currentY);
   currentY += 10;
 
-  // Header-Text dynamisch
-  doc.setFontSize(12);
   if (headerText?.trim()) {
+    addTOCEntry('Einleitung', doc.internal.getNumberOfPages(), 1);
+
+    doc.setFontSize(12);
     const headerLines = doc.splitTextToSize(headerText, 180);
-    const headerHeight = headerLines.length * 5 + 2;
-
-    if (currentY + headerHeight > doc.internal.pageSize.getHeight()) {
-      doc.addPage();
-      currentY = 20;
-      doc.setTextColor(51, 51, 51);
-    }
-
     doc.text(headerLines, 14, currentY);
-    currentY += headerHeight;
+    currentY += headerLines.length * 5 + 10;
   }
 
-  // Tabelle vorbereiten
+  // 📌 TABELLE
+  const offers = extractProductOfferData(filteredData);
   const tableData = offers.map(item => [
     item.PROD_ID,
     item.DESCRIPTION,
@@ -41,155 +45,77 @@ export async function generateOfferPDF(filteredData, headerText = '', footerText
     item.C_SPREAD
   ]);
 
+  addTOCEntry('Produktübersicht', doc.internal.getNumberOfPages(), 1);
+
   doc.autoTable({
     head: [['Produkt-ID', 'Beschreibung', 'Kurs', 'Laufzeit', 'Rendite', 'Spread']],
     body: tableData,
-    startY: currentY + 5,
+    startY: currentY,
     styles: {
       cellPadding: 2,
       fontSize: 10,
-      textColor: [51, 51, 51] // Tabelleninhalt auch dunkelgrau
+      textColor: [51, 51, 51]
     },
     headStyles: {
       fillColor: [70, 192, 230],
-      textColor: 255 // Weißer Tabellenkopf
+      textColor: 255
     },
     theme: 'striped',
   });
 
-  // Nach der Tabelle
   currentY = doc.lastAutoTable.finalY + 10;
 
-  // Footer-Text dynamisch
-  doc.setFontSize(11);
+  // 📌 FOOTER
   if (footerText?.trim()) {
+    addTOCEntry('Zusätzliche Hinweise', doc.internal.getNumberOfPages(), 1);
+    doc.setFontSize(11);
     const footerLines = doc.splitTextToSize(footerText, 180);
-    const footerHeight = footerLines.length * 5 + 2;
-
-    if (currentY + footerHeight > doc.internal.pageSize.getHeight()) {
-      doc.addPage();
-      currentY = 20;
-      doc.setTextColor(51, 51, 51);
-    }
-
     doc.text(footerLines, 14, currentY);
-    currentY += footerHeight;
+    currentY += footerLines.length * 5 + 10;
   }
 
-  // Chart zeichnen
-  //await drawSwapChartToPDF(filteredData, currentY, doc);
-
+  // 📌 CHARTS
+  addTOCEntry('Visualisierung: Produkt Yields', doc.internal.getNumberOfPages(), 1);
   await addChartToPDF('euswapProductYieldChart', doc, 14, currentY, 180, 90);
 
-      doc.save('Produktangebot.pdf');
-}
-
-
-
-async function drawSwapChartToPDF(filteredData, startY, doc) {
-  const euswData = window.appState.getEUSWData?.();
-  if (euswData?.length) {
-    const canvas = document.getElementById('IRlineChartExport');
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-
-      const swapPoints = euswData.map(entry => {
-        const x = parseFloat(entry.YEAR || entry.year || entry.TERM);
-        const y = parseFloat(entry.RATES || entry.rate || entry.RATE);
-        return (!isNaN(x) && !isNaN(y)) ? { x, y } : null;
-      }).filter(Boolean);
-
-      const productDatasets = filteredData.map((entry, index) => {
-        const rawTtM = entry.TtM;
-        const rawYTM = entry.ytm;
-
-        const ttm = typeof rawTtM === 'number' ? rawTtM : parseFloat(rawTtM);
-        //const ytm = parseFloat((rawYTM || '').toString().replace('%', '').trim());
-        const ytm = typeof entry.ytm === 'number' ? entry.ytm : parseFloat(entry.ytm);
-        console.log('ytm:', ytm)
-
-        if (isNaN(ttm) || isNaN(ytm)) return null;
-
-        const hue = (index * 47) % 360;
-        const color = `hsl(${hue}, 80%, 50%)`;
-
-        return {
-          label: entry.PROD_ID || `Produkt ${index + 1}`,
-          data: [{ x: ttm, y: ytm * 100 }],
-          type: 'scatter',
-          backgroundColor: color,
-          borderColor: color,
-          pointRadius: 5,
-          pointHoverRadius: 7
-        };
-      }).filter(Boolean);
-
-      if (window.exportChartInstance) {
-        window.exportChartInstance.destroy();
-      }
-
-      window.exportChartInstance = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-          datasets: [
-            {
-              label: 'Swapkurve',
-              data: swapPoints,
-              showLine: true,
-              borderColor: 'rgba(75, 192, 192, 1)',
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              tension: 0.3,
-              pointRadius: 3
-            },
-            ...productDatasets
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              type: 'linear',
-              title: {
-                display: true,
-                text: 'Laufzeit (Jahre)'
-              },
-              min: 0,
-              max: Math.max(...swapPoints.map(p => p.x), ...productDatasets.map(d => d.data[0].x)) + 1
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'Rendite (%)'
-              },
-              ticks: {
-                callback: val => `${val.toFixed(2)}%`
-              }
-            }
-          },
-          plugins: {
-            legend: { position: 'top' },
-            tooltip: {
-              callbacks: {
-                label: context => `${context.dataset.label}: ${context.raw.y.toFixed(2)}% bei ${context.raw.x.toFixed(2)}J`
-              }
-            }
-          }
-        }
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const chartImage = canvas.toDataURL('image/png');
-      doc.addImage(chartImage, 'PNG', 14, startY, 180, 90);
-    }
+  // 📄 SEITENZAHLEN einfügen
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.text(`Seite ${i} / ${totalPagesExp}`, doc.internal.pageSize.getWidth() - 30, doc.internal.pageSize.getHeight() - 10);
   }
+
+  // 📚 INHALTSVERZEICHNIS
+  doc.insertPage(1);
+  doc.setPage(1);
+  doc.setFontSize(16);
+  doc.text('Inhaltsverzeichnis', 14, 20);
+  doc.setFontSize(11);
+
+tocEntries.forEach((entry, index) => {
+  const indent = (entry.level - 1) * 5;
+  const lineY = 30 + index * 8;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginLeft = 20 + indent;
+  const marginRight = 20;
+  const maxLineWidth = pageWidth - marginLeft - marginRight;
+
+  const pageText = (entry.page + 1).toString();
+  const pageTextWidth = doc.getTextWidth(pageText);
+
+  const titleText = entry.title;
+  const titleTextWidth = doc.getTextWidth(titleText);
+
+  // Abstand zwischen Titel und Seitenzahl
+  const dotsWidth = maxLineWidth - titleTextWidth - pageTextWidth;
+  const dots = '.'.repeat(Math.floor(dotsWidth / doc.getTextWidth('.')));
+
+  doc.text(`${titleText} ${dots} ${pageText}`, marginLeft, lineY);
+});
+
+  doc.save('Produktangebot.pdf');
 }
-
-
-
-
-
-
 
 
 function extractProductOfferData(filteredData) {
@@ -228,85 +154,121 @@ function extractProductOfferData(filteredData) {
  * @param {number} widthMm - Breite im PDF (mm)
  * @param {number} heightMm - Höhe im PDF (mm)
  */
-export async function addChartToPDF(sourceCanvasId, doc, posX, posY, widthMm, heightMm) {
-  const sourceCanvas = document.getElementById(sourceCanvasId);
-  if (!sourceCanvas) {
-    console.warn(`Canvas '${sourceCanvasId}' nicht gefunden – kein Chart eingefügt.`);
+
+
+
+export async function addChartToPDF(
+  sourceCanvasId,
+  doc,
+  posX,
+  posY,
+  widthMm,
+  heightMm,
+  {
+    dpi = 200,           // 150–300 ist sweet spot
+    fit = 'contain',     // 'contain' | 'cover' | 'stretch'
+    pagePaddingMm = 10,  // untere Seitenmarge
+    bg = '#ffffff'
+  } = {}
+) {
+  const canvas = document.getElementById(sourceCanvasId);
+  if (!canvas) {
+    console.warn(`Canvas '${sourceCanvasId}' nicht gefunden.`);
     return;
   }
 
-  const chartInstance = Chart.getChart(sourceCanvas);
-  if (!chartInstance) {
-    console.warn(`Kein Chart-Objekt auf Canvas '${sourceCanvasId}' gefunden.`);
+  // Quelle: echte Canvas-Pixel (nicht CSS!)
+  const srcW = canvas.width;
+  const srcH = canvas.height;
+  if (!srcW || !srcH) {
+    console.warn(`Canvas '${sourceCanvasId}' hat 0×0.`);
     return;
   }
 
-  const originalData = chartInstance.data;
-  const originalOptions = chartInstance.options;
+  // Zielgröße in Pixel basierend auf gewünschter DPI
+  const PX_PER_MM = dpi / 25.4;
+  const destBoxWpx = Math.max(1, Math.round(widthMm  * PX_PER_MM));
+  const destBoxHpx = Math.max(1, Math.round(heightMm * PX_PER_MM));
 
-  const exportCanvas = document.createElement('canvas');
-  exportCanvas.style.display = 'none';
-  document.body.appendChild(exportCanvas);
+  // Seitenverhältnis wahren
+  const srcAR  = srcW / srcH;
+  const boxAR  = destBoxWpx / destBoxHpx;
 
-  const dpr = window.devicePixelRatio || 2;
-  const pxWidth = widthMm * 4;
-  const pxHeight = heightMm * 4;
-
-  exportCanvas.width = pxWidth * dpr;
-  exportCanvas.height = pxHeight * dpr;
-  exportCanvas.style.width = `${pxWidth}px`;
-  exportCanvas.style.height = `${pxHeight}px`;
-
-  const ctx = exportCanvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  const exportChart = new Chart(ctx, {
-    type: chartInstance.config.type,
-    data: originalData,
-    options: {
-      ...originalOptions,
-      responsive: false,
-      animation: false,
-      plugins: {
-        ...originalOptions.plugins,
-        legend: {
-          ...originalOptions.plugins?.legend,
-          labels: { font: { size: 12 } }
-        },
-        tooltip: {
-          ...originalOptions.plugins?.tooltip,
-          bodyFont: { size: 11 }
-        }
-      },
-      scales: {
-        x: {
-          ...originalOptions.scales?.x,
-          ticks: { ...originalOptions.scales?.x?.ticks, font: { size: 12 } },
-          title: { ...originalOptions.scales?.x?.title, font: { size: 14 } }
-        },
-        y: {
-          ...originalOptions.scales?.y,
-          ticks: { ...originalOptions.scales?.y?.ticks, font: { size: 12 } },
-          title: { ...originalOptions.scales?.y?.title, font: { size: 14 } }
-        }
-      }
+  let drawWpx, drawHpx;
+  if (fit === 'stretch') {
+    drawWpx = destBoxWpx;
+    drawHpx = destBoxHpx;
+  } else if (fit === 'cover') {
+    // fülle Box komplett, schneide ggf. ab (zentriert)
+    if (srcAR > boxAR) { // Quelle „zu breit“ → Höhe passt, Breite wird beschnitten
+      drawHpx = destBoxHpx;
+      drawWpx = Math.round(drawHpx * srcAR);
+    } else {
+      drawWpx = destBoxWpx;
+      drawHpx = Math.round(drawWpx / srcAR);
     }
-  });
+  } else { // 'contain' (empfohlen): alles sichtbar, ggf. Ränder
+    if (srcAR > boxAR) { // Quelle breiter → Breite passt, Höhe kleiner
+      drawWpx = destBoxWpx;
+      drawHpx = Math.round(drawWpx / srcAR);
+    } else {
+      drawHpx = destBoxHpx;
+      drawWpx = Math.round(drawHpx * srcAR);
+    }
+  }
 
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // Offscreen-Canvas in „Export-DPI“
+  const off = document.createElement('canvas');
+  const ctx = off.getContext('2d');
+  off.width  = drawWpx;
+  off.height = drawHpx;
 
-  const chartImage = exportCanvas.toDataURL('image/png');
+  // Hintergrund
+  ctx.save();
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, off.width, off.height);
+  ctx.restore();
 
-  if (posY + heightMm > doc.internal.pageSize.getHeight()) {
+  // Quelle → Ziel (cover/contain berücksichtigen: wir letterboxen/überfüllen)
+  // Quell-Rect (bei cover schneiden wir Quelle mittig zu)
+  let sx = 0, sy = 0, sW = srcW, sH = srcH;
+  if (fit === 'cover') {
+    const scale = Math.max(drawWpx / srcW, drawHpx / srcH);
+    const cropW = Math.round(drawWpx / scale);
+    const cropH = Math.round(drawHpx / scale);
+    sx = Math.floor((srcW - cropW) / 2);
+    sy = Math.floor((srcH - cropH) / 2);
+    sW = cropW;
+    sH = cropH;
+  }
+
+  // Ziel-Rect (bei contain zentrieren wir)
+  const dx = Math.floor((destBoxWpx - drawWpx) / 2);
+  const dy = Math.floor((destBoxHpx - drawHpx) / 2);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(canvas, sx, sy, sW, sH, 0, 0, drawWpx, drawHpx);
+
+  // PNG erzeugen
+  const img = off.toDataURL('image/png');
+
+  // Seitenumbruch falls nötig
+  const pageH = doc.internal.pageSize.getHeight();
+  if (posY + heightMm > pageH - pagePaddingMm) {
     doc.addPage();
     posY = 20;
   }
 
-  doc.addImage(chartImage, 'PNG', posX, posY, widthMm, heightMm);
+  // PDF: wir platzieren in der ursprünglich gewünschten mm-Box
+  // (bei contain/cover gibt's oben/unten oder links/rechts kleine Ränder)
+  doc.addImage(img, 'PNG', posX, posY, widthMm, heightMm);
 
-  exportChart.destroy();
-  exportCanvas.remove();
+  off.remove();
 }
+
+
+
 
 
 

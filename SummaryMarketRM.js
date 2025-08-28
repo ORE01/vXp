@@ -1,166 +1,5 @@
 import { getColorFromPalette } from './utils/colors.js';
 
-// 📊 Main function
-// export function handleSummaryRMData(filteredData, index, port_name) {
-//   const elementId = `portDataContainer${0}`;
-//   const portfolioData = appState.getPortAggData(elementId) || {};
-
-//   let startValue = 100; 
-//   let portValueRel = 1;
-
-//   // 🧮 Verhältnis berechnen, wenn Daten da sind
-//   const portValue = parseFloat(portfolioData.formPortValue.replace(/[^\d.-]/g, '').replace(',', ''));
-//   const portNotional = parseFloat(portfolioData.formPortNotional.replace(/[^\d.-]/g, '').replace(',', ''));
-
-
-//   if (!isNaN(portValue) && !isNaN(portNotional) && portNotional !== 0) {
-//     portValueRel = portValue / portNotional;
-//     startValue = portValueRel * 100;
-
-//     console.log(`📊 portValueRel = ${portValueRel.toFixed(4)} (${startValue.toFixed(2)}%)`);
-//     console.log(`📊 portValue = ${portValue}`);
-//     console.log(`📊 portNotional = ${portNotional}`);
-//   } else {
-//     console.warn("Missing or invalid data for portValueRel calculation");
-//   }
-
-//   const mvarAggData = appState.getAllMvarData();
-//   const matchingEntry = mvarAggData.find(item => item.port_name === port_name);
-//   if (!matchingEntry || typeof matchingEntry.VaR_T_rel !== 'number') {
-//     console.warn(`No valid VaR data for portfolio: ${port_name}`);
-//     return;
-//   }
-//   const varTRel = matchingEntry.VaR_T_rel;
-
-//   const mvarDistData = appState.getMvarDistData();
-//   const OriPortData = appState.getAllPortfolioData();
-//   const portNav = OriPortData.filter(item => item.port_name === port_name)
-//     .reduce((sum, item) => sum + parseFloat(item.NAV?.toString().replace(/[^\d.-]/g, '') || 0), 0);
-
-//   const plValues = mvarDistData.map(row => row["P/L"] / portNav * 100);
-//   if (plValues.length === 0) return console.warn("No P/L data");
-
-
-  
-//   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
-
-//   const targetValue = portValueRel * 100;
-
-// const highlightedBinIndex = histogram.labels.findIndex(label => {
-//   const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
-//   return targetValue >= startStr && targetValue <= endStr;
-// });
-
-// const backgroundColors = histogram.bins.map((_, i) =>
-//   i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
-// );
-// const borderColors = histogram.bins.map((_, i) =>
-//   i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
-// );
-
-
-  
-//   // Chart container setup
-//   let chartContainer = document.getElementById('riskDistChartSection');
-//   if (!chartContainer) {
-//     const summaryModal = document.getElementById('SUMMARY_Modal') || document.body;
-//     chartContainer = document.createElement('div');
-//     chartContainer.id = 'riskDistChartSection';
-//     chartContainer.className = 'chart-section';
-
-//     const heading = document.createElement('h3');
-//     heading.className = 'section-header';
-//     heading.textContent = 'Market P/L Distribution';
-
-//     const buttonWrapper = document.createElement('div');
-//     buttonWrapper.className = 'button-wrapper';
-
-//     const button = document.createElement('button');
-//     button.id = 'mvaRDistButton';
-//     button.className = 'edit-button';
-//     button.textContent = 'Update MVaR';
-//     button.addEventListener('click', () => handleSummaryRMData(filteredData, index, port_name));
-
-//     const canvas = document.createElement('canvas');
-//     canvas.id = 'plMvarDistChart';
-//     canvas.width = 900;
-//     canvas.height = 500;
-
-//     buttonWrapper.appendChild(button);
-//     chartContainer.appendChild(heading);
-//     chartContainer.appendChild(buttonWrapper);
-//     chartContainer.appendChild(canvas);
-//     summaryModal.appendChild(chartContainer);
-//   }
-
-//   // Chart render
-//   const ctx = document.getElementById('plMvarDistChart').getContext('2d');
-//   if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
-
-//   window.plMvarDistChartInstance = new Chart(ctx, {
-//     type: 'bar',
-//     data: {
-//       labels: histogram.labels,
-// datasets: [{
-//   label: 'Frequency',
-//   data: histogram.bins,
-//   backgroundColor: backgroundColors,
-//   borderColor: borderColors,
-//   borderWidth: 1
-// }]
-
-//     },
-//     options: {
-//       responsive: true,
-//       maintainAspectRatio: false,
-//       indexAxis: 'y',
-//       scales: {
-//         x: {
-//           title: { display: true, text: 'Frequency' },
-//           ticks: { beginAtZero: true }
-//         },
-//         y: {
-//           title: { display: true, text: 'P/L as % of NAV' },
-//           reverse: true
-//         }
-//       },
-//       plugins: {
-//         legend: { display: false },
-// tooltip: {
-//   callbacks: {
-//     label: context => {
-//       const val = context.raw?.y;
-//       return `${context.dataset.label}: ${val.toFixed(2)}%`;
-//     }
-//   }
-// },
-
-//         annotation: {
-//           annotations: {
-//             varLine: {
-//               type: 'line',
-//               yMin: varTRel,
-//               yMax: varTRel,
-//               borderColor: 'red',
-//               borderWidth: 2,
-//               label: {
-//                 display: true,
-//                 content: `VaR (${varTRel.toFixed(2)}%)`,
-//                 color: 'red',
-//                 position: 'start',
-//                 font: { weight: 'bold' }
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }
-//   });
-
-
-//   drawCMBChart(startValue);
-// }
-
 export function handleSummaryRMData(filteredData, index, port_name) {
   const elementId = `portDataContainer${0}`;
   const portfolioData = appState.getPortAggData(elementId) || {};
@@ -170,6 +9,8 @@ export function handleSummaryRMData(filteredData, index, port_name) {
 
   const portValue = parseFloat(portfolioData.formPortValue.replace(/[^\d.-]/g, '').replace(',', ''));
   const portNotional = parseFloat(portfolioData.formPortNotional.replace(/[^\d.-]/g, '').replace(',', ''));
+  const portPV01 = parseFloat(portfolioData.formPortPV01.replace(/[^\d.-]/g, '').replace(',', ''));
+  console.log(`📊 portPV01 = ${portPV01}`);
 
   if (!isNaN(portValue) && !isNaN(portNotional) && portNotional !== 0) {
     portValueRel = portValue / portNotional;
@@ -217,7 +58,7 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   });
 
   // 📈 CMBChart:
-  drawCMBChart(portfolioEndValue);
+  drawCMBChart(portfolioEndValue, portPV01, 5);
 }
 
 export function ensureChartContainerExists(containerId, canvasId, title, buttonId, buttonText, onClick) {
@@ -509,7 +350,7 @@ export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
 
     const diff = currRate - prevRate;
     const impact = diff * pv01;
-    currentValue *= (1 - impact / 100);
+    currentValue *= (1 + impact / 100);
 
     result.push({
       x: curr.DATE || curr.date,
@@ -524,11 +365,18 @@ export function computeCMBValueCurve(tsData, testTtM, pv01, startValue = 100) {
 
 
 // 📉 Main chart function for synthetic bond value
-export function drawCMBChart(targetEndValue = 100) {
+export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
   const tsData = appState.getTblTSData();
-  const testTtM = 5;
-  const testPV01 = 5;
-  const portfolioPV01 = 1;
+  // console.log('tsData:', tsData)
+  // const testTtM = 5;
+
+    
+    const testCurr = tsData[tsData.length - 1];
+    const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM)/100;
+    console.log('testCurrRate:', testCurrRate)
+  
+  const testPV01 = -testTtM/(1 + testCurrRate);
+  const portfolioPV01 = portPV01;
 
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
