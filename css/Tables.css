@@ -288,6 +288,31 @@
     padding: 6px 12px;
     font-size: 1rem;
   }
+
+  /* das ist für die neue Liquiditätsdarstellung in dem slide In */
+
+  .liqu-flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start; /* wichtig gegen Überlappen */
+  margin-top: 14px;
+}
+
+.table-card {
+  flex: 1 1 420px;
+  min-width: 320px;
+  position: relative;
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto;
+}
+
+.pivot-table { width: 100%; border-collapse: collapse; position: static !important; }
+.pivot-table th, .pivot-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap; }
+
   
   
   

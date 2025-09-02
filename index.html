@@ -153,6 +153,14 @@
       </button>
     </div>
 
+        <!-- 📉 Liquidity – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-liquidity" aria-controls="panel-liquidity" aria-expanded="false">
+        <span class="section-header">Liquidity</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
     <!-- Backdrop innerhalb des Modals -->
     <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
 
@@ -260,109 +268,57 @@
       </div>
     </div>
 
+    <!-- Panel: Liquidity -->
+<div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-liquidity-title" class="sub-panel-title">Liquidity</div>
+    <button class="sub-panel-close" data-close="panel-liquidity" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- Controls -->
+    <div id="liquControlsContainer" class="controls-bar" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="data-wrapper">
+        <div class="dropdown-wrapper">
+          <label for="liquMaturityDropdown" class="select-label" style="display:block; font-weight:600; margin-bottom:6px;">
+            Select Maturity
+          </label>
+          <select id="liquMaturityDropdown" multiple class="select-dropdown" aria-multiselectable="true"></select>
+        </div>
+      </div>
+
+      <button id="liquResetFiltersButton" class="reset-FiltersButton" type="button" title="Reset filters" aria-label="Reset filters" style="margin-left:auto;">
+        <!-- optional: dein SVG Icon -->
+        Reset
+      </button>
+    </div>
+
+    <!-- Tabellen -->
+    <!-- <div class="data-container" style="display:flex; gap:20px; flex-wrap:wrap; margin-top:14px;"> -->
+    <div class="liqu-flex-row"></div>
+      <!-- Pivot-Tabelle: Fälligkeiten/Kategorien -->
+      <div id="liquDataContainer" class="flex-1" style="flex:1 1 420px; min-width:320px;"></div>
+
+      <!-- Emittenten-Tabelle -->
+      <div id="issuerDataContainerLiqu" class="flex-1" style="flex:1 1 420px; min-width:320px;"></div>
+    </div>
+
+    <!-- Chart -->
+    <div class="liqu-chart-container" style="margin-top:18px;">
+      <canvas id="liquChart"></canvas>
+    </div>
+  </div>
+</div>
+
+
   </div><!-- /table-content -->
 </div><!-- /SUMMARY_Modal -->
 
-<script>
-  (function() {
-    const container = document.querySelector('#SUMMARY_Modal .table-content');
-    const backdrop  = document.getElementById('subPanelBackdrop');
 
-    function openPanel(id) {
-      const panel = document.getElementById(id);
-      if (!panel) return;
-      panel.hidden = false;
-      // Force layout vor Transition
-      panel.getBoundingClientRect();
-      panel.classList.add('open');
-      backdrop.hidden = false;
-      backdrop.classList.add('show');
-
-      const trigger = container.querySelector(`.section-trigger[data-panel="${id}"]`);
-      trigger?.setAttribute('aria-expanded', 'true');
-
-      // Nach Slide-In Charts sauber resizen/updaten
-      const onDone = (e) => {
-        if (e.propertyName !== 'right') return; // Transition-Ende des Panels
-        resizeChartsIn(panel);
-        panel.removeEventListener('transitionend', onDone);
-      };
-      panel.addEventListener('transitionend', onDone);
-
-      document.addEventListener('keydown', onEscClose);
-    }
-
-    function closePanel(id) {
-      const panel = document.getElementById(id);
-      if (!panel || panel.hidden) return;
-      panel.classList.remove('open');
-      backdrop.classList.remove('show');
-
-      const trigger = container.querySelector(`.section-trigger[data-panel="${id}"]`);
-      trigger?.setAttribute('aria-expanded', 'false');
-
-      const onDone = (e) => {
-        if (e.propertyName !== 'right') return;
-        panel.hidden = true;
-        const anyOpen = !!container.querySelector('.sub-panel.open');
-        if (!anyOpen) backdrop.hidden = true;
-        panel.removeEventListener('transitionend', onDone);
-      };
-      panel.addEventListener('transitionend', onDone);
-
-      document.removeEventListener('keydown', onEscClose);
-    }
-
-    function onEscClose(e) {
-      if (e.key === 'Escape') {
-        const open = container.querySelector('.sub-panel.open');
-        if (open) closePanel(open.id);
-      }
-    }
-
-    // Clicks: Trigger öffnen
-    container.addEventListener('click', (e) => {
-      const btn = e.target.closest('.section-trigger');
-      if (!btn) return;
-      openPanel(btn.dataset.panel);
-    });
-
-    // Clicks: Panel schließen
-    container.addEventListener('click', (e) => {
-      const btn = e.target.closest('.sub-panel-close');
-      if (!btn) return;
-      closePanel(btn.dataset.close);
-    });
-
-    // Backdrop klick -> aktuell offenes Panel schließen
-    backdrop?.addEventListener('click', () => {
-      const open = container.querySelector('.sub-panel.open');
-      if (open) closePanel(open.id);
-    });
-
-    // Chart-Resize/Update wenn Panel sichtbar wird
-    function resizeChartsIn(root) {
-      const canvases = root.querySelectorAll('canvas');
-      canvases.forEach((cv) => {
-        try {
-          // Chart.js v3/v4
-          const chart = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : (cv._chart || null);
-          if (chart?.resize) chart.resize();
-          if (chart?.update) chart.update('none');
-        } catch (err) {
-          console.warn('Chart resize failed for', cv?.id, err);
-        }
-      });
-      // Falls du Panels lazy befüllst/renderst, ruf hier deine Render-Funktionen auf.
-      // Beispiel:
-      // if (!window.euswapPortfolioYieldChartInstance) renderPerformanceCharts();
-    }
-  })();
-</script>
 
 
   <!-- Modal - Liquidity -->
-  <div id="Liquidity_Modal" class="table">
+  <!-- <div id="Liquidity_Modal" class="table">
     <span class="close">&times;</span>
     <div class="portfolio-info">
       <h2 class="section-header">LIQUIDITY</h2>
@@ -374,39 +330,36 @@
           <div>
             <p>Select Maturity:</p>
             <select id="liquMaturityDropdown" multiple class="select-dropdown"></select>
-            <!-- <p>Select Issuer:</p>
-            <select id="liquIssuerDropdown" multiple class="select-dropdown"></select> -->
+
           </div>
         </div>
       </div>
       <p>
         <button id="liquResetFiltersButton" class="reset-FiltersButton">
-          <!-- dein SVG hier -->
+          
         </button>
       </p>
     </div>
 
-    <!-- Tabellen-Container: Fälligkeiten/Kategorien + Emittenten -->
+   
     <div class="data-container flex">
-      <!-- Pivot-Tabelle Fälligkeiten/Kategorien -->
+ 
       <div id="liquDataContainer" class="flex-1"></div>
-      <!-- Emittenten-Tabelle -->
-      <!-- <div id="issuerDataContainer" class="flex-1 ml-4"></div> -->
+
     </div>
 
-    <!-- Chart -->
+    
     <div class="liqu-chart-container">
       <canvas id="liquChart"></canvas>
     </div>
 
   <div class="data-container flex">
-      <!-- Pivot-Tabelle Fälligkeiten/Kategorien -->
+     
       <div id="issuerDataContainerLiqu" class="flex-1"></div>
-      <!-- Emittenten-Tabelle -->
-      <!-- <div id="issuerDataContainer" class="flex-1 ml-4"></div> -->
+
     </div>
 
-  </div>
+  </div> -->
 
 
 <!-- Am Ende deiner Seite, direkt vor </body>, laden wir die Logik -->
@@ -1400,6 +1353,7 @@
   <script src="renderer.js" type="module"></script>
   <script src="trafficLight.js"></script>
   <script type="module" src="./liquidity.js"></script>
+  <script type="module" src="./utils/slideIn.js"></script>
   
 
 
