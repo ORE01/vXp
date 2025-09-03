@@ -1,88 +1,111 @@
+// liquidity.js (hardened for slide-in panel use)
 import { appState } from './renderer.js';
 import createBarChart from './charts/BarChart.js';
 
 let liquChart;
 
+// Root nur im Panel suchen (fällt zurück auf altes Modal, falls vorhanden)
+const liquRoot =
+  document.getElementById('panel-liquidity') ||
+  document.getElementById('Liquidity_Modal') ||
+  document;
+
+// kleine DOM-Helper (null-safe)
+const $  = (sel, root = liquRoot) => root?.querySelector(sel) || null;
+const $$ = (sel, root = liquRoot) => Array.from(root?.querySelectorAll(sel) || []);
+
 /**
- * Kern-Funktion zur Darstellung:
- * 1) Pivot-Tabelle nach Fälligkeit/Kategorie
+ * 1) Pivot Fälligkeit/Kategorie
  * 2) Stacked Bar Chart
- * 3) Emittenten-Gruppierung (immer aktuell, ohne Button)
+ * 3) Emittenten-Tabelle
+ * 4) Reset-Button
  */
 export function handleLiquidityData(filteredData, index, port_name) {
-  // 1) Pivot-Tabelle
-  const liquDataContainer = document.getElementById('liquDataContainer');
-  const liquData = aggregateByMaturityAndCategory(filteredData);
-  if (liquDataContainer) {
-    liquDataContainer.innerHTML = generatePivotTable(liquData);
+  const data = Array.isArray(filteredData) ? filteredData : [];
+
+  // Panel-DOM schon vorhanden?
+  const liquDataContainer  = $('#liquDataContainer');
+  const issuerContainer    = $('#issuerDataContainerLiqu');
+  const chartCanvas        = $('#liquChart');
+
+  if (!liquRoot || !liquDataContainer || !chartCanvas) {
+    console.warn('[Liquidity] Panel-DOM nicht bereit – Rendering übersprungen.');
+    return;
   }
 
-  // 2) Chart
-  setTimeout(() => {
-    renderLiquidityChart(liquData);
-  }, 0);
+  // 1) Pivot
+  const liquData = aggregateByMaturityAndCategory(data);
+  liquDataContainer.innerHTML = generatePivotTable(liquData);
 
-  // 3) Emittenten-Tabelle
-  const issuerContainer = document.getElementById('issuerDataContainerLiqu');
+  // 2) Chart (microtask, damit DOM-Updates stehen)
+  queueMicrotask(() => renderLiquidityChart(liquData));
+
+  // 3) Emittenten
   if (issuerContainer) {
-    const issuers = aggregateByIssuer(filteredData);
+    const issuers = aggregateByIssuer(data);
     issuerContainer.innerHTML = generateIssuerTable(issuers);
   }
 
-// document.addEventListener('DOMContentLoaded', () => {
-//   const issuerContainer = document.getElementById('issuerDataContainerLiqu');
-//   if (issuerContainer) {
-//     const issuers = aggregateByIssuer(filteredData);
-//     issuerContainer.innerHTML = generateIssuerTable(issuers);
-//   }
-// });
-
-
-  // 4) Filter-Reset
-  const resetBtn = document.getElementById('liquResetFiltersButton');
-  if (resetBtn) {
-    resetBtn.onclick = () => appState.resetFiltersForActiveTable(liquData, 'port');
+  // 4) Reset – nur einmal binden
+  const resetBtn = $('#liquResetFiltersButton');
+  if (resetBtn && !resetBtn.dataset.bound) {
+    resetBtn.addEventListener('click', () => appState.resetFiltersForActiveTable(liquData, 'port'));
+    resetBtn.dataset.bound = '1';
   }
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// 1) Aggregation nach MATURITY_YEAR & CATEGORY
+// Aggregation nach MATURITY_YEAR & CATEGORY
 function aggregateByMaturityAndCategory(data) {
-  //console.log('Liquidity:', data);
+  const arr = Array.isArray(data) ? data : [];
   const grouped = {};
-  data.forEach(item => {
-    const year     = item.MATURITY_YEAR || 'unbekannt';
-    const category = item.CATEGORY      || 'unbekannt';
-    const notional = parseFloat(item.NOTIONAL) || 0;
+
+  arr.forEach(item => {
+    const year     = item?.MATURITY_YEAR ?? 'unbekannt';
+    const category = item?.CATEGORY      ?? 'unbekannt';
+    const notional = Number.parseFloat(item?.NOTIONAL) || 0;
 
     grouped[year] ??= {};
     grouped[year][category] ??= { MATURITY_YEAR: year, CATEGORY: category, TOTAL_NOTIONAL: 0 };
     grouped[year][category].TOTAL_NOTIONAL += notional;
   });
-  //console.log('Liquidity:', grouped);
-  return Object.values(grouped)
-    .flatMap(catMap => Object.values(catMap));
-    
+
+  return Object.values(grouped).flatMap(catMap => Object.values(catMap));
 }
 
-// 2) Chart-Rendering (gestapeltes Balkendiagramm)
+// Stacked Bar Chart
 function renderLiquidityChart(data) {
-  const categories = new Set(), byYear = {};
-  data.forEach(d => {
+  const arr = Array.isArray(data) ? data : [];
+  const categories = new Set();
+  const byYear = {};
+
+  arr.forEach(d => {
     categories.add(d.CATEGORY);
     byYear[d.MATURITY_YEAR] ??= {};
-    byYear[d.MATURITY_YEAR][d.CATEGORY] = (byYear[d.MATURITY_YEAR][d.CATEGORY] || 0) + d.TOTAL_NOTIONAL;
+    byYear[d.MATURITY_YEAR][d.CATEGORY] =
+      (byYear[d.MATURITY_YEAR][d.CATEGORY] || 0) + (d.TOTAL_NOTIONAL || 0);
   });
 
   const years      = Object.keys(byYear).sort();
   const catsSorted = [...categories].sort();
-  const palette    = [
+
+  // Empty state handlen
+  if (years.length === 0 || catsSorted.length === 0) {
+    if (liquChart) { liquChart.destroy(); liquChart = null; }
+    const container = $('#liquChart')?.parentElement;
+    if (container) container.setAttribute('data-empty', '1');
+    return;
+  } else {
+    $('#liquChart')?.parentElement?.removeAttribute('data-empty');
+  }
+
+  const palette = [
     'rgba(255,213,0,1)','rgba(0,0,0,1)',
-    'rgba(198,198,198,1)',  'rgba(255,255,255,1)',
-    'rgba(153,102,255,0.7)', 'rgba(255,159,64,0.7)'
+    'rgba(198,198,198,1)','rgba(255,255,255,1)',
+    'rgba(153,102,255,0.7)','rgba(255,159,64,0.7)'
   ];
 
-  const datasets = catsSorted.map((cat,i) => ({
+  const datasets = catsSorted.map((cat, i) => ({
     label: cat,
     data: years.map(y => byYear[y][cat] || 0),
     backgroundColor: palette[i % palette.length],
@@ -92,51 +115,51 @@ function renderLiquidityChart(data) {
   if (liquChart) liquChart.destroy();
   liquChart = createBarChart(
     { labels: years, datasets },
-    'liquChart','bar','x',
+    'liquChart',      // canvas id
+    'bar',
+    'x',
     {
       responsive: true,
       plugins: {
         legend: { position: 'top' },
         title: { display: true, text: 'Notional je Jahr & Kategorie' }
       },
-      scales: { x:{ stacked:true }, y:{ stacked:true } }
+      scales: { x: { stacked: true }, y: { stacked: true } }
     }
   );
 }
 
-// 3) Aggregation nach ISSUER
+// Aggregation nach ISSUER
 function aggregateByIssuer(data) {
-  const grouped = {}, total = data.reduce((s, i) => s + (parseFloat(i.NOTIONAL)||0), 0);
+  const arr = Array.isArray(data) ? data : [];
+  const total = arr.reduce((s, i) => s + (Number.parseFloat(i?.NOTIONAL) || 0), 0) || 1;
 
-  data.forEach(item => {
-    const issuer  = item.ISSUER || 'unbekannt';
-    const notional = parseFloat(item.NOTIONAL) || 0;
+  const grouped = {};
+  arr.forEach(item => {
+    const issuer  = item?.ISSUER ?? 'unbekannt';
+    const notional = Number.parseFloat(item?.NOTIONAL) || 0;
     grouped[issuer] ??= { ISSUER: issuer, TOTAL_NOTIONAL: 0 };
     grouped[issuer].TOTAL_NOTIONAL += notional;
   });
 
   return Object.values(grouped)
-    .map(d => ({ ...d, SHARE: (d.TOTAL_NOTIONAL/total*100) }))
-    .sort((a,b) => b.TOTAL_NOTIONAL - a.TOTAL_NOTIONAL);
+    .map(d => ({ ...d, SHARE: (d.TOTAL_NOTIONAL / total * 100) }))
+    .sort((a, b) => b.TOTAL_NOTIONAL - a.TOTAL_NOTIONAL);
 }
 
-// 4) HTML-Tabelle Emittenten
+// HTML – Emittenten
 function generateIssuerTable(data) {
+  const rows = Array.isArray(data) ? data : [];
   let html = `<table class="pivot-table">
     <thead>
-      <tr>
-        <th>Issuer</th>
-        <th>Sum Notional</th>
-        <th>Anteil [%]</th>
-      </tr>
-    </thead>
-    <tbody>`;
+      <tr><th>Issuer</th><th>Sum Notional</th><th>Anteil [%]</th></tr>
+    </thead><tbody>`;
 
-  data.forEach(d => {
+  rows.forEach(d => {
     html += `<tr>
       <td>${d.ISSUER}</td>
-      <td>${d.TOTAL_NOTIONAL.toLocaleString('de-AT')}</td>
-      <td>${d.SHARE.toFixed(2)}</td>
+      <td>${(d.TOTAL_NOTIONAL || 0).toLocaleString('de-AT')}</td>
+      <td>${(d.SHARE ?? 0).toFixed(2)}</td>
     </tr>`;
   });
 
@@ -144,15 +167,15 @@ function generateIssuerTable(data) {
   return html;
 }
 
-// 5) HTML-Pivot-Tabelle Fälligkeiten/Kategorien
+// HTML – Pivot Fälligkeiten/Kategorien
 function generatePivotTable(data) {
-  const years      = [...new Set(data.map(d => d.MATURITY_YEAR))].sort();
-  const categories = [...new Set(data.map(d => d.CATEGORY))].sort();
+  const arr = Array.isArray(data) ? data : [];
+  const years      = [...new Set(arr.map(d => d.MATURITY_YEAR))].sort();
+  const categories = [...new Set(arr.map(d => d.CATEGORY))].sort();
   const lookup     = {};
 
-  data.forEach(d => {
-    lookup[d.CATEGORY] ??= {};
-    lookup[d.CATEGORY][d.MATURITY_YEAR] = d.TOTAL_NOTIONAL;
+  arr.forEach(d => {
+    (lookup[d.CATEGORY] ??= {})[d.MATURITY_YEAR] = d.TOTAL_NOTIONAL;
   });
 
   let html = `<table class="pivot-table">
@@ -164,19 +187,19 @@ function generatePivotTable(data) {
     let rowSum = 0;
     html += `<tr><td>${cat}</td>`;
     years.forEach(y => {
-      const v = lookup[cat]?.[y]||0;
+      const v = lookup[cat]?.[y] || 0;
       rowSum += v;
       html += `<td>${v.toLocaleString('de-AT')}</td>`;
     });
     html += `<td><strong>${rowSum.toLocaleString('de-AT')}</strong></td></tr>`;
   });
 
-  // Gesamtergebnis-Zeile
+  // Gesamtergebnis
   html += `<tr style="font-weight:bold"><td>Gesamtergebnis</td>`;
   let grand = 0;
   years.forEach(y => {
-    const sumY = data.filter(d => d.MATURITY_YEAR===y)
-                     .reduce((s,d)=>s+d.TOTAL_NOTIONAL,0);
+    const sumY = arr.filter(d => d.MATURITY_YEAR === y)
+                    .reduce((s, d) => s + (d.TOTAL_NOTIONAL || 0), 0);
     grand += sumY;
     html += `<td>${sumY.toLocaleString('de-AT')}</td>`;
   });
@@ -184,6 +207,7 @@ function generatePivotTable(data) {
   html += `</tbody></table>`;
   return html;
 }
+
 
 
 // export { issuerDataContainerLiqu };

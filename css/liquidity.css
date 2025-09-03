@@ -1,0 +1,50 @@
+  #liquControlsContainer,
+  #liquDataContainer,
+  #liquChart {
+    display: block;
+    width: 100%;
+    margin: 20px 0;
+  }
+  
+
+  
+  #liquControlsContainer select {
+    padding: 6px 12px;
+    font-size: 1rem;
+  }
+
+  /* das ist für die neue Liquiditätsdarstellung in dem slide In */
+
+.liqu-flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+
+.table-card {
+  flex: 1 1 420px;
+  min-width: 320px;
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto; /* scroll statt überlappen */
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+
+.table-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.pivot-table { width: 100%; border-collapse: collapse; }
+.pivot-table th, .pivot-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap; /* horizontales Scrollen statt Wrap-Spaghetti */
+}
+.pivot-table thead th { position: sticky; top: 0; background: var(--panel-surface, #0f0f10); z-index: 1; }

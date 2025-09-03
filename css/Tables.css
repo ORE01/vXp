@@ -274,20 +274,8 @@
     width: 90%; /* Adjust width relative to the parent container */
   }
 
-  #liquControlsContainer,
-  #liquDataContainer,
-  #liquChart {
-    display: block;
-    width: 100%;
-    margin: 20px 0;
-  }
-  
 
-  
-  #liquControlsContainer select {
-    padding: 6px 12px;
-    font-size: 1rem;
-  }
+
   
   
   
