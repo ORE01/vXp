@@ -15,6 +15,7 @@
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
   <link href="./css/CouponModal.css" rel="stylesheet">
   <link href="./css/Summary.css" rel="stylesheet">
+  <link href="./css/liquidity.css" rel="stylesheet">
 
   <!-- Library Imports -->
   
@@ -199,38 +200,37 @@
     </div>
 
     <!-- Panel: Market P/L -->
-<div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
-  <div class="sub-panel-header">
-    <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
-    <button class="sub-panel-close" data-close="panel-market" aria-label="Schließen">&times;</button>
-  </div>
-
-  <div class="sub-panel-body">
-    <!-- 1) INPUT OBEN -->
-    <div class="button-wrapper">
-      <!-- <div id="inputMVaR-container"></div> -->
-      <!-- <button id="mvarAddButton" class="edit-button">Add Entry</button> -->
-      <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
-    </div>
-
-
-    <!-- 2) MVaR/ES Daten DARUNTER -->
-    <p style="margin: 6px 0 4px;">Market Value at Risk / Expected Shortfall:</p>
-    <div class="data-container" id="MVaRDataContainer0" style="margin-bottom:14px;"></div>
-
-    <!-- 3) CHARTS NEBENEINANDER -->
-    <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap;">
-      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-        <canvas id="tsEU1YChart"></canvas>
+    <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
+        <button class="sub-panel-close" data-close="panel-market" aria-label="Schließen">&times;</button>
       </div>
-      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-        <canvas id="plMvarDistChart"></canvas>
+
+      <div class="sub-panel-body">
+        <!-- 1) INPUT OBEN -->
+        <div class="button-wrapper">
+          <div id="inputMVaR-container"></div>
+          <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
+          <button id="mvarAddButton" class="edit-button">Add Entry</button>
+          <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
+        </div>
+
+
+        <!-- 2) MVaR/ES Daten DARUNTER -->
+        <p style="margin: 6px 0 4px;">Market Value at Risk / Expected Shortfall:</p>
+        <div class="data-container" id="MVaRDataContainer0" style="margin-bottom:14px;"></div>
+
+        <!-- 3) CHARTS NEBENEINANDER -->
+        <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap;">
+          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+            <canvas id="tsEU1YChart"></canvas>
+          </div>
+          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+            <canvas id="plMvarDistChart"></canvas>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
-
 
     <!-- Panel: Credit P/L -->
     <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
@@ -269,39 +269,45 @@
     </div>
 
     <!-- Panel: Liquidity -->
-<div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
-  <div class="sub-panel-header">
-    <div id="panel-liquidity-title" class="sub-panel-title">Liquidity</div>
-    <button class="sub-panel-close" data-close="panel-liquidity" aria-label="Schließen">&times;</button>
-  </div>
-
-  <div class="sub-panel-body">
-    <!-- Controls -->
-    <div id="liquControlsContainer" class="controls-bar" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
-      <div class="data-wrapper">
-        <div class="dropdown-wrapper">
-          <label for="liquMaturityDropdown" class="select-label" style="display:block; font-weight:600; margin-bottom:6px;">
-            Select Maturity
-          </label>
-          <select id="liquMaturityDropdown" multiple class="select-dropdown" aria-multiselectable="true"></select>
-        </div>
+    <div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-liquidity-title" class="sub-panel-title">Liquidity</div>
+        <button class="sub-panel-close" data-close="panel-liquidity" aria-label="Schließen">&times;</button>
       </div>
 
-      <button id="liquResetFiltersButton" class="reset-FiltersButton" type="button" title="Reset filters" aria-label="Reset filters" style="margin-left:auto;">
-        <!-- optional: dein SVG Icon -->
-        Reset
-      </button>
-    </div>
+      <div class="sub-panel-body">
+        <!-- Controls -->
+        <div id="liquControlsContainer" class="controls-bar" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+          <div class="data-wrapper">
+            <div class="dropdown-wrapper">
+              <label for="liquMaturityDropdown" class="select-label" style="display:block; font-weight:600; margin-bottom:6px;">
+                Select Maturity
+              </label>
+              <select id="liquMaturityDropdown" multiple class="select-dropdown" aria-multiselectable="true"></select>
+            </div>
+          </div>
+
+          <button id="liquResetFiltersButton" class="reset-FiltersButton" type="button" title="Reset filters" aria-label="Reset filters" style="margin-left:auto;">
+            <!-- optional: dein SVG Icon -->
+            Reset
+          </button>
+        </div>
 
     <!-- Tabellen -->
     <!-- <div class="data-container" style="display:flex; gap:20px; flex-wrap:wrap; margin-top:14px;"> -->
-    <div class="liqu-flex-row"></div>
-      <!-- Pivot-Tabelle: Fälligkeiten/Kategorien -->
-      <div id="liquDataContainer" class="flex-1" style="flex:1 1 420px; min-width:320px;"></div>
+<!-- RICHTIG -->
+<div class="liqu-flex-row">
+  <section class="table-card">
+    <h4 class="table-title">Fälligkeiten × Kategorien</h4>
+    <div id="liquDataContainer"></div>
+  </section>
 
-      <!-- Emittenten-Tabelle -->
-      <div id="issuerDataContainerLiqu" class="flex-1" style="flex:1 1 420px; min-width:320px;"></div>
-    </div>
+  <section class="table-card">
+    <h4 class="table-title">Emittenten</h4>
+    <div id="issuerDataContainerLiqu"></div>
+  </section>
+</div>
+
 
     <!-- Chart -->
     <div class="liqu-chart-container" style="margin-top:18px;">
@@ -922,9 +928,9 @@
       <!-- Left Part (Tables) -->
       <div class="left-part">
         <div class="data-wrapper">
-          <div id="inputMVaR-container"></div>
+          <!-- <div id="inputMVaR-container"></div>
           <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
-          <button id="mvarAddButton" class="edit-button">Add Entry</button>
+          <button id="mvarAddButton" class="edit-button">Add Entry</button> -->
           <div class="data-container" id="MVaRDataContainer"></div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 .modal {
   display: none;
   position: fixed;
-  z-index: 1000;
+  z-index: 3000;
   inset: 0;
   overflow: auto;
   background-color: rgba(0, 0, 0, 0.4);
@@ -22,21 +22,21 @@
   color: rgb(161, 160, 160);
   font-size: 14px;
   border-radius: 8px; /* Add rounded corners for a modern look */
-  z-index: 1001; /* Ensure it stays above the overlay */
+  z-index: 3001; /* Ensure it stays above the overlay */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .draggable {
   cursor: move;
   position: absolute;
-  z-index: 1000;
+  z-index: 3000;
   -webkit-app-region: drag;
 }
 
 .modal-content.draggable input[type="text"],
 .modal-content.draggable textarea {
   position: relative;
-  z-index: 1000;
+  z-index: 3000;
   background-color: #fff; /* Lighter background for visibility */
   color: #222; /* White text */
   border: 1px solid #555; /* Subtle border */
