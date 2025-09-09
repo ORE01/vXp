@@ -15,6 +15,7 @@
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
   <link href="./css/CouponModal.css" rel="stylesheet">
   <link href="./css/Summary.css" rel="stylesheet">
+  <link href="./css/MarketDataSlideIn.css" rel="stylesheet">
   <link href="./css/liquidity.css" rel="stylesheet">
 
   <!-- Library Imports -->
@@ -80,24 +81,29 @@
 
 
   <div class="tab">
-    <button class="tablinks" id="SUMMARY_Tab">SUMMARY</button> 
+
+    <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
+    <button class="tablinks" id="SUMMARY_Tab">ANALYSE PORTFOLIO</button> 
+    
+
+    <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
+    
+
+    <button class="tablinks" id="DEALS_Tab">CREATE PORTFOLIO</button>
     <button class="tablinks" id="ISSUER_Tab">ISSUERS</button>
     <button class="tablinks" id="PROD_Tab">PRODUCTS</button>
-    <button class="tablinks" id="DEALS_Tab">CREATE PORTFOLIO</button>
-    <button class="tablinks" id="PORT_Tab">ANALYSE PORTFOLIO</button>
-    <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
-    <button class="tablinks" id="SENS_Tab">SENSITIVITIES</button>
-    <button class="tablinks" id="IR_Tab">RATES</button>
-    <button class="tablinks" id="FWD_Tab">FORWARDS</button>
-    <button class="tablinks" id="CS_Tab">CREDIT SPREADS</button> 
+
+   
     <button class="tablinks" id="MVaR_Tab">M-VaR</button>
     <button class="tablinks" id="CVaR_Tab">C-VaR</button>
-    <button class="tablinks" id="TS_Tab">HIST DATA</button>
+
+    <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
+    
     <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
     <button class="tablinks" id="ML_Tab">ML</button> 
     <button class="tablinks" id="Offers_Tab">OFFERS</button> 
     <button class="tablinks" id="DATA_Tab">UPDATES</button> 
-    <button class="tablinks" id="Liquidity_Tab">LIQUIDITY</button> 
+    
   </div>
 
 
@@ -136,6 +142,14 @@
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
         <span class="section-header">Performance</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Market Sensitivities – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
+        <span class="section-header">Market Sensitivities</span>
         <span class="chev">▶</span>
       </button>
     </div>
@@ -200,6 +214,45 @@
         </div>
       </div>
     </div>
+
+    <!-- Panel: Market Sensitivities -->
+    <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
+        <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="sens-layout">
+          <!-- Left Part (Tables) -->
+          <section class="sens-left table-card">
+            <div class="data-wrapper">
+              <p class="block-title">PV01:</p>
+              <div class="data-container" id="IRSensDataContainer"></div>
+
+              <div class="spacer-xxl"></div>
+
+              <p class="block-title">CPV01:</p>
+              <div class="data-container" id="CRSensDataContainer"></div>
+            </div>
+          </section>
+
+          <!-- Right Part (Charts) -->
+          <section class="sens-right">
+            <div class="pv01-chart-container chart-container">
+              <canvas id="PV01Chart"></canvas>
+            </div>
+
+            <div class="spacer-xxl"></div>
+
+            <div class="cpv01-chart-container chart-container">
+              <canvas id="CPV01Chart" width="400" height="400"></canvas>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Panel: Market P/L -->
     <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
@@ -322,56 +375,244 @@
   </div><!-- /table-content -->
 </div><!-- /SUMMARY_Modal -->
 
+<!-- Modal: Market Data -->
+<div id="MARKETDATA_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-md-close="1">&times;</span>
 
-
-
-  <!-- Modal - Liquidity -->
-  <!-- <div id="Liquidity_Modal" class="table">
-    <span class="close">&times;</span>
     <div class="portfolio-info">
-      <h2 class="section-header">LIQUIDITY</h2>
+      <h2 class="section-header">MARKET DATA</h2>
+      <p style="opacity:.8; margin: 6px 0 0;">Rates • Forward • Credit Spreads</p>
     </div>
 
-    <div id="liquControlsContainer">
-      <div class="data-wrapper">
-        <div class="dropdown-wrapper"> 
-          <div>
-            <p>Select Maturity:</p>
-            <select id="liquMaturityDropdown" multiple class="select-dropdown"></select>
+    <!-- Triggers -->
 
+    <!-- 📉 Interest Rates – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-rates" aria-controls="panel-rates" aria-expanded="false">
+        <span class="section-header">Interest Rates</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Forwards – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-forward" aria-controls="panel-forward" aria-expanded="false">
+        <span class="section-header">Forward</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Credit Spreads – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-creditspreads" aria-controls="panel-creditspreads" aria-expanded="false">
+        <span class="section-header">Credit Spreads</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Historic Data – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-ts" aria-controls="panel-ts" aria-expanded="false">
+        <span class="section-header">Historic Data [%]</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ====== PANELS ====== -->
+
+    <!-- Panel: RATES (IR Data Modal adapted for Slide-In) -->
+    <div id="panel-rates" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-rates-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-rates-title" class="sub-panel-title">INTEREST RATES</div>
+        <button class="sub-panel-close" data-close="panel-rates" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Controls -->
+        <label for="ratesSelector" style="display:block; font-weight:600; margin-bottom:6px;">Select Curve:</label>
+        <select id="ratesSelector" class="select-dropdown">
+          <option value="EUSWAP">EUSWAP</option>
+          <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
+        </select>
+
+        <!-- Table -->
+        <section class="table-card" style="margin-top:12px;">
+          <h4 class="table-title">Rates Table</h4>
+          <div id="IRDataContainer"></div>
+        </section>
+
+        <!-- Chart -->
+        <div class="chart-container" style="margin-top:16px;">
+          <canvas id="IRlineChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: FORWARD (Slide-In) -->
+    <div id="panel-forward" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-forward-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-forward-title" class="sub-panel-title">FORWARD RATES</div>
+        <button class="sub-panel-close" data-close="panel-forward" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Two-column wrapper: Table left, Charts right -->
+        <div class="forward-layout-wrapper">
+          
+          <!-- Data table container (left column) -->
+          <div class="data-container" id="FWDDataContainer"></div>
+        
+          <!-- Charts + Controls (right column) -->
+          <div class="forward-charts-wrapper">
+
+            <!-- First CMS forward length input for comparison -->
+            <div id="cmsInputContainer1">
+              <label for="cmsForwardInput1">CMS Forward Length 1:</label>
+              <input type="number" id="cmsForwardInput1" value="1" min="1" />
+              <button id="CMSButton1">Apply CMS Rate 1</button>
+            </div>
+
+            <!-- Second CMS forward length input for comparison -->
+            <div id="cmsInputContainer2">
+              <label for="cmsForwardInput2">CMS Forward Length 2:</label>
+              <input type="number" id="cmsForwardInput2" value="5" min="1" />
+              <button id="CMSButton2">Apply CMS Rate 2</button>
+            </div>
+
+            <!-- CMS Forward Rate Chart -->
+            <div class="chart-container">
+              <canvas id="FWDlineChart" class="forward-line-chart"></canvas>
+            </div>
+
+            <!-- Entry field for years_forward -->
+            <div id="inputContainer">
+              <label for="yearsForwardInput">Years Forward:</label>
+              <input type="number" id="yearsForwardInput" value="1" min="1" />
+              <button id="applyYearsForwardButton">Apply</button>
+            </div>
+
+            <!-- Forward Curve Chart -->
+            <div class="chart-container">
+              <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>
+            </div>
           </div>
         </div>
       </div>
-      <p>
-        <button id="liquResetFiltersButton" class="reset-FiltersButton">
-          
-        </button>
-      </p>
     </div>
 
-   
-    <div class="data-container flex">
- 
-      <div id="liquDataContainer" class="flex-1"></div>
 
+    <!-- Panel: CREDIT SPREADS (Slide-In) -->
+    <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-creditspreads-title" class="sub-panel-title">CREDIT SPREADS</div>
+        <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="Schließen">&times;</button>
+      </div>
+
+  <div class="sub-panel-body">
+    <div class="cs-layout-wrapper">
+      <!-- Chart -->
+      <div class="chart-container cs-chart">
+        <canvas id="CS_ChartCanvas"></canvas>
+      </div>
+
+      <!-- Parameters -->
+      <aside class="parameters-container">
+        <p>CS Curve Parameter:</p>
+        <p>e: Relative Displacement in %. Default 1</p>
+        <p>f: Absolute Displacement in Basis Points. Default 0</p>
+
+        <div id="CSParameterDataContainer"></div>
+
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="CSParButton" class="edit-button">CSParameter</button>
+          <button id="CSParameterAddButton" class="edit-button">Add New CSParameter</button>
+        </div>
+      </aside>
+    </div>
+  </div>
     </div>
 
-    
-    <div class="liqu-chart-container">
-      <canvas id="liquChart"></canvas>
+    <!-- Panel: HISTORIC DATA [%] -->
+    <div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA [%]</div>
+        <button class="sub-panel-close" data-close="panel-ts" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Adapter-Wrapper: behält deine alten IDs, ohne .table-Styles zu erben -->
+        <div id="TS_Modal" class="ts-panel-adapter">
+          <!-- Optional: Überschrift im Body, wenn gewünscht
+          <h2 class="section-header">HISTORIC DATA [%]</h2> -->
+
+          <!-- Container für dynamische Sektionen -->
+          <div id="modal-content-container"></div>
+        </div>
+
+        <!-- Template für Klone -->
+        <template id="TS_Modal_Template">
+          <div class="table-content">
+            <div class="filter-wrapper">
+              <label>Select Data:</label>
+
+              <div id="checkboxContainer" class="table-wrapper"></div>
+
+              <div class="table-wrapper">
+                <div class="moving-average-container">
+                  <label>Apply Moving Averages:</label><br />
+                  <input type="checkbox" id="applySMA1" /> SMA 1
+                  <input type="number" id="movingAveragePeriod1" value="20" min="1" /><br />
+                  <input type="checkbox" id="applySMA2" /> SMA 2
+                  <input type="number" id="movingAveragePeriod2" value="50" min="1" /><br />
+                  <input type="checkbox" id="applySMA3" /> SMA 3
+                  <input type="number" id="movingAveragePeriod3" value="200" min="1" /><br />
+                </div>
+              </div>
+
+              <div class="table-wrapper">
+                <div class="normalization-container">
+                  <label for="normalizationTypeSelector">Normalization Type:</label>
+                  <select id="normalizationTypeSelector">
+                    <option value="none">None</option>
+                    <option value="dynamic">Dynamic</option>
+                    <option value="firstValue">First Value</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="load-and-toggle-container">
+                <button id="loadButton" class="edit-button">Load Data</button>
+              </div>
+            </div>
+
+            <div class="TSChart-container">
+              <div class="chart-container">
+                <canvas id="TSlineChart" width="1000" height="400"></canvas>
+              </div>
+
+              <div class="time-range-buttons">
+                <button id="oneYearButton">1Y</button>
+                <button id="fiveYearButton">5Y</button>
+                <button id="tenYearButton">10Y</button>
+                <button id="maxButton">Max</button>
+              </div>
+            </div>
+
+            <div class="data-wrapper">
+              <div class="data-container" id="TSDataContainer"></div>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
 
-  <div class="data-container flex">
-     
-      <div id="issuerDataContainerLiqu" class="flex-1"></div>
 
-    </div>
-
-  </div> -->
+  </div>
+</div>
 
 
-<!-- Am Ende deiner Seite, direkt vor </body>, laden wir die Logik -->
-<script type="module" src="./liquidity.js"></script>
 
   <!-- Modal - ISSUER -->
   <div id="ISSUER_Modal" class="table">
@@ -647,139 +888,6 @@
       </p>
         <div class="data-container" id="portDataContainer0"></div>
         <!-- <div class="data-container" id="portDataContainer1"></div> -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - SENS -->
-  <div id="SENS_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header">SENSITIVITIES</h2>
-
-      <!-- Left Part (Tables) -->
-      <div class="left-part">
-        <div class="data-wrapper">
-          <!-- <div id="inputMVaR-container"></div>
-          <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>-->
-          <p>PV01:</p>
-          <div class="data-container" id="IRSensDataContainer"></div> 
-          <div style="margin-top: 10em;"></div> 
-          <p>CPV01:</p>
-          <div class="data-container" id="CRSensDataContainer"></div>
-        </div>
-      </div>
-
-      <!-- Right Part (Chart) -->
-      <div class="right-part">
-        <div class="pv01-chart-container">
-          <canvas id="PV01Chart"></canvas>
-        </div>
-        <div style="margin-top: 10em;"></div> 
-        <div class="cpv01-chart-container">
-          <canvas id="CPV01Chart" width="400" height="400"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - IR -->
-  <div id="IR_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header">INTEREST RATES</h2>
-
-
-      <label for="ratesSelector">Select Curve:</label>
-        <select id="ratesSelector">
-          <option value="EUSWAP">EUSWAP</option>
-          <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
-        </select>
-
-      <!-- <div class="data-container" id="IRDataContainer"></div> -->
-      <div id="IRDataContainer"></div>
-      <div class="chart-container">
-        <!-- <canvas id="IRlineChart"></canvas> -->
-        <canvas id="IRlineChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - FORWARDS -->
-  <div id="FWD_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header">FORWARD RATES</h2>
-
-      <!-- Two-column wrapper: Table on the left, Charts on the right -->
-      <div class="forward-layout-wrapper">
-        
-        <!-- Data table container (left column) -->
-        <div class="data-container" id="FWDDataContainer"></div>
-      
-        <!-- Charts container (right column) -->
-        <div class="forward-charts-wrapper">
-
-          <!-- First CMS forward length input for comparison -->
-          <div id="cmsInputContainer1">
-            <label for="cmsForwardInput1">CMS Forward Length 1:</label>
-            <input type="number" id="cmsForwardInput1" value="1" min="1" /> <!-- Input field for CMS forward length 1 -->
-            <button id="CMSButton1">Apply CMS Rate 1</button> <!-- Button for first CMS rate -->
-          </div>
-
-          <!-- Second CMS forward length input for comparison -->
-          <div id="cmsInputContainer2">
-            <label for="cmsForwardInput2">CMS Forward Length 2:</label>
-            <input type="number" id="cmsForwardInput2" value="5" min="1" /> <!-- Input field for CMS forward length 2 -->
-            <button id="CMSButton2">Apply CMS Rate 2</button> <!-- Button for second CMS rate -->
-          </div>
-
-          <!-- First chart container (CMS Forward Rate Chart) -->
-          <div class="chart-container">
-            <canvas id="FWDlineChart" class="forward-line-chart"></canvas>  <!-- Chart for CMS rates comparison -->
-          </div>
-
-          <!-- Entry field for years_forward -->
-          <div id="inputContainer">
-            <label for="yearsForwardInput">Years Forward:</label>
-            <input type="number" id="yearsForwardInput" value="1" min="1" /> <!-- Input field for years_forward -->
-            <button id="applyYearsForwardButton">Apply</button> <!-- Button to apply the input value -->
-          </div>
-
-          <!-- Second chart container -->
-          <div class="chart-container">
-            <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>  <!-- Second chart -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- CS_Modal: New Modal for CS Parameters and Chart -->
-  <div id="CS_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      
-      <!-- Header Section -->
-      <h2 class="section-header">CREDIT SPREADS</h2>
-
-      <div class="content-wrapper">
-        <!-- Chart Section -->
-        <div class="chart-container cs-chart">
-          <canvas id="CS_ChartCanvas"></canvas>
-        </div>
-
-        <!-- CS Parameters Section -->
-        <div class="parameters-container">
-          <p>CS Curve Parameter:</p>
-          <p>e: Relative Displacement in %. Default 1</p>
-          <p>f: Absolute Displacement in Basis Points. Default 0</p>
-          <div id="CSParameterDataContainer"></div>
-          <div class="button-wrapper">
-            <button id="CSParButton" class="edit-button">CSParameter</button>
-            <button id="CSParameterAddButton" class="edit-button">Add New CSParameter</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>

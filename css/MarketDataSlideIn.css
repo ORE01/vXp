@@ -1,0 +1,158 @@
+/* gleicher Frame wie SUMMARY_Modal */
+/* #MARKETDATA_Modal .table-content{
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+} */
+
+/* Falls du die Card-Styles noch nicht global hast */
+.md-flex-row{ display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; }
+.table-card{
+  flex:1 1 420px; min-width:320px;
+  background: var(--panel-surface, #0f0f10);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; padding:12px; overflow:auto;
+}
+.table-title{ margin:0 0 8px; font-size:14px; font-weight:600; opacity:.9; }
+
+/* Erzwinge vertikales Stacking nur im Market-Data-Modal */
+#MARKETDATA_Modal .table-content {
+  display: flex;           /* statt block – robust gegen fremde flex-Regeln */
+  flex-direction: column;  /* vertikal stapeln */
+  align-items: flex-start; /* linksbündig */
+}
+
+/* Trigger-Zeilen verlässlich als volle Zeilen unter dem Header */
+#MARKETDATA_Modal .chart-section {
+  display: block !important;
+  width: 100%;
+  margin: 12px 0;
+  clear: both;             /* falls irgendwo noch floated wird */
+  float: none;
+  text-align: left;
+}
+
+/* Header darf nichts „floaten“ */
+#MARKETDATA_Modal .portfolio-info {
+  display: block;
+  float: none;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* ===== MARKET DATA ▸ RATES: kompakteres Layout ===== */
+#MARKETDATA_Modal #panel-rates .sub-panel-body{
+  /* 1) Zwei Spalten auf groß, mittig begrenzen */
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: start;
+  max-width: 1200px;          /* Gesamtbreite limitieren */
+  margin: 0 auto;             /* zentrieren */
+}
+
+/* 2) Controls (Label + Select) über volle Breite */
+#MARKETDATA_Modal #panel-rates > .sub-panel-body > label,
+#MARKETDATA_Modal #panel-rates > .sub-panel-body > select{
+  grid-column: 1 / -1;
+}
+
+/* 3) Tabelle kompakter + mit eigenem Scroll */
+#MARKETDATA_Modal #panel-rates .table-card{
+  /* Card-Look hast du global – hier nur „kompakt“ */
+  padding: 10px;
+  max-height: 42vh;           /* weniger hoch */
+  overflow: auto;
+}
+#MARKETDATA_Modal #panel-rates #IRDataContainer table{
+  font-size: 12.5px;          /* kleinerer Text */
+}
+#MARKETDATA_Modal #panel-rates #IRDataContainer th,
+#MARKETDATA_Modal #panel-rates #IRDataContainer td{
+  padding: 6px 8px;           /* weniger Padding */
+  white-space: nowrap;
+}
+
+/* 4) Chart reduziert */
+#MARKETDATA_Modal #panel-rates .chart-container{
+  padding: 10px;              /* schmalere Card-Padding */
+}
+#MARKETDATA_Modal #panel-rates .chart-container canvas{
+  width: 100% !important;
+  height: 280px !important;   /* vorher 360 – jetzt kompakt */
+  display: block;
+}
+
+/* 5) Responsive: bei kleineren Screens stapeln */
+@media (max-width: 1100px){
+  #MARKETDATA_Modal #panel-rates .sub-panel-body{
+    grid-template-columns: 1fr;   /* alles untereinander */
+  }
+}
+
+
+/* ========== FORWARD PANEL LAYOUT & CHARTS ========== */
+#MARKETDATA_Modal #panel-forward .forward-layout-wrapper{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Linke Spalte (Tabelle) – Card-Look wie gewohnt */
+#MARKETDATA_Modal #panel-forward #FWDDataContainer{
+  flex: 1 1 420px;
+  min-width: 320px;
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto;
+}
+
+/* Rechte Spalte (Charts + Controls) – sauber untereinander */
+#MARKETDATA_Modal #panel-forward .forward-charts-wrapper{
+  flex: 2 1 520px;
+  min-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;               /* Abstand zwischen Controls/Charts */
+}
+
+/* Controls hübsch in Reihe */
+#MARKETDATA_Modal #panel-forward #cmsInputContainer1,
+#MARKETDATA_Modal #panel-forward #cmsInputContainer2,
+#MARKETDATA_Modal #panel-forward #inputContainer{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Jede Chart-Box als Card + sicherer Flow */
+#MARKETDATA_Modal #panel-forward .chart-container{
+  position: relative;      /* überschreibt evtl. absolute aus globalem CSS */
+  display: block;
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: hidden;        /* falls Canvas größer rendert, kein Überlauf */
+}
+
+/* Canvas richtig skalieren & NICHT absolut positionieren */
+#MARKETDATA_Modal #panel-forward .chart-container canvas{
+  position: static !important;   /* falls woanders absolute gesetzt wurde */
+  display: block;
+  width: 100% !important;
+  height: 360px !important;      /* ggf. 320–420 anpassen */
+}
+
+/* Responsive: Spalten stapeln auf kleineren Screens */
+@media (max-width: 1100px){
+  #MARKETDATA_Modal #panel-forward .forward-layout-wrapper{
+    flex-direction: column;
+  }
+}
+
+
