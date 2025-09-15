@@ -155,4 +155,72 @@
   }
 }
 
+/* ===== MARKET DATA ▸ ML Panel ===== */
+#MARKETDATA_Modal #panel-ml .ml-layout{
+  display: grid;
+  grid-template-columns: minmax(360px, 1.1fr) minmax(420px, 1.4fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1200px){
+  #MARKETDATA_Modal #panel-ml .ml-layout{ grid-template-columns: 1fr; }
+}
+
+#MARKETDATA_Modal #panel-ml .ml-left .table-wrapper,
+#MARKETDATA_Modal #panel-ml .ml-left .table-card{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+/* Tabellen kompakt + eigener Scroll */
+#MARKETDATA_Modal #panel-ml .ml-table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+#MARKETDATA_Modal #panel-ml .ml-table th,
+#MARKETDATA_Modal #panel-ml .ml-table td{
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  white-space: nowrap;
+}
+#MARKETDATA_Modal #panel-ml .data-container.table-card{
+  max-height: 36vh; /* scrolly tables */
+}
+
+/* Param-Reihe */
+#MARKETDATA_Modal #panel-ml .ml-inline{
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+#MARKETDATA_Modal #panel-ml .ml-params-row{
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+#MARKETDATA_Modal #panel-ml .input-container{
+  display: flex; flex-direction: column; gap: 6px; min-width: 160px;
+}
+#MARKETDATA_Modal #panel-ml .input-container input{
+  background: #fff; color:#222; border:1px solid #555; border-radius:4px; padding:6px;
+}
+
+/* Charts rechts */
+#MARKETDATA_Modal #panel-ml .chart-card{
+  padding: 12px;
+}
+#MARKETDATA_Modal #panel-ml .ml-h3{ margin: 8px 0; font-weight: 600; }
+#MARKETDATA_Modal #panel-ml .ml-h4{ margin: 0 0 8px; opacity:.9; }
+
+#MARKETDATA_Modal #panel-ml #MLTestDataChart,
+#MARKETDATA_Modal #panel-ml #MLFuturePredictionChart{
+  width: 100%; height: 320px; display: block;
+}
+@media (max-width: 600px){
+  #MARKETDATA_Modal #panel-ml #MLTestDataChart,
+  #MARKETDATA_Modal #panel-ml #MLFuturePredictionChart{ height: 280px; }
+}
+
+
 

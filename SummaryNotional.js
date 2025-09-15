@@ -13,7 +13,7 @@ const { jsPDF } = window.jspdf;
 let tableName = 'Portfolio';
 
 export function handleSummaryNotionalData(filteredData, index, port_name) {
-  console.log('summaryData:', filteredData);
+  //console.log('summaryData:', filteredData);
 
   const elementId = `portDataContainer${0}`;
   const aggContainerId = `portAggDataContainer${5}`;
@@ -81,6 +81,12 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
     });
   });
 }
+
+
+
+
+
+
 
 function drawPieChartByColumn(filteredData, columnName) {
   const valueType = document.getElementById('valueSelector').value;
@@ -185,6 +191,11 @@ generateLabels: function (chart) {
     }
   });
 }
+
+
+
+
+
 
 
 

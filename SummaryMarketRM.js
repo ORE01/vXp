@@ -10,12 +10,12 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   const portValue = parseFloat(portfolioData.formPortValue.replace(/[^\d.-]/g, '').replace(',', ''));
   const portNotional = parseFloat(portfolioData.formPortNotional.replace(/[^\d.-]/g, '').replace(',', ''));
   const portPV01 = parseFloat(portfolioData.formPortPV01.replace(/[^\d.-]/g, '').replace(',', ''));
-  console.log(`📊 portPV01 = ${portPV01}`);
+  //console.log(`📊 portPV01 = ${portPV01}`);
 
   if (!isNaN(portValue) && !isNaN(portNotional) && portNotional !== 0) {
     portValueRel = portValue / portNotional;
     portfolioEndValue = portValueRel * 100;
-    console.log(`📊 portValueRel = ${portValueRel.toFixed(4)} (${portfolioEndValue.toFixed(2)}%)`);
+    //console.log(`📊 portValueRel = ${portValueRel.toFixed(4)} (${portfolioEndValue.toFixed(2)}%)`);
   } else {
     console.warn("Missing or invalid data for portValueRel calculation");
   }
@@ -373,7 +373,7 @@ export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
     
     const testCurr = tsData[tsData.length - 1];
     const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM)/100;
-    console.log('testCurrRate:', testCurrRate)
+    //console.log('testCurrRate:', testCurrRate)
   
   const testPV01 = -testTtM/(1 + testCurrRate);
   const portfolioPV01 = portPV01;

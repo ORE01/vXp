@@ -11,7 +11,7 @@ function processData(data, selectedTableName, columnLabelMap = {}) {
   const excludeEditColumnTables = [
     'tblTS', 'MVaRMain', 'CVaRMain', 'EADMain', 'Portfolios',
     'PortMain', 'MarketVaR', 'CreditVaR', 'PortMain', 'sortedLossesIssuerMain',
-    'EAD', 'Portfolio',
+    'EAD', 'Portfolio', 'ProdALL', 'DealsMain',
   ];
 
   const excludePortTables = /^Port/;

@@ -16,7 +16,11 @@
   <link href="./css/CouponModal.css" rel="stylesheet">
   <link href="./css/Summary.css" rel="stylesheet">
   <link href="./css/MarketDataSlideIn.css" rel="stylesheet">
+  <link href="./css/CreatePortfolio.css" rel="stylesheet">
+  <link href="./css/NEW_PRODUCTS.css" rel="stylesheet">
+  <link href="./css/DataProvider.css" rel="stylesheet">
   <link href="./css/liquidity.css" rel="stylesheet">
+
 
   <!-- Library Imports -->
   
@@ -82,24 +86,11 @@
 
     <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
     <button class="tablinks" id="SUMMARY_Tab">ANALYSE PORTFOLIO</button> 
-    
-
     <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
-    
-
-    <button class="tablinks" id="DEALS_Tab">CREATE PORTFOLIO</button>
-    <button class="tablinks" id="ISSUER_Tab">ISSUERS</button>
-    <button class="tablinks" id="PROD_Tab">PRODUCTS</button>
-
-   
-    <button class="tablinks" id="MVaR_Tab">M-VaR</button>
-    <button class="tablinks" id="CVaR_Tab">C-VaR</button>
-
+    <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button> 
+    <button class="tablinks" id="NEW_PRODUCTS_Tab">NEW PRODUCTS</button> 
     <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
-    
-    <button class="tablinks" id="DataProvider_Tab">Data Provider</button>
-    <button class="tablinks" id="ML_Tab">ML</button> 
-    <button class="tablinks" id="Offers_Tab">OFFERS</button> 
+    <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
     <button class="tablinks" id="DATA_Tab">UPDATES</button> 
     
   </div>
@@ -107,14 +98,107 @@
 
 
 
+<!-- Modal: PORT / ANALYSE PORTFOLIO -->
+<div id="PORT_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+    <div class="portfolio-info">
+      <h2 class="section-header">PORTFOLIO</h2>
+      <div>
 
+        <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
+          <select id="createdPortDropdown0" class="deals-dropdown" style="color: #f9f9f9;"></select> 
+        </div>
+
+
+        <div class="button-wrapper">
+          <button id="fairValueButton"class="edit-button">Recalculate Portfolio</button>
+          <!-- <button id="MVaRButton"class="edit-button">MVaR</button> -->
+          <!-- <button id="CVaRButton"class="edit-button">CVaR</button> -->
+          
+          
+          <button id="riskPDFButton"class="edit-button">Risk PDF</button>
+      
+        </div>
+
+
+        <div class="data-container" id="portAggDataContainer3"></div>
+
+
+
+        <p>filtered:</p>
+
+        <div class="data-container" id="portAggDataContainer0"></div>
+
+      </div>
+    </div>
+    
+    <div class="data-wrapper">
+      <div class="dropdown-wrapper"> 
+        <div>
+          <p>Select Issuers:</p>
+          <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Product Ids:</p>
+          <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Coupon Type:</p>
+          <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Category:</p>
+          <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Rating:</p>
+          <select id="portRatingDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Rank:</p>
+          <select id="portRankDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Maturity Year:</p>
+          <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+        <div>
+          <p>Select Depotbank:</p>
+          <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
+          </select>
+        </div>
+    </div>
+    <p>
+      <button id="portResetFiltersButton" class="reset-FiltersButton">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+          <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+          <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+        </svg>
+      </button>
+    </p>
+      <div class="data-container" id="portDataContainer0"></div>
+      <!-- <div class="data-container" id="portDataContainer1"></div> -->
+    </div>
+  </div>
+</div>
+
+<!-- Modal: SUMMARY_Modal -->
 <div id="SUMMARY_Modal" class="table">
   <div class="table-content" style="display: block;"> <!-- 👈 Force vertical stacking -->
 
     <span class="close">&times;</span>
 
     <!-- Summary Section Header -->
-    <div class="portfolio-info">
+    <!-- <div class="portfolio-info">
       <h2 class="section-header">SUMMARY</h2>
       <div class="data-wrapper">
         <div class="data-container" id="portAggDataContainer5"></div>
@@ -124,7 +208,7 @@
           <option value="NOTIONAL">Notional</option>
         </select>
       </div>
-    </div>
+    </div> -->
 
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
 
@@ -144,15 +228,7 @@
       </button>
     </div>
 
-    <!-- 📉 Market Sensitivities – Trigger -->
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
-        <span class="section-header">Market Sensitivities</span>
-        <span class="chev">▶</span>
-      </button>
-    </div>
-
-    <!-- 📉 Market P/L – Trigger -->
+    <!-- 📉 Market P/L – Trigger (Hauptpunkt) -->
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
         <span class="section-header">Market Risk</span>
@@ -160,13 +236,47 @@
       </button>
     </div>
 
-    <!-- 📉 Credit P/L – Trigger -->
-    <div class="chart-section">
+        <!-- Market VaR – Unterpunkt -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-mvar"
+                  aria-controls="panel-mvar"
+                  aria-expanded="false"
+                  style="max-width: 184px;">
+            <span class="section-header">Market VaR (Detail)</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+
+
+        <!-- 📉 Market Sensitivities – Unterpunkt von Market Risk -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
+            <span class="section-header">Market Sensitivities</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+
+    <!-- 📉 Credit Risk – Trigger -->
+    <div class="chart-section no-after-divider">
       <button class="section-trigger" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
         <span class="section-header">Credit Risk</span>
         <span class="chev">▶</span>
       </button>
     </div>
+
+        <!-- 📉 Credit Risk Detail – Sub-Trigger -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-cvar"
+                  aria-controls="panel-cvar"
+                  aria-expanded="false">
+            <span class="section-header">Credit Risk Detail</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
 
         <!-- 📉 Liquidity – Trigger -->
     <div class="chart-section">
@@ -187,7 +297,35 @@
         <div id="panel-breakdown-title" class="sub-panel-title">Portfolio Breakdown</div>
         <button class="sub-panel-close" data-close="panel-breakdown" aria-label="Schließen">&times;</button>
       </div>
+
       <div class="sub-panel-body">
+        <!-- ⬇️ Summary Section Header (eingefügt) -->
+        <!-- <div class="portfolio-info" style="margin-bottom:12px;">
+          <div class="data-wrapper breakdown-controls">
+            <label for="valueSelector" class="select-label">Value basis</label>
+            <select id="valueSelector" class="select-dropdown">
+              <option value="NAV">NAV</option>
+              <option value="NOTIONAL">Notional</option>
+            </select>
+          </div>
+        </div> -->
+
+            <div class="portfolio-info">
+      <!-- <h2 class="section-header">SUMMARY</h2> -->
+      <div class="data-wrapper">
+        <!-- <div class="data-container" id="portAggDataContainer5"></div> -->
+
+        <label for="valueSelector" class="select-label">Value basis</label>
+        <select id="valueSelector">
+          <option value="NAV">NAV</option>
+          <option value="NOTIONAL">Notional</option>
+        </select>
+      </div>
+    </div>
+
+
+
+
         <!-- ⬇️ dein ursprünglicher Breakdown-Inhalt (IDs bleiben) -->
         <div id="pieChartGrid" class="pie-chart-grid">
           <!-- JS fügt hier Chart-Boxen ein -->
@@ -252,7 +390,7 @@
     </div>
 
 
-    <!-- Panel: Market P/L -->
+    <!-- Panel: Market VaR -->
     <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
@@ -285,6 +423,32 @@
       </div>
     </div>
 
+<!-- Panel: Market VaR (Detail) -->
+<div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-mvar-title" class="sub-panel-title">MARKET VaR</div>
+    <button class="sub-panel-close" data-close="panel-mvar" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="mvar-grid">
+      <!-- Links: Tabelle (einmaliges ID!) -->
+      <section class="mvar-left table-card">
+        <h4 class="table-title">Market VaR / ES</h4>
+        <div class="data-container" id="MVaRDataContainer"></div>
+      </section>
+
+      <!-- Rechts: Chart -->
+      <section class="mvar-right table-card">
+        <h4 class="table-title">Market VaR Chart</h4>
+        <canvas id="MVaRChart" height="360"></canvas>
+      </section>
+    </div>
+  </div>
+</div>
+
+
+
     <!-- Panel: Credit P/L -->
     <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
       <div class="sub-panel-header">
@@ -294,6 +458,7 @@
       <div class="sub-panel-body">
         <div class="button-wrapper">
           <button id="CVaRButton" class="edit-button">Profit/Loss Dist</button>
+          <button id="openCVaRDetails" class="edit-button">Details…</button>
         </div>
 
         <p>Credit Value at Risk/Expected Shortfall:</p>
@@ -320,6 +485,70 @@
         </div>
       </div>
     </div>
+
+    <!-- Panel: Credit VaR – Details -->
+    <div id="panel-cvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-cvar-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-cvar-title" class="sub-panel-title">Credit VaR – Details</div>
+        <button class="sub-panel-close" data-close="panel-cvar" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Oben: drei Metrik-Tabellen -->
+        <section class="table-card" style="margin-bottom:12px;">
+          <p>Historical Credit Metrics:</p>
+          <div class="data-container" id="CVaR_ratingDataContainer"></div>
+
+          <p style="margin-top:10px;">Market Implied Credit Metrics:</p>
+          <div class="data-container" id="CVaR_marketDataContainer"></div>
+
+          <p style="margin-top:10px;">Risk Adjusted Credit Metrics:</p>
+          <div class="data-container" id="CVaR_normDataContainer"></div>
+        </section>
+
+        <!-- 2-Spalten-Layout: links Tabellenumschalter, rechts Charts -->
+        <div class="cvar-grid">
+          <aside class="cvar-left">
+            <div class="chart-button-container">
+              <button class="chart-button" data-chart="EADChart">EAD</button>
+              <button class="chart-button" data-chart="LGDChart">LGD</button>
+              <button class="chart-button" data-chart="LossIssuerChartRating">LOSS ISSUER (Historic)</button>
+              <button class="chart-button" data-chart="LossIssuerChartMarket">LOSS ISSUER (Market Implied)</button>
+              <button class="chart-button" data-chart="LossIssuerChartMarketNorm">LOSS ISSUER (Risk Adjusted)</button>
+            </div>
+
+            <!-- Data-Tabellen für die einzelnen Views -->
+            <div class="data-container" id="EADDataContainer"></div>
+            <div class="data-container" id="LossIssuerDataContainerRating"></div>
+            <div class="data-container" id="LossIssuerDataContainerMarket"></div>
+            <div class="data-container" id="LossIssuerDataContainerMarketNorm"></div>
+          </aside>
+
+          <section class="cvar-right">
+            <div class="chart-container-table" id="EADChartContainer">
+              <canvas id="EADChart"></canvas>
+            </div>
+
+            <div class="chart-container-table" id="LGDChartContainer">
+              <canvas id="LGDChart"></canvas>
+            </div>
+
+            <div class="chart-container-inner" id="LossIssuerChartContainerRating">
+              <canvas id="LossIssuerChartRating"></canvas>
+            </div>
+
+            <div class="chart-container-inner" id="LossIssuerChartContainerMarket">
+              <canvas id="LossIssuerChartMarket"></canvas>
+            </div>
+
+            <div class="chart-container-inner" id="LossIssuerChartContainerMarketNorm">
+              <canvas id="LossIssuerChartMarketNorm"></canvas>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Panel: Liquidity -->
     <div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
@@ -371,7 +600,242 @@
 
 
   </div><!-- /table-content -->
-</div><!-- /SUMMARY_Modal -->
+</div>
+
+<!-- Modal: Create Portfolio -->
+<div id="CREATE_PORTFOLIO_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-cp-close="1">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header">CREATE PORTFOLIO</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Issuer • Products • Trades</p>
+    </div>
+
+    <!-- Triggers -->
+    <!-- <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
+        <span class="section-header">Issuer</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-products" aria-controls="panel-products" aria-expanded="false">
+        <span class="section-header">Products</span><span class="chev">▶</span>
+      </button>
+    </div> -->
+
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
+        <span class="section-header">Trades</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ===== PANELS ===== -->
+
+    <!-- Panel: ISSUER (aus deinem ISSUER_Modal adaptiert) -->
+    <!-- <div id="panel-issuer" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-issuer-title" class="sub-panel-title">ISSUER</div>
+        <button class="sub-panel-close" data-close="panel-issuer" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+          
+          <p style="margin:10px 0;">
+            <button id="issuerResetFiltersButton" class="reset-FiltersButton" title="Reset filters">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+
+          
+          <div class="button-wrapper">
+            <button id="issuerAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        
+        <div class="data-container cp-table" id="issuerDataContainer"></div>
+      </div>
+    </div> -->
+
+    <!-- Panel: PRODUCTS -->
+    <!-- <div id="panel-products" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-products-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-products-title" class="sub-panel-title">PRODUCTS</div>
+        <button class="sub-panel-close" data-close="panel-products" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Product Ids:</p>
+              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Coupon Type:</p>
+              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Maturity:</p>
+              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rank:</p>
+              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+          <p style="margin:10px 0;">
+            <button id="prodResetFiltersButton" class="reset-FiltersButton" title="Reset filters">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+
+          <div class="button-wrapper">
+            <button id="prodAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        
+        <div class="data-container cp-table" id="prodDataContainer"></div>
+      </div>
+    </div> -->
+
+    <!-- Panel: DEALS / CREATE PORTFOLIO -->
+    <div id="panel-deals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-deals-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-deals-title" class="sub-panel-title">EDIT / CREATE PORTFOLIO</div>
+        <button class="sub-panel-close" data-close="panel-deals" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Card 1: Edit / Create Controls -->
+        <section class="cp-card">
+          <h2 class="small-section-header">Edit Portfolio</h2>
+
+          <div class="cp-form-grid">
+            <!-- Created Portfolios -->
+            <label for="createdDealsDropdown">Select PORTFOLIO:</label>
+            <div class="cp-field">
+              <select id="createdDealsDropdown" class="deals-dropdown"></select>
+            </div>
+
+            <h2 class="small-section-header" style="grid-column: 1/-1; margin-top: 8px;">Create New Portfolio from Selected One</h2>
+
+            <!-- Trade IDs -->
+            <label for="tradeDropdown">Select TRADE_ID:</label>
+            <div class="cp-field">
+              <select id="tradeDropdown" multiple class="select-dropdown"></select>
+            </div>
+
+            <!-- New Name -->
+            <label for="nameInput">New Portfolio Name:</label>
+            <div class="cp-field">
+              <input type="text" id="nameInput" class="input-field" />
+            </div>
+
+            <!-- Tags -->
+            <label for="tagInputField">Tag selection:</label>
+            <div class="cp-field">
+              <input type="text" id="tagInputField" class="input-field" />
+            </div>
+
+            <!-- Actions -->
+            <div class="cp-actions" style="grid-column: 1/-1;">
+              <button id="saveSelectionButton" class="edit-button">Save Selection</button>
+              <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Card 2: Filter-Dropdowns -->
+        <section class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Products:</p>
+              <select id="dealsProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+
+            <div>
+              <p>Select Category:</p>
+              <select id="dealsCategoryDropdown" multiple class="select-dropdown"></select>
+            </div>
+
+            <div>
+              <p>Select Notional:</p>
+              <select id="dealsNotionalDropdown" multiple class="select-dropdown"></select>
+            </div>
+
+            <div>
+              <p>Select Depotbank:</p>
+              <select id="dealsDepotbankDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+          <p style="margin:10px 0;">
+            <button id="dealsResetFiltersButton" class="reset-FiltersButton" title="Reset filters" aria-label="Reset filters">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+
+          <div class="button-wrapper">
+            <button id="dealsAddButton" class="edit-button">ADD</button>
+            
+          </div>
+        </section>
+
+          <div class="button-wrapper">
+            
+            <button id="fairValueButton1"class="edit-button">Calculate Portfolio</button>
+          </div>
+        </section>
+
+        <!-- Ergebnis-Tabelle -->
+        <div class="data-container cp-table" id="dealsDataContainer"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- Modal: Market Data -->
 <div id="MARKETDATA_Modal" class="table">
@@ -413,6 +877,14 @@
         <span class="chev">▶</span>
       </button>
     </div>
+
+    <!-- 📉 Machine Learning – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-ml" aria-controls="panel-ml" aria-expanded="false">
+        <span class="section-header">Forcasting</span><span class="chev">▶</span>
+      </button>
+    </div>
+
 
 
     <!-- Backdrop nur für dieses Modal -->
@@ -606,572 +1078,433 @@
       </div>
     </div>
 
+    <!-- Panel: MACHINE LEARNING (Slide-In) -->
+    <div id="panel-ml" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ml-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-ml-title" class="sub-panel-title">Machine Learning (ML)</div>
+        <button class="sub-panel-close" data-close="panel-ml" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Optional: Language Toggle -->
+        <div class="language-toggle" style="margin-bottom:8px;">
+          <!--
+          <button id="lang-en" class="language-button">EN</button>
+          <button id="lang-de" class="language-button">DE</button>
+          -->
+        </div>
+
+        <!-- Content Grid -->
+        <div class="ml-layout">
+          <!-- Left Column: Inputs & Tables -->
+          <section class="ml-left">
+            <h3 class="ml-h3">Select Target</h3>
+            <div class="table-wrapper MLInputWrapper">
+              <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top: 10px;"></div>
+            </div>
+
+            <!-- Optional: TS helper container used by your JS -->
+            <div id="MLTS-modal-container"></div>
+
+            <h3 class="ml-h3">Use Trained ML Model</h3>
+            <div class="data-container table-card" style="padding:0;">
+              <table id="MLTrainedModelsTable" class="ml-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Target</th><th>Model Name</th><th>Created At</th><th>Model Type</th>
+                    <th>Epochs</th><th>Batch Size</th><th>Optimizer</th><th>Loss</th><th>Metrics</th>
+                    <th>Select Model</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <h3 class="ml-h3">Select Untrained ML Model</h3>
+            <div class="data-container table-card" style="padding:0;">
+              <table id="MLModelsTable" class="ml-table">
+                <thead>
+                  <tr><th>ID</th><th>Model Type</th><th>Description</th><th>Select</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="table-wrapper MLInputWrapper">
+              <label for="newModelCheckbox" class="ml-inline">
+                <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
+                Use new model
+              </label>
+
+              <div class="ml-params-row">
+                <div class="input-container">
+                  <label for="epochsInput">Epochs <span class="info-icon" id="tooltip-epochs">?</span></label>
+                  <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
+                </div>
+
+                <div class="input-container">
+                  <label for="batchSizeInput">Batch Size <span class="info-icon" id="tooltip-batch-size">?</span></label>
+                  <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
+                </div>
+              </div>
+            </div>
+
+            <h3 class="ml-h3">Start ML Model</h3>
+            <div class="button-container">
+              <button id="MLButton" class="edit-button">Run ML</button>
+            </div>
+          </section>
+
+          <!-- Right Column: Charts -->
+          <section class="ml-right">
+            <div class="table-card chart-card">
+              <h4 class="ml-h4">ML Test Data Chart</h4>
+              <canvas id="MLTestDataChart"></canvas>
+            </div>
+            <div class="table-card chart-card">
+              <h4 class="ml-h4">ML Predictions Chart</h4>
+              <canvas id="MLFuturePredictionChart"></canvas>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+
+
+  </div>
+</div>
+
+<!-- Modal: Data Provider (Slide-In) -->
+<div id="DataProvider_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-provider-close="1">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header Provider">PROVIDER</h2>
+
+      <!-- Triggers direkt im Header -->
+      <div class="provider-triggers">
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-ecb" aria-controls="panel-ecb" aria-expanded="false">
+            <span class="section-header">ECB</span><span class="chev">▶</span>
+          </button>
+        </div>
+
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-fed" aria-controls="panel-fed" aria-expanded="false">
+            <span class="section-header">Fed</span><span class="chev">▶</span>
+          </button>
+        </div>
+
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-yahoo" aria-controls="panel-yahoo" aria-expanded="false">
+            <span class="section-header">Yahoo</span><span class="chev">▶</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ========== PANELS ========== -->
+
+    <!-- Panel: ECB -->
+    <div id="panel-ecb" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ecb-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-ecb-title" class="sub-panel-title">ECB</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://www.ecb.europa.eu" target="_blank" rel="noopener" class="provider-link" aria-label="Open ECB website in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            ECB Website
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-ecb" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputEcb-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="ecbAddButton" class="edit-button">Add ECB Row</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Fed -->
+    <div id="panel-fed" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-fed-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-fed-title" class="sub-panel-title">Fed (FRED)</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener" class="provider-link" aria-label="Open FRED website in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            FRED Website
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-fed" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputFed-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="fedAddButton" class="edit-button">Add Fed Row</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Yahoo -->
+    <div id="panel-yahoo" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-yahoo-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-yahoo-title" class="sub-panel-title">Yahoo Finance</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://finance.yahoo.com/" target="_blank" rel="noopener" class="provider-link" aria-label="Open Yahoo Finance in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            Yahoo Finance
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-yahoo" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputYahoo-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="yahooAddButton" class="edit-button">Add Yahoo Row</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: New Products -->
+<div id="NEW_PRODUCTS_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-off-close="1">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header">OFFER DATA</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Issuer • Products</p>
+    </div>
+
+    <!-- Triggers -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-issuer-np"
+              aria-controls="panel-issuer-np"
+              aria-expanded="false">
+        <span class="section-header">Issuer</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-products-np"
+              aria-controls="panel-products-np"
+              aria-expanded="false">
+        <span class="section-header">Products</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- NEW: READ OFFERS Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-read-offers-np"
+              aria-controls="panel-read-offers-np"
+              aria-expanded="false">
+        <span class="section-header">Read Offers</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- NEW: OFFERS Trigger (bestehend) -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-offers-np"
+              aria-controls="panel-offers-np"
+              aria-expanded="false">
+        <span class="section-header">Offers</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ===== PANELS ===== -->
+
+    <!-- Panel: ISSUER -->
+    <div id="panel-issuer-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-issuer-title" class="sub-panel-title">ISSUER</div>
+        <button class="sub-panel-close" data-close="panel-issuer-np" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+          <p style="margin:10px 0;">
+            <button id="issuerResetFiltersButton" class="reset-FiltersButton" title="Reset filters">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+
+          <div class="button-wrapper">
+            <button id="issuerAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        <div class="data-container cp-table" id="issuerDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Panel: PRODUCTS -->
+    <div id="panel-products-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-products-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-products-title" class="sub-panel-title">PRODUCTS</div>
+        <button class="sub-panel-close" data-close="panel-products-np" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Product Ids:</p>
+              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Coupon Type:</p>
+              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Maturity:</p>
+              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rank:</p>
+              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+          <p style="margin:10px 0;">
+            <button id="prodResetFiltersButton" class="reset-FiltersButton" title="Reset filters">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
+                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
+                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
+              </svg>
+            </button>
+          </p>
+
+          <div class="button-wrapper">
+            <button id="prodAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        <div class="data-container cp-table" id="prodDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Panel: READ OFFERS (NEU) -->
+    <div id="panel-read-offers-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-read-offers-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-read-offers-title" class="sub-panel-title">READ OFFERS</div>
+        <button class="sub-panel-close" data-close="panel-read-offers-np" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="cp-card" style="margin-top:12px;">
+          <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <span class="button-label">Match Columns (AI)</span>
+            <button id="matchColumnsButton" class="edit-button">Columns AI</button>
+
+            <div id="productTargetsOverview"></div>
+            <button id="submitToProductsBtn" class="edit-button">📥 vXp Products</button>
+
+            <div id="offerTargetsOverview"></div>
+            <button id="submitToOffersBtn" class="edit-button">📥 vXp Offers</button>
+
+            <button id="btnQuickImport" class="edit-button">📥 Schnellimport (Testdatei Aufbau LLB)</button>
+            <button id="importOffersBtn" class="edit-button">📥 Import Offers aus externer Quelle</button>
+          </div>
+
+          <div id="matchingContainer" style="margin-top:10px;"></div>
+
+          <div class="button-wrapper" style="margin-top:10px;">
+            <button id="submitMatchingBtn" class="edit-button">Daten prüfen und importieren</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Panel: OFFERS (bereinigt) -->
+    <div id="panel-offers-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-offers-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-offers-title" class="sub-panel-title">OFFERS</div>
+        <button class="sub-panel-close" data-close="panel-offers-np" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+
+        <section class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <label for="createdOffersDropdown">Select Offers:</label>
+              <select id="createdOffersDropdown"></select>
+            </div>
+          </div>
+
+          <div class="button-wrapper" style="margin-top:10px;">
+            <button id="fairValueButton2" class="edit-button">Calculate Offers</button>
+            <button id="offerPDFButton" class="edit-button">Offers PDF</button>
+          </div>
+        </section>
+
+<div class="offers-two-col">
+  <section class="table-card">
+    <h4 class="table-title">Offers</h4>
+    <div id="offersDataContainer" class="data-container cp-table"></div>
+  </section>
+
+  <section class="table-card">
+    <h4 class="table-title">Preview</h4>
+    <div id="portDataContainer4" class="data-container cp-table"></div>
+  </section>
+</div>
+
+
+      </div>
+    </div>
 
   </div>
 </div>
 
 
 
-  <!-- Modal - ISSUER -->
-  <div id="ISSUER_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <div class="portfolio-info">
-        <h2 class="section-header">ISSUER</h2>
-      </div>
-
-      <div class="data-wrapper">
-        <!-- Scrollable area for dropdowns -->
-        <div class="dropdown-wrapper">
-          <div>
-            <p>Select Issuers:</p>
-            <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
-          </div>
-          <div>
-            <p>Select Rating:</p>
-            <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
-          </div>
-        </div>
-
-        <p>
-          <button id="issuerResetFiltersButton" class="reset-FiltersButton">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-              <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-              <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-            </svg>
-          </button>
-        </p>
-
-        <div class="button-wrapper">
-          <button id="issuerAddButton">ADD</button>
-        </div>
-
-        <div class="data-container" id="issuerDataContainer"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - PROD -->
-  <div id="PROD_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <div class="portfolio-info">
-        <h2 class="section-header">PRODUCTS</h2>
-
-      </div>
-      <div class="data-wrapper">
-
-            <!-- Scrollable area for dropdowns -->
-            <div class="dropdown-wrapper">
-              <div>
-                <p>Select Issuers:</p>
-                <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
-              </div>
-              <div>
-                <p>Select Product Ids:</p>
-                <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
-              </div>
-              <div>
-                <p>Select Coupon Type:</p>
-                <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
-              </div>
-              <div>
-                <p>Select Rating:</p>
-                <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
-              </div>
-              <div>
-                <p>Select Maturity:</p>
-                <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
-              </div>
-              <div>
-                <p>Select Rank:</p>
-                <select id="prodRankDropdown" multiple class="select-dropdown"></select>
-              </div>
-            </div>
-      
-            <p>
-              <button id="prodResetFiltersButton" class="reset-FiltersButton">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-                  <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-                  <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-                </svg>
-              </button>
-            </p>
-        <div class="button-wrapper">
-          <button id="prodAddButton">ADD</button>
-        </div>
-        <div class="data-container" id="prodDataContainer"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - DEALS / CREATE PORTFOLIO -->
-  <div id="DEALS_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <div class="portfolio-info">
-        <h2 class="section-header">EDIT / CREATE PORTFOLIO</h2>
-        <div class="filter-wrapper" style="display: flex; flex-direction: column; width: 100%;">
-
-          <!-- DEALS Dropdown -->
-          <h2 class="small-section-header">Edit Portfolio</h2>
-          <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-            <label for="createdDealsDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select PORTFOLIO:</label>
-            <select id="createdDealsDropdown" class="deals-dropdown"></select>
-
-          </div>
-
-          <!-- Trade ID Dropdown -->
-          <h2 class="small-section-header">Create New Portfolio from Selected One</h2>
-          <div class="trade-dropdown-wrapper portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-            <label for="tradeDropdown" style="width: 20%; min-width: 150px; margin-left: 20px;">Select TRADE_ID:</label>
-            <select id="tradeDropdown" multiple class="select-dropdown"></select>
-          </div>
-          
-          <!-- Name Input -->
-          <div class="tag-input" style="display: flex; margin-bottom: 10px;">
-            <label for="nameInput" style="width: 20%; min-width: 150px;margin-left: 20px;">New Portfolio Name:</label>
-            <input type="text" id="nameInput" value=""  class="input-field" style="color: #f9f9f9;">
-
-          </div>
-
-          <!-- Tag Input Field -->
-          <div class="tag-input" style="display: flex; margin-bottom: 10px;">
-            <label for="tagInputField" style="width: 20%; min-width: 150px; margin-left: 20px;">Tag selection:</label>
-            <input type="text" id="tagInputField" value="" class="input-field" style="color: #f9f9f9;">
-          </div>
-
-          <!-- Buttons -->
-          <div class="button-row" style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
-            <button id="saveSelectionButton" class="edit-button">Save Selection</button>
-            <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
-          </div>
-        </div>
-      </div>
-      <div class="data-wrapper">
-
-        <div class="dropdown-wrapper"> 
-
-          <div>
-            <p>Select Products:</p>
-            <select id="dealsProdIdDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-
-          <div>
-            <p>Select Category:</p>
-            <select id="dealsCategoryDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-
-          <div>
-            <p>Select Notional:</p>
-            <select id="dealsNotionalDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-
-          <div>
-            <p>Select Depotbank:</p>
-            <select id="dealsDepotbankDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-
-        </div>
-
-        <p>
-          <button id="dealsResetFiltersButton" class="reset-FiltersButton">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-              <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-              <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-            </svg>
-          </button>
-        </p>
-        <div class="button-wrapper">
-          <button id="dealsAddButton">ADD</button>
-        </div>
-        <div class="data-container" id="dealsDataContainer"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - PORT / ANALYSE PORTFOLIO -->
-  <div id="PORT_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <div class="portfolio-info">
-        <h2 class="section-header">PORTFOLIO</h2>
-        <div>
-
-          <div class="created-tables-dropdown portfolio-select-spacing" style="display: flex; margin-bottom: 10px;">
-            <select id="createdPortDropdown0" class="deals-dropdown" style="color: #f9f9f9;"></select> 
-          </div>
-
-
-          <div class="button-wrapper">
-            <button id="fairValueButton"class="edit-button">Fair Value</button>
-            <!-- <button id="MVaRButton"class="edit-button">MVaR</button> -->
-            <!-- <button id="CVaRButton"class="edit-button">CVaR</button> -->
-            
-            <button id="offerPDFButton"class="edit-button">Offer PDF</button>
-            <button id="riskPDFButton"class="edit-button">Risk PDF</button>
-        
-          </div>
-
-
-          <div class="data-container" id="portAggDataContainer3"></div>
-
-
-
-          <p>filtered:</p>
-
-          <div class="data-container" id="portAggDataContainer0"></div>
-
-        </div>
-      </div>
-      
-      <div class="data-wrapper">
-        <div class="dropdown-wrapper"> 
-          <div>
-            <p>Select Issuers:</p>
-            <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Product Ids:</p>
-            <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Coupon Type:</p>
-            <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Category:</p>
-            <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Rating:</p>
-            <select id="portRatingDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Rank:</p>
-            <select id="portRankDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Maturity Year:</p>
-            <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-          <div>
-            <p>Select Depotbank:</p>
-            <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
-            </select>
-          </div>
-      </div>
-      <p>
-        <button id="portResetFiltersButton" class="reset-FiltersButton">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-            <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-            <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-          </svg>
-        </button>
-      </p>
-        <div class="data-container" id="portDataContainer0"></div>
-        <!-- <div class="data-container" id="portDataContainer1"></div> -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - DataProvider -->
-  <div id="DataProvider_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header Provider">PROVIDER</h2>
-
-      <!-- Links to external websites -->
-      <div class="links-container" style="width: 150px;">
-        <a href="https://www.ecb.europa.eu" target="_blank" class="provider-link">Visit ECB</a>
-        <a href="https://fred.stlouisfed.org/" target="_blank" class="provider-link">Visit Fed (FRED)</a>
-        <a href="https://finance.yahoo.com/" target="_blank" class="provider-link">Visit Yahoo Finance</a>
-      </div>
-
-      <!-- Tabs for ECB, Fed, and Yahoo -->
-      <div class="provider-wrapper">
-        <button id="ecbTab" class="edit-button">ECB</button>
-        <button id="fedTab" class="edit-button">Fed</button>
-        <button id="yahooTab" class="edit-button">Yahoo</button>
-      
-        <!-- ECB, Fed, and Yahoo Data Containers -->
-        
-          <div class="data-container" id="inputEcb-container"></div>
-          <div class="data-container" id="inputFed-container" style="display: none;"></div>
-          <div class="data-container" id="inputYahoo-container" style="display: none;"></div>
-        
-        <!-- Add buttons -->
-        <button id="ecbAddButton" class="edit-button">Add ECB Row</button>
-        <button id="fedAddButton" class="edit-button" style="display: none;">Add Fed Row</button>
-        <button id="yahooAddButton" class="edit-button" style="display: none;">Add Yahoo Row</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - TS -->
-  <div id="TS_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header">HISTORIC DATA [%]</h2>
-          <!-- Container where the modal sections will be cloned and appended -->
-          <div id="modal-content-container"></div>
-
-    </div>
-  </div>
-
-  <!-- Template for the Modal Sections to Clone -->
-  <template id="TS_Modal_Template">
-    
-    <div class="table-content">
-      
-      <div class="filter-wrapper">
-        <label>Select Data:</label>
-        <!-- Checkbox Container for filtering data (aligned left) -->
-        <!-- <div id="checkboxContainer" class="checkbox-left"> -->
-        <div id="checkboxContainer" class="table-wrapper">
-          
-        </div>
-
-        <!-- Moving Averages Checkboxes  -->
-        <div class="table-wrapper">
-          <div class="moving-average-container">
-            <label>Apply Moving Averages:</label>
-            <br />
-            <input type="checkbox" id="applySMA1" /> SMA 1
-            <input type="number" id="movingAveragePeriod1" value="20" min="1" />
-            <br />
-            <input type="checkbox" id="applySMA2" /> SMA 2
-            <input type="number" id="movingAveragePeriod2" value="50" min="1" />
-            <br />
-            <input type="checkbox" id="applySMA3" /> SMA 3
-            <input type="number" id="movingAveragePeriod3" value="200" min="1" />
-            <br />
-          </div>
-        </div>
-
-        <!-- Normalization Dropdown -->
-        <div class="table-wrapper">
-          <div class="normalization-container">
-            <label for="normalizationType">Normalization Type:</label>
-            <select id="normalizationTypeSelector">
-              <option value="none">None</option>
-              <option value="dynamic">Dynamic</option>
-              <option value="firstValue">First Value</option>
-            </select>
-          </div>
-        </div>
-
-
-        <!-- Load Button and Graph/Table toggle (wrapped in a container) -->
-        <div class="load-and-toggle-container">
-          <button id="loadButton" class="edit-button">Load Data</button>
-
-          <!-- Graph/Table toggle -->
-          <!-- <p id="toggleTSGraphTable" class="toggle-text">Graph/Table</p> -->
-        </div>
-
-      </div>
-
-
-
-      <!-- Individual chart container for the TS Chart -->
-      <div class="TSChart-container">
-        <div class="chart-container">
-          <canvas id="TSlineChart" width="1000" height="400"></canvas>
-        </div>
-
-
-
-        <!-- Buttons for time ranges (centered under the chart) -->
-        <div class="time-range-buttons">
-          <button id="oneYearButton">1Y</button>
-          <button id="fiveYearButton">5Y</button>
-          <button id="tenYearButton">10Y</button>
-          <button id="maxButton">Max</button>
-        </div>
-
-        <!-- Checkboxes and input fields for multiple Moving Averages
-        <div class="moving-average-container">
-          <label>Apply Moving Averages:</label>
-          <br />
-          <input type="checkbox" id="applySMA1" /> SMA 1
-          <input type="number" id="movingAveragePeriod1" value="20" min="1" />
-          <br />
-          <input type="checkbox" id="applySMA2" /> SMA 2
-          <input type="number" id="movingAveragePeriod2" value="50" min="1" />
-          <br />
-          <input type="checkbox" id="applySMA3" /> SMA 3
-          <input type="number" id="movingAveragePeriod3" value="200" min="1" />
-          <br />
-        </div> -->
-
-      <!-- Main data table wrapper -->
-      <div class="data-wrapper">
-        <div class="data-container" id="TSDataContainer"></div>
-      </div>
-    </div>
-  </template>
-
-  <!-- Modal - MVaR -->
-  <div id="MVaR_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header">MARKET VaR</h2>
-
-      <!-- Left Part (Tables) -->
-      <div class="left-part">
-        <div class="data-wrapper">
-          <!-- <div id="inputMVaR-container"></div>
-          <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
-          <button id="mvarAddButton" class="edit-button">Add Entry</button> -->
-          <div class="data-container" id="MVaRDataContainer"></div>
-        </div>
-      </div>
-        <div class="data-container" id="MVaRDataContainer"></div>
-      <!-- Right Part (Chart) -->
-      <div class="right-part">
-        <!-- <div class="chart-container"> -->
-          <canvas id="MVaRChart"></canvas>
-        <!-- </div> -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal - CVaR -->
-  <div id="CVaR_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2 class="section-header">CREDIT VaR</h2>
-        <div class="data-wrapper">
-        <p>Historical Credit Metrics:</p>
-        <div class="data-container" id="CVaR_ratingDataContainer"></div>
-        <p>Market Implied Credit Metrics:</p>
-        <div class="data-container" id="CVaR_marketDataContainer"></div>
-        <p>Risk Adjusted Credit Metrics:</p>
-        <div class="data-container" id="CVaR_normDataContainer"></div>
-      </div>
-      
-
-      <!-- Left Part (Tables) -->
-      <div class="left-part">
-        <div class="data-wrapper">
-          <div class="chart-button-container">
-            <button class="chart-button" data-chart="EADChart">EAD</button>
-            <button class="chart-button" data-chart="LGDChart">LGD</button>
-            <button class="chart-button" data-chart="LossIssuerChartRating">LOSS ISSUER (Historic)</button>
-            <button class="chart-button" data-chart="LossIssuerChartMarket">LOSS ISSUER (Market Implied)</button>  
-            <button class="chart-button" data-chart="LossIssuerChartMarketNorm">LOSS ISSUER (Risk Adjusted)</button>            
-          </div>
-
-          <!-- Data containers for EAD, Rating, and Market -->
-          <div class="data-container" id="EADDataContainer"></div>
-          <div class="data-container" id="LossIssuerDataContainerRating"></div>
-          <div class="data-container" id="LossIssuerDataContainerMarket"></div>
-          <div class="data-container" id="LossIssuerDataContainerMarketNorm"></div>
-        </div>
-      </div>
-
-      <!-- Right Part (Charts) -->
-      <div class="right-part">
-        <div class="chart-container">
-
-          <!-- Chart for EAD -->
-          <div class="chart-container-table" id="EADChartContainer">
-            <canvas id="EADChart"></canvas>
-          </div>
-        
-          <!-- Chart for LGD -->
-          <div class="chart-container-table" id="LGDChartContainer">
-            <canvas id="LGDChart"></canvas>
-          </div>
-        
-          <!-- Chart for Loss Issuer Rating -->
-          <div class="chart-container-inner" id="LossIssuerChartContainerRating">
-            <canvas id="LossIssuerChartRating"></canvas>
-          </div>
-        
-          <!-- Chart for Loss Issuer Market -->
-          <div class="chart-container-inner" id="LossIssuerChartContainerMarket">
-            <canvas id="LossIssuerChartMarket"></canvas>
-          </div>
-
-          <!-- Chart for Loss Issuer Market -->
-          <div class="chart-container-inner" id="LossIssuerChartContainerMarketNorm">
-            <canvas id="LossIssuerChartMarketNorm"></canvas>
-          </div>
-
-
-
-
-        </div>
-
-      </div>
-    </div>
-
-
-
-  </div>
-
-  <!-- Modal - OFFERS-->
-  <div id="Offers_Modal" class="table">
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2>OFFERS</h2>
-      <div class="button-container">
-
-        <span class="button-label">Match Columns (AI)</span>
-        <button id="matchColumnsButton" class="edit-button">Columns AI</button>
-
-
-        <div id="productTargetsOverview"></div>
-        <button id="submitToProductsBtn" class="edit-button">📥 vXp Products</button>
-
-        <div id="offerTargetsOverview"></div>
-        <button id="submitToOffersBtn" class="edit-button">📥 vXp Offers</button>
-
-
-        <!-- <h3>Product Matches</h3>
-        <div id="productMatchesOutput"></div>
-
-        <h3>Offer Matches</h3>
-        <div id="offerMatchesOutput"></div> -->
-
-        <!-- neuer button für import angebote -->
-        
-        <!-- <button id="importOffersBtn" class="edit-button">📥 Import Offers aus externer Quelle</button>
-        <div id="matchingContainer"></div>
-        <button id="submitMatchingBtn" class="edit-button">Spalten zugeordnet, Import starten</button> -->
-        <!-- <button id="submitMatchingBtn" class="edit-button" style="display: none;">Spalten zugeordnet, Import starten</button> -->
-
-        <button id="btnQuickImport">📥 Schnellimport (Testdatei Aufbau LLB)</button>
-
-        <button id="importOffersBtn" class="edit-button">📥 Import Offers aus externer Quelle</button>
-         <div id="matchingContainer"></div>
-        <button id="submitMatchingBtn" class="edit-button">Daten prüfen und importieren</button>
-        <!-- <button id="importOffersIssuerBtn" class="edit-button">1. Issuer prüfen</button>
-        <button id="importOffersProdBtn" class="edit-button">2. Produkte prüfen</button>
-        <button id="importOffersPortBtn" class="edit-button">3. Angebote einlesen</button> -->
-
-
-      
-      </div>
-    </div>
-  </div>
 
   <!-- Modal - UPDATES-->
   <div id="DATA_Modal" class="table">
@@ -1271,141 +1604,6 @@
     <div id="compChartContainer8" class="comp-chart-container"></div>
   </div>
 </div>
-
-
-  <!-- Modal - ML -->
-  <div id="ML_Modal" class="table">
-
-    <div class="language-toggle">
-      <!-- Language toggle buttons -->
-      <!-- Uncomment if needed -->
-      <!-- <button id="lang-en" class="language-button">EN</button>
-      <button id="lang-de" class="language-button">DE</button> -->
-    </div>
-
-    <div class="table-content">
-      <span class="close">&times;</span>
-      <h2>ML Configuration</h2>
-
-      <!-- Wrapper for input fields, table, and button -->
-      <div class="models-container">
-        
-        <!-- Input table wrapper -->
-        <div class="input-table-wrapper">
-          <h3>Select Target:</h3>
-          <div class="table-wrapper MLInputWrapper">
-            <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top: 10px;"></div>
-          </div>
-        </div>
-
-        <div id="MLTS-modal-container"></div>
-
-
-        <!-- Table for ML Models -->
-        <h3>Use Trained ML Model</h3>
-        <div class="data-container">
-          <table id="MLTrainedModelsTable" class="data-container">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Target</th>
-                <th>Model Name</th>
-                <th>Created At</th>
-                <th>Model Type</th>
-                <th>Epochs</th>
-                <th>Batch Size</th>
-                <th>Optimizer</th>
-                <th>Loss</th>
-                <th>Metrics</th>
-                <th>Select Model</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Rows will be dynamically inserted here -->
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Generate and Train New ML Model -->
-        <div class="models-container">
-          <h3>Select Untrained ML Model</h3>
-                  <!-- Checkbox for using a new model -->
-                  <!-- <div class="input-container"> -->
-
-                  <!-- </div> -->
-          <table id="MLModelsTable" class="data-container">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Model Type</th>
-                <th>Description</th>
-                <th>Select</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Rows will be dynamically inserted here -->
-            </tbody>
-          </table>
-        </div>
-
-        <label for="newModelCheckbox">Use new model:</label>
-        <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
-        
-        <!-- Wrapper for Epochs, Batch Size, Use New Model, and Run ML -->
-        <h3>Untrained ML Model Parameters</h3>
-        <div class="table-wrapper MLInputWrapper">
-
-          <!-- Epochs Size -->
-          <div class="input-container">
-            <label for="epochsInput">
-              Epochs:
-              <span class="info-icon" id="tooltip-epochs">?</span>
-            </label>
-            <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
-          </div>
-
-          <!-- Batch Size -->
-          <div class="input-container">
-            <label for="batchSizeInput">
-              Batch Size:
-              <span class="info-icon" id="tooltip-batch-size">?</span>
-            </label>
-            <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
-          </div>
-
-
-        </div>
-
-        <h3>Start ML Model</h3>
-        <!-- Button to run ML -->
-        <div class="button-container">
-          <button id="MLButton" class="edit-button">Run ML</button>
-        </div>
-      </div>
-
-    </div> <!-- End of table-content -->
-
-      <!-- Chart Section -->
-      <div class="chart-section">
-        <h3>ML Charts</h3>
-
-        <!-- First Chart -->
-        <div id="test-data-chart-wrapper">
-          <h4>ML Test Data Chart</h4>
-          <canvas id="MLTestDataChart" width="600" height="300"></canvas>
-        </div>
-
-        <!-- Second Chart -->
-        <div id="future-prediction-chart-wrapper">
-          <h4>ML Predictions Chart</h4>
-          <canvas id="MLFuturePredictionChart" width="600" height="300"></canvas>
-        </div>
-      </div>
-
-    
-
-  </div> <!-- End of ML_Modal -->
 
   <!-- Modal - Edit Row -->
   <div id="modal" class="modal">

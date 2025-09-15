@@ -42,7 +42,7 @@ function setupEventListeners() {
   window.api.receive('CustomerData', handleCustomerData);
 
 
-  // FI-Market Data
+  // Market Data: Fixed Income
   window.api.receive('EUSWData', handleEUSWData);
 
   // ISSUER 
@@ -51,8 +51,8 @@ function setupEventListeners() {
   window.api.receive('CSParameterData', handleCSParameterData);
   window.api.receive('RankData', handleRankData);
 
-  // FI-Product Data
-  window.api.receive('ProdAllData', handleProdData);
+  // PRODUCTS: Fixed Income-Product Data
+  window.api.receive('ProdAllData', handleProdDataInit);
   window.api.receive('ProdCouponSchedulesData', (receivedData) => {
     //console.log('Received ProdCouponSchedulesData:', receivedData);
 
@@ -68,6 +68,8 @@ function setupEventListeners() {
   // DEALS:
   window.api.receive('DealsMainData', (data) => {
     handleDealsNameList(data);
+    handleOffersNameList(data);
+
     handleDealsMainData(data);
     
     // console.log('handleDealsMainData:', data);
@@ -404,6 +406,18 @@ function setupDropdowns() {
     setActiveTable: () => appState.setActiveElementId('dealsDataContainer')
   });
 
+  // Offers Dropdown (NEU)
+  setupDropdown({
+    dropdownId: 'createdOffersDropdown',
+    getDataFunction: appState.getOffersNameList,              // kommt aus deiner Trennung OFFER(S)_
+    updateDataFunction: appState.updateOffersDataTable,               // -> ruft handleDealsData(...)
+    setSelectedDealsTableName: appState.setSelectedDealsTableName,
+    setSelectedPortTableName: appState.setSelectedPortTableName, // (optional)
+    setActiveTable: () => appState.setActiveElementId('offersDataContainer')
+  });
+
+
+
   // Portfolio Dropdowns (0, 1, 2)
   ['0','1','2'].forEach(num => {
     setupDropdown({
@@ -436,7 +450,7 @@ function setupDropdowns() {
       if (dropdown) {
         dropdown.addEventListener('change', event => {
           const selectedTableName = event.target.value;
-          console.log(`🔄 Portfolio ausgewählt: ${selectedTableName} (Index: ${index})`);
+          //console.log(`🔄 Portfolio ausgewählt: ${selectedTableName} (Index: ${index})`);
 
           if (setSelectedDealsTableName) {
             appState.setSelectedDealsTableName(selectedTableName);
@@ -462,6 +476,103 @@ function setupDropdowns() {
         });
       }
     }
+
+// // Debounce helper
+// const debounce = (fn, wait = 180) => {
+//   let t;
+//   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+// };
+
+// // Stale-Work-Dropper (nur letztes Event gewinnt)
+// let _dropdownWorkToken = 0;
+// // Optional: Busy-Flag, falls du strikt seriell arbeiten willst
+// let _dropdownBusy = false;
+
+// export function setupDropdown({
+//   dropdownId,
+//   getDataFunction,
+//   updateDataFunction,
+//   updateMvarDataFunction,
+//   updateCvarDataFunction,
+//   updateEADDataFunction,
+//   setSelectedPortTableName,
+//   setSelectedDealsTableName,
+//   setActiveTable,
+//   index
+// }) {
+//   const dropdown = document.getElementById(dropdownId);
+//   if (!dropdown) return;
+
+//   // Doppeltes Binden verhindern
+//   if (dropdown.dataset.listenerBound === '1') return;
+//   dropdown.dataset.listenerBound = '1';
+
+//   const onChangeLight = (event) => {
+//     const selectedTableName = event.target.value;
+
+//     // Leichte State-Updates
+//     if (setSelectedDealsTableName) appState.setSelectedDealsTableName(selectedTableName);
+//     if (setSelectedPortTableName)  appState.setSelectedPortTableName(selectedTableName);
+//     if (setActiveTable)            setActiveTable();
+
+//     const myToken = ++_dropdownWorkToken;
+//     debouncedHeavyUpdate({ selectedTableName, dropdownId, myToken, index });
+//   };
+
+//   const debouncedHeavyUpdate = debounce(({ selectedTableName, dropdownId, myToken, index }) => {
+//     // Falls gerade ein altes Update läuft: Nur den letzten Zustand behalten
+//     const run = () => {
+//       if (myToken !== _dropdownWorkToken) return;  // stale
+//       if (_dropdownBusy) {
+//         // in 50ms nochmal probieren; stale-check bleibt aktiv
+//         setTimeout(run, 50);
+//         return;
+//       }
+//       _dropdownBusy = true;
+
+//       const opts = {
+//         dropdownElementId: dropdownId,
+//         getDataFunction: getDataFunction?.bind(appState),
+//         updateDataFunction: updateDataFunction ? updateDataFunction.bind(appState) : undefined,
+//         updateMvarDataFunction: updateMvarDataFunction ? updateMvarDataFunction.bind(appState) : undefined,
+//         updateCvarDataFunction: updateCvarDataFunction ? updateCvarDataFunction.bind(appState) : undefined,
+//         updateEADDataFunction: updateEADDataFunction ? updateEADDataFunction.bind(appState) : undefined,
+//         selectedTableName,
+//         index
+//       };
+
+//       // ✨ Schwere Arbeit in Idle-Zeit (kein rAF → keine rAF-Violation)
+//       const apply = () => {
+//         if (myToken !== _dropdownWorkToken) { _dropdownBusy = false; return; } // stale
+//         try {
+//           // Optional: Minimale Reflow-Scope-Reduktion während des Writes
+//           const root = document.querySelector('.data-container, .table-content, body');
+//           const prevContain = root && root.style.contain;
+//           if (root) root.style.contain = 'layout paint style';
+
+//           appState.updateDropdownOptions(opts);   // <- heavy DOM work here
+
+//           if (root) root.style.contain = prevContain || '';
+//         } finally {
+//           _dropdownBusy = false;
+//         }
+//       };
+
+//       if ('requestIdleCallback' in window) {
+//         requestIdleCallback(apply, { timeout: 500 });
+//       } else {
+//         // Fallback: entkoppeln, aber NICHT im rAF (vermeidet rAF-Logs)
+//         setTimeout(apply, 0);
+//       }
+//     };
+
+//     run();
+//   }, 180);
+
+//   dropdown.addEventListener('change', onChangeLight, { passive: true });
+// }
+
+
 
 
 
@@ -509,10 +620,10 @@ function setupButtons() {
     { id: 'yahooTab', container: 'inputYahoo-container', button: 'yahooAddButton' },
   ];
 
-  providers.forEach(({ id }) => {
-    const providerTab = document.getElementById(id);
-    providerTab.addEventListener('click', () => handleProviderClick(id, providers));
-  });
+    providers.forEach(({ id }) => {
+      document.getElementById(id)?.addEventListener('click', () => handleProviderClick(id, providers));
+    });
+
 
 
 
@@ -520,6 +631,8 @@ function setupButtons() {
   // Standard Buttons
   const projectButtons = [
     { buttonId: 'fairValueButton', projectName: 'py-fairValue' },
+    { buttonId: 'fairValueButton1', projectName: 'py-fairValue' },
+    { buttonId: 'fairValueButton2', projectName: 'py-fairValue' },
     // { buttonId: 'MVaRButton', projectName: 'py-MVaR' },
     // { buttonId: 'mvaRDistButton', projectName: 'py-MVaR' },
     { buttonId: 'CVaRButton', projectName: 'py-CVaR' },
@@ -614,50 +727,141 @@ function setupButtons() {
 
 
   // PORTFOLIO
-  function handleDealsNameList(receivedData) {
-    try {
-        //console.log('Received Alle Deals Daten:', receivedData);
+  // function handleDealsNameList(receivedData) {
+  //   try {
+  //       //console.log('Received Alle Deals Daten:', receivedData);
         
-        // Extract unique portfolio names from the port_name column
-        const uniquePortNames = [...new Set(receivedData.map(entry => entry.port_name).filter(name => name))];
+  //       // Extract unique portfolio names from the port_name column
+  //       const uniquePortNames = [...new Set(receivedData.map(entry => entry.port_name).filter(name => name))];
 
-        // Transform into dropdown-compatible format
-        const uniquePortfolios = uniquePortNames.map(name => ({ table_name: name }));
+  //       // Transform into dropdown-compatible format
+  //       const uniquePortfolios = uniquePortNames.map(name => ({ table_name: name }));
 
-        // Save the unique deals portfolios
-        appState.setDealsNameList(uniquePortfolios, 'createdDealsDropdown');
+  //       // Save the unique deals portfolios
+  //       appState.setDealsNameList(uniquePortfolios, 'createdDealsDropdown');
 
-        // Update the dropdown
-        appState.applyFiltersAndUpdateDropdowns('dealsTables');
+  //       // Update the dropdown
+  //       appState.applyFiltersAndUpdateDropdowns('dealsTables');
 
-        //console.log('✅ Unique deals portfolios:', uniquePortfolios);
-    } catch (error) {
-        console.error("❌ Error processing created deals data:", error);
+  //       //console.log('✅ Unique deals portfolios:', uniquePortfolios);
+  //   } catch (error) {
+  //       console.error("❌ Error processing created deals data:", error);
+  //   }
+  // }
+
+  // PORTFOLIO
+// // Hilfsfunktion: erkennt OFFER_/OFFERS_ (case-insensitive)
+const isOfferName = (name) =>
+  typeof name === 'string' && /^OFFERS?_/.test(name.toUpperCase());
+
+/** NUR Namen ohne OFFER(S)_ ins Deals-Dropdown **/
+function handleDealsNameList(receivedData) {
+  try {
+    const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
+    const unique = [...new Set(names)];
+    const dealsOnly = unique.filter(n => !isOfferName(n));
+    const dealsList = dealsOnly.map(name => ({ table_name: name }));
+
+    // Speichern & Dropdown aktualisieren
+    if (typeof appState.setDealsNameList === 'function') {
+      appState.setDealsNameList(dealsList, 'createdDealsDropdown');
     }
+    if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
+      appState.applyFiltersAndUpdateDropdowns('dealsTables');
+    }
+  } catch (error) {
+    console.error("❌ Error processing deals name list:", error);
   }
+}
+
+/** NUR Namen mit OFFER(S)_ ins Offers-Dropdown **/
+function handleOffersNameList(receivedData) {
+  try {
+    const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
+    const unique = [...new Set(names)];
+    const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/.test(n.toUpperCase());
+    const offersList = unique.filter(isOffer).map(name => ({ table_name: name }));
+
+    // nur Liste setzen …
+    if (typeof appState.setOffersNameList === 'function') {
+      appState.setOffersNameList(offersList, 'createdOffersDropdown');
+    }
+
+    // … und deine bestehende Update-Pipeline triggern
+    if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
+      appState.applyFiltersAndUpdateDropdowns('offersTables'); // falls du diese Gruppe nutzt
+    }
+  } catch (error) {
+    console.error("❌ Error processing offers name list:", error);
+  }
+}
+
+
+
+
+
+
+    document.addEventListener('change', (e) => {
+  const dd = e.target;
+  if (!dd || dd.id !== 'createdOffersDropdown') return;
+
+  const port_name = dd.value;
+  appState.setSelectedDealsTableName(port_name);
+  appState.setSelectedPortTableName(port_name);
+
+  const all = (appState.getAllDealsData && appState.getAllDealsData()) || [];
+  const rows = all.filter(r => r?.port_name === port_name);
+
+  // deine handleDealsData routed OFFER(S)_ automatisch in offersDataContainer
+  appState.handleDealsData(rows, port_name);
+});
+
+
+
+
 
 // Created PORT data
+  // function handlePortNameList(receivedData) {
+  // try {
+  //     //console.log('Received Alle Portfolio Daten:', receivedData);
+
+  //     // Extract unique portfolio names from port_name column
+  //     const uniquePortNames = [...new Set(receivedData.map(entry => entry.port_name).filter(name => name))];
+
+  //     // Transform into dropdown-compatible format
+  //     const uniquePortfolios = uniquePortNames.map(name => ({ table_name: name }));
+
+  //     // Update each dropdown with unique portfolio names
+  //     ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
+  //         appState.setPortNameList(uniquePortfolios, dropdown);
+  //         appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
+  //     });
+
+  //     //console.log('✅ Unique portfolios for dropdowns:', uniquePortfolios);
+  // } catch (error) {
+  //     console.error("❌ Error processing created port data:", error);
+  // }
+  // }
   function handlePortNameList(receivedData) {
   try {
-      //console.log('Received Alle Portfolio Daten:', receivedData);
+    const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/i.test(n);
 
-      // Extract unique portfolio names from port_name column
-      const uniquePortNames = [...new Set(receivedData.map(entry => entry.port_name).filter(name => name))];
+    const names = (receivedData || [])
+      .map(e => e?.port_name)
+      .filter(Boolean)
+      .filter(n => !isOffer(n)); // ❗ Angebote rausfiltern
 
-      // Transform into dropdown-compatible format
-      const uniquePortfolios = uniquePortNames.map(name => ({ table_name: name }));
+    const uniquePortfolios = [...new Set(names)].map(name => ({ table_name: name }));
 
-      // Update each dropdown with unique portfolio names
-      ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
-          appState.setPortNameList(uniquePortfolios, dropdown);
-          appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
-      });
-
-      //console.log('✅ Unique portfolios for dropdowns:', uniquePortfolios);
+    ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
+      appState.setPortNameList(uniquePortfolios, dropdown);
+      appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
+    });
   } catch (error) {
-      console.error("❌ Error processing created port data:", error);
+    console.error("❌ Error processing created port data:", error);
   }
-  }
+}
+
 
   function handleSaveSelection() {
     const port_name = document.getElementById('nameInput').value;
@@ -959,74 +1163,286 @@ function setupButtons() {
         //console.log('🚀 Sending payload for py-fairValue:', payload);
         window.api.send(`start-py-fairValue`, payload);
       }
-          function handleFairValueComplete(data) {
-            // console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
-            if (data.projectName === 'py-fairValue') {
-              // 🛠 1️⃣ Setzt die aktive Tabelle auf "deals"
-              appState.setActiveTable('deals');
-              appState.setActiveElementId('portDataContainer0')
+          // function handleFairValueComplete(data) {
+          //   // console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
+          //   if (data.projectName === 'py-fairValue') {
+          //     // 🛠 1️⃣ Setzt die aktive Tabelle auf "deals"
+          //     appState.setActiveTable('deals');
+          //     appState.setActiveElementId('portDataContainer0')
       
-              // 🛠 2️⃣ Holt den Portfolionamen aus Deals
-              const port_name = appState.getSelectedDealsTableName();
-              // console.log('🔹 Neues Portfolio:', port_name);
-      
-             // Antwort nur für Button:
-              handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
+          //     // 🛠 2️⃣ Holt den Portfolionamen aus Deals
+          //     const port_name = appState.getSelectedDealsTableName();
+          //     // console.log('🔹 Neues Portfolio:', port_name);
 
-              // 🛠 3️⃣ Holt die aktuellsten Portfolio-Daten **vor** dem Update der Dropdowns
-              fetchAndUpdateFairValueData();
+
+
+
+      
+          //    // Antwort nur für Button:
+          //     handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
+
+          //     // 🛠 3️⃣ Holt die aktuellsten Portfolio-Daten **vor** dem Update der Dropdowns
+          //     fetchAndUpdateFairValueData();
+          //   }
+          // }
+
+          // function handleFairValueComplete(data) {
+          //   console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
+          //   if (data.projectName === 'py-fairValue') {
+
+          //     // 🔎 1) Portfolioname holen und auf OFFER(S)_ prüfen (case-insensitive)
+          //     const port_name = (appState.getSelectedDealsTableName && appState.getSelectedDealsTableName()) || '';
+          //     const isOffer = /^OFFERS?_/.test(String(port_name).toUpperCase());
+
+          //     // 🛠 2) Aktive Ansicht je nach Prefix setzen
+          //     if (isOffer) {
+          //       appState.setActiveTable('offers');
+          //       appState.setActiveElementId('portDataContainer4');
+          //       fetchAndUpdateFairValueOffersData();
+          //     } else {
+          //       appState.setActiveTable('deals');
+          //       appState.setActiveElementId('portDataContainer0');
+          //       fetchAndUpdateFairValueData();
+          //     }
+
+          //     // 👉 3) Antwort nur für Button:
+          //     handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
+
+          //     // 🔁 4) Aktuellste Portfolio-Daten laden/aktualisieren
+          //     // fetchAndUpdateFairValueData();
+          //   }
+          // }
+
+          //     function fetchAndUpdateFairValueData() {
+          //       window.api.receive('PortfoliosData', (receivedData) => {
+          //       // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
+          //       // Neue Daten mit MATURITY_YEAR hinzufügen
+          //         const enhancedData = receivedData    //addMaturityYearToData(receivedData);
+
+          //         if (!enhancedData || enhancedData.length === 0) {
+          //           console.warn("⚠️ No new Portfolios data received!");
+          //           appState.setAllPortfolioData([]);
+          //           return;
+          //         }
+              
+          //         appState.setAllPortfolioData(enhancedData);
+          //         //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
+              
+          //         // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
+          //         const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
+          //           if (!port_name) {
+          //             console.warn("⚠️ Kein Portfolio ausgewählt.");
+          //             return;
+          //           }
+                  
+          //         const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
+          //         //appState.updatePortDataTable(filteredData, 0);
+          //         appState.updatePortDataTable(filteredData);
+          //         //console.log('✅ Portfolio filteredData:', filteredData, port_name);
+              
+          //         // 🛠 Dropdowns aktualisieren
+          //         ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
+          //           appState.updateDropdownOptions({
+          //             dropdownElementId: dropdownId,
+          //             getDataFunction: appState.getPortNameList.bind(appState),
+          //             updateDataFunction: appState.getPortfolioData.bind(appState),
+          //             selectedTableName: index === 0 ? port_name : undefined
+          //           });
+          //         });
+              
+          //         // 🛠 Portfolio setzen
+          //         // console.log('port_name', port_name);
+          //         appState.setSelectedPortTableName(port_name);
+          //         appState.setSelectedDealsTableName(port_name);
+          //         //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
+
+          //         handlePortAggData(filteredData, 3, port_name);
+          //         openPortAnalyseAndFocus(port_name);
+                  
+          //       });
+              
+          //       // 📤 Erst jetzt senden
+          //       window.api.send('fetch-table-data', 'Portfolios');
+          //     }
+          //     function fetchAndUpdateFairValueOffersData() {
+          //       window.api.receive('PortfoliosData', (receivedData) => {
+          //       // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
+          //       // Neue Daten mit MATURITY_YEAR hinzufügen
+          //         const enhancedData = receivedData    //addMaturityYearToData(receivedData);
+
+          //         if (!enhancedData || enhancedData.length === 0) {
+          //           console.warn("⚠️ No new Portfolios data received!");
+          //           appState.setAllPortfolioData([]);
+          //           return;
+          //         }
+              
+          //         appState.setAllPortfolioData(enhancedData);
+          //         //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
+              
+          //         // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
+          //         const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
+          //           if (!port_name) {
+          //             console.warn("⚠️ Kein Portfolio ausgewählt.");
+          //             return;
+          //           }
+                  
+          //         const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
+          //         //appState.updatePortDataTable(filteredData, 0);
+          //         appState.updateOffersDataTable(filteredData);
+          //         //console.log('✅ Portfolio filteredData:', filteredData, port_name);
+              
+          //         // 🛠 Dropdowns aktualisieren
+          //         ['createdOffersDropdown'].forEach((dropdownId, index) => {
+          //           appState.updateDropdownOptions({
+          //             dropdownElementId: dropdownId,
+          //             getDataFunction: appState.getPortNameList.bind(appState),
+          //             updateDataFunction: appState.getPortfolioData.bind(appState),
+          //             selectedTableName: index === 0 ? port_name : undefined
+          //           });
+          //         });
+              
+          //         // 🛠 Portfolio setzen
+          //         // console.log('port_name', port_name);
+          //         appState.setSelectedPortTableName(port_name);
+          //         appState.setSelectedDealsTableName(port_name);
+          //         //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
+
+          //         //handlePortAggData(filteredData, 3, port_name);
+          //         //openPortAnalyseAndFocus(port_name);
+                  
+          //       });
+              
+          //       // 📤 Erst jetzt senden
+          //       window.api.send('fetch-table-data', 'Portfolios');
+          //     }
+
+          function handleFairValueComplete(data) {
+            console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
+            if (data.projectName !== 'py-fairValue') return;
+
+            const port_name = String(appState.getSelectedDealsTableName?.() || '');
+            const isOffer = /^OFFERS?_/i.test(port_name);
+
+            if (isOffer) {
+              appState.setActiveTable('offers');
+              //appState.setActiveElementId('portDataContainer4');
+              appState.setActiveElementId('offersDataContainer'); 
+              // pass den Namen durch
+              fetchAndUpdateFairValueOffersData(port_name);
+            } else {
+              appState.setActiveTable('deals');
+              appState.setActiveElementId('portDataContainer0');
+              fetchAndUpdateFairValueData(port_name);
+            }
+
+            // Button-Rückmeldung (nimmt fairValueButton2, wenn vorhanden)
+            const btn = document.getElementById('fairValueButton2') || document.getElementById('fairValueButton');
+            if (typeof handleProjectResponse === 'function') {
+              handleProjectResponse(btn, data.projectName, data);
             }
           }
-              function fetchAndUpdateFairValueData() {
-                window.api.receive('PortfoliosData', (receivedData) => {
-                // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
-                // Neue Daten mit MATURITY_YEAR hinzufügen
-                  const enhancedData = receivedData    //addMaturityYearToData(receivedData);
-
-                  if (!enhancedData || enhancedData.length === 0) {
+              function fetchAndUpdateFairValueData(port_name) {
+                const onData = (receivedData) => {
+                  const enhancedData = receivedData; // ggf. addMaturityYearToData(receivedData)
+                  if (!Array.isArray(enhancedData) || !enhancedData.length) {
                     console.warn("⚠️ No new Portfolios data received!");
                     appState.setAllPortfolioData([]);
                     return;
                   }
-              
+                  if (!port_name) {
+                    console.warn("⚠️ Kein Portfolio ausgewählt.");
+                    return;
+                  }
+
                   appState.setAllPortfolioData(enhancedData);
-                  //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
-              
-                  // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
-                  const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
-                    if (!port_name) {
-                      console.warn("⚠️ Kein Portfolio ausgewählt.");
-                      return;
-                    }
-                  
-                  const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
-                  //appState.updatePortDataTable(filteredData, 0);
-                  appState.updatePortDataTable(filteredData);
-                  //console.log('✅ Portfolio filteredData:', filteredData, port_name);
-              
-                  // 🛠 Dropdowns aktualisieren
-                  ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
-                    appState.updateDropdownOptions({
+                  const filteredData = enhancedData.filter(e => e.port_name === port_name);
+
+                  appState.updatePortDataTable?.(filteredData);
+
+                  ['createdPortDropdown0','createdPortDropdown1','createdPortDropdown2'].forEach((dropdownId, index) => {
+                    appState.updateDropdownOptions?.({
                       dropdownElementId: dropdownId,
                       getDataFunction: appState.getPortNameList.bind(appState),
-                      updateDataFunction: appState.getPortfolioData.bind(appState),
+                      updateDataFunction: appState.getPortfolioData?.bind(appState),
                       selectedTableName: index === 0 ? port_name : undefined
                     });
                   });
-              
-                  // 🛠 Portfolio setzen
-                  // console.log('port_name', port_name);
-                  appState.setSelectedPortTableName(port_name);
-                  appState.setSelectedDealsTableName(port_name);
-                  //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
 
-                  handlePortAggData(filteredData, 3, port_name);
-                  
-                });
-              
-                // 📤 Erst jetzt senden
+                  appState.setSelectedPortTableName?.(port_name);
+                  appState.setSelectedDealsTableName?.(port_name);
+
+                  if (typeof handlePortAggData === 'function') handlePortAggData(filteredData, 3, port_name);
+                  if (typeof openPortAnalyseAndFocus === 'function') openPortAnalyseAndFocus(port_name);
+                };
+
+                if (window.api.once) window.api.once('PortfoliosData', onData);
+                else window.api.receive('PortfoliosData', onData); // Fallback
+
                 window.api.send('fetch-table-data', 'Portfolios');
               }
+              function fetchAndUpdateFairValueOffersData(port_name) {
+                const onData = (receivedData) => {
+                  const enhancedData = receivedData;
+                  if (!Array.isArray(enhancedData) || !enhancedData.length) {
+                    console.warn("⚠️ No new Portfolios data received!");
+                    appState.setAllPortfolioData([]);
+                    return;
+                  }
+                  if (!port_name) {
+                    console.warn("⚠️ Kein Portfolio ausgewählt.");
+                    return;
+                  }
+
+                  appState.setAllPortfolioData(enhancedData);
+                  const filteredData = enhancedData.filter(e => e.port_name === port_name);
+
+                  // Tabelle rechts aktualisieren
+                  appState.updateOffersDataTable?.(filteredData);
+
+                  // Offers-Dropdown mit Offer-Liste (nicht Port-Liste) befüllen
+                  appState.updateDropdownOptions?.({
+                    dropdownElementId: 'createdOffersDropdown',
+                    getDataFunction: (appState.getOffersNameList || appState.getDealsNameList).bind(appState),
+                    updateDataFunction: appState.updateOffersDataTable?.bind(appState),
+                    selectedTableName: port_name
+                  });
+
+                  appState.setSelectedDealsTableName?.(port_name);
+                  appState.setSelectedPortTableName?.(port_name);
+                };
+
+                if (window.api.once) window.api.once('PortfoliosData', onData);
+                else window.api.receive('PortfoliosData', onData); // Fallback
+
+                window.api.send('fetch-table-data', 'Portfolios');
+              }
+                  function openPortAnalyseAndFocus(portName) {
+                    // Tab öffnen (dein Tabs-Init hängt am Button mit id="PORT_Tab")
+                    document.getElementById('PORT_Tab')?.click();
+
+                    // Dropdown auswählen + hervorheben
+                    setTimeout(() => {
+                      const dd = document.getElementById('createdPortDropdown0');
+                      if (!dd) return;
+
+                      // Wenn ein Portfolioname übergeben wurde, im Dropdown anwählen
+                      if (portName) {
+                        const opt = Array.from(dd.options).find(o => o.value === portName || o.text === portName);
+                        if (opt) {
+                          dd.value = opt.value;
+                          // falls deine Logik auf change hört:
+                          dd.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                      }
+
+                      dd.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      dd.focus({ preventScroll: true });
+                      dd.classList.add('pulse');
+                      setTimeout(() => dd.classList.remove('pulse'), 1400);
+                    }, 200);
+                  }
+
+
         
       function handleMVaRProject(buttonElement, extraParam) {
         const selectedTableName = appState.getSelectedPortTableName();
@@ -1526,18 +1942,14 @@ function setupButtons() {
 
   //CUSTOMER
     function handleCustomerData(data) {
-      console.log('Empfangene Kundendaten:', data);
+      //console.log('Empfangene Kundendaten:', data);
       appState.setCustomerData(data);
       
     }
-
-
-
   // DEALS
   function handleDealsMainData(receivedData) {
     appState.setAllDealsData(receivedData);
     // console.log('📌 Alle Deals Daten: DealsMain:', receivedData);
-
     appState.setActiveTable('deals');
 
     const dealsResetButton = document.getElementById('dealsResetFiltersButton');
@@ -1545,7 +1957,6 @@ function setupButtons() {
       dealsResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'deals'));
     }
   }
-  
   // PORT: Portfolios
   function handlePortfolioData(receivedData) {
     //Daten in AppState speichern
@@ -1559,7 +1970,6 @@ function setupButtons() {
       portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
     }
   }
-
   // ISSUER
   function handleIssuerData(receivedData) {
     //console.log('IssuerData', receivedData);
@@ -1574,20 +1984,7 @@ function setupButtons() {
     }
   }
   // PROD
-  // function handleProdData(receivedData) {
-  //   console.log('ProdAllData', receivedData);
-  //   appState.setActiveTable('prod');
-  //   appState.setProdData(receivedData);
-  //   appState.applyFiltersAndUpdateDropdowns('prod');
-  //   appState.tableConfigs[appState.currentActiveTable];
-
-  //   const prodResetButton = document.getElementById('prodResetFiltersButton');
-  //   if (prodResetButton) {
-  //     prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'prod'));
-  //   }
-  // }
-
-  function handleProdData(receivedData) {
+  function handleProdDataInit(receivedData) {
   // TICKER → ISSUER Zuordnung holen
   const issuerData = appState.getIssuerData(); // enthält z. B. [{ TICKER: "TAAA", ISSUER: "Tesla Inc." }, ...]
 
@@ -1616,12 +2013,6 @@ function setupButtons() {
     prodResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(updatedData, 'prod'));
   }
 }
-
-  // PRODCouponData
-  // function handleCouponData(receivedData) {
-  //   console.log('CouponData', receivedData);
-  //   appState.setCouponData(receivedData);
-  // }
   // IR
   function handleEUSWData(data) {
     appState.setEUSWData(data);
@@ -1688,36 +2079,17 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
 
     // MVaR
   function handleMvarDistData(receivedData) {
-      console.log('handleMvarDistData:', receivedData)
+      //console.log('handleMvarDistData:', receivedData)
     appState.setMvarDistData(receivedData); 
-
-    
-    // const MVaRTable = handleMVaRData(receivedData, 0);
-
-    // const portMVaRDataContainer = document.getElementById('portMVaRDataContainer');
-    // if (portMVaRDataContainer) {
-    //   portMVaRDataContainer.innerHTML = '';
-    //   portMVaRDataContainer.appendChild(MVaRTable.cloneNode(true));
-    // }
-    // updateMVaRChart(receivedData);
-    //appState.updateMvarDataTable(receivedData);
   }
 
   //CVaR
   function handleAllCVaRData(receivedData) {
     // console.log("📊 Received full CVaR Data (new storage):", receivedData);
-
-    // if (!receivedData || receivedData.length === 0) {
-    //     console.warn("⚠️ No CVaR data received!");
-    //     appState.setAllCvarData([]);  // Store empty array
-    //     return;
-    // }
-
     appState.setAllCvarData(receivedData);  // ✅ Store in AllCvarData
-    
+  
     handleCVaRData(receivedData, 0) 
-
-}
+  }
   // EAD
   function handleAllEADData(receivedData) {
     //console.log("📊 Received all EAD Data:", receivedData);
@@ -1730,8 +2102,7 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
 
     appState.setAllEADData(receivedData);  // ✅ Store in AllCvarData
     handleEADData(receivedData)
-
-}
+  }
 
   //LOSS
   function handleAllLossData(receivedData) {
@@ -1746,7 +2117,7 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     appState.setAllLossData(receivedData);  // ✅ Store in AllCvarData
     handleLossIssuerMainData(receivedData)
 
-}
+  }
 
 
   // MVaR Input

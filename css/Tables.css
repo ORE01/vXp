@@ -1,10 +1,11 @@
 
 .table {
-    display: hidden;
-    font-family: "Your Font Name", sans-serif;
-    font-size: 13px;
-    color: rgb(161, 160, 160);
-  }
+  /* display: hidden;  ❌ */
+/*  display: none;        ✅ oder: visibility: hidden; */
+  font-family: "Your Font Name", sans-serif;
+  font-size: 13px;
+  color: rgb(161, 160, 160);
+}
 
   .table-selected {
     background-color: #4CAF50; 
@@ -231,14 +232,14 @@
     margin-bottom: 20px;
   } */
 
-  .data-wrapper {
-    display: 1;
-    margin-left: 20px; 
-    margin-right: 40px;
-    vertical-align: top;
-    display: flex;
-    flex-direction: column;
-  }
+.data-wrapper {
+  margin-left: 20px; 
+  margin-right: 40px;
+  vertical-align: top;
+  display: flex;
+  flex-direction: column;
+}
+
 
   .portfolio-details-container {
     flex: 0 1 20%;
@@ -273,6 +274,76 @@
     text-align: left; /* Ensure text inside is aligned to the left */
     width: 90%; /* Adjust width relative to the parent container */
   }
+
+
+
+  /* 1) Elter erlaubt wieder Überlauf */
+#PORT_Modal .table-content{
+  overflow: visible;         /* statt overflow:hidden */
+}
+
+/* 2) Der Body scrollt nur vertikal, die Tabelle selbst horizontal */
+#PORT_Modal .sub-panel-body{
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 3) Horizontaler Scrollcontainer für die Tabelle */
+#PORT_Modal #portDataContainer0{
+  overflow-x: auto;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 4) Tabelle breiter als Container ⇒ horizontale Scrollbar erscheint */
+#PORT_Modal #portDataContainer0 table{
+  width: max-content;     /* NICHT 100% */
+  min-width: 1200px;      /* optionaler Startwert */
+  border-collapse: collapse;
+}
+
+/* 5) Kein Zeilenumbruch in Zellen (sonst passt alles rein) */
+#PORT_Modal #portDataContainer0 th,
+#PORT_Modal #portDataContainer0 td{
+  white-space: nowrap;
+}
+
+/* 6) Falls Eltern Flex/Grid sind: Schrumpfen erlauben (wichtig für Scrollbar) */
+#PORT_Modal .table-content,
+#PORT_Modal .data-wrapper,
+#PORT_Modal .data-container{
+  min-width: 0;
+}
+
+
+
+
+.link-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #4aa3ff;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+.link-button:hover { color: #72b8ff; }
+
+:where(#CREATE_PORTFOLIO_Modal, #SUMMARY_Modal) td.prod-id-cell{
+  color:#4aa3ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+:where(#CREATE_PORTFOLIO_Modal, #SUMMARY_Modal) td.prod-id-cell:hover{
+  color:#72b8ff;
+}
+
+
+
+
+
 
 
 

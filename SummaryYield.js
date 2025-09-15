@@ -6,7 +6,7 @@ let euswapChart;
 
 
 export function handleSummaryYieldData(filteredData, index, port_name) {
-  console.log('summaryData:', filteredData);
+  //console.log('summaryData:', filteredData);
 
   // You intentionally use hardcoded values here
   const elementId = `portDataContainer${0}`;
@@ -24,7 +24,7 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
   const yieldCurve = transformTSDataToEUSWFormat(latestRow);
   const pastYieldCurve = transformTSDataToEUSWFormat(fiveYearsAgoRow);
 
-  console.log('portfolioData:', portfolioData);
+//   console.log('portfolioData:', portfolioData);
 //   console.log('EUSWData:', EUSWData);
 //   console.log('yieldCurve:', yieldCurve);
 //   console.log('pastYieldCurve:', pastYieldCurve);

@@ -1,0 +1,59 @@
+/* NEW_PRODUCTS only — minimale, sichere Overrides */
+#NEW_PRODUCTS_Modal { 
+  --trigger-max-width: 200px;     /* optional: gleiche Breite wie global */
+}
+
+/* Standard-Flow wie bei den anderen Modals */
+#NEW_PRODUCTS_Modal .table-content { 
+  display: block; 
+  position: relative; 
+}
+
+/* Trigger sauber UNTEREINANDER im linken Bereich */
+#NEW_PRODUCTS_Modal .chart-section{
+  display: block !important;
+  width: 100%;
+  margin: var(--parent-gap) 0;
+  text-align: left;
+}
+
+/* Globale Trigger-Optik beibehalten, nur Breite begrenzen */
+#NEW_PRODUCTS_Modal .section-trigger{
+  max-width: var(--trigger-max-width);   /* kein 100%-Button */
+  width: auto;
+}
+
+/* Close-Icon über Panel/Backdrop legen (wichtig fürs Schließen) */
+#NEW_PRODUCTS_Modal .close{
+  position: absolute;
+  top: 8px; 
+  right: 12px;
+  z-index: 1300; /* > 1100 (Panel) & > 1050 (Backdrop) */
+  cursor: pointer;
+}
+
+/* Kosmetik */
+#NEW_PRODUCTS_Modal .portfolio-info .section-header{ 
+  margin: 0; 
+}
+
+/* OFFERS: Offers & Preview UNTEREINANDER */
+#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col{
+  display: flex;
+  flex-direction: column;  /* stack statt nebeneinander */
+  gap: 16px;
+}
+#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col > .table-card{
+  width: 100%;
+  margin: 0;
+}
+/* Sicherheitsnetz gegen alte Floats */
+#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col .data-container{
+  float: none !important;
+}
+
+
+
+
+
+

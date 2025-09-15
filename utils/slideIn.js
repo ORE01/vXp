@@ -182,17 +182,11 @@ export function initSlideIns({ containerIds = [], selectors = ['.table .table-co
 // Auto-Init – passt für SUMMARY + MARKETDATA out-of-the-box
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    initSlideIns({
-      containerIds: ['SUMMARY_Modal', 'MARKETDATA_Modal'],
-      // selectors: ['.table .table-content'], // zusätzlich/alternativ
-      observe: false // auf true setzen, wenn dynamisch hinzugefügt wird
-    });
+    initSlideIns({ selectors: ['.table .table-content'] });
   }, { once: true });
 } else {
-  initSlideIns({
-    containerIds: ['SUMMARY_Modal', 'MARKETDATA_Modal'],
-    observe: false
-  });
+  initSlideIns({ selectors: ['.table .table-content'] });
 }
+
 
 
