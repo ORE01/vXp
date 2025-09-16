@@ -98,6 +98,7 @@ export function dealsAddButtonHandler (event, selectedTableName) {
 // }
 
 export function handleDealsData(receivedData, dealsTableName) {
+  console.log('dealsTableName:', dealsTableName)
   const tableName = dealsTableName || '';
   const norm = String(tableName).trim().toUpperCase();
   const isOffer = /^OFFERS?_/.test(norm); // OFFER_ oder OFFERS_
@@ -136,6 +137,7 @@ export function handleDealsData(receivedData, dealsTableName) {
     addButton.dataset.bound = '1'; // Doppel-Listener vermeiden
     addButton.addEventListener('click', (event) => {
       const actionType = 'add';
+      
       handleFormAction(event, filteredDealsData, null, tableName, actionType);
     });
   }
@@ -255,7 +257,8 @@ function attachTradeIdOpensDealsModal(container, tableName, dataArr) {
       }
 
       // 👉 exakt der gleiche Edit-Flow wie der alte Edit-Button
-      handleFormAction(ev, dataArr, rowIndex, tableName, 'edit');
+      
+      handleFormAction(ev, dataArr, rowIndex, 'DealsMain', 'edit');
     });
   });
 }

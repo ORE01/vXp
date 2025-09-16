@@ -1163,159 +1163,6 @@ function handleOffersNameList(receivedData) {
         //console.log('🚀 Sending payload for py-fairValue:', payload);
         window.api.send(`start-py-fairValue`, payload);
       }
-          // function handleFairValueComplete(data) {
-          //   // console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
-          //   if (data.projectName === 'py-fairValue') {
-          //     // 🛠 1️⃣ Setzt die aktive Tabelle auf "deals"
-          //     appState.setActiveTable('deals');
-          //     appState.setActiveElementId('portDataContainer0')
-      
-          //     // 🛠 2️⃣ Holt den Portfolionamen aus Deals
-          //     const port_name = appState.getSelectedDealsTableName();
-          //     // console.log('🔹 Neues Portfolio:', port_name);
-
-
-
-
-      
-          //    // Antwort nur für Button:
-          //     handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
-
-          //     // 🛠 3️⃣ Holt die aktuellsten Portfolio-Daten **vor** dem Update der Dropdowns
-          //     fetchAndUpdateFairValueData();
-          //   }
-          // }
-
-          // function handleFairValueComplete(data) {
-          //   console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
-          //   if (data.projectName === 'py-fairValue') {
-
-          //     // 🔎 1) Portfolioname holen und auf OFFER(S)_ prüfen (case-insensitive)
-          //     const port_name = (appState.getSelectedDealsTableName && appState.getSelectedDealsTableName()) || '';
-          //     const isOffer = /^OFFERS?_/.test(String(port_name).toUpperCase());
-
-          //     // 🛠 2) Aktive Ansicht je nach Prefix setzen
-          //     if (isOffer) {
-          //       appState.setActiveTable('offers');
-          //       appState.setActiveElementId('portDataContainer4');
-          //       fetchAndUpdateFairValueOffersData();
-          //     } else {
-          //       appState.setActiveTable('deals');
-          //       appState.setActiveElementId('portDataContainer0');
-          //       fetchAndUpdateFairValueData();
-          //     }
-
-          //     // 👉 3) Antwort nur für Button:
-          //     handleProjectResponse(document.getElementById('fairValueButton'), data.projectName, data);
-
-          //     // 🔁 4) Aktuellste Portfolio-Daten laden/aktualisieren
-          //     // fetchAndUpdateFairValueData();
-          //   }
-          // }
-
-          //     function fetchAndUpdateFairValueData() {
-          //       window.api.receive('PortfoliosData', (receivedData) => {
-          //       // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
-          //       // Neue Daten mit MATURITY_YEAR hinzufügen
-          //         const enhancedData = receivedData    //addMaturityYearToData(receivedData);
-
-          //         if (!enhancedData || enhancedData.length === 0) {
-          //           console.warn("⚠️ No new Portfolios data received!");
-          //           appState.setAllPortfolioData([]);
-          //           return;
-          //         }
-              
-          //         appState.setAllPortfolioData(enhancedData);
-          //         //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
-              
-          //         // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
-          //         const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
-          //           if (!port_name) {
-          //             console.warn("⚠️ Kein Portfolio ausgewählt.");
-          //             return;
-          //           }
-                  
-          //         const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
-          //         //appState.updatePortDataTable(filteredData, 0);
-          //         appState.updatePortDataTable(filteredData);
-          //         //console.log('✅ Portfolio filteredData:', filteredData, port_name);
-              
-          //         // 🛠 Dropdowns aktualisieren
-          //         ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdownId, index) => {
-          //           appState.updateDropdownOptions({
-          //             dropdownElementId: dropdownId,
-          //             getDataFunction: appState.getPortNameList.bind(appState),
-          //             updateDataFunction: appState.getPortfolioData.bind(appState),
-          //             selectedTableName: index === 0 ? port_name : undefined
-          //           });
-          //         });
-              
-          //         // 🛠 Portfolio setzen
-          //         // console.log('port_name', port_name);
-          //         appState.setSelectedPortTableName(port_name);
-          //         appState.setSelectedDealsTableName(port_name);
-          //         //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
-
-          //         handlePortAggData(filteredData, 3, port_name);
-          //         openPortAnalyseAndFocus(port_name);
-                  
-          //       });
-              
-          //       // 📤 Erst jetzt senden
-          //       window.api.send('fetch-table-data', 'Portfolios');
-          //     }
-          //     function fetchAndUpdateFairValueOffersData() {
-          //       window.api.receive('PortfoliosData', (receivedData) => {
-          //       // console.log(`✅ Updated PortfoliosData Data:`, receivedData);
-          //       // Neue Daten mit MATURITY_YEAR hinzufügen
-          //         const enhancedData = receivedData    //addMaturityYearToData(receivedData);
-
-          //         if (!enhancedData || enhancedData.length === 0) {
-          //           console.warn("⚠️ No new Portfolios data received!");
-          //           appState.setAllPortfolioData([]);
-          //           return;
-          //         }
-              
-          //         appState.setAllPortfolioData(enhancedData);
-          //         //console.log(`🔄 UI should now update with`, appState.getAllPortfolioData());
-              
-          //         // 🔹 Jetzt: Verarbeitung erst NACH dem Empfang
-          //         const port_name = appState.getSelectedPortTableName(); // oder getSelectedPortTableName(), je nach Kontext
-          //           if (!port_name) {
-          //             console.warn("⚠️ Kein Portfolio ausgewählt.");
-          //             return;
-          //           }
-                  
-          //         const filteredData = enhancedData.filter(entry => entry.port_name === port_name);
-          //         //appState.updatePortDataTable(filteredData, 0);
-          //         appState.updateOffersDataTable(filteredData);
-          //         //console.log('✅ Portfolio filteredData:', filteredData, port_name);
-              
-          //         // 🛠 Dropdowns aktualisieren
-          //         ['createdOffersDropdown'].forEach((dropdownId, index) => {
-          //           appState.updateDropdownOptions({
-          //             dropdownElementId: dropdownId,
-          //             getDataFunction: appState.getPortNameList.bind(appState),
-          //             updateDataFunction: appState.getPortfolioData.bind(appState),
-          //             selectedTableName: index === 0 ? port_name : undefined
-          //           });
-          //         });
-              
-          //         // 🛠 Portfolio setzen
-          //         // console.log('port_name', port_name);
-          //         appState.setSelectedPortTableName(port_name);
-          //         appState.setSelectedDealsTableName(port_name);
-          //         //console.log('✅ Portfolio-Daten & Dropdowns aktualisiert.');
-
-          //         //handlePortAggData(filteredData, 3, port_name);
-          //         //openPortAnalyseAndFocus(port_name);
-                  
-          //       });
-              
-          //       // 📤 Erst jetzt senden
-          //       window.api.send('fetch-table-data', 'Portfolios');
-          //     }
-
           function handleFairValueComplete(data) {
             console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
             if (data.projectName !== 'py-fairValue') return;
@@ -2219,6 +2066,36 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     //console.log('FBH saveChanges tableName:', newData, cleanTableName, uniqueIdentifier);
     window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
   }
+
+  window.api.receive('update-data-success', () => {
+  const dd = document.getElementById('createdDealsDropdown');
+  const prev = (appState.getSelectedDealsTableName?.() || dd?.value || '').trim();
+
+  // frische Deals-Daten holen
+  window.api.once('DealsMainData', (rows) => {
+    // deine Idee:
+    appState.updateDealsDataTable?.(rows);
+    appState.updateOffersDataTable?.(rows);
+    console.log('AllDealsData:', appState.getAllDealsData());
+    console.log('OffersData:', appState.getOffersData());
+
+    const dealsTable = appState.getSelectedDealsTableName();
+    console.log('dealsTable:', dealsTable);
+
+    // Auswahl zurücksetzen
+    if (dd && prev) {
+      const has = Array.from(dd.options).some(o => o.value === prev);
+      if (has) {
+        dd.value = prev;
+        dd.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    appState.setSelectedDealsTableName?.(prev);
+  });
+
+  window.api.send('fetch-table-data', 'DealsMain');
+});
+
 
 
 export { appState };

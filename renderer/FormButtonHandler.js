@@ -6,6 +6,7 @@ import { appState } from '../renderer.js';
 
 
 export function handleFormAction(event, data, rowIndex, selectedTableName, actionType) {
+  console.log('selectedTableName:', selectedTableName);
 
   displayModal(actionType, rowIndex);
   setupFormFields(actionType, data, rowIndex, selectedTableName);
@@ -141,6 +142,7 @@ function setupAddOperation(data, selectedTableName) {
 
 
 function setupEditOperation(data, rowIndex, selectedTableName) {
+  console.log('selectedTableName', selectedTableName);
   if (data && data.length > rowIndex) {
     const rowData = data[rowIndex];
     const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
@@ -301,7 +303,7 @@ export function setupFormFields(actionType, data, rowIndex, selectedTableName) {
 
 
 const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () => {
-  // console.log("selectedTableName", selectedTableName);
+  console.log("selectedTableName", selectedTableName);
   // Check if selectedTableName is defined
   if (!selectedTableName) {
     console.error("selectedTableName is undefined.");
@@ -464,14 +466,17 @@ function getCleanTableName(tableName) {
 }
 
 function getUniqueIdentifier(newData, selectedTableName) {
-  // console.log('newData, selectedTableName:', newData, selectedTableName);
+  console.log('newData, selectedTableName:', newData, selectedTableName);
   // Determine the column name based on the selected table name
   let uniqueIdentifierColumn;
   
   // Check if selectedTableName starts with "Deals"
-  if (selectedTableName.startsWith('Deals')) {
-      uniqueIdentifierColumn = 'TRADE_ID';
-  } else {
+const name = String(selectedTableName || '');
+const upper = name.toUpperCase();
+
+if (upper.startsWith('DEALS') || upper.startsWith('OFFERS_') || upper.startsWith('OFFER_')) {
+  uniqueIdentifierColumn = 'TRADE_ID';
+} else {
       switch (selectedTableName) {
           case 'Issuer':
               uniqueIdentifierColumn = 'TICKER';
