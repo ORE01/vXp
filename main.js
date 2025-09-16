@@ -1646,7 +1646,7 @@ const updateDataListener = async (event, { cleanTableName, rowIndex, newData, un
         event.reply('update-data-success');
         //console.log('Update:', cleanTableName, newData, uniqueIdentifier);
         //console.log('Update success');
-        refreshTable(cleanTableName);
+        refreshTable('DealsMain');
         refreshTable('ProdAll');
       }
     });
