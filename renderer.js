@@ -1075,97 +1075,209 @@ function handleOffersNameList(receivedData) {
 
 
   // PYTHON EXECUTION:
-  function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
-    buttonElement.disabled = true;
-    buttonElement.textContent = 'Executing...';
+  // function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
+  //   buttonElement.disabled = true;
+  //   buttonElement.textContent = 'Executing...';
 
-    try {
-        switch (projectName) {
-            case 'py-matchColumns':
-                handleAIColumnProject(extraParam);
-                break;
+  //   try {
+  //       switch (projectName) {
+  //           case 'py-matchColumns':
+  //               handleAIColumnProject(extraParam);
+  //               break;
 
-            case 'py-ml':
-                handleMLProject(extraParam);
-                break;    
+  //           case 'py-ml':
+  //               handleMLProject(extraParam);
+  //               break;    
 
-            case 'py-cspar':
-                handleCSParProject(buttonElement, extraParam);
-                break;
+  //           case 'py-cspar':
+  //               handleCSParProject(buttonElement, extraParam);
+  //               break;
 
-            case 'py-fairValue':
-                handleFairValueProject(buttonElement, extraParam);
-                break;
+  //           case 'py-fairValue':
+  //               handleFairValueProject(buttonElement, extraParam);
+  //               break;
 
-            case 'py-CVaR':
-                handleCVaRProject(buttonElement, extraParam);
-                break;
+  //           case 'py-CVaR':
+  //               handleCVaRProject(buttonElement, extraParam);
+  //               break;
 
-            case 'py-MVaR':
-                handleMVaRProject(buttonElement, extraParam);
-                break;
+  //           case 'py-MVaR':
+  //               handleMVaRProject(buttonElement, extraParam);
+  //               break;
 
-            case 'py-hist':
-              // 💡 Ergänze hier die API je nach Button-ID
-              const apiMap = {
-                histEcbButton: 'ECB',
-                histFedButton: 'FED',
-                histYahooButton: 'Yahoo'
-              };
-              const apiSource = apiMap[buttonElement.id];
-              if (apiSource) extraParam.api = apiSource;
+  //           case 'py-hist':
+  //             // 💡 Ergänze hier die API je nach Button-ID
+  //             const apiMap = {
+  //               histEcbButton: 'ECB',
+  //               histFedButton: 'FED',
+  //               histYahooButton: 'Yahoo'
+  //             };
+  //             const apiSource = apiMap[buttonElement.id];
+  //             if (apiSource) extraParam.api = apiSource;
         
-              handleHistProject(buttonElement, extraParam);
-              break;
+  //             handleHistProject(buttonElement, extraParam);
+  //             break;
 
 
-            default:
-              let selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
-              sendPayloadToAPI(projectName, selectedTableName, extraParam);
-              break;
+  //           default:
+  //             let selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
+  //             sendPayloadToAPI(projectName, selectedTableName, extraParam);
+  //             break;
               
-        }
+  //       }
 
-        // ✅ Event-Listener für den Abschluss setzen
-        window.api.receive(`${projectName}-complete`, () => {
-            //console.log(`✅ ${projectName} finished, resetting button.`);
-            buttonElement.disabled = false;
-            buttonElement.textContent = 'Run';
-        });
+  //       // ✅ Event-Listener für den Abschluss setzen
+  //       window.api.receive(`${projectName}-complete`, () => {
+  //           //console.log(`✅ ${projectName} finished, resetting button.`);
+  //           buttonElement.disabled = false;
+  //           buttonElement.textContent = 'Run';
+  //       });
 
-    } catch (error) {
-        console.error(`Error handling project "${projectName}":`, error);
-        alert('An error occurred while executing the project.');
-        buttonElement.disabled = false;
-        buttonElement.textContent = 'Run';
+  //   } catch (error) {
+  //       console.error(`Error handling project "${projectName}":`, error);
+  //       alert('An error occurred while executing the project.');
+  //       buttonElement.disabled = false;
+  //       buttonElement.textContent = 'Run';
+  //   }
+  // }
+function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
+  buttonElement.disabled = true;
+  buttonElement.textContent = 'Executing...';
+
+  try {
+    switch (projectName) {
+      case 'py-matchColumns': handleAIColumnProject(extraParam); break;
+      case 'py-ml':           handleMLProject(extraParam); break;
+      case 'py-cspar':        handleCSParProject(buttonElement, extraParam); break;
+      case 'py-fairValue':    handleFairValueProject(buttonElement, extraParam); break;
+      case 'py-CVaR':         handleCVaRProject(buttonElement, extraParam); break;
+      case 'py-MVaR':         handleMVaRProject(buttonElement, extraParam); break;
+      case 'py-hist': {
+        const apiMap = { histEcbButton: 'ECB', histFedButton: 'FED', histYahooButton: 'Yahoo' };
+        const apiSource = apiMap[buttonElement.id];
+        if (apiSource) extraParam.api = apiSource;
+        handleHistProject(buttonElement, extraParam);
+        break;
+      }
+      default: {
+        const selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
+        sendPayloadToAPI(projectName, selectedTableName, extraParam);
+      }
     }
+
+    // Nur EINMAL auf Abschluss reagieren und dann Button zurücksetzen
+    window.api.once(`${projectName}-complete`, (resp) => {
+      handleProjectResponse(buttonElement, projectName, resp || { success: true });
+    });
+
+  } catch (error) {
+    console.error(`Error handling project "${projectName}":`, error);
+    alert('An error occurred while executing the project.');
+    buttonElement.disabled = false;
+    buttonElement.textContent = 'Run';
   }
+}
+
+
       //py-Projects
       //fairvalue
-      function handleFairValueProject(buttonElement, extraParam) {
-        const port_name = appState.getSelectedDealsTableName();
-        //console.log('🚀 Sending payload for py-fairValue:', port_name);
-        const CSSzenario = appState.getCSSzenarioData();
-        const selectedCurve = appState.getSelectedCurve();
+// function handleFairValueProject(buttonElement, extraParam) {
+//   // 1) Namen ermitteln: zuerst Deals, sonst Port
+//   const dealsName = appState.getSelectedDealsTableName?.();
+//   const portName  = appState.getSelectedPortTableName?.();
+//   const port_name = (dealsName && dealsName.trim()) || (portName && portName.trim()) || '';
+
+//   if (!port_name) {
+//     console.warn('⚠️ Kein Deals- oder Port-Name ausgewählt.');
+//     return;
+//   }
+
+//   // Optional: wenn kein Deals-Name gesetzt war, den Port-Name dorthin spiegeln,
+//   // damit nachgelagerte Logik weiterhin mit getSelectedDealsTableName arbeiten kann.
+//   if (!dealsName && portName && appState.setSelectedDealsTableName) {
+//     appState.setSelectedDealsTableName(portName);
+//   }
+
+
+
+
+//         const CSSzenario = appState.getCSSzenarioData();
+//         const selectedCurve = appState.getSelectedCurve();
       
-        if (!CSSzenario) {
-          throw new Error('No scenario data available. Please set a scenario first.');
-        }
+//         if (!CSSzenario) {
+//           throw new Error('No scenario data available. Please set a scenario first.');
+//         }
       
-        extraParam.CSSzenario = CSSzenario;
-        extraParam.selectedCurve = selectedCurve;
+//         extraParam.CSSzenario = CSSzenario;
+//         extraParam.selectedCurve = selectedCurve;
       
-        const payload = {
-          tableName: port_name,
-          ...extraParam,
-        };
+//         const payload = {
+//           tableName: port_name,
+//           ...extraParam,
+//         };
       
-        //console.log('🚀 Sending payload for py-fairValue:', payload);
-        window.api.send(`start-py-fairValue`, payload);
-      }
+//         //console.log('🚀 Sending payload for py-fairValue:', payload);
+//         window.api.send(`start-py-fairValue`, payload);
+//       }
+function handleFairValueProject(buttonElement, extraParam = {}) {
+  const id = buttonElement?.id || '';
+  const preferredSource =
+    id === 'fairValueButton2' ? 'offers' :
+    id === 'fairValueButton1' ? 'port'   :
+    'deals';
+
+  const dealsName  = appState.getSelectedDealsTableName?.();
+  const portName   = appState.getSelectedPortTableName?.();
+  const offersName = appState.getSelectedOffersTableName?.();
+
+  const pickBySource = (src) => {
+    switch (src) {
+      case 'offers': return offersName || dealsName || portName || '';
+      case 'port':   return portName   || dealsName || offersName || '';
+      default:       return dealsName  || portName  || offersName || '';
+    }
+  };
+
+  const tableName = String(pickBySource(preferredSource)).trim();
+  if (!tableName) {
+    console.warn('⚠️ Kein Name ausgewählt (deals/port/offers).');
+    return;
+  }
+
+  if (!dealsName && appState.setSelectedDealsTableName) {
+    appState.setSelectedDealsTableName(tableName);
+  }
+
+  const CSSzenario    = appState.getCSSzenarioData?.();
+  const selectedCurve = appState.getSelectedCurve?.();
+  if (!CSSzenario) {
+    console.warn('⚠️ Kein CSSzenario gesetzt. Bitte zuerst Szenario wählen.');
+    return;
+  }
+
+  const payload = {
+    tableName,
+    source: preferredSource,
+    CSSzenario,
+    selectedCurve,
+    selectedDealsTableName:  dealsName  || '',
+    selectedPortTableName:   portName   || '',
+    selectedOffersTableName: offersName || '',
+    ...extraParam,
+  };
+
+  // WICHTIG: hier KEIN handleProjectResponse aufrufen
+  window.api?.send?.('start-py-fairValue', payload);
+}
+
+
+
           function handleFairValueComplete(data) {
             console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
             if (data.projectName !== 'py-fairValue') return;
+
+            //const port_name1 = appState.getSelectedPortTableName();
+            console.log('port_name:', appState.getSelectedPortTableName());
 
             const port_name = String(appState.getSelectedDealsTableName?.() || '');
             const isOffer = /^OFFERS?_/i.test(port_name);
@@ -1189,6 +1301,9 @@ function handleOffersNameList(receivedData) {
             }
           }
               function fetchAndUpdateFairValueData(port_name) {
+                console.log("⚠️ Kein Portfolio ausgewählt.", port_name );
+                //port_name = appState.getSelectedPortTableName();
+
                 const onData = (receivedData) => {
                   const enhancedData = receivedData; // ggf. addMaturityYearToData(receivedData)
                   if (!Array.isArray(enhancedData) || !enhancedData.length) {
@@ -1197,7 +1312,7 @@ function handleOffersNameList(receivedData) {
                     return;
                   }
                   if (!port_name) {
-                    console.warn("⚠️ Kein Portfolio ausgewählt.");
+                    console.warn("⚠️ Kein Portfolio ausgewählt.", port_name );
                     return;
                   }
 
@@ -1740,51 +1855,122 @@ function handleOffersNameList(receivedData) {
         window.api.send(`start-${projectName}`, payload);
       }
   //py-Projects FINISH
+  // function handleProjectFinished(data) {
+  //   const projectButtonMap = {
+  //     // 'py-MVaR': 'MVaRButton',
+  //     'py-MVaR': 'mvaRDistButton',
+  //     'py-CVaR': 'CVaRButton',
+  //     'py-excel': 'updateDataExcelButton',
+  //     'py-historicData': 'updateHistoricDataButton',
+  //     'py-cspar': 'CSParButton',
+  //     'py-ml': 'MLButton'
+  //   };
+
+  //   const buttonId = projectButtonMap[data.projectName];
+  //   if (buttonId) {
+  //     //console.log('handleProjectResponse', data);
+  //     handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
+  //   }
+  // }
+  //     function handleProjectResponse(buttonElement, projectName, response) {
+  //       //console.log('handleProjectResponse', projectName);
+
+  //     const projectLabels = {
+  //       'py-fairValue': 'Fair Value',
+  //       'py-MVaR': 'P/L Dist',
+  //       'py-CVaR': 'Credit VaR',
+  //       'py-ml': 'Machine Learning',
+  //       'py-excel': 'Excel Update',
+  //       'py-cspar': 'CS Parser',
+  //       'py-matchColumns': 'Match Columns',
+  //       'py-historicData': 'Historic Data',
+  //       'py-hist': 'Historical Update',
+  //       // add more mappings as needed
+  //     };
+
+
+
+
+  //       buttonElement.disabled = false;
+  //       buttonElement.textContent = projectLabels[projectName] || 'Unknown';
+
+  //       if (response.success) {
+  //         //console.log(`${projectName} executed successfully.`);
+  //       } else {
+  //         console.error(`Error starting ${projectName}:`, response.error);
+  //       }
+  //     }
+
   function handleProjectFinished(data) {
-    const projectButtonMap = {
-      // 'py-MVaR': 'MVaRButton',
-      'py-MVaR': 'mvaRDistButton',
-      'py-CVaR': 'CVaRButton',
-      'py-excel': 'updateDataExcelButton',
-      'py-historicData': 'updateHistoricDataButton',
-      'py-cspar': 'CSParButton',
-      'py-ml': 'MLButton'
+  const projectButtonMap = {
+    // 'py-MVaR': 'MVaRButton',
+    'py-MVaR': 'mvaRDistButton',
+    'py-CVaR': 'CVaRButton',
+    'py-excel': 'updateDataExcelButton',
+    'py-historicData': 'updateHistoricDataButton',
+    'py-cspar': 'CSParButton',
+    'py-ml': 'MLButton'
+  };
+
+  // Spezielles Routing für py-fairValue (es gibt 3 Buttons)
+  if (data.projectName === 'py-fairValue') {
+    const sourceToId = {
+      deals:  'fairValueButton',
+      port:   'fairValueButton1',
+      offers: 'fairValueButton2'
     };
 
-    const buttonId = projectButtonMap[data.projectName];
-    if (buttonId) {
-      //console.log('handleProjectResponse', data);
-      handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
+    // 1) Bevorzugt per data.source (falls du sie mitsendest)
+    let buttonId = sourceToId[data?.source];
+
+    // 2) Fallback: der aktuell deaktivierte Fair-Value-Button (wurde ja beim Klick disabled)
+    if (!buttonId) {
+      buttonId = ['fairValueButton', 'fairValueButton1', 'fairValueButton2']
+        .find(id => document.getElementById(id)?.disabled);
     }
+
+    const btn = document.getElementById(buttonId || '');
+    if (btn) {
+      handleProjectResponse(btn, data.projectName, data);
+    }
+    return; // fairValue ist damit erledigt
   }
-      function handleProjectResponse(buttonElement, projectName, response) {
-        //console.log('handleProjectResponse', projectName);
 
-      const projectLabels = {
-        'py-fairValue': 'Fair Value',
-        'py-MVaR': 'P/L Dist',
-        'py-CVaR': 'Credit VaR',
-        'py-ml': 'Machine Learning',
-        'py-excel': 'Excel Update',
-        'py-cspar': 'CS Parser',
-        'py-matchColumns': 'Match Columns',
-        'py-historicData': 'Historic Data',
-        'py-hist': 'Historical Update',
-        // add more mappings as needed
-      };
+  // Standard-Zuordnung für alle Projekte mit EINEM Button
+  const buttonId = projectButtonMap[data.projectName];
+  if (buttonId) {
+    handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
+  }
+}
+
+function handleProjectResponse(buttonElement, projectName, response) {
+  const projectLabels = {
+    'py-fairValue': 'Fair Value',
+    'py-MVaR': 'P/L Dist',
+    'py-CVaR': 'Credit VaR',
+    'py-ml': 'Machine Learning',
+    'py-excel': 'Excel Update',
+    'py-cspar': 'CS Parser',
+    'py-matchColumns': 'Match Columns',
+    'py-historicData': 'Historic Data',
+    'py-hist': 'Historical Update',
+  };
+
+  // Falls du handleProjectResponse aus Versehen beim Start rufst und {sent:true} mitgibst:
+  if (response && response.sent) return;
+
+  if (buttonElement) {
+    buttonElement.disabled = false;
+    buttonElement.textContent = projectLabels[projectName] || 'Run';
+  }
+
+  if (response && response.success === false) {
+    console.error(`Error starting ${projectName}:`, response.error);
+  }
+}
 
 
 
-
-        buttonElement.disabled = false;
-        buttonElement.textContent = projectLabels[projectName] || 'Unknown';
-
-        if (response.success) {
-          //console.log(`${projectName} executed successfully.`);
-        } else {
-          console.error(`Error starting ${projectName}:`, response.error);
-        }
-      }
 
 
   //CUSTOMER
