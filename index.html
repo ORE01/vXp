@@ -619,17 +619,17 @@
       <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
         <span class="section-header">Issuer</span><span class="chev">▶</span>
       </button>
-    </div>
+    </div>-->
 
     <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-products" aria-controls="panel-products" aria-expanded="false">
-        <span class="section-header">Products</span><span class="chev">▶</span>
+      <button class="section-trigger" data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
+        <span class="section-header">New Portfolio</span><span class="chev">▶</span>
       </button>
-    </div> -->
+    </div> 
 
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
-        <span class="section-header">Trades</span><span class="chev">▶</span>
+        <span class="section-header">Change Existing Portfolio</span><span class="chev">▶</span>
       </button>
     </div>
 
@@ -638,105 +638,48 @@
 
     <!-- ===== PANELS ===== -->
 
-    <!-- Panel: ISSUER (aus deinem ISSUER_Modal adaptiert) -->
-    <!-- <div id="panel-issuer" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+<!-- Panel: NEW DEALS / NEW PORTFOLIO (reduziert) -->
+    <div id="panel-newDeals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-newDeals-title" hidden>
       <div class="sub-panel-header">
-        <div id="panel-issuer-title" class="sub-panel-title">ISSUER</div>
-        <button class="sub-panel-close" data-close="panel-issuer" aria-label="Schließen">&times;</button>
+        <div id="panel-newDeals-title" class="sub-panel-title">NEW PORTFOLIO</div>
+        <button class="sub-panel-close" data-close="panel-newDeals" aria-label="Schließen">&times;</button>
       </div>
 
       <div class="sub-panel-body">
-        <div class="cp-card">
-          
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Issuers:</p>
-              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+        <!-- Card: Create New Portfolio (ohne Trade- und Filter-Teil) -->
+        <section class="cp-card">
+          <h2 class="small-section-header">Create Portfolio</h2>
+
+          <div class="cp-form-grid">
+            <!-- Neuer Name -->
+            <label for="nameInputNew">New Portfolio Name:</label>
+            <div class="cp-field">
+              <input type="text" id="nameInputNew" class="input-field" />
             </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+
+            <!-- Tags -->
+            <label for="tagInputFieldNew">Tag selection:</label>
+            <div class="cp-field">
+              <input type="text" id="tagInputFieldNew" class="input-field" />
+            </div>
+
+            <!-- Aktionen -->
+            <div class="cp-actions" style="grid-column: 1/-1;">
+              <button id="saveNewPortfolioButton" class="edit-button">Save Portfolio</button>
+              <button id="clearNewPortfolioButton" class="edit-button delete-button">Clear</button>
             </div>
           </div>
+        </section>
 
-          
-          <p style="margin:10px 0;">
-            <button id="issuerResetFiltersButton" class="reset-FiltersButton" title="Reset filters">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-              </svg>
-            </button>
-          </p>
-
-          
-          <div class="button-wrapper">
-            <button id="issuerAddButton" class="edit-button">ADD</button>
-          </div>
+        <!-- Optional: Calculate (beibehaltener Button-Flow) -->
+        <div class="button-wrapper">
+          <button id="fairValueButton1" class="edit-button">Calculate Portfolio</button>
         </div>
 
-        
-        <div class="data-container cp-table" id="issuerDataContainer"></div>
+        <!-- Ergebnis/Preview (eigener Container, um ID-Kollisionen zu vermeiden) -->
+        <div class="data-container cp-table" id="newDealsDataContainer"></div>
       </div>
-    </div> -->
-
-    <!-- Panel: PRODUCTS -->
-    <!-- <div id="panel-products" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-products-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-products-title" class="sub-panel-title">PRODUCTS</div>
-        <button class="sub-panel-close" data-close="panel-products" aria-label="Schließen">&times;</button>
-      </div>
-
-      <div class="sub-panel-body">
-        <div class="cp-card">
-          
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Issuers:</p>
-              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Product Ids:</p>
-              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Coupon Type:</p>
-              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Maturity:</p>
-              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rank:</p>
-              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
-            </div>
-          </div>
-
-          <p style="margin:10px 0;">
-            <button id="prodResetFiltersButton" class="reset-FiltersButton" title="Reset filters">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M3 1L8 6V15L8 15L8 6L13 1H3Z" stroke="white" stroke-width="1.5"/>
-                <line x1="4" y1="6" x2="12" y2="14" stroke="red" stroke-width="1.5"/>
-                <line x1="4" y1="14" x2="12" y2="6" stroke="red" stroke-width="1.5"/>
-              </svg>
-            </button>
-          </p>
-
-          <div class="button-wrapper">
-            <button id="prodAddButton" class="edit-button">ADD</button>
-          </div>
-        </div>
-
-        
-        <div class="data-container cp-table" id="prodDataContainer"></div>
-      </div>
-    </div> -->
+    </div>
 
     <!-- Panel: DEALS / CREATE PORTFOLIO -->
     <div id="panel-deals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-deals-title" hidden>

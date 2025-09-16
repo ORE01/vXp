@@ -1,5 +1,7 @@
 import { formatNumber, getFormatRules } from '../utils/format.js';
 
+// EDIT Column is in processData!!!
+
 function processData(data, selectedTableName, columnLabelMap = {}) {
   //console.log(`🔍 selectedTableName: ${selectedTableName}`);
   let html = '';
@@ -8,10 +10,12 @@ function processData(data, selectedTableName, columnLabelMap = {}) {
   // ================================
   // 💡 Alle Konfigurations-Abfragen gesammelt
   // ================================
+
+  // EDIT Column is her:
   const excludeEditColumnTables = [
     'tblTS', 'MVaRMain', 'CVaRMain', 'EADMain', 'Portfolios',
     'PortMain', 'MarketVaR', 'CreditVaR', 'PortMain', 'sortedLossesIssuerMain',
-    'EAD', 'Portfolio', 'ProdALL', 'DealsMain',
+    'EAD', 'Portfolio', 'ProdALL', 'DealsMain', 'OFFERS_DATA',
   ];
 
   const excludePortTables = /^Port/;
