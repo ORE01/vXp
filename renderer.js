@@ -633,6 +633,7 @@ function setupButtons() {
     { buttonId: 'fairValueButton', projectName: 'py-fairValue' },
     { buttonId: 'fairValueButton1', projectName: 'py-fairValue' },
     { buttonId: 'fairValueButton2', projectName: 'py-fairValue' },
+    { buttonId: 'fairValueButton3', projectName: 'py-fairValue' },
     // { buttonId: 'MVaRButton', projectName: 'py-MVaR' },
     // { buttonId: 'mvaRDistButton', projectName: 'py-MVaR' },
     { buttonId: 'CVaRButton', projectName: 'py-CVaR' },
@@ -1075,83 +1076,103 @@ function handleOffersNameList(receivedData) {
 
 
   // PYTHON EXECUTION:
-  // function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
-  //   buttonElement.disabled = true;
-  //   buttonElement.textContent = 'Executing...';
 
-  //   try {
-  //       switch (projectName) {
-  //           case 'py-matchColumns':
-  //               handleAIColumnProject(extraParam);
-  //               break;
+// function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
+//   buttonElement.disabled = true;
+//   buttonElement.textContent = 'Executing...';
 
-  //           case 'py-ml':
-  //               handleMLProject(extraParam);
-  //               break;    
+//   try {
+//     switch (projectName) {
+//       case 'py-matchColumns': handleAIColumnProject(extraParam); break;
+//       case 'py-ml':           handleMLProject(extraParam); break;
+//       case 'py-cspar':        handleCSParProject(buttonElement, extraParam); break;
+//       case 'py-fairValue':    handleFairValueProject(buttonElement, extraParam); break;
+//       case 'py-CVaR':         handleCVaRProject(buttonElement, extraParam); break;
+//       case 'py-MVaR':         handleMVaRProject(buttonElement, extraParam); break;
+//       case 'py-hist': {
+//         const apiMap = { histEcbButton: 'ECB', histFedButton: 'FED', histYahooButton: 'Yahoo' };
+//         const apiSource = apiMap[buttonElement.id];
+//         if (apiSource) extraParam.api = apiSource;
+//         handleHistProject(buttonElement, extraParam);
+//         break;
+//       }
+//       default: {
+//         const selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
+//         sendPayloadToAPI(projectName, selectedTableName, extraParam);
+//       }
+//     }
 
-  //           case 'py-cspar':
-  //               handleCSParProject(buttonElement, extraParam);
-  //               break;
+//     // Nur EINMAL auf Abschluss reagieren und dann Button zurücksetzen
+//     window.api.once(`${projectName}-complete`, (resp) => {
+//       handleProjectResponse(buttonElement, projectName, resp || { success: true });
+//     });
 
-  //           case 'py-fairValue':
-  //               handleFairValueProject(buttonElement, extraParam);
-  //               break;
-
-  //           case 'py-CVaR':
-  //               handleCVaRProject(buttonElement, extraParam);
-  //               break;
-
-  //           case 'py-MVaR':
-  //               handleMVaRProject(buttonElement, extraParam);
-  //               break;
-
-  //           case 'py-hist':
-  //             // 💡 Ergänze hier die API je nach Button-ID
-  //             const apiMap = {
-  //               histEcbButton: 'ECB',
-  //               histFedButton: 'FED',
-  //               histYahooButton: 'Yahoo'
-  //             };
-  //             const apiSource = apiMap[buttonElement.id];
-  //             if (apiSource) extraParam.api = apiSource;
-        
-  //             handleHistProject(buttonElement, extraParam);
-  //             break;
-
-
-  //           default:
-  //             let selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
-  //             sendPayloadToAPI(projectName, selectedTableName, extraParam);
-  //             break;
-              
-  //       }
-
-  //       // ✅ Event-Listener für den Abschluss setzen
-  //       window.api.receive(`${projectName}-complete`, () => {
-  //           //console.log(`✅ ${projectName} finished, resetting button.`);
-  //           buttonElement.disabled = false;
-  //           buttonElement.textContent = 'Run';
-  //       });
-
-  //   } catch (error) {
-  //       console.error(`Error handling project "${projectName}":`, error);
-  //       alert('An error occurred while executing the project.');
-  //       buttonElement.disabled = false;
-  //       buttonElement.textContent = 'Run';
-  //   }
-  // }
+//   } catch (error) {
+//     console.error(`Error handling project "${projectName}":`, error);
+//     alert('An error occurred while executing the project.');
+//     buttonElement.disabled = false;
+//     buttonElement.textContent = 'Run';
+//   }
+// }
 function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
+  if (!buttonElement) return;
+
+  // ursprüngliches Label merken
+  const originalLabel = buttonElement.dataset.originalLabel || buttonElement.textContent;
+  buttonElement.dataset.originalLabel = originalLabel;
+
   buttonElement.disabled = true;
   buttonElement.textContent = 'Executing...';
 
   try {
     switch (projectName) {
-      case 'py-matchColumns': handleAIColumnProject(extraParam); break;
-      case 'py-ml':           handleMLProject(extraParam); break;
-      case 'py-cspar':        handleCSParProject(buttonElement, extraParam); break;
-      case 'py-fairValue':    handleFairValueProject(buttonElement, extraParam); break;
-      case 'py-CVaR':         handleCVaRProject(buttonElement, extraParam); break;
-      case 'py-MVaR':         handleMVaRProject(buttonElement, extraParam); break;
+      case 'py-matchColumns':
+        handleAIColumnProject(extraParam);
+        break;
+
+      case 'py-ml':
+        handleMLProject(extraParam);
+        break;
+
+      case 'py-cspar':
+        handleCSParProject(buttonElement, extraParam);
+        break;
+
+      case 'py-fairValue': {
+        // Nur beim Offers-Button die iterative Kalibrierung
+        const isOffersBtn = (buttonElement.id === 'fairValueButton2');
+        if (isOffersBtn && typeof calibrateFairValueIterative === 'function') {
+          buttonElement.textContent = 'Calibrating…';
+          calibrateFairValueIterative({
+            source: 'offers',
+            maxIter: 3,
+            perRow: false,
+            tol: 0.01,
+            damp: 0.7,
+            maxStepBp: 50
+          })
+          .catch(err => console.error('calibration error:', err))
+          .finally(() => {
+            buttonElement.disabled = false;
+            buttonElement.textContent = originalLabel || 'Calculate Offers';
+          });
+          // Wichtig: hier NICHT in den generischen complete-Listener fallen
+          return;
+        }
+
+        // alle anderen FairValue-Buttons normal 1x
+        handleFairValueProject(buttonElement, extraParam);
+        break;
+      }
+
+      case 'py-CVaR':
+        handleCVaRProject(buttonElement, extraParam);
+        break;
+
+      case 'py-MVaR':
+        handleMVaRProject(buttonElement, extraParam);
+        break;
+
       case 'py-hist': {
         const apiMap = { histEcbButton: 'ECB', histFedButton: 'FED', histYahooButton: 'Yahoo' };
         const apiSource = apiMap[buttonElement.id];
@@ -1159,24 +1180,41 @@ function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
         handleHistProject(buttonElement, extraParam);
         break;
       }
+
       default: {
         const selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
         sendPayloadToAPI(projectName, selectedTableName, extraParam);
+        break;
       }
     }
 
-    // Nur EINMAL auf Abschluss reagieren und dann Button zurücksetzen
-    window.api.once(`${projectName}-complete`, (resp) => {
-      handleProjectResponse(buttonElement, projectName, resp || { success: true });
-    });
+    // Generischer “done”-Listener (nicht für Offers-Kalibrierung)
+    if (!(projectName === 'py-fairValue' && buttonElement.id === 'fairValueButton2')) {
+      const handler = () => {
+        buttonElement.disabled = false;
+        buttonElement.textContent = originalLabel || 'Run';
+      };
+      if (window.api?.once) {
+        window.api.once(`${projectName}-complete`, handler);
+      } else {
+        // Fallback: receive + einmalig ausführen
+        const one = (...args) => {
+          handler(...args);
+          // kein remove verfügbar -> notfalls Marker nutzen; hier reicht in der Praxis meist once
+        };
+        window.api.receive(`${projectName}-complete`, one);
+      }
+    }
 
   } catch (error) {
     console.error(`Error handling project "${projectName}":`, error);
     alert('An error occurred while executing the project.');
     buttonElement.disabled = false;
-    buttonElement.textContent = 'Run';
+    buttonElement.textContent = originalLabel || 'Run';
   }
 }
+
+
 
 
       //py-Projects
@@ -1223,7 +1261,7 @@ function handleFairValueProject(buttonElement, extraParam = {}) {
   const id = buttonElement?.id || '';
   const preferredSource =
     id === 'fairValueButton2' ? 'offers' :
-    id === 'fairValueButton1' ? 'port'   :
+    id === 'fairValueButton' ? 'port'   :
     'deals';
 
   const dealsName  = appState.getSelectedDealsTableName?.();
@@ -1234,6 +1272,7 @@ function handleFairValueProject(buttonElement, extraParam = {}) {
     switch (src) {
       case 'offers': return offersName || dealsName || portName || '';
       case 'port':   return portName   || dealsName || offersName || '';
+      //case 'deals':  return dealsName   || dealsName || offersName || '';
       default:       return dealsName  || portName  || offersName || '';
     }
   };
@@ -1269,9 +1308,6 @@ function handleFairValueProject(buttonElement, extraParam = {}) {
   // WICHTIG: hier KEIN handleProjectResponse aufrufen
   window.api?.send?.('start-py-fairValue', payload);
 }
-
-
-
           function handleFairValueComplete(data) {
             console.log('📌 handleFairValueComplete wurde ausgelöst:', data);
             if (data.projectName !== 'py-fairValue') return;
@@ -1288,7 +1324,11 @@ function handleFairValueProject(buttonElement, extraParam = {}) {
               appState.setActiveElementId('offersDataContainer'); 
               // pass den Namen durch
               fetchAndUpdateFairValueOffersData(port_name);
+
+
             } else {
+
+
               appState.setActiveTable('deals');
               appState.setActiveElementId('portDataContainer0');
               fetchAndUpdateFairValueData(port_name);
@@ -1343,6 +1383,7 @@ function handleFairValueProject(buttonElement, extraParam = {}) {
                 window.api.send('fetch-table-data', 'Portfolios');
               }
               function fetchAndUpdateFairValueOffersData(port_name) {
+                //console.log('fetchAndUpdateFairValueOffersData wird Ausgeführt')
                 const onData = (receivedData) => {
                   const enhancedData = receivedData;
                   if (!Array.isArray(enhancedData) || !enhancedData.length) {
@@ -1915,8 +1956,8 @@ function handleFairValueProject(buttonElement, extraParam = {}) {
   // Spezielles Routing für py-fairValue (es gibt 3 Buttons)
   if (data.projectName === 'py-fairValue') {
     const sourceToId = {
-      deals:  'fairValueButton',
-      port:   'fairValueButton1',
+      deals:  'fairValueButton1',
+      port:   'fairValueButton',
       offers: 'fairValueButton2'
     };
 
@@ -2001,6 +2042,12 @@ function handleProjectResponse(buttonElement, projectName, response) {
     const portResetButton = document.getElementById('portResetFiltersButton');
     if (portResetButton) {
       portResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'port'));
+    }
+
+    // Reset Button
+    const offersResetButton = document.getElementById('offersResetFiltersButton');
+    if (offersResetButton) {
+      offersResetButton.addEventListener('click', () => appState.resetFiltersForActiveTable(receivedData, 'offers'));
     }
   }
   // ISSUER
@@ -2253,34 +2300,669 @@ document.getElementById("ratesSelector").addEventListener("change", () => {
     window.api.send('update-data', { newData, cleanTableName, uniqueIdentifier });
   }
 
-  window.api.receive('update-data-success', () => {
-  const dd = document.getElementById('createdDealsDropdown');
-  const prev = (appState.getSelectedDealsTableName?.() || dd?.value || '').trim();
+  // window.api.receive('update-data-success', () => {
+  //   const dd = document.getElementById('createdDealsDropdown');
+  //   const prev = (appState.getSelectedDealsTableName?.() || dd?.value || '').trim();
 
-  // frische Deals-Daten holen
+  //   // frische Deals-Daten holen
+  //   window.api.once('DealsMainData', (rows) => {
+  //     // deine Idee:
+  //     appState.updateDealsDataTable?.(rows);
+  //     appState.updateOffersDataTable?.(rows);
+  //     //console.log('AllDealsData:', appState.getAllDealsData());
+  //     //console.log('OffersData:', appState.getOffersData());
+
+  //     const dealsTable = appState.getSelectedDealsTableName();
+  //     //console.log('dealsTable:', dealsTable);
+
+  //     // Auswahl zurücksetzen
+  //     if (dd && prev) {
+  //       const has = Array.from(dd.options).some(o => o.value === prev);
+  //       if (has) {
+  //         dd.value = prev;
+  //         dd.dispatchEvent(new Event('change', { bubbles: true }));
+  //       }
+  //     }
+  //     appState.setSelectedDealsTableName?.(prev);
+  //   });
+
+  //   window.api.send('fetch-table-data', 'DealsMain');
+  // });
+
+
+
+window.api.receive('update-data-success', () => {
+  const ddOffers  = document.getElementById('createdOffersDropdown');
+  const prevOffer = (appState.getSelectedPortTableName?.() || ddOffers?.value || '').trim();
+
+  // 1) Deals frisch holen → appState.updateDealsDataTable übernimmt Render & State
   window.api.once('DealsMainData', (rows) => {
-    // deine Idee:
-    appState.updateDealsDataTable?.(rows);
-    appState.updateOffersDataTable?.(rows);
-    console.log('AllDealsData:', appState.getAllDealsData());
-    console.log('OffersData:', appState.getOffersData());
+    appState.updateDealsDataTable?.(rows); // <-- deine Funktion eingebaut
 
-    const dealsTable = appState.getSelectedDealsTableName();
-    console.log('dealsTable:', dealsTable);
-
-    // Auswahl zurücksetzen
-    if (dd && prev) {
-      const has = Array.from(dd.options).some(o => o.value === prev);
-      if (has) {
-        dd.value = prev;
-        dd.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+    // 2) Danach Offers/Portfolios für die gleiche Auswahl refreshen
+    if (prevOffer) {
+      fetchAndUpdateFairValueOffersData(prevOffer);               // lädt Portfolios + updated Offers-Dropdown
+      restoreDropdownSelection('createdOffersDropdown', prevOffer); // falls Optionen async kommen
+      appState.setSelectedPortTableName?.(prevOffer);
     }
-    appState.setSelectedDealsTableName?.(prev);
   });
 
   window.api.send('fetch-table-data', 'DealsMain');
 });
+
+
+
+function restoreDropdownSelection(selectId, desiredValue) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+
+  const target = String(desiredValue || '');
+  const trySet = () => {
+    if (!target) return false;
+    const has = Array.from(sel.options).some(o => String(o.value) === target);
+    if (has) {
+      sel.value = target;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }
+    return false;
+  };
+
+  // sofort versuchen
+  if (trySet()) return;
+
+  // wenn Optionen noch nicht da sind: auf Änderungen warten
+  const obs = new MutationObserver(() => {
+    if (trySet()) obs.disconnect();
+  });
+  obs.observe(sel, { childList: true });
+
+  // Fallback nach 1s: erste sinnvolle Option wählen
+  setTimeout(() => {
+    obs.disconnect();
+    if (!sel.value || sel.value === 'ALL_TABLE_NAME') {
+      const firstValid = Array.from(sel.options).find(o => o.value && o.value !== 'ALL_TABLE_NAME');
+      if (firstValid) {
+        sel.value = firstValid.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }, 1000);
+}
+
+
+
+
+// CALIBRATION: lässt py-fairValue mehrfach laufen und passt CS_Szenario in ProdAll an ===
+
+
+function onceIPC(channel) {
+  return new Promise((resolve) => {
+    if (window.api?.once) window.api.once(channel, resolve);
+    else window.api.receive(channel, resolve);
+  });
+}
+
+function pickButtonBySource(source) {
+  switch (source) {
+    case 'offers': return document.getElementById('fairValueButton2');
+
+  }
+}
+
+// ProdAll-Zeilen für gegebene PROD_IDs ziehen (damit wir den aktuellen CS_Szenario kennen)
+function fetchProdAllByProdIds(prodIds) {
+  if (!Array.isArray(prodIds) || !prodIds.length) return [];
+
+  // Nimm die Produktdaten aus appState (passe die Getter ggf. an deine App an)
+  const prodAll =
+    (appState.getProdData && appState.getProdData()) ||
+    appState.prodData ||
+    (appState.getAllProdData && appState.getAllProdData()) ||
+    [];
+
+  const set = new Set(prodIds.map(String)); // Typ-robust vergleichen
+    //console.log('prodAll', prodAll)
+  return prodAll.filter(r => set.has(String(r.PROD_ID)));
+  
+}
+
+
+// Eine ProdAll-Zeile aktualisieren (CS_Szenario)
+function updateProdAllCS(prodId, newCS) {
+  return new Promise((resolve, reject) => {
+    const payload = {
+      cleanTableName: 'ProdAll',
+      rowIndex: 0, // wird in deinem updateRecord eh ignoriert
+      newData: { CS_Szenario: newCS },
+      uniqueIdentifier: { column: 'PROD_ID', value: prodId }
+    };
+    const onOk = () => resolve(true);
+    const onErr = (msg) => reject(new Error(msg));
+
+    if (window.api?.once) {
+      window.api.once('update-data-success', onOk);
+      window.api.once('update-data-error', onErr);
+    } else {
+      window.api.receive('update-data-success', onOk);
+      window.api.receive('update-data-error', onErr);
+    }
+    window.api.send('update-data', payload);
+  });
+}
+
+// Mehrere ProdAll-Updates sequenziell (sicher) ausführen
+async function applyProdAllUpdates(updates) {
+  for (const { PROD_ID, CS_Szenario } of updates) {
+    await updateProdAllCS(PROD_ID, CS_Szenario);
+  }
+}
+
+// Kern: eine Iteration rechnen → ΔCS bestimmen
+
+
+async function computeDeltaCS({ tableName, maxStepBp = 200 } = {}) {
+  //console.group(`computeDeltaCS ▶ table=${tableName}, maxStepBp=${maxStepBp}`);
+  try {
+    const all  = appState.getAllPortfolioData?.() || [];
+    const rows = all.filter(r => String(r.port_name) === String(tableName));
+    //console.log('rows.len', rows.length);
+    if (!rows.length) return { converged: true, info: 'no rows', updates: [] };
+
+    const steps = [];
+    let skipped = 0;
+
+    rows.forEach((r, i) => {
+      const id   = String(r.PROD_ID);
+      const cp   = normalizeToPercent(r.clean_price);
+      const tgt  = normalizeToPercent(r.PRICE_BUY ?? r.price_buy ?? r.PRICE);
+      const dv   = Number(r.CPV01) / 100; // deine aktuelle Skala beibehalten
+      const base = Number(r.C_SPREAD ?? r.CS_Szenario ?? r.CS ?? 0); // ⬅️ ORIGINALER CS aus Portfolio
+
+      if (!isFinite(cp) || !isFinite(tgt) || !isFinite(dv) || dv === 0) {
+        skipped++; console.warn(`[skip row ${i}] id=${id}`, { cp, tgt, dv }); return;
+      }
+
+      const err_bp = (tgt - cp) * 100;
+      const rawBp  = err_bp / dv;     // voller Schritt (vor Clamp)
+      let   step   = rawBp;
+
+      if (step >  maxStepBp) step =  maxStepBp;
+      if (step < -maxStepBp) step = -maxStepBp;
+
+      const newCS = base + step;      // ⬅️ AUFRECHNEN auf den ORIGINALEN C_SPREAD
+
+      steps.push({ PROD_ID: r.PROD_ID, baseCS: base, step, newCS });
+
+      // console.log(`[row ${i}] id=${id}`, {
+      //   cp, tgt, dv, err_bp,
+      //   rawBp: Number(rawBp.toFixed(3)),
+      //   usedStep: Number(step.toFixed(3)),
+      //   baseCS: Number(base.toFixed ? base.toFixed(3) : base),
+      //   newCS:  Number(newCS.toFixed ? newCS.toFixed(3) : newCS),
+      // });
+    });
+
+    if (skipped) console.warn('skipped rows:', skipped);
+    if (!steps.length) return { converged: true, info: 'no usable rows', updates: [] };
+
+    // Updates nur für vorhandene PROD_IDs in ProdAll bauen (Sicherheit)
+    const prodIds  = Array.from(new Set(steps.map(s => s.PROD_ID)));
+    const prodRows = await fetchProdAllByProdIds(prodIds);
+    //console.log('prodRows.len', prodRows.length);
+
+    const byId   = new Map(steps.map(s => [String(s.PROD_ID), s]));
+    const updates = prodRows
+      .map(pr => {
+        const s = byId.get(String(pr.PROD_ID));
+        return s ? { PROD_ID: pr.PROD_ID, CS_Szenario: s.newCS } : null;
+      })
+      .filter(Boolean);
+
+    // console.table(steps.slice(0, 10));
+    // console.table(updates.slice(0, 10));
+    // console.log('updates.total', updates.length);
+
+    return { converged: false, info: `one-step (per-row baseCS + step)`, updates };
+  } catch (e) {
+    console.error('computeDeltaCS error:', e);
+    return { converged: true, info: 'error', updates: [] };
+  } finally {
+    console.groupEnd();
+  }
+}
+
+// --- Orchestrator: iterativ kalibrieren + am Ende normal rechnen ---
+async function calibrateFairValueIterative({
+  source = 'deals',
+  maxIter = 0,
+  tol = 0.1,
+  damp = 0.7,
+  maxStepBp = 200,
+  perRow = false
+} = {}) {
+  const btnCalib  = pickButtonBySource(source);                 // dein Calibrate-Button (z.B. fairValueButton2)
+  const tableName = appState.getSelectedDealsTableName?.();
+  if (!tableName) { console.warn('Kein Name (deals/port/offers) gewählt.'); return; }
+
+  if (btnCalib) { btnCalib.disabled = true; btnCalib.textContent = 'Calibrating…'; }
+
+  let didApplyInLastStep = false;
+
+  for (let k = 0; k < maxIter; k++) {
+    handleFairValueProject(btnCalib, {});                       // normaler Rechenlauf
+    await onceIPC('py-fairValue-complete');
+
+    const { converged, updates } =
+      await computeDeltaCS({ tableName, maxStepBp: Number.POSITIVE_INFINITY });
+
+
+    if (converged || !updates.length) {
+      // wenn in der vorherigen Runde noch CS geschrieben wurden, fehlt evtl. ein Rechenlauf
+      if (didApplyInLastStep) {
+        handleFairValueProject(btnCalib, {});
+        await onceIPC('py-fairValue-complete');
+      }
+      break;
+    }
+
+    await applyProdAllUpdates(updates);
+    //break; 
+    didApplyInLastStep = true;
+  }
+
+  // 🔵 WICHTIG: zum Schluss den normalen "Calculate"-Flow triggern
+  const btnCalc = pickCalculateButton(tableName);
+  if (btnCalc) { btnCalc.disabled = true; /* optional: btnCalc.textContent = 'Calculating…'; */ }
+
+  handleFairValueProject(btnCalc, {});                           // exakt wie ein Klick auf "Calculate"
+  await onceIPC('py-fairValue-complete');                        // UI/Datenpfad wie gewohnt
+
+  if (btnCalc) { btnCalc.disabled = false; /* optional: Label zurücksetzen */ }
+  if (btnCalib) { btnCalib.disabled = false; btnCalib.textContent = 'Calibrate Offers'; }
+}
+
+    function normalizeToPercent(val) {
+      if (val == null) return NaN;
+
+      if (typeof val === 'string') {
+        // 1) HTML-Tags entfernen
+        let s = val.replace(/<[^>]*>/g, ''); // "<span>98.952%</span>" → "98.952%"
+
+        // 2) Whitespace & Prozentzeichen raus
+        s = s.replace(/\s|%/g, '');
+
+        // 3) deutsches Komma erlauben
+        s = s.replace(',', '.');
+
+        // 4) fallback: falls noch Müll drin ist, nur die Zahl extrahieren
+        if (s && isNaN(Number(s))) {
+          const m = s.match(/-?\d+(?:[.,]\d+)?/);
+          s = m ? m[0].replace(',', '.') : '';
+        }
+
+        val = Number(s);
+      }
+
+      if (typeof val !== 'number' || !isFinite(val)) return NaN;
+
+      // Heuristik: 0..1.5 → vermutlich Bruch, also *100
+      return (val > 0 && val <= 1.5) ? val * 100 : val;
+    }
+    // --- Helper: richtigen "Calculate"-Button ermitteln ---
+    function pickCalculateButton(tableName) {
+      const isOffer = /^OFFERS?_/i.test(String(tableName || ''));
+      // Offers: eigener Calculate-Button (fairValueButton3)
+      if (isOffer) return document.getElementById('fairValueButton3');
+      // Deals/Port: Standard-Calculate (falls vorhanden)
+      return document.getElementById('fairValueButton') 
+          || document.getElementById('fairValueButton3'); // Fallback
+    }
+
+
+
+
+
+
+// ⬅️ Stell hier den Tabellennamen ein:
+const ALL_PRODUCTS_TABLE = 'ProdAll'; // falls deine Tabelle 'ProdAll' heißt: const ALL_PRODUCTS_TABLE = 'ProdAll';
+
+function updateProdAllCSGeneric(prodId, newCS) {
+  return new Promise((resolve, reject) => {
+    const payload = {
+      cleanTableName: ALL_PRODUCTS_TABLE,
+      rowIndex: 0, // wird bei dir ignoriert
+      newData: { CS_Szenario: '' },   //  → leeren
+      uniqueIdentifier: { column: 'PROD_ID', value: prodId }
+    };
+    const onOk  = () => resolve(true);
+    const onErr = (msg) => reject(new Error(msg));
+
+    if (window.api?.once) {
+      window.api.once('update-data-success', onOk);
+      window.api.once('update-data-error', onErr);
+    } else {
+      window.api.receive('update-data-success', onOk);
+      window.api.receive('update-data-error', onErr);
+    }
+    window.api.send('update-data', payload);
+  });
+}
+
+async function clearCSSzenarioForCurrentOffer() {
+  // 1) aktuelles port_name ermitteln
+  const portName = String(
+    appState.getSelectedPortTableName?.() ||
+    document.getElementById('createdOffersDropdown')?.value || ''
+  ).trim();
+
+  if (!portName) {
+    console.warn('⚠️ Kein port_name ausgewählt – Abbruch.');
+    return;
+  }
+
+  // 2) zugehörige PROD_IDs aus den Portfoliodaten holen
+  const ports = appState.getAllPortfolioData?.() || [];
+  const prodIds = [...new Set(
+    ports.filter(r => String(r.port_name) === portName).map(r => r.PROD_ID)
+  )];
+
+  if (!prodIds.length) {
+    console.warn(`⚠️ Keine PROD_IDs gefunden für '${portName}'.`);
+    return;
+  }
+
+  //console.log(`Clear CS_Szenario in ${ALL_PRODUCTS_TABLE} für port='${portName}', #Products=${prodIds.length}`);
+
+  // 3) sequenziell leeren
+  for (const id of prodIds) {
+    await updateProdAllCSGeneric(id, ''); // oder '' falls DB kein NULL mag
+  }
+
+  // 4) Daten refreshen (ProdAll/AllProducts + optional Portfolios)
+  const onceIPC = (channel) => new Promise(res => (window.api?.once ? window.api.once(channel, res) : window.api.receive(channel, res)));
+
+  try {
+    const prodP = onceIPC('ProdAllData');  // falls deine App 'AllProductsData' sendet, passe den Channel an
+    window.api.send('fetch-table-data', ALL_PRODUCTS_TABLE === 'ProdAll' ? 'ProdAll' : 'AllProducts');
+    const freshProd = await prodP;
+    appState.setAllProdData?.(freshProd);
+  } catch (e) {
+    console.warn('⚠️ Refresh AllProducts/ProdAll nicht empfangen – bitte Channel prüfen.', e);
+  }
+
+  // 5) Offers-Ansicht neu zeichnen (damit die Anzeige sofort leer ist)
+  const filtered = ports.filter(r => String(r.port_name) === portName);
+  appState.updateOffersDataTable?.(filtered, 0);
+  // Optional: deine Preview
+  if (typeof handlePortProdData === 'function') handlePortProdData(filtered, 4, portName);
+
+  //console.log('✅ CS_Szenario geleert.');
+}
+
+// 6) Button-Handler binden
+document.getElementById('clearCSButton')?.addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Clearing…';
+  try { await clearCSSzenarioForCurrentOffer(); }
+  finally { btn.disabled = false; btn.textContent = old; }
+});
+
+
+
+
+
+
+
+// === DealsMain INCLUDE → Checkboxen im Grid ===
+
+window.enhanceDealsIncludeCheckboxes = enhanceDealsIncludeCheckboxes;
+
+const DEALS_TABLE = 'DealsMain';
+
+function updateDealsIncludeByKey(keyName, keyValue, includeVal) {
+  return new Promise((resolve, reject) => {
+    const payload = {
+      cleanTableName: DEALS_TABLE,
+      rowIndex: 0,
+      newData: { INCLUDE: includeVal },
+      uniqueIdentifier: { column: keyName, value: keyValue }
+    };
+    const ok  = () => resolve(true);
+    const err = (msg) => reject(new Error(msg));
+    if (window.api?.once) {
+      window.api.once('update-data-success', ok);
+      window.api.once('update-data-error', err);
+    } else {
+      window.api.receive('update-data-success', ok);
+      window.api.receive('update-data-error', err);
+    }
+    window.api.send('update-data', payload);
+  });
+}
+
+/**
+ * Patcht die INCLUDE-Spalte zur Checkbox-Spalte.
+ * Robust gegen fehlendes <thead>, andere Container, andere ID-Spalten.
+ */
+// function enhanceDealsIncludeCheckboxes(containerSelector = '#offersDataContainer') {
+//   console.log('➡️ enhanceDealsIncludeCheckboxes', containerSelector);
+//   const root = document.querySelector(containerSelector);
+//   if (!root) { console.warn('⛔ container not found:', containerSelector); return; }
+
+//   // 1) Tabelle finden (echte <table> oder tabellenähnlicher Container)
+//   let table = root.querySelector('table');
+//   if (!table) {
+//     // Fallback: cp-table-Struktur (div-basiert). Versuche trotzdem mit <tr>/<td>-ähnlichen Elementen.
+//     table = root; 
+//   }
+
+//   // 2) Header-Zellen ermitteln (thead|erste Zeile)
+//   let headerCells = Array.from(table.querySelectorAll('thead th, thead td'));
+//   if (!headerCells.length) {
+//     const firstRow = table.querySelector('tbody tr, .cp-table > .row, tr'); // Fallbacks
+//     if (firstRow) headerCells = Array.from(firstRow.children);
+//   }
+//   if (!headerCells.length) { console.warn('⛔ no header cells found'); return; }
+
+//   const norm = s => String(s||'').trim().toLowerCase();
+//   const findColByName = (name) =>
+//     headerCells.findIndex(th =>
+//       norm(th.textContent) === norm(name) ||
+//       norm(th.getAttribute?.('data-col')) === norm(name) ||
+//       norm(th.getAttribute?.('aria-colname')) === norm(name)
+//     );
+
+//   const idxInclude = findColByName('include');
+//   if (idxInclude < 0) { console.warn('⛔ INCLUDE column not found'); return; }
+
+//   // mögliche Schlüsselspalten
+//   const keyCandidates = ['row_id','rowid','id','_id','uid','prod_id','PROD_ID'];
+//   let keyIndex = -1, keyName = null;
+//   for (const k of keyCandidates) {
+//     const i = findColByName(k);
+//     if (i >= 0) { keyIndex = i; keyName = headerCells[i].textContent.trim() || k.toUpperCase(); break; }
+//   }
+//   if (!keyName) keyName = 'PROD_ID'; // Fallback-Name für DB-Update
+
+//   // 3) Datenzeilen
+//   const rowNodes = table.querySelectorAll('tbody tr, .cp-table .row, tr');
+//   if (!rowNodes.length) { console.warn('⛔ no data rows'); return; }
+
+//   console.log('✅ enhance INCLUDE:', { containerSelector, rows: rowNodes.length, idxInclude, keyIndex, keyName });
+
+//   rowNodes.forEach((tr) => {
+//     const cells = Array.from(tr.children);
+//     const tdInclude = cells[idxInclude];
+//     if (!tdInclude) return;
+
+//     // Key extrahieren
+//     let keyValue = (keyIndex >= 0 && cells[keyIndex]) ? cells[keyIndex].textContent.trim() : null;
+//     if (!keyValue && tr.dataset) {
+//       for (const k of ['row_id','rowid','id','_id','uid','prod_id','PROD_ID']) {
+//         if (tr.dataset[k] != null) { keyValue = tr.dataset[k]; keyName = k.toUpperCase(); break; }
+//       }
+//     }
+//     if (!keyValue) {
+//       const guess = tr.querySelector('[data-col="PROD_ID"], [aria-colname="PROD_ID"]');
+//       if (guess) { keyValue = guess.textContent.trim(); keyName = 'PROD_ID'; }
+//     }
+//     if (!keyValue) return; // kein stabiler Schlüssel → Zelle auslassen
+
+//     // aktuellen Wert lesen (1/0)
+//     const current = Number(String(tdInclude.textContent).trim()) === 1;
+
+//     // Checkbox einsetzen
+//     const cb = document.createElement('input');
+//     cb.type = 'checkbox';
+//     cb.checked = current;
+//     cb.title = 'Toggle INCLUDE';
+//     cb.style.transform = 'scale(1.05)';
+//     cb.style.cursor = 'pointer';
+
+//     // Inhalt ersetzen
+//     tdInclude.textContent = '';
+//     tdInclude.appendChild(cb);
+
+//     // Change -> DB
+//     cb.addEventListener('change', async () => {
+//       const newVal = cb.checked ? 1 : 0;
+//       // optimistic UI – optional lokalen State anpassen
+//       try {
+//         cb.disabled = true;
+//         await updateDealsIncludeByKey(keyName, keyValue, newVal);
+//       } catch (err) {
+//         console.warn('⚠️ INCLUDE update failed, reverting', err);
+//         cb.checked = !cb.checked;
+//       } finally {
+//         cb.disabled = false;
+//       }
+//     }, { passive: true });
+//   });
+// }
+function enhanceDealsIncludeCheckboxes(containerSelector = '#offersDataContainer') {
+  //console.log('➡️ enhanceDealsIncludeCheckboxes', containerSelector);
+  const root = document.querySelector(containerSelector);
+  if (!root) { console.warn('⛔ container not found:', containerSelector); return; }
+
+  const table = root.querySelector('table') || root;
+
+  // Header ermitteln (für robustes Skippen)
+  let headerCells = Array.from(table.querySelectorAll('thead th, thead td'));
+  let headerRowEl = null;
+  if (!headerCells.length) {
+    const firstRow = table.querySelector('thead tr') || table.querySelector('tbody tr') || table.querySelector('tr');
+    if (firstRow) { headerCells = Array.from(firstRow.children); headerRowEl = firstRow; }
+  } else {
+    headerRowEl = headerCells[0]?.parentElement || null;
+  }
+
+  const norm = s => String(s||'').trim().toLowerCase();
+  const findColByName = (name) =>
+    headerCells.findIndex(th =>
+      norm(th.textContent) === norm(name) ||
+      norm(th.getAttribute?.('data-col')) === norm(name) ||
+      norm(th.getAttribute?.('aria-colname')) === norm(name)
+    );
+
+  const idxInclude = findColByName('include');
+  if (idxInclude < 0) { console.warn('⛔ INCLUDE column not found'); return; }
+
+  // Key-Spalte bestimmen
+  const keyCandidates = ['row_id','rowid','id','_id','uid','prod_id','PROD_ID'];
+  let keyIndex = -1, keyName = null;
+  for (const k of keyCandidates) {
+    const i = findColByName(k);
+    if (i >= 0) { keyIndex = i; keyName = headerCells[i].textContent.trim() || k.toUpperCase(); break; }
+  }
+  if (!keyName) keyName = 'PROD_ID';
+
+  // Nur Datenzeilen (tbody). Fallback: tr ohne thead / ohne TH-Zellen / keine Header-Klasse.
+  let rowNodes = Array.from(table.querySelectorAll('tbody tr'));
+  if (!rowNodes.length) {
+    rowNodes = Array.from(table.querySelectorAll('tr')).filter(tr =>
+      tr !== headerRowEl &&
+      !tr.closest('thead') &&
+      !Array.from(tr.children).some(c => c.tagName === 'TH') &&
+      !/header/i.test(tr.className)
+    );
+  }
+  if (!rowNodes.length) {
+    rowNodes = Array.from(table.querySelectorAll('.cp-table .row')).filter(r => !/header/i.test(r.className));
+  }
+  if (!rowNodes.length) { console.warn('⛔ no data rows'); return; }
+
+  //console.log('✅ enhance INCLUDE:', { containerSelector, rows: rowNodes.length, idxInclude, keyIndex, keyName });
+
+  rowNodes.forEach((tr) => {
+    const cells = Array.from(tr.children);
+    const tdInclude = cells[idxInclude];
+    if (!tdInclude) return;
+
+    // 🔒 Niemals Header/TH oder bereits gepatchte Zellen anfassen
+    if (tdInclude.tagName === 'TH') return;
+    if (tdInclude.querySelector('input[type="checkbox"]')) return;
+
+    // Key extrahieren
+    let keyValue = (keyIndex >= 0 && cells[keyIndex]) ? cells[keyIndex].textContent.trim() : null;
+    if (!keyValue && tr.dataset) {
+      for (const k of ['row_id','rowid','id','_id','uid','prod_id','PROD_ID']) {
+        if (tr.dataset[k] != null) { keyValue = tr.dataset[k]; keyName = k.toUpperCase(); break; }
+      }
+    }
+    if (!keyValue) {
+      const guess = tr.querySelector('[data-col="PROD_ID"], [aria-colname="PROD_ID"]');
+      if (guess) { keyValue = guess.textContent.trim(); keyName = 'PROD_ID'; }
+    }
+    if (!keyValue) return;
+
+    // aktuellen Wert lesen (1/0)
+    const current = Number(String(tdInclude.textContent).trim()) === 1;
+
+    // Checkbox einsetzen
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = current;
+    cb.title = 'Toggle INCLUDE';
+    cb.style.transform = 'scale(1.05)';
+    cb.style.cursor = 'pointer';
+
+    tdInclude.textContent = '';
+    tdInclude.appendChild(cb);
+
+    cb.addEventListener('change', async () => {
+      const newVal = cb.checked ? 1 : 0;
+      try {
+        cb.disabled = true;
+        await updateDealsIncludeByKey(keyName, keyValue, newVal);
+      } catch (err) {
+        console.warn('⚠️ INCLUDE update failed, reverting', err);
+        cb.checked = !cb.checked;
+      } finally {
+        cb.disabled = false;
+      }
+    }, { passive: true });
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

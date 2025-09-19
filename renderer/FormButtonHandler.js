@@ -548,26 +548,6 @@ document.querySelectorAll('.deleteButton').forEach(button => {
   });
 });
 
-// export function addNewRow(newRowData, cleanTableName) {
-//   return new Promise((resolve, reject) => {
-//     // console.log('FBH in addNewRow newRowData:', newRowData);
-//     // console.log('FBH in addNewRow cleanTableName:', cleanTableName);
-    
-//     // Send the new row data and table name to the main.js process
-//     window.api.send('add-new-row', { newRowData, cleanTableName });
-//     newRowData = {}; 
-//     // Listen for the response from the main process
-//     window.api.receive('add-new-row-success', () => {
-//       newRowData = {}; 
-//       resolve(); // Resolve the promise after successful addition
-//     });
-//     // Handle any errors from the main process
-//     window.api.receive('add-new-row-error', (error) => {
-//       reject(new Error(error.message)); // Reject the promise with the error
-//     });
-//   });
-// }
-
 export function addNewRow(newRowData, cleanTableName) {
   return new Promise((resolve, reject) => {
     // Sende den Insert-Request an main.js
@@ -589,7 +569,7 @@ export function addNewRow(newRowData, cleanTableName) {
 
 
 export function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
-  // console.log('FBH saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
+  console.log('saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
   // Send the update request to the main process
   window.api.send('update-data', { newData, cleanTableName, rowIndex, uniqueIdentifier });
 }

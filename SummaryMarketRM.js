@@ -37,14 +37,14 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   if (plValues.length === 0) return console.warn("No P/L data");
 
   // 🧱 DOM sicherstellen
-  ensureChartContainerExists(
-    'riskDistChartSection',
-    'plMvarDistChart',
-    'Market P/L Distribution',
-    'mvaRDistButton',
-    'Update MVaR',
-    () => handleSummaryRMData(filteredData, index, port_name)
-  );
+  // ensureChartContainerExists(
+  //   'riskDistChartSection',
+  //   'plMvarDistChart',
+  //   // 'Market P/L Distribution',
+  //   // 'mvaRDistButton',
+  //   // 'Update MVaR',
+  //   () => handleSummaryRMData(filteredData, index, port_name)
+  // );
 
   // 📊 HISTOGRAM:
   const { data, options } = createMvarHistogramConfig(plValues, portValueRel, varTRel);
@@ -61,40 +61,40 @@ export function handleSummaryRMData(filteredData, index, port_name) {
   drawCMBChart(portfolioEndValue, portPV01, 5);
 }
 
-export function ensureChartContainerExists(containerId, canvasId, title, buttonId, buttonText, onClick) {
-  let chartContainer = document.getElementById(containerId);
-  if (!chartContainer) {
-    const parent = document.getElementById('SUMMARY_Modal') || document.body;
+// export function ensureChartContainerExists(containerId, canvasId, title, buttonId, buttonText, onClick) {
+//   let chartContainer = document.getElementById(containerId);
+//   if (!chartContainer) {
+//     const parent = document.getElementById('SUMMARY_Modal') || document.body;
 
-    chartContainer = document.createElement('div');
-    chartContainer.id = containerId;
-    chartContainer.className = 'chart-section';
+//     chartContainer = document.createElement('div');
+//     chartContainer.id = containerId;
+//     chartContainer.className = 'chart-section';
 
-    const heading = document.createElement('h3');
-    heading.className = 'section-header';
-    heading.textContent = title;
+//     const heading = document.createElement('h3');
+//     heading.className = 'section-header';
+//     heading.textContent = title;
 
-    const buttonWrapper = document.createElement('div');
-    buttonWrapper.className = 'button-wrapper';
+//     const buttonWrapper = document.createElement('div');
+//     buttonWrapper.className = 'button-wrapper';
 
-    const button = document.createElement('button');
-    button.id = buttonId;
-    button.className = 'edit-button';
-    button.textContent = buttonText;
-    button.addEventListener('click', onClick);
+//     const button = document.createElement('button');
+//     button.id = buttonId;
+//     button.className = 'edit-button';
+//     button.textContent = buttonText;
+//     button.addEventListener('click', onClick);
 
-    const canvas = document.createElement('canvas');
-    canvas.id = canvasId;
-    canvas.width = 900;
-    canvas.height = 500;
+//     const canvas = document.createElement('canvas');
+//     canvas.id = canvasId;
+//     canvas.width = 900;
+//     canvas.height = 500;
 
-    buttonWrapper.appendChild(button);
-    chartContainer.appendChild(heading);
-    chartContainer.appendChild(buttonWrapper);
-    chartContainer.appendChild(canvas);
-    parent.appendChild(chartContainer);
-  }
-}
+//     buttonWrapper.appendChild(button);
+//     chartContainer.appendChild(heading);
+//     chartContainer.appendChild(buttonWrapper);
+//     chartContainer.appendChild(canvas);
+//     parent.appendChild(chartContainer);
+//   }
+// }
 
 
 export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {

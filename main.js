@@ -1636,7 +1636,7 @@ const updateDataListener = async (event, { cleanTableName, rowIndex, newData, un
     // Call the updateRecord function with a callback
     updateRecord(cleanTableName, rowIndex, newData, uniqueIdentifier, (err) => {
       //console.log('updateRecord uniqueIdentifier:', uniqueIdentifier);
-      //console.log('updateRecord cleanTableName:', cleanTableName);
+      console.log('updateDataListener, updateRecord, cleanTableName:', cleanTableName);
       if (err) {
         // Handle the error when the updateRecord function reports an error
         console.error(err.message);
@@ -1648,6 +1648,9 @@ const updateDataListener = async (event, { cleanTableName, rowIndex, newData, un
         //console.log('Update success');
         refreshTable('DealsMain');
         refreshTable('ProdAll');
+        refreshTable('Portfolios');
+        refreshTable('Issuer');
+
       }
     });
   } catch (error) {

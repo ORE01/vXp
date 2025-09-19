@@ -1,56 +1,91 @@
-/* NEW_PRODUCTS only — minimale, sichere Overrides */
-#NEW_PRODUCTS_Modal { 
-  --trigger-max-width: 200px;     /* optional: gleiche Breite wie global */
-}
-
-/* Standard-Flow wie bei den anderen Modals */
-#NEW_PRODUCTS_Modal .table-content { 
-  display: block; 
-  position: relative; 
-}
-
-/* Trigger sauber UNTEREINANDER im linken Bereich */
-#NEW_PRODUCTS_Modal .chart-section{
-  display: block !important;
-  width: 100%;
-  margin: var(--parent-gap) 0;
-  text-align: left;
-}
-
-/* Globale Trigger-Optik beibehalten, nur Breite begrenzen */
-#NEW_PRODUCTS_Modal .section-trigger{
-  max-width: var(--trigger-max-width);   /* kein 100%-Button */
-  width: auto;
-}
-
-/* Close-Icon über Panel/Backdrop legen (wichtig fürs Schließen) */
-#NEW_PRODUCTS_Modal .close{
-  position: absolute;
-  top: 8px; 
-  right: 12px;
-  z-index: 1300; /* > 1100 (Panel) & > 1050 (Backdrop) */
-  cursor: pointer;
-}
-
-/* Kosmetik */
-#NEW_PRODUCTS_Modal .portfolio-info .section-header{ 
-  margin: 0; 
-}
-
-/* OFFERS: Offers & Preview UNTEREINANDER */
-#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col{
+/* NEW_PRODUCTS only — schlanke, stabile Overrides */
+#NEW_PRODUCTS_Modal{
+  --trigger-max-width: 200px;
+  height: 96vh;            /* mehr Gesamthöhe */
+  max-height: 96vh;
   display: flex;
-  flex-direction: column;  /* stack statt nebeneinander */
-  gap: 16px;
+  flex-direction: column;
 }
-#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col > .table-card{
-  width: 100%;
-  margin: 0;
+
+/* Basis */
+#NEW_PRODUCTS_Modal .table-content{ display:block; position:relative; }
+#NEW_PRODUCTS_Modal .chart-section{ display:block !important; width:100%; margin:var(--parent-gap) 0; text-align:left; }
+#NEW_PRODUCTS_Modal .section-trigger{ max-width:var(--trigger-max-width); width:auto; }
+#NEW_PRODUCTS_Modal .close{ position:absolute; top:8px; right:12px; z-index:1300; cursor:pointer; }
+#NEW_PRODUCTS_Modal .portfolio-info .section-header{ margin:0; }
+
+/* Buttons */
+.buttons-row{ display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+.btn-block{ display:flex; flex-direction:column; }
+.btn-label{ font-weight:600; margin-bottom:4px; font-size:.95rem; }
+
+/* OFFERS-Panel: Layout strecken */
+#NEW_PRODUCTS_Modal #panel-offers-np{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-height:0; /* verhindert Doppel-Scroll */
 }
-/* Sicherheitsnetz gegen alte Floats */
+#NEW_PRODUCTS_Modal #panel-offers-np .sub-panel-body{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  min-height:0;
+}
+
+/* Schwarze Grid-Fläche groß machen: Offers (1.2fr) / Filter (auto) / Preview (1fr) */
+#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col{
+  flex:1 1 auto;
+  min-height:0;
+  display:grid;
+  grid-template-rows: 1.2fr auto 1fr;
+  gap:16px;
+}
+
+/* Cards füllen ihre Zeilen */
+#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col .table-card{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  width:100%;
+  margin:0;
+}
+
+/* Sticky Titel in Cards */
+#NEW_PRODUCTS_Modal #panel-offers-np .table-card > .table-title{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background: var(--panel-bg, #0e0e0f);
+  padding-block:.4rem;
+}
+
+/* Inhalte (schwarze Container) füllen die Card */
 #NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col .data-container{
-  float: none !important;
+  flex:1 1 auto;
+  min-height:0;
+  height:100%;
+  overflow:auto;
+  float:none !important; /* Safety gegen alte Floats */
 }
+
+/* Zielgenau: beide Haupt-Container nutzen volle Zeilenhöhe */
+#NEW_PRODUCTS_Modal #panel-offers-np #offersDataContainer,
+#NEW_PRODUCTS_Modal #panel-offers-np #portDataContainer4{
+  height:100% !important;
+  min-height:0 !important;
+  max-height:none !important;
+}
+
+/* OFFERS: Offers/Filter/Preview – viel mehr Vertical Space für die schwarzen Flächen */
+#NEW_PRODUCTS_Modal #panel-offers-np .offers-two-col{
+  grid-template-rows: minmax(60vh, 1fr) auto minmax(60vh, 1fr) !important;
+}
+
+
+
+
 
 
 
