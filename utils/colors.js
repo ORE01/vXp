@@ -2,7 +2,6 @@ export function getColorFromPalette(index) {
   const colorPalette = [
     "rgba(255, 255, 0, 1)",     // Bright Yellow
     "rgba(255, 87, 34, 1)",     // Bright Red-Orange
-    "rgba(255, 0, 0, 1)",       // Bright Red
     "rgba(0, 255, 255, 1)",     // Bright Cyan
     "rgba(173, 255, 47, 1)",    // Bright Green
     "rgba(255, 105, 180, 1)",   // Hot Pink
@@ -20,7 +19,6 @@ export function getColorForPieChart(index) {
   const baseColors = [
     [255, 255, 0],     // Bright Yellow
     [255, 87, 34],     // Bright Red-Orange
-    [255, 0, 0],       // Bright Red
     [0, 255, 255],     // Bright Cyan
     [173, 255, 47],    // Bright Green
     [255, 105, 180],   // Hot Pink

@@ -3,7 +3,7 @@
   "productName": "valueXpro",
   "description": "Risk Management Application",
   "keywords": [],
-  "main": "./main.js",
+  "main": "./zzzBACK_END/main.js",
   "version": "1.0.0",
   "author": "ronal",
   "scripts": {
@@ -29,13 +29,17 @@
     }
   },
   "dependencies": {
+    "axios": "^1.12.2",
     "better-sqlite3": "^11.9.1",
     "chart.js": "^4.4.4",
     "chartjs-adapter-date-fns": "^3.0.0",
     "cubic-spline": "^3.0.3",
     "date-fns": "^4.1.0",
+    "dayjs": "^1.11.18",
     "dotenv": "^16.3.1",
     "lightweight-charts": "^4.2.0",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^5.1.91",
     "scipy": "^0.1.4",
     "sqlite3": "^5.1.7",
     "xlsx": "^0.18.5"

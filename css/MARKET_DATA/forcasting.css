@@ -1,0 +1,13 @@
+  #epochsInput {
+    display: block; /* Ensure block behavior for full control */
+    margin: 0 auto 10px 30px; /* Adds 20px distance from the left */
+    text-align: left; /* Ensure text inside is aligned to the left */
+    width: 90%; /* Adjust width relative to the parent container */
+  }
+
+  #batchSizeInput{
+    display: block; /* Ensure block behavior for full control */
+    margin: 0 auto 10px 10px; /* Adds 20px distance from the left */
+    text-align: left; /* Ensure text inside is aligned to the left */
+    width: 90%; /* Adjust width relative to the parent container */
+  }

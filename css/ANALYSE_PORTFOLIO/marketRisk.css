@@ -1,0 +1,45 @@
+.mvar-pair{
+  display: flex;
+  align-items: flex-start;   /* Container-Größe bleibt unverändert */
+  gap: 16px;
+  flex-wrap: wrap;           /* auf schmalen Screens untereinander */
+}
+
+/* risk-market.css — NUR die zwei Charts */
+
+#panel-market .chart-2x1-row{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+#panel-market .chart-box{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+
+  flex: 1 1 420px;
+  min-width: 320px;
+}
+
+#panel-market .chart-box canvas{
+  display:block;
+  width:100% !important;
+  height:360px !important;
+}
+
+@media (max-width: 1200px){
+  #panel-market .chart-box canvas{ height: 320px !important; }
+}
+@media (max-width: 800px){
+  #panel-market .chart-2x1-row{ gap:16px; }
+  #panel-market .chart-box{ min-width:0; width:100%; }
+  #panel-market .chart-box canvas{ height: 280px !important; }
+}
+
+/* Optional für sehr schmale Viewports */
+@media (max-width: 900px){
+  .mvar-pair{ gap: 12px; }
+}

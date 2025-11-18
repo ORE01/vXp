@@ -1,0 +1,9 @@
+/* ===== vXp Imports – nur Panel-spezifisch ===== */
+#panel-upd-vxp .cp-card{ margin-top: 8px; }
+
+/* Wenn du dort z. B. Status-Badges anzeigen willst: */
+#panel-upd-vxp .badge{
+  display:inline-block; padding:4px 8px; border-radius:999px;
+  background:#161719; border:1px solid rgba(255,255,255,.08); color:#eaeaea;
+  font-size:12px;
+}

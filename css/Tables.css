@@ -1,344 +1,148 @@
+/* ===== Global: neutrale Basis nur für Tabellen (sicher für Slide-Ins) ===== */
+
+/* Root-Design-Variablen pro Modal/Section erlauben */
+.table {
+  --tbl-font: "Your Font Name", sans-serif;
+  --tbl-fz: 13px;
+  --tbl-fg: rgb(161,160,160);
+  --tbl-border: #555;
+  --tbl-head-bg: #222;
+  --tbl-row-even: #333;
+  --tbl-row-odd: #444;
+  --tbl-cell-pad: 6px 12px;
+  --tbl-head-pad: 10px;
+  --tbl-head-minw: 100px;
+}
 
 .table {
-  /* display: hidden;  ❌ */
-/*  display: none;        ✅ oder: visibility: hidden; */
-  font-family: "Your Font Name", sans-serif;
-  font-size: 13px;
-  color: rgb(161, 160, 160);
+  font-family: var(--tbl-font);
+  font-size: var(--tbl-fz);
+  color: var(--tbl-fg);
 }
 
-  .table-selected {
-    background-color: #4CAF50; 
-    color: white; 
-  }
-  
-  
-  .table tr:nth-child(even) {
-    background-color: #333;
-  }
-  
-  .table-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; 
-  }
-  
-  .table-content tbody td {
-    border: 1px solid black;
-  }
-  
-  .table-content table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 1px solid black;
-    box-sizing: border-box;
-    text-align: right;
-  }
-  
-  .table-content thead {
-    border: none; 
-    background-color: #222; 
-    position: sticky; 
-    top: 0; 
-    z-index: 20; 
-  }
-  
-  .table-content thead th {
-    position: sticky; 
-    top: 0; 
-    background-color: #222; 
-    z-index: 19; 
-    border: 1px solid #555; 
-    box-sizing: border-box; 
-    padding: 10px; 
-    text-align: center; 
-    font-size: 14px; 
-    color: rgb(161, 160, 160);
-    height: 40px; 
-    min-width: 100px; 
-  }
-  
-  .table-content thead tr {
-    margin: 0;
-    padding: 0; 
-  }
-  
-  .table-content {
-    border-spacing: 0; 
-    width: 100%; 
-  }
-  
-  .table-content th:first-child {
-    padding-left: 10px; 
-  }
-  
-  .table-content th:last-child {
-    padding-right: 10px; 
-  }
-  
-  
-  .table-content thead {
-    box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.3); 
-  }
-  
-  
-  .table-content td 
-  .table-content th {
-    padding: 2px;
-    border: 1px solid black;
-  }
-  
-  .table-content td[data-column="clean_price"] {
-      background-color: orange;
-      color: white;
-    }
-  
-  @media screen and (max-width: 768px) {
-    .table-content {
-      top: 100px;
-      z-index: 60;
-    }
-  }
-  .table-content h2 {
-    margin-right: 20px;
-    margin-left: 20px; 
-  }
-  .table .content-wrapper {
-    display: flex;
-  }
-
-  /* #CVaRDataContainer table tr td:first-child,
-  #MVaRMainDataContainer table tr td:first-child {
-  width: 70px; 
-  
-  } */
-
-  .table-wrapper {
-    max-height: 300px; 
-    overflow: auto;
-    border: 1px solid rgb(100, 100, 100); 
-    border-radius: 5px;
-  }
-  
-  .table-wrapper::-webkit-scrollbar {
-    width: 8px; 
-  }
-  .table-wrapper::-webkit-scrollbar-thumb {
-    background-color: #888; 
-    border-radius: 4px; 
-  }
-  .table-wrapper::-webkit-scrollbar-thumb:hover {
-    background-color: #555; 
-  }
-
-
-.MLInputWrapper {
-  width: 300px; 
-}
-
-
-
-
-
-  .input-table-wrapper {
-    margin-bottom: 20px; 
-  }
-
-
-  
-
-/* Base styling for the data container */
-.data-container {
-  background-color: rgb(70, 69, 69);
-  z-index: 0;
+/* Nur echte Datenbereiche! */
+.table .data-container {
+  background: rgb(70,69,69);
   max-height: 500px;
-  overflow-y: auto;
-  border: 1px solid rgb(100, 100, 100);
+  overflow: auto;                 /* wichtig für sticky thead */
+  border: 1px solid rgb(100,100,100);
   border-radius: 5px;
 }
 
-/* Scrollbar customization */
-.data-container::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* Scrollbar hübsch */
+.table .data-container::-webkit-scrollbar { width: 8px; height: 8px; }
+.table .data-container::-webkit-scrollbar-thumb { background:#888; border-radius:4px; }
+.table .data-container::-webkit-scrollbar-thumb:hover { background:#555; }
+.table .data-container::-webkit-scrollbar-track { background: transparent; }
 
-.data-container::-webkit-scrollbar-thumb {
-  background-color: #888;
-  border-radius: 4px;
-}
-
-.data-container::-webkit-scrollbar-thumb:hover {
-  background-color: #555;
-}
-.data-container::-webkit-scrollbar-track {
-  background: transparent; /* Transparent scrollbar track */
-}
-
-/* Alternating row colors */
-.data-container tr:nth-child(even) {
-  background-color: #333; /* Dark gray for even rows */
-}
-
-.data-container tr:nth-child(odd) {
-  background-color: #444; /* Slightly lighter gray for odd rows */
-}
-
-/* Hover styling */
-.data-container tr:nth-child(even):hover {
-  color: white; /* Change text color to white */
-  background-color: #333; /* Retain dark gray for even rows */
-}
-
-.data-container tr:nth-child(odd):hover {
-  color: white; /* Change text color to white */
-  background-color: #444; /* Retain lighter gray for odd rows */
-}
-
-/* Tooltip for truncated text */
-.data-container td {
-  max-width: 150px; /* Limit width for truncation */
-  overflow: hidden; /* Hide overflowing text */
-  text-overflow: ellipsis; /* Display "..." for truncated content */
-  white-space: nowrap; /* Prevent text wrapping */
-  cursor: pointer; /* Indicate hover interactivity */
-  position: relative; /* Ensure proper stacking context */
-}
-
-.data-container table {
+/* Tabellen-Grundlayout */
+.table .data-container table {
   table-layout: auto;
   border-collapse: collapse;
+  width: 100%;
+  border: 1px solid black;
+  box-sizing: border-box;
 }
 
-.data-container table th,
-.data-container table td {
-  padding: 6px 12px;
+/* Header sticky */
+.table .data-container thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--tbl-head-bg);
+  box-shadow: 0 3px 5px rgba(0,0,0,.3);
+  border: none;
+}
+.table .data-container thead th {
+  position: sticky;
+  top: 0;
+  z-index: 19;
+  background: var(--tbl-head-bg);
+  color: var(--tbl-fg);
+  border: 1px solid var(--tbl-border);
+  box-sizing: border-box;
+  padding: var(--tbl-head-pad);
+  text-align: center;
+  font-size: 14px;
+  height: 40px;
+  min-width: var(--tbl-head-minw);
+}
+.table .data-container thead tr { margin:0; padding:0; }
+.table .data-container th:first-child { padding-left: 10px; }
+.table .data-container th:last-child  { padding-right: 10px; }
+
+/* Zellen */
+.table .data-container td,
+.table .data-container th {
+  padding: var(--tbl-cell-pad);
   text-align: left;
+  border: 1px solid black;
 }
 
+/* Alternierende Zeilen */
+.table .data-container tr:nth-child(even) { background: var(--tbl-row-even); }
+.table .data-container tr:nth-child(odd)  { background: var(--tbl-row-odd);  }
+.table .data-container tr:hover { color:#fff; }
 
+/* Truncation/Tooltip-ready */
+.table .data-container td {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
 
-  
-  /* #portMVaRDataContainer {
-    background-color: rgb(31, 31, 31);
-    z-index: 0;
-    width: 380px;
-    max-height: 890px;
-    overflow-y: auto;
-  }
-  
-  #CVaRDataContainer, #MVaRMainDataContainer {
-    width: 300px;
-    margin-bottom: 20px;
-  } */
+/* Utility/Optionals */
+.table .table-selected { background:#4CAF50; color:#fff; }
+.table .table-wrapper {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid rgb(100,100,100);
+  border-radius: 5px;
+}
+.table .table-wrapper::-webkit-scrollbar { width:8px; }
+.table .table-wrapper::-webkit-scrollbar-thumb { background:#888; border-radius:4px; }
+.table .table-wrapper::-webkit-scrollbar-thumb:hover { background:#555; }
 
-.data-wrapper {
-  margin-left: 20px; 
-  margin-right: 40px;
-  vertical-align: top;
+/* Form-/Layout-Utilities – NICHT .table-content global verbiegen */
+.table .data-wrapper {
+  margin: 0 40px 0 20px;
   display: flex;
   flex-direction: column;
 }
+.MLInputWrapper { width: 300px; }
+.input-table-wrapper { margin-bottom: 20px; }
 
-
-  .portfolio-details-container {
-    flex: 0 1 20%;
-    margin-right: 20px; /* Adjust as needed for spacing */
-    margin-left: 20px; /* Adjust as needed for spacing */
-    text-align: left; /* Align text to the left */
-  }
-  .portfolio-comparison-container {
-    display: flex;
-    width: 100%;
-    justify-content: space-between;
-    margin-bottom: 20px; /* Adjust as needed for spacing */
-  }
-  #COMP_Modal .data-wrapper {
-    height: 250px;
-    overflow-y: auto; 
-  }
-
-
-
-
-  #epochsInput {
-    display: block; /* Ensure block behavior for full control */
-    margin: 0 auto 10px 30px; /* Adds 20px distance from the left */
-    text-align: left; /* Ensure text inside is aligned to the left */
-    width: 90%; /* Adjust width relative to the parent container */
-  }
-
-  #batchSizeInput{
-    display: block; /* Ensure block behavior for full control */
-    margin: 0 auto 10px 10px; /* Adds 20px distance from the left */
-    text-align: left; /* Ensure text inside is aligned to the left */
-    width: 90%; /* Adjust width relative to the parent container */
-  }
-
-
-
-  /* 1) Elter erlaubt wieder Überlauf */
-#PORT_Modal .table-content{
-  overflow: visible;         /* statt overflow:hidden */
+/* Beispiel: spezielle Spaltenfärbung */
+.table .data-container td[data-column="clean_price"] {
+  background: orange; color: #fff;
 }
 
-/* 2) Der Body scrollt nur vertikal, die Tabelle selbst horizontal */
-#PORT_Modal .sub-panel-body{
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-/* 3) Horizontaler Scrollcontainer für die Tabelle */
-#PORT_Modal #portDataContainer0{
-  overflow-x: auto;
-  overflow-y: auto;
-  width: 100%;
-  max-width: 100%;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* 4) Tabelle breiter als Container ⇒ horizontale Scrollbar erscheint */
-#PORT_Modal #portDataContainer0 table{
-  width: max-content;     /* NICHT 100% */
-  min-width: 1200px;      /* optionaler Startwert */
-  border-collapse: collapse;
-}
-
-/* 5) Kein Zeilenumbruch in Zellen (sonst passt alles rein) */
-#PORT_Modal #portDataContainer0 th,
-#PORT_Modal #portDataContainer0 td{
-  white-space: nowrap;
-}
-
-/* 6) Falls Eltern Flex/Grid sind: Schrumpfen erlauben (wichtig für Scrollbar) */
-#PORT_Modal .table-content,
-#PORT_Modal .data-wrapper,
-#PORT_Modal .data-container{
-  min-width: 0;
+/* Mobile Feinheiten, ohne Layout zu sprengen */
+@media (max-width: 768px) {
+  .table .data-container { max-height: 60vh; }
 }
 
 
+.table .dropdown-wrapper{
+  display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end;
+  margin-bottom: 12px;
+}
+.table .select-dropdown{ min-width: 180px; }
 
 
-.link-button {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  color: #4aa3ff;
-  text-decoration: underline;
-  cursor: pointer;
-  font: inherit;
-}
-.link-button:hover { color: #72b8ff; }
 
-:where(#CREATE_PORTFOLIO_Modal, #SUMMARY_Modal) td.prod-id-cell{
-  color:#4aa3ff;
-  text-decoration: underline;
-  cursor: pointer;
-}
-:where(#CREATE_PORTFOLIO_Modal, #SUMMARY_Modal) td.prod-id-cell:hover{
-  color:#72b8ff;
-}
+
+
+
+
+
+
+
+
+
+
 
 
 

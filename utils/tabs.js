@@ -4,10 +4,11 @@ export function initializeTabs() {
     'DATA_Tab': 'DATA_Modal',
     'COMP_Tab': 'COMP_Modal',
     'DataProvider_Tab': 'DataProvider_Modal',
-    'SUMMARY_Tab': 'SUMMARY_Modal',
+    'ANALYSE_Tab': 'ANALYSE_Modal',
     'CREATE_PORTFOLIO_Tab': 'CREATE_PORTFOLIO_Modal',
     'MARKETDATA_Tab': 'MARKETDATA_Modal',
-    'NEW_PRODUCTS_Tab': 'NEW_PRODUCTS_Modal', // << hier auf die exakten IDs achten
+    'NEW_PRODUCTS_Tab': 'NEW_PRODUCTS_Modal',
+    'REPORTS_Tab': 'REPORTS_Modal',
   };
 
   const tables = document.querySelectorAll('.table');
