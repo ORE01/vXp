@@ -102,6 +102,9 @@ export async function quickImportWithStandardMapping() {
 
     const tableName = importResult.tempTableName;
 
+    // // NEU: RANK-Spalte normalisieren
+    // await normalizeRankOnTempTable(tableName);
+
     const columnMap = [
       { from: "PROD_ID", to: "PROD_ID" },
       { from: "SECURITY_DES", to: "DESCRIPTION" },
@@ -407,7 +410,8 @@ function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
     "PRICE_BUY",
     "TICKER",
     "DESCRIPTION",
-    "TENOR"
+    "TENOR",
+    "START_DATE"
   ];
 
   // Nur relevante Felder verwenden (Schnittmenge)
@@ -497,6 +501,16 @@ export async function handleSubmitMatching() {
     await showCustomAlert("❌ Fehler: Tabellenname nicht gefunden.");
     return;
   }
+
+  
+  // RANK-Werte in der Temp-Tabelle normalisieren
+  // ⬇️ EINMAL in offers.js definieren (vor der ersten Nutzung)
+  // async function normalizeRankOnTempTable(tableName) {
+  // return await window.api.invoke("normalize-rank", { tableName });
+  // }
+
+  // await normalizeRankOnTempTable(tempTableName);
+
 
   window.api.send("import-matched-columns", {
     sourceTable: tempTableName,

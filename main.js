@@ -1890,20 +1890,3 @@ ipcMain.on('update-customer-texts', async (event, { customer_id, pdf_header, pdf
     event.reply('update-customer-texts-error', err.message);
   }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
