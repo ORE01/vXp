@@ -1,0 +1,14 @@
+/* updates.css – nur Layout */
+#DATA_Modal .table-content{ display:block; }
+#panel-upd-excel .cp-card,
+#panel-upd-historic .cp-card,
+#panel-upd-vxp .cp-card{ margin-top:12px; }
+
+#panel-upd-excel .button-container,
+#panel-upd-historic .button-container,
+#panel-upd-vxp .button-container{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+}
+
+
+

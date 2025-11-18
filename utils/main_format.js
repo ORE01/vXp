@@ -10,78 +10,194 @@ require('dotenv').config();
 
 
 
-function formatColumns(rows) {
-    const firstRow = rows[0];
-    const formatColumns = [
-      'TRADE_ID', 'EUSWAP', 'EUSWAP_SZ1', 'RATES', 'NOTIONAL', 'NAV', 'COUPON', 'START_DATE', 'MATURITY', 'TRADE_DATE',
-      'CS_Szenario', 'clean_price', 'GEARING', 'FLOOR', 'CAP', 'SPREADS',
-      'DATE', 'EU_1Y', 'EU_5Y', 'EU_10Y', 'EU_20Y', 'EU_30Y', 'US_AAA', 'US_AA', 'US_A', 'US_BBB', 'US_BB',
-      'VaR', 'ES'
-    ];
+// function formatColumns(rows) {
+//     const firstRow = rows[0];
+//     const formatColumns = [
+//       'TRADE_ID', 'EUSWAP', 'EUSWAP_SZ1', 'RATES', 'NOTIONAL', 'NAV', 'COUPON', 'START_DATE', 'MATURITY', 'TRADE_DATE',
+//       'CS_Szenario', 'clean_price', 'GEARING', 'FLOOR', 'CAP', 'SPREADS',
+//       'DATE', 'EU_1Y', 'EU_5Y', 'EU_10Y', 'EU_20Y', 'EU_30Y', 'US_AAA', 'US_AA', 'US_A', 'US_BBB', 'US_BB',
+//       'VaR', 'ES'
+//     ];
   
-    return rows.map(row => {
-      const formattedRow = { ...row };
+//     return rows.map(row => {
+//       const formattedRow = { ...row };
       
-      formatColumns.forEach(column => {
-        if (column in firstRow) {
-          switch (column) {
-            case 'NOTIONAL':
-            case 'NAV':
-            case 'LGD':
-              const Value = Math.trunc(row[column]);
-              formattedRow[column] = Value.toString();
-              break; 
-            case 'TRADE_ID':
-              formattedRow[column] = row[column].toString();
-              break;
-            case 'START_DATE':
-            case 'MATURITY':
-            case 'TRADE_DATE':
-            case 'DATE':
-              const date = new Date(row[column]);
-              const day = date.getDate().toString().padStart(2, '0');
-              const month = (date.getMonth() + 1).toString().padStart(2, '0');
-              const year = date.getFullYear();
-              const formattedDate = `${day}-${month}-${year}`;
-              formattedRow[column] = formattedDate;
-              break;
-            case 'CS_Szenario': 
-              formattedRow[column] = row[column];
-              break;
-            case 'clean_price':
-              // Display as an empty string if value is null or NaN
-              formattedRow[column] = row[column] != null ? `<span style="color: orange; display: flex; justify-content: center;">${(row[column] * 100).toFixed(3)}%</span>` : "";
-              break;
-            case 'COUPON':
-            case 'GEARING':
-            case 'FLOOR':
-            case 'CAP':
-            case 'SPREADS':
-            case 'EUSWAP':
-            case 'EUSWAP_SZ1':
-            case 'RATES':
-              // Display as an empty string if value is null or NaN
-              formattedRow[column] = row[column] != null ? (row[column] * 100).toFixed(3) + '%' : "";
-              break;
-            case 'EU_1Y':
-            case 'EU_5Y':
-            case 'EU_10Y':
-            case 'EU_20Y':
-            case 'EU_30Y':
-            case 'VaR':
-            case 'ES':
-              // Display as an empty string if value is null or NaN
-              formattedRow[column] = row[column] != null ? row[column].toFixed(3) : "";
-              break;
-            default:
-              break;
-          }
-        }
-      });
+//       formatColumns.forEach(column => {
+//         if (column in firstRow) {
+//           switch (column) {
+//             case 'NOTIONAL':
+//             case 'NAV':
+//             case 'LGD':
+//               const Value = Math.trunc(row[column]);
+//               formattedRow[column] = Value.toString();
+//               break; 
+//             case 'TRADE_ID':
+//               formattedRow[column] = row[column].toString();
+//               break;
+//             case 'START_DATE':
+//             case 'MATURITY':
+//             case 'TRADE_DATE':
+//             case 'DATE':
+//               const date = new Date(row[column]);
+//               const day = date.getDate().toString().padStart(2, '0');
+//               const month = (date.getMonth() + 1).toString().padStart(2, '0');
+//               const year = date.getFullYear();
+//               const formattedDate = `${day}-${month}-${year}`;
+//               formattedRow[column] = formattedDate;
+//               break;
+//             case 'CS_Szenario': 
+//               formattedRow[column] = row[column];
+//               break;
+//             case 'clean_price':
+//               // Display as an empty string if value is null or NaN
+//               formattedRow[column] = row[column] != null ? `<span style="color: orange; display: flex; justify-content: center;">${(row[column] * 100).toFixed(3)}%</span>` : "";
+//               break;
+//             case 'COUPON':
+//             case 'GEARING':
+//             case 'FLOOR':
+//             case 'CAP':
+//             case 'SPREADS':
+//             case 'EUSWAP':
+//             case 'EUSWAP_SZ1':
+//             case 'RATES':
+//               // Display as an empty string if value is null or NaN
+//               formattedRow[column] = row[column] != null ? (row[column] * 100).toFixed(3) + '%' : "";
+//               break;
+//             case 'EU_1Y':
+//             case 'EU_5Y':
+//             case 'EU_10Y':
+//             case 'EU_20Y':
+//             case 'EU_30Y':
+//             case 'VaR':
+//             case 'ES':
+//               // Display as an empty string if value is null or NaN
+//               formattedRow[column] = row[column] != null ? row[column].toFixed(3) : "";
+//               break;
+//             default:
+//               break;
+//           }
+//         }
+//       });
   
-      return formattedRow;
+//       return formattedRow;
+//     });
+//   }
+
+function formatColumns(rows) {
+  const firstRow = rows[0];
+  const formatColumnsList = [
+    'TRADE_ID', 'EUSWAP', 'EUSWAP_SZ1', 'RATES', 'NOTIONAL', 'NAV', 'COUPON',
+    'START_DATE', 'MATURITY', 'TRADE_DATE', 'CS_Szenario', 'clean_price',
+    'GEARING', 'FLOOR', 'CAP', 'SPREADS', 'DATE',
+    'EU_1Y', 'EU_5Y', 'EU_10Y', 'EU_20Y', 'EU_30Y',
+    'US_AAA', 'US_AA', 'US_A', 'US_BBB', 'US_BB', 'VaR', 'ES'
+  ];
+
+  return rows.map(row => {
+    const formattedRow = { ...row };
+
+    formatColumnsList.forEach(column => {
+      if (!(column in firstRow)) return;
+
+      switch (column) {
+        case 'NOTIONAL':
+        case 'NAV':
+        case 'LGD': {
+          const Value = Math.trunc(row[column]);
+          formattedRow[column] = Value.toString();
+          break;
+        }
+
+        case 'TRADE_ID': {
+          formattedRow[column] = row[column]?.toString?.() ?? row[column];
+          break;
+        }
+
+        case 'START_DATE':
+        case 'MATURITY':
+        case 'TRADE_DATE':
+        case 'DATE': {
+          const raw = row[column];
+          if (raw == null || raw === '') { formattedRow[column] = ''; break; }
+          const s = String(raw).trim();
+
+          // keep tokens/relative strings untouched (renderer will handle them)
+          if (/^today(?:\s*[+-]\s*\d+)?$/i.test(s) || /^(\d+)\s*[dwmy]$/i.test(s)) {
+            formattedRow[column] = s;
+            break;
+          }
+
+          // already DD-MM-YYYY -> keep
+          if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+            formattedRow[column] = s;
+            break;
+          }
+
+          // ISO/SQLite YYYY-MM-DD[...] -> convert to DD-MM-YYYY
+          if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+            const d = s.slice(8, 10), m = s.slice(5, 7), y = s.slice(0, 4);
+            formattedRow[column] = `${d}-${m}-${y}`;
+            break;
+          }
+
+          // If it's a real Date object or a parseable timestamp, format it; else keep as-is
+          const maybeDate = (raw instanceof Date) ? raw : new Date(s);
+          if (!Number.isNaN(maybeDate.getTime())) {
+            const dd = String(maybeDate.getDate()).padStart(2, '0');
+            const mm = String(maybeDate.getMonth() + 1).padStart(2, '0');
+            const yy = maybeDate.getFullYear();
+            formattedRow[column] = `${dd}-${mm}-${yy}`;
+          } else {
+            formattedRow[column] = s; // do NOT turn into NaN-NaN-NaN
+          }
+          break;
+        }
+
+        case 'CS_Szenario': {
+          formattedRow[column] = row[column];
+          break;
+        }
+
+        case 'clean_price': {
+          formattedRow[column] = row[column] != null
+            ? `<span style="color: orange; display: flex; justify-content: center;">${(row[column] * 100).toFixed(3)}%</span>`
+            : "";
+          break;
+        }
+
+        case 'COUPON':
+        case 'GEARING':
+        case 'FLOOR':
+        case 'CAP':
+        case 'SPREADS':
+        case 'EUSWAP':
+        case 'EUSWAP_SZ1':
+        case 'RATES': {
+          formattedRow[column] = row[column] != null ? (row[column] * 100).toFixed(3) + '%' : "";
+          break;
+        }
+
+        case 'EU_1Y':
+        case 'EU_5Y':
+        case 'EU_10Y':
+        case 'EU_20Y':
+        case 'EU_30Y':
+        case 'VaR':
+        case 'ES': {
+          formattedRow[column] = row[column] != null ? row[column].toFixed(3) : "";
+          break;
+        }
+
+        default:
+          break;
+      }
     });
-  }
+
+    return formattedRow;
+  });
+}
+
+
 
   //Transform Date
   function formatDate(row, allowedColumns = null) {

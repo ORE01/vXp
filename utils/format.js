@@ -1,4 +1,32 @@
 
+// diese könnte die wichtigste funktion für die ANZEIGE sein (aber nur ANZEIGE)
+export function getFormatRules() {
+  return {
+    'PD': formatNumber(3, true, true), 
+    'PD_M': formatNumber(3, true, true), 
+    'PD_M_norm': formatNumber(3, true, true), 
+    'ytm': formatNumber(3, true, true), 
+    'ytm_BUY': formatNumber(3, true, true), 
+    'ytmPort': formatNumber(3, true, true), 
+    'CONVI': formatNumber(2, true), 
+    'NOTIONAL': formatNumber(0), 
+    'EAD': formatNumber(0), 
+    'LGD': formatNumber(0),
+    'LOSS': formatNumber(0),
+    'NAV': formatNumber(0),
+    'PV01': formatNumber(0),
+    'CPV01': formatNumber(0),
+    'PV01rel': formatNumber(2),
+    'CPV01rel': formatNumber(2),
+    'CPV01_EUR': formatNumber(2),
+    'absolute': formatNumber(0),
+    'C_SPREAD': formatNumber(0),
+    'C_SPREAD_BASE': formatNumber(0),
+    'C_SPREAD_DELTA': formatNumber(0),
+    'MATURITY_YEAR': v => (v == null || v === '') ? '' : (typeof v === 'number' ? String(Math.trunc(v)) : ((String(v).trim().match(/^(-?\d+)(?:[.,]\d+)?$/) || [,''])[1] || String(v))),
+  };
+}
+
 
 export const formatNumber = (decimals = 0, isPercentage = false, multiplyBy100 = false) => (value) => {
   let number = parseFloat(value);
@@ -98,36 +126,60 @@ export function formatInputFieldValue(fieldName, value) {
   return formattedValue;
 }
 
-export function convertDateToISO(dateStr) {
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+// export function convertDateToISO(dateStr) {
+//   const parts = dateStr.split('-');
+//   if (parts.length === 3) {
+//     return `${parts[2]}-${parts[1]}-${parts[0]}`;
+//   }
+//   return dateStr;
+// }
+export function convertDateToISO(s) {
+  if (!s) return '';
+  s = String(s).trim();
+
+  // bereits ISO → so lassen
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // DD-MM-YYYY → YYYY-MM-DD (auch 1/2-stellige D/M erlauben)
+  const m = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(s);
+  if (m) {
+    const dd = m[1].padStart(2, '0');
+    const mm = m[2].padStart(2, '0');
+    const yy = m[3];
+    return `${yy}-${mm}-${dd}`;
   }
-  return dateStr;
+
+  // sonst: unverändert zurück (oder weitere Formate ergänzen)
+  return s;
 }
 
-export function getFormatRules() {
-  return {
-    'PD': formatNumber(3, true, true), 
-    'PD_M': formatNumber(3, true, true), 
-    'PD_M_norm': formatNumber(3, true, true), 
-    'ytm': formatNumber(3, true, true), 
-    'ytm_BUY': formatNumber(3, true, true), 
-    'ytmPort': formatNumber(3, true, true), 
-    'CONVI': formatNumber(2, true), 
-    'NOTIONAL': formatNumber(0), 
-    'EAD': formatNumber(0), 
-    'LGD': formatNumber(0),
-    'LOSS': formatNumber(0),
-    'NAV': formatNumber(0),
-    'PV01': formatNumber(0),
-    'CPV01': formatNumber(0),
-    'PV01rel': formatNumber(2),
-    'CPV01rel': formatNumber(2),
-    'CPV01_EUR': formatNumber(2),
-    'absolute': formatNumber(0),
-  };
+export function toISODate(s) {
+  if (!s) return '';
+  if (s instanceof Date && !isNaN(s)) {
+    return s.toISOString().slice(0,10); // YYYY-MM-DD
+  }
+  s = String(s).trim();
+
+  // Already ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // DD-MM-YYYY → YYYY-MM-DD
+  const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(s);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+
+  // Fallback: try Date(...)
+  const d = new Date(s);
+  if (!isNaN(d)) return d.toISOString().slice(0,10);
+
+  return s; // last resort (won’t break SQL), but try to avoid
 }
+
+
+
+
+
+
+
 export function formatNumberWithGrouping(value) {
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');

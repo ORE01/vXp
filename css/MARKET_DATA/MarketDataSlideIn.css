@@ -1,0 +1,216 @@
+/* gleicher Frame wie ANALYSE_Modal */
+/* #MARKETDATA_Modal .table-content{
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+} */
+
+/* Falls du die Card-Styles noch nicht global hast */
+.md-flex-row{ display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; }
+.table-card{
+  flex:1 1 420px; min-width:320px;
+  background: var(--panel-surface, #0f0f10);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; padding:12px; overflow:auto;
+}
+.table-title{ margin:0 0 8px; font-size:14px; font-weight:600; opacity:.9; }
+
+/* Erzwinge vertikales Stacking nur im Market-Data-Modal */
+#MARKETDATA_Modal .table-content {
+  display: flex;           /* statt block – robust gegen fremde flex-Regeln */
+  flex-direction: column;  /* vertikal stapeln */
+  align-items: flex-start; /* linksbündig */
+}
+
+/* Trigger-Zeilen verlässlich als volle Zeilen unter dem Header */
+#MARKETDATA_Modal .chart-section {
+  display: block !important;
+  width: 100%;
+  margin: 12px 0;
+  clear: both;             /* falls irgendwo noch floated wird */
+  float: none;
+  text-align: left;
+}
+
+/* Header darf nichts „floaten“ */
+#MARKETDATA_Modal .portfolio-info {
+  display: block;
+  float: none;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* RATES: Tabelle + Chart wieder nebeneinander */
+#MARKETDATA_Modal #panel-rates .sub-panel-body{
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr); /* links Tabelle, rechts Chart größer */
+  gap: 16px;
+  max-width: 1380px;
+  margin: 0 auto;
+}
+
+/* Falls eine frühere Media-Query auf 1 Spalte umstellt: hier überschreiben */
+@media (max-width: 1100px){
+  #MARKETDATA_Modal #panel-rates.sub-panel .sub-panel-body{
+    grid-template-columns: minmax(300px, 1fr) minmax(360px, 1fr); /* bleibt 2-spaltig */
+  }
+}
+
+/* Chart als schwarze Card (nur RATES), bleibt im Grid rechts */
+#MARKETDATA_Modal #panel-rates .chart-container{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: hidden;
+}
+
+#MARKETDATA_Modal #panel-rates .chart-container canvas{
+  display: block;
+  width: 100% !important;
+  height: 420px !important;   /* ggf. anpassen */
+  position: static !important;
+}
+
+
+
+
+
+
+
+
+
+
+/* ========== FORWARD PANEL LAYOUT & CHARTS ========== */
+#MARKETDATA_Modal #panel-forward .forward-layout-wrapper{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Linke Spalte (Tabelle) – Card-Look wie gewohnt */
+#MARKETDATA_Modal #panel-forward #FWDDataContainer{
+  flex: 1 1 420px;
+  min-width: 320px;
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto;
+}
+
+/* Rechte Spalte (Charts + Controls) – sauber untereinander */
+#MARKETDATA_Modal #panel-forward .forward-charts-wrapper{
+  flex: 2 1 520px;
+  min-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;               /* Abstand zwischen Controls/Charts */
+}
+
+/* Controls hübsch in Reihe */
+#MARKETDATA_Modal #panel-forward #cmsInputContainer1,
+#MARKETDATA_Modal #panel-forward #cmsInputContainer2,
+#MARKETDATA_Modal #panel-forward #inputContainer{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ===== FORWARD: saubere Größensteuerung ohne Verzerrung ===== */
+/* FORWARD: schwarze Chart-Card sicherstellen */
+#MARKETDATA_Modal #panel-forward .chart-container{
+  background: var(--panel-surface, #0f0f10) !important;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  height: 420px; /* aus vorherigem Fix beibehalten */
+  overflow: hidden;
+}
+
+/* Canvas selbst NICHT weiß hinterlegen */
+#MARKETDATA_Modal #panel-forward .chart-container canvas{
+  background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: static !important;
+}
+
+
+/* Optional: auf sehr breiten Screens etwas höher */
+@media (min-width: 1600px){
+  #MARKETDATA_Modal #panel-forward .chart-container{ height: 480px; }
+}
+
+
+/* ===== MARKET DATA ▸ ML Panel ===== */
+#MARKETDATA_Modal #panel-ml .ml-layout{
+  display: grid;
+  grid-template-columns: minmax(360px, 1.1fr) minmax(420px, 1.4fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1200px){
+  #MARKETDATA_Modal #panel-ml .ml-layout{ grid-template-columns: 1fr; }
+}
+
+#MARKETDATA_Modal #panel-ml .ml-left .table-wrapper,
+#MARKETDATA_Modal #panel-ml .ml-left .table-card{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+/* Tabellen kompakt + eigener Scroll */
+#MARKETDATA_Modal #panel-ml .ml-table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+#MARKETDATA_Modal #panel-ml .ml-table th,
+#MARKETDATA_Modal #panel-ml .ml-table td{
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  white-space: nowrap;
+}
+#MARKETDATA_Modal #panel-ml .data-container.table-card{
+  max-height: 36vh; /* scrolly tables */
+}
+
+/* Param-Reihe */
+#MARKETDATA_Modal #panel-ml .ml-inline{
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+#MARKETDATA_Modal #panel-ml .ml-params-row{
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+#MARKETDATA_Modal #panel-ml .input-container{
+  display: flex; flex-direction: column; gap: 6px; min-width: 160px;
+}
+#MARKETDATA_Modal #panel-ml .input-container input{
+  background: #fff; color:#222; border:1px solid #555; border-radius:4px; padding:6px;
+}
+
+/* Charts rechts */
+#MARKETDATA_Modal #panel-ml .chart-card{
+  padding: 12px;
+}
+#MARKETDATA_Modal #panel-ml .ml-h3{ margin: 8px 0; font-weight: 600; }
+#MARKETDATA_Modal #panel-ml .ml-h4{ margin: 0 0 8px; opacity:.9; }
+
+#MARKETDATA_Modal #panel-ml #MLTestDataChart,
+#MARKETDATA_Modal #panel-ml #MLFuturePredictionChart{
+  width: 100%; height: 320px; display: block;
+}
+@media (max-width: 600px){
+  #MARKETDATA_Modal #panel-ml #MLTestDataChart,
+  #MARKETDATA_Modal #panel-ml #MLFuturePredictionChart{ height: 280px; }
+}
+
+
+

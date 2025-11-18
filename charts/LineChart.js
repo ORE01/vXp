@@ -1,4 +1,5 @@
 import { getColorFromPalette } from '../utils/colors.js';
+import { saveTrendlines, loadTrendlines } from '../FRONT_END/MARKET_DATA/HISTORIC_DATA/TS.js';
 
 
 
@@ -11,147 +12,437 @@ let debounceTimeout;
 
 export default function createLineChart(datasets, chartName, chartTitle, pointRadius, modalIndex, smaPeriods) {
   const canvasElement = document.getElementById(chartName);
-
-  if (!canvasElement) {
-    console.error(`Canvas element with ID "${chartName}" not found.`);
-    return null;
-  }
-
+  if (!canvasElement) { console.error(`Canvas element with ID "${chartName}" not found.`); return null; }
   const ctx = canvasElement.getContext("2d");
+  if (!ctx) { console.error(`Failed to get 2D context for ${chartName}.`); return null; }
 
-  if (!ctx) {
-    console.error(`Failed to get 2D context for canvas with ID "${chartName}".`);
-    return null;
+  // --- Trendspeicher pro Chart ---
+  const trendState = {
+    lines: [],        // [{x1,y1,x2,y2}]
+    drawing: false,   // ist im Draw-Modus?
+    tempStart: null   // {x,y} Datenkoordinaten
+  };
+
+  // --- Zeichen-Plugin: rendert Linien nach den Datensätzen ---
+const trendlinePlugin = {
+  id: 'trendlineDrawer',
+  afterDatasetsDraw(chart, args, pluginOpts) {
+    const { ctx } = chart;
+    const sx = chart.scales.x;
+    const sy = chart.scales.y;
+    if (!sx || !sy) return;
+
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = pluginOpts?.color || '#ffaa33';
+    ctx.setLineDash(pluginOpts?.dash || []);
+
+    // feste Linien
+    trendState.lines.forEach(l => {
+      const px1 = xPixel(chart, l.x1);
+      const px2 = xPixel(chart, l.x2);
+      if (px1 == null || px2 == null) return; // außerhalb des sichtbaren Bereichs/Labels nicht vorhanden
+      const y1 = sy.getPixelForValue(l.y1);
+      const y2 = sy.getPixelForValue(l.y2);
+      ctx.beginPath(); ctx.moveTo(px1, y1); ctx.lineTo(px2, y2); ctx.stroke();
+    });
+
+    // Vorschau (während Ziehen)
+    if (trendState.tempStart && pluginOpts?.preview && pluginOpts.preview.x !== undefined) {
+      const px1 = xPixel(chart, trendState.tempStart.x);
+      const px2 = xPixel(chart, pluginOpts.preview.x);
+      if (px1 != null && px2 != null) {
+        const y1 = sy.getPixelForValue(trendState.tempStart.y);
+        const y2 = sy.getPixelForValue(pluginOpts.preview.y);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#cccccc';
+        ctx.beginPath(); ctx.moveTo(px1, y1); ctx.lineTo(px2, y2); ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
+};
 
-  // Array to store both original datasets and their corresponding MAs
+
+  // --- Datensätze + SMAs zusammenbauen ---
   const allDatasets = [];
-
-  // Iterate over all selected datasets
   datasets.forEach((dataset, index) => {
-    console.log(`Processing dataset [${dataset.label}] with data:`, dataset.data);
-
-    // Original dataset (solid line)
     const originalDataset = {
-      label: dataset.label,  // Original dataset label
-      data: dataset.data.map(dataPoint => ({
-        x: dataPoint.x,
-        y: dataPoint.y,
-        originalY: dataPoint.originalY
-      })),
+      label: dataset.label,
+      data: dataset.data.map(p => ({ x: p.x, y: p.y, originalY: p.originalY })),
       fill: false,
-      borderColor: getColorFromPalette(index),  // Assign unique color for each dataset
+      borderColor: getColorFromPalette(index),
       tension: 0.1,
       pointRadius: pointRadius,
       borderWidth: 1,
       spanGaps: false,
-      borderDash: []  // Solid line for original dataset
+      borderDash: []
     };
-
-    // Add the original dataset to the array
     allDatasets.push(originalDataset);
 
-    // Check and add multiple SMAs if the data exists
-    ['smaData1', 'smaData2', 'smaData3'].forEach((smaKey, smaIndex) => {
-      if (dataset[smaKey] && dataset[smaKey].length > 0) {
-        const period = smaPeriods[`sma${smaIndex + 1}`]; // Use the respective period (e.g., 20, 50, 200)
-        console.log(`Adding SMA ${period} for dataset [${dataset.label}]`);
-
-        const maDataset = {
-          label: `${dataset.label} (SMA ${period})`,  // MA dataset label
-          data: dataset[smaKey].map(dataPoint => ({
-            x: dataPoint.x,
-            y: dataPoint.y
-          })),
+    ['smaData1','smaData2','smaData3'].forEach((k,i)=>{
+      if (dataset[k]?.length) {
+        const period = smaPeriods[`sma${i+1}`];
+        allDatasets.push({
+          label: `${dataset.label} (SMA ${period})`,
+          data: dataset[k].map(p=>({x:p.x,y:p.y})),
           fill: false,
-          borderColor: `rgba(${255 - (smaIndex * 50)}, 0, 0, 0.5)`,  // Different red shades for each SMA
-          borderDash: [5, 5],  // Dotted line for MA
+          borderColor: `rgba(${255-(i*50)},0,0,0.5)`,
+          borderDash: [5,5],
           tension: 0.1,
-          pointRadius: 0,  // No points for MA
+          pointRadius: 0,
           borderWidth: 2,
-          spanGaps: false,
-        };
-
-        allDatasets.push(maDataset);
-        console.log(`Added SMA ${period} dataset for [${dataset.label}]`);
+          spanGaps: false
+        });
       }
     });
   });
 
-  // Create the chart
-  let chartInstance = new Chart(ctx, {
+  // --- Chart erstellen (Plugin einhängen) ---
+  const chartInstance = new Chart(ctx, {
     type: "line",
     data: {
-      labels: datasets[0].data.map(dataPoint => dataPoint.x), // Use x-values from the first dataset
-      datasets: allDatasets // Pass the original datasets and MAs
+      labels: datasets[0]?.data?.map(p=>p.x) || [],
+      datasets: allDatasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: 'nearest',
-        axis: 'x',
-        intersect: false
-      },
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
       scales: {
-        x: {
-          display: true,
-          title: {
-            display: true,
-            text: "Year",
-          },
-        },
-        y: {
-          display: true,
-          title: {
-            display: true,
-            text: "Value",
-          },
-        },
+        x: { display: true, title: { display: true, text: "Year" } },
+        y: { display: true, title: { display: true, text: "Value" } }
       },
       plugins: {
         tooltip: {
           enabled: true,
           callbacks: {
-            label: function(context) {
-              if (context.dataset.label.includes('SMA')) {
-                // If the dataset is a moving average (SMA), display its y value directly
-                return `${context.dataset.label}: ${context.raw.y !== null ? context.raw.y.toFixed(2) : 'N/A'}`;
+            label: (ctx) => {
+              if (ctx.dataset.label.includes('SMA')) {
+                return `${ctx.dataset.label}: ${ctx.raw?.y != null ? ctx.raw.y.toFixed(2) : 'N/A'}`;
               } else {
-                // For the original dataset, use the originalY value to avoid normalized data
-                const originalValue = context.raw ? context.raw.originalY : null;
-                return `${context.dataset.label}: ${typeof originalValue === 'number' ? originalValue.toFixed(2) : 'N/A'}`;
+                const ov = ctx.raw ? ctx.raw.originalY : null;
+                return `${ctx.dataset.label}: ${typeof ov === 'number' ? ov.toFixed(2) : 'N/A'}`;
               }
             }
           }
         },
-        
         zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x', // Pan along the x-axis
-          },
+          pan: { enabled: true, mode: 'x' },
           zoom: {
-            drag: {
-              enabled: true, // Enable drag-to-zoom feature
-            },
-            wheel: {
-              enabled: true, // Enable zooming with the mouse wheel
-            },
-            pinch: {
-              enabled: true, // Enable zooming by pinching on touch devices
-            },
-            mode: 'x', // Zoom along the x-axis
-          },
+            drag: { enabled: true },
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x'
+          }
         },
+        trendlineDrawer: { color: '#ffaa33', dash: [] }
       }
-    }
+    },
+    plugins: [trendlinePlugin]
   });
 
+  // --- gespeicherte Trendlinien nach Init laden ---
+loadTrendlines(modalIndex, chartName).then((loaded) => {
+  console.log('[TS-TL][CHART][APPLY] modal=', modalIndex, 'chart=', chartName, 'count=', Array.isArray(loaded) ? loaded.length : 0);
+  if (Array.isArray(loaded) && loaded.length) {
+    trendState.lines = loaded.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 }));
+    chartInstance.update();
+  }
+});
+
+
+
+
+  // --- Zeichen-UI (Buttons) ---
+ensureDrawToolbar(
+  canvasElement,
+  modalIndex,
+  () => { // Toggle Draw
+    trendState.drawing = !trendState.drawing;
+    chartInstance.options.plugins.trendlineDrawer.preview = null;
+    chartInstance.update();
+  },
+  async () => { // Undo last line (statt alles löschen)
+    if (!trendState.lines.length) return;           // nichts zu tun
+    trendState.lines.pop();                         // letzte Linie entfernen
+    trendState.tempStart = null;
+    chartInstance.options.plugins.trendlineDrawer.preview = null;
+    chartInstance.update();
+    await saveTrendlines(modalIndex, chartName, trendState.lines);
+  }
+);
+
+
+  // --- Canvas-Events für Zeichnen ---
+  const getDataPointFromEvent = (evt) => {
+    const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
+    const sx = chartInstance.scales.x;
+    const sy = chartInstance.scales.y;
+    if (!sx || !sy) return null;
+    const xVal = sx.getValueForPixel(pos.x);
+    const yVal = sy.getValueForPixel(pos.y);
+    return (xVal == null || yVal == null) ? null : { x: xVal, y: yVal };
+  };
+
+const onClick = async (evt) => {
+  if (!trendState.drawing) return;
+  const pt = xValueFromEvent(chartInstance, evt);
+  if (!pt) return;
+
+  // y aus Pixel → Datenwert
+  const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
+  const sy  = chartInstance.scales.y;
+  const y   = sy.getValueForPixel(pos.y);
+  if (y == null) return;
+
+  const xVal = pt.x; // Label (category) ODER Number (time/linear)
+
+  if (!trendState.tempStart) {
+    trendState.tempStart = { x: xVal, y };
+  } else {
+    const end = { x: xVal, y };
+    if (evt.shiftKey) end.y = trendState.tempStart.y; // horizontale Linie
+
+    trendState.lines.push({
+      x1: trendState.tempStart.x, y1: trendState.tempStart.y,
+      x2: end.x,                  y2: end.y
+    });
+
+    trendState.tempStart = null;
+    chartInstance.options.plugins.trendlineDrawer.preview = null;
+    chartInstance.update();
+    await saveTrendlines(modalIndex, chartName, trendState.lines);
+  }
+};
+
+const onMouseMove = (evt) => {
+  if (!trendState.drawing || !trendState.tempStart) return;
+
+  const pt = xValueFromEvent(chartInstance, evt);
+  if (!pt) return;
+
+  const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
+  const sy  = chartInstance.scales.y;
+  const y   = sy.getValueForPixel(pos.y);
+  if (y == null) return;
+
+  const end = { x: pt.x, y };
+  if (evt.shiftKey) end.y = trendState.tempStart.y;
+  chartInstance.options.plugins.trendlineDrawer.preview = end;
+  chartInstance.update('none');
+};
+
+
+  const onContextOrEsc = (evt) => {
+    if ((evt.type === 'contextmenu') || (evt.type === 'keydown' && evt.key === 'Escape')) {
+      trendState.tempStart = null;
+      chartInstance.options.plugins.trendlineDrawer.preview = null;
+      chartInstance.update();
+    }
+  };
+
+  // Events binden
+  canvasElement.addEventListener('click', onClick);
+  canvasElement.addEventListener('mousemove', onMouseMove);
+  canvasElement.addEventListener('contextmenu', (e)=>{ e.preventDefault(); onContextOrEsc(e); });
+  window.addEventListener('keydown', onContextOrEsc);
+
+  // Bestehende Buttons etc.
   setupChartButtons(chartInstance, datasets, modalIndex);
+
+  // Cleanup beim Destroy (+ persist)
+  const _destroy = chartInstance.destroy.bind(chartInstance);
+  chartInstance.destroy = async () => {
+    try { await saveTrendlines(modalIndex, chartName, trendState.lines); } catch {}
+    canvasElement.removeEventListener('click', onClick);
+    canvasElement.removeEventListener('mousemove', onMouseMove);
+    canvasElement.removeEventListener('contextmenu', onContextOrEsc);
+    window.removeEventListener('keydown', onContextOrEsc);
+    _destroy();
+  };
 
   return chartInstance;
 }
+
+
+/** Fügt pro Chart (modalIndex) eine kleine Zeichen-Toolbar ein */
+function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
+  // wir hängen an den gleichen Container wie dein Chart
+  const holder = canvasEl.closest('.TSChart-container') || canvasEl.parentElement;
+  if (!holder) return;
+
+  const toolbarId = `tsDrawToolbar_${modalIndex}`;
+  if (holder.querySelector(`#${toolbarId}`)) return;
+
+  const bar = document.createElement('div');
+  bar.id = toolbarId;
+  bar.style.display = 'flex';
+  bar.style.gap = '8px';
+  bar.style.alignItems = 'center';
+  bar.style.justifyContent = 'flex-end';
+  bar.style.margin = '6px 0 8px';
+
+  const btnDraw = document.createElement('button');
+  btnDraw.type = 'button';
+  btnDraw.title = 'Trendline zeichnen (Shift = horizontal)';
+  btnDraw.innerHTML = '🔨 Draw Line';
+  btnDraw.style.padding = '6px 10px';
+  btnDraw.style.borderRadius = '8px';
+  btnDraw.style.border = '1px solid rgba(255,255,255,.12)';
+  btnDraw.style.background = '#1a1a1a';
+  btnDraw.style.color = '#cfcfcf';
+  btnDraw.addEventListener('click', onToggleDraw);
+
+  const btnClear = document.createElement('button');
+  btnClear.type = 'button';
+  btnClear.title = 'Alle Trendlines löschen';
+  btnClear.innerHTML = '✕ Clear';
+  btnClear.style.padding = '6px 10px';
+  btnClear.style.borderRadius = '8px';
+  btnClear.style.border = '1px solid rgba(255,255,255,.12)';
+  btnClear.style.background = '#1a1a1a';
+  btnClear.style.color = '#cfcfcf';
+  btnClear.addEventListener('click', onClear);
+
+  bar.appendChild(btnDraw);
+  bar.appendChild(btnClear);
+
+  // Toolbar direkt VOR den Chart-Canvas setzen (falls du sie lieber oben willst)
+  const chartCard = canvasEl.closest('.chart-container') || holder;
+  chartCard.parentElement.insertBefore(bar, chartCard);
+}
+// Hilfsfunktionen: X-Wert ↔ Pixel abhängig vom Scale-Typ
+function xValueFromEvent(chart, evt) {
+  const pos = Chart.helpers.getRelativePosition(evt, chart);
+  const sx = chart.scales.x;
+  if (!sx) return null;
+
+  // category → getValueForPixel gibt Index zurück → auf Label mappen
+  if (sx.type === 'category') {
+    const idx = Math.round(sx.getValueForPixel(pos.x));
+    const label = chart.data.labels?.[idx];
+    return (label !== undefined) ? { x: label } : null;
+  }
+
+  // time/linear → numerischer Wert
+  const x = sx.getValueForPixel(pos.x);
+  return (x == null) ? null : { x };
+}
+
+function xPixel(chart, xVal) {
+  const sx = chart.scales.x;
+  if (!sx) return null;
+
+  if (sx.type === 'category') {
+    const labels = chart.data.labels || [];
+    const idx = labels.indexOf(xVal);
+    if (idx === -1) return null;
+    return sx.getPixelForValue(idx);
+  }
+  // time/linear
+  return sx.getPixelForValue(xVal);
+}
+
+// === Hilfen: Label <-> Pixel Mapping ===
+function xLabelToPixel(chart, xLabel) {
+  const sx = chart.scales.x;
+  if (!sx) return null;
+  const labels = chart.data.labels || [];
+  const idx = labels.indexOf(xLabel);
+  if (idx < 0) return null;
+  return sx.getPixelForValue(idx); // Category-Scale: Index -> Pixel
+}
+
+function pickXLabelFromEvent(chart, evt) {
+  const sx = chart.scales.x;
+  if (!sx) return null;
+  const pos = Chart.helpers.getRelativePosition(evt, chart);
+  let idx = Math.round(sx.getValueForPixel(pos.x));  // Index im aktuellen Label-Array
+  const labels = chart.data.labels || [];
+  idx = Math.max(0, Math.min(labels.length - 1, idx));
+  return labels[idx]; // Datum/String-Label
+}
+
+// === Helpers: Date/Label utils ===
+function parseDateMaybe(s) {
+  // versuche ISO/Label → Date
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+function getLabels(chart) {
+  return chart?.data?.labels || [];
+}
+function getLabelDateRange(chart) {
+  const labels = getLabels(chart);
+  if (!labels.length) return { min: null, max: null };
+  const first = parseDateMaybe(labels[0]);
+  const last  = parseDateMaybe(labels[labels.length - 1]);
+  return { min: first, max: last };
+}
+function findNearestIndexForDate(labels, target) {
+  // labels: array of date-strings (ascending). binary search-ish fallback.
+  let lo = 0, hi = labels.length - 1;
+  const t = +target;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const md  = +new Date(labels[mid]);
+    if (md === t) return mid;
+    if (md < t) lo = mid + 1; else hi = mid - 1;
+  }
+  // lo ist nun Insert-Position → nimm nächstliegend
+  if (lo <= 0) return 0;
+  if (lo >= labels.length) return labels.length - 1;
+  const dl = Math.abs(+new Date(labels[lo]) - t);
+  const dh = Math.abs(+new Date(labels[lo - 1]) - t);
+  return (dl < dh) ? lo : (lo - 1);
+}
+function xAnyToPixel(chart, val) {
+  // versteht xLabel (Datum-String) ODER altes numerisches x
+  const sx = chart.scales.x;
+  if (!sx) return null;
+  const labels = getLabels(chart);
+
+  // 1) Neues Format (Label/Datum)
+  if (typeof val === 'string') {
+    const d = parseDateMaybe(val);
+    if (d) {
+      const idx = findNearestIndexForDate(labels, d);
+      return sx.getPixelForValue(idx);
+    }
+    // falls kein Datum, versuche exakte Label-Suche (kategorisch)
+    const idx = labels.indexOf(val);
+    if (idx >= 0) return sx.getPixelForValue(idx);
+  }
+  // 2) Altes Format (numerisch: Index/Value)
+  if (typeof val === 'number') {
+    return sx.getPixelForValue(val);
+  }
+  return null;
+}
+// clamp ein Linien-Ende auf sichtbaren Bereich via Date
+function clampXLabelToView(chart, xLabelOrNum) {
+  const labels = getLabels(chart);
+  if (!labels.length) return xLabelOrNum;
+
+  // wenn numerisch → unverändert (alte Datensätze)
+  if (typeof xLabelOrNum === 'number') return xLabelOrNum;
+
+  const d = parseDateMaybe(xLabelOrNum);
+  if (!d) return xLabelOrNum;
+
+  const { min, max } = getLabelDateRange(chart);
+  if (!min || !max) return xLabelOrNum;
+
+  if (d < min) return labels[0];
+  if (d > max) return labels[labels.length - 1];
+  return xLabelOrNum;
+}
+
+
+
+
 
 
 
@@ -592,85 +883,64 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
 
   const xValues = datasets[0].data.map((dataPoint) => dataPoint.x);
 
-  // Create the chart and store it in a variable
-  const chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: xValues,
-      datasets: datasets.map((dataset, index) => ({
-        label: dataset.label,
-        data: dataset.data,
-        fill: false,
-        borderColor: colorPalette[index % colorPalette.length], // Assign a color from the color palette
-        tension: 0.1,
-        pointRadius: pointRadius,
-        borderWidth: 1,
-      })),
-    },
-    options: {
-      responsive: true,
-      scales: {
-        x: {
-          display: true,
-          title: {
-            display: true,
-            text: "Year",
-            color: "rgb(161, 160, 160)",
-          },
-          ticks: {
-            color: "rgb(161, 160, 160)",
-          },
-          grid: {
-            color: "rgb(90, 90, 90)",
-          },
-        },
-        y: {
-          display: true,
-          title: {
-            display: true,
-            text: "Rate (%)",
-            color: "rgb(161, 160, 160)",
-          },
-          ticks: {
-            color: "rgb(161, 160, 160)",
-          },
-          grid: {
-            color: "rgb(90, 90, 90)",
-          },
-          legend: {
-            labels: {
-              color: "rgb(161, 160, 160)",
-            },
-          },
-        },
-      },
-      plugins: {
+// Create the chart and store it in a variable
+const chart = new Chart(ctx, {
+  type: "line",
+  data: {
+    labels: xValues,
+    datasets: datasets.map((dataset, index) => ({
+      label: dataset.label,
+      data: dataset.data,
+      fill: false,
+      borderColor: colorPalette[index % colorPalette.length],
+      tension: 0.1,
+      pointRadius: pointRadius,
+      borderWidth: 1,
+    })),
+  },
+  options: {
+    responsive: true,
+
+    // ✅ Performance-/Resize-Entlastung (minimaler Eingriff)
+    resizeDelay: 150,           // throttled Resize-Handler
+    animation: { duration: 0 }, // keine Animationsframes beim Resize/Update
+    normalized: true,           // stabilisiert interne Berechnungen
+
+    // ✅ Für Linien mit vielen Punkten: decimation beschleunigt Rendering
+    plugins: {
+      decimation: { enabled: true, algorithm: 'min-max' },
+
+      zoom: {
+        pan: { enabled: true, mode: 'x', threshold: 10 },
         zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x',
-            threshold: 10,
-          },
-          zoom: {
-            drag:{
-              enabled: true
-            },
-            wheel: {
-              enabled: true,
-            },
-            pinch: {
-              enabled: true,
-            },
-            mode: 'x',
-          },
-          limits: {
-            x: { minRange: 1 },
-          },
+          drag: { enabled: true },
+          wheel: { enabled: true },
+          pinch: { enabled: true },
+          mode: 'x',
         },
+        limits: { x: { minRange: 1 } },
+      },
+      // (Legende bleibt unverändert; falls du sie färben willst → plugins.legend.labels.color)
+    },
+
+    scales: {
+      x: {
+        display: true,
+        title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
+        ticks: { color: "rgb(161, 160, 160)" },
+        grid: { color: "rgb(90, 90, 90)" },
+      },
+      y: {
+        display: true,
+        title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
+        ticks: { color: "rgb(161, 160, 160)" },
+        grid: { color: "rgb(90, 90, 90)" },
       },
     },
-  });
-  return chart; // Return the created chart instance
+  },
+});
+return chart;
+
 }
 
 export function futurePredictionsChart(datasets, chartName, chartTitle, pointRadius) {

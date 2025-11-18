@@ -1,0 +1,13 @@
+/* DELTA FELDER bei Calibration */
+
+td.delta-pos  {
+  background: #16a34a;   /* grün */
+  color: #fff !important;
+  font-weight: 600;
+}
+
+td.delta-neg  {
+  background: #dc2626;   /* rot */
+  color: #fff !important;
+  font-weight: 600;
+}

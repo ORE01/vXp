@@ -1,0 +1,142 @@
+/* ───────────────── Credit VaR / EAD – Layout (final) ───────────────── */
+:is(#panel-cvar, #panel-EAD) .cvar-grid{
+  display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start;
+}
+
+/* Linke Spalte */
+:is(#panel-cvar, #panel-EAD) .cvar-left{
+  --cvar-left-card-width: 1000px;
+  flex: 0 0 var(--cvar-left-card-width);
+  max-width: var(--cvar-left-card-width);
+}
+
+/* Rechte Spalte */
+:is(#panel-cvar, #panel-EAD) .cvar-right{
+  flex: 1 1 auto; min-width: 420px;
+  display:flex; flex-direction:column; gap:12px; align-items:stretch;
+  position:relative; z-index:1;
+}
+
+/* Buttons-Block */
+:is(#panel-cvar, #panel-EAD) .chart-button-container{
+  display:flex; flex-wrap:wrap; gap:8px; margin:0 0 8px;
+}
+
+/* Linke Kacheln (Data) */
+:is(#panel-cvar, #panel-EAD) .cvar-left .data-container{
+  width:100%;
+  background: var(--panel-surface, #0f0f10);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px; padding:10px; box-sizing:border-box;
+  margin:0 0 10px 0; position:relative; z-index:2;
+}
+:is(#panel-cvar, #panel-EAD) .cvar-left .data-container table{
+  width:100%; table-layout:fixed; border-collapse:collapse;
+}
+:is(#panel-cvar, #panel-EAD) .cvar-left .data-container th,
+:is(#panel-cvar, #panel-EAD) .cvar-left .data-container td{
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Chart-Container rechts */
+:is(#panel-cvar, #panel-EAD) .chart-container-table,
+:is(#panel-cvar, #panel-EAD) .chart-container-inner{
+  position:relative;
+  background: var(--panel-surface, #0f0f10);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; padding:12px; box-sizing:border-box;
+  height:460px; z-index:1;
+}
+@media (min-width: 1200px){
+  :is(#panel-cvar, #panel-EAD) .chart-container-table,
+  :is(#panel-cvar, #panel-EAD) .chart-container-inner{ height:520px; }
+}
+:is(#panel-cvar, #panel-EAD) canvas{
+  position:absolute; inset:0; width:100%; height:100%; background:transparent !important;
+}
+
+/* Tabellen-Card (oben links) */
+:is(#panel-cvar, #panel-EAD) .table-card{
+  --cvar-card-width: 560px;
+  width: var(--cvar-card-width); max-width:100%;
+  margin:0 0 12px 0;
+  background: var(--panel-surface, #0f0f10);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; padding:12px; box-sizing:border-box;
+}
+:is(#panel-cvar, #panel-EAD) .table-card > p{ margin:0 0 8px 0; }
+:is(#panel-cvar, #panel-EAD) .table-card .data-container{
+  width:100%; margin:0 0 10px 0; background:transparent; border:0; padding:0; box-sizing:border-box;
+}
+:is(#panel-cvar, #panel-EAD) .table-card .data-container table{
+  width:100%; table-layout:fixed; border-collapse:collapse;
+}
+:is(#panel-cvar, #panel-EAD) .table-card .data-container th,
+:is(#panel-cvar, #panel-EAD) .table-card .data-container td{
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* EAD/LGD + LossIssuer: gleiche Chartbreite */
+:is(#panel-cvar, #panel-EAD) #EADChartContainer,
+:is(#panel-cvar, #panel-EAD) #LGDChartContainer,
+:is(#panel-cvar, #panel-EAD) #LossIssuerChartContainerRating,
+:is(#panel-cvar, #panel-EAD) #LossIssuerChartContainerMarket,
+:is(#panel-cvar, #panel-EAD) #LossIssuerChartContainerMarketNorm{
+  max-width:780px; width:100%; align-self:flex-start; margin-right:auto;
+}
+
+/* Toolbar-Reihe */
+:is(#panel-cvar, #panel-EAD) .cvar-toolbar-row{
+  display:flex; justify-content:flex-start; align-items:center; margin:0 0 12px 0;
+}
+:is(#panel-cvar, #panel-EAD) .cvar-toolbar-row .chart-button-container{
+  display:flex; flex-wrap:wrap; gap:8px;
+}
+:is(#panel-cvar, #panel-EAD) .cvar-left .chart-button-container{ margin:0; }
+
+/* Responsiv */
+@media (max-width: 1100px){
+  :is(#panel-cvar, #panel-EAD) .cvar-left{
+    --cvar-left-card-width: 520px;
+    flex: 0 0 var(--cvar-left-card-width);
+    max-width: var(--cvar-left-card-width);
+  }
+}
+@media (max-width: 900px){
+  :is(#panel-cvar, #panel-EAD) .cvar-grid{ gap:16px; }
+  :is(#panel-cvar, #panel-EAD) .cvar-left{
+    --cvar-left-card-width: 100%;
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+  :is(#panel-cvar, #panel-EAD) .cvar-right{ min-width:0; }
+  :is(#panel-cvar, #panel-EAD) .table-card{ width:100%; }
+  :is(#panel-cvar, #panel-EAD) .cvar-left .data-container{ width:100%; }
+}
+
+/* Linke Daten-Views: EAD breiter, LossIssuer schmäler */
+:is(#panel-cvar, #panel-EAD) .cvar-left{
+  --cvar-left-ead-width: 100%;
+  --cvar-left-narrow: 560px;
+}
+:is(#panel-cvar, #panel-EAD) #EADDataContainer{
+  width: var(--cvar-left-ead-width); max-width:100%; margin-right:0;
+}
+:is(#panel-cvar, #panel-EAD) #LossIssuerDataContainerRating,
+:is(#panel-cvar, #panel-EAD) #LossIssuerDataContainerMarket,
+:is(#panel-cvar, #panel-EAD) #LossIssuerDataContainerMarketNorm{
+  width: var(--cvar-left-narrow); max-width:100%; margin-right:auto;
+}
+
+/* Pair: Data + Ampel (dein bestehender Block bleibt global nutzbar) */
+.cvar-pair{
+  display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;
+}
+.cvar-pair .traffic-light-wrapper{ align-self:flex-start; }
+.traffic-light-wrapper.small .traffic-light{
+  width:40px; height:120px; padding:8px; border-radius:12px; border-width:2px;
+}
+.traffic-light-wrapper.small .light{ width:26px; height:26px; }
+@media (max-width:900px){ .cvar-pair{ gap:12px; } }
+
+

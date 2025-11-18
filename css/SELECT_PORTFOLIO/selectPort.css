@@ -1,0 +1,200 @@
+/* --- PORT: 2-Spalten-Layout ------------------------------------------- */
+#PORT_Modal .port-layout{
+  display: grid;
+  grid-template-columns: minmax(260px, 360px) 1fr; /* links fix, rechts flexibel */
+  column-gap: 40px;  /* viel Luft zwischen links/rechts */
+  row-gap: 20px;
+  align-items: start;
+}
+
+/* linke Spalte: zwei Boxen untereinander */
+#PORT_Modal .port-left{
+  display: grid;
+  gap: 16px;             /* Karten links weiter auseinander */
+  justify-items: start;  /* Items nicht auf 100% strecken */
+}
+#PORT_Modal .port-left .data-container{
+  width: auto;                                /* überschreibt globales width:100% */
+  inline-size: clamp(260px, 32vw, 360px);     /* saubere Maxbreite */
+}
+
+/* rechte Spalte: Filterleiste oben, Tabelle darunter */
+#PORT_Modal .port-right{
+  display: grid;
+  gap: 16px;          /* Filter/Tabelle mit mehr Abstand */
+  min-width: 0;       /* verhindert Überlaufen */
+}
+
+/* --- PORT: Innenabstand am Rand ---------------------------------------- */
+#PORT_Modal .table-content{
+  padding-inline: 28px;  /* links & rechts Luft zum Bildschirmrand */
+  padding-bottom: 20px;  /* etwas unten, falls nötig */
+}
+@media (max-width: 900px){
+  #PORT_Modal .table-content{ padding-inline: 18px; }
+}
+
+/* responsive: unter 1100px einspaltig stapeln */
+@media (max-width: 1100px){
+  #PORT_Modal .port-layout{ 
+    grid-template-columns: 1fr; 
+    column-gap: 16px; 
+    row-gap: 12px; 
+  }
+}
+
+/* PORT: Basis für Card-Look wie Slide-Ins */
+#PORT_Modal{ 
+  --panel-surface: #0f0f10;
+}
+
+/* Links: die beiden Agg-Boxen als Cards (nur Container, keine Table-Optik) */
+#PORT_Modal #portAggDataContainer3,
+#PORT_Modal #portAggDataContainer0{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: auto;
+  inline-size: clamp(260px, 32vw, 360px);
+}
+
+/* Filterleiste als Card + Layout */
+#PORT_Modal .controls-bar{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.15);
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  position: relative; 
+  z-index: 60;  /* > thead (20) */
+
+  /* etwas mehr Platz nach unten für den Button in der Ecke */
+  padding-bottom: 44px;
+}
+
+#PORT_Modal .controls-bar .dropdown-wrapper{
+  display: flex; 
+  gap: 14px; 
+  flex-wrap: wrap; 
+  align-items: flex-end; 
+  flex: 1 1 auto;
+}
+
+/* Reset-Button: linke untere Ecke der Filter-Card */
+#PORT_Modal #portResetFiltersButton{
+  position: absolute;
+  left: 16px;
+  bottom: 10px;
+
+  margin-left: 0;   /* override früheres auto */
+  flex: 0 0 auto;
+}
+
+
+/* Tabelle: nur Container-Scroll + Card-Rahmen (keine Tabellen-Styles!) */
+#PORT_Modal #portDataContainer0{
+  overflow: auto; 
+  width: 100%; 
+  max-width: 100%; 
+  -webkit-overflow-scrolling: touch;
+
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px; 
+}
+
+/* ========= PORT: feines Raster ohne Doppel-Kanten (nur innerhalb PORT) ========= */
+/* 1) Alle Standard-Borders neutralisieren */
+/* Sicherstellen: kein Abstand zwischen Zellen */
+#PORT_Modal #portDataContainer0 table{
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Erst ALLE Standard-Borders killen */
+#PORT_Modal #portDataContainer0 th,
+#PORT_Modal #portDataContainer0 td{
+  border: none !important;
+}
+
+/* Dünnes Raster in SCHWARZ zeichnen */
+#PORT_Modal #portDataContainer0 tr > * {
+  border-top: 1px solid #000 !important;
+}
+#PORT_Modal #portDataContainer0 tr:first-child > * {
+  border-top: 0 !important;
+}
+#PORT_Modal #portDataContainer0 tr > *:not(:first-child) {
+  border-left: 1px solid #000 !important;
+}
+
+/* Sticky-Spalten: rechte Kante ebenfalls schwarz */
+#PORT_Modal #portDataContainer0 thead th:nth-child(1),
+#PORT_Modal #portDataContainer0 tbody td:nth-child(1),
+#PORT_Modal #portDataContainer0 thead th:nth-child(2),
+#PORT_Modal #portDataContainer0 tbody td:nth-child(2){
+  border-right: 1px solid #000 !important;
+}
+
+
+
+
+
+/* ===== PORT: sticky erste/zweite Spalte – (optional) nur aktiv, wenn IDs existieren ===== */
+:root { --col1w:140px; --col2w:160px; }
+
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4){
+  overflow: auto; position: relative;
+}
+#portDataContainer0 table{
+  border-collapse: separate; border-spacing: 0; table-layout: fixed;
+  width: max-content; 
+}
+:is(#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) table{
+  border-collapse: separate; border-spacing: 0; table-layout: auto;
+  width: max-content;
+}
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) th,
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) td{
+  white-space: nowrap;
+}
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th{
+  position: sticky; top: 0; z-index: 4; background: #222; color: inherit;
+}
+
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) tbody td:nth-child(1),
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) tfoot td:nth-child(1),
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(1){
+  position: sticky; left: 0;
+  min-width: var(--col1w); max-width: var(--col1w);
+  z-index: 3; background: inherit; border-right: 1px solid #555;
+}
+
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) tbody td:nth-child(2),
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) tfoot td:nth-child(2),
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(2){
+  position: sticky; left: var(--col1w);
+  min-width: var(--col2w); max-width: var(--col2w);
+  z-index: 3; background: inherit; border-right: 1px solid #555;
+}
+
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(1),
+:is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(2){
+  background: #222; z-index: 5;
+}
+
+
+
+
+
+
+
+

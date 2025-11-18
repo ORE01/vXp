@@ -1,0 +1,30 @@
+/* Nur Layout – keine Optik! */
+#panel-liquidity .controls-bar{
+  display:flex;
+  gap:16px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  position:relative; 
+  z-index:60;
+}
+#panel-liquidity .dropdown-wrapper{
+  display:flex;
+  gap:14px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+}
+#panel-liquidity .data-wrapper{ min-width:0; }
+
+#panel-liquidity .liqu-flex-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:20px;
+  align-items:flex-start;
+  margin-top:14px;
+}
+
+/* Nur Abstand/Größe, Optik bleibt aus Base */
+#panel-liquidity .liqu-chart-container{
+  margin-top:18px;
+  width:100%;
+}

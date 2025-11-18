@@ -1,0 +1,317 @@
+/* ========== HISTORIC TS: 2-Column Layout (Controls left, Viz right) ========== */
+#panel-ts .table-content{
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr; /* left controls, right chart */
+  gap: 20px;
+  align-items: start;
+}
+
+/* ===== Tools-Block links (Filter/Controls) ===== */
+#panel-ts .filter-wrapper{
+  grid-column: 1;
+  display: grid;
+  gap: 12px;
+  /* Optional: Gesamtkarte um die Tools, wenn du einen Header benutzt */
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* Optionaler Header im Tools-Block (nur wenn vorhanden) */
+#panel-ts .filter-wrapper .tools-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+#panel-ts .filter-wrapper .tools-title{
+  margin:0; font-size:14px; font-weight:600; opacity:.9;
+}
+#panel-ts .filter-wrapper .tools-toggle,
+#panel-ts .filter-wrapper #tsToolsToggle{
+  border:1px solid rgba(255,255,255,0.12);
+  background:#1a1a1a; color:#cfcfcf;
+  border-radius:8px; padding:6px 10px; cursor:pointer;
+}
+#panel-ts .filter-wrapper .tools-toggle:hover,
+#panel-ts .filter-wrapper #tsToolsToggle:hover{
+  background:#222; color:#fff; border-color:rgba(255,255,255,0.2);
+}
+
+/* Jede Control-Gruppe als Karte (wie gehabt) */
+#panel-ts .filter-wrapper .table-wrapper,
+#panel-ts .moving-average-container,
+#panel-ts .normalization-container,
+#panel-ts .load-and-toggle-container{
+  background: #151618; /* etwas abgesetzt gegen die Tools-Gesamtkarte */
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+/* Checkboxes grid */
+#panel-ts #checkboxContainer{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 12px;
+  max-height: 38vh;            /* Scroll statt endlos wachsen */
+  overflow: auto;
+}
+
+/* ===== Moving Averages block ===== */
+#panel-ts .moving-average-container{
+  display: grid;
+  gap: 10px;
+}
+#panel-ts .moving-average-container .section-label{
+  font-size: 0.95rem;
+  opacity: .9;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* SMA-Reihe */
+#panel-ts .sma-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Toggle-Pill */
+#panel-ts .sma-toggle{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #161719;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+}
+#panel-ts .sma-toggle input[type="checkbox"]{
+  accent-color: #1f6feb;
+  width: 16px; height: 16px; margin: 0;
+}
+#panel-ts .sma-toggle span{ font-size: 0.92rem; }
+
+/* Inputs/Selects kompakt */
+#panel-ts .sma-row input[type="number"],
+#panel-ts .normalization-container select{
+  width: 80px;
+  background: #161719; color: #eaeaea;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px; padding: 6px 8px;
+}
+#panel-ts .normalization-container select{
+  width: auto; padding: 6px 10px;
+}
+
+/* Load-Button */
+#panel-ts .load-and-toggle-container{
+  display: flex; gap: 8px; justify-content: flex-start;
+}
+#panel-ts .load-and-toggle-container #loadButton{
+  background: #1f6feb; color: #fff; border: 0; border-radius: 10px;
+  padding: 10px 14px; cursor: pointer;
+}
+#panel-ts .load-and-toggle-container #loadButton:hover{ filter: brightness(1.05); }
+
+/* ===== Chart-/Daten-Spalte rechts ===== */
+#panel-ts .TSChart-container,
+#panel-ts .data-wrapper{
+  grid-column: 2;
+}
+
+/* Chart-Karte */
+#panel-ts .TSChart-container{
+  display: grid; gap: 12px;
+}
+#panel-ts .TSChart-container .chart-container{
+  background: var(--panel-surface, #0f0f10) !important;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  height: 420px;
+  overflow: hidden;
+}
+#panel-ts .TSChart-container .chart-container canvas{
+  background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: static !important;
+}
+
+/* Time-range Buttons */
+#panel-ts .time-range-buttons{
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+#panel-ts .time-range-buttons button{
+  background: #161719; color: #eaeaea;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px; padding: 6px 10px; cursor: pointer;
+}
+#panel-ts .time-range-buttons button:hover{ filter: brightness(1.1); }
+
+/* Datenbereich unter dem Chart */
+#panel-ts #TSDataContainer{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  max-height: 60vh; overflow: auto;
+}
+
+/* Header-Polish */
+#panel-ts .sub-panel-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 8px 0 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+#panel-ts .sub-panel-title{ font-weight: 600; letter-spacing: .02em; }
+
+/* ===== Tools einklappbar (per JS Klasse setzen) ===== */
+/* Wenn du per JS .tools-collapsed auf .table-content setzt, kollabiert die linke Spalte sauber */
+#panel-ts .table-content.tools-collapsed{
+  grid-template-columns: 0 1fr;
+}
+#panel-ts .table-content.tools-collapsed .filter-wrapper{
+  transform: translateX(-6px);
+  opacity: 0;
+  width: 0; padding: 0; margin: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  #panel-ts .table-content{ grid-template-columns: 1fr; }
+  #panel-ts .TSChart-container .chart-container{ height: 360px; }
+  /* im mobilen Zustand macht einklappen keinen Sinn → tools sichtbar lassen */
+  #panel-ts .table-content.tools-collapsed{
+    grid-template-columns: 1fr;
+  }
+  #panel-ts .table-content.tools-collapsed .filter-wrapper{
+    transform:none; opacity:1; width:auto; padding:12px; margin:0; border-width:1px;
+    pointer-events:auto;
+  }
+}
+@media (min-width: 1600px){
+  #panel-ts .TSChart-container .chart-container{ height: 480px; }
+}
+@media (max-width: 520px){
+  #panel-ts .sma-row{ flex-wrap: wrap; gap: 8px; }
+}
+
+/* ========== Basis: 2-Spalten mit eigener TS-Layout-Grid (kompakter) ========== */
+#panel-ts .ts-layout{
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr; /* Tools | Chart */
+  gap: 14px; /* vorher 20px */
+  align-items: start;
+}
+
+/* Tools-Spalte optisch (Header/Toggle-Fläche) */
+#panel-ts .ts-tools{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+/* Tools-Header + Toggle */
+#panel-ts .ts-tools-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;
+}
+#panel-ts .ts-tools-title{ margin:0; font-size:14px; font-weight:600; opacity:.9; }
+#panel-ts .ts-tools-toggle{
+  border:1px solid rgba(255,255,255,.12);
+  background:#1a1a1a; color:#cfcfcf;
+  border-radius:8px; padding:6px 10px; cursor:pointer;
+}
+#panel-ts .ts-tools-toggle:hover{ background:#222; color:#fff; border-color:rgba(255,255,255,.2); }
+
+/* Inhalt der Tools (deine Gruppen) */
+#panel-ts .filter-wrapper{
+  display: grid; gap: 12px;
+}
+
+/* ========== COLLAPSE: schmaler Rail, Toggle bleibt sichtbar (kompakter) ========== */
+#panel-ts .table-content.tools-collapsed .ts-layout{
+  grid-template-columns: 44px 1fr;  /* vorher 48px */
+  gap: 14px;                        /* vorher 20px */
+}
+
+/* Tools-Spalte im Rail-Modus */
+#panel-ts .table-content.tools-collapsed .ts-tools{
+  padding: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+/* Titel ausblenden, nur Icon-Button zeigen */
+#panel-ts .table-content.tools-collapsed .ts-tools-title{ display:none; }
+
+/* Nur den INHALT verstecken, nicht den Header */
+#panel-ts .table-content.tools-collapsed .filter-wrapper{
+  display: none !important;
+}
+
+/* Sanfte Transition */
+#panel-ts .ts-layout,
+#panel-ts .ts-tools{ transition: all .18s ease; }
+
+/* Weniger Abstand zwischen den TS-Templates (höhere Spezifität) */
+#panel-ts #TS_Modal #modal-content-container > .table-content{
+  margin: 8px 0 !important;   /* vorher 10px */
+  padding: 6px 0 !important;  /* vorher 8px */
+}
+#panel-ts #TS_Modal #modal-content-container > .table-content:first-child{ margin-top: 0 !important; }
+#panel-ts #TS_Modal #modal-content-container > .table-content:last-child{  margin-bottom: 0 !important; }
+
+/* Chart-Block leicht kompakter */
+#panel-ts .TSChart-container{ gap: 8px; }
+
+/* Statt Grid hier: neutralisieren, volle Breite nutzen */
+#panel-ts .table-content{
+  display: block !important;      /* nicht mehr Grid */
+  min-height: auto !important;    /* war 100vh im Skin */
+  overflow: visible !important;   /* kein Clipping */
+  padding: 0;                     /* optional schlank */
+}
+
+/* Dein eigentliches 2-Spalten-Layout bleibt hier */
+#panel-ts .ts-layout{
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr; /* Tools | Chart */
+  gap: 16px;
+  align-items: start;
+}
+
+/* Beim Einklappen: Chart rückt sauber nach links */
+#panel-ts .table-content.tools-collapsed .ts-layout{
+  grid-template-columns: 48px 1fr;   /* schmaler Rail mit Toggle */
+}
+
+/* Rail-Details */
+#panel-ts .table-content.tools-collapsed .ts-tools{
+  padding: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+#panel-ts .table-content.tools-collapsed .ts-tools-title{ display:none; }
+#panel-ts .table-content.tools-collapsed .filter-wrapper{ display:none !important; }
+
+/* Damit die rechte Spalte nicht clipped */
+#panel-ts .ts-chart{ min-width: 0; }
+#panel-ts .ts-tools{ min-width: 0; }
+
+/* Kleiner Template-Abstand */
+#panel-ts #modal-content-container > .table-content{
+  margin: 8px 0 !important;
+  padding: 6px 0 !important;
+}
+
+
+
+
