@@ -33,6 +33,7 @@
   <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/creditRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/liquidity.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/riskMetricsHistory.css" rel="stylesheet">
 
   <link href="./css/COMPARE/compare.css" rel="stylesheet">
 
@@ -261,7 +262,7 @@
       </button>
     </div>
 
-    <!-- 📉 Market P/L – Trigger (Hauptpunkt) -->
+    <!-- 📉 Market Risk – Trigger (Hauptpunkt) -->
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
         <span class="section-header">Market Risk</span>
@@ -327,7 +328,74 @@
       </button>
     </div>
 
+    <button
+  id="historicMetricsAddButton"
+  type="button"
+  class="btn btn-secondary"
+>
+  Add Historic Metric
+</button>
 
+
+<!-- 📈 Historic Performance – Trigger (Hauptpunkt) -->
+<div class="chart-section">
+  <button
+    class="section-trigger"
+    data-panel="PORTFOLIO_HISTORY_Modal"
+    aria-controls="PORTFOLIO_HISTORY_Modal"
+    aria-expanded="false">
+    <span class="section-header">Performance History</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 💰 Historic Portfolio Value – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-portfolio-value"
+    aria-controls="panel-portfolio-value"
+    aria-expanded="false">
+    <span class="section-header">Portfolio Value</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 📊 Historic Sensitivities – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-hist-sensitivities"
+    aria-controls="panel-hist-sensitivities"
+    aria-expanded="false">
+    <span class="section-header">Historical Sensitivities</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 📉 Historic Market Risk – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-market-risk"
+    aria-controls="panel-market-risk"
+    aria-expanded="false">
+    <span class="section-header">Market Risk</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 📉 Historic Credit Risk – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-credit-risk"
+    aria-controls="panel-credit-risk"
+    aria-expanded="false">
+    <span class="section-header">Credit Risk</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
 
 
 
@@ -335,7 +403,7 @@
     <!-- Backdrop innerhalb des Modals -->
     <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
 
-    <!-- ========= PANELS am Ende ========= -->
+    <!-- ========= PANELS ========= -->
 
     <!-- Panel: Breakdown -->
     <div id="panel-breakdown" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-breakdown-title" hidden>
@@ -374,6 +442,7 @@
         <div id="panel-performance-title" class="sub-panel-title">Performance</div>
         <button class="sub-panel-close" data-close="panel-performance" aria-label="Schließen">&times;</button>
       </div>
+
       <div class="sub-panel-body">
         <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
           <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
@@ -384,6 +453,7 @@
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- Panel: Market VaR -->
@@ -433,67 +503,67 @@
       </div>
     </div>
 
-    <!-- Panel: Market VaR (Detail) -->
-    <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-mvar-title" class="sub-panel-title">MARKET VaR</div>
-        <button class="sub-panel-close" data-close="panel-mvar" aria-label="Schließen">&times;</button>
-      </div>
+        <!-- Panel: Market VaR (Detail) -->
+        <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-mvar-title" class="sub-panel-title">MARKET VaR</div>
+            <button class="sub-panel-close" data-close="panel-mvar" aria-label="Schließen">&times;</button>
+          </div>
 
-      <div class="sub-panel-body">
-        <div class="mvar-grid">
-          <!-- Links: Tabelle (einmaliges ID!) -->
-          <section class="mvar-left table-card">
-            <h4 class="table-title">Market VaR / ES</h4>
-            <div class="data-container" id="MVaRDataContainer"></div>
-          </section>
+          <div class="sub-panel-body">
+            <div class="mvar-grid">
+              <!-- Links: Tabelle (einmaliges ID!) -->
+              <section class="mvar-left table-card">
+                <h4 class="table-title">Market VaR / ES</h4>
+                <div class="data-container" id="MVaRDataContainer"></div>
+              </section>
 
-          <!-- Rechts: Chart -->
-          <section class="mvar-right table-card">
-            <h4 class="table-title">Market VaR Chart</h4>
-            <canvas id="MVaRChart" height="360"></canvas>
-          </section>
+              <!-- Rechts: Chart -->
+              <section class="mvar-right table-card">
+                <h4 class="table-title">Market VaR Chart</h4>
+                <canvas id="MVaRChart" height="360"></canvas>
+              </section>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Panel: Market Sensitivities -->
-    <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
-        <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="Schließen">&times;</button>
-      </div>
+        <!-- Panel: Market Sensitivities -->
+        <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
+            <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="Schließen">&times;</button>
+          </div>
 
-      <div class="sub-panel-body">
-        <div class="sens-layout">
-          <!-- Left Part (Tables) -->
-          <section class="sens-left table-card">
-            <div class="data-wrapper">
-              <p class="block-title">PV01:</p>
-              <div class="data-container" id="IRSensDataContainer"></div>
+          <div class="sub-panel-body">
+            <div class="sens-layout">
+              <!-- Left Part (Tables) -->
+              <section class="sens-left table-card">
+                <div class="data-wrapper">
+                  <p class="block-title">PV01:</p>
+                  <div class="data-container" id="IRSensDataContainer"></div>
 
-              <div class="spacer-xxl"></div>
+                  <div class="spacer-xxl"></div>
 
-              <p class="block-title">CPV01:</p>
-              <div class="data-container" id="CRSensDataContainer"></div>
+                  <p class="block-title">CPV01:</p>
+                  <div class="data-container" id="CRSensDataContainer"></div>
+                </div>
+              </section>
+
+              <!-- Right Part (Charts) -->
+              <section class="sens-right">
+                <div class="pv01-chart-container chart-container">
+                  <canvas id="PV01Chart"></canvas>
+                </div>
+
+                <div class="spacer-xxl"></div>
+
+                <div class="cpv01-chart-container chart-container">
+                  <canvas id="CPV01Chart" width="400" height="400"></canvas>
+                </div>
+              </section>
             </div>
-          </section>
-
-          <!-- Right Part (Charts) -->
-          <section class="sens-right">
-            <div class="pv01-chart-container chart-container">
-              <canvas id="PV01Chart"></canvas>
-            </div>
-
-            <div class="spacer-xxl"></div>
-
-            <div class="cpv01-chart-container chart-container">
-              <canvas id="CPV01Chart" width="400" height="400"></canvas>
-            </div>
-          </section>
+          </div>
         </div>
-      </div>
-    </div>
 
     <!-- Panel: Credit Risk  -->
     <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
@@ -671,6 +741,147 @@
         </div>
       </div><!-- /.sub-panel-body -->
     </div>
+
+<!-- Panel: Historic Performance -->
+<div
+  id="PORTFOLIO_HISTORY_Modal"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="PORTFOLIO_HISTORY_Modal-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="PORTFOLIO_HISTORY_Modal-title" class="sub-panel-title">
+      Performance History
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="PORTFOLIO_HISTORY_Modal"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="portfolioHistoryChart" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Portfolio Value -->
+<div
+  id="panel-portfolio-value"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-portfolio-value-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-portfolio-value-title" class="sub-panel-title">
+      Portfolio Value
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-portfolio-value"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="portfolioValueChartLine" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Sensitivities -->
+<div
+  id="panel-hist-sensitivities"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-hist-sensitivities-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-hist-sensitivities-title" class="sub-panel-title">
+      Historical Sensitivities
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-hist-sensitivities"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="portfolioSensChartLine" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Market Risk (Performance-Bereich) -->
+<div
+  id="panel-market-risk"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-market-risk-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-market-risk-title" class="sub-panel-title">
+      Market Risk
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-market-risk"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="riskMetricsChartLine" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Credit Risk (Performance-Bereich) -->
+<div
+  id="panel-credit-risk"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-credit-risk-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-credit-risk-title" class="sub-panel-title">
+      Credit Risk
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-credit-risk"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="creditMetricsChartLine" width="600" height="280"></canvas>
+  </div>
+</div>
+
+
+
+
+
+
 
   </div><!-- /table-content -->
 </div>
@@ -865,43 +1076,65 @@
 
     <!-- Triggers -->
 
-    <!-- 📉 Interest Rates – Trigger -->
+    <!-- 📉 Interest Rates – Trigger (Hauptpunkt) -->
     <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-rates" aria-controls="panel-rates" aria-expanded="false">
-        <span class="section-header">Interest Rates</span><span class="chev">▶</span>
+      <button
+        class="section-trigger"
+        data-panel="panel-rates"
+        aria-controls="panel-rates"
+        aria-expanded="false">
+        <span class="section-header">Interest Rates</span>
+        <span class="chev">▶</span>
       </button>
     </div>
 
-    <!-- 📉 Forwards – Trigger -->
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-forward" aria-controls="panel-forward" aria-expanded="false">
-        <span class="section-header">Forward</span><span class="chev">▶</span>
+    <!-- 📉 Forwards – Unterpunkt von Interest Rates -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-forward"
+        aria-controls="panel-forward"
+        aria-expanded="false">
+        <span class="section-header">Forward</span>
+        <span class="chev">▶</span>
       </button>
     </div>
 
     <!-- 📉 Credit Spreads – Trigger -->
     <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-creditspreads" aria-controls="panel-creditspreads" aria-expanded="false">
-        <span class="section-header">Credit Spreads</span><span class="chev">▶</span>
+      <button
+        class="section-trigger"
+        data-panel="panel-creditspreads"
+        aria-controls="panel-creditspreads"
+        aria-expanded="false">
+        <span class="section-header">Credit Spreads</span>
+        <span class="chev">▶</span>
       </button>
     </div>
 
     <!-- 📉 Historic Data – Trigger -->
     <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-ts" aria-controls="panel-ts" aria-expanded="false">
-        <span class="section-header">Historic Data </span>
+      <button
+        class="section-trigger"
+        data-panel="panel-ts"
+        aria-controls="panel-ts"
+        aria-expanded="false">
+        <span class="section-header">Historic Data</span>
         <span class="chev">▶</span>
       </button>
     </div>
 
     <!-- 📉 Machine Learning – Trigger -->
     <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-ml" aria-controls="panel-ml" aria-expanded="false">
-        <span class="section-header">Forcasting</span><span class="chev">▶</span>
+      <button
+        class="section-trigger"
+        data-panel="panel-ml"
+        aria-controls="panel-ml"
+        aria-expanded="false">
+        <span class="section-header">Forcasting</span>
+        <span class="chev">▶</span>
       </button>
     </div>
-
-
 
     <!-- Backdrop nur für dieses Modal -->
     <div class="sub-panel-backdrop" hidden></div>
@@ -916,20 +1149,17 @@
       </div>
 
       <div class="sub-panel-body">
-        <!-- Controls -->
         <label for="ratesSelector" style="display:block; font-weight:600; margin-bottom:6px;">Select Curve:</label>
         <select id="ratesSelector" class="ir-select">
           <option value="EUSWAP">EUSWAP</option>
           <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
         </select>
 
-        <!-- Table -->
         <section class="table-card" style="margin-top:12px;">
           <h4 class="table-title">Rates Table</h4>
-          <div id="IRDataContainer"></div>
+          <div id="IRDataContainer" class="data-container"></div>
         </section>
 
-        <!-- Chart -->
         <div class="chart-container" style="margin-top:16px;">
           <canvas id="IRlineChart"></canvas>
         </div>
@@ -944,42 +1174,32 @@
       </div>
 
       <div class="sub-panel-body">
-        <!-- Two-column wrapper: Table left, Charts right -->
         <div class="forward-layout-wrapper">
-          
-          <!-- Data table container (left column) -->
           <div class="data-container" id="FWDDataContainer"></div>
-        
-          <!-- Charts + Controls (right column) -->
-          <div class="forward-charts-wrapper">
 
-            <!-- First CMS forward length input for comparison -->
+          <div class="forward-charts-wrapper">
             <div id="cmsInputContainer1">
               <label for="cmsForwardInput1">CMS Forward Length 1:</label>
               <input type="number" id="cmsForwardInput1" value="1" min="1" />
               <button id="CMSButton1">Apply CMS Rate 1</button>
             </div>
 
-            <!-- Second CMS forward length input for comparison -->
             <div id="cmsInputContainer2">
               <label for="cmsForwardInput2">CMS Forward Length 2:</label>
               <input type="number" id="cmsForwardInput2" value="5" min="1" />
               <button id="CMSButton2">Apply CMS Rate 2</button>
             </div>
 
-            <!-- CMS Forward Rate Chart -->
             <div class="chart-container">
               <canvas id="FWDlineChart" class="forward-line-chart"></canvas>
             </div>
 
-            <!-- Entry field for years_forward -->
             <div id="inputContainer">
               <label for="yearsForwardInput">Years Forward:</label>
               <input type="number" id="yearsForwardInput" value="1" min="1" />
               <button id="applyYearsForwardButton">Apply</button>
             </div>
 
-            <!-- Forward Curve Chart -->
             <div class="chart-container">
               <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>
             </div>
@@ -988,7 +1208,6 @@
       </div>
     </div>
 
-
     <!-- Panel: CREDIT SPREADS (Slide-In) -->
     <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
       <div class="sub-panel-header">
@@ -996,147 +1215,137 @@
         <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="Schließen">&times;</button>
       </div>
 
-  <div class="sub-panel-body">
-    <div class="cs-layout-wrapper">
-      <!-- Chart -->
-      <div class="chart-container cs-chart">
-        <canvas id="CS_ChartCanvas"></canvas>
-      </div>
-
-      <!-- Parameters -->
-      <aside class="parameters-container">
-        <p>CS Curve Parameter:</p>
-        <p>e: Relative Displacement in %. Default 1</p>
-        <p>f: Absolute Displacement in Basis Points. Default 0</p>
-
-        <div id="CSParameterDataContainer"></div>
-
-        <div class="button-wrapper" style="margin-top:10px;">
-          <button id="CSParButton" class="edit-button">CSParameter</button>
-          <button id="CSParameterAddButton" class="edit-button">Add New CSParameter</button>
-        </div>
-      </aside>
-    </div>
-  </div>
-    </div>
-
-    <!-- Panel: HISTORIC DATA [%] -->
-    <div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA</div>
-        <button class="sub-panel-close" data-close="panel-ts" aria-label="Schließen">&times;</button>
-      </div>
-
       <div class="sub-panel-body">
-        <!-- Adapter-Wrapper: behält deine alten IDs, ohne .table-Styles zu erben -->
-        <div id="TS_Modal" class="ts-panel-adapter">
-          <!-- Optional: Überschrift im Body, wenn gewünscht
-          <h2 class="section-header">HISTORIC DATA [%]</h2> -->
+        <div class="cs-layout-wrapper">
+          <div class="chart-container cs-chart">
+            <canvas id="CS_ChartCanvas"></canvas>
+          </div>
 
-          <!-- Container für dynamische Sektionen -->
-          <div id="modal-content-container"></div>
-        </div>
+          <aside class="parameters-container">
+            <p>CS Curve Parameter:</p>
+            <p>e: Relative Displacement in %. Default 1</p>
+            <p>f: Absolute Displacement in Basis Points. Default 0</p>
 
-        <!-- Template für Klone -->
-<template id="TS_Modal_Template">
-  <div class="table-content">
-    <div class="ts-layout">
+            <div id="CSParameterDataContainer" class="data-container"></div>
 
-      <!-- TOOLS-LEISTE LINKS -->
-      <aside class="ts-tools" id="tsTools">
-        <!-- Tools-Header mit Toggle-Button -->
-        <div class="ts-tools-header">
-          <h4 class="ts-tools-title">Tools</h4>
-          <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Toggle tools">
-            <!-- schlichtes „Schraubenschlüssel“-Icon -->
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
-              <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- deine bisherigen Controls bleiben erhalten -->
-        <div class="filter-wrapper">
-          <label>Select Data:</label>
-
-          <div id="checkboxContainer" class="table-wrapper"></div>
-
-          <div class="table-wrapper">
-            <div class="moving-average-container">
-              <label class="section-label">Apply Moving Averages:</label>
-
-              <div class="sma-row">
-                <label class="sma-toggle" for="applySMA1">
-                  <input type="checkbox" id="applySMA1" />
-                  <span>SMA 1</span>
-                </label>
-                <input type="number" id="movingAveragePeriod1" value="20" min="1" aria-label="SMA 1 period" />
-              </div>
-
-              <div class="sma-row">
-                <label class="sma-toggle" for="applySMA2">
-                  <input type="checkbox" id="applySMA2" />
-                  <span>SMA 2</span>
-                </label>
-                <input type="number" id="movingAveragePeriod2" value="50" min="1" aria-label="SMA 2 period" />
-              </div>
-
-              <div class="sma-row">
-                <label class="sma-toggle" for="applySMA3">
-                  <input type="checkbox" id="applySMA3" />
-                  <span>SMA 3</span>
-                </label>
-                <input type="number" id="movingAveragePeriod3" value="200" min="1" aria-label="SMA 3 period" />
-              </div>
+            <div class="button-wrapper" style="margin-top:10px;">
+              <button id="CSParButton" class="edit-button">CSParameter</button>
+              <button id="CSParameterAddButton" class="edit-button">Add New CSParameter</button>
             </div>
-          </div>
-
-          <div class="table-wrapper">
-            <div class="normalization-container">
-              <label for="normalizationTypeSelector">Normalization Type:</label>
-              <select id="normalizationTypeSelector">
-                <option value="none">None</option>
-                <option value="dynamic">Dynamic</option>
-                <option value="firstValue">First Value</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="load-and-toggle-container">
-            <button id="loadButton" class="edit-button">Load Data</button>
-          </div>
+          </aside>
         </div>
-      </aside>
-
-      <!-- CHART RECHTS -->
-      <section class="ts-chart">
-        <div class="ts-chart-toolbar">
-          <div class="time-range-buttons">
-            <button id="oneYearButton">1Y</button>
-            <button id="fiveYearButton">5Y</button>
-            <button id="tenYearButton">10Y</button>
-            <button id="maxButton">Max</button>
-          </div>
-        </div>
-
-        <div class="TSChart-container">
-          <div class="chart-container">
-            <canvas id="TSlineChart" width="1000" height="400"></canvas>
-          </div>
-        </div>
-
-        <div class="data-wrapper">
-          <div class="data-container" id="TSDataContainer"></div>
-        </div>
-      </section>
-
-    </div><!-- /.ts-layout -->
-  </div>
-</template>
-
       </div>
     </div>
+
+<!-- Panel: HISTORIC DATA [%] -->
+<div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA</div>
+    <button class="sub-panel-close" data-close="panel-ts" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div id="TS_Modal" class="ts-panel-adapter">
+      <div id="modal-content-container"></div>
+    </div>
+
+    <!-- HIER muss der echte Template-Content rein -->
+    <template id="TS_Modal_Template">
+      <div class="table-content">
+        <div class="ts-layout">
+
+          <!-- TOOLS-LEISTE LINKS -->
+          <aside class="ts-tools" id="tsTools">
+            <div class="ts-tools-header">
+              <h4 class="ts-tools-title">Tools</h4>
+              <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Toggle tools">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
+                  <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="filter-wrapper">
+              <label>Select Data:</label>
+
+              <div id="checkboxContainer" class="table-wrapper"></div>
+
+              <div class="table-wrapper">
+                <div class="moving-average-container">
+                  <label class="section-label">Apply Moving Averages:</label>
+
+                  <div class="sma-row">
+                    <label class="sma-toggle" for="applySMA1">
+                      <input type="checkbox" id="applySMA1" />
+                      <span>SMA 1</span>
+                    </label>
+                    <input type="number" id="movingAveragePeriod1" value="20" min="1" />
+                  </div>
+
+                  <div class="sma-row">
+                    <label class="sma-toggle" for="applySMA2">
+                      <input type="checkbox" id="applySMA2" />
+                      <span>SMA 2</span>
+                    </label>
+                    <input type="number" id="movingAveragePeriod2" value="50" min="1" />
+                  </div>
+
+                  <div class="sma-row">
+                    <label class="sma-toggle" for="applySMA3">
+                      <input type="checkbox" id="applySMA3" />
+                      <span>SMA 3</span>
+                    </label>
+                    <input type="number" id="movingAveragePeriod3" value="200" min="1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-wrapper">
+                <div class="normalization-container">
+                  <label for="normalizationTypeSelector">Normalization Type:</label>
+                  <select id="normalizationTypeSelector">
+                    <option value="none">None</option>
+                    <option value="dynamic">Dynamic</option>
+                    <option value="firstValue">First Value</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="load-and-toggle-container">
+                <button id="loadButton" class="edit-button">Load Data</button>
+              </div>
+            </div>
+          </aside>
+
+          <!-- CHART RECHTS -->
+          <section class="ts-chart">
+            <div class="ts-chart-toolbar">
+              <div class="time-range-buttons">
+                <button id="oneYearButton">1Y</button>
+                <button id="fiveYearButton">5Y</button>
+                <button id="tenYearButton">10Y</button>
+                <button id="maxButton">Max</button>
+              </div>
+            </div>
+
+            <div class="TSChart-container">
+              <div class="chart-container">
+                <canvas id="TSlineChart" width="1000" height="400"></canvas>
+              </div>
+            </div>
+
+            <div class="data-wrapper">
+              <div class="data-container" id="TSDataContainer"></div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
 
     <!-- Panel: MACHINE LEARNING (Slide-In) -->
     <div id="panel-ml" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ml-title" hidden>
@@ -1145,95 +1354,96 @@
         <button class="sub-panel-close" data-close="panel-ml" aria-label="Schließen">&times;</button>
       </div>
 
-      <div class="sub-panel-body">
-        <!-- Optional: Language Toggle -->
-        <div class="language-toggle" style="margin-bottom:8px;">
-          <!--
-          <button id="lang-en" class="language-button">EN</button>
-          <button id="lang-de" class="language-button">DE</button>
-          -->
-        </div>
+<div class="sub-panel-body">
+  <!-- Optional: Language Toggle -->
+  <div class="language-toggle" style="margin-bottom:8px;">
+    <!--
+    <button id="lang-en" class="language-button">EN</button>
+    <button id="lang-de" class="language-button">DE</button>
+    -->
+  </div>
 
-        <!-- Content Grid -->
-        <div class="ml-layout">
-          <!-- Left Column: Inputs & Tables -->
-          <section class="ml-left">
-            <h3 class="ml-h3">Select Target</h3>
-            <div class="table-wrapper MLInputWrapper">
-              <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top: 10px;"></div>
-            </div>
+  <!-- Content Grid -->
+  <div class="ml-layout">
+    <!-- Left Column: Inputs & Tables -->
+    <section class="ml-left">
+      <h3 class="ml-h3">Select Target</h3>
+      <div class="table-wrapper MLInputWrapper">
+        <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top:10px;"></div>
+      </div>
 
-            <!-- Optional: TS helper container used by your JS -->
-            <div id="MLTS-modal-container"></div>
+      <!-- Optional: TS helper container used by your JS -->
+      <div id="MLTS-modal-container"></div>
 
-            <h3 class="ml-h3">Use Trained ML Model</h3>
-            <div class="data-container table-card" style="padding:0;">
-              <table id="MLTrainedModelsTable" class="ml-table">
-                <thead>
-                  <tr>
-                    <th>ID</th><th>Target</th><th>Model Name</th><th>Created At</th><th>Model Type</th>
-                    <th>Epochs</th><th>Batch Size</th><th>Optimizer</th><th>Loss</th><th>Metrics</th>
-                    <th>Select Model</th><th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+      <h3 class="ml-h3">Use Trained ML Model</h3>
+      <div class="data-container table-card" style="padding:0;">
+        <table id="MLTrainedModelsTable" class="ml-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Target</th><th>Model Name</th><th>Created At</th><th>Model Type</th>
+              <th>Epochs</th><th>Batch Size</th><th>Optimizer</th><th>Loss</th><th>Metrics</th>
+              <th>Select Model</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-            <h3 class="ml-h3">Select Untrained ML Model</h3>
-            <div class="data-container table-card" style="padding:0;">
-              <table id="MLModelsTable" class="ml-table">
-                <thead>
-                  <tr><th>ID</th><th>Model Type</th><th>Description</th><th>Select</th></tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+      <h3 class="ml-h3">Select Untrained ML Model</h3>
+      <div class="data-container table-card" style="padding:0;">
+        <table id="MLModelsTable" class="ml-table">
+          <thead>
+            <tr><th>ID</th><th>Model Type</th><th>Description</th><th>Select</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-            <div class="table-wrapper MLInputWrapper">
-              <label for="newModelCheckbox" class="ml-inline">
-                <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
-                Use new model
-              </label>
+      <div class="table-wrapper MLInputWrapper">
+        <label for="newModelCheckbox" class="ml-inline">
+          <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
+          Use new model
+        </label>
 
-              <div class="ml-params-row">
-                <div class="input-container">
-                  <label for="epochsInput">Epochs <span class="info-icon" id="tooltip-epochs">?</span></label>
-                  <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
-                </div>
+        <div class="ml-params-row">
+          <div class="input-container">
+            <label for="epochsInput">Epochs <span class="info-icon" id="tooltip-epochs">?</span></label>
+            <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
+          </div>
 
-                <div class="input-container">
-                  <label for="batchSizeInput">Batch Size <span class="info-icon" id="tooltip-batch-size">?</span></label>
-                  <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
-                </div>
-              </div>
-            </div>
-
-            <h3 class="ml-h3">Start ML Model</h3>
-            <div class="button-container">
-              <button id="MLButton" class="edit-button">Run ML</button>
-            </div>
-          </section>
-
-          <!-- Right Column: Charts -->
-          <section class="ml-right">
-            <div class="table-card chart-card">
-              <h4 class="ml-h4">ML Test Data Chart</h4>
-              <canvas id="MLTestDataChart"></canvas>
-            </div>
-            <div class="table-card chart-card">
-              <h4 class="ml-h4">ML Predictions Chart</h4>
-              <canvas id="MLFuturePredictionChart"></canvas>
-            </div>
-          </section>
+          <div class="input-container">
+            <label for="batchSizeInput">Batch Size <span class="info-icon" id="tooltip-batch-size">?</span></label>
+            <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
+          </div>
         </div>
       </div>
+
+      <h3 class="ml-h3">Start ML Model</h3>
+      <div class="button-container">
+        <button id="MLButton" class="edit-button">Run ML</button>
+      </div>
+    </section>
+
+    <!-- Right Column: Charts -->
+    <section class="ml-right">
+      <div class="table-card chart-card">
+        <h4 class="ml-h4">ML Test Data Chart</h4>
+        <canvas id="MLTestDataChart"></canvas>
+      </div>
+
+      <div class="table-card chart-card">
+        <h4 class="ml-h4">ML Predictions Chart</h4>
+        <canvas id="MLFuturePredictionChart"></canvas>
+      </div>
+    </section>
+  </div>
+</div>
+
     </div>
-
-
 
   </div>
 </div>
+
 
 <!-- Modal: Data Provider (Slide-In) -->
 <div id="DataProvider_Modal" class="table">
@@ -1947,39 +2157,36 @@
       </div>
     </div>
 
-    <!-- Panel: Historic Data (APIs) -->
-    <div id="panel-upd-historic" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-historic-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-upd-historic-title" class="sub-panel-title">HISTORIC DATA (APIs)</div>
-        <button class="sub-panel-close" data-close="panel-upd-historic" aria-label="Schließen">&times;</button>
+<!-- Panel: Historic Data (APIs) -->
+<div id="panel-upd-historic" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-historic-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-upd-historic-title" class="sub-panel-title">HISTORIC DATA (APIs)</div>
+    <button class="sub-panel-close" data-close="panel-upd-historic" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <section class="cp-card hist-card" style="margin-top:12px;">
+
+      <div class="hist-hint">
+        Data from ECB and FRED<br>
+        This update can take several minutes
       </div>
 
-      <div class="sub-panel-body">
-        <section class="cp-card" style="margin-top:12px;">
-          <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <span class="button-label">Data from ECB and FRED<br>This update can take several minutes</span>
-            <button id="updateHistoricDataButton" class="edit-button" type="button">Historic Data (All)</button>
-          </div>
+      <div class="hist-row">
+        <button id="updateHistoricDataButton" class="edit-button" type="button">
+          Historic Data (All)
+        </button>
 
-          <!-- Optional: Einzel-API Buttons (auskommentiert wie bei dir) -->
-          <!--
-          <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px;">
-            <span class="button-label">Run only ECB</span>
-            <button id="histEcbButton" class="edit-button" type="button">Update ECB</button>
-
-            <span class="button-label">Run only FED</span>
-            <button id="histFedButton" class="edit-button" type="button">Update FED</button>
-
-            <span class="button-label">Run only Yahoo</span>
-            <button id="histYahooButton" class="edit-button" type="button">Update Yahoo</button>
-
-            <span class="button-label">Run only Finnhub</span>
-            <button id="histFinnhubButton" class="edit-button" type="button">Update Finnhub</button>
-          </div>
-          -->
-        </section>
+        <div class="hist-progress-wrap">
+          <progress id="progressBar" value="0" max="100"></progress>
+          <div id="progressText"></div>
+        </div>
       </div>
-    </div>
+
+    </section>
+  </div>
+</div>
+
 
     <!-- Panel: vXp Imports -->
     <div id="panel-upd-vxp" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-vxp-title" hidden>

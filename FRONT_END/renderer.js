@@ -1,3 +1,6 @@
+import { refreshOpenPanels} from './lazyPanelsCore.js';
+import { initPortfolioPanelsLazyRender} from './initAnalysePortfolioPanels.js';
+import { initMarketDataPanelsLazyRender} from './initMarketDataPanels.js';
 import { createTSModals, observePanelTsOpen} from './MARKET_DATA/HISTORIC_DATA/TS.js';
 import { handlePortAggData, handlePortProdData} from './SELECT_PORTFOLIO/PORT.js';
 import { handleMVaRData, handleMVarInputData} from './ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
@@ -7,6 +10,7 @@ import { handleProviderData } from './DATA_PROVIDER/DATAProvider.js';
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './MARKET_DATA/FORCASTING/ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js'; 
 import { handleLiquidityData } from './ANALYSE_PORTFOLIO/liquidity.js';
+import { renderPortfolioHistoryYieldChart, renderPortfolioValueChartLine, renderMarketRiskChartLine, renderPortfolioSensChartLine, renderCreditMetricsChartLine} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 import { handleSummaryRMData } from './ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRM.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './NEW_PRODUCTS/offers.js';
 
@@ -16,6 +20,7 @@ import { getOffersReportData, getOffersReportOptions, renderOffersPreview, rowsA
 import { generateRiskPDF } from './PDF/RiskPDF.js';
 import { getRiskReportOptions, wireRiskPreview } from './PDF/RiskPDFPreview.js';
 
+import { handleHistoricMetricsAddClick} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';
 
 
 
@@ -31,6 +36,9 @@ import { handleFormAction } from '../modal_HELPER/FormButtonHandler.js';
 let appState;
 let lastHistButton = null;
 
+const panelRenderState = Object.create(null);
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
   appState = new AppState();
@@ -42,6 +50,24 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   setupReportsEnterLeaveBridge();
   setupBulkUpdateBridge();
+
+    // ---------------------------------------------
+  // PYTHON PROGRESS LISTENER → HIER EINSETZEN
+  // ---------------------------------------------
+  // Reset UI (optional)
+  const bar = document.getElementById("progressBar");
+  const txt = document.getElementById("progressText");
+  if (bar) bar.value = 0;
+  if (txt) txt.textContent = "Starting...";
+
+  // IMPORTANT: in ES-modules immer window.api verwenden
+  window.api.on('py-progress', (data) => {
+    console.log("PY PROGRESS (renderer):", data);
+
+    if (bar) bar.value = data.progress ?? 0;
+    if (txt) txt.textContent = data.message ?? "";
+
+  });
 
 });
 
@@ -120,6 +146,11 @@ function setupEventListeners() {
   }
   window.__listenersBoundOnce = true;
 
+
+
+  initPortfolioPanelsLazyRender({ panelRenderState });
+  initMarketDataPanelsLazyRender({ panelRenderState });
+
 // CUSTOMER-Data
   window.api.receive('CustomerData', handleCustomerData);
   window.api.receive('CustomerTSSelectionData', handleCustomerTSData);
@@ -192,6 +223,12 @@ function setupEventListeners() {
   // LOSSES sorted
   window.api.receive('sortedLossesIssuerMainData', (data) => handleAllLossData(data));
 
+
+
+
+
+
+
   // ML
   window.api.receive('ML_FuturePredictionsData', (data) => handleFuturePredictions(data));
   window.api.receive('ML_MergedDataData', (data) => handleMLTestData(data));
@@ -221,6 +258,13 @@ function setupEventListeners() {
   window.api.receive('tblTSData', (data) => {createTSModals(data);});
   // TS Tools panel
   observePanelTsOpen();
+
+    // PortfolioHistoryMetrics
+  window.api.receive('PortfolioHistoryMetricsData', (data) => {
+  handlePortfolioHistoryData(data);
+  refreshOpenPanels(panelRenderState);
+});
+
 
   //===================================== END LISTENERS ===============================
   
@@ -427,12 +471,14 @@ function setupButtons() {
   // ====== EXISTING BUTTONS ======
   document.getElementById('savePortfolioButton').addEventListener('click', handleSaveNewPortfolio);
     // ✅ NEU: ADD-Button im Portfolio-Panel
+  document.getElementById('historicMetricsAddButton')?.addEventListener('click', handleHistoricMetricsAddClick);  
+
   document.getElementById('portfolioDealsAddButton')
     ?.addEventListener('click', handleAddDealsToNewPortfolio);
 
   document.getElementById('saveSelectionButton').addEventListener('click', handleSaveSelection);
   document.getElementById('deleteTableButton').addEventListener('click', handleDeleteSelection);
-  document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
+  //document.getElementById('applyYearsForwardButton').addEventListener('click', handleSwapForwardCurve);
 
   document.getElementById('importExcelButtonVXP')?.addEventListener('click', handleExcelImport);
   document.getElementById('importEUSWButton').addEventListener('click', () => {handleExcelImport(['EUSW']);});
@@ -497,8 +543,8 @@ function setupButtons() {
   });
 
   // ====== CMS (Deins)
-  applyCMSForwardRate('CMSButton1');
-  applyCMSForwardRate('CMSButton2');
+  // applyCMSForwardRate('CMSButton1');
+  // applyCMSForwardRate('CMSButton2');
 
   // ====== LANGUAGE (Deins)
   updateTooltips('en');
@@ -1153,22 +1199,39 @@ function handleCustomerTSData(data) {
   }
   }
   // IR
+  // function handleEUSWData(data) {
+  //   appState.setEUSWData(data);
+
+
+  //   const selectedCurve = document.getElementById("ratesSelector").value;
+
+  //   // Setze RATES auf die gewählte Spalte
+  //   data.forEach(row => {
+  //       if (selectedCurve in row) {
+  //           row.RATES = row[selectedCurve]; 
+  //       }
+  //   });
+
+  //   // Graphen direkt aktualisieren
+  //   //appState.handleIRData.call(appState, data);
+  //   appState.handleFWDData.call(appState, data);
+  //   appState.handleSwapForwardCurve.call(appState, data);
+  // }
   function handleEUSWData(data) {
+    // 1) nur roh speichern
     appState.setEUSWData(data);
-    const selectedCurve = document.getElementById("ratesSelector").value;
 
-    // Setze RATES auf die gewählte Spalte
-    data.forEach(row => {
-        if (selectedCurve in row) {
-            row.RATES = row[selectedCurve]; 
-        }
-    });
-
-    // Graphen direkt aktualisieren
-    appState.handleIRData.call(appState, data);
-    appState.handleFWDData.call(appState, data);
-    appState.handleSwapForwardCurve.call(appState, data);
+    // 2) optional: falls das Rates-Panel gerade offen ist,
+    //    kannst du die offenen MarketData-Panels refreshen
+    //    (wenn du den curve:changed Event + lazy refresher schon drin hast,
+    //     brauchst du das hier NICHT mehr)
+    try {
+      document.dispatchEvent(new CustomEvent("eusw:data:ready"));
+    } catch {}
   }
+
+
+
   // CSMatrix
   function handleCSMatrixData(receivedData) {
     //console.log('CSMatrixData', receivedData);
@@ -1240,6 +1303,38 @@ function handleCustomerTSData(data) {
     handleLossIssuerMainData(receivedData)
 
   }
+
+  // PortfolioHistoryMetrics
+
+  function handlePortfolioHistoryData(receivedData) {
+    console.log("🔥 PortfolioHistoryMetricsData arrived:", receivedData?.length);
+
+    appState.setPortfolioHistoryData(receivedData);
+
+    // Wenn Panels schon einmal geöffnet wurden, dann nachziehen:
+    if (panelRenderState["PORTFOLIO_HISTORY_Modal"]) {
+      renderPortfolioHistoryYieldChart();
+    }
+    if (panelRenderState["panel-portfolio-value"]) {
+      renderPortfolioValueChartLine();
+    }
+    if (panelRenderState["panel-hist-sensitivities"]) {
+      renderPortfolioSensChartLine();
+    }
+    if (panelRenderState["panel-market-risk"]) {
+      renderMarketRiskChartLine();
+      //refreshMarketRiskChartLine();
+    }
+    if (panelRenderState["panel-credit-risk"]) {
+      renderCreditMetricsChartLine();
+    }
+  }
+
+
+
+  
+
+
   // PROVIDER: ECB, FED...
   function handleProviderClick(activeProviderId, providers) {
   providers.forEach(({ id, container, button }) => {

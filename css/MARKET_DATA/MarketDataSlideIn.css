@@ -23,14 +23,14 @@
 }
 
 /* Trigger-Zeilen verlässlich als volle Zeilen unter dem Header */
-#MARKETDATA_Modal .chart-section {
-  display: block !important;
-  width: 100%;
-  margin: 12px 0;
-  clear: both;             /* falls irgendwo noch floated wird */
-  float: none;
-  text-align: left;
-}
+#MARKETDATA_Modal .chart-section:not(.chart-section--sub) {
+   display: block !important;
+   width: 100%;
+   margin: 12px 0;
+   clear: both;
+   float: none;
+   text-align: left;
+ }
 
 /* Header darf nichts „floaten“ */
 #MARKETDATA_Modal .portfolio-info {
@@ -214,3 +214,53 @@
 
 
 
+/* MARKETDATA: Sub-Trigger default hidden */
+#MARKETDATA_Modal .chart-section--sub {
+  display: none;
+}
+
+/* MARKETDATA: Sub-Trigger only visible if parent trigger is open */
+#MARKETDATA_Modal .section-trigger.is-open
+  + .chart-section--sub {
+  display: block;
+}
+
+/* ===== RATES: Placement FIX (NO DUPES, INLINE OVERRIDE SAFE) ===== */
+
+/* Grid placement for the 4 direct children in panel-rates body */
+#MARKETDATA_Modal #panel-rates .sub-panel-body{
+  display: grid !important;
+  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr);
+  grid-auto-rows: max-content;
+  gap: 16px;
+  align-items: start;
+}
+
+/* Label links oben */
+#MARKETDATA_Modal #panel-rates .sub-panel-body > label[for="ratesSelector"]{
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  justify-self: start;
+  margin-bottom: 2px !important;   /* überschreibt inline 6px */
+}
+
+/* Select direkt darunter links */
+#MARKETDATA_Modal #panel-rates .sub-panel-body > #ratesSelector.ir-select{
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  justify-self: start;
+  width: 180px;
+  margin-top: 0 !important;
+}
+
+/* Links: Rates Table */
+#MARKETDATA_Modal #panel-rates .sub-panel-body > section.table-card{
+  grid-column: 1 !important;
+  grid-row: 3 !important;
+}
+
+/* Rechts: Chart */
+#MARKETDATA_Modal #panel-rates .sub-panel-body > .chart-container{
+  grid-column: 2 !important;
+  grid-row: 3 !important;
+}

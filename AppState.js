@@ -1,3 +1,4 @@
+import { initCurveSelectorGlobal } from "./FRONT_END/MARKET_DATA/INTEREST_RATES/initCurveSelectorGlobal.js";
 import { handleIssuerData } from './FRONT_END/NEW_PRODUCTS/ISSUER.js';
 import { handleProdData } from './FRONT_END/NEW_PRODUCTS/PROD.js';
 import { handleDealsData} from './FRONT_END/CREATE_PORTFOLIO/DEALS.js';
@@ -6,7 +7,7 @@ import { handleIRSensData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/IRSe
 import { handleCSSensData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
 import { handleCSMatrixData } from './FRONT_END/MARKET_DATA/CREDIT_SPREADS/CSMatrix.js';
 import { handleCSParameterData } from './FRONT_END/MARKET_DATA/CREDIT_SPREADS/CSParameter.js';
-import { handleIRData } from './FRONT_END/MARKET_DATA/INTEREST_RATES/IR.js';
+//import { handleIRData } from './FRONT_END/MARKET_DATA/INTEREST_RATES/IR.js';
 import { handleFWDData, handleSwapForwardCurve } from './FRONT_END/MARKET_DATA/FORWARDS/FORWARDS.js';
 import { handleMVaRData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
 import { handleEADData, handleCVaRData } from './FRONT_END/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js'; 
@@ -37,6 +38,10 @@ function runIdle(fn, timeout = 200) {
 
 export class AppState {
     constructor() {
+        this.euswData = [];
+        this.selectedCurve = "EUSWAP";
+
+
         this.customerData = null;
         this.euswData= [];
         this.tblTSData = [];
@@ -120,7 +125,7 @@ export class AppState {
         this.handleEADData = handleEADData;
         this.handleCVaRData = handleCVaRData;
 
-        this.handleIRData = handleIRData;
+        //this.handleIRData = handleIRData;
         this.handleFWDData = handleFWDData;
         this.handleSwapForwardCurve = handleSwapForwardCurve;
         
@@ -441,6 +446,13 @@ export class AppState {
             }
         });
 
+        
+
+        document.addEventListener("DOMContentLoaded", () => {
+        initCurveSelectorGlobal();
+        });
+
+
         this.initDropdownListeners(); // Initialize listeners for dropdown changes  
     }
 
@@ -661,19 +673,74 @@ handleOffersTable(data, index = 0) {
         this.customerData[key] = value;
     }
 
-    // ✅ Setter for EUSW data
-    setEUSWData(data) {
-        this.euswData = data;
+        // ✅ Setter for EUSW data
+    setPortfolioHistoryData(data) {
+        this.PortfolioHistoryMetrics = data;
     }
 
     // ✅ Getter for EUSW data
-    getEUSWData() {
-        return this.euswData;
+    getPortfolioHistoryData() {
+        return this.PortfolioHistoryMetrics;
     }
+
+
+
+
+
+
+// --- interne Caches als Properties (robust) ---
+
+setEUSWData(data) {
+  // nur übernehmen, wenn wirklich Daten da sind
+  if (Array.isArray(data) && data.length > 0) {
+    this._EUSWDataCache = data;
+    this._EUSWLastGoodCache = data; // letzte gültige Kopie merken
+  }
+  // wenn leer/undefined kommt: IGNORIEREN (sonst verlierst du beim Rückwechsel alles)
+}
+
+getEUSWData() {
+  if (Array.isArray(this._EUSWDataCache) && this._EUSWDataCache.length > 0) {
+    return this._EUSWDataCache;
+  }
+  // Fallback auf letzte gültige Daten
+  if (Array.isArray(this._EUSWLastGoodCache) && this._EUSWLastGoodCache.length > 0) {
+    return this._EUSWLastGoodCache;
+  }
+  return [];
+}
+
+setSelectedCurve(curve) {
+  this._selectedCurveCache = curve || "EUSWAP";
+}
+
+getSelectedCurve() {
+  return this._selectedCurveCache || "EUSWAP";
+}
+
+
+getEUSWDataWithSelectedCurve() {
+  const curve = this.getSelectedCurve();
+  return this.getEUSWData().map(row => {
+    const r = { ...row };
+
+    // wichtigste Zeile:
+    r.RATES = r[curve];   // immer auf aktuelle Curve mappen
+
+    return r;
+  });
+}
+
+
+
+
+
+
 
     // ✅ Setter for EUSW data
     setTblTSData(data) {
         this.tblTSData = data;
+        // console.log('tblTSData', data)
     }
 
     // ✅ Getter for EUSW data
@@ -798,12 +865,34 @@ handleOffersTable(data, index = 0) {
         return this.portfolioData;
     }
 
-    setPortAggData(elementId, data) {
-        this.portDataMap[elementId] = {
-          ...this.portDataMap[elementId], // bestehende Daten beibehalten
-          ...data                         // neue Werte einfügen
-        };
-      }
+setPortAggData(elementId, data) {
+  const before = this.portDataMap[elementId] || {};
+
+//   console.log("🔵 [setPortAggData] BEFORE:", {
+//     elementId,
+//     before
+//   });
+
+  this.portDataMap[elementId] = {
+    ...before,
+    ...data
+  };
+
+  const after = this.portDataMap[elementId];
+
+//   console.log("🟢 [setPortAggData] AFTER (full object):", {
+//     elementId,
+//     after
+//   });
+
+  // Werte einzeln loggen: Key = Value
+  console.log("📌 [setPortAggData] VALUES:");
+  Object.entries(after).forEach(([key, value]) => {
+    // console.log(`   • ${key}:`, value);
+  });
+}
+
+
 
     getPortAggData(elementId) {
     return this.portDataMap[elementId] || {};

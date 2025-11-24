@@ -35,9 +35,12 @@ contextBridge.exposeInMainWorld('api', {
   fetchBonds: (isins) => ipcRenderer.invoke('bonds:fetch', isins),
   fetchBondsTermsOnly: (isins) => ipcRenderer.invoke('bonds:fetchTermsOnly', isins),
   parsePdfUrl: (url, isin) => ipcRenderer.invoke('bonds:parsePdfUrl', { url, isin }),
-  
-});
 
+  // --- NEW: Python progress events ---
+  onProgress: (callback) => {
+    ipcRenderer.on('py-progress', (event, data) => callback(data));
+  },
+});
 
 // Optional: Replace text in DOM for Electron environment details
 window.addEventListener('DOMContentLoaded', () => {
@@ -50,5 +53,6 @@ window.addEventListener('DOMContentLoaded', () => {
     replaceText(`${type}-version`, process.versions[type]);
   }
 });
+
 
 

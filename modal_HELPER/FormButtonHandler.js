@@ -582,7 +582,9 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
                 uniqueIdentifierColumn = 'id';   
               case 'Customer': 
                 uniqueIdentifierColumn = 'id';   
-                break;   
+              case 'PortfolioHistoryMetrics': 
+                uniqueIdentifierColumn = 'DATE';   
+              break;   
               // Add more cases as needed for different tables
               default:
                   console.error('Unknown table:', selectedTableName);

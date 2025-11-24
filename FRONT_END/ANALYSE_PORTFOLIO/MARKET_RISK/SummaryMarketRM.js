@@ -1,4 +1,6 @@
 import { getColorFromPalette } from '../../../utils/colors.js';
+import { appState } from '../../renderer.js';
+
 
 export function handleSummaryRMData(filteredData, index, port_name) {
   console.log('port_name:',port_name)
@@ -424,6 +426,195 @@ export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
     }
   );
 }
+
+// export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
+//   const tsData = appState.getTblTSData();
+//   if (!Array.isArray(tsData) || tsData.length === 0) {
+//     console.warn("⚠️ Keine TS-Daten für CMB-Chart.");
+//     return;
+//   }
+
+//   const testCurr = tsData[tsData.length - 1];
+//   const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM) / 100;
+
+//   const testPV01 = -testTtM / (1 + testCurrRate);
+//   const portfolioPV01 = portPV01;
+
+//   // wie bisher: optionales 3-Jahres-Fenster
+//   const threeYearsAgo = new Date();
+//   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+
+//   const tsFiltered = tsData.filter(d => new Date(d.DATE || d.date) >= threeYearsAgo);
+
+//   const rawSynthetic = computeCMBValueCurve(tsFiltered, testTtM, testPV01);
+//   const rawPortfolio = computeCMBValueCurve(tsFiltered, testTtM, portfolioPV01);
+
+//   const syntheticData = normalizeCurveToEndValue(rawSynthetic, targetEndValue);
+//   const portfolioData = normalizeCurveToEndValue(rawPortfolio, targetEndValue);
+
+//   // 🔹 NEU: alle Portfolio-History-Punkte roh
+//   const portHistOverlay = computePortHistoryOverlayRaw();
+
+//   const allYValues = [...syntheticData, ...portfolioData].map(p => p.y);
+//   const ySpread = Math.max(...allYValues) - Math.min(...allYValues);
+//   const yPadding = ySpread * 0.1;
+//   const yMax = targetEndValue + ySpread / 2 + yPadding;
+//   const yMin = targetEndValue - ySpread / 2 - yPadding;
+
+//   const cmbValueDataset = {
+//     label: `Synthetic CMB (${testTtM}Y)`,
+//     data: syntheticData,
+//     borderColor: 'purple',
+//     backgroundColor: 'rgba(128, 0, 128, 0.2)',
+//     tension: 0.1,
+//     pointRadius: 0,
+//     yAxisID: 'yCMB'
+//   };
+
+//   const portfolioValueDataset = {
+//     label: `Portfolio (CMB ${testTtM}Y)`,
+//     data: portfolioData,
+//     borderColor: 'teal',
+//     backgroundColor: 'rgba(0, 128, 128, 0.2)',
+//     tension: 0.1,
+//     pointRadius: 0,
+//     yAxisID: 'yCMB'
+//   };
+
+//   const lastPoint = syntheticData[syntheticData.length - 1];
+
+//   const endMarker = {
+//     label: `Current Portfolio Value (${targetEndValue.toFixed(2)}%)`,
+//     data: [{ x: lastPoint.x, y: targetEndValue }],
+//     pointRadius: 5,
+//     pointStyle: 'circle',
+//     pointBackgroundColor: 'red',
+//     pointBorderColor: 'red',
+//     showLine: false,
+//     borderColor: 'red',
+//     backgroundColor: 'red',
+//     yAxisID: 'yCMB'
+//   };
+
+//   // 🔹 Overlay-Dataset: alle History-Werte, eigene Achse (Rechts, in %)
+//   const portHistDataset = portHistOverlay.length ? {
+//     label: 'Portfolio Value / Notional (History)',
+//     data: portHistOverlay,
+//     type: 'line',
+//     showLine: false,
+//     pointRadius: 5,
+//     pointHoverRadius: 7,
+//     pointHitRadius: 7,
+//     pointBackgroundColor: 'rgba(0, 200, 80, 1)',
+//     pointBorderColor: '#003d20',
+//     pointBorderWidth: 2,
+//     pointStyle: 'circle',
+//     yAxisID: 'yPort'   // eigene Achse
+//   } : null;
+
+//   const datasets = [cmbValueDataset, portfolioValueDataset, endMarker];
+//   if (portHistDataset) datasets.push(portHistDataset);
+
+//   // ⚙️ Chart erstellen – mit Override für zwei Y-Achsen
+//   window.tsEU1YChartInstance = createSimpleLineChart(
+//     datasets,
+//     'tsEU1YChart',
+//     'Synthetic Bond vs. Portfolio',
+//     0,
+//     {
+//       scales: {
+//         yCMB: {
+//           position: 'left',
+//           title: { display: true, text: 'Normalized Value (CMB)' },
+//           min: yMin,
+//           max: yMax
+//         },
+//         yPort: {
+//           position: 'right',
+//           title: { display: true, text: 'Portfolio Value / Notional (%)' },
+//           ticks: {
+//             callback: v => (v * 100).toFixed(1) + ' %'
+//           },
+//           grid: {
+//             drawOnChartArea: false
+//           }
+//         },
+//         x: {
+//           type: 'time',
+//           time: {
+//             unit: 'month'
+//           },
+//           title: {
+//             display: true,
+//             text: 'Date'
+//           }
+//         }
+//       }
+//     }
+//   );
+// }
+
+
+// function computePortHistoryOverlayRaw() {
+//   const historyData = appState.getPortfolioHistoryData() || [];
+//   if (!Array.isArray(historyData) || historyData.length === 0) {
+//     console.warn("⚠️ Keine PortfolioHistoryMetrics für Overlay.");
+//     return [];
+//   }
+
+//   const sortedData = [...historyData].sort((a, b) => {
+//     const da = parseLocalYMD(a.DATE);
+//     const db = parseLocalYMD(b.DATE);
+//     return da - db;
+//   });
+
+//   const overlay = [];
+
+//   for (const row of sortedData) {
+//     const d = parseLocalYMD(row.DATE);
+//     if (!d || isNaN(d)) continue;
+
+//     const value    = parseFloat(row.PORTFOLIO_VALUE);
+//     const notional = parseFloat(row.PORTFOLIO_NOTIONAL);
+
+//     if (isNaN(value) || isNaN(notional) || notional === 0) continue;
+
+//     const pct = value / notional;
+
+//     overlay.push({
+//       x: d,   // echtes Date-Objekt
+//       y: pct  // Roh-Prozentwert
+//     });
+//   }
+
+//   console.log("📌 PortHistoryOverlay RAW (safe date parse): length =", overlay.length, overlay);
+//   return overlay;
+// }
+
+// function parseLocalYMD(dateStr) {
+//   // erwartet "YYYY-MM-DD"
+//   if (!dateStr || typeof dateStr !== "string") return null;
+//   const parts = dateStr.split("-");
+//   if (parts.length !== 3) return null;
+
+//   const year  = Number(parts[0]);
+//   const month = Number(parts[1]); // 1-12
+//   const day   = Number(parts[2]);
+
+//   if (!year || !month || !day) return null;
+
+//   // new Date(year, monthIndex, day) -> Local Time, KEIN UTC-Offset-Problem
+//   return new Date(year, month - 1, day);
+// }
+
+
+
+
+
+
+
+
+
 
 
 

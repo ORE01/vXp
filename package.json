@@ -12,7 +12,7 @@
   },
   "build": {
     "win": {
-      "icon": "./vXp.ico",
+      "icon": "./zzzBACK_END/vXp.ico",
       "asar": true,
       "asarUnpack": [
         "files/UNI.db",

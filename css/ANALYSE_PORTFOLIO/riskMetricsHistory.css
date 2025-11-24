@@ -1,0 +1,42 @@
+/* ───────────── HISTORIC PERFORMANCE – Panels & Charts (Card + Luft) ───────────── */
+
+/* Dark-Card für alle History-Panels */
+#PORTFOLIO_HISTORY_Modal .sub-panel-body,
+#panel-portfolio-value .sub-panel-body,
+#panel-hist-sensitivities .sub-panel-body,
+#panel-market-risk .sub-panel-body,
+#panel-credit-risk .sub-panel-body {
+  display: flex;
+  flex-direction: column;
+
+  padding: 16px 20px;                             /* etwas mehr Luft innen */
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+/* Canvas: etwas kleiner + zentriert, fester Shape */
+#PORTFOLIO_HISTORY_Modal .sub-panel-body canvas,
+#panel-portfolio-value .sub-panel-body canvas,
+#panel-hist-sensitivities .sub-panel-body canvas,
+#panel-market-risk .sub-panel-body canvas,
+#panel-credit-risk .sub-panel-body canvas {
+  display: block;
+  width: 94% !important;          /* nicht bis ganz zum Rand */
+  margin: 4px auto 0;             /* zentriert, kleine Top-Luft */
+  height: auto !important;
+  aspect-ratio: 16 / 9;           /* konsistentes Seitenverhältnis */
+}
+
+@media (max-width: 900px) {
+  #PORTFOLIO_HISTORY_Modal .sub-panel-body canvas,
+  #panel-portfolio-value .sub-panel-body canvas,
+  #panel-hist-sensitivities .sub-panel-body canvas,
+  #panel-market-risk .sub-panel-body canvas,
+  #panel-credit-risk .sub-panel-body canvas {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+

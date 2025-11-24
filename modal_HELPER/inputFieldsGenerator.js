@@ -12,7 +12,7 @@ const tableHandlers = {
 };
 
 // ISSUER-Feld PROBLEM:
-export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter','Portfolios', 'MVaRInput_2']);
+export const skipIssuerForTables = new Set(['ecb', 'fed', 'yahoo', 'CSParameter','Portfolios', 'MVaRInput_2', 'PortfolioHistoryMetrics']);
 
 // ISSUER-Feld PROBLEM:
 export function shouldSkipTable(tableName) {

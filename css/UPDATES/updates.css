@@ -10,5 +10,88 @@
   display:flex; gap:10px; flex-wrap:wrap; align-items:center;
 }
 
+/* =========================
+   HISTORIC PANEL LAYOUT
+   ========================= */
+
+/* Card insgesamt luftiger */
+#panel-upd-historic .hist-card{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;              
+  padding: 14px 14px;     
+}
+
+/* Hinweistext oben */
+#panel-upd-historic .hist-hint{
+  font-size: 12.5px;
+  color: #cfcfcf;
+  line-height: 1.35;
+  margin-bottom: 2px;     
+}
+
+/* Zeile mit Button + Progress */
+#panel-upd-historic .hist-row{
+  display: flex;
+  align-items: center;
+  gap: 16px;              
+}
+
+/* Progressblock selbst luftiger */
+#panel-upd-historic .hist-progress-wrap{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;               
+}
+
+
+/* =========================
+   PROGRESS BAR (Historic Data)
+   ========================= */
+
+#panel-upd-historic #progressBar {
+  width: 100%;
+  max-width: 520px;        
+  height: 16px;            
+  margin-top: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #222;        
+  border: 1px solid #555;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
+}
+
+/* WebKit (Chromium/Electron) */
+#panel-upd-historic #progressBar::-webkit-progress-bar {
+  background-color: #222;
+  border-radius: 999px;
+}
+
+#panel-upd-historic #progressBar::-webkit-progress-value {
+  background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, .55);
+  transition: width .18s ease;
+}
+
+/* Firefox (falls du mal portierst) */
+#panel-upd-historic #progressBar::-moz-progress-bar {
+  background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, .55);
+}
+
+/* Text darunter */
+#panel-upd-historic #progressText {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: #cfcfcf;
+  letter-spacing: .2px;
+  min-height: 16px; 
+}
+
+
+
 
 
