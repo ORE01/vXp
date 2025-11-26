@@ -47,28 +47,64 @@
 
 
 /* =========================
-   PROGRESS BAR (Historic Data)
+   PROGRESS BARS (Historic Data) – ECB & FED
    ========================= */
 
-#panel-upd-historic #progressBar {
+/* Button oben, Progress-Bereich darunter */
+#panel-upd-historic .hist-row {
+  display: flex;
+  flex-direction: column;   /* <-- sorgt für untereinander */
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Wrapper für die Balken: untereinander stapeln */
+#panel-upd-historic .hist-progress-wrap {
+  display: flex;
+  flex-direction: column;   /* <-- Bars NICHT nebeneinander */
+  gap: 10px;
+  min-width: 260px;
   width: 100%;
-  max-width: 520px;        
-  height: 16px;            
-  margin-top: 10px;
+  max-width: 520px;
+}
+
+/* Jede Provider-Zeile: Label links, Bar + Text rechts */
+#panel-upd-historic .provider-progress {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Label links */
+#panel-upd-historic .provider-label {
+  grid-row: span 2;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* === Progress-Elemente: alle IDs die mit progressBar_ starten === */
+#panel-upd-historic progress[id^="progressBar_"] {
+  width: 100%;
+  height: 16px;
+  margin-top: 2px;
   border-radius: 999px;
   overflow: hidden;
-  background: #222;        
+  background: #222;
   border: 1px solid #555;
   box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
 }
 
 /* WebKit (Chromium/Electron) */
-#panel-upd-historic #progressBar::-webkit-progress-bar {
+#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-bar {
   background-color: #222;
   border-radius: 999px;
 }
 
-#panel-upd-historic #progressBar::-webkit-progress-value {
+#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-value {
   background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
   border-radius: 999px;
   box-shadow: 0 0 8px rgba(76, 175, 80, .55);
@@ -76,22 +112,26 @@
 }
 
 /* Firefox (falls du mal portierst) */
-#panel-upd-historic #progressBar::-moz-progress-bar {
+#panel-upd-historic progress[id^="progressBar_"]::-moz-progress-bar {
   background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
   border-radius: 999px;
   box-shadow: 0 0 8px rgba(76, 175, 80, .55);
 }
 
-/* Text darunter */
-#panel-upd-historic #progressText {
-  margin-top: 6px;
+/* === Texte darunter: alle IDs die mit progressText_ starten === */
+#panel-upd-historic div[id^="progressText_"] {
+  grid-column: 2;
+  margin-top: 4px;
   font-size: 12.5px;
   color: #cfcfcf;
   letter-spacing: .2px;
-  min-height: 16px; 
+  min-height: 16px;
+  opacity: .9;
 }
 
-
-
-
-
+/* Optional globaler Text */
+#panel-upd-historic #progressText_GLOBAL {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: .7;
+}

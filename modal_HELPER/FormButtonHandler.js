@@ -443,7 +443,7 @@ if (String(selectedTableName).trim() === 'Customer') {
   }
 }
 
-console.log('newData:', newData);
+// console.log('newData:', newData);
 
 
           try {
@@ -576,12 +576,16 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
                 break;  
               case 'ProdCouponSchedules': 
                 uniqueIdentifierColumn = 'ID'; 
+                break; 
               case 'EUSW': 
                 uniqueIdentifierColumn = 'YEAR'; 
+                break; 
               case 'MVaRInput_2': 
-                uniqueIdentifierColumn = 'id';   
+                uniqueIdentifierColumn = 'id';  
+                break;  
               case 'Customer': 
                 uniqueIdentifierColumn = 'id';   
+                break; 
               case 'PortfolioHistoryMetrics': 
                 uniqueIdentifierColumn = 'DATE';   
               break;   

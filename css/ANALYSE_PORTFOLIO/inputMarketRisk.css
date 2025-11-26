@@ -1,0 +1,196 @@
+/* ===========================
+   Market VaR – Grundlayout
+   =========================== */
+
+#panel-market .sub-panel-body{
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ===========================
+   1) INPUT OBEN
+   =========================== */
+
+#panel-market .mvar-input{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Tabelle mit Intervallen */
+#panel-market #inputMVaRContainer{
+  flex: 1 1 auto;
+  min-width: 320px;
+  max-height: 260px;
+  overflow: auto;
+
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* Tabellen im Input-Container */
+#panel-market #inputMVaRContainer table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#panel-market #inputMVaRContainer th,
+#panel-market #inputMVaRContainer td{
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+#panel-market #inputMVaRContainer th{
+  text-align: left;
+  opacity: 0.8;
+}
+
+/* Buttons UNTER der Tabelle, LINKS bündig */
+#panel-market .mvar-input-buttons{
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+#panel-market .mvar-input-buttons .edit-button{
+  white-space: nowrap;
+}
+
+/* ===========================
+   2) MVaR / ES + Profit/Loss Dist + Ampel
+   =========================== */
+
+#panel-market .mvar-summary{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Caption + Profit/Loss Dist – links nebeneinander */
+#panel-market .mvar-summary-header{
+  display: flex;
+  flex-direction: column;   /* Überschrift oben, Button darunter */
+  align-items: flex-start;  /* links ausrichten */
+  gap: 4px;                 /* kleiner Abstand zwischen Text und Button */
+}
+
+
+#panel-market .mvar-caption{
+  margin: 6px 0 4px;
+}
+
+/* Zeile: Box + Ampel nebeneinander.
+   WICHTIG: wir stretchen nur die Kartenhöhe, nicht die Zeilen im Table */
+#panel-market .mvar-summary-row{
+  display: flex;
+  align-items: stretch;      /* macht die Flex-Items gleich hoch */
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+/* MVaR-Box links – normale Karte, keine Flex-Spielereien innen */
+#panel-market #MVaRDataContainer0{
+  flex: 1 1 320px;
+  min-width: 260px;
+
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* Tabelle darin ganz normal */
+#panel-market #MVaRDataContainer0 table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#panel-market #MVaRDataContainer0 th,
+#panel-market #MVaRDataContainer0 td{
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+#panel-market #MVaRDataContainer0 th{
+  text-align: left;
+  opacity: 0.8;
+}
+
+/* Ampel rechts – Karte, Höhe = Höhe der MVaR-Karte */
+#panel-market .traffic-light-wrapper.small{
+  margin: 0;
+  flex: 0 0 90px;                /* fixe Breite */
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid #000000;     /* schwarze Umrandung */
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;                  /* zieht die Ampel-Karte auf Containerhöhe */
+}
+
+/* ===========================
+   3) CHARTS NEBENEINANDER
+   =========================== */
+
+#panel-market .chart-2x1-row{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+#panel-market .chart-box{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+
+  flex: 1 1 420px;
+  min-width: 320px;
+}
+
+#panel-market .chart-box canvas{
+  display:block;
+  width:100% !important;
+  height:360px !important;
+}
+
+/* ===========================
+   Responsive Feinschliff
+   =========================== */
+
+@media (max-width: 1200px){
+  #panel-market .chart-box canvas{ height: 320px !important; }
+}
+
+@media (max-width: 900px){
+  #panel-market .mvar-summary-row{
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  #panel-market .traffic-light-wrapper.small{
+    height: auto;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 800px){
+  #panel-market .chart-2x1-row{ gap:16px; }
+  #panel-market .chart-box{ min-width:0; width:100%; }
+  #panel-market .chart-box canvas{ height: 280px !important; }
+}
+
+
+

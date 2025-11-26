@@ -75,7 +75,7 @@ function processData(data, selectedTableName, columnLabelMap = {}) {
         html += '<tr>';
 
         if (includeRadioSelect) {
-          html += generateRadioCell(item, defaultInterval);  // 👈 Default mitgeben
+          html += generateRadioCell(item, rowIndex, defaultInterval);
         }
 
         columnNames.forEach((columnName) => {
@@ -94,12 +94,25 @@ function processData(data, selectedTableName, columnLabelMap = {}) {
     }
 
 
-        function generateRadioCell(item, defaultInterval) {
+        // function generateRadioCell(item, defaultInterval) {
+        //   const isChecked = item.INTERVAL_NAME === defaultInterval ? 'checked' : '';
+        //   return `<td>
+        //     <input type="radio" name="scenario-select" class="scenario-radio" data-interval="${item.INTERVAL_NAME}" ${isChecked}>
+        //   </td>`;
+        // }
+        function generateRadioCell(item, rowIndex, defaultInterval) {
           const isChecked = item.INTERVAL_NAME === defaultInterval ? 'checked' : '';
           return `<td>
-            <input type="radio" name="scenario-select" class="scenario-radio" data-interval="${item.INTERVAL_NAME}" ${isChecked}>
+            <input 
+              type="radio" 
+              name="scenario-select" 
+              class="scenario-radio" 
+              data-interval="${item.INTERVAL_NAME}" 
+              data-id="${item.id}"
+              ${isChecked}>
           </td>`;
         }
+
 
 
         function generateDataCell(item, columnName, selectedTableName, formatRules) {

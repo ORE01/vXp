@@ -25,7 +25,7 @@
     background: #555;
 }
 
-.green.active { background: green; }
+.green.active { background: #4caf50; }
 .yellow.active { background: yellow; }
 .red.active { background: red; }
     

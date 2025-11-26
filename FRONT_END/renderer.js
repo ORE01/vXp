@@ -50,25 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   setupReportsEnterLeaveBridge();
   setupBulkUpdateBridge();
-
-    // ---------------------------------------------
-  // PYTHON PROGRESS LISTENER → HIER EINSETZEN
-  // ---------------------------------------------
-  // Reset UI (optional)
-  const bar = document.getElementById("progressBar");
-  const txt = document.getElementById("progressText");
-  if (bar) bar.value = 0;
-  if (txt) txt.textContent = "Starting...";
-
-  // IMPORTANT: in ES-modules immer window.api verwenden
-  window.api.on('py-progress', (data) => {
-    console.log("PY PROGRESS (renderer):", data);
-
-    if (bar) bar.value = data.progress ?? 0;
-    if (txt) txt.textContent = data.message ?? "";
-
+  setupPythonProgressBars({
+    initialProviders: ["ECB", "FED"]   // später einfach erweitern oder weglassen
   });
-
 });
 
 // --- Reports enter/leave Bridge (idempotent) ---
@@ -134,6 +118,71 @@ function unlockRender(){
   window.__uiLocked = false;
   delete document.body.dataset.uiLocked;
 }
+// PYTHON PROGRESS BAR
+function setupPythonProgressBars({
+  initialProviders = ["ECB", "FED"],
+  containerId = "progressBarsContainer",
+  globalTextId = "progressText_GLOBAL",
+  eventName = "py-progress"
+} = {}) {
+  const container = document.getElementById(containerId);
+  const globalTxt = document.getElementById(globalTextId);
+
+  if (!container) {
+    console.warn(`[ProgressBars] Container #${containerId} not found.`);
+    return;
+  }
+
+  // Erzeugt eine Provider-Bar, falls sie noch nicht existiert
+  function ensureProviderBar(provider) {
+    const barId = `progressBar_${provider}`;
+    if (document.getElementById(barId)) return;
+
+    const row = document.createElement("div");
+    row.className = "provider-progress";
+
+    row.innerHTML = `
+      <div class="provider-label">${provider}</div>
+      <progress id="${barId}" value="0" max="100"></progress>
+      <div id="progressText_${provider}" class="progress-text">Waiting...</div>
+    `;
+
+    container.appendChild(row);
+  }
+
+  // Initiale Bars erstellen + resetten
+  for (const p of initialProviders) {
+    ensureProviderBar(p);
+
+    const bar = document.getElementById(`progressBar_${p}`);
+    const txt = document.getElementById(`progressText_${p}`);
+    if (bar) bar.value = 0;
+    if (txt) txt.textContent = "Waiting...";
+  }
+
+  if (globalTxt) globalTxt.textContent = "Starting...";
+
+  // Listener registrieren
+  window.api.on(eventName, (data) => {
+    const provider = data.provider || "GLOBAL";
+
+    // GLOBAL nur als Text anzeigen
+    if (provider === "GLOBAL") {
+      if (globalTxt) globalTxt.textContent = data.message ?? "";
+      return;
+    }
+
+    // Neue Provider dynamisch erzeugen
+    ensureProviderBar(provider);
+
+    const bar = document.getElementById(`progressBar_${provider}`);
+    const txt = document.getElementById(`progressText_${provider}`);
+
+    if (bar) bar.value = data.progress ?? 0;
+    if (txt) txt.textContent = data.message ?? "";
+  });
+}
+
 
 
 

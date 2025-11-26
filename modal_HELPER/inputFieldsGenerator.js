@@ -1,6 +1,7 @@
 import { prodData } from '../FRONT_END/NEW_PRODUCTS/PROD.js';
 import { filteredIssuerData } from '../FRONT_END/NEW_PRODUCTS/ISSUER.js';
 import { convertDateToISO } from '../utils/format.js';
+import { MVAR_COLUMNS } from '../FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
 
 
 // mapping of tables to functions:
@@ -9,6 +10,11 @@ const tableHandlers = {
   Deals: handleDealsFields,
   CSParameter: handleCSParameterFields,
   //MVarInput_2: handleMVarInput,
+};
+
+// Felder, die im Modal NICHT angezeigt werden sollen – je Tabelle
+const hiddenFieldsByTable = {
+  MVarInput_2: new Set(['id']),   // <- ID NICHT anzeigen
 };
 
 // ISSUER-Feld PROBLEM:
@@ -25,51 +31,92 @@ export function shouldSkipTable(tableName) {
 
 
 // Generiert Eingabefelder für ein gegebenes `rowData`-Objekt
-export function generateInputFields(rowData, form, uniqueIssuers, selectedTableName) {
-  // console.log('Generating input fields for:', selectedTableName);
+// export function generateInputFields(rowData, form, uniqueIssuers, selectedTableName) {
+//   // console.log('Generating input fields for:', selectedTableName);
 
-  // Sortiere `uniqueIssuers` alphabetisch (optional)
+//   // Sortiere `uniqueIssuers` alphabetisch (optional)
+//   uniqueIssuers.sort();
+
+//   Object.keys(rowData).forEach((fieldName) => {
+//     // Falls das Feld `ISSUER` ist und es für diese Tabelle ignoriert werden soll → Überspringen
+//     if (fieldName === 'ISSUER' && shouldSkipTable(selectedTableName)) {
+//       // console.log(`Skipping ISSUER field for table: ${selectedTableName}`);
+//       return;
+//     }
+
+//     // Erstelle eine Form-Row für das Feld
+//     const formRow = document.createElement('div');
+//     formRow.classList.add('form-row');
+
+//     // Label für das Feld erstellen
+//     const label = document.createElement('label');
+//     label.textContent = fieldName;
+//     label.classList.add('label');
+
+//     // Prüfe, ob eine spezielle Handler-Funktion für diese Tabelle existiert
+//     for (const [prefix, handler] of Object.entries(tableHandlers)) {
+//       if (selectedTableName.startsWith(prefix)) {
+//         if (handler(fieldName, rowData, formRow, label)) {
+//           form.appendChild(formRow);
+//           return; // Falls Spezialverarbeitung durchgeführt wurde → nächstes Feld
+//         }
+//       }
+//     }
+
+//     // Standardmäßiges Eingabefeld für alle anderen Fälle
+//     const input = document.createElement('input');
+//     input.type = 'text';
+//     input.value = rowData[fieldName] || '';
+//     input.setAttribute('data-field', fieldName);
+//     input.classList.add('input-field');
+
+//     // Feld dem Formular hinzufügen
+//     formRow.appendChild(label);
+//     formRow.appendChild(input);
+//     form.appendChild(formRow);
+//   });
+// }
+export function generateInputFields(rowData, form, uniqueIssuers, selectedTableName) {
   uniqueIssuers.sort();
 
-  Object.keys(rowData).forEach((fieldName) => {
-    // Falls das Feld `ISSUER` ist und es für diese Tabelle ignoriert werden soll → Überspringen
-    if (fieldName === 'ISSUER' && shouldSkipTable(selectedTableName)) {
-      // console.log(`Skipping ISSUER field for table: ${selectedTableName}`);
-      return;
-    }
+  // 👉 Sonderfall: MVaRInput_2 komplett über eigenen Handler
+  if (selectedTableName === 'MVaRInput_2') {
+    handleMVarInput(rowData, form);
+    return;
+  }
 
-    // Erstelle eine Form-Row für das Feld
+  // Standard-Flow für alle anderen Tabellen
+  Object.keys(rowData).forEach((fieldName) => {
+    if (fieldName === 'ISSUER' && shouldSkipTable(selectedTableName)) return;
+
     const formRow = document.createElement('div');
     formRow.classList.add('form-row');
 
-    // Label für das Feld erstellen
     const label = document.createElement('label');
     label.textContent = fieldName;
     label.classList.add('label');
 
-    // Prüfe, ob eine spezielle Handler-Funktion für diese Tabelle existiert
     for (const [prefix, handler] of Object.entries(tableHandlers)) {
       if (selectedTableName.startsWith(prefix)) {
         if (handler(fieldName, rowData, formRow, label)) {
           form.appendChild(formRow);
-          return; // Falls Spezialverarbeitung durchgeführt wurde → nächstes Feld
+          return;
         }
       }
     }
 
-    // Standardmäßiges Eingabefeld für alle anderen Fälle
     const input = document.createElement('input');
     input.type = 'text';
-    input.value = rowData[fieldName] || '';
+    input.value = rowData[fieldName] ?? '';
     input.setAttribute('data-field', fieldName);
     input.classList.add('input-field');
 
-    // Feld dem Formular hinzufügen
     formRow.appendChild(label);
     formRow.appendChild(input);
     form.appendChild(formRow);
   });
 }
+
 
     function handleProdAllFields(fieldName, rowData, formRow, label) {
       switch (fieldName) {
@@ -91,184 +138,102 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           return true;
         }
 
-        // case 'MATURITY':
-        // case 'START_DATE': {
-        //   const dateInput = document.createElement('input');
-        //   dateInput.type = 'date';
-        //   dateInput.id = `${fieldName.toLowerCase()}Date`;
-        //   dateInput.classList.add('input-field');
 
-        //   const isoDate = rowData[fieldName]
-        //     ? convertDateToISO(rowData[fieldName])
-        //     : '';
-        //   dateInput.value = isoDate;
 
-        //   dateInput.setAttribute('data-field', fieldName);
-        //   formRow.appendChild(label);
-        //   formRow.appendChild(dateInput);
-        //   return true;
-        // }
+        case 'MATURITY':
+        case 'START_DATE': {
+          // helpers
+          const toISO = (d) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          };
+          const addYearsISO = (isoYMD, years) => {
+            const [y, m, d] = isoYMD.split('-').map(Number);
+            const base = new Date(y, m - 1, d);
+            base.setFullYear(base.getFullYear() + Number(years || 0));
+            return toISO(base);
+          };
+          const resolveStartToISO = (val) => {
+            const s = String(val || '').trim().toLowerCase();
+            if (s === 'today') return toISO(new Date());
+            return convertDateToISO(val); // your existing function
+          };
 
-// case 'MATURITY':
-// case 'START_DATE': {
-//   // tiny local helpers
-//   const toISO = (d) => {
-//     const y = d.getFullYear();
-//     const m = String(d.getMonth() + 1).padStart(2, '0');
-//     const day = String(d.getDate()).padStart(2, '0');
-//     return `${y}-${m}-${day}`;
-//   };
-//   const addYearsISO = (isoYMD, years) => {
-//     const [y, m, d] = isoYMD.split('-').map(Number);
-//     const base = new Date(y, m - 1, d);
-//     base.setFullYear(base.getFullYear() + Number(years || 0));
-//     return toISO(base);
-//   };
-//   const resolveStartToISO = (val) => {
-//     const s = String(val || '').trim().toLowerCase();
-//     if (s === 'today') return toISO(new Date());
-//     return convertDateToISO(val); // your existing function
-//   };
+          // main date input (unchanged)
+          const dateInput = document.createElement('input');
+          dateInput.type = 'date';
+          dateInput.id = `${fieldName.toLowerCase()}Date`;
+          dateInput.classList.add('input-field');
+          dateInput.setAttribute('data-field', fieldName);
 
-//   // create date input (unchanged)
-//   const dateInput = document.createElement('input');
-//   dateInput.type = 'date';
-//   dateInput.id = `${fieldName.toLowerCase()}Date`;
-//   dateInput.classList.add('input-field');
-//   dateInput.setAttribute('data-field', fieldName);
+          // compute initial ISO for date input
+          let isoDate = '';
+          if (fieldName === 'START_DATE') {
+            isoDate = rowData.START_DATE ? resolveStartToISO(rowData.START_DATE) : '';
+          } else {
+            const rawMat = String(rowData.MATURITY ?? '').trim();
+            const relY = /^\s*(\d+)\s*y\s*$/i.exec(rawMat);
+            if (relY) {
+              const baseStartISO = resolveStartToISO(rowData.START_DATE);
+              isoDate = baseStartISO ? addYearsISO(baseStartISO, Number(relY[1])) : '';
+            } else {
+              isoDate = rowData.MATURITY ? convertDateToISO(rowData.MATURITY) : '';
+            }
+          }
+          dateInput.value = isoDate || '';
 
-//   // compute ISO value for the input
-//   let isoDate = '';
-//   if (fieldName === 'START_DATE') {
-//     isoDate = rowData.START_DATE ? resolveStartToISO(rowData.START_DATE) : '';
-//   } else {
-//     const rawMat = String(rowData.MATURITY ?? '').trim();
-//     const relY = /^\s*(\d+)\s*y\s*$/i.exec(rawMat);
-//     if (relY) {
-//       const baseStartISO = resolveStartToISO(rowData.START_DATE);
-//       isoDate = baseStartISO ? addYearsISO(baseStartISO, Number(relY[1])) : '';
-//     } else {
-//       isoDate = rowData.MATURITY ? convertDateToISO(rowData.MATURITY) : '';
-//     }
-//   }
-//   dateInput.value = isoDate || '';
+          // --- NEW: small token input to allow typing 'today' / '11y' ---
+          const tokenInput = document.createElement('input');
+          tokenInput.type = 'text';
+          tokenInput.id = `${fieldName.toLowerCase()}Token`;
+          tokenInput.classList.add('input-field');
+          tokenInput.style.width = '72px';
+          tokenInput.style.marginLeft = '8px';
+          tokenInput.placeholder = fieldName === 'START_DATE' ? 'today' : 'e.g. 11y';
 
-//   // --- NEW: small badge showing the original value (only when useful)
-//   const rawOriginal = String(rowData[fieldName] ?? '').trim();
-//   const shouldShowBadge =
-//     /^today(?:\s*[+-]\s*\d+)?$/i.test(rawOriginal) ||     // today, today+N
-//     /^\s*\d+\s*y\s*$/i.test(rawOriginal) ||               // 10y, 20y
-//     (rawOriginal && isoDate && rawOriginal !== isoDate);   // differs from displayed ISO
+          const rawOriginal = String(rowData[fieldName] ?? '').trim();
+          if (fieldName === 'START_DATE') {
+            if (/^today$/i.test(rawOriginal)) tokenInput.value = 'today';
+          } else {
+            const m = /^\s*(\d+)\s*y\s*$/i.exec(rawOriginal);
+            if (m) tokenInput.value = `${m[1]}y`;
+          }
 
-//   const badge = document.createElement('span');
-//   badge.style.marginLeft = '8px';
-//   badge.style.opacity = '0.8';
-//   badge.style.fontSize = '0.9em';
-//   badge.style.whiteSpace = 'nowrap';
-//   badge.textContent = shouldShowBadge ? rawOriginal : '';
+          // wiring: when token changes, recompute the date field
+          tokenInput.addEventListener('input', () => {
+            const t = tokenInput.value.trim();
 
-//   // append
-//   formRow.appendChild(label);
-//   formRow.appendChild(dateInput);
-//   formRow.appendChild(badge);
+            if (fieldName === 'START_DATE') {
+              if (/^today$/i.test(t)) {
+                dateInput.value = toISO(new Date());
+              }
+              // otherwise leave date unchanged
+            } else {
+              const m = /^\s*(\d+)\s*y\s*$/i.exec(t);
+              if (m) {
+                const baseStartISO =
+                  resolveStartToISO(
+                    // prefer current start-date input if present in DOM; else fall back to rowData
+                    (document.getElementById('start_dateDate')?.value || rowData.START_DATE)
+                  ) || toISO(new Date());
+                dateInput.value = addYearsISO(baseStartISO, Number(m[1]));
+              }
+            }
+          });
 
-//   return true;
-// }
+          // if user changes date manually, clear token (date becomes source of truth)
+          dateInput.addEventListener('change', () => {
+            tokenInput.value = '';
+          });
 
-case 'MATURITY':
-case 'START_DATE': {
-  // helpers
-  const toISO = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-  const addYearsISO = (isoYMD, years) => {
-    const [y, m, d] = isoYMD.split('-').map(Number);
-    const base = new Date(y, m - 1, d);
-    base.setFullYear(base.getFullYear() + Number(years || 0));
-    return toISO(base);
-  };
-  const resolveStartToISO = (val) => {
-    const s = String(val || '').trim().toLowerCase();
-    if (s === 'today') return toISO(new Date());
-    return convertDateToISO(val); // your existing function
-  };
-
-  // main date input (unchanged)
-  const dateInput = document.createElement('input');
-  dateInput.type = 'date';
-  dateInput.id = `${fieldName.toLowerCase()}Date`;
-  dateInput.classList.add('input-field');
-  dateInput.setAttribute('data-field', fieldName);
-
-  // compute initial ISO for date input
-  let isoDate = '';
-  if (fieldName === 'START_DATE') {
-    isoDate = rowData.START_DATE ? resolveStartToISO(rowData.START_DATE) : '';
-  } else {
-    const rawMat = String(rowData.MATURITY ?? '').trim();
-    const relY = /^\s*(\d+)\s*y\s*$/i.exec(rawMat);
-    if (relY) {
-      const baseStartISO = resolveStartToISO(rowData.START_DATE);
-      isoDate = baseStartISO ? addYearsISO(baseStartISO, Number(relY[1])) : '';
-    } else {
-      isoDate = rowData.MATURITY ? convertDateToISO(rowData.MATURITY) : '';
-    }
-  }
-  dateInput.value = isoDate || '';
-
-  // --- NEW: small token input to allow typing 'today' / '11y' ---
-  const tokenInput = document.createElement('input');
-  tokenInput.type = 'text';
-  tokenInput.id = `${fieldName.toLowerCase()}Token`;
-  tokenInput.classList.add('input-field');
-  tokenInput.style.width = '72px';
-  tokenInput.style.marginLeft = '8px';
-  tokenInput.placeholder = fieldName === 'START_DATE' ? 'today' : 'e.g. 11y';
-
-  const rawOriginal = String(rowData[fieldName] ?? '').trim();
-  if (fieldName === 'START_DATE') {
-    if (/^today$/i.test(rawOriginal)) tokenInput.value = 'today';
-  } else {
-    const m = /^\s*(\d+)\s*y\s*$/i.exec(rawOriginal);
-    if (m) tokenInput.value = `${m[1]}y`;
-  }
-
-  // wiring: when token changes, recompute the date field
-  tokenInput.addEventListener('input', () => {
-    const t = tokenInput.value.trim();
-
-    if (fieldName === 'START_DATE') {
-      if (/^today$/i.test(t)) {
-        dateInput.value = toISO(new Date());
-      }
-      // otherwise leave date unchanged
-    } else {
-      const m = /^\s*(\d+)\s*y\s*$/i.exec(t);
-      if (m) {
-        const baseStartISO =
-          resolveStartToISO(
-            // prefer current start-date input if present in DOM; else fall back to rowData
-            (document.getElementById('start_dateDate')?.value || rowData.START_DATE)
-          ) || toISO(new Date());
-        dateInput.value = addYearsISO(baseStartISO, Number(m[1]));
-      }
-    }
-  });
-
-  // if user changes date manually, clear token (date becomes source of truth)
-  dateInput.addEventListener('change', () => {
-    tokenInput.value = '';
-  });
-
-  // append
-  formRow.appendChild(label);
-  formRow.appendChild(dateInput);
-  formRow.appendChild(tokenInput);
-  return true;
-}
+          // append
+          formRow.appendChild(label);
+          formRow.appendChild(dateInput);
+          formRow.appendChild(tokenInput);
+          return true;
+        }
 
 
 
@@ -431,7 +396,95 @@ case 'START_DATE': {
       }
     }
 
-    //function handleMVarInput()
+function handleMVarInput(rowData, form) {
+  // Kleine Hilfsfunktion: 'DD-MM-YYYY' -> 'YYYY-MM-DD'
+  const dmyToISO = (raw) => {
+    if (!raw) return '';
+    const s = String(raw).trim();
+    const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(s); // 03-01-2020
+    if (!m) return '';
+    const [, dd, mm, yyyy] = m;
+    return `${yyyy}-${mm}-${dd}`; // 2020-01-03
+  };
+
+  MVAR_COLUMNS.forEach((fieldName) => {
+    if (!(fieldName in rowData)) return;
+
+    const formRow = document.createElement('div');
+    formRow.classList.add('form-row');
+
+    const label = document.createElement('label');
+    label.textContent = fieldName;
+    label.classList.add('label');
+
+    let input;
+
+    // 🔹 START: Kalender mit bestehendem Datum
+    if (fieldName === 'START') {
+      input = document.createElement('input');
+      input.type = 'date';
+      input.classList.add('input-field');
+      input.setAttribute('data-field', fieldName);
+
+      const raw = rowData.START;
+      let iso = '';
+
+      if (raw) {
+        // 1) DD-MM-YYYY -> YYYY-MM-DD
+        iso = dmyToISO(raw);
+        // 2) Falls du irgendwann auf YYYY-MM-DD umstellst, greift das automatisch:
+        if (!iso) {
+          const d = parseISO(String(raw).trim()); // deine Funktion
+          if (d) iso = toISO(d);                  // deine Funktion
+        }
+      }
+
+      if (iso) {
+        input.value = iso;
+      }
+
+    // 🔹 END: Kalender mit bestehendem Datum
+    } else if (fieldName === 'END') {
+      input = document.createElement('input');
+      input.type = 'date';
+      input.classList.add('input-field');
+      input.setAttribute('data-field', fieldName);
+
+      const raw = rowData.END;
+      let iso = '';
+
+      if (raw) {
+        iso = dmyToISO(raw);
+        if (!iso) {
+          const d = parseISO(String(raw).trim());
+          if (d) iso = toISO(d);
+        }
+      }
+
+      if (iso) {
+        input.value = iso;
+      }
+
+    // 🔹 alle anderen Felder: normale Text-Inputs
+    } else {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.classList.add('input-field');
+      input.setAttribute('data-field', fieldName);
+      input.value = rowData[fieldName] ?? '';
+    }
+
+    formRow.appendChild(label);
+    formRow.appendChild(input);
+    form.appendChild(formRow);
+  });
+}
+
+
+
+
+
+
     
     
 

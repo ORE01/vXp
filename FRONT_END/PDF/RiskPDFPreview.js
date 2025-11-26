@@ -398,35 +398,67 @@ portfolioBreakdown: (() => {
 
 
 // Mini-Helfer: aus einem Canvas ein kleines PNG bauen
-// ⬆️ Modul-scope:
 const __thumbCache = new Map(); // key = id@WxH -> HTML
 
-function clearThumbCache() { __thumbCache.clear(); }
+function clearThumbCache() {
+  __thumbCache.clear();
+}
 
-// ersetze canvasThumb():
-function canvasThumb(id, w = 160) {
+function canvasThumb(id, targetWidth = 160) {
   const c = document.getElementById(id);
-  if (!c || !c.width || !c.height) return '';
-  // nur rechnen, wenn Panel sichtbar
-  const panel = document.getElementById('panel-reports-risk');
-  if (!panel || getComputedStyle(panel).display === 'none' || panel.hidden) return '';
 
-  const key = `${id}@${c.width}x${c.height}@${w}`;
+  if (!c) {
+    console.warn('[canvasThumb] Kein Canvas mit ID gefunden:', id);
+    return '';
+  }
+
+  // 1) Größe bestimmen – zuerst echte Canvas-Größe, sonst CSS-Size als Fallback
+  let srcW = c.width;
+  let srcH = c.height;
+
+  if (!srcW || !srcH) {
+    const rect = c.getBoundingClientRect();
+    srcW = rect.width  || 300;
+    srcH = rect.height || 150;
+    console.debug('[canvasThumb] Fallback Size für', id, '→', srcW, 'x', srcH);
+  }
+
+  if (!srcW || !srcH) {
+    console.warn('[canvasThumb] Canvas hat ungültige Größe:', id, srcW, srcH);
+    return '';
+  }
+
+  const key = `${id}@${srcW}x${srcH}@${targetWidth}`;
   const cached = __thumbCache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    // console.debug('[canvasThumb] Cache-Hit für', id);
+    return cached;
+  }
 
   try {
-    const r = c.width / c.height || 1.6;
-    const h = Math.round(w / r);
-    // Achtung: toDataURL bleibt – aber nur 1× je Größe
+    const ratio = srcW / srcH || 1.6;
+    const targetHeight = Math.round(targetWidth / ratio);
+
     const data = c.toDataURL('image/png');
-    const html = `<img src="${data}" width="${w}" height="${h}" style="border:1px solid #444;border-radius:6px;background:#111;"/>`;
+    const html = `
+      <img
+        src="${data}"
+        width="${targetWidth}"
+        height="${targetHeight}"
+        style="border:1px solid #444;border-radius:6px;background:#111;"
+      />
+    `.trim();
+
     __thumbCache.set(key, html);
+    console.debug('[canvasThumb] Thumb erstellt für', id, '→', targetWidth, 'x', targetHeight);
     return html;
-  } catch {
+  } catch (e) {
+    console.warn('[canvasThumb] toDataURL failed für', id, e);
     return '';
   }
 }
+
+
 
 // sammelt bis zu `max` Pie-Chart-Canvases aus #pieChartGrid (oder .pieChart)
 function canvasThumbsBreakdown(max = 12, w = 160) {
@@ -471,6 +503,34 @@ function canvasThumbsBreakdown(max = 12, w = 160) {
   }).filter(Boolean);
 }
 
+function safeThumb(id, label, w = 160) {
+  const html = canvasThumb(id, w);
+  if (html) return html;
+
+  const exists = !!document.getElementById(id);
+  const info = exists ? 'Canvas vorhanden, aber kein Bild' : 'Canvas nicht gefunden';
+
+  return `
+    <div style="
+      width:${w}px;
+      min-height:40px;
+      border:1px dashed #555;
+      border-radius:6px;
+      padding:4px;
+      font-size:11px;
+      color:#aaa;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      background:#111;
+    ">
+      ${label || id}<br><span style="opacity:.7">${info}</span>
+    </div>
+  `;
+}
+
+
 
 
 
@@ -484,38 +544,67 @@ function isVisible(el) {
 }
 
 
+
 function renderRiskPreview() {
-  if (__riskRendering) return;
+  // Mehrfach-Render verhindern
+  if (typeof __riskRendering !== 'undefined' && __riskRendering) return;
+
+  const wrap = document.getElementById('reportsRiskPreview');
+  if (!wrap) return;
+
+  const panel = document.getElementById('panel-reports-risk');
+  if (!panel || !isVisible(panel)) return;
+
   __riskRendering = true;
   try {
-    const wrap = document.getElementById('reportsRiskPreview');
-    if (!wrap) return;
-
-    const panel = document.getElementById('panel-reports-risk');
-    if (!isVisible(panel)) return;
-
     const opts = getRiskReportOptions();
 
+    // Alle Thumbnails an einer Stelle definieren
     const thumbsFor = {
       breakdown: () => canvasThumbsBreakdown(12),
+
+      // PERFORMANCE-BEREICH – exakt deine 4 Charts aus panel-performance
       performance: () => [
-        canvasThumb('euswapPortfolioYieldChart'),
-        canvasThumb('durationProductYieldChart'),
+        safeThumb('euswapPortfolioYieldChart',   'EUSWAP Portfolio Yield'),
+        safeThumb('euswapProductYieldChart',     'EUSWAP Product Yield'),
+        safeThumb('durationSwapChart',           'Duration Swap'),
+        safeThumb('durationProductYieldChart',   'Duration Product Yield'),
       ].filter(Boolean),
+
+      // MARKET RISK – Basis + historischer Market-Risk-Chart
       marketRiskBase: () => [
         canvasThumb('tsEU1YChart'),
         canvasThumb('plMvarDistChart'),
+        // canvasThumb('riskMetricsChartLine'),       // Historic Market Risk
       ].filter(Boolean),
-      sensitivities: () => [],
+
+      // SENSITIVITIES – historischer Sensitivities-Chart
+      sensitivities: () => [
+        canvasThumb('portfolioSensChartLine'),     // Historical Sensitivities
+      ].filter(Boolean),
+
+      // CREDIT RISK – Basis + historischer Credit-Risk-Chart
       creditRiskBase: () => [
         canvasThumb('LossIssuerCombinedChart'),
         canvasThumb('LossIssuerCombinedESChart'),
+        // canvasThumb('creditMetricsChartLine'),     // Historic Credit Risk
       ].filter(Boolean),
+
       mdIR: () => [canvasThumb('IRlineChart')].filter(Boolean),
       mdCS: () => [canvasThumb('CS_ChartCanvas')].filter(Boolean),
       liquidity: () => [canvasThumb('liquChart')].filter(Boolean),
+
+      // 🔹 NEU: Sammel-Block für die historischen Charts (separate Sektion)
+      historic: () => [
+        safeThumb('portfolioHistoryChart',     'Performance History'),
+        safeThumb('portfolioValueChartLine',   'Portfolio Value (Historic)'),
+        safeThumb('portfolioSensChartLine',    'Historical Sensitivities'),
+        safeThumb('riskMetricsChartLine',      'Market Risk – Historic'),
+        safeThumb('creditMetricsChartLine',    'Credit Risk – Historic'),
+      ].filter(Boolean),
     };
 
+    // Labels für "Sections included"
     const enabledLabels = [];
     if (opts.sections.portfolioBreakdown) enabledLabels.push('Portfolio Breakdown');
     if (opts.sections.performance)        enabledLabels.push('Performance');
@@ -525,7 +614,7 @@ function renderRiskPreview() {
       const parts = [];
       if (mr.details)       parts.push('Details');
       if (mr.sensitivities) parts.push('Sensitivities');
-      enabledLabels.push(`Market Risk${parts.length ? ' ('+parts.join(', ')+')' : ''}`);
+      enabledLabels.push(`Market Risk${parts.length ? ' (' + parts.join(', ') + ')' : ''}`);
     }
 
     const cr = opts.sections.creditRisk;
@@ -539,112 +628,146 @@ function renderRiskPreview() {
       if (opts.sections.marketData.creditSpreads) mdParts.push('Credit Spreads');
       enabledLabels.push(`Market Data${mdParts.length ? ` (${mdParts.join(', ')})` : ''}`);
     }
-    if (opts.sections.appendixProducts) enabledLabels.push('Appendix: Products');
 
+    if (opts.sections.appendixProducts) {
+      enabledLabels.push('Appendix: Products');
+    }
+
+    // Sections für die Preview sammeln
     const sections = [];
 
+    // Portfolio Breakdown
     if (opts.sections.portfolioBreakdown) {
       const bdControlsHTML = buildBreakdownControlsHTML();
-sections.push({
-  title: 'Portfolio Breakdown',
-  thumbs: thumbsFor.breakdown()
-});
+      sections.push({
+        title: 'Portfolio Breakdown',
+        thumbs: thumbsFor.breakdown(),
+        extraHTML: bdControlsHTML,
+      });
     }
 
+    // Performance
     if (opts.sections.performance) {
-      sections.push({ title: 'Performance', thumbs: thumbsFor.performance() });
+      sections.push({
+        title: 'Performance',
+        thumbs: thumbsFor.performance(),
+      });
     }
 
-if (mr?.enabled) {
-  // 1) Basis zuerst: Inputs + Basis-Thumbnails
-  sections.push({
-    title: 'Market Risk',
-    thumbs: thumbsFor.marketRiskBase(),
-    extraHTML: marketRiskInputsPreviewHTML()
-  });
+    // Market Risk (Basis + Details + Sensitivities)
+    if (mr?.enabled) {
+      // 1) Basis: Inputs + Basis-Thumbnails
+      sections.push({
+        title: 'Market Risk',
+        thumbs: thumbsFor.marketRiskBase(),
+        extraHTML: marketRiskInputsPreviewHTML(),
+      });
 
-  // 2) Danach die Detail-Sektion separat
-  if (mr.details) {
-    sections.push({
-      title: 'Market Risk — Detail',
-      thumbs: [],
-      extraHTML: marketRiskDetailHTML({ heading: false })
-    });
-  }
+      // 2) Detail-Sektion
+      if (mr.details) {
+        sections.push({
+          title: 'Market Risk — Detail',
+          thumbs: [],
+          extraHTML: marketRiskDetailHTML({ heading: false }),
+        });
+      }
 
-  // 3) Zuletzt Sensitivities
-  if (mr.sensitivities) {
-    sections.push({
-      title: 'Sensitivities — Detail',
-      thumbs: [],
-      extraHTML: sensitivitiesDetailHTML({ heading: false })
-    });
-  }
-}
+      // 3) Sensitivities mit Thumbnails
+      if (mr.sensitivities) {
+        sections.push({
+          title: 'Sensitivities — Detail',
+          thumbs: thumbsFor.sensitivities(),
+          extraHTML: sensitivitiesDetailHTML({ heading: false }),
+        });
+      }
+    }
 
-
+    // Credit Risk
     if (cr?.enabled) {
       sections.push({
         title: 'Credit Risk',
         thumbs: thumbsFor.creditRiskBase(),
       });
+
       if (cr.details) {
         sections.push({
           title: 'Credit Risk — Details',
           thumbs: [],
-          extraHTML: creditRiskDetailsPreviewHTML()
+          extraHTML: creditRiskDetailsPreviewHTML(),
         });
       }
     }
 
+    // Liquidity
     if (opts.sections.liquidity?.enabled) {
-      const liquHasAny = document.getElementById('liquChart')
-                        || document.querySelector('#liquDataContainer table')
-                        || document.querySelector('#issuerDataContainerLiqu table');
+      const liquHasAny =
+        document.getElementById('liquChart') ||
+        document.querySelector('#liquDataContainer table') ||
+        document.querySelector('#issuerDataContainerLiqu table');
+
       if (liquHasAny) {
         sections.push({
           title: 'Liquidity',
           thumbs: thumbsFor.liquidity(),
-          extraHTML: liquidityPreviewHTML()
+          extraHTML: liquidityPreviewHTML(),
         });
       }
     }
 
+    // 🔹 NEU: Historische Charts – direkt NACH Liquidity
+    const histThumbs = thumbsFor.historic();
+    if (histThumbs && histThumbs.length) {
+      sections.push({
+        title: 'Historic Performance & Risk',
+        thumbs: histThumbs,
+      });
+    }
+
+    // Market Data
     if (opts.sections.marketData?.enabled) {
       if (opts.sections.marketData.interestRates) {
-        sections.push({ title: 'Market Data — Interest Rates', thumbs: thumbsFor.mdIR() });
+        sections.push({
+          title: 'Market Data — Interest Rates',
+          thumbs: thumbsFor.mdIR(),
+        });
       }
       if (opts.sections.marketData.creditSpreads) {
-        sections.push({ title: 'Market Data — Credit Spreads', thumbs: thumbsFor.mdCS() });
+        sections.push({
+          title: 'Market Data — Credit Spreads',
+          thumbs: thumbsFor.mdCS(),
+        });
       }
     }
 
-    const sectionBlocks = sections.map(sec => {
-      const hasThumbs = Array.isArray(sec.thumbs) && sec.thumbs.length > 0;
-      const thumbsHTML = hasThumbs
-        ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${sec.thumbs.join('')}</div>`
-        : '';
-      const extra = sec.extraHTML ? `${sec.extraHTML}` : '';
-      //const content = `${extra}${thumbsHTML || `<div style="opacity:.65">No charts found for this section (yet).</div>`}`;
-      //const content = `${thumbsHTML}${extra || ''}`;
-      const content = `${extra || ''}${thumbsHTML}`;
+    // HTML-Blöcke pro Section bauen
+    const sectionBlocks = sections
+      .map((sec) => {
+        const hasThumbs = Array.isArray(sec.thumbs) && sec.thumbs.length > 0;
+        const thumbsHTML = hasThumbs
+          ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${sec.thumbs.join('')}</div>`
+          : '';
+        const extra = sec.extraHTML ? `${sec.extraHTML}` : '';
+        const content = `${extra || ''}${thumbsHTML}`;
 
+        return `
+          <div style="margin:12px 0 10px">
+            <div style="font-weight:600;margin:0 0 6px">${sec.title}</div>
+            ${content}
+          </div>
+        `;
+      })
+      .join('');
 
-      return `
-        <div style="margin:12px 0 10px">
-          <div style="font-weight:600;margin:0 0 6px">${sec.title}</div>
-          ${content}
-        </div>
-      `;
-    }).join('');
-
+    // Gesamt-Preview in Wrap schreiben
     wrap.innerHTML = `
       <div style="padding:10px">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
           <span style="opacity:.8">TOC:</span>
           <strong>${opts.includeTOC ? 'On' : 'Off'}</strong>
           <span style="opacity:.8;margin-left:12px">Format:</span>
-          <code>${opts.paper.toUpperCase()} / ${opts.orientation === 'l' ? 'Landscape' : 'Portrait'}</code>
+          <code>${opts.paper.toUpperCase()} / ${
+            opts.orientation === 'l' ? 'Landscape' : 'Portrait'
+          }</code>
           <span style="opacity:.8;margin-left:12px">File:</span>
           <code>${opts.fileName}</code>
         </div>
@@ -652,7 +775,7 @@ if (mr?.enabled) {
         <div style="margin-bottom:8px">
           <div style="opacity:.8;margin-bottom:4px">Sections included:</div>
           <ul style="margin:0;padding-left:18px">
-            ${enabledLabels.map(s => `<li>${s}</li>`).join('')}
+            ${enabledLabels.map((s) => `<li>${s}</li>`).join('')}
           </ul>
         </div>
 
@@ -660,7 +783,11 @@ if (mr?.enabled) {
       </div>
     `;
 
-    try { wireBreakdownControlsOnce(); } catch(e) { console.error(e); }
+    try {
+      wireBreakdownControlsOnce();
+    } catch (e) {
+      console.error(e);
+    }
   } finally {
     __lastRenderTs = Date.now();
     __riskRendering = false;
@@ -668,7 +795,8 @@ if (mr?.enabled) {
 }
 
 
-//WIRE:
+
+
 export function wireRiskPreview(force = false) {
   if (force) { try { teardownRiskPreview(); } catch {} }
   if (__riskWired && !force) return;
@@ -919,7 +1047,7 @@ function miniTableFromContainer(
 // ───────── Market-Risk_INPUT – ─────────
 function marketRiskInputsPreviewHTML() {
   // Tabellen aus dem DOM ziehen
-  const inputsMini  = miniTbl('inputMVaR-container', { maxRows: 8, maxCols: 8, maxWidth: 520 });
+  const inputsMini  = miniTbl('inputMVaRContainer', { maxRows: 8, maxCols: 8, maxWidth: 520 });
   const summaryMini = miniTbl('MVaRDataContainer0',  { maxRows: 10, maxCols: 4, maxWidth: 300 })
                    || miniTbl('MVaRDataContainer',   { maxRows: 10, maxCols: 4, maxWidth: 300 });
 

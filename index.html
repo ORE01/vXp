@@ -30,7 +30,10 @@
   <link href="./css/ANALYSE_PORTFOLIO/analyse.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/breakdown.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
+
   <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
+
   <link href="./css/ANALYSE_PORTFOLIO/creditRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/liquidity.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/riskMetricsHistory.css" rel="stylesheet">
@@ -456,52 +459,57 @@
 
     </div>
 
-    <!-- Panel: Market VaR -->
-    <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
-        <button class="sub-panel-close" data-close="panel-market" aria-label="Schließen">&times;</button>
+<!-- Panel: Market VaR -->
+<div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
+    <button class="sub-panel-close" data-close="panel-market" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- 1) INPUT OBEN: Tabelle + Buttons darunter -->
+    <div class="mvar-input">
+      <div class="data-container" id="inputMVaRContainer"></div>
+
+      <div class="mvar-input-buttons">
+        <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
+        <button id="mvarAddButton" class="edit-button">Add Entry</button>
+      </div>
+    </div>
+
+    <!-- 2) MVaR/ES: Caption + Profit/Loss Dist oben, darunter Tabelle + Ampel nebeneinander -->
+    <div class="mvar-summary">
+      <div class="mvar-summary-header">
+        <p class="mvar-caption">Market Value at Risk / Expected Shortfall:</p>
+        <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
       </div>
 
-      <div class="sub-panel-body">
-        <!-- 1) INPUT OBEN -->
-        <div class="button-wrapper">
-          <div class="data-container" id="inputMVaR-container"></div>
-          <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
-          <button id="mvarAddButton" class="edit-button">Add Entry</button>
-          <!-- <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button> -->
+      <div class="mvar-summary-row">
+        <div class="data-container" id="MVaRDataContainer0"></div>
+
+        <div class="traffic-light-wrapper small" id="traffic-mvar">
+          <div class="traffic-light">
+            <div id="red" class="light red"></div>
+            <div id="yellow" class="light yellow"></div>
+            <div id="green" class="light green"></div>
+          </div>
         </div>
+      </div>
+    </div>
 
-
-<!-- 2) MVaR/ES Daten NEBEN der Ampel -->
-<p style="margin: 6px 0 4px;">Market Value at Risk / Expected Shortfall:</p>
-
-<div class="mvar-pair">
-  <div class="data-container" id="MVaRDataContainer0" style="margin-bottom:14px;"></div>
-
-  <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
-
-  <div class="traffic-light-wrapper small" id="traffic-mvar" style="margin:0 0 14px 20px;">
-    <div class="traffic-light">
-      <div id="red" class="light red"></div>
-      <div id="yellow" class="light yellow"></div>
-      <div id="green" class="light green"></div>
+    <!-- 3) CHARTS NEBENEINANDER -->
+    <div class="chart-2x1-row">
+      <div class="chart-box">
+        <canvas id="tsEU1YChart"></canvas>
+      </div>
+      <div class="chart-box">
+        <canvas id="plMvarDistChart"></canvas>
+      </div>
     </div>
   </div>
 </div>
 
 
-        <!-- 3) CHARTS NEBENEINANDER -->
-        <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap;">
-          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-            <canvas id="tsEU1YChart"></canvas>
-          </div>
-          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-            <canvas id="plMvarDistChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
 
         <!-- Panel: Market VaR (Detail) -->
         <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
@@ -510,21 +518,41 @@
             <button class="sub-panel-close" data-close="panel-mvar" aria-label="Schließen">&times;</button>
           </div>
 
-          <div class="sub-panel-body">
-            <div class="mvar-grid">
-              <!-- Links: Tabelle (einmaliges ID!) -->
-              <section class="mvar-left table-card">
-                <h4 class="table-title">Market VaR / ES</h4>
-                <div class="data-container" id="MVaRDataContainer"></div>
-              </section>
+<div class="sub-panel-body">
+  <div class="mvar-grid">
+    
+    <!-- LINKER BEREICH: Total oben, IR & CS darunter -->
+    <section class="mvar-left">
+      <!-- Total immer oben, volle Breite -->
+      <div class="MVaR-block MVaR-block--total">
+        <h3>Total (T)</h3>
+        <div class="data-container" id="MVaRTotalContainer"></div>
+      </div>
 
-              <!-- Rechts: Chart -->
-              <section class="mvar-right table-card">
-                <h4 class="table-title">Market VaR Chart</h4>
-                <canvas id="MVaRChart" height="360"></canvas>
-              </section>
-            </div>
-          </div>
+      <!-- Darunter: IR & CS nebeneinander (bzw. untereinander auf Mobile) -->
+      <div class="mvar-pair">
+        <div class="MVaR-block">
+          <h3>Interest Rate (IR)</h3>
+          <div class="data-container" id="MVaRIRContainer"></div>
+        </div>
+
+        <div class="MVaR-block">
+          <h3>Credit Spread (CS)</h3>
+          <div class="data-container" id="MVaRCSContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECHTER BEREICH: Chart -->
+    <section class="mvar-right table-card">
+      <h4 class="table-title">Market VaR Chart</h4>
+      <canvas id="MVaRChart" height="360"></canvas>
+    </section>
+
+  </div>
+</div>
+
+
         </div>
 
         <!-- Panel: Market Sensitivities -->
@@ -2168,20 +2196,21 @@
     <section class="cp-card hist-card" style="margin-top:12px;">
 
       <div class="hist-hint">
-        Data from ECB and FRED<br>
         This update can take several minutes
       </div>
 
-      <div class="hist-row">
-        <button id="updateHistoricDataButton" class="edit-button" type="button">
-          Historic Data (All)
-        </button>
+<div class="hist-row">
+  <button id="updateHistoricDataButton" class="edit-button" type="button">
+    Historic Data (All)
+  </button>
 
-        <div class="hist-progress-wrap">
-          <progress id="progressBar" value="0" max="100"></progress>
-          <div id="progressText"></div>
-        </div>
-      </div>
+  <div id="progressBarsContainer" class="hist-progress-wrap"></div>
+
+  <div id="progressText_GLOBAL" class="progress-text global-text"></div>
+</div>
+
+
+
 
     </section>
   </div>

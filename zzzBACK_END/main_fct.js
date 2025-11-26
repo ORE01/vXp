@@ -260,71 +260,6 @@ function runSQL(sql, params = []) {
   });
 }
 
-// function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
-//   console.log('main_fct: startPythonScriptWithEvent:', args);
-
-//   return new Promise((resolve, reject) => {
-//       let pythonExecutable;
-//       let pythonArgs = [scriptIdentifier, ...args];
-
-//       // Bestimme die Umgebung
-//       const env = process.env.NODE_ENV ? process.env.NODE_ENV.trim().toLowerCase() : 'production';
-
-//       if (env === 'development') {
-//           const defaultExecutable = 'C:\\Python312\\python.exe';
-//           const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
-
-//           pythonExecutable = defaultExecutable;
-//           pythonArgs.unshift(defaultScriptPath);
-
-//       } else if (env === 'thomasdev') {
-//           pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
-
-//       } else {
-//           pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
-//       }
-
-//       try {
-//           const pythonProcess = spawn(pythonExecutable, pythonArgs);
-//           let scriptOutput = '';
-
-//           // Collect stdout data
-//           pythonProcess.stdout.on('data', (data) => {
-//               console.log(`stdout: ${data}`);
-//               scriptOutput += data.toString();
-//               event.sender.send(`${eventType}-output`, data.toString());
-//           });
-
-//           // Collect stderr data
-//           pythonProcess.stderr.on('data', (data) => {
-//               console.error(`stderr: ${data}`);
-//               event.sender.send(`${eventType}-error`, data.toString());
-//           });
-
-//           // Handle process close
-//           pythonProcess.on('close', (code) => {
-//               const match = scriptOutput.match(/___RESULT___({[\s\S]*})/);
-//               if (match) {
-//                   try {
-//                       const parsedResult = JSON.parse(match[1]);
-//                       resolve(parsedResult); // ✅ auch wenn code !== 0
-//                   } catch (err) {
-//                       console.error('❌ JSON parsing failed for matched result:', match[1]);
-//                       reject(new Error('Failed to parse extracted JSON result.'));
-//                   }
-//               } else {
-//                   console.error(`❌ No JSON result found. Exit code: ${code}`);
-//                   reject(new Error(`Python script failed with code ${code}`));
-//               }
-//           });
-
-//       } catch (error) {
-//           console.error(`Failed to start Python script: ${error.message}`);
-//           reject(error);
-//       }
-//   });
-// }
-
 function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = []) {
   console.log('main_fct: startPythonScriptWithEvent:', args);
 
@@ -376,11 +311,13 @@ pythonProcess.stdout.on('data', (data) => {
             if (msg && typeof msg.progress !== 'undefined') {
                 event.sender.send('py-progress', {
                     script: scriptIdentifier,
+                    provider: msg.provider || 'GLOBAL',   // <-- NEU
                     progress: msg.progress,
                     message: msg.message || ''
                 });
                 continue; // NICHT in scriptOutput
             }
+
         } catch (err) {
             // kein JSON → normaler Output
         }

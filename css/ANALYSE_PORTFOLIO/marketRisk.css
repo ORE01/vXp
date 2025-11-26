@@ -1,11 +1,64 @@
-.mvar-pair{
+/* ===========================
+   MVaR-Panels & Layout
+   =========================== */
+
+/* Grid für linke Kennzahlen + rechten Chart */
+.mvar-grid{
   display: flex;
-  align-items: flex-start;   /* Container-Größe bleibt unverändert */
-  gap: 16px;
-  flex-wrap: wrap;           /* auf schmalen Screens untereinander */
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;  /* auf schmalen Screens untereinander */
 }
 
-/* risk-market.css — NUR die zwei Charts */
+/* Linker Bereich (Total + IR/CS) */
+.mvar-left{
+  flex: 1 1 320px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 gleich breite Spalten */
+  grid-auto-rows: auto;
+  gap: 12px;
+}
+
+/* Rechter Bereich: Chart */
+.mvar-right{
+  flex: 1 1 420px;
+}
+
+/* Gemeinsamer Stil für Kennzahlen-Container */
+.MVaR-block{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* Total: gleiche Breite wie IR/CS, erste Zelle oben links */
+.MVaR-block--total{
+  grid-column: 1 / 2;  /* nur erste Spalte */
+  border-color: rgba(255,255,255,0.18); /* optional: visuell hervorheben */
+}
+
+/* IR & CS: kommen in die nächsten Grid-Zellen.
+   mvar-pair dient nur noch als logische Gruppierung im HTML */
+.mvar-pair{
+  display: contents; /* Kinder verhalten sich, als wären sie direkt in .mvar-left */
+}
+
+/* Responsive: auf schmalen Viewports alles untereinander */
+@media (max-width: 900px){
+  .mvar-grid{
+    flex-direction: column;
+  }
+
+  .mvar-left{
+    grid-template-columns: 1fr; /* Total, IR, CS untereinander, gleiche Breite */
+  }
+}
+
+/* ===========================
+   Risk-Market Charts (dein bestehendes CSS)
+   =========================== */
 
 #panel-market .chart-2x1-row{
   display:flex;
@@ -33,13 +86,18 @@
 @media (max-width: 1200px){
   #panel-market .chart-box canvas{ height: 320px !important; }
 }
+
 @media (max-width: 800px){
   #panel-market .chart-2x1-row{ gap:16px; }
   #panel-market .chart-box{ min-width:0; width:100%; }
   #panel-market .chart-box canvas{ height: 280px !important; }
 }
 
-/* Optional für sehr schmale Viewports */
+/* Optional: etwas geringere Abstände auf sehr schmalen Viewports */
 @media (max-width: 900px){
-  .mvar-pair{ gap: 12px; }
+  .mvar-left{
+    gap: 10px;
+  }
 }
+
+

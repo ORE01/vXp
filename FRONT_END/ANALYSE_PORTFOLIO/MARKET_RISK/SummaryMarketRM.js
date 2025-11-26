@@ -80,37 +80,150 @@ export function handleSummaryRMData(filteredData, index, port_name) {
 }
 
 
+// export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
+//   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
+//   const targetValue = portValueRel * 100;
+
+//   const highlightedBinIndex = histogram.labels.findIndex(label => {
+//     const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
+//     return targetValue >= startStr && targetValue <= endStr;
+//   });
+
+//   const backgroundColor = histogram.bins.map((_, i) =>
+//     i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
+//   );
+//   const borderColor = histogram.bins.map((_, i) =>
+//     i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
+//   );
+
+//   return {
+//     data: {
+//       labels: histogram.labels,
+//       datasets: [{
+//         label: 'Frequency',
+//         data: histogram.bins,
+//         backgroundColor,
+//         borderColor,
+//         borderWidth: 1
+//       }]
+//     },
+//     options: {
+//       responsive: true,
+//       maintainAspectRatio: false,
+//       indexAxis: 'y',
+//       scales: {
+//         x: {
+//           title: { display: true, text: 'Frequency' },
+//           ticks: { beginAtZero: true }
+//         },
+//         y: {
+//           title: { display: true, text: 'P/L as % of NAV' },
+//           reverse: true
+//         }
+//       },
+//       plugins: {
+//         legend: { display: false },
+//         tooltip: {
+//           callbacks: {
+//             label: context => {
+//               const val = context.raw?.y;
+//               return `${context.dataset.label}: ${val?.toFixed(2)}%`;
+//             }
+//           }
+//         },
+//         annotation: {
+//           annotations: {
+//             varLine: {
+//               type: 'line',
+//               yMin: varTRel,
+//               yMax: varTRel,
+//               borderColor: 'red',
+//               borderWidth: 2,
+//               label: {
+//                 display: true,
+//                 content: `VaR (${varTRel.toFixed(2)}%)`,
+//                 color: 'red',
+//                 position: 'start',
+//                 font: { weight: 'bold' }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//   };
+// }
 export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
-  const targetValue = portValueRel * 100;
 
-  const highlightedBinIndex = histogram.labels.findIndex(label => {
-    const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
-    return targetValue >= startStr && targetValue <= endStr;
+  // Wenn portValueRel / varTRel schon in % sind (z.B. -4.23), ändere hier auf: v => v;
+  const toPercent = v => v * 100;
+
+  const portPercent = toPercent(portValueRel);
+  // deine Variante: varPercent = varTRel selbst (so wie du es gerade hast)
+  const varPercent = toPercent(varTRel) / 100;
+
+  // Dein Wunsch: Bin für "Portfolio-Wert minus VaR"
+  const thresholdPercent = portPercent + varPercent;
+
+  console.log('portPercent:', portPercent);
+  console.log('varPercent:', varPercent);
+  console.log('thresholdPercent:', thresholdPercent);
+
+  // Hilfsfunktion: findet den Index des Bins, in dem ein Wert liegt
+  const findBinIndexForValue = (value, labels) =>
+    labels.findIndex(label => {
+      // Erwartetes Format: "-5.00 – -4.00%"
+      const cleaned = label.replace('%', '');
+      const [startStr, endStr] = cleaned
+        .split('–')
+        .map(s => parseFloat(s.trim()));
+
+      return value >= startStr && value <= endStr;
+    });
+
+  const portBinIndex = findBinIndexForValue(portPercent, histogram.labels);
+  const thresholdBinIndex = findBinIndexForValue(thresholdPercent, histogram.labels);
+
+  const backgroundColor = histogram.bins.map((_, i) => {
+    if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
+      // Threshold-Bin (Portfoliowert - VaR) → jetzt KNALLROT, ohne Transparenz
+      return 'rgba(247, 18, 68, 1)';
+    }
+    if (portBinIndex !== -1 && i === portBinIndex) {
+      // Bin des Portfoliowerts → bleibt wie davor
+      return 'rgba(255, 99, 132, 1)';
+    }
+    return 'rgba(54, 162, 235, 0.5)'; // Standard
   });
 
-  const backgroundColor = histogram.bins.map((_, i) =>
-    i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
-  );
-  const borderColor = histogram.bins.map((_, i) =>
-    i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
-  );
+  const borderColor = histogram.bins.map((_, i) => {
+    if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
+      return 'rgba(247, 18, 68, 1)';
+    }
+    if (portBinIndex !== -1 && i === portBinIndex) {
+      return 'rgba(75, 192, 192, 1)'; // Portfolio-Bin-Rand bleibt wie er war
+    }
+    return 'rgba(54, 162, 235, 1)';
+  });
 
   return {
     data: {
       labels: histogram.labels,
-      datasets: [{
-        label: 'Frequency',
-        data: histogram.bins,
-        backgroundColor,
-        borderColor,
-        borderWidth: 1
-      }]
+      datasets: [
+        {
+          label: 'Frequency',
+          data: histogram.bins,
+          backgroundColor,
+          borderColor,
+          borderWidth: 1
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: 'y',
+      indexAxis: 'y', // horizontaler Chart
       scales: {
         x: {
           title: { display: true, text: 'Frequency' },
@@ -126,26 +239,9 @@ export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
         tooltip: {
           callbacks: {
             label: context => {
-              const val = context.raw?.y;
-              return `${context.dataset.label}: ${val?.toFixed(2)}%`;
-            }
-          }
-        },
-        annotation: {
-          annotations: {
-            varLine: {
-              type: 'line',
-              yMin: varTRel,
-              yMax: varTRel,
-              borderColor: 'red',
-              borderWidth: 2,
-              label: {
-                display: true,
-                content: `VaR (${varTRel.toFixed(2)}%)`,
-                color: 'red',
-                position: 'start',
-                font: { weight: 'bold' }
-              }
+              const freq = context.raw;
+              const label = context.label;
+              return `${label}: ${freq}`;
             }
           }
         }
@@ -153,6 +249,11 @@ export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
     }
   };
 }
+
+
+
+
+
 
 export function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   // 1. In absolute Performance umrechnen
@@ -402,11 +503,11 @@ export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
     data: [{ x: lastPoint.x, y: targetEndValue }],
     pointRadius: 5,
     pointStyle: 'circle',
-    pointBackgroundColor: 'red',
-    pointBorderColor: 'red',
+    pointBackgroundColor: ' rgba(255, 99, 132, 1)',
+    pointBorderColor: ' rgba(255, 99, 132, 1)',
     showLine: false,
-    borderColor: 'red',
-    backgroundColor: 'red',
+    borderColor: ' rgba(255, 99, 132, 1)',
+    backgroundColor: ' rgba(255, 99, 132, 1)',
   };
 
   // 🔄 Chart generieren
