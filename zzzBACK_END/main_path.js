@@ -7,7 +7,7 @@ const app = electron.app || electron.remote.app;
 require('dotenv').config();
 
 
-const userName = 'Ronny' //'Thomas'
+const userName = 'Thomas' //'Thomas'
 
 
 // function getDevelopmentPythonPath() {
