@@ -10,5 +10,128 @@
   display:flex; gap:10px; flex-wrap:wrap; align-items:center;
 }
 
+/* =========================
+   HISTORIC PANEL LAYOUT
+   ========================= */
+
+/* Card insgesamt luftiger */
+#panel-upd-historic .hist-card{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;              
+  padding: 14px 14px;     
+}
+
+/* Hinweistext oben */
+#panel-upd-historic .hist-hint{
+  font-size: 12.5px;
+  color: #cfcfcf;
+  line-height: 1.35;
+  margin-bottom: 2px;     
+}
+
+/* Zeile mit Button + Progress */
+#panel-upd-historic .hist-row{
+  display: flex;
+  align-items: center;
+  gap: 16px;              
+}
+
+/* Progressblock selbst luftiger */
+#panel-upd-historic .hist-progress-wrap{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;               
+}
 
 
+/* =========================
+   PROGRESS BARS (Historic Data) – ECB & FED
+   ========================= */
+
+/* Button oben, Progress-Bereich darunter */
+#panel-upd-historic .hist-row {
+  display: flex;
+  flex-direction: column;   /* <-- sorgt für untereinander */
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Wrapper für die Balken: untereinander stapeln */
+#panel-upd-historic .hist-progress-wrap {
+  display: flex;
+  flex-direction: column;   /* <-- Bars NICHT nebeneinander */
+  gap: 10px;
+  min-width: 260px;
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Jede Provider-Zeile: Label links, Bar + Text rechts */
+#panel-upd-historic .provider-progress {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Label links */
+#panel-upd-historic .provider-label {
+  grid-row: span 2;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* === Progress-Elemente: alle IDs die mit progressBar_ starten === */
+#panel-upd-historic progress[id^="progressBar_"] {
+  width: 100%;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #222;
+  border: 1px solid #555;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
+}
+
+/* WebKit (Chromium/Electron) */
+#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-bar {
+  background-color: #222;
+  border-radius: 999px;
+}
+
+#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-value {
+  background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, .55);
+  transition: width .18s ease;
+}
+
+/* Firefox (falls du mal portierst) */
+#panel-upd-historic progress[id^="progressBar_"]::-moz-progress-bar {
+  background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, .55);
+}
+
+/* === Texte darunter: alle IDs die mit progressText_ starten === */
+#panel-upd-historic div[id^="progressText_"] {
+  grid-column: 2;
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: #cfcfcf;
+  letter-spacing: .2px;
+  min-height: 16px;
+  opacity: .9;
+}
+
+/* Optional globaler Text */
+#panel-upd-historic #progressText_GLOBAL {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: .7;
+}

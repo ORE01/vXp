@@ -309,67 +309,86 @@ const isSinglePoint =
   window[targetId + '_chartInstance'] = new Chart(ctx, {
     type: 'scatter',
     data: { datasets },
-    options: {
-      responsive: false,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          type: 'linear',
-          title: { display: true, text: 'Years', font: { size: 16 } },
-          ticks: { font: { size: 14 } },
-          min: 0,
-          max: xMax + 1
-        },
-        y: {
-          title: { display: true, text: 'Yield (%)', font: { size: 16 } },
-          ticks: {
-            font: { size: 14 },
-            callback: val => `${Number(val).toFixed(2)}%`
-          },
-          min: Math.floor(yMin),
-          max: Math.ceil(yMax)
-        }
+options: {
+  responsive: false,
+  maintainAspectRatio: false,
+
+  // ✅ NUR Tooltip wenn Cursor wirklich auf einem Punkt ist
+  interaction: {
+    mode: 'nearest',
+    intersect: true   // war vorher nicht gesetzt
+  },
+  hover: {
+    mode: 'nearest',
+    intersect: true
+  },
+
+  // ✅ Punkte leichter treffen (ohne anderes Verhalten zu ändern)
+  elements: {
+    point: {
+      hitRadius: 8,
+      hoverRadius: 7
+    }
+  },
+
+  scales: {
+    x: {
+      type: 'linear',
+      title: { display: true, text: 'Years', font: { size: 16 } },
+      ticks: { font: { size: 14 } },
+      min: 0,
+      max: xMax + 1
+    },
+    y: {
+      title: { display: true, text: 'Yield (%)', font: { size: 16 } },
+      ticks: {
+        font: { size: 14 },
+        callback: val => `${Number(val).toFixed(2)}%`
       },
-      plugins: {
-        title: {
-          display: false,
-          text: heading,
-          font: { size: 16, weight: 'bold' },
-          color: '#fff',
-          padding: { top: 10, bottom: 15 }
-        },
-      legend: {
-        display: showLegend,
-        position: 'top',
-        labels: {
-          font: { size: 14 },
-          // 👇 Verstecke Produkt-Legenden, wenn >1 Produkt
-          filter: (legendItem, data) => {
-            const ds = data.datasets?.[legendItem.datasetIndex];
-            if (!ds || !Array.isArray(ds.data) || ds.data.length === 0) return false;
+      min: Math.floor(yMin),
+      max: Math.ceil(yMax)
+    }
+  },
 
-            // Anzahl der Produkt-Datasets direkt aus den Datasets ermitteln
-            const productCount = (data.datasets || []).filter(d => d && d.isProduct).length;
+  plugins: {
+    title: {
+      display: false,
+      text: heading,
+      font: { size: 16, weight: 'bold' },
+      color: '#fff',
+      padding: { top: 10, bottom: 15 }
+    },
 
-            // Wenn mehr als 1 Produkt: keine Produkt-Einträge in der Legende anzeigen
-            if (ds.isProduct && productCount > 1) return false;
+    // ✅ bleibt exakt wie bei dir
+    legend: {
+      display: showLegend,
+      position: 'top',
+      labels: {
+        font: { size: 14 },
+        filter: (legendItem, data) => {
+          const ds = data.datasets?.[legendItem.datasetIndex];
+          if (!ds || !Array.isArray(ds.data) || ds.data.length === 0) return false;
 
-            return true; // sonst anzeigen
-          }
+          const productCount = (data.datasets || []).filter(d => d && d.isProduct).length;
+          if (ds.isProduct && productCount > 1) return false;
 
-        }
-      },
-        tooltip: {
-          callbacks: {
-            label: context =>
-              context.dataset.label === 'Portfolio Yield'
-                ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-                : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-          },
-          bodyFont: { size: 13 }
+          return true;
         }
       }
+    },
+
+    tooltip: {
+      callbacks: {
+        label: context =>
+          context.dataset.label === 'Portfolio Yield'
+            ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+            : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+      },
+      bodyFont: { size: 13 }
     }
+  }
+}
+
   });
 }
 
@@ -452,11 +471,4 @@ function insertHeadingIntoExistingChartBox({ canvasId, title }) {
 
   chartBox.insertBefore(heading, canvas);
 }
-
-
-
-
-
-
-                
 

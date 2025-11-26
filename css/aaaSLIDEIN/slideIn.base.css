@@ -1,29 +1,50 @@
-
-.table{
-  --parent-gap: 8px;         
-  --parent-to-sub-gap: 3px;   
-  --sub-gap: 2px;             
-  --sub-indent: 14px;         
-  --trigger-max-width: 200px; 
+.table {
+  --parent-gap: 8px;
+  --parent-to-sub-gap: 3px;
+  --sub-gap: 2px;
+  --sub-indent: 14px;
+  --trigger-max-width: 200px;
 }
 
-.table .table-content{
+/* Grundlayout im Modal */
+.table .table-content {
   position: relative;
   overflow: hidden;
   min-height: 100vh;
+  display: block !important; /* Trigger immer vertikal */
 }
 
-
-.table .chart-section{
+/* Haupt-Trigger-Zeilen */
+.table .chart-section {
   display: block;
   text-align: left;
   align-self: flex-start;
   width: 100%;
-  margin: var(--parent-gap) 0;     
+  margin: var(--parent-gap) 0;
+  clear: both;
 }
 
+/* Unterpunkte – initial VERSTECKT */
+.table .chart-section--sub {
+  display: none; /* <– wichtig: wird per JS auf block gesetzt */
+  width: 100%;
+  clear: both;
+  margin: var(--sub-gap) 0;
+  margin-left: var(--sub-indent);
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
 
-.table .section-trigger{
+.table .chart-section + .chart-section--sub {
+  margin-top: var(--parent-to-sub-gap);
+}
+
+.table .chart-section--sub + .chart-section--sub {
+  margin-top: var(--sub-gap);
+}
+
+/* Einheitliche Trigger-Buttons (Basis) */
+.table .section-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -39,36 +60,57 @@
   height: 28px;
   max-width: var(--trigger-max-width);
 
-  color: #cfcfcf;                
+  color: #cfcfcf;
+  box-sizing: border-box;
 }
-.table .section-trigger:hover { color: #fff; border-color: #999; }
-.table .section-trigger:disabled { color: rgba(255,255,255,.45); }
 
-/* ── Unterpunkte ──────────────────────────────────────────────────────────── */
-.table .chart-section--sub{
-  margin: var(--sub-gap) 0;
-  margin-left: var(--sub-indent);
-  border-top: 0 !important;
-  padding-top: 0 !important;
+.table .section-trigger:hover {
+  color: #fff;
+  border-color: #999;
 }
-.table .chart-section + .chart-section--sub{       
-  margin-top: var(--parent-to-sub-gap);
+
+.table .section-trigger:disabled {
+  color: rgba(255, 255, 255, .45);
 }
-.table .chart-section--sub + .chart-section--sub{   
-  margin-top: var(--sub-gap);
+
+/* Text + Chevron im Trigger */
+.section-trigger .section-header {
+  font-size: 13px;
+  position: relative;
+  top: 1px;
 }
-.table .section-trigger--sub{
+
+.section-trigger .chev {
+  font-size: 11px;
+  position: relative;
+  top: 1px;
+  transition: transform 0.2s ease;
+}
+
+/* Dreieck drehen, wenn Haupt-Trigger "offen" ist */
+.section-trigger.is-open .chev {
+  transform: rotate(90deg);
+}
+
+/* Unterpunkt-Trigger (optische Stufe) */
+.table .section-trigger--sub {
   height: 24px;
   font-size: 12px;
   background: #444;
   border-color: #666;
   color: #cfcfcf;
-  padding: 0 8px 0 22px;        
+  padding: 0 8px 0 22px;
   position: relative;
   max-width: calc(var(--trigger-max-width) - var(--sub-indent));
 }
-.table .section-trigger--sub:hover { color:#fff; border-color:#888; }
-.table .section-trigger--sub::before{
+
+.table .section-trigger--sub:hover {
+  color: #fff;
+  border-color: #888;
+}
+
+/* kleiner Pfeil/Einschub für Unterpunkte */
+.table .section-trigger--sub::before {
   content: "↳";
   position: absolute;
   left: 8px;
@@ -78,25 +120,21 @@
   font-size: 12px;
 }
 
-
-.table .chart-section:has(+ hr + .chart-section--sub) + hr {
-  display: none !important;
-}
-
-
-
-
 /* Backdrop & Panel global */
 .sub-panel-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   opacity: 0;
   pointer-events: none;
   transition: opacity .25s ease;
   z-index: 1050;
 }
-.sub-panel-backdrop.show { opacity: 1; pointer-events: auto; }
+
+.sub-panel-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .sub-panel {
   position: absolute;
@@ -108,77 +146,51 @@
   max-height: 100vh;
   background: #333;
   border-left: 1px solid #e6e6e6;
-  box-shadow: -12px 0 24px rgba(0,0,0,.15);
+  box-shadow: -12px 0 24px rgba(0, 0, 0, .15);
   transition: right .28s ease;
   z-index: 1100;
   display: flex;
   flex-direction: column;
 }
-.sub-panel.open { right: 0; }
+
+.sub-panel.open {
+  right: 0;
+}
 
 .sub-panel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 12px 16px; border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
 }
-.sub-panel-title { font-size: 18px; font-weight: 600; }
-.sub-panel-close { border: 0; background: transparent; font-size: 24px; line-height: 1; cursor: pointer; }
-.sub-panel-body { flex: 1; overflow: auto; padding: 16px; }
 
-/* Einheitliche Trigger-Buttons */
-.section-trigger{
-  display:inline-flex; align-items:center; justify-content:space-between; gap:6px;
-  font-size:13px; line-height:1; padding:0 8px;
-  background:#555; border:1px solid #777; border-radius:4px; height:28px; max-width:200px;
+.sub-panel-title {
+  font-size: 18px;
+  font-weight: 600;
 }
-.section-trigger .section-header{ font-size:13px; position:relative; top:1px; }
-.section-trigger .chev{ font-size:11px; position:relative; top:1px; }
 
-/* Unterpunkt-Trigger unterhalb eines Haupt-Triggers */
-.chart-section--sub { margin: 6px 0 12px 0; }
-
-.section-trigger--sub{
-  height: 24px;
-  font-size: 12px;
-  background: #444;
-  border-color: #666;
-  color: #cfcfcf;           
-  padding: 0 8px 0 22px;
-  position: relative;
+.sub-panel-close {
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
 }
-.section-trigger--sub:hover { color:#fff; border-color:#888; }
 
-/* kleiner Pfeil-Einzug als „Unterpunkt“-Marker */
-.section-trigger--sub::before{
-  content: "↳";
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  translate: 0 -50%;
-  opacity: .7;
-  font-size: 12px;
+.sub-panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+/* Falls du diese Regel weiterhin brauchst: nur für direkte Geschwister mit hr */
+.table .chart-section:has(+ hr + .chart-section--sub) + hr {
+  display: none !important;
 }
 
 
-/* Grundeinstellung: einheitliche Max-Breite für alle Trigger */
-.table { --trigger-max-width: 200px; }
-.table .section-trigger { 
-  max-width: var(--trigger-max-width);
-  width: auto;                 
-  box-sizing: border-box;
-}
-
-/* ==== Trigger immer vertikal anordnen ==== */
-.table .table-content{
-  display:block !important;      
-}
-
-.table .chart-section,
-.table .chart-section--sub{
-  display:block !important;      
-  width:100% !important;        
-  clear:both;                    
-  float:none !important;       
-}
 
 
 

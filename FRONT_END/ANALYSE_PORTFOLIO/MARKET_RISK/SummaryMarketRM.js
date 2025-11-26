@@ -1,4 +1,6 @@
 import { getColorFromPalette } from '../../../utils/colors.js';
+import { appState } from '../../renderer.js';
+
 
 export function handleSummaryRMData(filteredData, index, port_name) {
   console.log('port_name:',port_name)
@@ -78,37 +80,150 @@ export function handleSummaryRMData(filteredData, index, port_name) {
 }
 
 
+// export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
+//   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
+//   const targetValue = portValueRel * 100;
+
+//   const highlightedBinIndex = histogram.labels.findIndex(label => {
+//     const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
+//     return targetValue >= startStr && targetValue <= endStr;
+//   });
+
+//   const backgroundColor = histogram.bins.map((_, i) =>
+//     i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
+//   );
+//   const borderColor = histogram.bins.map((_, i) =>
+//     i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
+//   );
+
+//   return {
+//     data: {
+//       labels: histogram.labels,
+//       datasets: [{
+//         label: 'Frequency',
+//         data: histogram.bins,
+//         backgroundColor,
+//         borderColor,
+//         borderWidth: 1
+//       }]
+//     },
+//     options: {
+//       responsive: true,
+//       maintainAspectRatio: false,
+//       indexAxis: 'y',
+//       scales: {
+//         x: {
+//           title: { display: true, text: 'Frequency' },
+//           ticks: { beginAtZero: true }
+//         },
+//         y: {
+//           title: { display: true, text: 'P/L as % of NAV' },
+//           reverse: true
+//         }
+//       },
+//       plugins: {
+//         legend: { display: false },
+//         tooltip: {
+//           callbacks: {
+//             label: context => {
+//               const val = context.raw?.y;
+//               return `${context.dataset.label}: ${val?.toFixed(2)}%`;
+//             }
+//           }
+//         },
+//         annotation: {
+//           annotations: {
+//             varLine: {
+//               type: 'line',
+//               yMin: varTRel,
+//               yMax: varTRel,
+//               borderColor: 'red',
+//               borderWidth: 2,
+//               label: {
+//                 display: true,
+//                 content: `VaR (${varTRel.toFixed(2)}%)`,
+//                 color: 'red',
+//                 position: 'start',
+//                 font: { weight: 'bold' }
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//   };
+// }
 export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
-  const targetValue = portValueRel * 100;
 
-  const highlightedBinIndex = histogram.labels.findIndex(label => {
-    const [startStr, endStr] = label.replace('%', '').split('–').map(s => parseFloat(s.trim()));
-    return targetValue >= startStr && targetValue <= endStr;
+  // Wenn portValueRel / varTRel schon in % sind (z.B. -4.23), ändere hier auf: v => v;
+  const toPercent = v => v * 100;
+
+  const portPercent = toPercent(portValueRel);
+  // deine Variante: varPercent = varTRel selbst (so wie du es gerade hast)
+  const varPercent = toPercent(varTRel) / 100;
+
+  // Dein Wunsch: Bin für "Portfolio-Wert minus VaR"
+  const thresholdPercent = portPercent + varPercent;
+
+  console.log('portPercent:', portPercent);
+  console.log('varPercent:', varPercent);
+  console.log('thresholdPercent:', thresholdPercent);
+
+  // Hilfsfunktion: findet den Index des Bins, in dem ein Wert liegt
+  const findBinIndexForValue = (value, labels) =>
+    labels.findIndex(label => {
+      // Erwartetes Format: "-5.00 – -4.00%"
+      const cleaned = label.replace('%', '');
+      const [startStr, endStr] = cleaned
+        .split('–')
+        .map(s => parseFloat(s.trim()));
+
+      return value >= startStr && value <= endStr;
+    });
+
+  const portBinIndex = findBinIndexForValue(portPercent, histogram.labels);
+  const thresholdBinIndex = findBinIndexForValue(thresholdPercent, histogram.labels);
+
+  const backgroundColor = histogram.bins.map((_, i) => {
+    if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
+      // Threshold-Bin (Portfoliowert - VaR) → jetzt KNALLROT, ohne Transparenz
+      return 'rgba(247, 18, 68, 1)';
+    }
+    if (portBinIndex !== -1 && i === portBinIndex) {
+      // Bin des Portfoliowerts → bleibt wie davor
+      return 'rgba(255, 99, 132, 1)';
+    }
+    return 'rgba(54, 162, 235, 0.5)'; // Standard
   });
 
-  const backgroundColor = histogram.bins.map((_, i) =>
-    i === highlightedBinIndex ? 'rgba(255, 99, 132, 0.8)' : 'rgba(54, 162, 235, 0.5)'
-  );
-  const borderColor = histogram.bins.map((_, i) =>
-    i === highlightedBinIndex ? 'rgba(255, 99, 132, 1)' : 'rgba(54, 162, 235, 1)'
-  );
+  const borderColor = histogram.bins.map((_, i) => {
+    if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
+      return 'rgba(247, 18, 68, 1)';
+    }
+    if (portBinIndex !== -1 && i === portBinIndex) {
+      return 'rgba(75, 192, 192, 1)'; // Portfolio-Bin-Rand bleibt wie er war
+    }
+    return 'rgba(54, 162, 235, 1)';
+  });
 
   return {
     data: {
       labels: histogram.labels,
-      datasets: [{
-        label: 'Frequency',
-        data: histogram.bins,
-        backgroundColor,
-        borderColor,
-        borderWidth: 1
-      }]
+      datasets: [
+        {
+          label: 'Frequency',
+          data: histogram.bins,
+          backgroundColor,
+          borderColor,
+          borderWidth: 1
+        }
+      ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: 'y',
+      indexAxis: 'y', // horizontaler Chart
       scales: {
         x: {
           title: { display: true, text: 'Frequency' },
@@ -124,26 +239,9 @@ export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
         tooltip: {
           callbacks: {
             label: context => {
-              const val = context.raw?.y;
-              return `${context.dataset.label}: ${val?.toFixed(2)}%`;
-            }
-          }
-        },
-        annotation: {
-          annotations: {
-            varLine: {
-              type: 'line',
-              yMin: varTRel,
-              yMax: varTRel,
-              borderColor: 'red',
-              borderWidth: 2,
-              label: {
-                display: true,
-                content: `VaR (${varTRel.toFixed(2)}%)`,
-                color: 'red',
-                position: 'start',
-                font: { weight: 'bold' }
-              }
+              const freq = context.raw;
+              const label = context.label;
+              return `${label}: ${freq}`;
             }
           }
         }
@@ -151,6 +249,11 @@ export function createMvarHistogramConfig(plValues, portValueRel, varTRel) {
     }
   };
 }
+
+
+
+
+
 
 export function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   // 1. In absolute Performance umrechnen
@@ -400,11 +503,11 @@ export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
     data: [{ x: lastPoint.x, y: targetEndValue }],
     pointRadius: 5,
     pointStyle: 'circle',
-    pointBackgroundColor: 'red',
-    pointBorderColor: 'red',
+    pointBackgroundColor: ' rgba(255, 99, 132, 1)',
+    pointBorderColor: ' rgba(255, 99, 132, 1)',
     showLine: false,
-    borderColor: 'red',
-    backgroundColor: 'red',
+    borderColor: ' rgba(255, 99, 132, 1)',
+    backgroundColor: ' rgba(255, 99, 132, 1)',
   };
 
   // 🔄 Chart generieren
@@ -424,6 +527,195 @@ export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
     }
   );
 }
+
+// export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
+//   const tsData = appState.getTblTSData();
+//   if (!Array.isArray(tsData) || tsData.length === 0) {
+//     console.warn("⚠️ Keine TS-Daten für CMB-Chart.");
+//     return;
+//   }
+
+//   const testCurr = tsData[tsData.length - 1];
+//   const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM) / 100;
+
+//   const testPV01 = -testTtM / (1 + testCurrRate);
+//   const portfolioPV01 = portPV01;
+
+//   // wie bisher: optionales 3-Jahres-Fenster
+//   const threeYearsAgo = new Date();
+//   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+
+//   const tsFiltered = tsData.filter(d => new Date(d.DATE || d.date) >= threeYearsAgo);
+
+//   const rawSynthetic = computeCMBValueCurve(tsFiltered, testTtM, testPV01);
+//   const rawPortfolio = computeCMBValueCurve(tsFiltered, testTtM, portfolioPV01);
+
+//   const syntheticData = normalizeCurveToEndValue(rawSynthetic, targetEndValue);
+//   const portfolioData = normalizeCurveToEndValue(rawPortfolio, targetEndValue);
+
+//   // 🔹 NEU: alle Portfolio-History-Punkte roh
+//   const portHistOverlay = computePortHistoryOverlayRaw();
+
+//   const allYValues = [...syntheticData, ...portfolioData].map(p => p.y);
+//   const ySpread = Math.max(...allYValues) - Math.min(...allYValues);
+//   const yPadding = ySpread * 0.1;
+//   const yMax = targetEndValue + ySpread / 2 + yPadding;
+//   const yMin = targetEndValue - ySpread / 2 - yPadding;
+
+//   const cmbValueDataset = {
+//     label: `Synthetic CMB (${testTtM}Y)`,
+//     data: syntheticData,
+//     borderColor: 'purple',
+//     backgroundColor: 'rgba(128, 0, 128, 0.2)',
+//     tension: 0.1,
+//     pointRadius: 0,
+//     yAxisID: 'yCMB'
+//   };
+
+//   const portfolioValueDataset = {
+//     label: `Portfolio (CMB ${testTtM}Y)`,
+//     data: portfolioData,
+//     borderColor: 'teal',
+//     backgroundColor: 'rgba(0, 128, 128, 0.2)',
+//     tension: 0.1,
+//     pointRadius: 0,
+//     yAxisID: 'yCMB'
+//   };
+
+//   const lastPoint = syntheticData[syntheticData.length - 1];
+
+//   const endMarker = {
+//     label: `Current Portfolio Value (${targetEndValue.toFixed(2)}%)`,
+//     data: [{ x: lastPoint.x, y: targetEndValue }],
+//     pointRadius: 5,
+//     pointStyle: 'circle',
+//     pointBackgroundColor: 'red',
+//     pointBorderColor: 'red',
+//     showLine: false,
+//     borderColor: 'red',
+//     backgroundColor: 'red',
+//     yAxisID: 'yCMB'
+//   };
+
+//   // 🔹 Overlay-Dataset: alle History-Werte, eigene Achse (Rechts, in %)
+//   const portHistDataset = portHistOverlay.length ? {
+//     label: 'Portfolio Value / Notional (History)',
+//     data: portHistOverlay,
+//     type: 'line',
+//     showLine: false,
+//     pointRadius: 5,
+//     pointHoverRadius: 7,
+//     pointHitRadius: 7,
+//     pointBackgroundColor: 'rgba(0, 200, 80, 1)',
+//     pointBorderColor: '#003d20',
+//     pointBorderWidth: 2,
+//     pointStyle: 'circle',
+//     yAxisID: 'yPort'   // eigene Achse
+//   } : null;
+
+//   const datasets = [cmbValueDataset, portfolioValueDataset, endMarker];
+//   if (portHistDataset) datasets.push(portHistDataset);
+
+//   // ⚙️ Chart erstellen – mit Override für zwei Y-Achsen
+//   window.tsEU1YChartInstance = createSimpleLineChart(
+//     datasets,
+//     'tsEU1YChart',
+//     'Synthetic Bond vs. Portfolio',
+//     0,
+//     {
+//       scales: {
+//         yCMB: {
+//           position: 'left',
+//           title: { display: true, text: 'Normalized Value (CMB)' },
+//           min: yMin,
+//           max: yMax
+//         },
+//         yPort: {
+//           position: 'right',
+//           title: { display: true, text: 'Portfolio Value / Notional (%)' },
+//           ticks: {
+//             callback: v => (v * 100).toFixed(1) + ' %'
+//           },
+//           grid: {
+//             drawOnChartArea: false
+//           }
+//         },
+//         x: {
+//           type: 'time',
+//           time: {
+//             unit: 'month'
+//           },
+//           title: {
+//             display: true,
+//             text: 'Date'
+//           }
+//         }
+//       }
+//     }
+//   );
+// }
+
+
+// function computePortHistoryOverlayRaw() {
+//   const historyData = appState.getPortfolioHistoryData() || [];
+//   if (!Array.isArray(historyData) || historyData.length === 0) {
+//     console.warn("⚠️ Keine PortfolioHistoryMetrics für Overlay.");
+//     return [];
+//   }
+
+//   const sortedData = [...historyData].sort((a, b) => {
+//     const da = parseLocalYMD(a.DATE);
+//     const db = parseLocalYMD(b.DATE);
+//     return da - db;
+//   });
+
+//   const overlay = [];
+
+//   for (const row of sortedData) {
+//     const d = parseLocalYMD(row.DATE);
+//     if (!d || isNaN(d)) continue;
+
+//     const value    = parseFloat(row.PORTFOLIO_VALUE);
+//     const notional = parseFloat(row.PORTFOLIO_NOTIONAL);
+
+//     if (isNaN(value) || isNaN(notional) || notional === 0) continue;
+
+//     const pct = value / notional;
+
+//     overlay.push({
+//       x: d,   // echtes Date-Objekt
+//       y: pct  // Roh-Prozentwert
+//     });
+//   }
+
+//   console.log("📌 PortHistoryOverlay RAW (safe date parse): length =", overlay.length, overlay);
+//   return overlay;
+// }
+
+// function parseLocalYMD(dateStr) {
+//   // erwartet "YYYY-MM-DD"
+//   if (!dateStr || typeof dateStr !== "string") return null;
+//   const parts = dateStr.split("-");
+//   if (parts.length !== 3) return null;
+
+//   const year  = Number(parts[0]);
+//   const month = Number(parts[1]); // 1-12
+//   const day   = Number(parts[2]);
+
+//   if (!year || !month || !day) return null;
+
+//   // new Date(year, monthIndex, day) -> Local Time, KEIN UTC-Offset-Problem
+//   return new Date(year, month - 1, day);
+// }
+
+
+
+
+
+
+
+
+
 
 
 

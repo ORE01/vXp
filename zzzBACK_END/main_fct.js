@@ -267,13 +267,11 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
       let pythonExecutable;
       let pythonArgs = [scriptIdentifier, ...args];
 
-      // Bestimme die Umgebung
       const env = process.env.NODE_ENV ? process.env.NODE_ENV.trim().toLowerCase() : 'production';
 
       if (env === 'development') {
           const defaultExecutable = 'C:\\Python312\\python.exe';
           const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
-
           pythonExecutable = defaultExecutable;
           pythonArgs.unshift(defaultScriptPath);
 
@@ -281,33 +279,69 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
           pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
 
       } else {
-          pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
+          //pythonExecutable = path.join(__dirname, '..', '..', 'resources', 'bin', 'main', 'main.exe');
+          pythonExecutable = path.join(process.resourcesPath, 'bin', 'main', 'main.exe');
       }
 
       try {
           const pythonProcess = spawn(pythonExecutable, pythonArgs);
           let scriptOutput = '';
 
-          // Collect stdout data
-          pythonProcess.stdout.on('data', (data) => {
-              console.log(`stdout: ${data}`);
-              scriptOutput += data.toString();
-              event.sender.send(`${eventType}-output`, data.toString());
-          });
+// ----------------- STDOUT -----------------
+let stdoutBuffer = '';  // <-- NEU: Buffer für Zeilen
 
-          // Collect stderr data
+pythonProcess.stdout.on('data', (data) => {
+    const chunk = data.toString();
+    console.log(`stdout: ${chunk}`);
+
+    stdoutBuffer += chunk;
+
+    // Zeilenweise verarbeiten
+    let lines = stdoutBuffer.split(/\r?\n/);
+    stdoutBuffer = lines.pop(); // letzte (evtl. unvollständige) Zeile bleibt im Buffer
+
+    for (const line of lines) {
+        const text = line.trim();
+        if (!text) continue;
+
+        // 1) Progress-JSON?
+        try {
+            const msg = JSON.parse(text);
+
+            if (msg && typeof msg.progress !== 'undefined') {
+                event.sender.send('py-progress', {
+                    script: scriptIdentifier,
+                    provider: msg.provider || 'GLOBAL',   // <-- NEU
+                    progress: msg.progress,
+                    message: msg.message || ''
+                });
+                continue; // NICHT in scriptOutput
+            }
+
+        } catch (err) {
+            // kein JSON → normaler Output
+        }
+
+        // 2) Normaler Output für RESULT-Matching und Debug
+        scriptOutput += text + "\n";
+        event.sender.send(`${eventType}-output`, text + "\n");
+    }
+});
+
+
+          // ----------------- STDERR -----------------
           pythonProcess.stderr.on('data', (data) => {
               console.error(`stderr: ${data}`);
               event.sender.send(`${eventType}-error`, data.toString());
           });
 
-          // Handle process close
+          // ----------------- CLOSE -----------------
           pythonProcess.on('close', (code) => {
               const match = scriptOutput.match(/___RESULT___({[\s\S]*})/);
               if (match) {
                   try {
-                      const parsedResult = JSON.parse(match[1]);
-                      resolve(parsedResult); // ✅ auch wenn code !== 0
+                      const parsed = JSON.parse(match[1]);
+                      resolve(parsed);
                   } catch (err) {
                       console.error('❌ JSON parsing failed for matched result:', match[1]);
                       reject(new Error('Failed to parse extracted JSON result.'));
@@ -324,6 +358,7 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
       }
   });
 }
+
 
 
 function insertCSParameter(data, tableName, callback) {

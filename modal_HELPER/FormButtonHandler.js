@@ -443,7 +443,7 @@ if (String(selectedTableName).trim() === 'Customer') {
   }
 }
 
-console.log('newData:', newData);
+// console.log('newData:', newData);
 
 
           try {
@@ -576,13 +576,19 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
                 break;  
               case 'ProdCouponSchedules': 
                 uniqueIdentifierColumn = 'ID'; 
+                break; 
               case 'EUSW': 
                 uniqueIdentifierColumn = 'YEAR'; 
+                break; 
               case 'MVaRInput_2': 
-                uniqueIdentifierColumn = 'id';   
+                uniqueIdentifierColumn = 'id';  
+                break;  
               case 'Customer': 
                 uniqueIdentifierColumn = 'id';   
-                break;   
+                break; 
+              case 'PortfolioHistoryMetrics': 
+                uniqueIdentifierColumn = 'DATE';   
+              break;   
               // Add more cases as needed for different tables
               default:
                   console.error('Unknown table:', selectedTableName);
