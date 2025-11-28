@@ -14,6 +14,7 @@ export function initLazyPanels({
   triggerSelector = ".section-trigger",
   panelAttr = "data-panel"
 } = {}) {
+
   if (registry.has(key)) return; // already registered for this key
 
   if (!panelRenderState) {
@@ -32,12 +33,28 @@ export function initLazyPanels({
     const panelId = btn.getAttribute(panelAttr) || btn.dataset.panel;
     if (!panelId) return;
 
+    // merken, dass Panel gerendert wurde
     panelRenderState[panelId] = true;
 
+    // lazy render – erst nach DOM update
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const fn = panelRenderers[panelId];
-        if (typeof fn === "function") fn();
+        if (typeof fn === "function") {
+
+          try {
+            fn(); // Panel rendert hier (z.B. Chart)
+          } catch (err) {
+            console.error(`[LazyRender] renderer for ${panelId} failed`, err);
+          }
+
+          // 🔹 WICHTIG: Risk-Preview informieren
+          try {
+            document.dispatchEvent(new Event('risk:refresh-thumbnails'));
+          } catch (e) {
+            console.warn('[LazyRender] dispatch risk:refresh-thumbnails failed', e);
+          }
+        }
       });
     });
   };
@@ -57,7 +74,23 @@ export function refreshOpenPanels(key = "default") {
 
   for (const id of Object.keys(panelRenderState)) {
     if (!panelRenderState[id]) continue;
+
     const fn = panelRenderers[id];
-    if (typeof fn === "function") fn();
+    if (typeof fn === "function") {
+
+      try {
+        fn(); // Panel refresh
+      } catch (err) {
+        console.error(`[LazyRender] refresh renderer for ${id} failed`, err);
+      }
+
+      // 🔹 Preview ebenfalls aktualisieren
+      try {
+        document.dispatchEvent(new Event('risk:refresh-thumbnails'));
+      } catch (e) {
+        console.warn('[LazyRender] dispatch risk:refresh-thumbnails (refreshOpenPanels) failed', e);
+      }
+    }
   }
 }
+

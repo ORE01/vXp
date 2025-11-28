@@ -793,7 +793,7 @@
   </div>
 
   <div class="sub-panel-body">
-    <canvas id="portfolioHistoryChart" width="600" height="280"></canvas>
+    <canvas id="historicPortfolioYieldChart" width="600" height="280"></canvas>
   </div>
 </div>
 
@@ -820,7 +820,7 @@
   </div>
 
   <div class="sub-panel-body">
-    <canvas id="portfolioValueChartLine" width="600" height="280"></canvas>
+    <canvas id="historicPortfolioValueChart" width="600" height="280"></canvas>
   </div>
 </div>
 
@@ -847,7 +847,7 @@
   </div>
 
   <div class="sub-panel-body">
-    <canvas id="portfolioSensChartLine" width="600" height="280"></canvas>
+    <canvas id="historicPortfolioSensChart" width="600" height="280"></canvas>
   </div>
 </div>
 
@@ -874,7 +874,7 @@
   </div>
 
   <div class="sub-panel-body">
-    <canvas id="riskMetricsChartLine" width="600" height="280"></canvas>
+    <canvas id="historicMarketRiskChart" width="600" height="280"></canvas>
   </div>
 </div>
 
@@ -901,7 +901,7 @@
   </div>
 
   <div class="sub-panel-body">
-    <canvas id="creditMetricsChartLine" width="600" height="280"></canvas>
+    <canvas id="historicCreditRiskChart" width="600" height="280"></canvas>
   </div>
 </div>
 
@@ -1189,7 +1189,7 @@
         </section>
 
         <div class="chart-container" style="margin-top:16px;">
-          <canvas id="IRlineChart"></canvas>
+          <canvas id="IRLineChart"></canvas>
         </div>
       </div>
     </div>
@@ -2005,117 +2005,58 @@
       </div>
     </div>
 
-    <!-- Panel: RISK -->
-    <div id="panel-reports-risk" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-reports-risk-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-reports-risk-title" class="sub-panel-title">RISK REPORT</div>
-        <button class="sub-panel-close" data-close="panel-reports-risk" aria-label="Schließen">&times;</button>
+<!-- Panel: RISK -->
+<div id="panel-reports-risk"
+     class="sub-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-reports-risk-title"
+     hidden>
+  <div class="sub-panel-header">
+    <div id="panel-reports-risk-title" class="sub-panel-title">RISK REPORT</div>
+    <button class="sub-panel-close"
+            data-close="panel-reports-risk"
+            aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <section class="table-card">
+      <h4 class="table-title">Risk Preview</h4>
+
+      <!-- 👉 Hier rendert dein JS die komplette Preview inkl. Checkboxen pro Chart -->
+      <div id="reportsRiskPreview" class="data-container cp-table"></div>
+
+      <!-- Buttons unter der Preview -->
+      <div class="button-wrapper buttons-row" style="margin-top:10px;">
+        <!-- Get Risk Data -->
+        <div class="btn-block">
+          <div class="btn-label" id="title-refreshRisk">Get Risk Data</div>
+          <button
+            id="refreshThumbnailsBtn"
+            class="edit-button"
+            type="button"
+            aria-describedby="title-refreshRisk"
+            title="Reload risk thumbnails">
+            Get Risk Data
+          </button>
+        </div>
+
+        <!-- Generate Risk PDF -->
+        <div class="btn-block">
+          <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>
+          <button
+            id="riskPDFButton"
+            class="edit-button"
+            type="button"
+            aria-describedby="title-riskPDFButton">
+            Risk PDF
+          </button>
+        </div>
       </div>
+    </section>
+  </div>
+</div>
 
-      <div class="sub-panel-body">
-        <!-- 🔧 Report Options -->
-        <section class="cp-card" id="riskReportOptions">
-          <h4 class="table-title">Report Options</h4>
-
-          <div class="grid grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <label><input type="checkbox" id="rr-includeTOC" checked> Table of Contents</label>
-
-            <!-- Portfolio Breakdown -->
-            <div style="grid-column:1 / -1; margin-top:6px; padding:8px; border:1px solid #555; border-radius:6px;">
-              <label style="display:block; margin:0;">
-                <input type="checkbox" id="rr-portfolioBreakdown" checked> Portfolio Breakdown
-              </label>
-            </div>
-
-            <!-- Performance -->
-            <div style="grid-column:1 / -1; margin-top:6px; padding:8px; border:1px solid #555; border-radius:6px;">
-              <label style="display:block; margin:0;">
-                <input type="checkbox" id="rr-performance" checked> Performance
-              </label>
-            </div>
-
-            <!-- Market-Risk-Block -->
-            <div style="grid-column:1 / -1; margin-top:6px; padding:8px; border:1px solid #555; border-radius:6px;">
-              <label style="display:block; margin-bottom:6px;">
-                <input type="checkbox" id="rr-marketRisk-enabled" checked> Market Risk
-              </label>
-              <div style="display:flex; gap:14px; padding-left:18px; opacity:.9;">
-                <label><input type="checkbox" id="rr-marketRisk-details" checked> Details</label>
-                <label><input type="checkbox" id="rr-marketRisk-sens" checked> Sensitivities</label>
-              </div>
-            </div>
-
-            <!-- Credit-Risk -->
-            <div style="grid-column:1 / -1; margin-top:6px; padding:8px; border:1px solid #555; border-radius:6px;">
-              <label style="display:block; margin-bottom:6px;">
-                <input type="checkbox" id="rr-creditRisk-enabled" checked> Credit Risk
-              </label>
-              <div style="display:flex; gap:14px; padding-left:18px; opacity:.9;">
-                <label><input type="checkbox" id="rr-creditRisk-details" checked> Details</label>
-              </div>
-            </div>
-
-            <!-- Liquidity Block -->
-            <div style="grid-column:1 / -1; margin-top:6px; padding:8px; border:1px solid #555; border-radius:6px;">
-              <label style="display:block; margin-bottom:6px;">
-                <input type="checkbox" id="rr-liquidity-enabled" checked> Liquidity
-              </label>
-            </div>
-
-            <!-- Market Data Block -->
-            <div style="grid-column:1 / -1; margin-top:6px; padding:8px; border:1px solid #555; border-radius:6px;">
-              <label style="display:block; margin-bottom:6px;">
-                <input type="checkbox" id="rr-marketData-enabled" checked> Market Data
-              </label>
-              <div style="display:flex; gap:14px; padding-left:18px;">
-                <label><input type="checkbox" id="rr-marketData-ir" checked> Interest Rates</label>
-                <label><input type="checkbox" id="rr-marketData-cs" checked> Credit Spreads</label>
-              </div>
-            </div>
-
-            <div style="grid-column:1 / -1;">
-              <label>Filename
-                <input id="rr-filename" type="text" value="Risk.pdf">
-              </label>
-            </div>
-          </div>
-
-          <div class="button-wrapper buttons-row" style="margin-top:10px;">
-            <!-- Get Risk Data -->
-            <div class="btn-block">
-              <div class="btn-label" id="title-refreshRisk">Get Risk Data</div>
-              <button
-                id="refreshThumbnailsBtn"
-                class="edit-button"
-                type="button"
-                aria-describedby="title-refreshRisk"
-                title="Reload risk thumbnails">
-                Get Risk Data
-              </button>
-            </div>
-
-            <!-- Generate Risk PDF -->
-            <div class="btn-block">
-              <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>
-              <button
-                id="riskPDFButton"
-                class="edit-button"
-                type="button"
-                aria-describedby="title-riskPDFButton">
-                Risk PDF
-              </button>
-            </div>
-          </div>
-
-
-        </section>
-
-        <section class="table-card">
-          <h4 class="table-title">Risk Preview</h4>
-          <div id="reportsRiskPreview" class="data-container cp-table"></div>
-        </section>
-      </div>
-    </div>
 
   </div>
 </div>
@@ -2425,7 +2366,7 @@
 
 
 <!-- unsichtbarer IR chart für pdf -->
-<canvas id="IRlineChartExport" width="400" height="200" style="display:none;"></canvas>
+<canvas id="IRLineChartExport" width="400" height="200" style="display:none;"></canvas>
 <canvas id="ProductCurveExport" width="400" height="200" style="display:none;"></canvas>
 <canvas id="euswapYieldChartExport" style="display: none"></canvas>
 

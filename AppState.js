@@ -1683,6 +1683,7 @@ updateDropdownOptions({
   index,
 }) {
   const dropdownElement = document.getElementById(dropdownElementId);
+  console.log('START:', dropdownElementId);
   if (!dropdownElement) { console.error(`⚠️ Dropdown element '${dropdownElementId}' not found.`); return; }
 
   const isPortfolio = dropdownElementId.startsWith('createdPortDropdown');
@@ -1749,109 +1750,6 @@ updateDropdownOptions({
     }
   }
 }
-
-// updateDropdownOptions({
-//   dropdownElementId,
-//   getDataFunction,
-//   updateDataFunction,
-//   updateMvarDataFunction,
-//   updateCvarDataFunction,
-//   updateEADDataFunction,
-//   selectedTableName,
-//   index,
-// }) {
-//   const dd = document.getElementById(dropdownElementId);
-//   if (!dd) { console.error(`⚠️ Dropdown element '${dropdownElementId}' not found.`); return; }
-
-//   const isPortfolio = dropdownElementId.startsWith('createdPortDropdown');
-//   const isOffers    = dropdownElementId === 'createdOffersDropdown';
-//   const isDeals     = dropdownElementId === 'createdDealsDropdown';
-
-//   if (isPortfolio && typeof this.setPortIndex === 'function') this.setPortIndex(index);
-
-//   // 1) Daten holen (sicher)
-//   let data = [];
-//   try { data = getDataFunction?.() || []; } catch { data = []; }
-//   if (!Array.isArray(data) || data.length === 0) {
-//     // Nur schreiben, wenn nötig
-//     if (!(dd.options.length === 1 && dd.options[0].disabled)) {
-//       dd.innerHTML = '<option disabled>No data available</option>';
-//     }
-//     return;
-//   }
-
-//   // 2) NO-OP Guard: Optionen nur neu setzen, wenn sie sich geändert haben
-//   const newValues = data.map(d => String(d.table_name));
-//   const prevValues = Array.from(dd.options).map(o => o.value);
-//   const sameOptions = newValues.length === prevValues.length && newValues.every((v,i)=>v===prevValues[i]);
-
-//   if (!sameOptions) {
-//     const frag = document.createDocumentFragment();
-//     for (const v of newValues) {
-//       const opt = document.createElement('option');
-//       opt.value = v;
-//       opt.textContent = v;
-//       frag.appendChild(opt);
-//     }
-//     dd.replaceChildren(frag); // ein einziger DOM write
-//   }
-
-//   // 3) Auswahl setzen (ohne teure Folgearbeiten)
-//   const desired = String(selectedTableName ?? '');
-//   const hasDesired = newValues.includes(desired);
-//   const targetValue = hasDesired ? desired : newValues[0];
-//   if (dd.value !== targetValue) dd.value = targetValue;
-
-//   // 4) State aktualisieren (leichter write)
-//   if (isPortfolio || isOffers) {
-//     this.setSelectedPortTableName?.(dd.value);
-//   } else if (isDeals) {
-//     this.setSelectedDealsTableName?.(dd.value);
-//   }
-
-//   // 5) Schwere Folge-Updates NICHT sofort — in Idle schieben
-//   const usePortfolioData = isPortfolio || isOffers; // Offers nutzt Portfolios
-//   const allData = usePortfolioData ? this.getAllPortfolioData?.() : this.getAllDealsData?.();
-//   const filteredData = (Array.isArray(allData) ? allData : []).filter(e => String(e.port_name) === String(dd.value));
-//   if (filteredData.length === 0) {
-//     console.warn(`⚠️ Keine Daten für '${dd.value}' (${usePortfolioData ? 'Portfolio/Offers' : 'Deals'}).`);
-//     return;
-//   }
-//   const safeIndex = isPortfolio ? (index ?? 0) : 0;
-
-//   const runIdle = (fn, timeout = 600) => {
-//     if ('requestIdleCallback' in window) return requestIdleCallback(fn, { timeout });
-//     return setTimeout(fn, 0);
-//   };
-
-//   runIdle(() => {
-//     try {
-//       // Haupt-Render
-//       if (typeof updateDataFunction === 'function') {
-//         updateDataFunction(filteredData, safeIndex);
-//       }
-//       // Nur für Portfolio: MVaR / CVaR / EAD nachziehen
-//       if (isPortfolio) {
-//         if (typeof updateMvarDataFunction === 'function') {
-//           const fm = (this.getAllMvarData?.() || []).filter(e => e.port_name === dd.value);
-//           updateMvarDataFunction(fm, safeIndex);
-//         }
-//         if (typeof updateCvarDataFunction === 'function') {
-//           const fc = (this.getAllCvarData?.() || []).filter(e => e.port_name === dd.value);
-//           updateCvarDataFunction(fc, safeIndex);
-//         }
-//         if (typeof updateEADDataFunction === 'function') {
-//           const fe = (this.getAllEADData?.() || []).filter(e => e.port_name === dd.value);
-//           updateEADDataFunction(fe, safeIndex);
-//         }
-//       }
-//     } catch (e) {
-//       console.error('[updateDropdownOptions] idle update failed:', e);
-//     }
-//   }, 600);
-// }
-
-
 
 
 

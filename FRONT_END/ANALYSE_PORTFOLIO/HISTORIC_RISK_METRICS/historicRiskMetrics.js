@@ -98,15 +98,15 @@ import { appState } from '../../renderer.js';
 // ------------------------------------------------------------
 // Market Risk Line Chart (MVaR / ES) – robust render + refresh
 // ------------------------------------------------------------
-
-let riskMetricsChartLine = null;
 let _riskLastData = null;
 let _riskLastOptions = null;
 
 
-export function renderMarketRiskChartLine() {
+let historicMarketRiskChart = null;
+
+export function renderHistoricMarketRiskChart() {
   const historyData = appState.getPortfolioHistoryData() || [];
-  console.log("🎯 renderMarketRiskChartLine CALLED with rows:", historyData.length);
+  console.log("🎯 renderHistoricMarketRiskChart CALLED with rows:", historyData.length);
 
   if (!Array.isArray(historyData) || historyData.length === 0) {
     console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
@@ -158,14 +158,14 @@ export function renderMarketRiskChartLine() {
   );
 
   // destroy old instance
-if (riskMetricsChartLine) {
-  console.log("♻️ Destroy existing riskMetricsChartLine instance");
+if (historicMarketRiskChart) {
+  console.log("♻️ Destroy existing historicMarketRiskChart instance");
   try {
-    riskMetricsChartLine.destroy();
+    historicMarketRiskChart.destroy();
   } catch (err) {
-    console.error("⚠️ Fehler beim Destroy von riskMetricsChartLine:", err);
+    console.error("⚠️ Fehler beim Destroy von historicMarketRiskChart:", err);
   } finally {
-    riskMetricsChartLine = null;   // <-- wichtig
+    historicMarketRiskChart = null;   // <-- wichtig
   }
 }
 
@@ -248,11 +248,11 @@ if (riskMetricsChartLine) {
   let tries = 0;
 
   const tryRender = () => {
-    const canvas = document.getElementById("riskMetricsChartLine");
+    const canvas = document.getElementById("historicMarketRiskChart");
 
     if (!canvas) {
       if (++tries < maxTries) return requestAnimationFrame(tryRender);
-      console.warn("❌ riskMetricsChartLine canvas not found after retries");
+      console.warn("❌ historicMarketRiskChart canvas not found after retries");
       return;
     }
 
@@ -261,40 +261,40 @@ if (riskMetricsChartLine) {
 
     if (w === 0 || h === 0) {
       if (++tries < maxTries) return requestAnimationFrame(tryRender);
-      console.warn("❌ riskMetricsChartLine canvas has 0 size after retries", { w, h });
+      console.warn("❌ historicMarketRiskChart canvas has 0 size after retries", { w, h });
       return;
     }
 
     try {
-      riskMetricsChartLine = createTimeSeriesChart(
-        "riskMetricsChartLine",
+      historicMarketRiskChart = createTimeSeriesChart(
+        "historicMarketRiskChart",
         data,
         options,
         "line"
       );
 
-      if (!riskMetricsChartLine) {
+      if (!historicMarketRiskChart) {
         console.warn("❌ createTimeSeriesChart returned null/undefined");
         return;
       }
 
-      riskMetricsChartLine.resize();
-      riskMetricsChartLine.update();
+      historicMarketRiskChart.resize();
+      historicMarketRiskChart.update();
 
       console.log("✅ MarketRiskMetricsChartLine rendered with", sortedData.length, "points");
     } catch (err) {
-      console.error("💥 Fehler beim Erzeugen von riskMetricsChartLine:", err);
+      console.error("💥 Fehler beim Erzeugen von historicMarketRiskChart:", err);
     }
   };
 
   requestAnimationFrame(tryRender);
 }
 
-let creditMetricsChartLine = null;
+let historicCreditRiskChart = null;
 
-export function renderCreditMetricsChartLine() {
+export function renderHistoricCreditRiskChart() {
   const historyData = appState.getPortfolioHistoryData() || [];
-  console.log("🎯 renderCreditMetricsChartLine CALLED with rows:", historyData.length);
+  console.log("🎯 renderHistoricCreditRiskChart CALLED with rows:", historyData.length);
 
   if (!Array.isArray(historyData) || historyData.length === 0) {
     console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden (Credit Metrics).");
@@ -335,12 +335,12 @@ export function renderCreditMetricsChartLine() {
     "C_ES[0]:", cEsPct[0]
   );
 
-  if (creditMetricsChartLine) {
-    console.log("♻️ Destroy existing creditMetricsChartLine instance");
+  if (historicCreditRiskChart) {
+    console.log("♻️ Destroy existing historicCreditRiskChart instance");
     try {
-      creditMetricsChartLine.destroy();
+      historicCreditRiskChart.destroy();
     } catch (err) {
-      console.error("⚠️ Fehler beim Destroy von creditMetricsChartLine:", err);
+      console.error("⚠️ Fehler beim Destroy von historicCreditRiskChart:", err);
     }
   }
 
@@ -372,21 +372,21 @@ export function renderCreditMetricsChartLine() {
   const options = createPercentChartOptions("Credit VaR / ES (%)");
 
   try {
-    creditMetricsChartLine = createTimeSeriesChart(
-      "creditMetricsChartLine",
+    historicCreditRiskChart = createTimeSeriesChart(
+      "historicCreditRiskChart",
       data,
       options,
       "line"
     );
-    console.log("✅ creditMetricsChartLine rendered with", sortedData.length, "points");
+    console.log("✅ historicCreditRiskChart rendered with", sortedData.length, "points");
   } catch (err) {
-    console.error("💥 Fehler beim Erzeugen von creditMetricsChartLine:", err);
+    console.error("💥 Fehler beim Erzeugen von historicCreditRiskChart:", err);
   }
 }
 
-let portfolioHistoryChart = null;
+let historicPortfolioYieldChart = null;
 
-export function renderPortfolioHistoryYieldChart() {
+export function renderHistoricPortfolioYieldChart() {
   const historyData = appState.getPortfolioHistoryData() || [];
   const tsData = appState.getTblTSData();
 
@@ -473,8 +473,8 @@ export function renderPortfolioHistoryYieldChart() {
     }
   }
 
-  if (portfolioHistoryChart) {
-    portfolioHistoryChart.destroy();
+  if (historicPortfolioYieldChart) {
+    historicPortfolioYieldChart.destroy();
   }
 
   const data = {
@@ -505,19 +505,19 @@ export function renderPortfolioHistoryYieldChart() {
 
   const options = createPercentChartOptions("MVaR / ES Metrics (%)");
 
-  portfolioHistoryChart = createTimeSeriesChart(
-    "portfolioHistoryChart",
+  historicPortfolioYieldChart = createTimeSeriesChart(
+    "historicPortfolioYieldChart",
     data,
     options,
     "line"
   );
 }
 
-let portfolioSensChartLine = null;
+let historicPortfolioSensChart = null;
 
-export function renderPortfolioSensChartLine() {
+export function renderHistoricPortfolioSensChart() {
   const historyData = appState.getPortfolioHistoryData() || [];
-  console.log("📈 renderPortfolioSensChartLine CALLED, rows:", historyData.length);
+  console.log("📈 renderHistoricPortfolioSensChart CALLED, rows:", historyData.length);
 
   if (!Array.isArray(historyData) || historyData.length === 0) {
     console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
@@ -548,11 +548,11 @@ export function renderPortfolioSensChartLine() {
     readSeries(row, ["CPV01bp", "CPV01_BP", "CPV01_BP_BASIS"])
   );
 
-  if (portfolioSensChartLine) {
+  if (historicPortfolioSensChart) {
     try {
-      portfolioSensChartLine.destroy();
+      historicPortfolioSensChart.destroy();
     } catch (err) {
-      console.error("⚠️ Fehler beim Destroy von portfolioSensChartLine:", err);
+      console.error("⚠️ Fehler beim Destroy von historicPortfolioSensChart:", err);
     }
   }
 
@@ -605,22 +605,22 @@ export function renderPortfolioSensChartLine() {
   };
 
   try {
-    portfolioSensChartLine = createTimeSeriesChart(
-      "portfolioSensChartLine",
+    historicPortfolioSensChart = createTimeSeriesChart(
+      "historicPortfolioSensChart",
       data,
       options,
       "line"
     );
-    console.log("✅ portfolioSensChartLine rendered with", labels.length, "points");
+    console.log("✅ historicPortfolioSensChart rendered with", labels.length, "points");
   } catch (err) {
-    console.error("💥 Fehler beim Erzeugen von portfolioSensChartLine:", err);
+    console.error("💥 Fehler beim Erzeugen von historicPortfolioSensChart:", err);
   }
 }
 
 
-let portfolioValueChartLine = null;
+let historicPortfolioValueChart = null;
 
-export function renderPortfolioValueChartLine() {
+export function renderHistoricPortfolioValueChart() {
   const historyData = appState.getPortfolioHistoryData() || [];
 
   if (!Array.isArray(historyData) || historyData.length === 0) {
@@ -657,8 +657,8 @@ export function renderPortfolioValueChartLine() {
     return isNaN(v) ? null : v;
   });
 
-  if (portfolioValueChartLine) {
-    portfolioValueChartLine.destroy();
+  if (historicPortfolioValueChart) {
+    historicPortfolioValueChart.destroy();
   }
 
   const data = {
@@ -722,14 +722,64 @@ options.scales.y1 = {
   }
 };
 
-portfolioValueChartLine = createTimeSeriesChart(
-  "portfolioValueChartLine",
+historicPortfolioValueChart = createTimeSeriesChart(
+  "historicPortfolioValueChart",
   data,
   options,
   "bar"
 );
 
 }
+
+
+
+
+
+
+// MASTER: Alle Charts sofort rendern – unabhängig von LazyRender
+export function renderAllChartsNow() {
+  console.log("🚀 renderAllChartsNow(): building ALL charts eagerly...");
+
+  try { renderHistoricMarketRiskChart(); } catch (e) { console.error(e); }
+  try { renderHistoricCreditRiskChart(); } catch (e) { console.error(e); }
+  try { renderHistoricPortfolioYieldChart(); } catch (e) { console.error(e); }
+  try { renderHistoricPortfolioSensChart(); } catch (e) { console.error(e); }
+  try { renderHistoricPortfolioValueChart(); } catch (e) { console.error(e); }
+
+  // Falls du die Performance-Charts auch eager willst:
+  try { renderEUSwapPortfolioYieldChart(); } catch (e) {}
+  try { renderEUSwapProductYieldChart(); } catch (e) {}
+  try { renderDurationSwapChart(); } catch (e) {}
+  try { renderDurationProductYieldChart(); } catch (e) {}
+
+  // Market Risk (nicht historic – die live Charts)
+  try { renderMarketRiskChartLine(); } catch (e) {}
+
+  // Credit Risk live
+  try { renderCreditMetricsChartLine(); } catch (e) {}
+
+  // Sensitivities live
+  try { renderPortfolioSensChartLine(); } catch (e) {}
+
+  // Portfolio Value live
+  try { renderPortfolioValueChartLine(); } catch (e) {}
+
+  // Interest Rates
+  try { renderIRLineChart(); } catch (e) {}
+
+  // Forward Charts
+  try { renderForwardLineChart(); } catch (e) {}
+  try { renderForwardCurveChart(); } catch (e) {}
+
+  // Liquidity
+  try { renderLiquidityChart(); } catch (e) {}
+
+  // TimeSeries / Historic Data Panel
+  try { renderTSLineChart(); } catch (e) {}
+
+  console.log("✅ ALL charts built.");
+}
+
 
 
 

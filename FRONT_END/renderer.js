@@ -1,4 +1,5 @@
 import { refreshOpenPanels} from './lazyPanelsCore.js';
+import { renderAllChartsNow} from './allChartsRenderer.js';
 import { initPortfolioPanelsLazyRender} from './initAnalysePortfolioPanels.js';
 import { initMarketDataPanelsLazyRender} from './initMarketDataPanels.js';
 import { createTSModals, observePanelTsOpen} from './MARKET_DATA/HISTORIC_DATA/TS.js';
@@ -10,7 +11,7 @@ import { handleProviderData } from './DATA_PROVIDER/DATAProvider.js';
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './MARKET_DATA/FORCASTING/ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js'; 
 import { handleLiquidityData } from './ANALYSE_PORTFOLIO/liquidity.js';
-import { renderPortfolioHistoryYieldChart, renderPortfolioValueChartLine, renderMarketRiskChartLine, renderPortfolioSensChartLine, renderCreditMetricsChartLine} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
+import { renderHistoricPortfolioYieldChart, renderHistoricPortfolioValueChart, renderHistoricMarketRiskChart, renderHistoricPortfolioSensChart, renderHistoricCreditRiskChart} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 import { handleSummaryRMData } from './ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRM.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './NEW_PRODUCTS/offers.js';
 
@@ -503,6 +504,7 @@ function setupDropdowns() {
 
       dropdown.addEventListener('change', (event) => {
         const selectedTableName = event.currentTarget.value;
+        console.log('START!!!!')
 
         // 🔹 nur leichter State im Handler (kein DOM!)
         if (setSelectedDealsTableName) appState.setSelectedDealsTableName(selectedTableName);
@@ -511,6 +513,13 @@ function setupDropdowns() {
 
         // 🔹 schwere Arbeit (Rendern/Layouts) erst im nächsten Frame
         scheduleOptionsUpdate(selectedTableName);
+
+        requestAnimationFrame(() => {
+          if (typeof renderAllChartsNow === 'function') {
+            renderAllChartsNow();
+          }
+        });
+
       });
     }
 
@@ -1362,20 +1371,20 @@ function handleCustomerTSData(data) {
 
     // Wenn Panels schon einmal geöffnet wurden, dann nachziehen:
     if (panelRenderState["PORTFOLIO_HISTORY_Modal"]) {
-      renderPortfolioHistoryYieldChart();
+      renderHistoricPortfolioYieldChart();
     }
     if (panelRenderState["panel-portfolio-value"]) {
-      renderPortfolioValueChartLine();
+      renderHistoricPortfolioValueChart();
     }
     if (panelRenderState["panel-hist-sensitivities"]) {
-      renderPortfolioSensChartLine();
+      renderHistoricPortfolioSensChart();
     }
     if (panelRenderState["panel-market-risk"]) {
-      renderMarketRiskChartLine();
+      renderHistoricMarketRiskChart();
       //refreshMarketRiskChartLine();
     }
     if (panelRenderState["panel-credit-risk"]) {
-      renderCreditMetricsChartLine();
+      renderHistoricCreditRiskChart();
     }
   }
 

@@ -57,205 +57,6 @@ const BD_GROUPS_ORDERED = {
 };
 
 
-// === Chart-Definitionen pro Section (für Checkboxen + Thumbnails) ===
-const SECTION_CHARTS = {
-  performance: [
-    { key: 'euswapPortfolioYield', id: 'euswapPortfolioYieldChart', label: 'Portfolio Yield' },
-    { key: 'euswapProductYield',   id: 'euswapProductYieldChart',   label: 'Product Yield' },
-    { key: 'durationSwap',         id: 'durationSwapChart',         label: 'Duration Swap' },
-    { key: 'durationProductYield', id: 'durationProductYieldChart', label: 'Duration vs Yield' },
-  ],
-
-    // NEU: Eingabe + Summary + Traffic Light (Market VaR Input-Bereich)
-  mvarInputs: [
-    { key: 'input',   label: 'VaR Input Table' },          // inputMVaRContainer
-    { key: 'summary', label: 'VaR / ES Summary Table' },   // MVaRDataContainer0
-    { key: 'traffic', label: 'VaR Traffic Light' },        // traffic-mvar
-  ],
-
-
-  marketRisk: [
-    { key: 'tsEU1Y',      id: 'tsEU1YChart',      label: '1Y Time Series' },
-    { key: 'plMvarDist',  id: 'plMvarDistChart',  label: 'P/L MVaR Distribution' },
-  ],
-
-  // Detail-Section Market Risk (MVaR-Chart)
-  marketRiskDetail: [
-    { key: 'mvarMain', id: 'MVaRChart',  label: 'MVaR Chart' },
-  ],
-
-  // Tabellen für MVaR (Total / IR / CS)
-  mvarTables: [
-    { key: 'total', label: 'Total (T)' },
-    { key: 'ir',    label: 'Interest Rate (IR)' },
-    { key: 'cs',    label: 'Credit Spread (CS)' },
-  ],
-
-  // Sensitivities-Section (Charts)
-  sensitivities: [
-    { key: 'pv01a', id: 'PV01Chart0', label: 'PV01' },
-    { key: 'cpv01a',id: 'CPV01Chart0',label: 'CPV01' },
-  ],
-
-  // Tabellen zu Sensitivities (PV01/CPV01)
-  sensTables: [
-    { key: 'ir', label: 'PV01 Table' },
-    { key: 'cs', label: 'CPV01 Table' },
-  ],
-
-  creditRisk: [
-    { key: 'lossCombined',   id: 'LossIssuerCombinedChart',   label: 'Loss Issuer Combined' },
-    { key: 'lossCombinedES', id: 'LossIssuerCombinedESChart', label: 'Loss Issuer ES' },
-  ],
-
-  // Detail-Section Credit Risk (Charts)
-  creditRiskDetail: [
-    { key: 'lgd',      id: 'LGDChart',                  label: 'LGD' },
-    { key: 'lossHist', id: 'LossIssuerChartRating',     label: 'Loss Issuer (Historic)' },
-    { key: 'lossMkt',  id: 'LossIssuerChartMarket',     label: 'Loss Issuer (Market)' },
-    { key: 'lossNorm', id: 'LossIssuerChartMarketNorm', label: 'Loss Issuer (Risk Adj.)' },
-  ],
-
-  // Tabellen-Section Credit Risk – Top-Metriken
-  creditTopTables: [
-    { key: 'topRating', label: 'Top Rating' },
-    { key: 'topMarket', label: 'Top Market' },
-    { key: 'topNorm',   label: 'Top Risk Adj.' },
-  ],
-
-  // Tabellen-Section Credit Risk – Loss/EAD-Tabellen
-  creditLossTables: [
-    { key: 'ead',    label: 'EAD Table' },
-    { key: 'liHist', label: 'Loss Issuer (Historic)' },
-    { key: 'liMkt',  label: 'Loss Issuer (Market)' },
-    { key: 'liNorm', label: 'Loss Issuer (Risk Adj.)' },
-  ],
-
-  liquidity: [
-    { key: 'liquMain', id: 'liquChart', label: 'Liquidity' },
-  ],
-
-  // Tabellen-Section Liquidity
-  liquidityTables: [
-    { key: 'matCat',  label: 'Maturities × Categories' },
-    { key: 'issuers', label: 'Issuers' },
-  ],
-
-  historic: [
-    { key: 'histPerf',   id: 'historicPortfolioYieldChart',  label: 'Performance History' },
-    { key: 'histValue',  id: 'historicPortfolioValueChart',  label: 'Portfolio Value' },
-    { key: 'histSens',   id: 'historicPortfolioSensChart',   label: 'Sensitivities' },
-    { key: 'histMkt',    id: 'historicMarketRiskChart',      label: 'Market Risk – Historic' },
-    { key: 'histCredit', id: 'historicCreditRiskChart',      label: 'Credit Risk – Historic' },
-  ],
-
-  marketData: [
-    { key: 'mdIR', id: 'IRLineChart',     label: 'Interest Rates' },
-    { key: 'mdCS', id: 'CS_ChartCanvas',  label: 'Credit Spreads' },
-  ],
-};
-
-
-
-
-
-// === Chart-Toggle-State (pro Chart) ==========================================
-const CHART_STATE_KEY = 'rr-chart-state';
-
-// State aus localStorage laden
-function loadChartToggleState() {
-  try {
-    return JSON.parse(localStorage.getItem(CHART_STATE_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
-
-// State aus den DOM-Checkboxen speichern
-function saveChartToggleStateFromDOM() {
-  const st = {};
-
-  // alle Chart-Checkboxen einsammeln
-  document
-    .querySelectorAll('input[data-chart-section][data-chart-key]')
-    .forEach(el => {
-      const sec = el.dataset.chartSection;
-      const key = el.dataset.chartKey;
-      if (!sec || !key) return;
-      st[`${sec}:${key}`] = !!el.checked;
-    });
-
-  try {
-    localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st));
-  } catch {}
-}
-
-// Prüfen, ob ein Chart enabled ist (Default: true)
-function isChartEnabled(section, key, state) {
-  const sKey = `${section}:${key}`;
-  const v = (state || {})[sKey];
-  return (typeof v === 'boolean') ? v : true;
-}
-
-// Checkbox-Row pro Section bauen
-function buildSectionChartControlsHTML(sectionKey, chartState, allowedKeys = null) {
-  const chartsAll = SECTION_CHARTS[sectionKey] || [];
-
-  // optional: nur bestimmte Keys (z.B. ['mdIR'])
-  const charts = allowedKeys
-    ? chartsAll.filter(ch => allowedKeys.includes(ch.key))
-    : chartsAll;
-
-  if (!charts.length) return '';
-
-  const state = chartState || {};
-
-  const items = charts.map(ch => {
-    const domId   = `rr-chart-${sectionKey}-${ch.key}`;
-    const flatKey = `${sectionKey}:${ch.key}`;
-    const checked = state[flatKey] !== false ? 'checked' : '';
-
-    return `
-      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
-        <input
-          type="checkbox"
-          id="${domId}"
-          data-chart-section="${sectionKey}"
-          data-chart-key="${ch.key}"
-          ${checked}
-        >
-        <span>${ch.label}</span>
-      </label>
-    `;
-  }).join('');
-
-  return `
-    <div class="rr-chart-controls" style="margin:4px 0 8px;">
-      <div style="font-size:11px;opacity:.8;margin-bottom:4px">Charts:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;">
-        ${items}
-      </div>
-    </div>
-  `;
-}
-
-// Event-Wiring für diese Checkboxen
-function wireChartControlsOnce() {
-  const nodes = document.querySelectorAll('input[data-chart-section][data-chart-key]');
-  nodes.forEach(el => {
-    if (el.dataset.bound) return;
-    el.addEventListener('change', () => {
-      saveChartToggleStateFromDOM();
-      try { scheduleRiskPreviewRender(); } catch {}
-    });
-    el.dataset.bound = '1';
-  });
-}
-
-
-
-
-
 // === Persistenz ===
 // ——— Per-Chart-Status laden/speichern (wie gehabt) ———
 function loadBdState() {
@@ -264,10 +65,71 @@ function loadBdState() {
 function saveBdStateFromDOM() {
   const st = {};
   BD_COLUMNS.forEach(c => {
-    const els = Array.from(document.querySelectorAll(`#rr-bd-${c}`));
-    st[c] = els.length ? els.some(el => el.checked) : true;
+    const el = document.getElementById('rr-bd-' + c);
+    st[c] = !!el?.checked;
   });
   try { localStorage.setItem('rr-bd-state', JSON.stringify(st)); } catch {}
+}
+
+// ——— Controls-HTML generieren ———
+function buildBreakdownPerChartControlsHTML() {
+  const st = loadBdState();
+  const items = BD_COLUMNS.map(c => {
+    const id = 'rr-bd-' + c;
+    const label = BD_DISPLAY[c] || c;
+    const checked = (st[c] !== false) ? 'checked' : '';
+    return `
+      <label style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+        <input id="${id}" type="checkbox" ${checked}>
+        <span>${label}</span>
+      </label>`;
+  }).join('');
+
+  return `
+    <div id="rr-bd-controls" style="margin:8px 0 0 24px;">
+      <div style="opacity:.8;margin-bottom:6px">Show charts:</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;">
+        ${items}
+      </div>
+    </div>
+  `;
+}
+
+// ——— In Report Options unter „Portfolio Breakdown“ einhängen (einmalig) ———
+let __bdControlsMounted = false;
+function mountBreakdownControlsInReportOptions() {
+  if (__bdControlsMounted) return;
+
+  // Anker: die Haupt-Checkbox „Portfolio Breakdown“
+  const anchor = document.getElementById('rr-portfolioBreakdown');
+  if (!anchor) return; // Options-UI noch nicht da? Dann später erneut versuchen.
+
+  // Host bestimmen: direkt nach dem Zeilen-Container einfügen,
+  // sonst einfach nach dem Label/Eltern-Knoten.
+  let host = null;
+  host = anchor.closest?.('.option-row') || anchor.closest?.('label') || anchor.parentElement;
+  if (!host) host = anchor;
+
+  // Schauen, ob schon vorhanden
+  if (!host.nextElementSibling || host.nextElementSibling.id !== 'rr-bd-controls') {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = buildBreakdownPerChartControlsHTML();
+    host.after(wrap.firstElementChild);
+  }
+
+  // Events binden
+  BD_COLUMNS.forEach(c => {
+    const el = document.getElementById('rr-bd-' + c);
+    if (el && !el.dataset.bound) {
+      el.addEventListener('change', () => {
+        saveBdStateFromDOM();
+        try { scheduleRiskPreviewRender(); } catch {}
+      });
+      el.dataset.bound = '1';
+    }
+  });
+
+  __bdControlsMounted = true;
 }
 
 
@@ -469,52 +331,70 @@ const getValue = (id, def) => {
 // getRiskReportOptions REPORT OPTIONS=============================================
 
 export function getRiskReportOptions() {
-  const d = REPORT_DEFAULTS;
+  const $   = (id) => document.getElementById(id);
+  const chk = (id, def) => { const el = $(id); return el ? !!el.checked : def; };
+  const val = (id, def) => { const el = $(id); const v = el?.value?.trim(); return v || def; };
 
   return {
-    includeTOC: d.includeTOC ?? true,
+    includeTOC: chk('rr-includeTOC', REPORT_DEFAULTS.includeTOC),
     sections: {
-      portfolioBreakdown: {
-        enabled:  d.sections?.portfolioBreakdown?.enabled ?? true,
-        issuer:   d.sections?.portfolioBreakdown?.issuer  ?? true,
-        product:  d.sections?.portfolioBreakdown?.product ?? true,
-        general:  d.sections?.portfolioBreakdown?.general ?? true,
-      },
-      performance: d.sections?.performance ?? true,
+      // bereits vorhanden:
+      portfolioBreakdown: (() => {
+        const def = REPORT_DEFAULTS.sections.portfolioBreakdown || { enabled: true, issuer: true, product: true, general: true };
+
+        const uiEnabled = document.getElementById('rr-portfolioBreakdown');
+        const enabled   = uiEnabled ? !!uiEnabled.checked : (def.enabled !== false);
+
+        const uiIssuer  = document.getElementById('rr-portfolioBreakdown-issuer');
+        const uiProduct = document.getElementById('rr-portfolioBreakdown-product');
+        const uiGeneral = document.getElementById('rr-portfolioBreakdown-general');
+
+        const issuer  = uiIssuer  ? !!uiIssuer.checked  : (def.issuer  !== false);
+        const product = uiProduct ? !!uiProduct.checked : (def.product !== false);
+        const general = uiGeneral ? !!uiGeneral.checked : (def.general !== false);
+
+        return { enabled, issuer, product, general };
+      })(),
+
+      performance: chk('rr-performance', REPORT_DEFAULTS.sections.performance),
 
       marketRisk: {
-        enabled:       d.sections?.marketRisk?.enabled       ?? true,
-        details:       d.sections?.marketRisk?.details       ?? true,
-        sensitivities: d.sections?.marketRisk?.sensitivities ?? true,
+        enabled:       chk('rr-marketRisk-enabled',  REPORT_DEFAULTS.sections.marketRisk.enabled),
+        details:       chk('rr-marketRisk-details',  REPORT_DEFAULTS.sections.marketRisk.details),
+        sensitivities: chk('rr-marketRisk-sens',     REPORT_DEFAULTS.sections.marketRisk.sensitivities),
       },
 
       creditRisk: {
-        enabled: d.sections?.creditRisk?.enabled ?? true,
-        details: d.sections?.creditRisk?.details ?? true,
+        enabled: chk('rr-creditRisk-enabled', REPORT_DEFAULTS.sections.creditRisk.enabled),
+        details: chk('rr-creditRisk-details', REPORT_DEFAULTS.sections.creditRisk.details),
       },
 
       liquidity: {
-        enabled: d.sections?.liquidity?.enabled ?? true,
+        enabled: chk('rr-liquidity-enabled', REPORT_DEFAULTS.sections.liquidity.enabled),
       },
 
       marketData: {
-        enabled:       d.sections?.marketData?.enabled       ?? true,
-        interestRates: d.sections?.marketData?.interestRates ?? true,
-        creditSpreads: d.sections?.marketData?.creditSpreads ?? true,
+        enabled:       chk('rr-marketData-enabled',   REPORT_DEFAULTS.sections.marketData.enabled),
+        interestRates: chk('rr-marketData-ir',        REPORT_DEFAULTS.sections.marketData.interestRates),
+        creditSpreads: chk('rr-marketData-cs',        REPORT_DEFAULTS.sections.marketData.creditSpreads),
       },
 
+      // 🆕 HIER: Historic-Section
       historic: {
-        enabled: d.sections?.historic?.enabled ?? true,
+        // Checkbox mit id="rr-historic-enabled"
+        enabled: chk(
+          'rr-historic-enabled',
+          (REPORT_DEFAULTS.sections.historic && REPORT_DEFAULTS.sections.historic.enabled) ?? true
+        ),
       },
 
-      appendixProducts: d.sections?.appendixProducts ?? false,
+      appendixProducts: chk('rr-appendixProducts', REPORT_DEFAULTS.sections.appendixProducts),
     },
-    fileName:    d.fileName    || 'Risk.pdf',
-    paper:       d.paper       || 'A4',
-    orientation: d.orientation || 'p',
+    fileName:    val('rr-filename',    REPORT_DEFAULTS.fileName),
+    paper:       val('rr-paper',       REPORT_DEFAULTS.paper),
+    orientation: val('rr-orientation', REPORT_DEFAULTS.orientation),
   };
 }
-
 
 
 
@@ -654,7 +534,7 @@ function safeThumb(id, label, w = 160) {
 
 
 
-
+//RENDER:
 function isVisible(el) {
   if (!el) return false;
   if (el.hidden) return false;
@@ -663,12 +543,12 @@ function isVisible(el) {
 }
 
 
-//RENDER:========================================================================================================RENDER
+
 function renderRiskPreview() {
   // Mehrfach-Render verhindern
   if (typeof __riskRendering !== 'undefined' && __riskRendering) return;
 
-  const wrap  = document.getElementById('reportsRiskPreview');
+  const wrap = document.getElementById('reportsRiskPreview');
   if (!wrap) return;
 
   const panel = document.getElementById('panel-reports-risk');
@@ -676,76 +556,73 @@ function renderRiskPreview() {
 
   __riskRendering = true;
   try {
-    // Thumbnail-Cache leeren, damit wir IMMER den aktuellen Chart-Stand sehen
+    // 🔹 NEU: Thumbnail-Cache leeren, damit wir IMMER den aktuellen Chart-Stand sehen
     try {
       if (typeof clearThumbCache === 'function') clearThumbCache();
     } catch (e) {
       console.warn('[RiskPreview] clearThumbCache failed', e);
     }
 
-    const opts       = getRiskReportOptions() || {};
-    const secOpts    = opts.sections || {};
-    const chartState = (typeof loadChartToggleState === 'function')
-      ? loadChartToggleState()
-      : {};
+    const opts = getRiskReportOptions();
 
-    // ───────── Thumbnails je Bereich ─────────
+    // Alle Thumbnails an einer Stelle definieren
     const thumbsFor = {
-      breakdown: () =>
-        canvasThumbsBreakdown(12),
+      breakdown: () => canvasThumbsBreakdown(12),
 
-      performance: () =>
-        (SECTION_CHARTS.performance || [])
-          .filter(ch => isChartEnabled('performance', ch.key, chartState))
-          .map(ch => safeThumb(ch.id, ch.label))
-          .filter(Boolean),
+      // PERFORMANCE-BEREICH – exakt deine 4 Charts aus panel-performance
+      performance: () => [
+        safeThumb('euswapPortfolioYieldChart',   'EUSWAP Portfolio Yield'),
+        safeThumb('euswapProductYieldChart',     'EUSWAP Product Yield'),
+        safeThumb('durationSwapChart',           'Duration Swap'),
+        safeThumb('durationProductYieldChart',   'Duration Product Yield'),
+      ].filter(Boolean),
 
-      marketRiskBase: () =>
-        (SECTION_CHARTS.marketRisk || [])
-          .filter(ch => isChartEnabled('marketRisk', ch.key, chartState))
-          .map(ch => canvasThumb(ch.id))
-          .filter(Boolean),
+      // MARKET RISK – Basis (ohne historische Liniencharts, die kommen im "historic"-Block)
+      marketRiskBase: () => [
+        canvasThumb('tsEU1YChart'),
+        canvasThumb('plMvarDistChart'),
+        // canvasThumb('historicMarketRiskChart'), // Historic Market Risk → im "historic"-Block
+      ].filter(Boolean),
 
-      creditRiskBase: () =>
-        (SECTION_CHARTS.creditRisk || [])
-          .filter(ch => isChartEnabled('creditRisk', ch.key, chartState))
-          .map(ch => canvasThumb(ch.id))
-          .filter(Boolean),
+      // SENSITIVITIES – historischer Sensitivities-Chart
+      sensitivities: () => [
+        // canvasThumb('historicPortfolioSensChart'), // wird zusätzlich im "historic"-Block gezeigt
+      ].filter(Boolean),
 
-      liquidity: () =>
-        (SECTION_CHARTS.liquidity || [])
-          .filter(ch => isChartEnabled('liquidity', ch.key, chartState))
-          .map(ch => canvasThumb(ch.id))
-          .filter(Boolean),
+      // CREDIT RISK – Basis (ohne historischen Credit-Risk-Chart)
+      creditRiskBase: () => [
+        canvasThumb('LossIssuerCombinedChart'),
+        canvasThumb('LossIssuerCombinedESChart'),
+        // canvasThumb('historicCreditRiskChart'), // Historic Credit Risk → im "historic"-Block
+      ].filter(Boolean),
 
-      historic: () =>
-        (SECTION_CHARTS.historic || [])
-          .filter(ch => isChartEnabled('historic', ch.key, chartState))
-          .map(ch => safeThumb(ch.id, ch.label))
-          .filter(Boolean),
+      // MARKET DATA – Interest Rates / Credit Spreads
+      mdIR: () => [
+        safeThumb('IRLineChart', 'Interest Rates'),
+      ].filter(Boolean),
 
-      mdIR: () =>
-        (SECTION_CHARTS.marketData || [])
-          .filter(ch => ch.key === 'mdIR' && isChartEnabled('marketData', ch.key, chartState))
-          .map(ch => safeThumb(ch.id, ch.label))
-          .filter(Boolean),
+      mdCS: () => [
+        safeThumb('CS_ChartCanvas', 'Credit Spreads'),
+      ].filter(Boolean),
 
-      mdCS: () =>
-        (SECTION_CHARTS.marketData || [])
-          .filter(ch => ch.key === 'mdCS' && isChartEnabled('marketData', ch.key, chartState))
-          .map(ch => safeThumb(ch.id, ch.label))
-          .filter(Boolean),
+      liquidity: () => [canvasThumb('liquChart')].filter(Boolean),
+
+      // 🔹 Sammel-Block für die historischen Charts (eigene Sektion)
+      historic: () => [
+        safeThumb('historicPortfolioYieldChart',     'Performance History'),
+        safeThumb('historicPortfolioValueChart',   'Portfolio Value (Historic)'),
+        safeThumb('historicPortfolioSensChart',    'Historical Sensitivities'),
+        safeThumb('historicMarketRiskChart',      'Market Risk – Historic'),
+        safeThumb('historicCreditRiskChart',    'Credit Risk – Historic'),
+      ].filter(Boolean),
     };
 
-    // ───────── Labels "Sections included" ─────────
+    // Labels für "Sections included"
     const enabledLabels = [];
-    if (secOpts.portfolioBreakdown) enabledLabels.push('Portfolio Breakdown');
-    if (secOpts.performance)        enabledLabels.push('Performance');
+    if (opts.sections.portfolioBreakdown) enabledLabels.push('Portfolio Breakdown');
+    if (opts.sections.performance)        enabledLabels.push('Performance');
 
-    const mr  = secOpts.marketRisk;
-    const cr  = secOpts.creditRisk;
-    const hist = secOpts.historic;
-
+    const mr = opts.sections.marketRisk;
     if (mr?.enabled) {
       const parts = [];
       if (mr.details)       parts.push('Details');
@@ -753,209 +630,157 @@ function renderRiskPreview() {
       enabledLabels.push(`Market Risk${parts.length ? ' (' + parts.join(', ') + ')' : ''}`);
     }
 
+    const cr = opts.sections.creditRisk;
     if (cr?.enabled) {
       enabledLabels.push('Credit Risk' + (cr.details ? ' (Details)' : ''));
     }
 
-    if (secOpts.liquidity?.enabled) {
-      enabledLabels.push('Liquidity');
-    }
-
-    if (hist?.enabled) {
-      enabledLabels.push('Historic Performance & Risk');
-    }
-
-    if (secOpts.marketData?.enabled) {
+    if (opts.sections.marketData?.enabled) {
       const mdParts = [];
-      if (secOpts.marketData.interestRates)  mdParts.push('Interest Rates');
-      if (secOpts.marketData.creditSpreads)  mdParts.push('Credit Spreads');
+      if (opts.sections.marketData.interestRates) mdParts.push('Interest Rates');
+      if (opts.sections.marketData.creditSpreads) mdParts.push('Credit Spreads');
       enabledLabels.push(`Market Data${mdParts.length ? ` (${mdParts.join(', ')})` : ''}`);
     }
 
-    if (secOpts.appendixProducts) {
+    if (opts.sections.appendixProducts) {
       enabledLabels.push('Appendix: Products');
     }
 
-    // ───────── Sections für Preview sammeln ─────────
+    // Sections für die Preview sammeln
     const sections = [];
 
     // Portfolio Breakdown
-    if (secOpts.portfolioBreakdown) {
+    if (opts.sections.portfolioBreakdown) {
+      const bdControlsHTML = buildBreakdownControlsHTML();
       sections.push({
         title: 'Portfolio Breakdown',
         thumbs: thumbsFor.breakdown(),
-        extraHTML: buildBreakdownControlsHTML(),
+        extraHTML: bdControlsHTML,
       });
     }
 
     // Performance
-    if (secOpts.performance) {
+    if (opts.sections.performance) {
       sections.push({
         title: 'Performance',
         thumbs: thumbsFor.performance(),
-        extraHTML: buildSectionChartControlsHTML('performance', chartState),
       });
     }
 
+    // Market Risk (Basis + Details + Sensitivities)
+    if (mr?.enabled) {
+      // 1) Basis: Inputs + Basis-Thumbnails
+      sections.push({
+        title: 'Market Risk',
+        thumbs: thumbsFor.marketRiskBase(),
+        extraHTML: marketRiskInputsPreviewHTML(),
+      });
 
-// ───── Market Risk (Basis + Detail + Sensitivities) ─────
-if (mr?.enabled) {
-  // Basis-Block bleibt wie gehabt
-  sections.push({
-    title: 'Market Risk',
-    thumbs: thumbsFor.marketRiskBase(),
-    extraHTML:
-      buildSectionChartControlsHTML('marketRisk',   chartState) +  // TimeSeries + Dist
-      buildSectionChartControlsHTML('mvarInputs',   chartState) +  // Input, Summary, Traffic
-      marketRiskInputsPreviewHTML(chartState),
-  });
+      // 2) Detail-Sektion
+      if (mr.details) {
+        sections.push({
+          title: 'Market Risk — Detail',
+          thumbs: [],
+          extraHTML: marketRiskDetailHTML({ heading: false }),
+        });
+      }
 
-  // Market Risk — Detail (MVaR Chart + Tabellen mit Checkboxen)
-  if (mr.details) {
-    const mvarChartOn = isChartEnabled('marketRiskDetail', 'mvarMain', chartState);
-    const mvarThumb   = mvarChartOn ? canvasThumb('MVaRChart', 180) : '';
-
-    const detailHTML = `
-      <!-- Checkbox für MVaR-Chart -->
-      ${buildSectionChartControlsHTML('marketRiskDetail', chartState)}
-
-      ${mvarThumb ? `
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;opacity:.75;margin-bottom:4px">MVaR Chart</div>
-          ${mvarThumb}
-        </div>` : ''}
-
-      <!-- Checkboxen für die 3 Tabellen -->
-      ${buildSectionChartControlsHTML('mvarTables', chartState)}
-
-      <!-- Tabellen Total / IR / CS -->
-      ${mvarDetailPreviewHTML(chartState)}
-    `;
-
-    sections.push({
-      title: 'Market Risk — Detail',
-      thumbs: [],          // wichtig: keine separaten Thumbnails mehr
-      extraHTML: detailHTML,
-    });
-  }
-
-  // Sensitivities — PV01 / CPV01 (so wie du es zuletzt hattest)
-if (mr.sensitivities) {
-  sections.push({
-    title: 'Sensitivities — Detail',
-    thumbs: [],
-    extraHTML:
-      buildSectionChartControlsHTML('sensitivities', chartState) +   // Chart-Checkboxen
-      buildSectionChartControlsHTML('sensTables', chartState) +      // Tabellen-Checkboxen
-      sensitivitiesDetailHTML({ heading: false, chartState }),
-  });
-}
-
-}
-
-// ... darunter geht dein renderRiskPreview normal weiter (Credit Risk, Liquidity, Historic, Market Data usw.)
+      // 3) Sensitivities mit Thumbnails
+      if (mr.sensitivities) {
+        sections.push({
+          title: 'Sensitivities — Detail',
+          thumbs: thumbsFor.sensitivities(),
+          extraHTML: sensitivitiesDetailHTML({ heading: false }),
+        });
+      }
+    }
 
     // Credit Risk
     if (cr?.enabled) {
       sections.push({
         title: 'Credit Risk',
         thumbs: thumbsFor.creditRiskBase(),
-        extraHTML: buildSectionChartControlsHTML('creditRisk', chartState),
       });
 
-// Credit Risk — Details (LGD + LossIssuer-Charts + Tables)
-if (cr.details) {
-  sections.push({
-    title: 'Credit Risk — Details',
-    thumbs: [],
-    extraHTML:
-      buildSectionChartControlsHTML('creditRiskDetail', chartState) +   // Chart-Checkboxen
-      buildSectionChartControlsHTML('creditTopTables', chartState) +    // Top-Tabellen
-      buildSectionChartControlsHTML('creditLossTables', chartState) +   // Loss/EAD-Tabellen
-      creditRiskDetailsPreviewHTML(chartState),
-  });
-}
-
-
+      if (cr.details) {
+        sections.push({
+          title: 'Credit Risk — Details',
+          thumbs: [],
+          extraHTML: creditRiskDetailsPreviewHTML(),
+        });
+      }
     }
 
     // Liquidity
-    if (secOpts.liquidity?.enabled) {
+    if (opts.sections.liquidity?.enabled) {
       const liquHasAny =
         document.getElementById('liquChart') ||
         document.querySelector('#liquDataContainer table') ||
         document.querySelector('#issuerDataContainerLiqu table');
 
-if (liquHasAny) {
-  sections.push({
-    title: 'Liquidity',
-    thumbs: thumbsFor.liquidity(),
-    extraHTML:
-      buildSectionChartControlsHTML('liquidity', chartState) +          // Chart-Checkbox
-      buildSectionChartControlsHTML('liquidityTables', chartState) +    // Tabellen-Checkboxen
-      liquidityPreviewHTML(chartState),
-  });
-}
-
-    }
-
-    // Historic Performance & Risk
-    if (hist?.enabled) {
-      const histThumbs = thumbsFor.historic();
-      if (histThumbs && histThumbs.length) {
+      if (liquHasAny) {
         sections.push({
-          title: 'Historic Performance & Risk',
-          thumbs: histThumbs,
-          extraHTML: buildSectionChartControlsHTML('historic', chartState),
+          title: 'Liquidity',
+          thumbs: thumbsFor.liquidity(),
+          extraHTML: liquidityPreviewHTML(),
         });
       }
+    }
+
+    // 🔹 Historische Charts – direkt NACH Liquidity
+    const histThumbs = thumbsFor.historic();
+    if (histThumbs && histThumbs.length) {
+      sections.push({
+        title: 'Historic Performance & Risk',
+        thumbs: histThumbs,
+      });
     }
 
     // Market Data
-    if (secOpts.marketData?.enabled) {
-      if (secOpts.marketData.interestRates) {
+    if (opts.sections.marketData?.enabled) {
+      if (opts.sections.marketData.interestRates) {
         sections.push({
           title: 'Market Data — Interest Rates',
           thumbs: thumbsFor.mdIR(),
-          extraHTML: buildSectionChartControlsHTML('marketData', chartState, ['mdIR']),
         });
       }
-      if (secOpts.marketData.creditSpreads) {
+      if (opts.sections.marketData.creditSpreads) {
         sections.push({
           title: 'Market Data — Credit Spreads',
           thumbs: thumbsFor.mdCS(),
-          extraHTML: buildSectionChartControlsHTML('marketData', chartState, ['mdCS']),
         });
       }
     }
 
-    // ───────── HTML-Blöcke erzeugen ─────────
-    const sectionBlocks = sections.map((sec) => {
-      const hasThumbs  = Array.isArray(sec.thumbs) && sec.thumbs.length > 0;
-      const thumbsHTML = hasThumbs
-        ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${sec.thumbs.join('')}</div>`
-        : '';
-      const extra   = sec.extraHTML ? sec.extraHTML : '';
-      const content = `${extra}${thumbsHTML}`;
+    // HTML-Blöcke pro Section bauen
+    const sectionBlocks = sections
+      .map((sec) => {
+        const hasThumbs = Array.isArray(sec.thumbs) && sec.thumbs.length > 0;
+        const thumbsHTML = hasThumbs
+          ? `<div style="display:flex;flex-wrap:wrap;gap:8px">${sec.thumbs.join('')}</div>`
+          : '';
+        const extra = sec.extraHTML ? `${sec.extraHTML}` : '';
+        const content = `${extra || ''}${thumbsHTML}`;
 
-      return `
-        <div style="margin:12px 0 10px">
-          <div style="font-weight:600;margin:0 0 6px">${sec.title}</div>
-          ${content}
-        </div>
-      `;
-    }).join('');
+        return `
+          <div style="margin:12px 0 10px">
+            <div style="font-weight:600;margin:0 0 6px">${sec.title}</div>
+            ${content}
+          </div>
+        `;
+      })
+      .join('');
 
-    // ───────── Gesamt-Preview schreiben ─────────
+    // Gesamt-Preview in Wrap schreiben
     wrap.innerHTML = `
       <div style="padding:10px">
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
           <span style="opacity:.8">TOC:</span>
           <strong>${opts.includeTOC ? 'On' : 'Off'}</strong>
           <span style="opacity:.8;margin-left:12px">Format:</span>
-          <code>${(opts.paper || 'A4').toUpperCase()} / ${opts.orientation === 'l' ? 'Landscape' : 'Portrait'}</code>
+          <code>${opts.paper.toUpperCase()} / ${opts.orientation === 'l' ? 'Landscape' : 'Portrait'}</code>
           <span style="opacity:.8;margin-left:12px">File:</span>
-          <code>${opts.fileName || 'Risk.pdf'}</code>
+          <code>${opts.fileName}</code>
         </div>
 
         <div style="margin-bottom:8px">
@@ -969,34 +794,16 @@ if (liquHasAny) {
       </div>
     `;
 
-    // ───────── NUR im Preview den großen MVaR-Chart entfernen ─────────
-    try {
-      const bigCanvas = wrap.querySelector('canvas#MVaRChart');
-      if (bigCanvas) {
-        // Versuche, die gesamte Chart-Card zu entfernen
-        const card = bigCanvas.closest('.mvar-right, .table-card, section, div');
-        if (card && card.parentElement) {
-          card.parentElement.removeChild(card);
-        } else {
-          bigCanvas.remove();
-        }
-      }
-    } catch (e) {
-      console.warn('[RiskPreview] failed to remove big MVaR chart', e);
-    }
-
     try {
       wireBreakdownControlsOnce();
-      if (typeof wireChartControlsOnce === 'function') wireChartControlsOnce();
     } catch (e) {
       console.error(e);
     }
   } finally {
-    __lastRenderTs  = Date.now();
+    __lastRenderTs = Date.now();
     __riskRendering = false;
   }
 }
-
 
 
 
@@ -1104,6 +911,9 @@ __riskControlsMO.observe(panel, { childList: true, subtree: true });
 
   } catch {}
 
+  // --- 5) Initial erzwingen ---
+  kick();
+  try { mountBreakdownControlsInReportOptions(); } catch {}
 
 }
 
@@ -1247,123 +1057,44 @@ function miniTableFromContainer(
 
 
 // ───────── Market-Risk_INPUT – ─────────
-// ───────── Market-Risk_INPUT – Preview (Input-Tabelle, Summary, Traffic Light) ─────────
-function marketRiskInputsPreviewHTML(chartState = {}) {
-  const cs = chartState || {};
+function marketRiskInputsPreviewHTML() {
+  // Tabellen aus dem DOM ziehen
+  const inputsMini  = miniTbl('inputMVaRContainer', { maxRows: 8, maxCols: 8, maxWidth: 520 });
+  const summaryMini = miniTbl('MVaRDataContainer0',  { maxRows: 10, maxCols: 4, maxWidth: 300 })
+                   || miniTbl('MVaRDataContainer',   { maxRows: 10, maxCols: 4, maxWidth: 300 });
 
-  // Checkbox-States
-  const showInput   = isChartEnabled('mvarInputs', 'input',   cs);
-  const showSummary = isChartEnabled('mvarInputs', 'summary', cs);
-  const showTraffic = isChartEnabled('mvarInputs', 'traffic', cs);
-
-  // 1) Input-Tabelle
-  const inputsMini = showInput && typeof miniTbl === 'function'
-    ? miniTbl('inputMVaRContainer', { maxRows: 8, maxCols: 8, maxWidth: 520 })
-    : '';
-
-  // 2) Summary-Tabelle (MVaR / ES)
-  const summaryMini = showSummary && typeof miniTbl === 'function'
-    ? (miniTbl('MVaRDataContainer0', { maxRows: 10, maxCols: 4, maxWidth: 300 })
-       || miniTbl('MVaRDataContainer', { maxRows: 10, maxCols: 4, maxWidth: 300 }))
-    : '';
-
-  // 3) Traffic Light (klein kopieren, IDs entfernen)
-  let trafficMini = '';
-  if (showTraffic) {
-    const trafficEl = document.getElementById('traffic-mvar');
-    if (trafficEl) {
-      try {
-        // OuterHTML kopieren und alle id-Attribute entfernen, damit es keine Konflikte gibt
-        const raw  = trafficEl.outerHTML;
-        const safe = raw.replace(/\sid="[^"]+"/g, '');
-        trafficMini = `
-          <div style="margin-top:4px">
-            <div style="font-size:11px;opacity:.7;margin-bottom:4px">VaR Traffic Light</div>
-            <div style="transform:scale(0.85);transform-origin:top left;">
-              ${safe}
-            </div>
-          </div>
-        `;
-      } catch (e) {
-        console.warn('[marketRiskInputsPreviewHTML] traffic light clone failed', e);
-      }
-    }
-  }
-
-  // Wenn gar nichts zu zeigen ist → leer
-  if (!inputsMini && !summaryMini && !trafficMini) return '';
+  // Wenn gar nichts da ist → nichts rendern
+  if (!inputsMini && !summaryMini) return '';
 
   return `
     <div style="margin:6px 0 10px">
       <div style="font-weight:600;opacity:.9;margin:0 0 6px">Market Risk — Parameters & Summary</div>
-
       <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start">
-        ${inputsMini ? `
-          <div>
-            <div style="font-size:11px;opacity:.7;margin-bottom:4px">Scenario Selection</div>
-            ${inputsMini}
-          </div>` : ''}
-
-        ${(summaryMini || trafficMini) ? `
-          <div>
-            ${summaryMini ? `
-              <div style="font-size:11px;opacity:.7;margin-bottom:4px">VaR / ES Summary</div>
-              ${summaryMini}` : ''}
-
-            ${trafficMini ? `
-              <div style="margin-top:${summaryMini ? '10px' : '0'};">
-                ${trafficMini}
-              </div>` : ''}
-          </div>` : ''}
+        ${inputsMini  ? `<div><div style="font-size:11px;opacity:.7;margin-bottom:4px">Scenario Selection</div>${inputsMini}</div>` : ''}
+        ${summaryMini ? `<div><div style="font-size:11px;opacity:.7;margin-bottom:4px">VaR / ES Summary</div>${summaryMini}</div>` : ''}
       </div>
     </div>
   `;
 }
 
-// ───────── Market-Risk – Detail-Tabellen (Total / IR / CS) ─────────
-function mvarDetailPreviewHTML(chartState = {}) {
-  const cs = chartState || {};
+// ───────── Market-Risk – Detailblock (MVaR-Chart + Tabelle) ─────────
+function marketRiskDetailHTML(opts = {}) {
+  const withHeading = opts.heading !== false; // default: true
 
-  const showTotal = isChartEnabled('mvarTables', 'total', cs);
-  const showIR    = isChartEnabled('mvarTables', 'ir',    cs);
-  const showCS    = isChartEnabled('mvarTables', 'cs',    cs);
+  const chartId = document.getElementById('MVaRChart') ? 'MVaRChart' : 'MVaRChart0';
+  const tableId = document.getElementById('MVaRDataContainer') ? 'MVaRDataContainer' : 'MVaRDataContainer0';
 
-  const totalMini = showTotal
-    ? miniTbl('MVaRTotalContainer', { maxRows: 8, maxCols: 10, maxWidth: 380 })
-    : '';
+  const chartImg  = chartId ? canvasThumb(chartId, 220) : '';
+  const tableMini = tableId ? miniTbl(tableId, { maxRows: 8, maxCols: 8, maxWidth: 360 }) : '';
 
-  const irMini = showIR
-    ? miniTbl('MVaRIRContainer', { maxRows: 8, maxCols: 10, maxWidth: 380 })
-    : '';
-
-  const csMini = showCS
-    ? miniTbl('MVaRCSContainer', { maxRows: 8, maxCols: 10, maxWidth: 380 })
-    : '';
-
-  if (!totalMini && !irMini && !csMini) return '';
+  if (!chartImg && !tableMini) return '';
 
   return `
     <div style="margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,.15);">
-      <div style="font-weight:600; opacity:.9; margin:0 0 8px">Market VaR Tables</div>
-
-      <div style="display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
-        ${totalMini ? `
-          <div>
-            <div style="font-size:11px;opacity:.75;margin-bottom:4px">Total (T)</div>
-            ${totalMini}
-          </div>` : ''}
-
-        ${irMini ? `
-          <div>
-            <div style="font-size:11px;opacity:.75;margin-bottom:4px">Interest Rate (IR)</div>
-            ${irMini}
-          </div>` : ''}
-
-        ${csMini ? `
-          <div>
-            <div style="font-size:11px;opacity:.75;margin-bottom:4px">Credit Spread (CS)</div>
-            ${csMini}
-          </div>` : ''}
+      ${withHeading ? `<div style="font-weight:600; opacity:.9; margin:0 0 8px">Market Risk — Detail</div>` : ''}
+      <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+        ${chartImg ? `<div>${chartImg}</div>` : ''}
+        ${tableMini ? `<div style="flex:1 1 360px; min-width:280px;">${tableMini}</div>` : ''}
       </div>
     </div>
   `;
@@ -1372,58 +1103,31 @@ function mvarDetailPreviewHTML(chartState = {}) {
 // ───────── Sensitivities (PV01/CPV01) – Charts + Tabellen ─────────
 function sensitivitiesDetailHTML(opts = {}) {
   const withHeading = opts.heading !== false; // default: true
-  const state       = opts.chartState || {};
 
-  // Chart-Toggles (Alt-Varianten)
-  const pvEnabled  = isChartEnabled('sensitivities', 'pv01a',  state);
-  const cpvEnabled = isChartEnabled('sensitivities', 'cpv01a', state);
+  const pvChartId  = document.getElementById('PV01Chart')  ? 'PV01Chart'  : (document.getElementById('PV01Chart0')  ? 'PV01Chart0'  : '');
+  const cpvChartId = document.getElementById('CPV01Chart') ? 'CPV01Chart' : (document.getElementById('CPV01Chart0') ? 'CPV01Chart0' : '');
+  const pvImg  = pvChartId  ? canvasThumb(pvChartId, 220)  : '';
+  const cpvImg = cpvChartId ? canvasThumb(cpvChartId, 220) : '';
 
-  // Tabellen-Toggles
-  const irTblEnabled = isChartEnabled('sensTables', 'ir', state);
-  const csTblEnabled = isChartEnabled('sensTables', 'cs', state);
+  const irTableId = document.getElementById('IRSensDataContainer') ? 'IRSensDataContainer'
+                    : (document.getElementById('IRSensDataContainer0') ? 'IRSensDataContainer0' : '');
+  const crTableId = document.getElementById('CRSensDataContainer') ? 'CRSensDataContainer'
+                    : (document.getElementById('CRSensDataContainer0') ? 'CRSensDataContainer0' : '');
 
-  // Alt-Chart-IDs (0er-Variante bevorzugt)
-  const pvChartId  = document.getElementById('PV01Chart0')
-    ? 'PV01Chart0'
-    : (document.getElementById('PV01Chart') ? 'PV01Chart' : '');
-
-  const cpvChartId = document.getElementById('CPV01Chart0')
-    ? 'CPV01Chart0'
-    : (document.getElementById('CPV01Chart') ? 'CPV01Chart' : '');
-
-  // Thumbnails nur, wenn Chart existiert + Checkbox aktiv
-  const pvImg  = (pvEnabled  && pvChartId)  ? canvasThumb(pvChartId, 220)  : '';
-  const cpvImg = (cpvEnabled && cpvChartId) ? canvasThumb(cpvChartId, 220) : '';
-
-  // Tabellen-Container (IR / Credit Spread)
-  const irTableId = document.getElementById('IRSensDataContainer')
-    ? 'IRSensDataContainer'
-    : (document.getElementById('IRSensDataContainer0') ? 'IRSensDataContainer0' : '');
-
-  const crTableId = document.getElementById('CRSensDataContainer')
-    ? 'CRSensDataContainer'
-    : (document.getElementById('CRSensDataContainer0') ? 'CRSensDataContainer0' : '');
-
-  const irMini = irTableId && irTblEnabled && typeof miniTbl === 'function'
-    ? miniTbl(irTableId, { maxRows: 8, maxCols: 10, maxWidth: 380 })
-    : '';
-
-  const crMini = crTableId && csTblEnabled && typeof miniTbl === 'function'
-    ? miniTbl(crTableId, { maxRows: 8, maxCols: 10, maxWidth: 380 })
-    : '';
+  // kompakte Tabellen mit globalen Defaults + leicht größerer Breite
+  const irMini = irTableId ? miniTbl(irTableId, { maxRows: 8, maxCols: 10, maxWidth: 380 }) : '';
+  const crMini = crTableId ? miniTbl(crTableId, { maxRows: 8, maxCols: 10, maxWidth: 380 }) : '';
 
   if (!pvImg && !cpvImg && !irMini && !crMini) return '';
 
   return `
     <div style="margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,.15);">
-      ${withHeading
-        ? `<div style="font-weight:600; opacity:.9; margin:0 0 8px">Sensitivities — Detail</div>`
-        : ''}
+      ${withHeading ? `<div style="font-weight:600; opacity:.9; margin:0 0 8px">Sensitivities — Detail</div>` : ''}
 
       ${(pvImg || cpvImg) ? `
       <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:10px;">
-        ${pvImg  ? `<div><div style="font-size:11px;opacity:.75;margin-bottom:4px">PV01 (Alt)</div>${pvImg}</div>` : ''}
-        ${cpvImg ? `<div><div style="font-size:11px;opacity:.75;margin-bottom:4px">CPV01 (Alt)</div>${cpvImg}</div>` : ''}
+        ${pvImg  ? `<div><div style="font-size:11px;opacity:.75;margin-bottom:4px">PV01</div>${pvImg}</div>` : ''}
+        ${cpvImg ? `<div><div style="font-size:11px;opacity:.75;margin-bottom:4px">CPV01</div>${cpvImg}</div>` : ''}
       </div>` : ''}
 
       ${(irMini || crMini) ? `
@@ -1436,62 +1140,24 @@ function sensitivitiesDetailHTML(opts = {}) {
 }
 
 // ───────── Credit Risk – Detail-Panel (Top-Metriken, Charts, Tabellen) ─────────
-function creditRiskDetailsPreviewHTML(chartState = {}) {
-  const cs = chartState || {};
+function creditRiskDetailsPreviewHTML() {
+  // Top-Metriken (klein & grid)
+  const topRating = miniTbl('CVaR_ratingDataContainer', { maxRows: 8, maxCols: 8, maxWidth: 300 });
+  const topMarket = miniTbl('CVaR_marketDataContainer', { maxRows: 8, maxCols: 8, maxWidth: 300 });
+  const topNorm   = miniTbl('CVaR_normDataContainer',   { maxRows: 8, maxCols: 8, maxWidth: 300 });
 
-  // === Tabellen-Toggles Top-Metriken ===
-  const topRatingOn = isChartEnabled('creditTopTables', 'topRating', cs);
-  const topMarketOn = isChartEnabled('creditTopTables', 'topMarket', cs);
-  const topNormOn   = isChartEnabled('creditTopTables', 'topNorm',   cs);
+  // Tabellen (EAD & Loss Issuer Varianten)
+  const eadTbl = miniTbl('EADDataContainer', { maxRows: 10, maxCols: 12, maxWidth: 360 });
+  const liR    = miniTbl('LossIssuerDataContainerRating',     { maxRows: 10, maxCols: 12, maxWidth: 360 });
+  const liM    = miniTbl('LossIssuerDataContainerMarket',     { maxRows: 10, maxCols: 12, maxWidth: 360 });
+  const liN    = miniTbl('LossIssuerDataContainerMarketNorm', { maxRows: 10, maxCols: 12, maxWidth: 360 });
 
-  // === Tabellen-Toggles Loss/EAD ===
-  const eadOn   = isChartEnabled('creditLossTables', 'ead',    cs);
-  const liROn   = isChartEnabled('creditLossTables', 'liHist', cs);
-  const liMOn   = isChartEnabled('creditLossTables', 'liMkt',  cs);
-  const liNOn   = isChartEnabled('creditLossTables', 'liNorm', cs);
+  // Charts (als Thumbs)
+  const lgdImg = canvasThumb('LGDChart', 200);
+  const liRImg = canvasThumb('LossIssuerChartRating', 220);
+  const liMImg = canvasThumb('LossIssuerChartMarket', 220);
+  const liNImg = canvasThumb('LossIssuerChartMarketNorm', 220);
 
-  // === Top-Metriken (kleine Tabellen) ===
-  const topRating = topRatingOn
-    ? miniTbl('CVaR_ratingDataContainer', { maxRows: 8, maxCols: 8, maxWidth: 300 })
-    : '';
-
-  const topMarket = topMarketOn
-    ? miniTbl('CVaR_marketDataContainer', { maxRows: 8, maxCols: 8, maxWidth: 300 })
-    : '';
-
-  const topNorm   = topNormOn
-    ? miniTbl('CVaR_normDataContainer',   { maxRows: 8, maxCols: 8, maxWidth: 300 })
-    : '';
-
-  // === Tabellen (EAD & Loss Issuer Varianten) ===
-  const eadTbl = eadOn
-    ? miniTbl('EADDataContainer', { maxRows: 10, maxCols: 12, maxWidth: 360 })
-    : '';
-
-  const liR    = liROn
-    ? miniTbl('LossIssuerDataContainerRating',     { maxRows: 10, maxCols: 12, maxWidth: 360 })
-    : '';
-
-  const liM    = liMOn
-    ? miniTbl('LossIssuerDataContainerMarket',     { maxRows: 10, maxCols: 12, maxWidth: 360 })
-    : '';
-
-  const liN    = liNOn
-    ? miniTbl('LossIssuerDataContainerMarketNorm', { maxRows: 10, maxCols: 12, maxWidth: 360 })
-    : '';
-
-  // === Charts (als Thumbs) – nur wenn Checkbox aktiv ===
-  const lgdEnabled = isChartEnabled('creditRiskDetail', 'lgd',      cs);
-  const liREnabled = isChartEnabled('creditRiskDetail', 'lossHist', cs);
-  const liMEnabled = isChartEnabled('creditRiskDetail', 'lossMkt',  cs);
-  const liNEnabled = isChartEnabled('creditRiskDetail', 'lossNorm', cs);
-
-  const lgdImg = lgdEnabled ? canvasThumb('LGDChart', 180) : '';
-  const liRImg = liREnabled ? canvasThumb('LossIssuerChartRating', 200) : '';
-  const liMImg = liMEnabled ? canvasThumb('LossIssuerChartMarket', 200) : '';
-  const liNImg = liNEnabled ? canvasThumb('LossIssuerChartMarketNorm', 200) : '';
-
-  // === Blöcke zusammenbauen ===
   const topBlock = (topRating || topMarket || topNorm) ? `
     <div style="margin-top:8px">
       <div style="font-weight:600;opacity:.9;margin:0 0 6px">Credit Metrics (Top)</div>
@@ -1525,26 +1191,16 @@ function creditRiskDetailsPreviewHTML(chartState = {}) {
     </div>` : '';
 
   const nothing = (!topBlock && !chartsBlock && !tablesBlock)
-    ? `<div style="opacity:.65">No Credit-Risk details found (yet).</div>`
-    : '';
+    ? `<div style="opacity:.65">No Credit-Risk details found (yet).</div>` : '';
 
   return `${topBlock}${chartsBlock}${tablesBlock}${nothing}`;
 }
 
 // ───────── Liquidity (Top-Metriken, Charts, Tabellen) ─────────
-function liquidityPreviewHTML(chartState = {}) {
-  const cs = chartState || {};
-
-  const showMatCat  = isChartEnabled('liquidityTables', 'matCat',  cs);
-  const showIssuers = isChartEnabled('liquidityTables', 'issuers', cs);
-
-  const matxCat = showMatCat
-    ? miniTbl('liquDataContainer', { maxRows: 10, maxCols: 10, maxWidth: 380 })
-    : '';
-
-  const issuers = showIssuers
-    ? miniTbl('issuerDataContainerLiqu', { maxRows: 10, maxCols: 10, maxWidth: 380 })
-    : '';
+function liquidityPreviewHTML() {
+  // kompakte Tabellen aus den bestehenden Containern
+  const matxCat = miniTbl('liquDataContainer', { maxRows: 10, maxCols: 10, maxWidth: 380 });
+  const issuers = miniTbl('issuerDataContainerLiqu', { maxRows: 10, maxCols: 10, maxWidth: 380 });
 
   if (!matxCat && !issuers) return ''; // nichts zu zeigen
 
@@ -1559,11 +1215,10 @@ function liquidityPreviewHTML(chartState = {}) {
 }
 
 
-
 // RiskPDFPreview.js
 document.addEventListener('reports:enter', () => {
   try { wireRiskPreview(); } catch (e) { console.error(e); }
-  
+  try { mountBreakdownControlsInReportOptions(); } catch {}
 });
 
 document.addEventListener('reports:leave', () => {
