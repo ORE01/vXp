@@ -2,11 +2,11 @@
 import { initLazyPanels, refreshOpenPanels as refreshCore } from "./lazyPanelsCore.js";
 
 import {
-  renderPortfolioHistoryYieldChart,
-  renderPortfolioValueChartLine,
-  renderMarketRiskChartLine,
-  renderPortfolioSensChartLine,
-  renderCreditMetricsChartLine,
+  renderHistoricPortfolioYieldChart,
+  renderHistoricPortfolioValueChart,
+  renderHistoricMarketRiskChart,
+  renderHistoricPortfolioSensChart,
+  renderHistoricCreditRiskChart,
 } from "./ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js";
 
 /**
@@ -15,11 +15,11 @@ import {
  */
 export function getPortfolioPanelRenderers() {
   return {
-    "PORTFOLIO_HISTORY_Modal": () => renderPortfolioHistoryYieldChart(),
-    "panel-portfolio-value": () => renderPortfolioValueChartLine(),
-    "panel-hist-sensitivities": () => renderPortfolioSensChartLine(),
-    "panel-market-risk": () => renderMarketRiskChartLine(),
-    "panel-credit-risk": () => renderCreditMetricsChartLine(),
+    "PORTFOLIO_HISTORY_Modal": () => renderHistoricPortfolioYieldChart(),
+    "panel-portfolio-value": () => renderHistoricPortfolioValueChart(),
+    "panel-hist-sensitivities": () => renderHistoricPortfolioSensChart(),
+    "panel-market-risk": () => renderHistoricMarketRiskChart(),
+    "panel-credit-risk": () => renderHistoricCreditRiskChart(),
   };
 }
 

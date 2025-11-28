@@ -7,18 +7,23 @@ export const REPORT_DEFAULTS = {
   includeTOC: true,
   sections: {
     portfolioBreakdown: { enabled: true, issuer: true, product: true, general: true },
-    performance:       true,
-    marketRisk:        { enabled: true, details: true, sensitivities: true },
-    creditRisk:        { enabled: true, details: true },       
-    liquidity:         { enabled: true },    
-    marketData:        { enabled: true, interestRates: true, creditSpreads: true },
-    
-    appendixProducts:  true,
+    performance:        true,
+    marketRisk:         { enabled: true, details: true, sensitivities: true },
+    creditRisk:         { enabled: true, details: true },
+    liquidity:          { enabled: true },
+
+    marketData:         { enabled: true, interestRates: true, creditSpreads: true },
+
+    // 🆕 Historic-Block – einfache Default-Config
+    historic:           { enabled: true },
+
+    appendixProducts:   true,
   },
   fileName: 'Risk.pdf',
   paper: 'a4',
   orientation: 'p',
 };
+
 
 // Zuordnung Spalte → Gruppe
 const BD_GROUP_OF = {
@@ -802,7 +807,7 @@ function drawMarketDataSection(doc, addTOCEntry, flags = { interestRates: true, 
     doc.text('Interest Rates', 14, y);
     y += 10;
 
-    const irCanvas = document.getElementById('IRlineChart');
+    const irCanvas = document.getElementById('IRLineChart');
     if (irCanvas) {
       const irImg = irCanvas.toDataURL('image/png');
       doc.addImage(irImg, 'PNG', 10, y, 180, 80);

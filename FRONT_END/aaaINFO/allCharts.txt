@@ -1,0 +1,67 @@
+📊 PERFORMANCE
+
+euswapPortfolioYieldChart
+euswapProductYieldChart
+durationSwapChart
+durationProductYieldChart
+
+📉 MARKET RISK
+
+tsEU1YChart
+plMvarDistChart
+MVaRChart
+
+📐 SENSITIVITIES
+
+PV01Chart
+CPV01Chart
+
+💳 CREDIT RISK (Distribution)
+
+LossIssuerCombinedChart
+LossIssuerCombinedESChart
+
+💳 CREDIT METRICS (EAD / LGD / PD / CVaR)
+
+LGDChart
+LossIssuerChartRating
+LossIssuerChartMarket
+LossIssuerChartMarketNorm
+
+💧 LIQUIDITY
+
+liquChart
+
+📈 HISTORIC PERFORMANCE
+
+historicPortfolioYieldChart
+historicPortfolioValueChart
+historicPortfolioSensChart
+historicMarketRiskChart
+historicCreditRiskChart
+
+📉 MARKET DATA
+Interest Rates
+
+IRLineChart
+
+Forward
+FWDlineChart
+FWDforwardCurveChart
+
+Credit Spreads
+CS_ChartCanvas
+
+Time Series
+TSlineChart
+
+🤖 MACHINE LEARNING
+
+MLTestDataChart
+MLFuturePredictionChart
+
+📊 EXPORT-CHARTS (für PDFs)
+
+IRlineChartExport
+ProductCurveExport
+euswapYieldChartExport
