@@ -1,5 +1,5 @@
-import processData from '../../../modal_HELPER/dataProcessor.js';
-import { handleFormAction } from '../../../modal_HELPER/FormButtonHandler.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 
 
 export function handleCSParameterData(receivedData) {
@@ -33,7 +33,7 @@ export function handleCSParameterData(receivedData) {
       const rowIndex = parseInt(button.getAttribute('data-row'), 10);
 
       // Use handleFormAction to handle add/edit logic
-      handleFormAction(event, CSPData, rowIndex, tableName, actionType);
+      handleModalAction(event, CSPData, rowIndex, tableName, actionType);
     });
   });
 
@@ -42,7 +42,7 @@ export function handleCSParameterData(receivedData) {
   csParameterAddButton.addEventListener('click', (event) => {
     const tableName = 'CSParameter';
     const actionType = 'add';
-    handleFormAction(event, CSPData, null, tableName, actionType); // Call handleFormAction for add
+    handleModalAction(event, CSPData, null, tableName, actionType); // Call handleFormAction for add
   });
 }
 

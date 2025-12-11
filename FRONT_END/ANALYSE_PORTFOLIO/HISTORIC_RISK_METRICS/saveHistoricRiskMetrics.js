@@ -1,4 +1,4 @@
-import { handleFormAction } from '../../../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 import { appState } from '../../renderer.js';
 
 function parseEuroString(str) {
@@ -403,7 +403,7 @@ const payload = {
 
     console.log("✏️ Edit existing HistoricMetric row:", mergedRow);
 
-    handleFormAction(
+    handleModalAction(
       event,
       dataForEdit,
       existingIndex,
@@ -417,7 +417,7 @@ const payload = {
 
     console.log("➕ Add new HistoricMetric row:", newRow);
 
-    handleFormAction(
+    handleModalAction(
       event,
       dataForAdd,
       null,

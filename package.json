@@ -40,6 +40,7 @@
     "lightweight-charts": "^4.2.0",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.1.91",
+    "plotly.js-dist-min": "^3.3.0",
     "scipy": "^0.1.4",
     "sqlite3": "^5.1.7",
     "xlsx": "^0.18.5"

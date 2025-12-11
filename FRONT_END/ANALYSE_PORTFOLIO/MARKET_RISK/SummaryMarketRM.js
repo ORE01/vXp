@@ -478,20 +478,21 @@ export function drawCMBChart(targetEndValue = 100, portPV01 = 1, testTtM = 5)  {
   const yMax = targetEndValue + ySpread / 2 + yPadding;
   const yMin = targetEndValue - ySpread / 2 - yPadding;
 
-  const cmbValueDataset = {
-    label: `Synthetic CMB (${testTtM}Y)`,
-    data: syntheticData,
-    borderColor: 'purple',
-    backgroundColor: 'rgba(128, 0, 128, 0.2)',
-    tension: 0.1,
-    pointRadius: 0
-  };
+const cmbValueDataset = {
+  label: `Synthetic CMB (${testTtM}Y)`,
+  data: syntheticData,
+  borderColor: 'rgba(45, 212, 191, 0.9)',       // neues Türkis-Grün
+  backgroundColor: 'rgba(45, 212, 191, 0.4)',   // etwas transparenter für die Fläche
+  tension: 0.1,
+  pointRadius: 0
+};
+
 
   const portfolioValueDataset = {
-    label: `Portfolio (CMB ${testTtM}Y)`,
+    label: `Synthetic Portfolio`,
     data: portfolioData,
-    borderColor: 'teal',
-    backgroundColor: 'rgba(0, 128, 128, 0.2)',
+    borderColor: ' rgba(255, 99, 132, 1)',
+    backgroundColor: ' rgba(255, 99, 132, 1)',
     tension: 0.1,
     pointRadius: 0
   };

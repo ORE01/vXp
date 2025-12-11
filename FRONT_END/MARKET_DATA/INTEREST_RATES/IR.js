@@ -1,6 +1,6 @@
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import { createRatesLineChart } from '../../../charts/LineChart.js';
-import { handleFormAction } from '../../../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 
 /**
  * Hilfsfunktion: holt EUSW-Daten aus appState + mapped die aktuelle Curve auf RATES
@@ -60,7 +60,7 @@ export function renderIRPanel() {
       event.stopPropagation();
       const tableName = 'EUSW';
       const rowIndex = parseInt(button.getAttribute('data-row'), 10);
-      handleFormAction(event, IRData, rowIndex, tableName, "edit");
+      handleModalAction(event, IRData, rowIndex, tableName, "edit");
     });
   });
 

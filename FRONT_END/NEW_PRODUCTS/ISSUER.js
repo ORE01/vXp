@@ -1,6 +1,6 @@
-import processData from '../../modal_HELPER/dataProcessor.js';
-import { handleFormAction } from '../../modal_HELPER/FormButtonHandler.js';
-import { filterColumnsInData } from '../../modal_HELPER/dataProcessor.js';
+import processData from '../../MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
+import { filterColumnsInData } from '../../MODAL_HELPER/dataProcessor.js';
 import { AppState } from '../../AppState.js';
 import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { ensureRendered } from '../../utils/domHelpers.js';
@@ -60,7 +60,7 @@ export async function handleIssuerData(receivedData, appState) {
         const actionType = 'edit';
         const rowIndex = parseInt(button.getAttribute('data-row'), 10);
 
-        handleFormAction(event, filteredIssuerData, rowIndex, tableName, actionType);
+        handleModalAction(event, filteredIssuerData, rowIndex, tableName, actionType);
       });
     });
 
@@ -70,7 +70,7 @@ export async function handleIssuerData(receivedData, appState) {
       const tableName = 'Issuer';
       const actionType = 'add';
       // console.log('AddButton')
-      handleFormAction(event, issuerData, null, tableName, actionType);
+      handleModalAction(event, issuerData, null, tableName, actionType);
     });
 
   });

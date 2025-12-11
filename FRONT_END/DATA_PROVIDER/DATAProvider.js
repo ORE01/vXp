@@ -1,5 +1,5 @@
-import processData from '../../modal_HELPER/dataProcessor.js';
-import { handleFormAction } from '../../modal_HELPER/FormButtonHandler.js';
+import processData from '../../MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
 
 // Universal function to handle both ECB and Fed data and display in a table
 export function handleProviderData(receivedData, tableName) {
@@ -26,7 +26,7 @@ export function handleProviderData(receivedData, tableName) {
         event.stopPropagation();
         const actionType = 'edit';
         const rowIndex = parseInt(button.getAttribute('data-row'), 10);
-        handleFormAction(event, receivedData, rowIndex, tableName, actionType);
+        handleModalAction(event, receivedData, rowIndex, tableName, actionType);
       });
     });
   
@@ -35,7 +35,7 @@ export function handleProviderData(receivedData, tableName) {
     if (addButton) {
       addButton.addEventListener('click', (event) => {
         const actionType = 'add';
-        handleFormAction(event, receivedData, null, tableName, actionType);
+        handleModalAction(event, receivedData, null, tableName, actionType);
       });
     }
 }

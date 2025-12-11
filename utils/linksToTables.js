@@ -1,6 +1,6 @@
 
 // utils/linksToTables.js
-import { handleFormAction } from '../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
 import { appState } from '../FRONT_END/renderer.js';
 import { handleCouponModal } from '../FRONT_END/NEW_PRODUCTS/PRODCoupon.js';
 
@@ -122,83 +122,83 @@ export function attachIdLinks(container, opts = {}) {
     }
   });
 }
-        // 2) PROD -> Editor + optional Coupon-Modal
-        export function openProdEditorByProdId(prodId) {
-            const prodDataArr = appState.getProdData?.() || [];
-            const needle = String(prodId ?? '').trim();
-            const rowIndex = prodDataArr.findIndex(r => String(r?.PROD_ID).trim() === needle);
-            if (rowIndex < 0) { console.warn('PROD_ID nicht gefunden:', needle); return false; }
+// 2) PROD -> Editor + optional Coupon-Modal
+export function openProdEditorByProdId(prodId) {
+    const prodDataArr = appState.getProdData?.() || [];
+    const needle = String(prodId ?? '').trim();
+    const rowIndex = prodDataArr.findIndex(r => String(r?.PROD_ID).trim() === needle);
+    if (rowIndex < 0) { console.warn('PROD_ID nicht gefunden:', needle); return false; }
 
-            const fakeEvt = new Event('click', { bubbles: true });
-            try {
-                handleFormAction(fakeEvt, prodDataArr, rowIndex, 'ProdAll', 'edit');
-            } catch (e) {
-                console.error('[openProdEditorByProdId] handleFormAction Fehler:', e);
-                return false;
-            }
+    const fakeEvt = new Event('click', { bubbles: true });
+    try {
+        handleModalAction(fakeEvt, prodDataArr, rowIndex, 'ProdAll', 'edit');
+    } catch (e) {
+        console.error('[openProdEditorByProdId] handleFormAction Fehler:', e);
+        return false;
+    }
 
-            // Optionales Folge-Modal
-            const row = prodDataArr[rowIndex];
-            requestAnimationFrame(() => {
-                if (row) handleCouponModal?.(row.PROD_ID, row.SCHEDULE, row.START_DATE, row.MATURITY, row.TENOR);
-            });
-            return true;
-        }
-        // 3) DEAL -> Editor per TRADE_ID
-        function openDealEditorByTradeId(tradeId) {
-        const dealsArr = getDealsArrSafe();
-        if (!Array.isArray(dealsArr) || dealsArr.length === 0) {
-            console.warn('[openDealEditorByTradeId] Deals-Array nicht gefunden oder leer.');
-            return false;
-        }
-        const needle = normalizeId(tradeId);
+    // Optionales Folge-Modal
+    const row = prodDataArr[rowIndex];
+    requestAnimationFrame(() => {
+        if (row) handleCouponModal?.(row.PROD_ID, row.SCHEDULE, row.START_DATE, row.MATURITY, row.TENOR);
+    });
+    return true;
+}
+// 3) DEAL -> Editor per TRADE_ID
+function openDealEditorByTradeId(tradeId) {
+const dealsArr = getDealsArrSafe();
+if (!Array.isArray(dealsArr) || dealsArr.length === 0) {
+    console.warn('[openDealEditorByTradeId] Deals-Array nicht gefunden oder leer.');
+    return false;
+}
+const needle = normalizeId(tradeId);
 
-        const matches = [];
-        for (let i = 0; i < dealsArr.length; i++) {
-            if (normalizeId(dealsArr[i]?.TRADE_ID) === needle) matches.push(i);
-        }
-        if (matches.length === 0) {
-            console.warn('[openDealEditorByTradeId] TRADE_ID nicht gefunden:', needle);
-            return false;
-        }
-        if (matches.length > 1) {
-            console.warn(`[openDealEditorByTradeId] WARN: ${matches.length} Treffer. Öffne ersten.`, matches);
-        }
-        const rowIndex = matches[0];
+const matches = [];
+for (let i = 0; i < dealsArr.length; i++) {
+    if (normalizeId(dealsArr[i]?.TRADE_ID) === needle) matches.push(i);
+}
+if (matches.length === 0) {
+    console.warn('[openDealEditorByTradeId] TRADE_ID nicht gefunden:', needle);
+    return false;
+}
+if (matches.length > 1) {
+    console.warn(`[openDealEditorByTradeId] WARN: ${matches.length} Treffer. Öffne ersten.`, matches);
+}
+const rowIndex = matches[0];
 
-        // Kontext (optional)
-        if (typeof appState?.setActiveTable === 'function') {
-            try { appState.setActiveTable('DealsMain'); } catch {}
-        }
+// Kontext (optional)
+if (typeof appState?.setActiveTable === 'function') {
+    try { appState.setActiveTable('DealsMain'); } catch {}
+}
 
-        // Fake-Button wie echter UI-Trigger
-        const fakeBtn = document.createElement('button');
-        fakeBtn.type = 'button';
-        fakeBtn.className = 'edit-button';
-        fakeBtn.dataset.row = String(rowIndex);
-        fakeBtn.dataset.table = 'DealsMain';
-        fakeBtn.dataset.action = 'edit';
-        fakeBtn.dataset.tradeId = needle;
+// Fake-Button wie echter UI-Trigger
+const fakeBtn = document.createElement('button');
+fakeBtn.type = 'button';
+fakeBtn.className = 'edit-button';
+fakeBtn.dataset.row = String(rowIndex);
+fakeBtn.dataset.table = 'DealsMain';
+fakeBtn.dataset.action = 'edit';
+fakeBtn.dataset.tradeId = needle;
 
-        const fakeEvt = {
-            preventDefault(){},
-            stopPropagation(){},
-            target: fakeBtn,
-            currentTarget: fakeBtn
-        };
+const fakeEvt = {
+    preventDefault(){},
+    stopPropagation(){},
+    target: fakeBtn,
+    currentTarget: fakeBtn
+};
 
-        try {
-            handleFormAction(fakeEvt, dealsArr, rowIndex, 'DealsMain', 'edit');
-            return true;
-        } catch (err) {
-            console.error('[openDealEditorByTradeId] handleFormAction Fehler:', err);
-            return false;
-        }
-        }
-                // -------- helpers (modul-intern) --------
-                function normalizeId(v){ return String(v ?? '').trim(); }
-                function getDealsArrSafe(){
-                return (appState.getAllDealsData && appState.getAllDealsData())
-                    || (appState.getFilteredData && appState.getFilteredData('deals'))
-                    || [];
-                }
+try {
+    handleModalAction(fakeEvt, dealsArr, rowIndex, 'DealsMain', 'edit');
+    return true;
+} catch (err) {
+    console.error('[openDealEditorByTradeId] handleFormAction Fehler:', err);
+    return false;
+}
+}
+    // -------- helpers (modul-intern) --------
+    function normalizeId(v){ return String(v ?? '').trim(); }
+    function getDealsArrSafe(){
+    return (appState.getAllDealsData && appState.getAllDealsData())
+        || (appState.getFilteredData && appState.getFilteredData('deals'))
+        || [];
+    }

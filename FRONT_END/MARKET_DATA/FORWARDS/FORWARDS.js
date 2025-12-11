@@ -1,4 +1,4 @@
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import { createFWDLineChart, createForwardSwapChart } from '../../../charts/LineChart.js';
 
 

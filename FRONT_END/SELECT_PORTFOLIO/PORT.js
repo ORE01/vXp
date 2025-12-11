@@ -1,10 +1,8 @@
-import { filterColumnsInData } from '../../modal_HELPER/dataProcessor.js';
-import processData from '../../modal_HELPER/dataProcessor.js';
+import { filterColumnsInData } from '../../MODAL_HELPER/dataProcessor.js';
+import processData from '../../MODAL_HELPER/dataProcessor.js';
 import { appState } from '../renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { formatNumberWithGrouping } from '../../utils/format.js';
-import { handleFormAction, handleCouponFormAction , saveChanges} from '../../modal_HELPER/FormButtonHandler.js';
-
 import { attachIdLinks } from '../../utils/linksToTables.js';
 
 
@@ -23,66 +21,6 @@ const pf = (v) => {
 
 const safeDiv = (num, den) => (den ? num / den : 0);
 
-// export function handlePortAggData(receivedData, index, port_name) {
-//   const elementId = `portDataContainer${index}`;
-//   const aggContainerId = `portAggDataContainer${index}`;
-
-//   if (!portDataMap[elementId]) portDataMap[elementId] = {};
-
-//   const portData = filterColumnsInData(receivedData, columns);
-
-//   let PortValue = 0;
-//   let PortNotional = 0;
-//   let PortYield = 0;
-//   let PortYieldA = 0;
-//   let PortPV01 = 0;
-//   let PortCPV01 = 0;
-//   let PortTtM = 0;
-
-//   // Aggregation – wie vorher, nur mit pf()
-//   for (let i = 0; i < portData.length; i++) {
-//     const r = portData[i];
-//     const nav      = pf(r.NAV);
-//     const notional = pf(r.NOTIONAL);
-
-//     PortValue     += nav;
-//     PortNotional  += notional;
-//     PortYield     += pf(r.ytmPort);
-//     PortYieldA    += pf(r.ytmPortA);
-//     PortPV01      += pf(r.PV01);
-//     PortCPV01     += pf(r.CPV01);
-//     PortTtM       += pf(r.TtM) * notional;
-//   }
-
-//   const aggData = {
-//     formPortValue:     formatNumberWithGrouping(PortValue) + ' EUR',
-//     formPortNotional:  formatNumberWithGrouping(PortNotional) + ' EUR',
-//     formPortYield:     (safeDiv(PortYield,  PortNotional) * 100).toFixed(2) + '%',
-//     formPortYieldA:    (safeDiv(PortYieldA, PortNotional) * 100).toFixed(2) + '%',
-//     formPortPV01:      (safeDiv(PortPV01,   PortNotional) * 10000).toFixed(2),
-//     formPortCPV01:     (safeDiv(PortCPV01,  PortNotional) * 10000).toFixed(2),
-//     formPortTtM:       (safeDiv(PortTtM,    PortNotional)).toFixed(2),
-//   };
-
-//   appState.setPortAggData(elementId, aggData);
-
-//   const portDataAggContainer = document.getElementById(aggContainerId);
-//   if (!portDataAggContainer) return;
-
-//   // DOM-Update leicht verschieben -> weniger Blockzeit im change-Handler
-//   requestAnimationFrame(() => {
-//     const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
-//     const portDataHTML = processData(tableData, tableName);
-//     portDataAggContainer.innerHTML = portDataHTML;
-
-//     // Nach dem Paint optionale Deko (Tooltips/Links), nochmal in rAF
-//     requestAnimationFrame(() => {
-//       addTooltipsForTruncatedText(portDataAggContainer);
-//       addProdIdTooltips?.(portDataAggContainer);
-//       attachIdLinks?.(portDataAggContainer);
-//     });
-//   });
-// }
 
 export function handlePortAggData(receivedData, index, port_name) {
   const elementId = `portDataContainer${index}`;
@@ -133,29 +71,50 @@ export function handlePortAggData(receivedData, index, port_name) {
     formPortTtM:       (safeDiv(PortTtM,    PortNotional)).toFixed(2),
   };
 
+ //Aggregierte werte ins appState setzen:
   appState.setPortAggData(elementId, aggData);
+
+
+
+// HTML: nur mit aggKeysToShow
+
+    const aggKeysToShow = [
+    'formPortValue',
+    'formPortValueBuy',
+    'formPortNotional',
+    'formPortYield',
+    'formPortYieldA',
+    'formPortPV01',
+    'formPortCPV01',
+    'formPortTtM',
+    // 'formPortPV01abs', 'formPortCPV01abs' z.B. bewusst weglassen
+  ];
 
   const portDataAggContainer = document.getElementById(aggContainerId);
   if (!portDataAggContainer) return;
 
-  // DOM-Update leicht verschieben -> weniger Blockzeit im change-Handler
+  
   requestAnimationFrame(() => {
-    const tableData = mapPortDataToTableRows(appState.portDataMap[elementId]);
+    // nur ausgewählte Keys ins Table-Objekt
+    const filteredAggData = Object.fromEntries(
+      Object.entries(aggData).filter(([key]) => aggKeysToShow.includes(key))
+    );
+
+    // NAMENSVERGABE für ANZEIGE:
+    const tableData = mapPortDataToTableRows(filteredAggData);
+
+    // ANZEIGE:  
     const portDataHTML = processData(tableData, tableName);
     portDataAggContainer.innerHTML = portDataHTML;
 
-    // Nach dem Paint optionale Deko (Tooltips/Links), nochmal in rAF
     requestAnimationFrame(() => {
       addTooltipsForTruncatedText(portDataAggContainer);
       addProdIdTooltips?.(portDataAggContainer);
       attachIdLinks?.(portDataAggContainer);
     });
   });
+
 }
-
-
-
-
 
 
     function mapPortDataToTableRows(data) {
@@ -164,8 +123,8 @@ export function handlePortAggData(receivedData, index, port_name) {
         { label: 'NetAssetValue', value: data.formPortValue },
         { label: 'NetAssetValueBuy', value: data.formPortValueBuy },
 
-        { label: 'PV01 (abs)', value: data.formPortPV01abs },   // <-- NEU
-        { label: 'CPV01 (abs)', value: data.formPortCPV01abs }, // <-- NEU
+        // { label: 'PV01 (abs)', value: data.formPortPV01abs },   // <-- NEU
+        // { label: 'CPV01 (abs)', value: data.formPortCPV01abs }, // <-- NEU
 
         { label: 'Portfolio Yield', value: data.formPortYield },
         { label: 'Portfolio Yield (act)', value: data.formPortYieldA },

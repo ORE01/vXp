@@ -103,10 +103,10 @@ let _riskLastOptions = null;
 
 
 let historicMarketRiskChart = null;
+let historicMarketRiskRafId = null;
 
 export function renderHistoricMarketRiskChart() {
   const historyData = appState.getPortfolioHistoryData() || [];
-  console.log("🎯 renderHistoricMarketRiskChart CALLED with rows:", historyData.length);
 
   if (!Array.isArray(historyData) || historyData.length === 0) {
     console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
@@ -115,10 +115,6 @@ export function renderHistoricMarketRiskChart() {
 
   const sortedData = [...historyData].sort(
     (a, b) => new Date(a.DATE) - new Date(b.DATE)
-  );
-  console.log(
-    "📅 First DATE:", sortedData[0]?.DATE,
-    "Last DATE:", sortedData[sortedData.length - 1]?.DATE
   );
 
   function readPctSeries(row, keys) {
@@ -151,24 +147,23 @@ export function renderHistoricMarketRiskChart() {
     readPctSeries(row, ["M_ES_CS_PCT", "M_ES_CS_pct", "MES_CS_PCT"])
   );
 
-  console.log(
-    "✅ Sample values:",
-    "MVaR All[0]:", mvarAllPct[0],
-    "M ES All[0]:", mesAllPct[0]
-  );
-
-  // destroy old instance
-if (historicMarketRiskChart) {
-  console.log("♻️ Destroy existing historicMarketRiskChart instance");
-  try {
-    historicMarketRiskChart.destroy();
-  } catch (err) {
-    console.error("⚠️ Fehler beim Destroy von historicMarketRiskChart:", err);
-  } finally {
-    historicMarketRiskChart = null;   // <-- wichtig
+  // 🔁 Falls schon ein Render-Loop läuft → abbrechen
+  if (historicMarketRiskRafId != null) {
+    cancelAnimationFrame(historicMarketRiskRafId);
+    historicMarketRiskRafId = null;
   }
-}
 
+  // ♻️ Alte Chart-Instanz einmalig vernichten
+  if (historicMarketRiskChart) {
+    console.log("♻️ Destroy existing historicMarketRiskChart instance");
+    try {
+      historicMarketRiskChart.destroy();
+    } catch (err) {
+      console.error("⚠️ Fehler beim Destroy von historicMarketRiskChart:", err);
+    } finally {
+      historicMarketRiskChart = null;
+    }
+  }
 
   const data = {
     labels: sortedData.map(row => row.DATE),
@@ -189,8 +184,7 @@ if (historicMarketRiskChart) {
         backgroundColor: "rgba(0, 200, 83, 0.15)",
         borderWidth: 2,
         pointRadius: 2,
-        tension: 0.2,
-       
+        tension: 0.2
       },
       {
         label: "MVaR CS (%)",
@@ -199,8 +193,7 @@ if (historicMarketRiskChart) {
         backgroundColor: "rgba(255, 159, 64, 0.15)",
         borderWidth: 2,
         pointRadius: 2,
-        tension: 0.2,
-       
+        tension: 0.2
       },
       {
         label: "M ES All (%)",
@@ -220,8 +213,7 @@ if (historicMarketRiskChart) {
         borderWidth: 2,
         pointRadius: 2,
         tension: 0.2,
-        borderDash: [6, 4],
-       
+        borderDash: [6, 4]
       },
       {
         label: "M ES CS (%)",
@@ -231,28 +223,28 @@ if (historicMarketRiskChart) {
         borderWidth: 2,
         pointRadius: 2,
         tension: 0.2,
-        borderDash: [6, 4],
-       
+        borderDash: [6, 4]
       }
     ]
   };
 
   const options = createPercentChartOptions("MVaR / ES Metrics (%)");
 
-  // remember last successful inputs for refresh
   _riskLastData = data;
   _riskLastOptions = options;
 
-  // ---- Render when canvas exists AND has size ----
-  const maxTries = 60; // ~1s @60fps
+  const maxTries = 60;
   let tries = 0;
 
   const tryRender = () => {
     const canvas = document.getElementById("historicMarketRiskChart");
 
     if (!canvas) {
-      if (++tries < maxTries) return requestAnimationFrame(tryRender);
-      console.warn("❌ historicMarketRiskChart canvas not found after retries");
+      if (++tries < maxTries) {
+        historicMarketRiskRafId = requestAnimationFrame(tryRender);
+      } else {
+        console.warn("❌ historicMarketRiskChart canvas not found after retries");
+      }
       return;
     }
 
@@ -260,12 +252,26 @@ if (historicMarketRiskChart) {
     const h = canvas.clientHeight;
 
     if (w === 0 || h === 0) {
-      if (++tries < maxTries) return requestAnimationFrame(tryRender);
-      console.warn("❌ historicMarketRiskChart canvas has 0 size after retries", { w, h });
+      if (++tries < maxTries) {
+        historicMarketRiskRafId = requestAnimationFrame(tryRender);
+      } else {
+        console.warn("❌ historicMarketRiskChart canvas has 0 size after retries", { w, h });
+      }
       return;
     }
 
     try {
+      // Extra-Sicherheit: eventuell existierenden Chart direkt über Chart.js-Registry killen
+      const existingChart =
+        window.Chart?.getChart
+          ? window.Chart.getChart(canvas)
+          : null;
+
+      if (existingChart && existingChart !== historicMarketRiskChart) {
+        console.log("♻️ Destroy chart from Chart.js registry");
+        existingChart.destroy();
+      }
+
       historicMarketRiskChart = createTimeSeriesChart(
         "historicMarketRiskChart",
         data,
@@ -280,15 +286,17 @@ if (historicMarketRiskChart) {
 
       historicMarketRiskChart.resize();
       historicMarketRiskChart.update();
-
-      console.log("✅ MarketRiskMetricsChartLine rendered with", sortedData.length, "points");
     } catch (err) {
       console.error("💥 Fehler beim Erzeugen von historicMarketRiskChart:", err);
+    } finally {
+      // Render-Loop ist erledigt
+      historicMarketRiskRafId = null;
     }
   };
 
-  requestAnimationFrame(tryRender);
+  historicMarketRiskRafId = requestAnimationFrame(tryRender);
 }
+
 
 let historicCreditRiskChart = null;
 

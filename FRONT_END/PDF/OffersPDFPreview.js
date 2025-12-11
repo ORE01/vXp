@@ -1,5 +1,5 @@
 import { REPORT_DEFAULTS_OFFERS } from './OffersPDF.js';
-import { handleFormAction } from '../../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
 import { appState } from '../../FRONT_END/renderer.js';
 import { drawYieldVsTimeChart, transformTSDataToEUSWFormat, swapPointToDurationAsYearRate } from '../../FRONT_END/ANALYSE_PORTFOLIO/SummaryYield.js';
 
@@ -660,8 +660,8 @@ const PREVIEW_ID = 'reportsOffersPreview';
   btn.dataset.bound = '1';
 
   btn.addEventListener('click', async (event) => {
-    if (typeof handleFormAction === 'function') {
-      const res = await handleFormAction(event);
+    if (typeof handleModalAction === 'function') {
+      const res = await handleModalAction(event);
       if (res === false || res === 0) return;
     }
     setTimeout(() => handleOffersHeaderEditAction(), 0);
@@ -995,7 +995,7 @@ function handleSaveHeader(ev) {
       if (btn) btn.disabled = true;
       setBtn('Speichere…'); setStatus('Speichere…');
 
-      const res = handleFormAction(ev, { id: customer.id, pdf_header: val }, rowIndex, 'Customer', 'edit');
+      const res = handleModalAction(ev, { id: customer.id, pdf_header: val }, rowIndex, 'Customer', 'edit');
       if (res && typeof res.then === 'function') await res;
 
       try { customer.pdf_header = val; } catch {}

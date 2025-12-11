@@ -13,6 +13,7 @@
   form-action 'self';
 ">
 
+  <link href="./css/LOGIN.css" rel="stylesheet">  
 
   <link href="./css/tableDark.css" rel="stylesheet">  
   <link href="./css/modalDark.css" rel="stylesheet">
@@ -58,6 +59,7 @@
   <link href="./css/UPDATES/excelImport.css" rel="stylesheet">
   <link href="./css/UPDATES/historicDataImport.css" rel="stylesheet">
   <link href="./css/UPDATES/vxpImports.css" rel="stylesheet">
+  <!-- <link href="./css/UPDATES/conflictModalProducts.css" rel="stylesheet"> -->
 
 
   <link href="./css/REPORTS/reports.css" rel="stylesheet">
@@ -74,83 +76,131 @@
 
  
 
+<!-- LIBRARIES IMPORT -->
 
-  <!-- Library Imports -->
-  
   <!-- Chart.js 4.0.1 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"></script>
 
-  <!-- Date adapter for handling time scales -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0"></script> -->
-
-  <!-- Chart.js Zoom Plugin -->
+  <!-- Chart.js Plugins -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-
-  <!-- Chart.js Annotation Plugin (if you need it) -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
-
+  <!-- Math.js -->
   <script src="https://cdn.jsdelivr.net/npm/mathjs/lib/browser/math.js"></script>
 
+  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Plotly über jsDelivr (CSP-kompatibel) -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.35.2/plotly.min.js"></script>
+
 
 
   <title>ValuationXpro</title>
 </head>
 <body>
 
-  <img id="logo" src="assets/logo.png" style="display:none;" />
+<!-- 1) LOGIN SCREEN (Startup Screen) -->
+<div class="login-page">
+  <div class="login-overlay"></div>
 
-  <!-- Toolbar for Language Toggle -->
-  <div id="toolbar" class="toolbar">
-      <div class="language-toggle">
-          <button id="lang-en" class="language-button">EN</button>
-          <button id="lang-de" class="language-button">DE</button>
-          <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
-
-          <!-- Curve Szenario Warning -->
-          <div id="curveWarningContainer" class="warning-container">
-              <span class="warning-text">Curve Szenario Set</span>
-              <div id="curveWarning" class="warning-light"></div>
-          </div>
-
-          <!-- Credit Spread Szenario Warning -->
-          <div id="creditWarningContainer" class="warning-container">
-              <span class="warning-text">Credit Spread Szenario Set</span>
-              <div id="creditWarning" class="warning-light"></div>
-          </div>
-
-          <!-- CS Szenario Warning -->
-          <div id="csWarningContainer" class="warning-container">
-            <span class="warning-text">CS Szenario for ID Set:</span>
-            <div id="csWarning" class="warning-light"></div> 
-            <span id="csWarningText" class="warning-text"></span> <!-- 🔴 Hier erscheinen die betroffenen IDs -->
-          </div>
-
-
-        
+  <div class="login-card">
+    <!-- Linke Seite: Hero-Content -->
+    <div class="login-image">
+      <div class="login-hero">
+        <h2>Risk. Visualized.</h2>
+        <p>
+          Build, monitor and stress-test your portfolios in one console.
+        </p>
+        <ul>
+          <li>Instant VaR &amp; CVaR per portfolio</li>
+          <li>Swaption cube &amp; SABR surface explorer</li>
+          <li>Export-ready reports for Risk Committees</li>
+        </ul>
       </div>
+    </div>
+
+    <!-- Rechte Seite: Login -->
+    <div class="login-content">
+      <img src="assets/vXp.png" alt="vXp Logo" class="login-logo" />
+
+      <h1>vXp Console</h1>
+      <p class="login-subtitle">
+        Sign in to access your risk analyses, scenarios, and reports.
+      </p>
+
+      <div class="login-fields">
+        <div class="login-field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="your.name@example.com" />
+        </div>
+
+        <div class="login-field">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="••••••••" />
+        </div>
+
+        <button class="login-button" type="button">
+          Sign In
+        </button>
+
+        <p class="login-hint">
+          This login is currently only a placeholder for the upcoming authentication.
+        </p>
+      </div>
+    </div>
   </div>
+</div>
 
 
 
 
-  <div class="tab">
+  <!-- 2) DEINE EIGENTLICHE APP – am Anfang VERSTECKT -->
+  <div id="app-root" class="app-hidden">
 
-    <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
-    <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button> 
-    <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
-    <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button> 
-    <button class="tablinks" id="NEW_PRODUCTS_Tab">NEW PRODUCTS</button> 
-    <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
-    <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
-    <button class="tablinks" id="DATA_Tab">UPDATES</button> 
-    <button class="tablinks" id="REPORTS_Tab">REPORTS</button> 
-    
-  </div>
+    <img id="logo" src="assets/logo.png" style="display:none;" />
 
+    <!-- Toolbar for Language Toggle -->
+    <div id="toolbar" class="toolbar">
+      <div class="language-toggle">
+        <button id="lang-en" class="language-button">EN</button>
+        <button id="lang-de" class="language-button">DE</button>
+        <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
+
+        <!-- Curve Szenario Warning -->
+        <div id="curveWarningContainer" class="warning-container">
+          <span class="warning-text">Curve Szenario Set</span>
+          <div id="curveWarning" class="warning-light"></div>
+        </div>
+
+        <!-- Credit Spread Szenario Warning -->
+        <div id="creditWarningContainer" class="warning-container">
+          <span class="warning-text">Credit Spread Szenario Set</span>
+          <div id="creditWarning" class="warning-light"></div>
+        </div>
+
+        <!-- CS Szenario Warning -->
+        <div id="csWarningContainer" class="warning-container">
+          <span class="warning-text">CS Szenario for ID Set:</span>
+          <div id="csWarning" class="warning-light"></div> 
+          <span id="csWarningText" class="warning-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab">
+      <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
+      <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button> 
+      <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
+      <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button> 
+      <button class="tablinks" id="NEW_PRODUCTS_Tab">NEW PRODUCTS</button> 
+      <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
+      <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
+      <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+      <button class="tablinks" id="REPORTS_Tab">REPORTS</button> 
+    </div>
 
 
 
@@ -469,10 +519,10 @@
   <div class="sub-panel-body">
     <!-- 1) INPUT OBEN: Tabelle + Buttons darunter -->
     <div class="mvar-input">
-      <div class="data-container" id="inputMVaRContainer"></div>
+      <div class="data-container" id="inputMvarContainer"></div>
 
       <div class="mvar-input-buttons">
-        <button id="inputMVaRSave-button" class="edit-button">Save Changes</button>
+        <!-- <button id="inputMVaRSave-button" class="edit-button">Save Changes</button> -->
         <button id="mvarAddButton" class="edit-button">Add Entry</button>
       </div>
     </div>
@@ -593,52 +643,111 @@
           </div>
         </div>
 
-    <!-- Panel: Credit Risk  -->
-    <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-credit-title" class="sub-panel-title">Credit Loss Distribution</div>
-        <button class="sub-panel-close" data-close="panel-credit" aria-label="Schließen">&times;</button>
+<!-- Panel: Credit Risk  -->
+<div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-credit-title" class="sub-panel-title">Credit Loss Distribution</div>
+    <button class="sub-panel-close" data-close="panel-credit" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- 🔹 BLOCK 1: Allgemeine CVaR Settings (Konfidenzniveau, Horizont, Szenarien, etc.) -->
+    <div class="cvar-config-section">
+      <div class="sub-panel-subtitle" style="margin-top: 12px; margin-bottom: 6px;">
+        CVaR General Settings
       </div>
-      <div class="sub-panel-body">
-        <div class="button-wrapper">
-          <button id="CVaRButton" class="edit-button">Calculate PL</button>
-          
-        </div>
 
-<p>Credit Value at Risk:</p>
+      <div class="button-wrapper" style="margin-bottom: 8px;">
+        <button id="cvarConfigAddButton" class="edit-button">Add Config</button>
+      </div>
 
-<div class="cvar-pair">
-  <div class="data-container" id="CVaR_allRelativeContainer0"></div>
-
-  <!-- nur hier: Zusatzklasse `small` am Wrapper -->
-  <div class="traffic-light-wrapper small" id="traffic-credit" style="margin-top: 0;">
-    <div class="traffic-light">
-      <div id="red" class="light red"></div>
-      <div id="yellow" class="light yellow"></div>
-      <div id="green" class="light green"></div>
+      <!-- Hier rendert handleCvarInputConfigView() die Tabelle -->
+      <div class="data-container" id="inputCreditVaRConfigContainer"></div>
     </div>
+    <!-- 🔹 ENDE BLOCK 1 -->
+
+    <!-- 🔹 BLOCK 2: Threshold-Input für CVaR / TSI / MSD -->
+    <div class="threshold-section">
+      <div class="sub-panel-subtitle" style="margin-top: 16px; margin-bottom: 6px;">
+        Threshold Settings (CVaR / TSI / MSD)
+      </div>
+
+      <!-- <div class="button-wrapper" style="margin-bottom: 8px;">
+        <button id="cvarThresholdAddButton" class="edit-button">Add Threshold</button>
+      </div> -->
+
+      <!-- Hier rendert handleCvarInputThresholdView() die Tabelle -->
+      <div class="data-container" id="inputCreditVaRThresholdContainer"></div>
+    </div>
+    <!-- 🔹 ENDE BLOCK 2 -->
+
+    <!-- 🔹 BLOCK 2.1: Calculate PL Button unter Threshold Settings -->
+    <div class="button-wrapper" style="margin-top: 12px; margin-bottom: 16px;">
+      <button id="CVaRButton" class="edit-button">Calculate PL</button>
+    </div>
+    <!-- 🔹 ENDE BLOCK 2.1 -->
+
+    <!-- 🔹 BLOCK 3: CVaR/TSI/MSD Ampeln + Output-Tabelle -->
+    <div class="cvar-pair" style="margin-top: 4px;">
+      <!-- Linke Spalte: CVaR Kennzahlen-Tabelle -->
+      <div class="cvar-col">
+        <div class="data-container" id="CVaR_allRelativeContainer0"></div>
+      </div>
+
+      <!-- CVAR + Ampel -->
+      <div class="cvar-col">
+        <p>Credit Value at Risk (CVaR):</p>
+        <div class="traffic-light-wrapper small" id="traffic-credit-cvar" style="margin-top: 0;">
+          <div class="traffic-light">
+            <div id="red" class="light red"></div>
+            <div id="yellow" class="light yellow"></div>
+            <div id="green" class="light green"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TSI + Ampel -->
+      <div class="cvar-col">
+        <p>Tail Severity Index (TSI):</p>
+        <div class="traffic-light-wrapper small" id="traffic-credit-tsi" style="margin-top: 0;">
+          <div class="traffic-light">
+            <div id="red" class="light red"></div>
+            <div id="yellow" class="light yellow"></div>
+            <div id="green" class="light green"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MSD + Ampel -->
+      <div class="cvar-col">
+        <p>Market Stress Divergence (MSD):</p>
+        <div class="traffic-light-wrapper small" id="traffic-credit-msd" style="margin-top: 0;">
+          <div class="traffic-light">
+            <div id="red" class="light red"></div>
+            <div id="yellow" class="light yellow"></div>
+            <div id="green" class="light green"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 🔹 ENDE BLOCK 3 -->
+
+    <!-- 🔹 BLOCK 4: Charts -->
+    <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 20px;">
+      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+        <p style="text-align: center;">Value at Risk:</p>
+        <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
+      </div>
+      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+        <p style="text-align: center;">Expected Shortfall:</p>
+        <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
+      </div>
+    </div>
+    <!-- 🔹 ENDE BLOCK 4 -->
   </div>
 </div>
 
 
-
-        <!-- 2x1 Grid -->
-        <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap;">
-          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-            <p style="text-align: center;">Value at Risk:</p>
-            <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
-          </div>
-          <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-            <p style="text-align: center;">Expected Shortfall:</p>
-            <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
-
-
-
-          </div>
-        </div>
-        
-      </div>
-    </div>
 
         <!-- Panel: Credit Risk – Details -->
         <div id="panel-EAD" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-EAD-title" hidden>
@@ -1128,6 +1237,44 @@
       </button>
     </div>
 
+        <!-- 📉 Swaption Vols – Unterpunkt von Interest Rates -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-swaption"
+        aria-controls="panel-swaption"
+        aria-expanded="false">
+        <span class="section-header">Swaption Vols</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Swaption Smile – eigener Unterpunkt von Interest Rates -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-swaption-smile"
+        aria-controls="panel-swaption-smile"
+        aria-expanded="false">
+        <span class="section-header">Swaption Smile</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Swaption Vol Cube – eigener Unterpunkt von Interest Rates -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-swaption-cube"
+    aria-controls="panel-swaption-cube"
+    aria-expanded="false">
+    <span class="section-header">Swaption Vol Cube</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+
+
     <!-- 📉 Credit Spreads – Trigger -->
     <div class="chart-section">
       <button
@@ -1235,6 +1382,177 @@
         </div>
       </div>
     </div>
+
+<!-- Panel: SWAPTION VOLS (Slide-In) -->
+<div id="panel-swaption" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-swaption-title" class="sub-panel-title">SWAPTION VOLS</div>
+    <button class="sub-panel-close" data-close="panel-swaption" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <div class="swaption-layout-wrapper">
+      
+
+
+      <!-- Rechte Seite: ATM Surface (3D) -->
+      <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+
+        <div class="table-card chart-card" style="flex:1; min-height:320px;">
+          <h4 class="table-title">ATM Surface (3D)</h4>
+          <div class="chart-container" style="height:100%;">
+            <div id="swaption-atm-surface-3d" style="width:100%; height:100%;"></div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Panel: SWAPTION SMILE (Slide-In) -->
+<div id="panel-swaption-smile" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-smile-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-swaption-smile-title" class="sub-panel-title">SWAPTION SMILE</div>
+    <button class="sub-panel-close" data-close="panel-swaption-smile" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <div class="swaption-layout-wrapper" style="display:flex; gap:16px; align-items:stretch;">
+
+      <!-- Linke Seite: Auswahl + Summary-Tabelle -->
+      <section class="table-card" style="flex: 0 0 30%; margin-right:16px;">
+        <h4 class="table-title">ATM Vols</h4>
+
+        <div class="swaption-select-row" style="display:flex; gap:8px; margin-bottom:8px;">
+          <div class="input-container" style="flex:1;">
+            <label for="swaptionOptionTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+              Option Tenor
+            </label>
+            <select id="swaptionOptionTenorSelect" class="ir-select"></select>
+          </div>
+
+          <div class="input-container" style="flex:1;">
+            <label for="swaptionSwapTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+              Swap Tenor
+            </label>
+            <select id="swaptionSwapTenorSelect" class="ir-select"></select>
+          </div>
+        </div>
+
+        <!-- Hier kommt die ATM + Resulting Vol Tabelle rein -->
+        <div id="SwaptionATMDataContainer" class="data-container"></div>
+      </section>
+
+      <!-- Rechte Seite: Smile-Chart -->
+      <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+        <div class="table-card chart-card" style="flex:1;">
+          <h4 class="table-title">Smile / Skew</h4>
+          <div class="chart-container" style="height:260px; max-height:260px;">
+            <canvas id="swaption-smile-chart" style="width:100%; height:100%;"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Panel: SWAPTION VOL CUBE (Slide-In) -->
+<div id="panel-swaption-cube"
+     class="sub-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-swaption-cube-title"
+     hidden>
+  <div class="sub-panel-header">
+    <div id="panel-swaption-cube-title" class="sub-panel-title">
+      SWAPTION VOL CUBE
+    </div>
+    <button class="sub-panel-close"
+            data-close="panel-swaption-cube"
+            aria-label="Schließen">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="swaption-layout-wrapper"
+         style="display:flex; gap:16px; align-items:stretch;">
+
+      <!-- LINKE SPALTE: Run-Button + Filter + Summary -->
+      <section style="flex:0 0 32%; display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Run-Button (vollbreit) -->
+        <button
+          id="swaptionCubeRunButton"
+          class="exec-button"
+          type="button"
+          style="width:100%; padding:10px 12px; font-weight:600;">
+          Run Vol Cube
+        </button>
+
+        <!-- Karte: Filter + Summary -->
+        <div class="table-card" style="flex:1;">
+          <h4 class="table-title">Node Filter &amp; Summary</h4>
+
+          <!-- Filter-Row -->
+          <div class="swaption-select-row"
+               style="display:flex; gap:8px; margin-bottom:8px; margin-top:4px;">
+            <div class="input-container" style="flex:1;">
+              <label for="swaptionOptionTenorSelectCube"
+                     style="display:block; font-weight:600; margin-bottom:2px;">
+                Option Tenor
+              </label>
+              <select id="swaptionOptionTenorSelectCube" class="ir-select"></select>
+            </div>
+
+            <div class="input-container" style="flex:1;">
+              <label for="swaptionSwapTenorSelectCube"
+                     style="display:block; font-weight:600; margin-bottom:2px;">
+                Swap Tenor
+              </label>
+              <select id="swaptionSwapTenorSelectCube" class="ir-select"></select>
+            </div>
+          </div>
+
+          <!-- Summary / Node-Info für gewählten Ausschnitt -->
+          <div id="SwaptionCubeSummaryContainer" class="data-container"></div>
+        </div>
+      </section>
+
+      <!-- RECHTE SPALTE: 3D Vol Cube Surface -->
+      <section class="swaption-charts-wrapper"
+               style="flex:1; display:flex; flex-direction:column;">
+        <div class="table-card chart-card" style="flex:1;">
+          <h4 class="table-title">
+            SABR Vol Cube Surface
+          </h4>
+          <div class="chart-container"
+               style="height:260px; max-height:260px;">
+            <!-- Plotly-Target für 3D Surface -->
+            <div id="swaption-cube-surface-3d"
+                 style="width:100%; height:100%;"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
 
     <!-- Panel: CREDIT SPREADS (Slide-In) -->
     <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
@@ -2109,22 +2427,69 @@
 
     <!-- ===== PANELS ===== -->
 
-    <!-- Panel: Excel Import -->
-    <div id="panel-upd-excel" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-upd-excel-title" class="sub-panel-title">EXCEL IMPORT</div>
-        <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="Schließen">&times;</button>
-      </div>
+<!-- Panel: Excel Import -->
+<div id="panel-upd-excel" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-upd-excel-title" class="sub-panel-title">EXCEL IMPORT</div>
+    <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="Schließen">&times;</button>
+  </div>
 
-      <div class="sub-panel-body">
-        <section class="cp-card" style="margin-top:12px;">
-          <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <span class="button-label">Products, Deals and Swap-Rates</span>
-            <button id="updateDataExcelButton" class="edit-button" type="button">Data from EXCEL</button>
-          </div>
-        </section>
+  <div class="sub-panel-body">
+
+    <!-- Full Import -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="button-label">Vollimport (alle Tabellen)</span>
+        <button id="updateExcelAllButton" class="edit-button" type="button">
+          Import: ALL
+        </button>
       </div>
-    </div>
+    </section>
+
+    <!-- Core Portfoliodaten -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="button-label">Stammdaten & Portfoliodaten</span>
+        <button id="updateExcelIssuerButton" class="edit-button" type="button">
+          Issuer + Rank
+        </button>
+        <button id="updateExcelProductsButton" class="edit-button" type="button">
+          Products (Bonds)
+        </button>
+        <button id="updateExcelDealsButton" class="edit-button" type="button">
+          Deals (DealsMain)
+        </button>
+      </div>
+    </section>
+
+    <!-- Curves & Swaptions -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="button-label">Zinskurven & Swaptions</span>
+        <button id="updateExcelEuswButton" class="edit-button" type="button">
+          EUSW + ATM + Smile
+        </button>
+      </div>
+    </section>
+
+    <!-- Progress-Bar für Excel, für setupPythonProgressBars -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="hist-row">
+        <div id="excelProgressBarsContainer" class="hist-progress-wrap"></div>
+        <div id="progressText_EXCEL" class="progress-text global-text"></div>
+      </div>
+    </section>
+
+<!-- Produkt-Konflikte Modal -->
+<div id="prod-conflict-overlay" class="modal-overlay" style="display:none;"></div>
+<div id="prod-conflict-modal" class="modal-root" style="display:none;"></div>
+
+
+
+  </div>
+</div>
+
+
 
 <!-- Panel: Historic Data (APIs) -->
 <div id="panel-upd-historic" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-historic-title" hidden>
@@ -2380,6 +2745,8 @@
   <script src="./utils/trafficLight.js"></script>
   <!-- <script type="module" src="./liquidity.js"></script> -->
   <script type="module" src="./utils/slideIn.js"></script>
+  <script src="./login.js"></script>
+
   
 
 

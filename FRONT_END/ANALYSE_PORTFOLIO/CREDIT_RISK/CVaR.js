@@ -1,228 +1,5 @@
-// import { filterColumnsInData } from '../../../modal_HELPER/dataProcessor.js';
-// import processData from '../../../modal_HELPER/dataProcessor.js';
-// import createBarChart from '../../../charts/BarChart.js';
-// import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/format.js';
-
-// // let EADChart;
-// let LGDChart;
-// let filteredEADMainData = [];
-
-// export function handleEADData(receivedData) {
-//   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
-//   // console.log('port_name:', port_name);
-
-//   const EADDataContainer = document.getElementById('EADDataContainer');
-
-//   // 🔍 Daten vorher filtern
-//   const filtered = receivedData.filter(
-//     row => row.port_name === port_name && row.pd_flag === 'RATING'
-//   );
-//   ////console.log('filtered:', filtered);
-//   const EADMainData = filtered;
-
-//   if (EADDataContainer && EADMainData) {
-//     let columns = ['ISSUER', 'RANK', 'RATING', 'NOTIONAL', 'LGD', 'PD', 'PD_M', 'PD_M_norm'];
-//     const eadColumnLabelMap = {
-//       ISSUER: 'ISSUER',
-//       RANK: 'RANK',
-//       RATING: 'RATING',
-//       NOTIONAL: 'NOTIONAL',
-//       LGD: 'LGD',
-//       PD: 'PD-Historic',
-//       PD_M: 'PD-Market Implied',
-//       PD_M_norm: 'PD-Risk Adjusted',
-//     };
-
-//     filteredEADMainData = filterColumnsInData(EADMainData, columns);
-//     // if (EADChart) {EADChart.destroy();}
-//     if (LGDChart) {LGDChart.destroy();}
-
-//     // Sort the data by the "NOTIONAL" in descending order
-//     filteredEADMainData.sort((a, b) => parseFloat(b.NOTIONAL.replace(/\s/g, '')) - parseFloat(a.NOTIONAL.replace(/\s/g, '')));
-
-//     const EADMainDataHTML = processData(filteredEADMainData, 'EAD', eadColumnLabelMap);
-//     EADDataContainer.innerHTML = EADMainDataHTML;
-
-//     // CHARTS:
-
-//     // Format the data for the EAD bar chart
-//     const EADLabels = filteredEADMainData.map(data => data.ISSUER);
-//     //NOTIONAL is a string!
-//     const EADValues = filteredEADMainData.map(data => parseFloat(data.NOTIONAL.replace(/\s/g, '')));
-
-//     // Call createBarChart with the formatted data for EAD chart
-//     //EADChart = createBarChart({ labels: EADLabels, datasets: [{ label: 'EAD', data: EADValues, backgroundColor: 'rgba(70, 192, 230, 0.7)', borderColor: 'rgba(70, 192, 230, 0.7)' }] }, 'EADChart', 'bar', 'y');
-    
-//     // Format the data for the LGD bar chart
-//     const LGDValues = filteredEADMainData.map(data => parseFloat(data.LGD.toString().replace(/\s/g, '')));
-//     //////console.log('LGDvalues:', LGDValues);
-
-//     // Create the combined dataset for EAD and LGD
-//     const combinedDataset = [
-//       {
-//         label: 'EAD',
-//         data: EADValues,
-//         backgroundColor: 'rgba(70, 192, 230, 0.7)',
-//         borderColor: 'rgba(70, 192, 230, 0.7)',
-//         borderWidth: 1,
-//       },
-//       {
-//         label: 'LGD',
-//         data: LGDValues,
-//         backgroundColor: 'rgba(255, 0, 0)',
-//         borderColor: 'rgba(255, 0, 0)',
-//         borderWidth: 1,
-//       },
-//     ];
-//     //console.log('combinedDatasets:', combinedDataset);
-    
-//     // Call createBarChart with the combined datasets for EAD and LGD chart
-//     const combinedLabels = EADLabels;
-//     LGDChart = createBarChart({ labels: combinedLabels, datasets: combinedDataset }, 'LGDChart', 'bar', 'y');
-//     //LGDChart = createBarChart({ labels: combinedLabels, datasets: combinedDataset }, 'LGDChart', 'bar', 'y');
-
-//     //console.log('EADMain:', EADMainData);
-//   }
-// }
-// export function handleCVaRData(receivedData, index) {
-//   const port_name = appState.getSelectedPortTableName();
-//   const filteredByPort = receivedData.filter(item => item.port_name === port_name);
-//   appState.setCvarData(filteredByPort);
-
-//   const containerMapping = {
-//     rating: 'CVaR_ratingDataContainer',
-//     market: 'CVaR_marketDataContainer',
-//     norm: 'CVaR_normDataContainer',
-//   };
-
-//   const combinedRelData = {};
-
-//   Object.keys(containerMapping).forEach(pd_flag => {
-//     const filteredData = filteredByPort.filter(item =>
-//       item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
-//     );
-
-//     const containerId = containerMapping[pd_flag];
-//     const container = document.getElementById(containerId);
-//     if (container && filteredData.length > 0) {
-//       populateCVaRTable(container, filteredData, port_name);
-//       combinedRelData[pd_flag] = filteredData;
-//     }
-//   });
-
-//   // ✅ Jetzt rendern wir eine kombinierte Übersicht:
-//   renderCombinedCVaRRelTable(combinedRelData, index);
-
-//   // if (Object.keys(combinedRelData).length === 0) {
-//   //   noCVaRDataFallback("run CVaR");
-//   // }
-  
-// }
-//     function populateCVaRTable(container, CVaRData, port_name) {
-//       if (!CVaRData || CVaRData.length === 0) {
-//           console.warn("⚠️ No CVaR data available.");
-//           container.innerHTML = "<p>No data available</p>";
-//           return;
-//       }
-
-//       // Create a new table
-//       const table = document.createElement("table");
-//       table.border = "1"; // Add border for visibility
-
-//       // Create table headers
-//       const headers = [`Metric for ${port_name}`, "Absolute", "Relative"];
-//       const headerRow = table.insertRow();
-//       headers.forEach(headerText => {
-//           const cell = headerRow.insertCell();
-//           cell.textContent = headerText;
-//           cell.style.fontWeight = "bold"; // Make headers bold
-//       });
-
-//       // Process and insert data rows
-//       const metrics = [
-//           { label: "VaR", absKey: "VaR_abs", relKey: "VaR_rel" },
-//           { label: "ES", absKey: "ES_abs", relKey: "ES_rel" }
-//       ];
-
-//       metrics.forEach(metric => {
-//           const row = table.insertRow();
-//           row.insertCell().textContent = metric.label; // First column: Metric name
-//           row.insertCell().textContent = formatNumber(0)(CVaRData[0][metric.absKey]); // ✅
-//           row.insertCell().textContent = formatPercentage(CVaRData[0][metric.relKey]); // ✅ (wenn korrekt definiert)
-
-//       });
-
-//       // Clear previous content and append the new table
-//       container.innerHTML = "";
-//       container.appendChild(table);
-//     }
-//     function formatPercentage(value) {
-//       return value !== undefined ? (value * 100).toFixed(2) + "%" : "N/A";
-//     }
-//     function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
-//       const containerId = `CVaR_allRelativeContainer${index}`;
-//       // console.log('containerId:', containerId);
-    
-//       const container = document.getElementById(containerId);
-//       if (!container) return;
-    
-//       // ✅ Prüfen, ob überhaupt sinnvolle Daten vorhanden sind
-//       const hasValidData = Object.values(allFilteredDataByPdFlag).some(
-//         (data) => data?.[0]?.VaR_rel !== undefined
-//       );
-    
-//       if (!hasValidData) {
-//         container.innerHTML = ''; // Kein Header, keine Tabelle
-//         return;
-//       }
-    
-//       // ✅ Jetzt sicher: Es gibt gültige Daten → baue die Tabelle
-//       container.innerHTML = '';
-//       const table = document.createElement('table');
-//       table.classList.add('CVaRTable');
-    
-//       const headerRow = table.insertRow();
-//       ['label', 'value'].forEach(text => {
-//         const cell = headerRow.insertCell();
-//         cell.textContent = text;
-//       });
-      
-//       const allowedPdFlags = ['rating', 'market' , 'norm']; // ⬅️ Nur "market" anzeigen. Für alle: einfach [] oder null setzen
-
-//       const labelMap = {
-//   rating: 'Historic',
-//   market: 'Market Implied',
-//   norm: 'Risk Adjusted'
-// };
-
-
-// Object.entries(allFilteredDataByPdFlag).forEach(([pd_flag, data]) => {
-//   if (allowedPdFlags.length > 0 && !allowedPdFlags.includes(pd_flag)) return; // ⛔ Skip if not allowed
-
-//   const row = data[0];
-//   if (!row || !('VaR_rel' in row)) return;
-
-//   const label = `${labelMap[pd_flag] || pd_flag} VaR`;
-
-//   const value = typeof row.VaR_rel === 'string'
-//     ? row.VaR_rel
-//     : formatPercentage(row.VaR_rel);
-
-//   const r = table.insertRow();
-//   r.insertCell(0).textContent = label;
-//   r.insertCell(1).textContent = value;
-// });
-
-      
-    
-//       container.appendChild(table);
-//     }
-    
-// export { filteredEADMainData};
-
-
-import { filterColumnsInData } from '../../../modal_HELPER/dataProcessor.js';
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import { filterColumnsInData } from '../../../MODAL_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/format.js';
 
@@ -425,6 +202,8 @@ export function handleCVaRData(receivedData, index) {
 
   // Kombinierte Übersicht (VaR_rel)
   renderCombinedCVaRRelTable(combinedRelData, index);
+
+
 }
 
 function populateCVaRTable(container, CVaRData, port_name) {
@@ -536,9 +315,350 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
   });
 
   container.appendChild(table);
+
+
+        const stateCvar = trafficLightStateForCvar(allFilteredDataByPdFlag, 'Historic');
+      if (stateCvar) updateTrafficLight('#traffic-credit-cvar', stateCvar);
+
+        const stateMsd = trafficLightStateForMsd(allFilteredDataByPdFlag, allowedPdFlags );
+      if (stateMsd) updateTrafficLight('#traffic-credit-msd', stateMsd);
+
+        const stateTsi = trafficLightStateForTsi(allFilteredDataByPdFlag, allowedPdFlags );
+      if (stateTsi) updateTrafficLight('#traffic-credit-tsi', stateTsi);
+
+
+  
 }
 
-// Für andere Module verfügbar lassen
+
+function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
+  if (!allFilteredDataByPdFlag || typeof allFilteredDataByPdFlag !== 'object') {
+    return null;
+  }
+
+  // 1) Thresholds aus appState holen (kann Array oder Objekt sein)
+  const thrRaw = appState.getCvarInputThreshold
+    ? appState.getCvarInputThreshold('CVaR')
+    : null;
+
+  console.log('getCvarInputThreshold("CVaR") →', thrRaw);
+
+  if (!thrRaw) {
+    console.warn('⚠️ CVaR-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
+    return null;
+  }
+
+  // 2) Falls Array → passende Zeile nach metric = "CVaR" suchen
+  let thrObj;
+
+  if (Array.isArray(thrRaw)) {
+    thrObj = thrRaw.find(r => r.metric === 'CVaR') || thrRaw[0];
+  } else {
+    thrObj = thrRaw;
+  }
+
+  if (!thrObj) {
+    console.warn('⚠️ CVaR-Thresholds: Kein Eintrag für metric="CVaR" gefunden:', thrRaw);
+    return null;
+  }
+
+  let YELLOW = Number(thrObj.yellow_threshold);
+  let RED    = Number(thrObj.red_threshold);
+
+  console.log('Rohe Thresholds aus DB (CVaR-Zeile):', {
+    rawYellow: YELLOW,
+    rawRed: RED,
+  });
+
+  if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
+    console.warn('⚠️ CVaR-Thresholds sind keine gültigen Zahlen:', thrObj);
+    return null;
+  }
+
+  // 3) Einheit normalisieren:
+  // - Deine neue DB-Konvention: -0.05, -0.2 etc. → already fractions → bleiben so.
+  // - Falls irgendwo noch alte Werte wie -5 / -20 drin sind → in Brüche umrechnen.
+  if (Math.abs(YELLOW) > 1 || Math.abs(RED) > 1) {
+    YELLOW = YELLOW / 100;
+    RED    = RED / 100;
+  }
+
+  // Beträge verwenden (weil Verlustseite negativ)
+  YELLOW = Math.abs(YELLOW);
+  RED    = Math.abs(RED);
+
+  console.log('Normierte Thresholds (Brüche, Betrag):', { YELLOW, RED });
+
+  // 4) Daten für aktuelles Flag holen
+  const key = (flag === 'Historic') ? 'rating' : flag;
+  const arr = allFilteredDataByPdFlag[key];
+
+  if (!Array.isArray(arr) || !arr.length) return null;
+
+  const row = arr[0];
+  if (!row || row.VaR_rel == null) return null;
+
+  const raw = Number(row.VaR_rel);
+  if (!isFinite(raw)) return null;
+
+  // VaR_rel ist bei Verlusten negativ → Betrag
+  const lossLevel = Math.abs(raw);   // z.B. -0.0552 → 0.0552 = 5.52 %
+
+  console.log('CVaR Ampel Check:', {
+    flag,
+    VaR_rel_raw: raw,
+    lossLevel,
+    YELLOW,
+    RED
+  });
+
+  if (lossLevel >= RED)    return 'red';
+  if (lossLevel >= YELLOW) return 'yellow';
+  return 'green';
+}
+
+
+
+
+
+function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
+  if (!allFilteredDataByPdFlag || typeof allFilteredDataByPdFlag !== 'object') {
+    return null;
+  }
+
+  // 1) Thresholds aus appState holen (kann Array oder Objekt sein)
+  const thrRaw = appState.getCvarInputThreshold
+    ? appState.getCvarInputThreshold('MSD')
+    : null;
+
+  console.log('getCvarInputThreshold("MSD") →', thrRaw);
+
+  if (!thrRaw) {
+    console.warn('⚠️ MSD-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
+    return null;
+  }
+
+  // 2) Falls Array → passende Zeile nach metric = "MSD" suchen
+  let thrObj;
+
+  if (Array.isArray(thrRaw)) {
+    thrObj = thrRaw.find(r => r.metric === 'MSD') || thrRaw[0];
+  } else {
+    thrObj = thrRaw;
+  }
+
+  if (!thrObj) {
+    console.warn('⚠️ MSD-Thresholds: Kein Eintrag für metric="MSD" gefunden:', thrRaw);
+    return null;
+  }
+
+  let YELLOW = Number(thrObj.yellow_threshold);
+  let RED    = Number(thrObj.red_threshold);
+
+  console.log('Rohe MSD-Thresholds aus DB:', {
+    rawYellow: YELLOW,
+    rawRed: RED,
+  });
+
+  if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
+    console.warn('⚠️ MSD-Thresholds sind keine gültigen Zahlen:', thrObj);
+    return null;
+  }
+
+  // 3) Einheit normalisieren:
+  // Neue Konvention: 0.01, 0.02 etc. → bereits Brüche.
+  // Falls mal alte Werte 1 / 2 oder 10 / 20 drin sind → in Brüche umrechnen.
+  if (Math.abs(YELLOW) > 1 || Math.abs(RED) > 1) {
+    YELLOW = YELLOW / 100;
+    RED    = RED / 100;
+  }
+
+  // Ab jetzt arbeiten wir mit positiven Schwellen (Betrag)
+  YELLOW = Math.abs(YELLOW);
+  RED    = Math.abs(RED);
+
+  console.log('Normierte MSD-Thresholds (Brüche, Betrag):', { YELLOW, RED });
+
+  // 4) rating/norm-Daten holen
+  const ratingArr = allFilteredDataByPdFlag['rating'];
+  const normArr   = allFilteredDataByPdFlag['norm'];
+
+  if (!Array.isArray(ratingArr) || !ratingArr.length) return null;
+  if (!Array.isArray(normArr)   || !normArr.length)   return null;
+
+  const ratingRow = ratingArr[0];
+  const normRow   = normArr[0];
+
+  if (!ratingRow || !normRow) return null;
+
+  // Wir verwenden gezielt ES_rel
+  const candidateKeys = ['ES_rel'];
+
+  const findKey = (row) =>
+    candidateKeys.find(k => k in row);
+
+  const keyRating = findKey(ratingRow);
+  const keyNorm   = findKey(normRow);
+
+  if (!keyRating || !keyNorm) {
+    console.warn('⚠️ Kein passender ES-Key in rating/norm gefunden (MSD)');
+    return null;
+  }
+
+  const esRating = Number(ratingRow[keyRating]);
+  const esNorm   = Number(normRow[keyNorm]);
+
+  if (!Number.isFinite(esRating) || !Number.isFinite(esNorm)) {
+    return null;
+  }
+
+  // Differenz, z.B. -0.01 = -1%, aber wir vergleichen den Betrag
+  const diffRel = esNorm - esRating;
+  const valueToCompare = Math.abs(diffRel);
+
+  console.log('Credit Risk Ampel MSD (ES):', {
+    esRating,
+    esNorm,
+    diffRel,
+    absDiff: valueToCompare,
+    YELLOW,
+    RED
+  });
+
+  // Schwellen sind positiv:
+  // Beispiel: YELLOW = 0.01, RED = 0.02
+  // |diffRel| >= RED    → rot
+  // |diffRel| >= YELLOW → gelb
+  if (valueToCompare >= RED)    return 'red';
+  if (valueToCompare >= YELLOW) return 'yellow';
+  return 'green';
+}
+
+
+
+
+
+function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
+  if (!allFilteredDataByPdFlag || typeof allFilteredDataByPdFlag !== 'object') {
+    return null;
+  }
+
+  // 1) Thresholds aus appState holen (kann Array oder Objekt sein)
+  const thrRaw = appState.getCvarInputThreshold
+    ? appState.getCvarInputThreshold('TSI')
+    : null;
+
+  console.log('getCvarInputThreshold("TSI") →', thrRaw);
+
+  if (!thrRaw) {
+    console.warn('⚠️ TSI-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
+    return null;
+  }
+
+  // 2) Falls Array → passende Zeile nach metric = "TSI" suchen
+  let thrObj;
+
+  if (Array.isArray(thrRaw)) {
+    thrObj = thrRaw.find(r => r.metric === 'TSI') || thrRaw[0];
+  } else {
+    thrObj = thrRaw;
+  }
+
+  if (!thrObj) {
+    console.warn('⚠️ TSI-Thresholds: Kein Eintrag für metric="TSI" gefunden:', thrRaw);
+    return null;
+  }
+
+  let YELLOW = Number(thrObj.yellow_threshold);
+  let RED    = Number(thrObj.red_threshold);
+
+  console.log('Rohe TSI-Thresholds aus DB:', {
+    rawYellow: YELLOW,
+    rawRed: RED,
+  });
+
+  if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
+    console.warn('⚠️ TSI-Thresholds sind keine gültigen Zahlen:', thrObj);
+    return null;
+  }
+
+  // 3) Einheit normalisieren:
+  // Neue Konvention: 0.01, 0.02 etc. → bereits Brüche (Prozentpunkte).
+  // Alte Werte 1 / 2 / 10 / 20 → in Brüche umrechnen.
+  if (Math.abs(YELLOW) > 1 || Math.abs(RED) > 1) {
+    YELLOW = YELLOW / 100;
+    RED    = RED / 100;
+  }
+
+  // Ab jetzt mit positiven Schwellen (Betrag in Prozentpunkten)
+  YELLOW = Math.abs(YELLOW);
+  RED    = Math.abs(RED);
+
+  console.log('Normierte TSI-Thresholds (Brüche, Betrag):', { YELLOW, RED });
+
+  // 4) Wir schauen nur auf "rating"
+  const ratingArr = allFilteredDataByPdFlag['rating'];
+  if (!Array.isArray(ratingArr) || !ratingArr.length) return null;
+
+  const row = ratingArr[0];
+  if (!row || typeof row !== 'object') return null;
+
+  // Feldnamen – nur relative Größen
+  const esCandidates  = ['ES_rel', 'es_rel'];
+  const varCandidates = ['VaR_rel', 'var_rel'];
+
+  const findKey = (r, candidates) =>
+    candidates.find(k => k in r);
+
+  const esKey  = findKey(row, esCandidates);
+  const varKey = findKey(row, varCandidates);
+
+  if (!esKey || !varKey) {
+    console.warn('⚠️ Kein ES_rel-/VaR_rel-Key für rating gefunden (TSI).');
+    return null;
+  }
+
+  const esVal  = Number(row[esKey]);   // z.B. -0.07
+  const varVal = Number(row[varKey]);  // z.B. -0.05
+
+  if (!Number.isFinite(esVal) || !Number.isFinite(varVal)) {
+    return null;
+  }
+
+  // TSI in Prozentpunkten: Differenz zweier relativer Werte
+  // z.B. -0.07 - (-0.05) = -0.02 ( = -2 %-Punkte )
+  const tsiDiff = esVal - varVal;
+  const valueToCompare = Math.abs(tsiDiff);  // 0.02
+
+  console.log('TSI (rating, Prozentpunkte):', {
+    esKey,
+    varKey,
+    esVal,
+    varVal,
+    tsiDiff,
+    absDiff: valueToCompare,
+    YELLOW,
+    RED
+  });
+
+  // Schwellen sind positiv:
+  // |TSI_diff| >= RED    → rot
+  // |TSI_diff| >= YELLOW → gelb
+  if (valueToCompare >= RED)    return 'red';
+  if (valueToCompare >= YELLOW) return 'yellow';
+  return 'green';
+}
+
+
+
+
+
+
+
+
+
+
+
 export { filteredEADMainData };
 
 
