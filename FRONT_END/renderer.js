@@ -3,8 +3,17 @@ import { renderAllChartsNow} from './allChartsRenderer.js';
 import { initPortfolioPanelsLazyRender} from './initAnalysePortfolioPanels.js';
 import { initMarketDataPanelsLazyRender} from './initMarketDataPanels.js';
 import { createTSModals, observePanelTsOpen} from './MARKET_DATA/HISTORIC_DATA/TS.js';
+import { renderVolSurfacePanel, renderSwaptionSmile } from './MARKET_DATA/VOLS/swaptionVols.js';
+import { handleExcelComplete } from './UPDATES/updatesExcel.js';
+
+import { buildCubeSurfaceGrid, renderSwaptionCubeSurface3D, populateSwaptionCubeSelectors, renderSwaptionCubeSummary } from './MARKET_DATA/VOLS/volCube.js';
+
 import { handlePortAggData, handlePortProdData} from './SELECT_PORTFOLIO/PORT.js';
-import { handleMVaRData, handleMVarInputData} from './ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
+import { handleMVaRData, handleMvarInputData} from './ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
+
+import { handleCvarInput} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInput.js'; 
+import { handleCvarInputThresholdView} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInputThreshold.js'; 
+
 import { handleCVaRData, handleEADData} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js'; 
 import { handleSwapForwardCurve, handleFWDData } from './MARKET_DATA/FORWARDS/FORWARDS.js';
 import { handleProviderData } from './DATA_PROVIDER/DATAProvider.js'; 
@@ -30,7 +39,7 @@ import { AppState } from '../AppState.js';
 import { initializeTabs } from '../utils/tabs.js';
 
 
-import { handleFormAction } from '../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
 
 
 
@@ -51,8 +60,20 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   setupReportsEnterLeaveBridge();
   setupBulkUpdateBridge();
+  // HIST-Progress (APIs)
   setupPythonProgressBars({
-    initialProviders: ["ECB", "FED"]   // später einfach erweitern oder weglassen
+    initialProviders: ["ECB", "FED"],
+    containerId: "progressBarsContainer",
+    globalTextId: "progressText_GLOBAL",
+    eventName: "py-progress"
+  });
+
+  // EXCEL-Progress – eigener Satz Balken, einer pro Mode
+  setupPythonProgressBars({
+    initialProviders: ["ALL", "ISSUER", "PRODUCTS", "DEALS", "EUSW"],
+    containerId: "excelProgressBarsContainer",
+    globalTextId: "progressText_EXCEL",
+    eventName: "py-excel-progress"
   });
 });
 
@@ -134,7 +155,6 @@ function setupPythonProgressBars({
     return;
   }
 
-  // Erzeugt eine Provider-Bar, falls sie noch nicht existiert
   function ensureProviderBar(provider) {
     const barId = `progressBar_${provider}`;
     if (document.getElementById(barId)) return;
@@ -188,6 +208,7 @@ function setupPythonProgressBars({
 
 
 
+
 function setupEventListeners() {
 
     if (window.__listenersBoundOnce) {
@@ -208,6 +229,9 @@ function setupEventListeners() {
 
   // Market Data: Fixed Income
   window.api.receive('EUSWData', handleEUSWData);
+    // --- NEU: Swaption-Vol-Daten aus der DB ---
+  window.api.receive('EUSWAPTION_ATMData', handleSwaptionATMData);
+  window.api.receive('EUSWAPTION_SMILEData', handleSwaptionSmileData);
 
   // ISSUER 
   window.api.receive('IssuerData', handleIssuerDataInit);
@@ -255,7 +279,7 @@ function setupEventListeners() {
 
 
   // MVaR: Input
-  window.api.receive('MVaRInput_2Data', handleMVarInputData);
+  window.api.receive('MVaRInputData', handleMvarInputData);
 
   // MVaR
   window.api.receive('MarketVaRData', handleAllMVaRData);
@@ -267,6 +291,12 @@ function setupEventListeners() {
   // EAD
   window.api.receive('EADData', (data) => handleAllEADData(data));
 
+  // CVaR:Input
+    window.api.receive('CreditVaRInputData', (data) => initHandleCvarInput(data));
+
+  // CVaR:Input Thresholds
+  window.api.receive('CreditVaRInputThresholdData', (data) => handleCvarInputThreshold(data));  
+  
   // CVaR
   window.api.receive('CreditVaRData', (data) => handleAllCVaRData(data));
 
@@ -301,6 +331,9 @@ function setupEventListeners() {
   window.api.receive('py-cvar-complete', handleCVaRComplete);
   window.api.receive('py-matchColumns-complete', handleAIColumnComplete);
   window.api.receive('py-historicData-complete', handleHistComplete);
+  window.api.receive('py-swaption-complete', handleSwaptionComplete);
+
+  window.api.receive('py-excel-complete', handleExcelComplete);
 
   window.api.receive('project-finished', handleProjectFinished);
 
@@ -453,6 +486,61 @@ function setupDropdowns() {
       index: parseInt(num) // 🆕 übergeben!
     });
   });
+
+// -----------------------------------------------------
+// SWAPTION DROPDOWNS (ATM / Smile)
+// -----------------------------------------------------
+const optSel = document.getElementById("swaptionOptionTenorSelect");
+const swpSel = document.getElementById("swaptionSwapTenorSelect");
+
+// Falls Panel nie gerendert wird -> nicht crashen
+if (optSel && swpSel) {
+  optSel.addEventListener("change", () => {
+    console.log("[Swaption] OptionTenor geändert → Re-Render ATM/Smile");
+    renderVolSurfacePanel();
+    renderSwaptionSmile();
+  });
+
+  swpSel.addEventListener("change", () => {
+    console.log("[Swaption] SwapTenor geändert → Re-Render ATM/Smile");
+    renderVolSurfacePanel();
+    renderSwaptionSmile();
+  });
+}
+
+
+// -----------------------------------------------------
+// SWAPTION DROPDOWNS for CUBE (OptionTenor / SwapTenor)
+// -----------------------------------------------------
+const cubeOptSel = document.getElementById('swaptionOptionTenorSelectCube');
+const cubeSwpSel = document.getElementById('swaptionSwapTenorSelectCube');
+const summaryEl  = document.getElementById('SwaptionCubeSummaryContainer');
+const cubeTargetId = 'swaption-cube-surface-3d'; // optional, nur wenn du ihn brauchst
+
+if (cubeOptSel && cubeSwpSel) {
+  cubeOptSel.addEventListener('change', () => {
+    console.log('[SwaptionCube] OptionTenor geändert → Re-Render Cube');
+    renderSwaptionCubeSurface3D();
+    renderSwaptionCubeSummary();
+    
+  });
+
+  cubeSwpSel.addEventListener('change', () => {
+    console.log('[SwaptionCube] SwapTenor geändert → Re-Render Cube');
+    renderSwaptionCubeSurface3D();
+    renderSwaptionCubeSummary();
+    
+  });
+}
+
+
+
+
+
+
+
+
+
 }
         // einmalig definieren
     const debounce = (fn, ms = 120) => {
@@ -531,8 +619,7 @@ function setupButtons() {
     // ✅ NEU: ADD-Button im Portfolio-Panel
   document.getElementById('historicMetricsAddButton')?.addEventListener('click', handleHistoricMetricsAddClick);  
 
-  document.getElementById('portfolioDealsAddButton')
-    ?.addEventListener('click', handleAddDealsToNewPortfolio);
+  document.getElementById('portfolioDealsAddButton')?.addEventListener('click', handleAddDealsToNewPortfolio);
 
   document.getElementById('saveSelectionButton').addEventListener('click', handleSaveSelection);
   document.getElementById('deleteTableButton').addEventListener('click', handleDeleteSelection);
@@ -571,15 +658,27 @@ function setupButtons() {
     { buttonId: 'fairValueButton1', projectName: 'py-fairValue' },
     { buttonId: 'fairValueButton2', projectName: 'py-fairValue' },
     { buttonId: 'fairValueButton3', projectName: 'py-fairValue' },
-    { buttonId: 'CVaRButton', projectName: 'py-CVaR' },
-    { buttonId: 'updateDataExcelButton', projectName: 'py-excel' },
+
+    // { buttonId: 'CVaRButton', projectName: 'py-CVaR' },
     { buttonId: 'CSParButton', projectName: 'py-cspar' },
     { buttonId: 'MLButton', projectName: 'py-ml' },
+
     { buttonId: 'matchColumnsButton', projectName: 'py-matchColumns' },
+
     { buttonId: 'updateHistoricDataButton', projectName: 'py-historicData' },
+
+      // Excel-Import: neue Buttons
+    { buttonId: 'updateExcelAllButton',    projectName: 'py-excel' },
+    { buttonId: 'updateExcelIssuerButton', projectName: 'py-excel' },
+    { buttonId: 'updateExcelProductsButton', projectName: 'py-excel' },
+    { buttonId: 'updateExcelDealsButton',  projectName: 'py-excel' },
+    { buttonId: 'updateExcelEuswButton',   projectName: 'py-excel' },
+
     { buttonId: 'histEcbButton', projectName: 'py-hist' },
     { buttonId: 'histFedButton', projectName: 'py-hist' },
     { buttonId: 'histYahooButton', projectName: 'py-hist' },
+      // 🔵 NEU: Swaption Vol Cube
+  { buttonId: 'swaptionCubeRunButton', projectName: 'py-swaption' },
   ];
   projectButtons.forEach(({ buttonId, projectName, extraParam }) => {
     const button = document.getElementById(buttonId);
@@ -588,17 +687,61 @@ function setupButtons() {
     );
   });
 
-  ['mvaRDistButton'].forEach((buttonId) => {
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.addEventListener('click', (event) => {
-        const selectedRadio = document.querySelector('.scenario-radio:checked');
-        if (!selectedRadio) { alert('Select a Timeperiode!'); return; }
-        const selectedInterval = selectedRadio.getAttribute('data-interval');
-        handleProjectButtonClick(event.target, 'py-MVaR', { selectedInterval });
-      });
+
+function setupRadioProjectButton({
+  buttonId,
+  projectName,
+  radioSelector,
+  valueAttr,      // z.B. 'data-interval' oder 'data-name'
+  payloadKey,     // z.B. 'selectedInterval' oder 'cvarName'
+  emptyMessage,
+}) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+
+  button.addEventListener('click', (event) => {
+    const selectedRadio = document.querySelector(`${radioSelector}:checked`);
+    if (!selectedRadio) {
+      alert(emptyMessage || 'Please select an option!');
+      return;
     }
+
+    const value = selectedRadio.getAttribute(valueAttr);
+    if (!value) {
+      alert(`Selected row has no ${valueAttr} attribute.`);
+      return;
+    }
+
+    console.log(`▶️ ${projectName} selected value for ${payloadKey}:`, value);
+
+    // Über deinen generischen Handler gehen → Button wird auf "Executing" gesetzt etc.
+    handleProjectButtonClick(event.target, projectName, {
+      [payloadKey]: value,
+    });
   });
+}
+
+// === Konfiguration für MVaR (wie bisher) ======================
+setupRadioProjectButton({
+  buttonId: 'mvaRDistButton',
+  projectName: 'py-MVaR',
+  radioSelector: '.scenario-radio',
+  valueAttr: 'data-interval',
+  payloadKey: 'selectedInterval',
+  emptyMessage: 'Select a Timeperiode!',
+});
+
+// === Konfiguration für CVaR (neue Variante) ===================
+setupRadioProjectButton({
+  buttonId: 'CVaRButton',
+  projectName: 'py-CVaR',
+  radioSelector: '.cvar-radio',
+  valueAttr: 'data-name',
+  payloadKey: 'cvarName',
+  emptyMessage: 'Select a CVaR configuration!',
+});
+
+
 
   // ====== CMS (Deins)
   // applyCMSForwardRate('CMSButton1');
@@ -929,11 +1072,11 @@ function handleAddDealsToNewPortfolio(event) {
     }
   }
 
-  // 2) Modal/Formular öffnen – wie beim normalen Deals-Add-Button
+  // 2) Modal öffnen – wie beim normalen Deals-Add-Button
   const selectedTableName = 'DealsMain'; // physische Tabelle
-  handleFormAction(event, dealsData, null, selectedTableName, 'add');
+  handleModalAction(event, dealsData, null, selectedTableName, 'add');
 
-  // 3) Portfolio-Name im Formular vorbelegen (z.B. PORT_NAME)
+  // 3) Portfolio-Name im Modal vorbelegen (z.B. PORT_NAME)
   setTimeout(() => {
     const form = document.getElementById('editForm') || document.querySelector('#modal form');
     if (!form) return;
@@ -1257,24 +1400,6 @@ function handleCustomerTSData(data) {
   }
   }
   // IR
-  // function handleEUSWData(data) {
-  //   appState.setEUSWData(data);
-
-
-  //   const selectedCurve = document.getElementById("ratesSelector").value;
-
-  //   // Setze RATES auf die gewählte Spalte
-  //   data.forEach(row => {
-  //       if (selectedCurve in row) {
-  //           row.RATES = row[selectedCurve]; 
-  //       }
-  //   });
-
-  //   // Graphen direkt aktualisieren
-  //   //appState.handleIRData.call(appState, data);
-  //   appState.handleFWDData.call(appState, data);
-  //   appState.handleSwapForwardCurve.call(appState, data);
-  // }
   function handleEUSWData(data) {
     // 1) nur roh speichern
     appState.setEUSWData(data);
@@ -1287,6 +1412,173 @@ function handleCustomerTSData(data) {
       document.dispatchEvent(new CustomEvent("eusw:data:ready"));
     } catch {}
   }
+
+
+function sortTenors(tenors) {
+  function parseTenor(t) {
+    if (typeof t !== 'string') return { totalYears: 9999 };
+
+    const match = t.trim().match(/^(\d+)\s*([MDWY])?$/i);
+    if (!match) return { totalYears: 9999 };
+
+    const value = parseInt(match[1], 10);
+    const unit  = (match[2] || 'Y').toUpperCase();
+
+    let factor;
+    switch (unit) {
+      case 'D': factor = 1 / 365; break;
+      case 'W': factor = 7 / 365; break;
+      case 'M': factor = 1 / 12; break;
+      case 'Y':
+      default:  factor = 1; break;
+    }
+
+    return { totalYears: value * factor };
+  }
+
+  return [...tenors].sort((a, b) => {
+    const A = parseTenor(a);
+    const B = parseTenor(b);
+    return A.totalYears - B.totalYears;
+  });
+}
+
+// 🔧 Helper: Swaption-Dropdowns füllen
+function fillSwaptionDropdowns(optionTenors, swapTenors) {
+  const optSel = document.getElementById("swaptionOptionTenorSelect");
+  const swpSel = document.getElementById("swaptionSwapTenorSelect");
+
+  if (!optSel || !swpSel) {
+    console.warn('[handleSwaptionATMData] Swaption-Dropdowns im DOM nicht gefunden.');
+    return;
+  }
+
+  // Dropdowns leeren
+  optSel.innerHTML = "";
+  swpSel.innerHTML = "";
+
+  // Optionen befüllen
+  optionTenors.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    optSel.appendChild(opt);
+  });
+
+  swapTenors.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    swpSel.appendChild(opt);
+  });
+
+  // Wenn noch nichts gewählt → auf ersten Wert setzen
+  if (!optSel.value && optionTenors.length > 0) {
+    optSel.value = optionTenors[0];
+  }
+  if (!swpSel.value && swapTenors.length > 0) {
+    swpSel.value = swapTenors[0];
+  }
+}
+
+// ⭐ NEU: Komplett überarbeiteter Handler
+function handleSwaptionATMData(rows) {
+  if (!rows || rows.length === 0) {
+    console.warn('[handleSwaptionATMData] Keine Rows erhalten.');
+    if (appState) appState.swaptionATM = null;
+    return;
+  }
+
+  if (!appState) {
+    console.warn('[handleSwaptionATMData] appState ist nicht initialisiert.');
+    return;
+  }
+
+  console.log('[handleSwaptionATMData] rows:', rows);
+
+  // 1) Einzigartige Tenöre sammeln
+  const optionSet = new Set();
+  const swapSet   = new Set();
+
+  for (const r of rows) {
+    optionSet.add(r.option_tenor); // Feldnamen ggf. anpassen
+    swapSet.add(r.swap_tenor);
+  }
+
+  // 2) Fachlich sinnvolle Sortierung
+  const optionTenors = sortTenors(Array.from(optionSet)); // X-Achse
+  const swapTenors   = sortTenors(Array.from(swapSet));   // Y-Achse
+
+  // 3) Leere Matrix: ZEILE = SwapTenor (y), SPALTE = OptionTenor (x)
+  const volMatrix = swapTenors.map(() => optionTenors.map(() => null));
+
+  // 4) Matrix füllen: volMatrix[row_y][col_x]
+  for (const r of rows) {
+    const rowIdx = swapTenors.indexOf(r.swap_tenor);     // y
+    const colIdx = optionTenors.indexOf(r.option_tenor); // x
+
+    if (rowIdx >= 0 && colIdx >= 0) {
+      const vol = Number(r.atm_vol);
+      volMatrix[rowIdx][colIdx] = isNaN(vol) ? null : vol;
+    }
+  }
+
+  // 5) Im AppState speichern
+  appState.swaptionATM = {
+    optionTenors, // X
+    swapTenors,   // Y
+    volMatrix     // [y][x]
+  };
+
+  console.log('[handleSwaptionATMData] swaptionATM (structured):');
+  console.log('optionTenors (X):', optionTenors);
+  console.log('swapTenors   (Y):', swapTenors);
+  console.table(volMatrix);
+
+  // 6) Dropdowns für Option/Swap-Tenor befüllen/aktualisieren
+  fillSwaptionDropdowns(optionTenors, swapTenors);
+
+  // 7) Falls Swaption-Panel offen → Surface & Smile neu rendern
+  const pSwaption = document.getElementById("panel-swaption");
+  if (pSwaption && !pSwaption.hidden) {
+    if (typeof renderVolSurfacePanel === 'function') {
+      renderVolSurfacePanel();
+    }
+    if (typeof renderSwaptionSmile === 'function') {
+      renderSwaptionSmile();
+    }
+  }
+}
+
+export function handleSwaptionSmileData(rows) {
+  console.log('[Smile] Raw rows:', rows);
+
+  if (!appState) {
+    console.warn('[Smile] appState ist nicht initialisiert.');
+    return;
+  }
+
+  if (!rows || rows.length === 0) {
+    console.warn('[Smile] Keine Smile-Daten erhalten.');
+    appState.swaptionSmile = null;
+    // Chart hier NICHT anfassen – das macht renderSwaptionSmile bei Bedarf
+    return;
+  }
+
+  // Deine Struktur: [{ StrikeSpreadBP, VolSpread }, ...]
+  appState.swaptionSmile = rows;
+
+  // Wenn Swaption-Panel offen → sofort neu zeichnen
+  const panel = document.getElementById('panel-swaption');
+  if (panel && !panel.hidden) {
+    if (typeof renderSwaptionSmile === 'function') {
+      renderSwaptionSmile();
+    }
+  }
+}
+
+
+
 
 
 
@@ -1325,6 +1617,17 @@ function handleCustomerTSData(data) {
   function handleMvarDistData(receivedData) {
       //console.log('handleMvarDistData:', receivedData)
     appState.setMvarDistData(receivedData); 
+  }
+
+    // CVaR:Input Threshold
+  function initHandleCvarInput(receivedData) {
+    appState.setCvarInput(receivedData);
+    handleCvarInput();
+  }
+  // CVaR:Input Threshold
+  function handleCvarInputThreshold(receivedData) {
+    appState.setCvarInputThreshold(receivedData);
+    handleCvarInputThresholdView();
   }
   // CVaR
   function handleAllCVaRData(receivedData) {
@@ -1975,80 +2278,105 @@ function enhanceDealsIncludeCheckboxes(container = '#offersDataContainer', opts 
 
   // =================================PYTHON EXECUTION:===============================
 
-  function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
-    if (!buttonElement) return;
+function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
+  if (!buttonElement) return;
 
-    const originalLabel = buttonElement.dataset.originalLabel || buttonElement.textContent;
-    buttonElement.dataset.originalLabel = originalLabel;
-    buttonElement.disabled = true;
-    buttonElement.textContent = 'Executing...';
+  const originalLabel = buttonElement.dataset.originalLabel || buttonElement.textContent;
+  buttonElement.dataset.originalLabel = originalLabel;
+  buttonElement.disabled = true;
+  buttonElement.textContent = 'Executing...';
 
-    try {
-      switch (projectName) {
-        case 'py-matchColumns':
-          handleAIColumnProject(extraParam);
-          break;
+  try {
+    switch (projectName) {
+      case 'py-matchColumns':
+        handleAIColumnProject(extraParam);
+        break;
 
-        case 'py-ml':
-          handleMLProject(extraParam);
-          break;
+      case 'py-ml':
+        handleMLProject(extraParam);
+        break;
 
-        case 'py-cspar':
-          handleCSParProject(buttonElement, extraParam);
-          break;
+      case 'py-cspar':
+        handleCSParProject(buttonElement, extraParam);
+        break;
 
-        case 'py-fairValue': {
-          const isOffersBtn = (buttonElement.id === 'fairValueButton2');
-          // 🔵 Nur Flag/Parameter setzen – Rest macht Python
-          handleFairValueProject(buttonElement, {
-            ...extraParam,
-            calibrate: isOffersBtn,
-            cal_iters: 2,         // ggf. aus Settings holen
-          });
-          break;
-        }
-
-        case 'py-CVaR':
-          handleCVaRProject(buttonElement, extraParam);
-          break;
-
-        case 'py-MVaR':
-          handleMVaRProject(buttonElement, extraParam);
-          break;
-
-        case 'py-hist': {
-          const apiMap = { histEcbButton: 'ECB', histFedButton: 'FED', histYahooButton: 'Yahoo' };
-          const apiSource = apiMap[buttonElement.id];
-          if (apiSource) extraParam.api = apiSource;
-          handleHistProject(buttonElement, extraParam);
-          break;
-        }
-
-        default: {
-          const selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
-          sendPayloadToAPI(projectName, selectedTableName, extraParam);
-          break;
-        }
+      case 'py-fairValue': {
+        const isOffersBtn = (buttonElement.id === 'fairValueButton2');
+        // 🔵 Nur Flag/Parameter setzen – Rest macht Python
+        handleFairValueProject(buttonElement, {
+          ...extraParam,
+          calibrate: isOffersBtn,
+          cal_iters: 2, // ggf. aus Settings holen
+        });
+        break;
       }
 
-      // ✅ Einheitlicher Done-Listener (keine Ausnahme mehr für fairValueButton2)
-      const handler = () => {
-        buttonElement.disabled = false;
-        buttonElement.textContent = originalLabel || 'Run';
-      };
-      if (window.api?.once) {
-        window.api.once(`${projectName}-complete`, handler);
-      } else {
-        window.api.receive(`${projectName}-complete`, handler);
+      case 'py-CVaR':
+        handleCVaRProject(buttonElement, extraParam);
+        break;
+
+      case 'py-MVaR':
+        handleMVaRProject(buttonElement, extraParam);
+        break;
+
+      case 'py-hist': {
+        const apiMap = { histEcbButton: 'ECB', histFedButton: 'FED', histYahooButton: 'Yahoo' };
+        const apiSource = apiMap[buttonElement.id];
+        if (apiSource) extraParam.api = apiSource;
+        handleHistProject(buttonElement, extraParam);
+        break;
+        
       }
 
-    } catch (error) {
-      console.error(`Error handling project "${projectName}":`, error);
-      alert('An error occurred while executing the project.');
+      // 🔴 NEU: Excel-Import mit Modes (ALL, ISSUER, PRODUCTS, DEALS, EUSW)
+      case 'py-excel': {
+        const modeMap = {
+          updateExcelAllButton:    'ALL',
+          updateExcelIssuerButton: 'ISSUER',
+          updateExcelProductsButton: 'PRODUCTS',
+          updateExcelDealsButton:  'DEALS',
+          updateExcelEuswButton:   'EUSW',
+        };
+
+        const mode = modeMap[buttonElement.id] || 'ALL';
+
+        // hier wie bei den anderen Projekten: table-Arg = mode
+        // sendPayloadToAPI(projectName, tableName, extraParam)
+        sendPayloadToAPI(projectName, mode, extraParam);
+        break;
+      }
+
+          // 🔵 NEU: Swaption-Cube
+        case 'py-swaption':
+          handleSwaptionProject(buttonElement, extraParam);
+        break;
+
+      default: {
+        const selectedTableName = appState.getSelectedDealsTableName() || 'DealsMain';
+        sendPayloadToAPI(projectName, selectedTableName, extraParam);
+        break;
+      }
+    }
+
+    // ✅ Einheitlicher Done-Listener
+    const handler = () => {
       buttonElement.disabled = false;
       buttonElement.textContent = originalLabel || 'Run';
+    };
+    if (window.api?.once) {
+      window.api.once(`${projectName}-complete`, handler);
+    } else {
+      window.api.receive(`${projectName}-complete`, handler);
     }
+
+  } catch (error) {
+    console.error(`Error handling project "${projectName}":`, error);
+    alert('An error occurred while executing the project.');
+    buttonElement.disabled = false;
+    buttonElement.textContent = originalLabel || 'Run';
   }
+}
+
   //fairvalue
 
       function handleFairValueProject(buttonElement, extraParam = {}) {
@@ -2310,24 +2638,28 @@ function enhanceDealsIncludeCheckboxes(container = '#offersDataContainer', opts 
               }
 
       //CVaR
-      function handleCVaRProject(buttonElement, extraParam) {
+      function handleCVaRProject(buttonElement, extraParam = {}) {
         const port_name = appState.getSelectedPortTableName();
         const CSSzenario = appState.getCSSzenarioData();
-      
+
         if (!CSSzenario) {
           throw new Error('No scenario data available. Please set a scenario first.');
         }
-      
-        extraParam.CSSzenario = CSSzenario;
-      
+
+        if (!extraParam.cvarName) {
+          throw new Error('No CVaR configuration name (cvarName) provided.');
+        }
+
         const payload = {
           tableName: port_name,
-          ...extraParam,
+          CSSzenario,
+          cvarName: extraParam.cvarName,   // 👈 kommt direkt vom Radio
         };
-      
+
         console.log('🚀 Sending payload for py-CVaR:', payload);
-        window.api.send(`start-py-CVaR`, payload);
+        window.api.send('start-py-CVaR', payload);
       }
+
           function handleCVaRComplete(data) {
             if (data.projectName === 'py-CVaR') {
               appState.setActiveTable('port'); // Set the active table
@@ -2676,6 +3008,61 @@ function enhanceDealsIncludeCheckboxes(container = '#offersDataContainer', opts 
               
                 window.api.send('fetch-table-data', 'tblTS');
               }
+
+
+// SWAPTION CUBE
+      function handleSwaptionProject(buttonElement, extraParam = {}) {
+        // Wenn du die Curve schon im State hast:
+        const selectedCurve = appState.getSelectedCurve?.() || 'EUSWAP';
+
+        const payload = {
+          selectedCurve,
+          ...extraParam,
+        };
+
+        // Startet den IPC-Call, den wir im Main definiert haben
+        window.api?.send?.('start-py-swaption', payload);
+      }
+function handleSwaptionComplete(data) {
+  console.log('📌 handleSwaptionComplete:', data);
+  if (data.projectName !== 'py-swaption') return;
+
+  if (!data.success) {
+    console.error('❌ Swaption-Run fehlgeschlagen:', data.error);
+    return;
+  }
+
+  const outer = data.result || {};
+  if (outer.status !== 'ok') {
+    console.error('❌ Swaption status != ok:', outer.message || outer.error);
+    return;
+  }
+
+  const core = outer.result || {};
+  const { cubeSurfaceFixedK } = core;
+
+  const cubeGrid = buildCubeSurfaceGrid(cubeSurfaceFixedK);
+  if (!cubeGrid) {
+    console.warn('[handleSwaptionComplete] Konnte cubeGrid nicht bauen.');
+    return;
+  }
+
+  if (appState.setSwaptionCubeSurface) {
+    appState.setSwaptionCubeSurface(cubeGrid);
+  } else {
+    appState.swaptionCubeSurface = cubeGrid;
+  }
+
+  // 🔹 Selects befüllen + Default (2Y / 5Y) setzen
+  populateSwaptionCubeSelectors();
+
+  // 🔹 Surface rendern
+  renderSwaptionCubeSurface3D();
+}
+
+
+
+ 
           
       
   //py-Projects SEND DATA to main       
@@ -2691,58 +3078,79 @@ function enhanceDealsIncludeCheckboxes(container = '#offersDataContainer', opts 
 
 
   function handleProjectFinished(data) {
-  const projectButtonMap = {
-    // 'py-MVaR': 'MVaRButton',
-    'py-MVaR': 'mvaRDistButton',
-    'py-CVaR': 'CVaRButton',
-    'py-excel': 'updateDataExcelButton',
-    'py-historicData': 'updateHistoricDataButton',
-    'py-cspar': 'CSParButton',
-    'py-ml': 'MLButton'
-  };
-
-  // Spezielles Routing für py-fairValue (es gibt 3 Buttons)
-  if (data.projectName === 'py-fairValue') {
-    const sourceToId = {
-      deals:  'fairValueButton1',
-      port:   'fairValueButton',
-      offers: 'fairValueButton2'
+    const projectButtonMap = {
+      // 'py-MVaR': 'MVaRButton',
+      'py-MVaR': 'mvaRDistButton',
+      'py-CVaR': 'CVaRButton',
+      // 'py-excel' fällt hier raus – mehrere Buttons!
+      'py-historicData': 'updateHistoricDataButton',
+      'py-cspar': 'CSParButton',
+      'py-ml': 'MLButton'
     };
 
-    // 1) Bevorzugt per data.source (falls du sie mitsendest)
-    let buttonId = sourceToId[data?.source];
+    // 🔹 Spezialrouting für py-fairValue (3 Buttons)
+    if (data.projectName === 'py-fairValue') {
+      const sourceToId = {
+        deals:  'fairValueButton1',
+        port:   'fairValueButton',
+        offers: 'fairValueButton2'
+      };
 
-    // 2) Fallback: der aktuell deaktivierte Fair-Value-Button (wurde ja beim Klick disabled)
-    if (!buttonId) {
-      buttonId = ['fairValueButton', 'fairValueButton1', 'fairValueButton2']
-        .find(id => document.getElementById(id)?.disabled);
+      // 1) Bevorzugt per data.source (falls du sie mitsendest)
+      let buttonId = sourceToId[data?.source];
+
+      // 2) Fallback: der aktuell deaktivierte Fair-Value-Button
+      if (!buttonId) {
+        buttonId = ['fairValueButton', 'fairValueButton1', 'fairValueButton2']
+          .find(id => document.getElementById(id)?.disabled);
+      }
+
+      const btn = document.getElementById(buttonId || '');
+      if (btn) {
+        handleProjectResponse(btn, data.projectName, data);
+      }
+      return; // fairValue erledigt
     }
 
-    const btn = document.getElementById(buttonId || '');
-    if (btn) {
-      handleProjectResponse(btn, data.projectName, data);
+    // 🔹 NEU: Spezialrouting für py-excel (5 Buttons)
+    if (data.projectName === 'py-excel') {
+      const excelIds = [
+        'updateExcelAllButton',
+        'updateExcelIssuerButton',
+        'updateExcelProductsButton',
+        'updateExcelDealsButton',
+        'updateExcelEuswButton',
+      ];
+
+      // Nimm den Button, der gerade disabled ist (der, den der User geklickt hat)
+      const buttonId = excelIds.find(id => document.getElementById(id)?.disabled);
+      const btn = buttonId ? document.getElementById(buttonId) : null;
+
+      if (btn) {
+        handleProjectResponse(btn, data.projectName, data);
+      }
+      return; // Excel erledigt
     }
-    return; // fairValue ist damit erledigt
+
+    // 🔹 Standard-Zuordnung für Projekte mit EINEM Button
+    const buttonId = projectButtonMap[data.projectName];
+    if (buttonId) {
+      handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
+    }
   }
 
-  // Standard-Zuordnung für alle Projekte mit EINEM Button
-  const buttonId = projectButtonMap[data.projectName];
-  if (buttonId) {
-    handleProjectResponse(document.getElementById(buttonId), data.projectName, data);
-  }
-  }
 
   function handleProjectResponse(buttonElement, projectName, response) {
     const projectLabels = {
-      'py-fairValue': 'Fair Value',
-      'py-MVaR': 'P/L Dist',
-      'py-CVaR': 'Credit VaR',
-      'py-ml': 'Machine Learning',
-      'py-excel': 'Excel Update',
-      'py-cspar': 'CS Parser',
+      'py-fairValue':    'Fair Value',
+      'py-MVaR':         'P/L Dist',
+      'py-CVaR':         'Credit VaR',
+      'py-ml':           'Machine Learning',
+      'py-excel':        'Excel Update',
+      'py-cspar':        'CS Parser',
       'py-matchColumns': 'Match Columns',
       'py-historicData': 'Historic Data',
-      'py-hist': 'Historical Update',
+      'py-hist':         'Historical Update',
     };
 
     // Falls du handleProjectResponse aus Versehen beim Start rufst und {sent:true} mitgibst:
@@ -2750,13 +3158,21 @@ function enhanceDealsIncludeCheckboxes(container = '#offersDataContainer', opts 
 
     if (buttonElement) {
       buttonElement.disabled = false;
-      buttonElement.textContent = projectLabels[projectName] || 'Run';
+
+      // 🔹 Bevorzugt das Original-Label (wird in handleProjectButtonClick gesetzt)
+      const originalLabel = buttonElement.dataset.originalLabel;
+      if (originalLabel) {
+        buttonElement.textContent = originalLabel;
+      } else {
+        buttonElement.textContent = projectLabels[projectName] || 'Run';
+      }
     }
 
     if (response && response.success === false) {
       console.error(`Error starting ${projectName}:`, response.error);
     }
   }
+
 
 
 //======================================PYTHON FINISH================================

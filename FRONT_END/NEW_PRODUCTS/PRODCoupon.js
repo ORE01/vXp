@@ -1,9 +1,60 @@
 import { appState } from '../renderer.js';
-import { handleFormAction, handleCouponFormAction , saveChanges, addSaveButtonHandler, addNewRow} from '../../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction, saveChanges, addSaveButtonHandler, addNewRow} from '../../MODAL_HELPER/ModalActionHandler.js';
 import { convertDateToISO, toISODate} from '../../utils/format.js';
+import { makeModalDraggable} from '../../MODAL_HELPER/DraggableModal.js';
 
 
-export function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfreq) {
+export function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfreq) {
+
+  const modalContent = document.querySelector('.modal-content');
+  if (!modalContent) {
+    console.warn('Modal content container not found!');
+    return;
+  }
+// COUPON BUTTON:
+
+  // COUPON button: Check exists to prevent duplicates
+  let couponButton = document.getElementById('coupon-button');
+  if (!couponButton) {
+    // Create the button
+    couponButton = document.createElement('button');
+    couponButton.id = 'coupon-button';
+    couponButton.textContent = 'Coupon Schedule';
+    couponButton.classList.add('chart-button'); // Use the same style class as your other buttons
+
+    // COUPON button: Append to the modal (next to Save/Delete buttons)
+    const saveButton = document.getElementById('saveButton');
+    if (saveButton) {
+      saveButton.parentElement.appendChild(couponButton);
+    } else {
+      console.warn('Save button not found! Adding the coupon button at the end.');
+      modalContent.appendChild(couponButton);
+    }
+  }
+
+  // COUPON SCHEDULE: EVENT LISTENER with the current prodId
+
+  couponButton.onclick = async () => {
+    try {
+      await handleCouponData(
+        prodId,
+        couponSchedule, // <— statt "schedule"
+        startDate,
+        maturity,
+        couponfreq
+      );
+    } catch (e) {
+      console.error('[handleCouponModal] handleCouponData Fehler:', e);
+    }
+  };
+  
+}
+
+
+
+
+
+function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfreq) {
   const receivedData = appState.getCouponData();
   if (!Array.isArray(receivedData)) {
     console.error("❌ Error: receivedData is not an array", receivedData);
@@ -37,10 +88,54 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
   closeButton.onclick = () => document.body.removeChild(modal);
   modalContent.appendChild(closeButton);
 
+  // 🔹 NEU: Maximize-Toggle
+  let isFullscreen = false;
+
+  const maxBtn = document.createElement('button');
+  maxBtn.type = 'button';
+  maxBtn.classList.add('modal-maximize-btn');
+  maxBtn.textContent = '⛶'; // Symbol für Vollbild
+
+  maxBtn.onclick = () => {
+    isFullscreen = !isFullscreen;
+
+    if (isFullscreen) {
+      // Vollbild aktivieren
+      modalContent.classList.add('fullscreen');
+
+      // Close-Button AUSBLENDEN
+      closeButton.style.display = 'none';
+
+      // Inline-Styles zurücksetzen, damit CSS-Fullscreen sauber greift
+      modalContent.style.left = '';
+      modalContent.style.top = '';
+      modalContent.style.width = '';
+      modalContent.style.height = '';
+      modalContent.style.transform = '';
+    } else {
+      // Vollbild verlassen
+      modalContent.classList.remove('fullscreen');
+
+      // Close-Button wieder EINBLENDEN
+      closeButton.style.display = '';
+
+      // Position wird beim nächsten Drag neu gesetzt
+      modalContent.style.left = '';
+      modalContent.style.top = '';
+      modalContent.style.width = '';
+      modalContent.style.height = '';
+      modalContent.style.transform = '';
+    }
+  };
+
+
+  modalContent.appendChild(maxBtn);
+
   // Titel
   const title = document.createElement('h2');
   title.textContent = `${prodId}`;
   modalContent.appendChild(title);
+
 
   // Formular aufbauen (leer vs. bestehend)
   const isEmptySchedule = Number(couponSchedule) === 1 && filteredData.length === 0;
@@ -53,22 +148,27 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
     couponForm = generateCouponForm(filteredData);
   }
 
-  // Button-Leiste (immer beide Buttons anzeigen)
-  const btnWrap = document.createElement('div');
-  btnWrap.style.display = 'flex';
-  btnWrap.style.gap = '8px';
-  btnWrap.style.marginBottom = '8px';
+// Button-Leiste (immer beide Buttons anzeigen)
+const btnWrap = document.createElement('div');
+btnWrap.style.display = 'flex';
+btnWrap.style.gap = '8px';
+btnWrap.style.marginBottom = '8px';
 
-  const saveBtn = document.createElement('button');
-  saveBtn.id = 'couponSaveBtn';
-  saveBtn.textContent = 'Save Changes';
+const saveBtn = document.createElement('button');
+saveBtn.id = 'couponSaveBtn';
+saveBtn.textContent = 'Save Changes';
+// gleiche Optik wie andere Edit-Buttons
+saveBtn.classList.add('edit-button');
 
-  const delBtn = document.createElement('button');
-  delBtn.id = 'couponDeleteBtn';
-  delBtn.textContent = 'Delete Schedule';
-  delBtn.style.background = '#5b1b1b';
-  delBtn.style.color = '#fff';
-  delBtn.title = 'Delete all coupon rows for this PROD_ID';
+const delBtn = document.createElement('button');
+delBtn.id = 'couponDeleteBtn';
+delBtn.textContent = 'Delete Schedule';
+// Basis-Style von edit-button + extra Danger-Style
+delBtn.classList.add('edit-button', 'delete-button');
+
+// wenn du vorerst kein extra CSS willst, könntest du auch hier
+// zusätzlich inline stylen – aber schöner ist eine Klasse.
+
 
   // Handler pro Modus
   if (isEmptySchedule) {
@@ -168,6 +268,10 @@ export function handleCouponData(prodId, couponSchedule, startDate, maturity, co
   // Zusammenbauen & anzeigen
   modalContent.appendChild(btnWrap);
   modalContent.appendChild(couponForm);
+
+
+  makeModalDraggable(modalContent);
+
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
   modal.style.display = 'block';
@@ -604,56 +708,7 @@ function evaluateFormula(expression, context = {}) {
 }
 
 
-export function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfreq) {
 
-  const modalContent = document.querySelector('.modal-content');
-  if (!modalContent) {
-    console.warn('Modal content container not found!');
-    return;
-  }
-// COUPON BUTTON:
-
-  // COUPON button: Check exists to prevent duplicates
-  let couponButton = document.getElementById('coupon-button');
-  if (!couponButton) {
-    // Create the button
-    couponButton = document.createElement('button');
-    couponButton.id = 'coupon-button';
-    couponButton.textContent = 'Coupon Schedule';
-    couponButton.classList.add('chart-button'); // Use the same style class as your other buttons
-
-    // COUPON button: Append to the modal (next to Save/Delete buttons)
-    const saveButton = document.getElementById('saveButton');
-    if (saveButton) {
-      saveButton.parentElement.appendChild(couponButton);
-    } else {
-      console.warn('Save button not found! Adding the coupon button at the end.');
-      modalContent.appendChild(couponButton);
-    }
-  }
-
-  // COUPON SCHEDULE: EVENT LISTENER with the current prodId
-
-  couponButton.onclick = async () => {
-    try {
-      await handleCouponData(
-        prodId,
-        couponSchedule, // <— statt "schedule"
-        startDate,
-        maturity,
-        couponfreq
-      );
-    } catch (e) {
-      console.error('[handleCouponModal] handleCouponData Fehler:', e);
-    }
-  };
-  
-}
-
-
-
-
-// helpers
 function parsePercentToDecimal(str) {
   if (str == null) return null;
   const s = String(str).replace('%','').replace(',','.').trim();

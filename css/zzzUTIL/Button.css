@@ -115,6 +115,38 @@
   background-color: #3e8e41;
 }
 
+
+/* Allgemeine Button-Stile (wie andere Buttons in deinem Design) */
+#coupon-button {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#coupon-button:hover {
+  background-color: #45a049;
+}
+
+#coupon-button:active {
+  background-color: #3e8e41;
+}
+
+
+
+
+
+
+
 /* LINK BUTTON – unverändert lassen */
 .link-button {
   background: transparent;

@@ -1,4 +1,4 @@
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createLineChart from '../../../charts/LineChart.js';
 import { calculateSMA, calculateRSI } from './ChartAnalyses.js';
 //import { normalizeDataset } from './charts/LineChart.js';

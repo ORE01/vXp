@@ -1,9 +1,11 @@
-import { generateInputFields} from './inputFieldsGenerator.js';
-import { generateCouponInputFields } from './couponInputFieldsGenerator.js';
+import { generateInputFields} from './HandleInputFields.js';
 import { formatInputFieldValue } from '../utils/format.js';
+import { makeModalDraggable} from './DraggableModal.js';
 import { issuerData } from '../FRONT_END/NEW_PRODUCTS/ISSUER.js';
 import { appState } from '../FRONT_END/renderer.js';
 import { handleDealsData } from '../FRONT_END/CREATE_PORTFOLIO/DEALS.js';
+import { buildOrderedFieldsForModal } from '../FRONT_END/NEW_PRODUCTS/PROD.js';
+
 
 let isAddingRow;
 
@@ -25,18 +27,18 @@ function addYearsISO(isoYMD, years) {
 
 
 
-export function handleFormAction(event, data, rowIndex, selectedTableName, actionType) {
+export function handleModalAction(event, data, rowIndex, selectedTableName, actionType) {
   console.log('selectedTableName:', selectedTableName);
 
   displayModal(actionType, rowIndex);
-  setupFormFields(actionType, data, rowIndex, selectedTableName);
-
-  //EDIT:
-  if (actionType === 'add') {
-        //console.log('data, rowIndex, selectedTableName', data, selectedTableName)
-    setupAddOperation(data, selectedTableName);
+  setupModalFields(actionType, data, rowIndex, selectedTableName);
 
   //ADD:
+  if (actionType === 'add') {
+        console.log('add_TEST:')
+    setupAddOperation(data, selectedTableName);
+
+  //EDIT:
   } else if (actionType === 'edit') {
     const rowData = data[rowIndex];
     console.log('data',data)
@@ -47,7 +49,6 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
   }
   removeCouponButton();
 }
-
         function displayModal(actionType, rowIndex = null) {
           const modal = document.getElementById('modal');
           const modalContent = modal.querySelector('.modal-content');
@@ -76,74 +77,73 @@ export function handleFormAction(event, data, rowIndex, selectedTableName, actio
             modal.style.display = 'none'; // Hide the modal
           };
 
-          //makeModalDraggable(modalContent);
+          makeModalDraggable(modalContent);
         }
-        function setupFormFields(actionType, data, rowIndex, selectedTableName) {
-          // console.log('actionType_if:', actionType, data, rowIndex, selectedTableName);
-          const form = modal.querySelector(actionType === 'add' ? 'form' : '#editForm');
-          form.innerHTML = ''; // Clear the form fields
+        function setupModalFields(actionType, data, rowIndex, selectedTableName) {
+          const modal = document.getElementById('modal');
+          const form = modal.querySelector('#editForm');
+          form.innerHTML = '';
 
-          
+          // Issuer-Liste
+          const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
+
+          // ADD:
           if (actionType === 'add') {
-            // Handle the add operation
-            // console.log('actionType_if:', actionType);
-            const emptyRowData = Object.keys(data[0]).reduce((acc, fieldName) => {
-                acc[fieldName] = '';
-                return acc;
-            }, {});
-            // console.log('emptyRowData:', emptyRowData);
-            const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
-            emptyRowData['ISSUER'] = uniqueIssuers.length > 0 ? uniqueIssuers[0] : '';
-          
-            generateInputFields(emptyRowData, form, uniqueIssuers, selectedTableName);
-          }
-          
-          if (actionType === 'edit' && data && data.length > rowIndex) {
+            console.log('addTEST2');
 
-            const rowData = data[rowIndex];
-            const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
-            // console.log("selectedTableName, rowData", selectedTableName,rowData);
+            // 🔹 Basis: immer die LETZTE Zeile aus den vorhandenen Daten
+            const baseRow = (data && data.length > 0)
+              ? data[data.length - 1]   // letzte Zeile
+              : {};
 
-            generateInputFields(rowData, form, uniqueIssuers, selectedTableName);
-          }
-        }
-        function makeModalDraggable(modalContent) {
-          const dragElement = modalContent; // ✅ Now only modal-content is draggable
-          let isDragging = false, offsetX = 0, offsetY = 0;
+            let rowDataForForm = {};
 
-          dragElement.onmousedown = (e) => {
-            isDragging = true;
-            modalContent.style.transition = 'none'; // Prevent smooth transitions while dragging
-            modalContent.style.position = 'fixed'; // ✅ Ensure modal-content stays fixed on screen
-
-            const rect = modalContent.getBoundingClientRect();
-
-            // Remove centering transform to avoid jumps
-            if (modalContent.style.transform.includes('translate')) {
-              modalContent.style.left = `${rect.left}px`;
-              modalContent.style.top = `${rect.top}px`;
-              modalContent.style.transform = 'none'; // ✅ Fix jumping issue
+            if (selectedTableName === 'ProdAll') {
+              // Für ProdAll: Reihenfolge über Helper, aber Werte der letzten Zeile behalten
+              const orderedTemplate = buildOrderedFieldsForModal(baseRow) || {};
+              rowDataForForm = { ...orderedTemplate };
+            } else {
+              // Für alle anderen Tabellen: Werte der letzten Zeile übernehmen
+              rowDataForForm = { ...baseRow };
             }
 
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
+            // Primärschlüssel-Felder beim ADD leeren (id soll neu vergeben werden)
+            if ('id' in rowDataForForm) {
+              rowDataForForm.id = '';
+            }
+            if ('ID' in rowDataForForm) {
+              rowDataForForm.ID = '';
+            }
 
-            const onMouseMove = (moveEvent) => {
-              if (isDragging) {
-                modalContent.style.left = `${moveEvent.clientX - offsetX}px`;
-                modalContent.style.top = `${moveEvent.clientY - offsetY}px`;
-              }
-            };
+            // Optional: für bestimmte Tabellen Defaults setzen/anpassen
+            if (selectedTableName === 'CreditVaRInput') {
+              // Name z.B. leer lassen oder mit Prefix füllen
+              // rowDataForForm.name = '';
+              // is_active nicht im Modal, wird in DB/Backend gesetzt
+              // updated_at wird im Handler als hidden field überschrieben
+            }
 
-            const onMouseUp = () => {
-              isDragging = false;
-              document.removeEventListener('mousemove', onMouseMove);
-              document.removeEventListener('mouseup', onMouseUp);
-            };
+            // ISSUER-Default nur setzen, wenn Feld existiert und leer ist
+            if ('ISSUER' in rowDataForForm && !rowDataForForm['ISSUER']) {
+              rowDataForForm['ISSUER'] = uniqueIssuers.length > 0 ? uniqueIssuers[0] : '';
+            }
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-          };
+            generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
+            return;
+          }
+
+          // EDIT:
+          if (actionType === 'edit' && data && data.length > rowIndex) {
+            const rawRowData = data[rowIndex];
+            let rowDataForForm = rawRowData;
+
+            if (selectedTableName === 'ProdAll') {
+              // Für ProdAll: Feldreihenfolge über Helper
+              rowDataForForm = buildOrderedFieldsForModal(rawRowData);
+            }
+
+            generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
+          }
         }
         function removeCouponButton() {
           const couponButton = document.getElementById('coupon-button');
@@ -165,110 +165,71 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // ADD:
+
     function setupAddOperation(data, selectedTableName) {
-      //console.log('data, selectedTableName', data, selectedTableName);
       const modal = document.getElementById('modal');
       const modalTitle = modal.querySelector('h2');
-      const form = document.getElementById('editForm'); // Ensure this ID matches your Add Form
+      const form = document.getElementById('editForm');
 
-      // Reset the form and modal for a new addition
-      form.innerHTML = '';
+      // WICHTIG: Felder wurden bereits in setupFormFields erzeugt.
+      // Hier NICHT nochmal form.innerHTML leeren oder generateInputFields aufrufen.
+
       modalTitle.textContent = 'Add New Row';
 
-      // Preparing a template based on the structure of `data`
-      const emptyRowData = data.length > 0 
-        ? Object.keys(data[0]).reduce((acc, fieldName) => {
-            acc[fieldName] = data[0][fieldName] ?? ''; // Retain original data structure and values
-            return acc;
-          }, {}) 
-        : {};
-
-      // Additional setup for specific tables
-      const uniqueIssuers = [...new Set(data.map(item => item.ISSUER))];
-      emptyRowData['ISSUER'] = uniqueIssuers.length > 0 ? uniqueIssuers[0] : '';
-
-      // Generate input fields based on the data template
-      generateInputFields(emptyRowData, form, uniqueIssuers, selectedTableName);
-
-      // Cloning the saveButton without redefining it
+      // Save-Button neu verdrahten
       const saveButton = document.getElementById('saveButton');
       const saveButtonClone = saveButton.cloneNode(true);
       saveButton.parentNode.replaceChild(saveButtonClone, saveButton);
 
-      //console.log('Attaching event listener to saveButton');
-
-      saveButtonClone.addEventListener('click', () => addSaveButtonHandler(form, modal, selectedTableName));
-
+      saveButtonClone.addEventListener('click', () =>
+        addSaveButtonHandler(form, modal, selectedTableName)
+      );
     }
-        // export const addSaveButtonHandler = async (form, modal, selectedTableName, onReload) => {
-        //   if (isAddingRow) return;
-        //   isAddingRow = true;
-
-        //   try {
-        //     const newRowData = gatherFormData(form);
-        //     delete newRowData.ID; // Autoincrement
-
-        //     // wartet sauber auf Erfolg/Fehler (deine reqId-Version von addNewRow!)
-        //     await addNewRow(newRowData, selectedTableName);
-
-        //     // Modal zu, danach gezielt reloaden
-        //     closeModal();
-        //     if (typeof onReload === 'function') {
-        //       await onReload(selectedTableName);
-        //     }
-        //     console.log(`✅ New row added to ${selectedTableName}.`);
-        //   } catch (error) {
-        //     displayErrorMessage(`Failed to add new row: ${error.message}`);
-        //   } finally {
-        //     isAddingRow = false;
-        //   }
-        // };
         export const addSaveButtonHandler = async (form, modal, selectedTableName, onReload) => {
-  if (isAddingRow) return;
-  isAddingRow = true;
+          if (isAddingRow) return;
+          isAddingRow = true;
 
-  try {
-    // 0) aktuelle Auswahl merken (Dropdown/State)
-    const dd = document.getElementById('createdDealsDropdown');
-    const prev = (window.appState?.getSelectedDealsTableName?.() || dd?.value || '').trim();
+          try {
+            // 0) aktuelle Auswahl merken (Dropdown/State)
+            const dd = document.getElementById('createdDealsDropdown');
+            const prev = (window.appState?.getSelectedDealsTableName?.() || dd?.value || '').trim();
 
-    const newRowData = gatherFormData(form);
-    delete newRowData.ID;
+            const newRowData = gatherModalData(form);
+            delete newRowData.ID;
 
-    await addNewRow(newRowData, selectedTableName);
+            await addNewRow(newRowData, selectedTableName);
 
-    // 1) Modal schließen
-    closeModal();
+            // 1) Modal schließen
+            closeModal();
 
-    // 2) DealsMain frisch holen
-    window.api.once('DealsMainData', (rows) => {
-      // deine bestehende Update-Funktion
-      window.appState?.updateDealsDataTable?.(rows, { isFull: true });
+            // 2) DealsMain frisch holen
+            window.api.once('DealsMainData', (rows) => {
+              // deine bestehende Update-Funktion
+              window.appState?.updateDealsDataTable?.(rows, { isFull: true });
 
-      // 3) Auswahl wiederherstellen (Dropdown + State)
-      if (prev) {
-        const d = document.getElementById('createdDealsDropdown');
-        if (d) {
-          const opt = Array.from(d.options).find(o => o.value === prev);
-          if (opt) d.value = prev;
-        }
-        window.appState?.setSelectedDealsTableName?.(prev);
-      }
-    });
-    window.api.send('fetch-table-data', 'DealsMain');
+              // 3) Auswahl wiederherstellen (Dropdown + State)
+              if (prev) {
+                const d = document.getElementById('createdDealsDropdown');
+                if (d) {
+                  const opt = Array.from(d.options).find(o => o.value === prev);
+                  if (opt) d.value = prev;
+                }
+                window.appState?.setSelectedDealsTableName?.(prev);
+              }
+            });
+            window.api.send('fetch-table-data', 'DealsMain');
 
-    // (optional) zusätzlicher Hook des Callers
-    if (typeof onReload === 'function') await onReload(selectedTableName);
+            // (optional) zusätzlicher Hook des Callers
+            if (typeof onReload === 'function') await onReload(selectedTableName);
 
-    console.log(`✅ New row added to ${selectedTableName}.`);
-  } catch (error) {
-    displayErrorMessage(`Failed to add new row: ${error.message}`);
-  } finally {
-    isAddingRow = false;
-  }
-};
-
-            function gatherFormData(form) {
+            console.log(`✅ New row added to ${selectedTableName}.`);
+          } catch (error) {
+            displayErrorMessage(`Failed to add new row: ${error.message}`);
+          } finally {
+            isAddingRow = false;
+          }
+        };
+            function gatherModalData(form) {
           if (!form) {
             console.error('Form not found in gatherFormData.');
             return {};
@@ -379,31 +340,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 // EDIT:
+
     function setupEditOperation(data, rowIndex, selectedTableName) {
       console.log('selectedTableName', selectedTableName);
-      if (data && data.length > rowIndex) {
-        const rowData = data[rowIndex];
-        const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
-        // Correctly select the form element
-        const form = document.getElementById('editForm');
-        form.innerHTML = '';
-        generateInputFields(rowData, form, uniqueIssuers, selectedTableName);
-      }
-      // Configuring Save Button
+
+      // WICHTIG:
+      // Die Input-Felder wurden bereits in setupFormFields generiert
+      // (inkl. buildOrderedFieldsForModal für ProdAll).
+      // Hier NICHT nochmal form.innerHTML leeren oder generateInputFields aufrufen.
+
+      // Save-Button
       const saveButton = document.getElementById('saveButton');
-      // Remove existing event listeners by cloning the button
       const newSaveButton = saveButton.cloneNode(true);
       saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+      newSaveButton.addEventListener(
+        'click',
+        editSaveButtonHandler(selectedTableName, rowIndex, data)
+      );
 
-      // Add event listener to the new save button
-      
-      newSaveButton.addEventListener('click', editSaveButtonHandler(selectedTableName, rowIndex, data));
-
-        // Configuring Erase Button
-        const eraseButton = document.getElementById('eraseButton');
-        const newEraseButton = eraseButton.cloneNode(true); // Clone to remove existing listeners
-        newEraseButton.addEventListener('click', eraseButtonHandler(selectedTableName, rowIndex, data));
-        eraseButton.parentNode.replaceChild(newEraseButton, eraseButton);
+      // Erase-Button
+      const eraseButton = document.getElementById('eraseButton');
+      const newEraseButton = eraseButton.cloneNode(true);
+      newEraseButton.addEventListener(
+        'click',
+        eraseButtonHandler(selectedTableName, rowIndex, data)
+      );
+      eraseButton.parentNode.replaceChild(newEraseButton, eraseButton);
     }
         const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () => {
           console.log("selectedTableName", selectedTableName);
@@ -414,7 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           const form = document.getElementById('editForm');
-          const formData = form ? gatherFormData(form) : {};
+          const formData = form ? gatherModalData(form) : {};
           // 👉 Fallback: merge mit übergebenem data (z.B. aus Preview)
           let newData = { ...(data || {}), ...(formData || {}) };
 
@@ -455,42 +417,6 @@ if (String(selectedTableName).trim() === 'Customer') {
             displayErrorMessage(`Failed to save changes: ${error.message}`);
           }
         };
-
-
-// COUPON FORM:
-export function handleCouponFormAction(event, data, rowIndex, actionType) {
-  console.log('handleCouponFormAction',  data)
-  displayModal(actionType, rowIndex);
-  setupCouponEditOperation(data);
-}
-    function setupCouponEditOperation(rowData) {
-      if (!rowData) {
-        console.error('setupCouponEditOperation: rowData is undefined or null.');
-        return;
-      }
-
-      // console.log('setupCouponEditOperation data', rowData);
-      const modal = document.getElementById('modal');
-      const form = document.getElementById('editForm');
-      const modalTitle = modal.querySelector('h2');
-
-      // Reset form and modal title
-      form.innerHTML = '';
-      modalTitle.textContent = `Edit Coupon Data`;
-
-      // TERMSTRUCTURE of COUPONS:
-      generateCouponInputFields(rowData, form);
-
-      // Configure save button
-      const saveButton = document.getElementById('saveButton');
-      const newSaveButton = saveButton.cloneNode(true);
-      saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-
-      newSaveButton.addEventListener('click', () => {
-        editSaveButtonHandler('ProdCouponSchedules', rowData)();
-      });
-
-    }
 
 
 //-----------------------------------SAVE, ERASE -----------------------------------------------------//    
@@ -580,7 +506,7 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
               case 'EUSW': 
                 uniqueIdentifierColumn = 'YEAR'; 
                 break; 
-              case 'MVaRInput_2': 
+              case 'MVaRInput': 
                 uniqueIdentifierColumn = 'id';  
                 break;  
               case 'Customer': 
@@ -588,7 +514,13 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
                 break; 
               case 'PortfolioHistoryMetrics': 
                 uniqueIdentifierColumn = 'DATE';   
-              break;   
+                break;   
+              case 'CreditVaRInputThreshold': 
+                uniqueIdentifierColumn = 'id';   
+                break; 
+              case 'CreditVaRInput': 
+                uniqueIdentifierColumn = 'id';   
+                break;    
               // Add more cases as needed for different tables
               default:
                   console.error('Unknown table:', selectedTableName);
@@ -669,20 +601,20 @@ export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async (
 
         // Get all created portfolio data
         const dealsData = appState.getDealsData();  
-        console.log('Available rows in Deals:', dealsData);
+        // console.log('Available rows in Deals:', dealsData);
 
 
 
 
         // Find matching rows by PROD_ID
         const matchingRows = dealsData.filter(row => {
-          console.log('Checking row in Portfolios:', row);
+          // console.log('Checking row in Portfolios:', row);
           return row.PROD_ID && String(row.PROD_ID).trim() === uniqueValue;
         });
 
         // If matches are found, erase them
         if (matchingRows.length > 0) {
-          console.log(`Found ${matchingRows.length} matching rows in Portfolios. Deleting...`);
+          // console.log(`Found ${matchingRows.length} matching rows in Portfolios. Deleting...`);
 
           for (const row of matchingRows) {
             if (!row.ID) {
@@ -751,35 +683,56 @@ document.querySelectorAll('.deleteButton').forEach(button => {
       }
     }
 
+window.api.receive('erase-data-success', ({ cleanTableName, uniqueIdentifier }) => {
+  console.log('[erase-data-success] for table:', cleanTableName, 'id:', uniqueIdentifier);
 
+  // 1) Kontext bestimmen: Offer vs. Deal
+  const isOfferTable = /^OFFERS?/i.test(cleanTableName); 
+  // matcht: OFFER_..., OFFERS_..., offers_xyz etc.
 
+  // IDs der Dropdowns
+  const dropdownId = isOfferTable
+    ? 'createdOffersDropdown'
+    : 'createdDealsDropdown';
 
+  // State-Getter/Setter je nach Kontext
+  const getSelectedTableName = isOfferTable
+    ? appState.getSelectedOffersTableName?.bind(appState)
+    : appState.getSelectedDealsTableName?.bind(appState);
 
-window.api.receive('erase-data-success', ({ cleanTableName }) => {
-  // aktuelle Auswahl merken
-  const ddDeals = document.getElementById('createdDealsDropdown');
-  const prevSel = (appState.getSelectedDealsTableName?.() || ddDeals?.value || '').trim();
+  const setSelectedTableName = isOfferTable
+    ? appState.setSelectedOffersTableName?.bind(appState)
+    : appState.setSelectedDealsTableName?.bind(appState);
 
-  // Deals neu laden (ungefiltert), danach UI + Dropdown wiederherstellen
+  // 2) aktuelle Auswahl merken
+  const dd = document.getElementById(dropdownId);
+  const prevSel = (getSelectedTableName?.() || dd?.value || '').trim();
+  console.log('[erase-data-success] prevSel =', prevSel, 'isOfferTable =', isOfferTable);
+
+  // 3) DealsMain neu laden
   window.api.once('DealsMainData', (rows) => {
-    // vollständigen Dump in State, dann gefiltert rendern
+    console.log('[DealsMainData] received after erase, rows:', Array.isArray(rows) ? rows.length : typeof rows);
+
+    // vollständigen Dump in State
     appState.updateDealsDataTable?.(rows, { isFull: true });
 
     if (prevSel) {
       // Dropdown-Option wieder setzen
       if (typeof restoreDropdownSelection === 'function') {
-  restoreDropdownSelection('createdOffersDropdown', prevSel);
-}
+        restoreDropdownSelection(dropdownId, prevSel);
+      }
 
-      appState.setSelectedDealsTableName?.(prevSel);
+      // State aktualisieren
+      setSelectedTableName?.(prevSel);
 
-      // gefilterte Sicht rendern (nur wenn deine handleDealsData das so erwartet)
+      // gefilterte Sicht rendern (wie bisher)
       const filtered = Array.isArray(rows)
         ? rows.filter(r => String(r.port_name || r.PORT_NAME || '') === prevSel)
         : rows;
 
       handleDealsData?.(filtered, 'DealsMain');
     } else {
+      // keine vorherige Auswahl -> alles zeigen
       handleDealsData?.(rows, 'DealsMain');
     }
   });

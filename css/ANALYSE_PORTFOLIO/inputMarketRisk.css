@@ -19,7 +19,7 @@
 }
 
 /* Tabelle mit Intervallen */
-#panel-market #inputMVaRContainer{
+#panel-market #inputMvarContainer{
   flex: 1 1 auto;
   min-width: 320px;
   max-height: 260px;
@@ -33,14 +33,14 @@
 }
 
 /* Tabellen im Input-Container */
-#panel-market #inputMVaRContainer table{
+#panel-market #inputMvarContainer table{
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
 
-#panel-market #inputMVaRContainer th,
-#panel-market #inputMVaRContainer td{
+#panel-market #inputMvarContainer th,
+#panel-market #inputMvarContainer td{
   padding: 4px 8px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }

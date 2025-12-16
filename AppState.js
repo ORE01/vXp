@@ -14,7 +14,7 @@ import { handleEADData, handleCVaRData } from './FRONT_END/ANALYSE_PORTFOLIO/CRE
 import { handleLossIssuerMainData } from './FRONT_END/ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js'; 
 import { createComparisonCharts } from './FRONT_END/COMPARE_PORTFOLIOS/COMP.js'; 
 import { formatPercentage} from './utils/format.js';
-import { filterColumnsInData } from './modal_HELPER/dataProcessor.js';
+import { filterColumnsInData } from './MODAL_HELPER/dataProcessor.js';
 import { handleLiquidityData } from './FRONT_END/ANALYSE_PORTFOLIO/liquidity.js';
 import { handleSummaryRMData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRM.js';
 import { handleSummaryNotionalData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryNotional.js';
@@ -44,6 +44,10 @@ export class AppState {
 
         this.customerData = null;
         this.euswData= [];
+        this.swaptionATM = [];
+        this.swaptionSmile = [];
+        this.swaptionCubeSurface = null;
+
         this.tblTSData = [];
         this.availableDealsTablesData = {}; 
         this.availableDealsTablesArray = [];
@@ -80,6 +84,9 @@ export class AppState {
         this.mvarData = null,
         this.mvarDistData = [],
         this.mlModel = null; 
+
+        this.cvarInputData = null,
+        this.cvarInputThresholdData = null,
 
         this.CSSzenarioData = 'default';
         this.selectedCurve = "EUSWAP",
@@ -130,7 +137,7 @@ export class AppState {
         this.handleSwapForwardCurve = handleSwapForwardCurve;
         
         this.handleMVaRData = handleMVaRData;
-        //this.handleCouponData = handleCouponData;
+      
 
         
 
@@ -710,6 +717,54 @@ getEUSWData() {
   return [];
 }
 
+  setSwaptionATM(rows) {
+    this.swaptionATM = Array.isArray(rows) ? rows : [];
+  }
+
+  setSwaptionSmile(rows) {
+    this.swaptionSmile = Array.isArray(rows) ? rows : [];
+    console.log('swaptionSmile' , this.swaptionSmile );
+  }
+
+  // Optional: Helper, um gefilterte Views zu bekommen
+  getSwaptionATMByTenor(optionTenor, swapTenor) {
+    return this.swaptionATM.filter(
+      r => r.option_tenor === optionTenor && r.swap_tenor === swapTenor
+    );
+  }
+
+  getSwaptionSmileByNode(optionTenor, swapTenor) {
+    return this.swaptionSmile.filter(
+      r => r.option_tenor === optionTenor && r.swap_tenor === swapTenor
+    );
+  }
+
+  setSwaptionCubeSurface(cubeGrid) {
+    if (
+      !cubeGrid ||
+      !Array.isArray(cubeGrid.optionTenors) ||
+      !Array.isArray(cubeGrid.swapTenors) ||
+      !Array.isArray(cubeGrid.volMatrix)
+    ) {
+      console.warn('[AppState.setSwaptionCubeSurface] Ungültiges cubeGrid:', cubeGrid);
+      this.swaptionCubeSurface = null;
+      return;
+    }
+
+    this.swaptionCubeSurface = cubeGrid;
+    console.log('[AppState.setSwaptionCubeSurface] Cube gesetzt:', cubeGrid);
+  }
+
+  // 🔹 Getter für Cube-Surface
+  getSwaptionCubeSurface() {
+    return this.swaptionCubeSurface;
+  }
+
+
+
+
+
+
 setSelectedCurve(curve) {
   this._selectedCurveCache = curve || "EUSWAP";
 }
@@ -886,7 +941,7 @@ setPortAggData(elementId, data) {
 //   });
 
   // Werte einzeln loggen: Key = Value
-  console.log("📌 [setPortAggData] VALUES:");
+  //console.log("📌 [setPortAggData] VALUES:");
   Object.entries(after).forEach(([key, value]) => {
     // console.log(`   • ${key}:`, value);
   });
@@ -936,6 +991,31 @@ setPortAggData(elementId, data) {
         return this.mvarDistData;
         
     }
+    setCvarInput(data) {
+        // Erwartet: Array der Rows aus CreditVaRInputThreshold
+        // z.B. [{ metric: 'CVaR', yellow_threshold: 10.0, red_threshold: 20.0, is_percent: 1 }, ...]
+        this.cvarInputData = data;
+        //console.log('✓ CreditVaRInputThresholdData gespeichert:', this.cvarInputThresholdData);
+    }
+
+    getCvarInput() {
+        return this.cvarInputData;
+    }
+    
+    setCvarInputThreshold(data) {
+        // Erwartet: Array der Rows aus CreditVaRInputThreshold
+        // z.B. [{ metric: 'CVaR', yellow_threshold: 10.0, red_threshold: 20.0, is_percent: 1 }, ...]
+        this.cvarInputThresholdData = data;
+        //console.log('✓ CreditVaRInputThresholdData gespeichert:', this.cvarInputThresholdData);
+    }
+
+    getCvarInputThreshold() {
+        return this.cvarInputThresholdData;
+    }
+
+
+
+
 
     setCvarData(data) {
         this.cvarData = data;
@@ -1148,7 +1228,7 @@ setPortAggData(elementId, data) {
 
 // UPDATE DATA:
     updatePortfolioDealsDataTable(receivedData, { isFull = false } = {}) {
-        console.log('updateDealsDataTable', receivedData)
+        //console.log('updateDealsDataTable', receivedData)
         if (!Array.isArray(receivedData)) return;
 
         // Nur wenn explizit der *volle* DealsMain-Dump kommt, den ALL-State setzen
@@ -1183,7 +1263,7 @@ setPortAggData(elementId, data) {
         document.dispatchEvent(new Event('dealsData:ready'));
     }
     updateDealsDataTable(receivedData, { isFull = false } = {}) {
-        console.log('updateDealsDataTable', receivedData)
+        //console.log('updateDealsDataTable', receivedData)
         if (!Array.isArray(receivedData)) return;
 
         // Nur wenn explizit der *volle* DealsMain-Dump kommt, den ALL-State setzen

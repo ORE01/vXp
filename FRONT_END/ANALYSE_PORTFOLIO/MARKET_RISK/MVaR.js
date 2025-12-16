@@ -1,12 +1,12 @@
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../renderer.js';
 import { formatNumber, formatNumberWithCommas } from '../../../utils/format.js';
-import { handleFormAction } from '../../../modal_HELPER/FormButtonHandler.js';
+import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 //import { startOfDay } from 'date-fns';
 
-const TABLE_MVAR = 'MVaRInput_2';
+const TABLE_MVAR = 'MVaRInput';
 let MVaRChart = null;
 export const MVAR_COLUMNS = [
   'INTERVAL_NAME',
@@ -14,93 +14,12 @@ export const MVAR_COLUMNS = [
   'END',
   'VaR_Days',
   'Confidence',
-  'red_threshold_rel',
-  'yellow_threshold_rel',
+  'red_threshold',
+  'yellow_threshold',
 ];
 
-// export function handleMVarInputData(receivedData) {
-//   const container = document.getElementById('inputMVaRContainer');
-//   while (container.firstChild) container.removeChild(container.firstChild);
-
-//   // Tabelle rendern
-//   container.innerHTML = processData(receivedData, TABLE_MVAR);
-
-//   // AppState aktualisieren
-//   appState.setMvarInputData(receivedData);
-
-//   // Nach DOM-Rendern Buttons & Radios binden
-//   ensureRendered(async () => {
-//     const reloadMVar = async () => {
-//       await fetchAndUpdateMVarDataInputData(TABLE_MVAR);
-//     };
-
-//     // 🔹 ADD-Button
-//     const mvarAddButton = document.getElementById('mvarAddButton');
-//     if (mvarAddButton) {
-//       mvarAddButton.addEventListener('click', (event) => {
-//         handleFormAction(
-//           event,
-//           appState.mvarInputData,   // Quelle für Form/Defaults
-//           null,                     // rowIndex bei add
-//           TABLE_MVAR,
-//           'add',
-//           { modalId: 'editModal', onReload: reloadMVar }
-//         );
-//       });
-//     }
-
-//     // 🔹 EDIT-Buttons (pro Zeile)
-//     const mvarEditButtons = document.querySelectorAll('#inputMVaRContainer .edit-button');
-//     mvarEditButtons.forEach((button) => {
-//       button.addEventListener('click', (event) => {
-//         const rowIndex = parseInt(button.getAttribute('data-row'), 10);
-//         handleFormAction(
-//           event,
-//           appState.mvarInputData,   // Datensatz-Array
-//           rowIndex,                 // Zeile, die editiert werden soll
-//           TABLE_MVAR,
-//           'edit',
-//           { modalId: 'editModal', onReload: reloadMVar }
-//         );
-//       });
-//     });
-
-//     // 🔹 RADIO: Szenario-Auswahl (schreibt id in appState)
-//     const radios = container.querySelectorAll('input.scenario-radio[name="scenario-select"]');
-
-//     radios.forEach((radio) => {
-//       radio.addEventListener('change', () => {
-//         if (!radio.checked) return;
-
-//         // nur eine Auswahl aktiv
-//         radios.forEach(other => {
-//           if (other !== radio) other.checked = false;
-//         });
-
-//         const idAttr = radio.getAttribute('data-id');
-//         const selectedId = idAttr != null ? parseInt(idAttr, 10) : null;
-
-//         if (!Number.isNaN(selectedId) && selectedId != null) {
-//           appState.selectedMvarId = selectedId;
-//           appState.selectedMvarInterval = radio.getAttribute('data-interval');
-//         }
-//       });
-//     });
-
-//     // Initial: Default-Szenario (z.B. STRESSED) in State übernehmen
-//     const initiallyChecked = container.querySelector('input.scenario-radio[name="scenario-select"]:checked');
-//     if (initiallyChecked) {
-//       const idAttr = initiallyChecked.getAttribute('data-id');
-//       const selectedId = idAttr != null ? parseInt(idAttr, 10) : null;
-//       if (!Number.isNaN(selectedId) && selectedId != null) {
-//         appState.selectedMvarId = selectedId;
-//         appState.selectedMvarInterval = initiallyChecked.getAttribute('data-interval');
-//       }
-//     }
-//   });
-// }
-export function handleMVarInputData(receivedData) {
-  const container = document.getElementById('inputMVaRContainer');
+export function handleMvarInputData(receivedData) {
+  const container = document.getElementById('inputMvarContainer');
   while (container.firstChild) container.removeChild(container.firstChild);
 
   // Nur gewünschte Spalten für die TABELLE aufbereiten – in definierter Reihenfolge
@@ -132,7 +51,7 @@ export function handleMVarInputData(receivedData) {
     const mvarAddButton = document.getElementById('mvarAddButton');
     if (mvarAddButton) {
       mvarAddButton.addEventListener('click', (event) => {
-        handleFormAction(
+        handleModalAction(
           event,
           appState.mvarInputData,
           null,
@@ -144,11 +63,11 @@ export function handleMVarInputData(receivedData) {
     }
 
     // 🔹 EDIT-Buttons (pro Zeile)
-    const mvarEditButtons = document.querySelectorAll('#inputMVaRContainer .edit-button');
+    const mvarEditButtons = document.querySelectorAll('#inputMvarContainer .edit-button');
     mvarEditButtons.forEach((button) => {
       button.addEventListener('click', (event) => {
         const rowIndex = parseInt(button.getAttribute('data-row'), 10);
-        handleFormAction(
+        handleModalAction(
           event,
           appState.mvarInputData,
           rowIndex,
@@ -234,7 +153,7 @@ export function handleMVaRData(receivedData, index) {
   renderMVaRRelativeTableWithIndex(filteredData, index);
   updateMVaRChart(filteredData);
 
-  // 🔴🟡 Schwellen aus MVaRInput_2 holen
+  // 🔴🟡 Schwellen aus MVaRInput holen
   let thresholds = getMVaRThresholdsFromInputUsingState();
 
   // Fallback, falls DB-Werte fehlen
@@ -491,7 +410,7 @@ export function handleMVaRData(receivedData, index) {
       }
 
       const redRel = typeof row.red_threshold_rel === 'number' ? row.red_threshold_rel : null;
-      const yellowRel = typeof row.yellow_threshold_rel === 'number' ? row.yellow_threshold_rel : null;
+      const yellowRel = typeof row.yellow_threshold === 'number' ? row.yellow_threshold : null;
 
       if (redRel == null || yellowRel == null) {
         console.warn('getMVaRThresholdsFromInputUsingState: Thresholds fehlen in row:', row);

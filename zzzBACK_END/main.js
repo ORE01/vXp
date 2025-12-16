@@ -28,7 +28,13 @@ const sqlite3 = require('sqlite3').verbose();
 
 
 let mainWindow;
+let couponWindow = null;// ist ein Versuch ist nicht fertig!!!!
 let tableNames;
+
+
+
+
+
 
 
 
@@ -59,7 +65,7 @@ function bulkUpdateEnd() {
 }
 
 
-
+//============================================BROWSER FENSTER=======================================================
 
 app.whenReady().then(() => {
   // CSP als Header setzen (frame-ancestors funktioniert nur per Header)
@@ -91,13 +97,6 @@ app.whenReady().then(() => {
 });
 
 
-
-
-
-
-
-
-
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
@@ -105,6 +104,68 @@ app.on('window-all-closed', function () {
 app.on('before-quit', () => {
   closeDatabase();
 });
+
+
+function createWindow() {
+  // Create the browser window.
+  mainWindow = new BrowserWindow({
+    width: 800,
+    height: 700,
+    icon: path.join(__dirname, 'vXp.ico'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: true,
+    },
+  });
+
+  // and load the index.html of the app.
+  mainWindow.loadFile('index.html');
+
+  // Open the DevTools.
+  mainWindow.webContents.openDevTools();
+}
+
+//============================================WEITERES BROWSER FENSTER=======================================================
+
+ipcMain.on('open-coupon-window', (event, { prodId }) => {
+  openCouponWindow(prodId);
+});
+
+
+function openCouponWindow(prodId) {
+  // Schon offen? Dann nur in den Vordergrund holen
+  if (couponWindow && !couponWindow.isDestroyed()) {
+    couponWindow.focus();
+    // Optional: ProdId an Renderer schicken
+    couponWindow.webContents.send('coupon:set-prod', prodId);
+    return;
+  }
+
+  couponWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    title: `Coupon Schedule – ${prodId}`,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      devTools: true,
+    },
+  });
+
+  couponWindow.loadFile('coupon.html'); // eigene HTML für den Editor
+
+  couponWindow.on('closed', () => {
+    couponWindow = null;
+  });
+
+  // ProdId an das Fenster schicken, wenn es bereit ist
+  couponWindow.webContents.on('did-finish-load', () => {
+    couponWindow.webContents.send('coupon:set-prod', prodId);
+  });
+}
+
+
+
+
 
 // ======================EXCEL IMPORT=======================================================
 
@@ -219,48 +280,6 @@ ipcMain.handle('import-excel-dialog', async (event, options = {}) => {
     return { success: false, error: err.message };
   }
 });
-
-// ipcMain.handle('start-offer-import', async () => {
-//   try {
-//     const { canceled, filePaths } = await dialog.showOpenDialog({
-//       title: 'Excel-Datei für Portfolio auswählen',
-//       filters: [{ name: 'Excel Files', extensions: ['xlsx', 'xls', 'xlsm'] }],
-//       properties: ['openFile']
-//     });
-
-//     if (canceled || filePaths.length === 0) {
-//       return { success: false, error: 'Keine Datei gewählt.' };
-//     }
-
-//     const filePath = filePaths[0];
-//     const fileName = path.basename(filePath, path.extname(filePath)); // z. B. "myportfolio"
-//     const workbook = XLSX.readFile(filePath);
-//     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-//     const rows = XLSX.utils.sheet_to_json(sheet);
-
-//     if (rows.length === 0) {
-//       return { success: false, error: 'Excel-Datei enthält keine Daten.' };
-//     }
-
-//     // Tabelle erstellen und Daten speichern
-//     await createTableFromRows(fileName, rows); // ← eigene Funktion, siehe unten
-
-//     // Spalten von ProdAll & der neuen Tabelle holen
-//     const prodAllColumns = await getTableColumns('ProdAll');
-//     const tempTableColumns = await getTableColumns(fileName);
-
-//     return {
-//       success: true,
-//       tempTableName: fileName,
-//       prodAllColumns,
-//       tempTableColumns
-//     };
-//   } catch (err) {
-//     return { success: false, error: err.message };
-//   }
-// });
-
-
 
 // Temporäre Tabelle anlegen für Spaltenvergleich
 
@@ -794,24 +813,8 @@ ipcMain.on('import-matched-columns', (event, { sourceTable, columnMap }) => {
 //============================================END EXCEL IMPORT====================================================
 
 
-function createWindow() {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 700,
-    icon: path.join(__dirname, 'vXp.ico'),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      devTools: true,
-    },
-  });
 
-  // and load the index.html of the app.
-  mainWindow.loadFile('index.html');
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
-}
 
 
 // Holt alle Tabellen aus der DB
@@ -977,9 +980,6 @@ ipcMain.on('start-py-MVaR', async (event, args) => {
     });
 });
 ipcMain.on('start-py-CVaR', async (event, args) => {
-  //console.log('start-py-CVaR:', args);
-
-  // Define the tables to be used in the script and for refreshing
   const tablesToRefresh = [
     'EAD', 
     'CreditVaR', 
@@ -988,34 +988,31 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
     'sortedLossesIndicesMain'
   ];
 
-  // Extract `tableName` and `CSSzenario` from arguments
-  const { tableName, CSSzenario } = args; 
+  const { tableName, CSSzenario, cvarName } = args; 
 
-  if (!tableName || !CSSzenario) {
-    console.error('❌ Missing required arguments: "tableName" or "CSSzenario".');
+  if (!tableName || !CSSzenario || !cvarName) {
+    console.error('❌ Missing required arguments: "tableName", "CSSzenario" or "cvarName".', { tableName, CSSzenario, cvarName });
     event.reply('py-CVaR-complete', {
       success: false,
       projectName: 'py-CVaR',
-      message: 'Both "tableName" and "CSSzenario" are required.',
+      message: 'Arguments "tableName", "CSSzenario" and "cvarName" are required.',
     });
-    return; // Exit if any argument is missing
+    return;
   }
 
-  const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario];
-  //console.log('Starting Python script with arguments:', pythonArgs);
+  const pythonArgs = [
+    '--table', tableName,
+    '--CSSzenario', CSSzenario,
+    '--cvarName', cvarName,    // 👈 jetzt immer dabei
+  ];
+
+  console.log('Starting Python CVaR with args:', pythonArgs);
 
   startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs)
     .then(() => {
-      //console.log('Python script executed successfully');
-
-      // Refresh each table using a distinct variable name
       tablesToRefresh.forEach(table => {
-        refreshTable(table, () => {
-          //console.log('Refreshed table:', table);
-        });
+        refreshTable(table, () => {});
       });
-
-      //console.log('All tables refreshed successfully');
     })
     .catch(error => {
       console.error('Python script execution failed:', error);
@@ -1025,30 +1022,117 @@ ipcMain.on('start-py-CVaR', async (event, args) => {
       event.reply('project-finished', { success: true, projectName: 'py-CVaR' });
     });
 });
-ipcMain.on('start-py-excel', (event) => {
-  // Define the tables to be used in the script and for refreshing
-  const tablesToRefresh = ['Portfolios', 'DealsMain', 'ProdAll', 'Issuer'];
 
-  // Start the Python script and pass the tables array
-  startPythonScriptWithEvent(event, 'excel', 'py-excel')
-  .then(() => {
-    //console.log('Python script executed successfully_main');
 
-        // Refresh each table
-      tablesToRefresh.forEach(tableName => {
+ipcMain.on('start-py-excel', async (event, args = {}) => {
+  const mode = (args.tableName || 'ALL').toUpperCase();
+
+  const scriptArgs = [];
+  if (mode) {
+    scriptArgs.push('--table', mode);
+  }
+
+  let tablesToRefresh = [];
+  switch (mode) {
+    case 'ISSUER':
+      tablesToRefresh = ['Issuer', 'Rank'];
+      break;
+    case 'PRODUCTS':
+      tablesToRefresh = ['ProdAll'];
+      break;
+    case 'DEALS':
+      tablesToRefresh = ['DealsMain', 'Portfolios'];
+      break;
+    case 'EUSW':
+      tablesToRefresh = ['EUSW', 'EUSWAPTION_ATM', 'EUSWAPTION_SMILE'];
+      break;
+    case 'ALL':
+    default:
+      tablesToRefresh = [
+        'Portfolios',
+        'DealsMain',
+        'ProdAll',
+        'Issuer',
+        'Rank',
+        'EUSW',
+        'EUSWAPTION_ATM',
+        'EUSWAPTION_SMILE',
+      ];
+      break;
+  }
+
+  try {
+    // 👉 Start: Balken für diesen MODE initialisieren
+    event.sender.send('py-excel-progress', {
+      provider: mode,            // ALL / ISSUER / PRODUCTS / DEALS / EUSW
+      progress: 5,
+      message: `Starting Excel import (${mode}) ...`
+    });
+
+    const result = await startPythonScriptWithEvent(
+      event,
+      'excel',
+      'py-excel',
+      scriptArgs
+    );
+
+    // 👉 Nach Python-Run, vor UI-Refresh
+    event.sender.send('py-excel-progress', {
+      provider: mode,
+      progress: 70,
+      message: `Updating UI tables (${mode}) ...`
+    });
+
+    tablesToRefresh.forEach(tableName => {
       refreshTable(tableName);
-      //console.log('tableName:', tableName);
-  })
-    //console.log('Python script refreshed TABLES_main');
-  })
-  .catch(error => {
-    console.error('Python script execution failed:', error);
-  })
-  .finally(() => {
-    event.reply('project-finished', { success: true, projectName: 'py-excel' });
+    });
 
-  });
+    // 👉 Fertig
+    event.sender.send('py-excel-progress', {
+      provider: mode,
+      progress: 100,
+      message: `Excel import completed (${mode}).`
+    });
+
+    event.reply('py-excel-complete', {
+      success: true,
+      projectName: 'py-excel',
+      mode,
+      result
+    });
+
+    event.reply('project-finished', {
+      success: true,
+      projectName: 'py-excel',
+      mode
+    });
+
+  } catch (error) {
+    console.error('Python script execution failed (py-excel):', error);
+
+    event.sender.send('py-excel-progress', {
+      provider: mode,
+      progress: 100,
+      message: `Excel import failed (${mode}): ${error.message || String(error)}`
+    });
+
+    event.reply('py-excel-complete', {
+      success: false,
+      projectName: 'py-excel',
+      mode,
+      error: error.message || String(error)
+    });
+
+    event.reply('project-finished', {
+      success: false,
+      projectName: 'py-excel',
+      mode,
+      error: error.message || String(error)
+    });
+  }
 });
+
+
 ipcMain.on('start-py-historicData', async (event, args = {}) => {
   const api = args.api || ''; // z. B. "ECB"
 
@@ -1297,6 +1381,52 @@ ipcMain.on('start-py-matchColumns', async (event, args) => {
   }
 });
 
+ipcMain.on('start-py-swaption', async (event, args) => {
+  const { selectedCurve = 'EUSWAP' } = args || {};
+
+  try {
+    const pythonArgs = [];
+
+    if (selectedCurve) {
+      pythonArgs.push('--selectedCurve', selectedCurve);
+    }
+
+    // script = 'swaption' → entspricht dem positional Argument in main.py
+    const result = await startPythonScriptWithEvent(
+      event,
+      'swaption',     // <- das ist args.script in Python
+      'py-swaption',  // <- projectName / Tag
+      pythonArgs
+    );
+
+    event.reply('py-swaption-complete', {
+      success: true,
+      projectName: 'py-swaption',
+      result
+    });
+
+    event.reply('project-finished', {
+      success: true,
+      projectName: 'py-swaption'
+    });
+
+  } catch (error) {
+    console.error('❌ Error during swaption script:', error);
+
+    event.reply('py-swaption-complete', {
+      success: false,
+      projectName: 'py-swaption',
+      error: error.message || String(error)
+    });
+
+    event.reply('project-finished', {
+      success: false,
+      projectName: 'py-swaption'
+    });
+  }
+});      
+
+
 
 
 // =====================================UPDATE DATA:==============================================
@@ -1310,7 +1440,7 @@ const REFRESH_DEPENDENCIES = {
   ProdCouponSchedules: ['ProdCouponSchedules', 'ProdAll'], // Schedules beeinflussen Produktansicht
   Issuer:              ['Issuer'],
   Portfolios:          ['Portfolios'],
-  MVaRInput_2:         ['MVaRInput_2'],
+  MVaRInput:         ['MVaRInput'],
   ecb:                 ['ecb'],
   fed:                 ['fed'],
   yahoo:               ['yahoo'],
@@ -1488,8 +1618,7 @@ ipcMain.on('erase-data', async (event, { cleanTableName, uniqueIdentifier }) => 
     console.error(error.message);
     event.reply('erase-data-error', error.message);
   }
-  // ❌ Diese Zeilen bitte weglassen – sie entfernen den falschen Listener
-  // ipcMain.removeListener('erase-data', eraseRowFromDB);
+
 });
 
 

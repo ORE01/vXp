@@ -1,31 +1,101 @@
 
+
+
+
+// Zentrale Format-Konfiguration: EINMAL pflegen
+const FIELD_FORMAT_CONFIG = {
+  PD:         { decimals: 3, isPercentage: true, multiplyBy100: true },
+  PD_M:       { decimals: 3, isPercentage: true, multiplyBy100: true },
+  PD_M_norm:  { decimals: 3, isPercentage: true, multiplyBy100: true },
+  
+  ytm:        { decimals: 3, isPercentage: true, multiplyBy100: true },
+  ytm_BUY:    { decimals: 3, isPercentage: true, multiplyBy100: true },
+  ytmPort:    { decimals: 3, isPercentage: true, multiplyBy100: true },
+
+  QUANTIL:    { decimals: 2, isPercentage: true, multiplyBy100: false },
+
+  Confidence: { decimals: 2, isPercentage: true, multiplyBy100: true },
+  conf_level: { decimals: 2, isPercentage: true, multiplyBy100: true },
+  recovery_rate: { decimals: 2, isPercentage: true, multiplyBy100: true },
+
+  red_threshold: { decimals: 2, isPercentage: true, multiplyBy100: true },
+  yellow_threshold	: { decimals: 2, isPercentage: true, multiplyBy100: true },
+  // recovery_rate: { decimals: 2, isPercentage: true, multiplyBy100: true },
+  // recovery_rate: { decimals: 2, isPercentage: true, multiplyBy100: true },
+
+  NOTIONAL:   { decimals: 0, isPercentage: false, multiplyBy100: false },
+  EAD:        { decimals: 0, isPercentage: false, multiplyBy100: false },
+  LGD:        { decimals: 0, isPercentage: false, multiplyBy100: false },
+  LOSS:       { decimals: 0, isPercentage: false, multiplyBy100: false },
+  NAV:        { decimals: 0, isPercentage: false, multiplyBy100: false },
+  PV01:       { decimals: 0, isPercentage: false, multiplyBy100: false },
+  CPV01:      { decimals: 0, isPercentage: false, multiplyBy100: false },
+
+  PV01rel:    { decimals: 2, isPercentage: false, multiplyBy100: false },
+  CPV01rel:   { decimals: 2, isPercentage: false, multiplyBy100: false },
+  CPV01_EUR:  { decimals: 2, isPercentage: false, multiplyBy100: false },
+
+  absolute:   { decimals: 0, isPercentage: false, multiplyBy100: false },
+  C_SPREAD:        { decimals: 0, isPercentage: false, multiplyBy100: false },
+  C_SPREAD_BASE:   { decimals: 0, isPercentage: false, multiplyBy100: false },
+  C_SPREAD_DELTA:  { decimals: 0, isPercentage: false, multiplyBy100: false },
+};
+
+
+export const PERCENT_DECIMAL_FIELDS = Object.entries(FIELD_FORMAT_CONFIG)
+  .filter(([_, cfg]) => cfg.isPercentage && cfg.multiplyBy100)
+  .map(([field]) => field);
+
+
 // diese könnte die wichtigste funktion für die ANZEIGE sein (aber nur ANZEIGE)
+// export function getFormatRules() {
+//   return {
+//     'PD': formatNumber(3, true, true), 
+//     'PD_M': formatNumber(3, true, true), 
+//     'PD_M_norm': formatNumber(3, true, true), 
+//     'ytm': formatNumber(3, true, true), 
+//     'ytm_BUY': formatNumber(3, true, true), 
+//     'ytmPort': formatNumber(3, true, true), 
+//     'QUANTIL': formatNumber(2, true), 
+//     'NOTIONAL': formatNumber(0), 
+//     'EAD': formatNumber(0), 
+//     'LGD': formatNumber(0),
+//     'LOSS': formatNumber(0),
+//     'NAV': formatNumber(0),
+//     'PV01': formatNumber(0),
+//     'CPV01': formatNumber(0),
+//     'PV01rel': formatNumber(2),
+//     'CPV01rel': formatNumber(2),
+//     'CPV01_EUR': formatNumber(2),
+//     'absolute': formatNumber(0),
+//     'C_SPREAD': formatNumber(0),
+//     'C_SPREAD_BASE': formatNumber(0),
+//     'C_SPREAD_DELTA': formatNumber(0),
+//     'MATURITY_YEAR': v => (v == null || v === '') ? '' : (typeof v === 'number' ? String(Math.trunc(v)) : ((String(v).trim().match(/^(-?\d+)(?:[.,]\d+)?$/) || [,''])[1] || String(v))),
+//   };
+// }
 export function getFormatRules() {
-  return {
-    'PD': formatNumber(3, true, true), 
-    'PD_M': formatNumber(3, true, true), 
-    'PD_M_norm': formatNumber(3, true, true), 
-    'ytm': formatNumber(3, true, true), 
-    'ytm_BUY': formatNumber(3, true, true), 
-    'ytmPort': formatNumber(3, true, true), 
-    'CONVI': formatNumber(2, true), 
-    'NOTIONAL': formatNumber(0), 
-    'EAD': formatNumber(0), 
-    'LGD': formatNumber(0),
-    'LOSS': formatNumber(0),
-    'NAV': formatNumber(0),
-    'PV01': formatNumber(0),
-    'CPV01': formatNumber(0),
-    'PV01rel': formatNumber(2),
-    'CPV01rel': formatNumber(2),
-    'CPV01_EUR': formatNumber(2),
-    'absolute': formatNumber(0),
-    'C_SPREAD': formatNumber(0),
-    'C_SPREAD_BASE': formatNumber(0),
-    'C_SPREAD_DELTA': formatNumber(0),
-    'MATURITY_YEAR': v => (v == null || v === '') ? '' : (typeof v === 'number' ? String(Math.trunc(v)) : ((String(v).trim().match(/^(-?\d+)(?:[.,]\d+)?$/) || [,''])[1] || String(v))),
-  };
+  const rules = {};
+
+  for (const [field, cfg] of Object.entries(FIELD_FORMAT_CONFIG)) {
+    rules[field] = formatNumber(
+      cfg.decimals,
+      cfg.isPercentage,
+      cfg.multiplyBy100
+    );
+  }
+
+  // Sonderfall MATURITY_YEAR bleibt so wie bisher extra
+  rules.MATURITY_YEAR = v =>
+    (v == null || v === '')
+      ? ''
+      : (typeof v === 'number'
+          ? String(Math.trunc(v))
+          : ((String(v).trim().match(/^(-?\d+)(?:[.,]\d+)?$/) || [,''])[1] || String(v)));
+
+  return rules;
 }
+
 
 
 export const formatNumber = (decimals = 0, isPercentage = false, multiplyBy100 = false) => (value) => {
@@ -65,66 +135,127 @@ export function formatNumberWithCommas(value) {
   return numericValue.toFixed(3) + '%';
 }
 
-// Für die Anzeige
-export function formatDisplayValue(fieldName, value) {
-  if (!value) return ''; // Handle empty values
+// =============================================================================ANZEIGE APP===============================================================
+// export function formatDisplayValue(fieldName, value) {
+//   if (!value) return ''; // Handle empty values
 
-  if ([
-    'COUPON', 
-    'FIX_CF', 
-    'GEARING', 
-    'FLOOR', 
-    'CAP', 
-    'SPREADS', 
-    'clean_price', 
-    'FORWARDS', 
-    'RATES', 
-    'EUSWAP',
-    'EUSWAP_SZ1'
-  ].includes(fieldName)) {
+//   if ([
+//     'COUPON', 
+//     'FIX_CF', 
+//     'GEARING', 
+//     'FLOOR', 
+//     'CAP', 
+//     'SPREADS', 
+//     'clean_price', 
+//     'FORWARDS', 
+//     'RATES', 
+//     'EUSWAP',
+//     'EUSWAP_SZ1'
+//   ].includes(fieldName)) {
   
-    return (parseFloat(value) * 100).toFixed(2) + '%'; // Convert decimal to percentage format
+//     return (parseFloat(value) * 100).toFixed(2) + '%'; // Convert decimal to percentage format
+//   }
+
+//   return value; // Return unchanged for other fields
+// }
+
+// Für die Anzeige (z.B. in Edit-Feldern)
+export function formatDisplayValue(fieldName, value) {
+  if (value === null || value === undefined || value === '') return '';
+
+  // Wenn das Feld in der Prozent-Liste ist → Dezimal (0.2) zu Prozent (20.00%)
+  if (PERCENT_DECIMAL_FIELDS.includes(fieldName)) {
+    const num = parseFloat(value);
+    if (isNaN(num)) return value;
+
+    // hier kannst du frei entscheiden, wie viele Nachkommastellen du im Input sehen willst
+    // das ist unabhängig von getFormatRules (Tabelle)
+    return (num * 100).toFixed(2) + '%';
   }
 
-  return value; // Return unchanged for other fields
+  // Alle anderen Felder unverändert
+  return value;
 }
 
+ 
 
 
-  //For SAVING!!!!
+  //=============================================================================SPEICHERUNG DB============================================================
+// export function formatInputFieldValue(fieldName, value) {
+//   // console.log('fieldNameFF:', fieldName);
+//   // console.log('value', value);
+//   let formattedValue = value;
+
+//   if (fieldName === 'COUPON' ||
+//       fieldName === 'FIX_CF' ||
+//       fieldName === 'GEARING' ||
+//       fieldName === 'FLOOR' ||
+//       fieldName === 'CAP' ||
+//       fieldName === 'SPREADS' ||
+//       fieldName === 'clean_price' ||
+//       fieldName === 'FORWARDS' ||
+//       fieldName === 'RATES'||
+//       fieldName === 'EUSWAP'||
+//       fieldName === 'EUSWAP_SZ1') {
+//       formattedValue = parseFloat(formattedValue) / 100;
+//       //console.log('formattedValue:', formattedValue); 
+
+//   } else if (fieldName === 'NOTIONAL') {
+//       formattedValue = parseInt(formattedValue); // Convert to whole number
+//       //console.log('formattedValue:', formattedValue);
+      
+//   } else if (fieldName === 'RATING') {
+//     formattedValue = String(formattedValue); // Convert to whole number
+//     //console.log('formattedValue:', formattedValue);
+
+//   } else if (['a', 'b', 'c', 'd', 'Shift_percent', 'Shift_bp'].includes(fieldName)) {
+//     formattedValue = parseFloat(formattedValue) || 0; // Convert text to number (default to 0)
+// }
+
+//   return formattedValue;
+// }
+
 export function formatInputFieldValue(fieldName, value) {
-  // console.log('fieldNameFF:', fieldName);
-  // console.log('value', value);
   let formattedValue = value;
 
-  if (fieldName === 'COUPON' ||
-      fieldName === 'FIX_CF' ||
-      fieldName === 'GEARING' ||
-      fieldName === 'FLOOR' ||
-      fieldName === 'CAP' ||
-      fieldName === 'SPREADS' ||
-      fieldName === 'clean_price' ||
-      fieldName === 'FORWARDS' ||
-      fieldName === 'RATES'||
-      fieldName === 'EUSWAP'||
-      fieldName === 'EUSWAP_SZ1') {
-      formattedValue = parseFloat(formattedValue) / 100;
-      //console.log('formattedValue:', formattedValue); 
+  // 1) Alle Felder, die in der DB als Dezimal liegen,
+  //    aber im UI als Prozent angezeigt werden
+  if (PERCENT_DECIMAL_FIELDS.includes(fieldName)) {
+    if (formattedValue === null || formattedValue === undefined || formattedValue === '') {
+      return null;
+    }
 
+    let str = String(formattedValue).trim();
+
+    // % entfernen, falls der User  "25%" oder "25.00 %" eingibt
+    str = str.replace('%', '').trim();
+    // Komma in Punkt wandeln (z.B. "25,5")
+    str = str.replace(',', '.');
+
+    const num = parseFloat(str);
+    if (isNaN(num)) {
+      return null; // oder: return formattedValue; wenn du lieber "roh" speicherst
+    }
+
+    // Zurück in dein DB-Format: 25.00 -> 0.25
+    formattedValue = num / 100;
+
+  // 2) Ganzzahlige Notional
   } else if (fieldName === 'NOTIONAL') {
-      formattedValue = parseInt(formattedValue); // Convert to whole number
-      //console.log('formattedValue:', formattedValue);
-      
-  } else if (fieldName === 'RATING') {
-    formattedValue = String(formattedValue); // Convert to whole number
-    //console.log('formattedValue:', formattedValue);
+    formattedValue = parseInt(formattedValue, 10);
 
+  // 3) Rating als String
+  } else if (fieldName === 'RATING') {
+    formattedValue = String(formattedValue);
+
+  // 4) Sonstige numerische Felder
   } else if (['a', 'b', 'c', 'd', 'Shift_percent', 'Shift_bp'].includes(fieldName)) {
-    formattedValue = parseFloat(formattedValue) || 0; // Convert text to number (default to 0)
-}
+    formattedValue = parseFloat(formattedValue) || 0;
+  }
 
   return formattedValue;
 }
+
 
 // export function convertDateToISO(dateStr) {
 //   const parts = dateStr.split('-');

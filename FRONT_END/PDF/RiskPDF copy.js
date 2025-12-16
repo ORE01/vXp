@@ -449,7 +449,11 @@ function drawMarketRiskSection(doc, { includeDetails = true, addTOC = null } = {
   const marginX = 10, marginY = 20;
 
   // 1) Eingabentabelle (Szenarien)
+<<<<<<< HEAD
   const tblInputs = extractTableFromContainer('inputMVaRContainer', { maxRows: 200, maxCols: 50 });
+=======
+  const tblInputs = extractTableFromContainer('inputMvarContainer', { maxRows: 200, maxCols: 50 });
+>>>>>>> 86583dc934e6d20c0bb0603bffd3114067b347a6
   if (tblInputs && tblInputs.body.length) {
     if (y + 40 > pageH - marginY) { doc.addPage(); y = marginY; }
     doc.setFontSize(11);

@@ -1,5 +1,5 @@
-import { filterColumnsInData } from '../../../modal_HELPER/dataProcessor.js';
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import { filterColumnsInData } from '../../../MODAL_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../renderer.js';
 // import {handleTrafficLight} from './trafficLight.js';
@@ -13,7 +13,7 @@ let marketData = [];
 let marketNormData = [];
 
 export function handleLossIssuerMainData(receivedData) {
-  //console.log('LossIssuer receivedData:', receivedData);
+  console.log('LossIssuer receivedData:', receivedData);
 
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
   //console.log('port_name:', port_name);
@@ -86,35 +86,12 @@ export function handleLossIssuerMainData(receivedData) {
       const extractedRatingLosses = ratingData.map(item => item.LOSS || 0);
       const extractedNormLosses = marketNormData.map(item => item.LOSS || 0);
       
-
-      const state = trafficLightStateForCredit(extractedRatingLosses, extractedNormLosses);
-      if (state) updateTrafficLight('#traffic-credit', state);
-
     });
   }
 }
 
-    function trafficLightStateForCredit(ratingLosses, normLosses) {
-      // AVERAGE: 
-      const SLICE = 10;           // Wieviele Werte man für den Duchschnitt nimmt
 
-    // SCHWELLEN:
-      const YELLOW = 10;          // ab dieser schwelle in % kommt gelb
-      const RED    = 20;          // % Schwelle rot
 
-      if (ratingLosses.length < SLICE || normLosses.length < SLICE) return null;
-
-      const avg = (arr,n)=>arr.slice(0,n).reduce((s,v)=>s+v,0)/n;
-      const rAvg = avg(ratingLosses, SLICE);
-      const nAvg = avg(normLosses,   SLICE);
-      const diff = (rAvg === 0) ? Infinity : Math.abs((nAvg - rAvg)/rAvg)*100;
-
-      console.log('Credit Risk Ampel:',diff)
-
-      if (diff > RED)   return 'red';
-      if (diff > YELLOW)return 'yellow';
-      return 'green';
-    }    
 
 
 
@@ -160,7 +137,7 @@ export function setupLossIssuerUI() {
   // KEINE Button-Events mehr, kein Umschalten
 }
     function processAndSortLossIssuerData(receivedData) {
-      let columns = ['CONVI', 'DEFAULTS', 'ISSUER_RANK', 'LOSS'];
+      let columns = ['QUANTIL', 'DEFAULTS', 'ISSUER_RANK', 'LOSS'];
       let filteredData = filterColumnsInData(receivedData, columns);
 
       // Sort the data
@@ -216,41 +193,41 @@ export function setupLossIssuerUI() {
         return; 
       }
 
-      // 🔥 Combine the CONVI labels from all datasets (remove duplicates)
+      // 🔥 Combine the QUANTIL labels from all datasets (remove duplicates)
       const allConvIValues = Array.from(new Set([
-        ...ratingData.map(d => d.CONVI), 
-        ...marketData.map(d => d.CONVI),
-        ...marketNormData.map(d => d.CONVI)
+        ...ratingData.map(d => d.QUANTIL), 
+        ...marketData.map(d => d.QUANTIL),
+        ...marketNormData.map(d => d.QUANTIL)
       ])).sort((a, b) => a - b);
 
-      // 🔥 Map the LOSS and ISSUER_RANK for each CONVI in all datasets
+      // 🔥 Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
       const ratingValues = allConvIValues.map(convI => {
-        const found = ratingData.find(d => d.CONVI === convI);
+        const found = ratingData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
       });
 
       const marketValues = allConvIValues.map(convI => {
-        const found = marketData.find(d => d.CONVI === convI);
+        const found = marketData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
       });
 
       const marketNormValues = allConvIValues.map(convI => {
-        const found = marketNormData.find(d => d.CONVI === convI);
+        const found = marketNormData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
       });
 
       const issuerRanksRating = allConvIValues.map(convI => {
-        const found = ratingData.find(d => d.CONVI === convI);
+        const found = ratingData.find(d => d.QUANTIL === convI);
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
       const issuerRanksMarket = allConvIValues.map(convI => {
-        const found = marketData.find(d => d.CONVI === convI);
+        const found = marketData.find(d => d.QUANTIL === convI);
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
       const issuerRanksMarketNorm = allConvIValues.map(convI => {
-        const found = marketNormData.find(d => d.CONVI === convI);
+        const found = marketNormData.find(d => d.QUANTIL === convI);
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
@@ -299,7 +276,7 @@ export function setupLossIssuerUI() {
               reverse: true, 
               title: {
                 display: true,
-                text: 'CONVI'
+                text: 'QUANTIL'
               },
             },
             y: {
@@ -359,7 +336,7 @@ export function setupLossIssuerUI() {
               callbacks: {
                 title: (context) => {
                   const index = context[0].dataIndex;
-                  return `CONVI: ${allConvIValues[index]}`;
+                  return `QUANTIL: ${allConvIValues[index]}`;
                 },
                 label: (context) => {
                   const index = context.dataIndex;
@@ -397,41 +374,41 @@ export function setupLossIssuerUI() {
         return; 
       }
 
-      // 🔥 Filter CONVI values to only include those from 99.9 to 99.89
+      // 🔥 Filter QUANTIL values to only include those from 99.9 to 99.89
       const allConvIValues = Array.from(new Set([
-        ...ratingData.map(d => d.CONVI), 
-        ...marketData.map(d => d.CONVI),
-        ...marketNormData.map(d => d.CONVI)
+        ...ratingData.map(d => d.QUANTIL), 
+        ...marketData.map(d => d.QUANTIL),
+        ...marketNormData.map(d => d.QUANTIL)
       ])).filter(convI => convI <= 99.99 && convI >= 99.90).sort((a, b) => a - b);
 
-      // 🔥 Map the LOSS and ISSUER_RANK for each CONVI in all datasets
+      // 🔥 Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
       const ratingValues = allConvIValues.map(convI => {
-        const found = ratingData.find(d => d.CONVI === convI);
+        const found = ratingData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
       });
 
       const marketValues = allConvIValues.map(convI => {
-        const found = marketData.find(d => d.CONVI === convI);
+        const found = marketData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
       });
 
       const marketNormValues = allConvIValues.map(convI => {
-        const found = marketNormData.find(d => d.CONVI === convI);
+        const found = marketNormData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
       });
 
       const issuerRanksRating = allConvIValues.map(convI => {
-        const found = ratingData.find(d => d.CONVI === convI);
+        const found = ratingData.find(d => d.QUANTIL === convI);
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
       const issuerRanksMarket = allConvIValues.map(convI => {
-        const found = marketData.find(d => d.CONVI === convI);
+        const found = marketData.find(d => d.QUANTIL === convI);
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
       const issuerRanksMarketNorm = allConvIValues.map(convI => {
-        const found = marketNormData.find(d => d.CONVI === convI);
+        const found = marketNormData.find(d => d.QUANTIL === convI);
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
@@ -525,7 +502,7 @@ export function setupLossIssuerUI() {
               reverse: true, 
               title: {
                 display: true,
-                text: 'CONVI'
+                text: 'QUANTIL'
               },
             },
             y: {
@@ -565,7 +542,7 @@ export function setupLossIssuerUI() {
             },
             tooltip: {
               callbacks: {
-                title: (context) => `CONVI: ${allConvIValues[context[0].dataIndex]}`
+                title: (context) => `QUANTIL: ${allConvIValues[context[0].dataIndex]}`
               }
             }
           }

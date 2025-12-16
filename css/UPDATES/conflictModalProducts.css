@@ -1,0 +1,76 @@
+/* Nur dieses Overlay */
+#prod-conflict-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;        /* Hintergrund */
+}
+
+/* Nur dieser Modal-Container */
+#prod-conflict-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;        /* über dem Overlay */
+}
+
+/* Karte im Produkt-Konflikt-Modal */
+#prod-conflict-modal .modal-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #222;
+  color: #eee;
+  padding: 16px 20px;
+  border-radius: 10px;
+  max-height: 80vh;
+  max-width: 900px;
+  overflow: auto;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  font-size: 13px;
+}
+
+#prod-conflict-modal .modal-card h2 {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+#prod-conflict-modal .modal-card p {
+  margin: 4px 0 8px 0;
+}
+
+#prod-conflict-modal .conflict-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+#prod-conflict-modal .conflict-table th,
+#prod-conflict-modal .conflict-table td {
+  border: 1px solid #444;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+#prod-conflict-modal .conflict-table th {
+  background: #333;
+}
+
+#prod-conflict-modal .decision-row {
+  display: flex;
+  gap: 16px;
+  margin: 10px 0;
+}
+
+#prod-conflict-modal .decision-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#prod-conflict-modal .conflict-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

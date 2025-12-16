@@ -1,5 +1,5 @@
-import processData from '../../modal_HELPER/dataProcessor.js';
-import { handleFormAction } from '../../modal_HELPER/FormButtonHandler.js';
+import processData from '../../MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
 import { appState } from '../renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
@@ -9,7 +9,7 @@ let filteredDealsData;
 // ADD-Button (Add braucht keinen RowIndex → null)
 export function dealsAddButtonHandler (event, selectedTableName) {
   console.log('Start Add Deal', selectedTableName)
-  handleFormAction(event, filteredDealsData, null, selectedTableName, 'add');
+  handleModalAction(event, filteredDealsData, null, selectedTableName, 'add');
 }
 
 // export function handleDealsData(receivedData, dealsTableName) {
@@ -169,7 +169,7 @@ export function handleDealsData(receivedData, dealsTableName) {
     addButton.dataset.bound = '1';
     addButton.addEventListener('click', (event) => {
       console.log('Start Add Deal', tableName);
-      handleFormAction(event, filteredDealsData, null, tableName, 'add');
+      handleModalAction(event, filteredDealsData, null, tableName, 'add');
     });
   }
 

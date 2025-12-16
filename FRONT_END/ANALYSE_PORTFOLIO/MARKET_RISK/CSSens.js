@@ -1,6 +1,6 @@
 // Minor change to test git push 1-3-2024 1011
 
-import processData from '../../../modal_HELPER/dataProcessor.js';
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { formatNumberWithGrouping } from '../../../utils/format.js';
 
