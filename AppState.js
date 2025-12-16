@@ -8,7 +8,7 @@ import { handleCSSensData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/CSSe
 import { handleCSMatrixData } from './FRONT_END/MARKET_DATA/CREDIT_SPREADS/CSMatrix.js';
 import { handleCSParameterData } from './FRONT_END/MARKET_DATA/CREDIT_SPREADS/CSParameter.js';
 //import { handleIRData } from './FRONT_END/MARKET_DATA/INTEREST_RATES/IR.js';
-import { handleFWDData, handleSwapForwardCurve } from './FRONT_END/MARKET_DATA/FORWARDS/FORWARDS.js';
+import { handleFWDData, handleSwapForwardCurve } from './FRONT_END/MARKET_DATA/FORWARDS/forwards.js';
 import { handleMVaRData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
 import { handleEADData, handleCVaRData } from './FRONT_END/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js'; 
 import { handleLossIssuerMainData } from './FRONT_END/ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js'; 
@@ -16,7 +16,7 @@ import { createComparisonCharts } from './FRONT_END/COMPARE_PORTFOLIOS/COMP.js';
 import { formatPercentage} from './utils/format.js';
 import { filterColumnsInData } from './MODAL_HELPER/dataProcessor.js';
 import { handleLiquidityData } from './FRONT_END/ANALYSE_PORTFOLIO/liquidity.js';
-import { handleSummaryRMData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRM.js';
+import { handleSummaryMarketRiskData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRisk.js';
 import { handleSummaryNotionalData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryNotional.js';
 import { handleSummaryYieldData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryYield.js';
 
@@ -568,12 +568,14 @@ handleOffersTable(data, index = 0) {
         // console.log("handlePortAggData:", filteredData, index, port_name);
 
         handlePortProdData(filteredData, index, port_name);
-        handleLiquidityData(filteredData, index, port_name);
+        //handleLiquidityData(filteredData, index, port_name);
+        handleLiquidityData(filteredData);
         
         handleSummaryNotionalData(filteredData, index, port_name);
         handleSummaryYieldData(filteredData, index, port_name);
 
-        handleSummaryRMData(filteredData, index, port_name);
+        //handleSummaryRMData(filteredData, index, port_name);
+        handleSummaryMarketRiskData(port_name);
 
         
         // 2️⃣ MVaR-Daten
@@ -674,6 +676,23 @@ handleOffersTable(data, index = 0) {
     getCustomerTSData() {
         return this.customerTSData;
     }
+
+    setCustomerReportsData(data) {
+    this.customerReportsData = data;
+    }
+
+    getCustomerReportsData() {
+    return this.customerReportsData;
+    }
+
+
+
+
+
+
+
+
+
 
     updateCustomerField(key, value) {
         if (!this.customerData) this.customerData = {};
@@ -1351,7 +1370,8 @@ setPortAggData(elementId, data) {
     // console.trace("🔍 updateMvarDataTable triggered from:");
 
     this.setMvarDistData(receivedData);
-    handleSummaryRMData(receivedData, 0, port_name);
+    //handleSummaryRMData(receivedData, 0, port_name);
+    handleSummaryMarketRiskData(port_name);
 
     }
     updateCvarDataTable(receivedData) {
@@ -1759,6 +1779,7 @@ updateDropdownOptions({
   updateMvarDataFunction,
   updateCvarDataFunction,
   updateEADDataFunction,
+  updateLiquidityDataFunction, 
   selectedTableName,
   index,
 }) {
@@ -1816,6 +1837,11 @@ updateDropdownOptions({
   }
 
   if (isPortfolio) {
+    // 🔹 NEU: Liquidity aus denselben gefilterten Portfoliodaten
+    if (typeof updateLiquidityDataFunction === 'function') {
+      updateLiquidityDataFunction(filteredData, safeIndex);
+    }
+
     if (typeof updateMvarDataFunction === 'function') {
       const filteredMvar = appState.getAllMvarData().filter(e => e.port_name === dropdownElement.value);
       updateMvarDataFunction(filteredMvar, safeIndex);
@@ -1830,6 +1856,8 @@ updateDropdownOptions({
     }
   }
 }
+
+
 
 
 

@@ -58,97 +58,6 @@ function normalizeDateToIso(value) {
   return "";
 }
 
-// export function handleHistoricMetricsAddClick(event) {
-//   const tableName = "PortfolioHistoryMetrics";   // UI-/Form-Key
-//   const elementId = "portDataContainer3";        // später dynamisch, jetzt fix
-
-//   const dateIso = getTodayIsoDate(); // "YYYY-MM-DD", z.B. "2025-11-20"
-
-//   // 1) History-Daten aus appState holen
-//   const historyData = appState?.getPortfolioHistoryData?.() || [];
-
-//   console.log("📚 historyData length:", historyData.length);
-
-//   // Nur fürs Debugging – kannst du später wieder rauswerfen
-//   const normalizedDates = historyData.map(r => ({
-//     raw: r.DATE,
-//     norm: normalizeDateToIso(r.DATE)
-//   }));
-//   console.log("📅 DATE normalized list:", normalizedDates);
-//   console.log("📅 today (ISO):", dateIso);
-
-//   // 2) prüfen, ob für dieses Datum schon ein Eintrag existiert
-//   const existingIndex = historyData.findIndex(row =>
-//     normalizeDateToIso(row?.DATE) === dateIso
-//   );
-
-//   const hasExisting = existingIndex !== -1;
-//   console.log("🔎 Existing index for", dateIso, "→", existingIndex);
-
-//   if (hasExisting) {
-//     console.log(
-//       `⚠️ There is already a record for ${dateIso} in PortfolioHistoryMetrics. ` +
-//       `Existing row will be edited/overwritten.`
-//     );
-//   }
-
-//   // 3) Portfoliodaten holen
-//   const portAgg = appState?.getPortAggData(elementId) || {};
-//   console.log("🔍 PortAggData for", elementId, portAgg);
-
-//   const notional = parseEuroString(portAgg.formPortNotional);
-//   const value    = parseEuroString(portAgg.formPortValue);
-//   const valueBuy    = parseEuroString(portAgg.formPortValueBuy);
-//   const pv01     = portAgg.formPortPV01 != null ? parseFloat(portAgg.formPortPV01) : null;
-//   const cpv01    = portAgg.formPortCPV01 != null ? parseFloat(portAgg.formPortCPV01) : null;
-//   const retPct = parsePercentString(portAgg.formPortYield);
-
-//   // 4) Gemeinsame Payload-Werte (was wir in die DB schreiben wollen)
-//   const payload = {
-//     DATE: dateIso,                // immer ISO in der DB
-//     PORTFOLIO_NOTIONAL: notional,
-//     PORTFOLIO_VALUE: value,
-//     PORTFOLIO_VALUE_BUY: valueBuy,
-//     MDURATION: pv01,              // laut deinem Schema
-//     CPV01bp: cpv01,
-//     RETURN: retPct,
-//     // später: weitere Felder ergänzen (M_VaR_*, M_ES_*, C_VaR_*, etc.)
-//   };
-
-//   if (hasExisting) {
-//     // ------ EDIT-Fall ------
-//     const dataForEdit = [...historyData];
-//     const mergedRow = {
-//       ...historyData[existingIndex],
-//       ...payload
-//     };
-//     dataForEdit[existingIndex] = mergedRow;
-
-//     console.log("✏️ Edit existing HistoricMetric row:", mergedRow);
-
-//     handleFormAction(
-//       event,
-//       dataForEdit,
-//       existingIndex,
-//       tableName,
-//       "edit"
-//     );
-//   } else {
-//     // ------ ADD-Fall ------
-//     const newRow = { ...payload };
-//     const dataForAdd = [newRow];
-
-//     console.log("➕ Add new HistoricMetric row:", newRow);
-
-//     handleFormAction(
-//       event,
-//       dataForAdd,
-//       null,
-//       tableName,
-//       "add"
-//     );
-//   }
-// }
 
 export function showConfirmationBox(message, {
   confirmText = "OK",
@@ -227,48 +136,48 @@ export function showConfirmationBox(message, {
 
 
 export async function handleHistoricMetricsAddClick(event) {
-  const tableName = "PortfolioHistoryMetrics";   // UI-/Form-Key
-  const elementId = "portDataContainer3";        // später dynamisch, jetzt fix
+  const tableName = "PortfolioHistoryMetrics";
+  const elementId = "portDataContainer3";
 
-  const dateIso = getTodayIsoDate(); // "YYYY-MM-DD", z.B. "2025-11-20"
+  const dateIso = getTodayIsoDate();
 
-  // 1) History-Daten aus appState holen
-  const historyData = appState?.getPortfolioHistoryData?.() || [];
+  // ✅ Aktives Portfolio
+  const port_name_raw = appState.getSelectedPortTableName?.();
+  const port_name = String(port_name_raw ?? "").trim();
 
-  console.log("📚 historyData length:", historyData.length);
+  if (!port_name) {
+    await showConfirmationBox("⚠️ Kein Portfolio ausgewählt (port_name ist leer).", {
+      confirmText: "OK",
+      confirmClass: "confirmation-button-green",
+      dangerous: true
+    });
+    return;
+  }
 
-  const normalizedDates = historyData.map(r => ({
-    raw: r.DATE,
-    norm: normalizeDateToIso(r.DATE)
-  }));
-  console.log("📅 DATE normalized list:", normalizedDates);
-  console.log("📅 today (ISO):", dateIso);
+  // 1) History-DATEN: ALLE holen (weil wir edit mit Index im Gesamtarray machen)
+  const historyAll = appState?.getPortfolioHistoryData?.() || [];
+  console.log("📚 historyAll length:", historyAll.length, "port_name:", port_name);
 
-  // 2) prüfen, ob für dieses Datum schon ein Eintrag existiert
-  const existingIndex = historyData.findIndex(row =>
+  // 2) Prüfen, ob es für DIESEN port_name und HEUTE schon einen Eintrag gibt
+  const existingIndex = historyAll.findIndex(row =>
+    String(row?.port_name ?? "").trim() === port_name &&
     normalizeDateToIso(row?.DATE) === dateIso
   );
 
   const hasExisting = existingIndex !== -1;
-  console.log("🔎 Existing index for", dateIso, "→", existingIndex);
+  console.log("🔎 Existing index for", { dateIso, port_name }, "→", existingIndex);
 
-if (hasExisting) {
-  await showConfirmationBox(
-    `⚠️ There is already a record for ${dateIso} in PortfolioHistoryMetrics. Existing row will be edited/overwritten.`,
-    {
-      confirmText: "OK",
-      confirmClass: "confirmation-button-green"
-      // cancelText: "Cancel"  // nur falls du wirklich abbrechen willst
-    }
-  );
-}
-
-
-
+  if (hasExisting) {
+    await showConfirmationBox(
+      `⚠️ There is already a record for ${dateIso} in PortfolioHistoryMetrics for portfolio "${port_name}". Existing row will be edited/overwritten.`,
+      { confirmText: "OK", confirmClass: "confirmation-button-green" }
+    );
+  }
 
   // 3) Portfoliodaten holen
   const portAgg = appState?.getPortAggData(elementId) || {};
   console.log("🔍 PortAggData for", elementId, portAgg);
+
 
   const notional   = parseEuroString(portAgg.formPortNotional);
   const value      = parseEuroString(portAgg.formPortValue);
@@ -282,7 +191,7 @@ if (hasExisting) {
   const yieldBuy     = parsePercentString(portAgg.formPortYield);
 
   // -----------------------------------------------
-  // 3b) MVaR-Daten aus appState holen (port_name = "UNI")
+  // 3b) MVaR-Daten aus appState holen (port_name = port_name)
   // -----------------------------------------------
   const allMvarData =
     (appState?.getAllMvarData?.() ??
@@ -292,18 +201,16 @@ if (hasExisting) {
   let mvarUNI = null;
 
   if (Array.isArray(allMvarData)) {
-    mvarUNI = allMvarData.find(d =>
-      (d?.port_name || d?.PORT_NAME || d?.PORT || d?.port) === "UNI"
-    ) || null;
+mvarUNI = allMvarData.find(d => d?.port_name === port_name) || null;
 
   } else if (allMvarData && typeof allMvarData === "object") {
-    if ("UNI" in allMvarData) {
-      mvarUNI = allMvarData["UNI"];
+    if (port_name in allMvarData) {
+      mvarUNI = allMvarData[port_name];
     } else {
       const hitKey = Object.keys(allMvarData).find(k => {
         const v = allMvarData[k];
         const pn = v?.port_name || v?.PORT_NAME || v?.PORT || v?.port;
-        return pn === "UNI";
+        return pn === port_name;
       });
       mvarUNI = hitKey ? allMvarData[hitKey] : null;
     }
@@ -313,7 +220,7 @@ if (hasExisting) {
   // -----------------------------------------------
 
   // -----------------------------------------------
-// 3c) CVaR-Daten aus appState holen (port_name = "UNI") – nur LOG
+// 3c) CVaR-Daten aus appState holen (port_name = port_name) – nur LOG
 // -----------------------------------------------
 const allCvarData =
   (appState?.getAllCvarData?.() ??
@@ -324,20 +231,18 @@ let cvarUNI = null;
 
 if (Array.isArray(allCvarData)) {
   // Fall 1: Array von Rows/Objekten
-  cvarUNI = allCvarData.find(d =>
-    (d?.port_name || d?.PORT_NAME || d?.PORT || d?.port) === "UNI"
-  ) || null;
+cvarUNI = allCvarData.find(d => d?.port_name === port_name) || null;
 
 } else if (allCvarData && typeof allCvarData === "object") {
   // Fall 2: Map/Object mit Portnamen als Keys
-  if ("UNI" in allCvarData) {
-    cvarUNI = allCvarData["UNI"];
+  if (port_name in allCvarData) {
+    cvarUNI = allCvarData[port_name];
   } else {
     // Fall 3: Map/Object mit anderen Keys, innen steht port_name
     const hitKey = Object.keys(allCvarData).find(k => {
       const v = allCvarData[k];
       const pn = v?.port_name || v?.PORT_NAME || v?.PORT || v?.port;
-      return pn === "UNI";
+      return pn === port_name;
     });
     cvarUNI = hitKey ? allCvarData[hitKey] : null;
   }
@@ -353,6 +258,7 @@ if (cvarUNI && typeof cvarUNI === "object") {
 
   // 4) Gemeinsame Payload-Werte (was wir in die DB schreiben wollen)
 const payload = {
+  port_name, 
   DATE: dateIso,
   PORTFOLIO_NOTIONAL: notional,
   PORTFOLIO_VALUE: value,
@@ -392,39 +298,28 @@ const payload = {
 
 
 
-  if (hasExisting) {
-    // ------ EDIT-Fall ------
-    const dataForEdit = [...historyData];
-    const mergedRow = {
-      ...historyData[existingIndex],
-      ...payload
-    };
-    dataForEdit[existingIndex] = mergedRow;
+if (hasExisting) {
+  const dataForEdit = [...historyAll];
 
-    console.log("✏️ Edit existing HistoricMetric row:", mergedRow);
+  const mergedRow = {
+    ...dataForEdit[existingIndex],
+    ...payload
+  };
 
-    handleModalAction(
-      event,
-      dataForEdit,
-      existingIndex,
-      tableName,
-      "edit"
-    );
-  } else {
-    // ------ ADD-Fall ------
-    const newRow = { ...payload };
-    const dataForAdd = [newRow];
+  dataForEdit[existingIndex] = mergedRow;
 
-    console.log("➕ Add new HistoricMetric row:", newRow);
+  console.log("✏️ Edit existing HistoricMetric row:", mergedRow);
 
-    handleModalAction(
-      event,
-      dataForAdd,
-      null,
-      tableName,
-      "add"
-    );
-  }
+  handleModalAction(event, dataForEdit, existingIndex, tableName, "edit");
+} else {
+  const newRow = { ...payload };
+  const dataForAdd = [newRow];
+
+  console.log("➕ Add new HistoricMetric row:", newRow);
+
+  handleModalAction(event, dataForAdd, null, tableName, "add");
+}
+
 }
 
 

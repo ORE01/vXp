@@ -2341,6 +2341,39 @@
     <section class="table-card">
       <h4 class="table-title">Risk Preview</h4>
 
+
+
+<!-- Risk Presets: CustomerReports -->
+<div class="mvar-summary" style="margin-bottom:12px;">
+  <div class="mvar-summary-header" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+    <div style="min-width:260px;">
+      <p class="mvar-caption" style="margin:0;">Report Preset:</p>
+      <select id="customerReportsDropdown"
+              style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+      </select>
+    </div>
+
+    <div style="min-width:260px;">
+      <p class="mvar-caption" style="margin:0;">Preset Name:</p>
+      <input id="customerReportsNameInput"
+             type="text"
+             placeholder="e.g. Board Pack"
+             style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+    </div>
+
+    <div class="mvar-input-buttons" style="display:flex; gap:10px; margin-left:auto;">
+      <button id="customerReportsLoadButton"  class="edit-button">Load</button>
+      <button id="customerReportsSaveButton"  class="edit-button">Save</button>
+      <button id="customerReportsAddButton"   class="edit-button">Add</button>
+      <button id="customerReportsDeleteButton" class="edit-button">Delete</button>
+    </div>
+  </div>
+</div>
+
+
+
+      
+
       <!-- 👉 Hier rendert dein JS die komplette Preview inkl. Checkboxen pro Chart -->
       <div id="reportsRiskPreview" class="data-container cp-table"></div>
 

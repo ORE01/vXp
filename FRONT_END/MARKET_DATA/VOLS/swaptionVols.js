@@ -1,3 +1,5 @@
+import { sortTenors } from "../../renderer.js";
+
 const colorScale = [
   [0.0,  '#1a1a1a'],   // very dark
   [0.25, '#0e3a60'],   // tiefes Stahlblau
@@ -6,8 +8,58 @@ const colorScale = [
   [1.0,  '#80deea']    // helles Aqua als Highlight
 ];
 
+//HELPER:
+      function buildSwaptionATMGridFromRows(atmRows) {
+        const rows = Array.isArray(atmRows) ? atmRows : [];
+        if (rows.length === 0) return null;
+
+        const optionSet = new Set();
+        const swapSet = new Set();
+
+        for (const r of rows) {
+          const opt = String(r?.option_tenor ?? "").trim();
+          const swp = String(r?.swap_tenor ?? "").trim();
+          if (opt) optionSet.add(opt);
+          if (swp) swapSet.add(swp);
+        }
+
+        const optionTenors = sortTenors([...optionSet]); // X
+        const swapTenors   = sortTenors([...swapSet]);   // Y
+
+        const volMatrix = swapTenors.map(() => optionTenors.map(() => null)); // [y][x]
+
+        for (const r of rows) {
+          const opt = String(r?.option_tenor ?? "").trim();
+          const swp = String(r?.swap_tenor ?? "").trim();
+          const rowIdx = swapTenors.indexOf(swp);
+          const colIdx = optionTenors.indexOf(opt);
+          if (rowIdx < 0 || colIdx < 0) continue;
+
+          const vol = Number(r?.atm_vol);
+          volMatrix[rowIdx][colIdx] = Number.isFinite(vol) ? vol : null;
+        }
+
+        return { optionTenors, swapTenors, volMatrix };
+      }
+      // ATM Vol für aktuell gewählte Node aus ATM rows[]
+      function getAtmVolForSelectedNodeFromRows() {
+        const opt = document.getElementById("swaptionOptionTenorSelect")?.value || '';
+        const swp = document.getElementById("swaptionSwapTenorSelect")?.value || '';
+        if (!opt || !swp) return null;
+
+        const rows = Array.isArray(appState?.swaptionATM) ? appState.swaptionATM : [];
+        const hit = rows.find(r =>
+          String(r?.option_tenor ?? "").trim() === opt &&
+          String(r?.swap_tenor ?? "").trim() === swp
+        );
+        if (!hit) return null;
+
+        const v = Number(hit?.atm_vol);
+        return Number.isFinite(v) ? v : null;
+      }
 
 
+//3D plottly Chart:
 export function renderVolSurfacePanel() {
   const targetId = 'swaption-atm-surface-3d';
   const el = document.getElementById(targetId);
@@ -22,120 +74,127 @@ export function renderVolSurfacePanel() {
     return;
   }
 
-  const atm = appState && appState.swaptionATM;
-  if (!atm) {
-    console.warn('[renderVolSurfacePanel] Keine swaptionATM-Daten im appState.');
+  // ✅ ATM ist jetzt rows[]
+  const atmRows = appState?.swaptionATM;
+  if (!Array.isArray(atmRows) || atmRows.length === 0) {
+    console.warn('[renderVolSurfacePanel] Keine swaptionATM-Daten (rows[]) im appState.');
     return;
   }
 
-  const { optionTenors, swapTenors, volMatrix } = atm;
-  console.log('[renderVolSurfacePanel] swaptionATM:', atm);
-
-const data = [{
-  type: 'surface',
-  x: optionTenors,
-  y: swapTenors,
-  z: volMatrix,
-  colorscale: colorScale,
-  colorbar: {
-    title: 'Vol',
-    tickcolor: 'rgb(161,160,160)',
-    tickfont: { color: 'rgb(161,160,160)' },
-    titlefont: { color: 'rgb(161,160,160)' },
-    bgcolor: 'rgb(20,20,20)',
-    outlinecolor: 'rgb(90,90,90)'
+  const grid = buildSwaptionATMGridFromRows(atmRows);
+  if (!grid) {
+    console.warn('[renderVolSurfacePanel] Konnte ATM-Grid nicht bauen.');
+    return;
   }
-}];
 
+  const { optionTenors, swapTenors, volMatrix } = grid;
+  console.log('[renderVolSurfacePanel] swaptionATM grid:', grid);
 
-const layout = {
-  title: {
-    text: 'EUR Swaption ATM Vol Surface',
-    font: { color: 'rgb(161,160,160)', size: 14 }
-  },
-
-  paper_bgcolor: 'rgb(20, 20, 20)',   // GANZES Panel
-  plot_bgcolor:  'rgb(20, 20, 20)',   // Chartfläche
-
-  scene: {
-    bgcolor: 'rgb(20,20,20)',
-
-    xaxis: {
-      title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
+  const data = [{
+    type: 'surface',
+    x: optionTenors,
+    y: swapTenors,
+    z: volMatrix,
+    colorscale: colorScale,
+    colorbar: {
+      title: 'Vol',
+      tickcolor: 'rgb(161,160,160)',
       tickfont: { color: 'rgb(161,160,160)' },
-      gridcolor: 'rgb(90, 90, 90)',
-      zerolinecolor: 'rgb(120, 120, 120)'
-    },
-
-    yaxis: {
-      title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
-      tickfont: { color: 'rgb(161,160,160)' },
-      gridcolor: 'rgb(90, 90, 90)',
-      zerolinecolor: 'rgb(120, 120, 120)'
-    },
-
-    zaxis: {
-      title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
-      tickfont: { color: 'rgb(161,160,160)' },
-      gridcolor: 'rgb(90, 90, 90)',
-      zerolinecolor: 'rgb(120, 120, 120)'
+      titlefont: { color: 'rgb(161,160,160)' },
+      bgcolor: 'rgb(20,20,20)',
+      outlinecolor: 'rgb(90,90,90)'
     }
-  },
+  }];
 
-  margin: { l: 0, r: 0, t: 30, b: 0 }
-};
-
-
-  const config = {
-    responsive: true,
-    displaylogo: false
+  const layout = {
+    title: { text: 'EUR Swaption ATM Vol Surface', font: { color: 'rgb(161,160,160)', size: 14 } },
+    paper_bgcolor: 'rgb(20, 20, 20)',
+    plot_bgcolor:  'rgb(20, 20, 20)',
+    scene: {
+      bgcolor: 'rgb(20,20,20)',
+      xaxis: {
+        title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
+        tickfont: { color: 'rgb(161,160,160)' },
+        gridcolor: 'rgb(90, 90, 90)',
+        zerolinecolor: 'rgb(120, 120, 120)'
+      },
+      yaxis: {
+        title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
+        tickfont: { color: 'rgb(161,160,160)' },
+        gridcolor: 'rgb(90, 90, 90)',
+        zerolinecolor: 'rgb(120, 120, 120)'
+      },
+      zaxis: {
+        title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
+        tickfont: { color: 'rgb(161,160,160)' },
+        gridcolor: 'rgb(90, 90, 90)',
+        zerolinecolor: 'rgb(120, 120, 120)'
+      }
+    },
+    margin: { l: 0, r: 0, t: 30, b: 0 }
   };
 
-  Plotly.newPlot(el, data, layout, config)
-    .then(() => console.log('[renderVolSurfacePanel] Plot erfolgreich gerendert.'))
-    .catch(err => console.error('[renderVolSurfacePanel] Fehler beim Rendern:', err));
+  const config = { responsive: true, displaylogo: false };
+
+Plotly.newPlot(el, data, layout, config)
+  .then(async () => {
+    console.log('[renderVolSurfacePanel] Plot erfolgreich gerendert.');
+
+    // ✅ Plotly Surface als PNG exportieren (für Preview)
+    try {
+      const png = await Plotly.toImage(el, {
+        format: "png",
+        width: 900,
+        height: 520,
+        scale: 2
+      });
+
+      // irgendwo speichern (appState)
+      appState.swaptionATMSurfacePng = png;
+
+      // Preview neu triggern
+      document.dispatchEvent(new Event("risk:refresh-thumbnails"));
+    } catch (e) {
+      console.warn("[renderVolSurfacePanel] Plotly.toImage failed", e);
+      appState.swaptionATMSurfacePng = null;
+    }
+  })
+  .catch(err => console.error('[renderVolSurfacePanel] Fehler beim Rendern:', err));
+
 }
+
 
 export function renderSwaptionSmile() {
   const rows = appState?.swaptionSmile;
-  if (!rows || rows.length === 0) {
+
+  // ✅ Smile bleibt: nur StrikeSpreadBP + VolSpread
+  if (!Array.isArray(rows) || rows.length === 0) {
     console.warn('[Smile] Kein Smile im State.');
     return;
   }
-
-  // 1) Smile-Daten sortieren
-  const sorted = [...rows].sort((a, b) => a.StrikeSpreadBP - b.StrikeSpreadBP);
 
   const opt = document.getElementById("swaptionOptionTenorSelect")?.value || '';
   const swp = document.getElementById("swaptionSwapTenorSelect")?.value || '';
   const label = (opt && swp) ? `Smile ${opt} x ${swp}` : 'Smile';
 
-  // 2) ATM-Vol für dieses Tenor-Paar holen
-  let atmVol = null;
-  const atm = appState?.swaptionATM;
-  if (atm && opt && swp) {
-    const colIdx = atm.optionTenors.indexOf(opt); // X = OptionTenor
-    const rowIdx = atm.swapTenors.indexOf(swp);   // Y = SwapTenor
-    if (rowIdx >= 0 && colIdx >= 0) {
-      atmVol = atm.volMatrix[rowIdx][colIdx];     // [Y][X]
-    }
-  }
+  // 1) sortieren
+  const sorted = [...rows].sort((a, b) =>
+    Number(a?.StrikeSpreadBP ?? 0) - Number(b?.StrikeSpreadBP ?? 0)
+  );
 
-  // 3) X/Y für den Chart: gesamte Vol, nicht Spread
-  const strikesBp = sorted.map(r => r.StrikeSpreadBP);
-  const volsAbs   = sorted.map(r => {
-    const spread = Number(r.VolSpread || 0);
-    return (atmVol != null ? atmVol : 0) + spread;   // Vol in Dezimalform
-  });
+  // 2) ATM-Vol aus ATM rows[] (nicht mehr aus volMatrix)
+  const atmVol = getAtmVolForSelectedNodeFromRows();
+
+  // 3) absolute Vol = ATM + Spread
+  const strikesBp = sorted.map(r => Number(r?.StrikeSpreadBP ?? 0));
+  const volsAbs   = sorted.map(r => (atmVol ?? 0) + Number(r?.VolSpread ?? 0));
 
   console.log('[Smile] Plot data (abs Vol):', { strikesBp, volsAbs, atmVol, label });
 
-  // 👉 jetzt wird die absolute Vol geplottet
   renderSmileChart(strikesBp, volsAbs, label);
-
-  // 4) Summary-Tabelle links – hier verwenden wir ebenfalls atmVol + Spreads
   renderSmileSummaryTable(sorted, atmVol);
 }
+
 
 
 
@@ -274,6 +333,50 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
     </table>
   `;
 }
+
+
+
+export function swaptionReady() {
+  const atmOk   = Array.isArray(appState?.swaptionATM)   && appState.swaptionATM.length > 0;
+  const smileOk = Array.isArray(appState?.swaptionSmile) && appState.swaptionSmile.length > 0;
+  return atmOk && smileOk;
+}
+
+
+export function renderSwaptionIfReady() {
+  const panel = document.getElementById("panel-swaption");
+  if (!panel || panel.hidden) return;
+
+  if (!swaptionReady()) return;
+
+  renderVolSurfacePanel();
+  renderSwaptionSmile?.();
+}
+
+
+
+export async function plotlyDivToPngDataUrl(plotlyDiv, { width = 900, height = 520 } = {}) {
+  if (!plotlyDiv) return null;
+  if (typeof Plotly === "undefined") return null;
+
+  // Plotly rendert async – wenn noch nichts da ist, kann toImage fehlschlagen
+  // (optional) kurz warten bis Plotly intern fertig ist:
+  await new Promise(r => requestAnimationFrame(r));
+
+  try {
+    const dataUrl = await Plotly.toImage(plotlyDiv, {
+      format: "png",
+      width,
+      height,
+      scale: 2
+    });
+    return dataUrl;
+  } catch (e) {
+    console.warn("[Preview] Plotly.toImage failed", e);
+    return null;
+  }
+}
+
 
 
 

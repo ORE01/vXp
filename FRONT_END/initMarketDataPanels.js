@@ -5,11 +5,10 @@ import { initLazyPanels, refreshOpenPanels as refreshCore } from "./lazyPanelsCo
 import { initCurveSelectorGlobal } from "./MARKET_DATA/INTEREST_RATES/initCurveSelectorGlobal.js";
 
 import { renderIRPanel } from "./MARKET_DATA/INTEREST_RATES/IR.js";
-import { handleFWDData, handleSwapForwardCurve } from "./MARKET_DATA/FORWARDS/FORWARDS.js";
+import { handleFWDData, handleSwapForwardCurve } from "./MARKET_DATA/FORWARDS/forwards.js";
 
 // Swaption Vols: 3D-ATM-Surface (Plotly) + Smile (Chart.js)
-// Pfad ggf. anpassen, falls du renderSwaptionSmile woanders liegen hast
-import { renderVolSurfacePanel, renderSwaptionSmile } from "./MARKET_DATA/VOLS/swaptionVols.js";
+import { renderSwaptionIfReady } from "./MARKET_DATA/VOLS/swaptionVols.js";
 
 
 // ────────────────────────────────────────────────────────────
@@ -29,13 +28,7 @@ export function getMarketDataPanelRenderers() {
 
     // Swaption-Panel: ATM-3D-Surface + Smile
     "panel-swaption": () => {
-      // ATM Surface
-      renderVolSurfacePanel();
-
-      // Smile (wenn Funktion vorhanden)
-      if (typeof renderSwaptionSmile === "function") {
-        renderSwaptionSmile();
-      }
+      renderSwaptionAndPreview();
     },
 
     // "panel-creditspreads": () => renderCreditSpreadsPanel(),
@@ -61,6 +54,12 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
   // 2) Curve-Selector initialisieren (erst NACH Modal-DOM)
   initCurveSelectorGlobal();
 
+  // OPTIONAL aber sehr empfehlenswert:
+  // Wenn IPC-Daten (ATM/Smile) reinkommen → wenn Panel offen & ready → rendern
+document.addEventListener("swaption:atm:ready",   renderSwaptionAndPreview);
+document.addEventListener("swaption:smile:ready", renderSwaptionAndPreview);
+
+
   // 3) Re-render offene Panels, wenn sich die Curve ändert
   document.addEventListener("curve:changed", () => {
     const pRates    = document.getElementById("panel-rates");
@@ -73,16 +72,11 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
 
     if (pForward && !pForward.hidden) {
       handleFWDData();
-      // SwapForwardCurve ggf. nur bei Bedarf:
-      // handleSwapForwardCurve();
+      // handleSwapForwardCurve(); // bei Bedarf
     }
 
-    // Swaption-Panel: ATM + Smile refreshen
     if (pSwaption && !pSwaption.hidden) {
-      renderVolSurfacePanel();
-      if (typeof renderSwaptionSmile === "function") {
-        renderSwaptionSmile();
-      }
+      renderSwaptionAndPreview();
     }
   });
 
@@ -98,18 +92,32 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
 
     if (pForward && !pForward.hidden) {
       handleFWDData();
-      // handleSwapForwardCurve(); // bei Bedarf zusätzlich
+      // handleSwapForwardCurve(); // bei Bedarf
     }
 
-    // Swaption-Panel: ATM + Smile refreshen
     if (pSwaption && !pSwaption.hidden) {
-      renderVolSurfacePanel();
-      if (typeof renderSwaptionSmile === "function") {
-        renderSwaptionSmile();
-      }
+      renderSwaptionIfReady();
     }
   });
 }
+
+
+
+function renderSwaptionAndPreview() {
+  renderSwaptionIfReady();
+
+  // Plotly/WebGL braucht oft einen Tick länger → 2 Frames warten
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try {
+        document.dispatchEvent(new Event("risk:refresh-thumbnails"));
+      } catch (e) {
+        console.warn("[MarketDataPanels] risk:refresh-thumbnails failed", e);
+      }
+    });
+  });
+}
+
 
 
 // ────────────────────────────────────────────────────────────
@@ -118,6 +126,9 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
 export function refreshOpenMarketDataPanels() {
   refreshCore("marketdata");
 }
+
+
+
 
 
 

@@ -2048,6 +2048,140 @@ ipcMain.on('ts-trendlines:load', async (event, query = {}) => {
   }
 });
 
+//CUSTOMER REPORT
+
+ipcMain.on('customerReports:save', async (event, payload = {}) => {
+  const {
+    requestId,
+    name,
+    report_type = 'risk',
+    state = null,        // optional: object
+    state_json = null    // optional: string
+  } = payload;
+
+  const okCh  = `customerReports:save-success:${requestId}`;
+  const errCh = `customerReports:save-error:${requestId}`;
+
+  try {
+    const presetName = String(name || '').trim();
+    if (!presetName) throw new Error('name fehlt/ungültig');
+
+    // state_json bevorzugen, sonst state serialisieren
+    const json = typeof state_json === 'string'
+      ? state_json
+      : JSON.stringify(state || {});
+
+    // exists?
+    const existing = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT id FROM CustomerReports WHERE name=?`,
+        [presetName],
+        (e, row) => e ? reject(e) : resolve(row)
+      );
+    });
+
+    if (existing?.id) {
+      await runSQL(
+        `UPDATE CustomerReports
+         SET report_type=?,
+             state_json=?,
+             updated_at=datetime('now')
+         WHERE id=?`,
+        [String(report_type || 'risk'), json, existing.id]
+      );
+    } else {
+      await runSQL(
+        `INSERT INTO CustomerReports (name, report_type, state_json, created_at, updated_at)
+         VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
+        [presetName, String(report_type || 'risk'), json]
+      );
+    }
+
+    event.reply(okCh);
+  } catch (err) {
+    console.error('customerReports:save error:', err);
+    event.reply(errCh, err?.message || String(err));
+  }
+});
+
+
+ipcMain.on('customerReports:load', async (event, query = {}) => {
+  const { requestId, name } = query;
+
+  const okCh  = `customerReports:load-success:${requestId}`;
+  const errCh = `customerReports:load-error:${requestId}`;
+
+  try {
+    const presetName = String(name || '').trim();
+    if (!presetName) throw new Error('name fehlt/ungültig');
+
+    const row = await new Promise((resolve, reject) => {
+      db.get(
+        `SELECT id, name, report_type, state_json, created_at, updated_at
+         FROM CustomerReports
+         WHERE name=?`,
+        [presetName],
+        (e, r) => e ? reject(e) : resolve(r)
+      );
+    });
+
+    if (!row) throw new Error('Preset nicht gefunden');
+
+    event.reply(okCh, row);
+  } catch (err) {
+    console.error('customerReports:load error:', err);
+    event.reply(errCh, err?.message || String(err));
+  }
+});
+
+ipcMain.on('customerReports:list', async (event, query = {}) => {
+  const { requestId, report_type = 'risk' } = query;
+
+  const okCh  = `customerReports:list-success:${requestId}`;
+  const errCh = `customerReports:list-error:${requestId}`;
+
+  try {
+    const rows = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT id, name, report_type, created_at, updated_at
+         FROM CustomerReports
+         WHERE report_type=?
+         ORDER BY name COLLATE NOCASE`,
+        [String(report_type || 'risk')],
+        (e, r) => e ? reject(e) : resolve(r)
+      );
+    });
+
+    event.reply(okCh, rows || []);
+  } catch (err) {
+    console.error('customerReports:list error:', err);
+    event.reply(errCh, err?.message || String(err));
+  }
+});
+
+ipcMain.on('customerReports:delete', async (event, payload = {}) => {
+  const { requestId, name } = payload;
+
+  const okCh  = `customerReports:delete-success:${requestId}`;
+  const errCh = `customerReports:delete-error:${requestId}`;
+
+  try {
+    const presetName = String(name || '').trim();
+    if (!presetName) throw new Error('name fehlt/ungültig');
+
+    await runSQL(`DELETE FROM CustomerReports WHERE name=?`, [presetName]);
+
+    event.reply(okCh);
+  } catch (err) {
+    console.error('customerReports:delete error:', err);
+    event.reply(errCh, err?.message || String(err));
+  }
+});
+
+
+
+
+
 
 
 

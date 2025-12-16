@@ -1,13 +1,7 @@
 
-import { handleRefreshThumbnailsClick } from '../../FRONT_END/renderer.js';
-import {
-  REPORT_DEFAULTS,
-  BD_COLUMNS,
-  BD_DISPLAY,
-  BD_GROUPS_ORDERED,
-  BD_GROUP_OF,
-  RISK_LAYOUT,
-} from './RiskConfig.js';
+import { handleRefreshThumbnailsClick } from '../renderer.js';
+import { getSectionTitleFromPanel } from './RiskPDF.js';
+
 
 // ==== oben ins Modul (Modul-Scope-Variablen) ====
 let __riskWired = false;
@@ -41,12 +35,29 @@ function discoverPanels() {
 
 function discoverChartsFromPanel(panel) {
   const canvases = [...panel.querySelectorAll('canvas[id]')];
-  const plotlyDivs = [...panel.querySelectorAll('div[id^="plotly-"]')]; // optional
+
+  // Plotly: entweder hat der DIV die Plotly-Klasse oder genau deine ID
+  const plotlyDivs = [
+    ...panel.querySelectorAll('.js-plotly-plot[id]'),
+    ...panel.querySelectorAll('#swaption-atm-surface-3d')
+  ];
+
+  // Du willst keine Duplikate
+  const uniqPlotly = [];
+  const seen = new Set();
+  for (const d of plotlyDivs) {
+    if (!d?.id) continue;
+    if (seen.has(d.id)) continue;
+    seen.add(d.id);
+    uniqPlotly.push(d);
+  }
+
   return [
     ...canvases.map(c => ({ id: c.id, label: c.dataset.label || c.id })),
-    ...plotlyDivs.map(d => ({ id: d.id, label: d.dataset.label || d.id }))
+    ...uniqPlotly.map(d => ({ id: d.id, label: d.dataset.label || d.id }))
   ];
 }
+
 
 function discoverTablesFromPanel(panel) {
   return [...panel.querySelectorAll('.data-container[id]')].map(div => ({
@@ -70,42 +81,76 @@ function discoverSectionsFull() {
   return sectionMap;
 }
 
+// ─────────────────────────────────────────────
+// Zentrales Layout: Sections + enabled Charts/Tables
+// ─────────────────────────────────────────────
+
+function computeRiskLayout(chartState = {}) {
+  const discovered = discoverSectionsFull();
+  const sections = [];
+
+  Object.entries(discovered).forEach(([secKey, sec]) => {
+    const sectionEnabled = isSectionEnabled(secKey, chartState);
+
+    // Charts/Tables: enabled nach aktuellem State
+    const enabledCharts = (sec.charts || []).filter(ch =>
+      isChartEnabled(secKey, ch.id, chartState)
+    );
+    const enabledTables = (sec.tables || []).filter(t =>
+      isChartEnabled(secKey, `tbl-${t.id}`, chartState)
+    );
+
+    sections.push({
+      key: secKey,
+      title: getSectionTitleFromPanel
+        ? getSectionTitleFromPanel(sec.element, secKey)
+        : sectionTitleFromKey(secKey),
+      element: sec.element,
+      sectionEnabled,
+      charts: sec.charts || [],       // alle Charts (für Controls)
+      tables: sec.tables || [],       // alle Tables (für Controls)
+      enabledCharts,                  // nur aktive Charts
+      enabledTables,                  // nur aktive Tables
+    });
+  });
+
+  return sections;
+}
+
+
 
 // ─────────────────────────────────────────────
 // PREVIEW_SECTIONS automatisch erstellen
 // ─────────────────────────────────────────────
 
-function buildPreviewSections(secOpts, chartState) {
-  const discovered = discoverSectionsFull();
+function buildPreviewSections(chartState) {
+  const layout = computeRiskLayout(chartState);
   const sections = [];
 
-  Object.entries(discovered).forEach(([secKey, sec]) => {
-    if (!isSectionEnabled(secKey, secOpts)) return;
+  layout.forEach(sec => {
+    // Section-Toggle respektieren → ausgehackte Section gar nicht anzeigen
+    if (!sec.sectionEnabled) return;
 
-    // 🔹 Checkbox-Steuerung pro Section (Charts & Tables)
-    const chartControlsHTML = buildDynamicChartControlsHTML(secKey, sec.charts, chartState);
-    const tableControlsHTML = buildDynamicTableControlsHTML(secKey, sec.tables, chartState);
+    // Controls immer bauen (damit man Charts/Tables wieder anhacken kann)
+    const sectionControlsHTML = buildSectionControlsHTML(sec.key, chartState);
+    const chartControlsHTML   = buildDynamicChartControlsHTML(sec.key, sec.charts, chartState);
+    const tableControlsHTML   = buildDynamicTableControlsHTML(sec.key, sec.tables, chartState);
 
-    // 🔹 Chart-Thumbnails (via Toggle)
-    const thumbs = sec.charts
-      .filter(ch => isChartEnabled(secKey, ch.id, chartState))
-      .map(ch => safeThumb(ch.id, ch.label))
+    // Thumbs nur für enabled-Charts
+    const thumbs = (sec.enabledCharts || [])
+      .map(ch => smartThumb(ch.id, ch.label))
       .filter(Boolean);
 
-    // 🔹 Tabellen (via Toggle, eigener Schlüssel tbl-<id>)
-    const tablesHTML = sec.tables
-      .filter(t => isChartEnabled(secKey, `tbl-${t.id}`, chartState))
+    const tablesHTML = (sec.enabledTables || [])
       .map(t => miniTbl(t.id))
       .join('');
 
-    // Wenn nichts zu zeigen ist → Section überspringen
-    if (!thumbs.length && !tablesHTML && !chartControlsHTML && !tableControlsHTML) return;
-
     sections.push({
-      key: secKey,
-      title: sectionTitleFromKey(secKey),
+      key: sec.key,
+      title: sec.title,
       thumbs,
       extraHTML: `
+        ${sectionControlsHTML}
         ${chartControlsHTML || ''}
         ${tableControlsHTML || ''}
         ${tablesHTML || ''}
@@ -116,10 +161,7 @@ function buildPreviewSections(secOpts, chartState) {
   return sections;
 }
 
-function isSectionEnabled(secKey, secOpts) {
-  // Preview: immer alle Panels anzeigen
-  return true;
-}
+
 
 
 function sectionTitleFromKey(key) {
@@ -138,6 +180,33 @@ function sectionTitleFromKey(key) {
   };
   return titles[key] || key;
 }
+
+
+
+// SECTION CONTROLL: 
+function isSectionEnabled(sectionKey, state) {
+  const k = `${sectionKey}:__section__`;
+  const v = (state || {})[k];
+  return (typeof v === 'boolean') ? v : true; // default: true
+}
+
+function buildSectionControlsHTML(sectionKey, chartState) {
+  const state = chartState || {};
+  const domId = `rr-sec-${sectionKey}`;
+  const checked = state[`${sectionKey}:__section__`] !== false ? 'checked' : '';
+  return `
+    <div class="rr-sec-controls" style="margin:0 0 6px; display:flex; align-items:center; gap:10px;">
+      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+        <input type="checkbox"
+               id="${domId}"
+               data-section-key="${sectionKey}"
+               ${checked}>
+        <span style="opacity:.85;">Section</span>
+      </label>
+    </div>
+  `;
+}
+
 
 // ─────────────────────────────────────────────
 // Dynamische Chart-Checkboxen pro Section
@@ -219,10 +288,6 @@ function buildDynamicTableControlsHTML(sectionKey, tables, chartState) {
   `;
 }
 
-
-
-
-
 // === Chart-Toggle-State (pro Chart) ==========================================
 const CHART_STATE_KEY = 'rr-chart-state';
 
@@ -239,20 +304,24 @@ function loadChartToggleState() {
 function saveChartToggleStateFromDOM() {
   const st = {};
 
-  // alle Chart-Checkboxen einsammeln
-  document
-    .querySelectorAll('input[data-chart-section][data-chart-key]')
-    .forEach(el => {
-      const sec = el.dataset.chartSection;
-      const key = el.dataset.chartKey;
-      if (!sec || !key) return;
-      st[`${sec}:${key}`] = !!el.checked;
-    });
+  // Charts + Tables
+  document.querySelectorAll('input[data-chart-section][data-chart-key]').forEach(el => {
+    const sec = el.dataset.chartSection;
+    const key = el.dataset.chartKey;
+    if (!sec || !key) return;
+    st[`${sec}:${key}`] = !!el.checked;
+  });
 
-  try {
-    localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st));
-  } catch {}
+  // Sections
+  document.querySelectorAll('input[data-section-key]').forEach(el => {
+    const sec = el.dataset.sectionKey;
+    if (!sec) return;
+    st[`${sec}:__section__`] = !!el.checked;
+  });
+
+  try { localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st)); } catch {}
 }
+
 
 // Prüfen, ob ein Chart enabled ist (Default: true)
 function isChartEnabled(section, key, state) {
@@ -263,7 +332,7 @@ function isChartEnabled(section, key, state) {
 
 // Event-Wiring für diese Checkboxen
 function wireChartControlsOnce() {
-  const nodes = document.querySelectorAll('input[data-chart-section][data-chart-key]');
+  const nodes = document.querySelectorAll('input[data-chart-section][data-chart-key], input[data-section-key]');
   nodes.forEach(el => {
     if (el.dataset.bound) return;
     el.addEventListener('change', () => {
@@ -274,28 +343,6 @@ function wireChartControlsOnce() {
   });
 }
 
-function saveBdStateFromDOM() {
-  const st = {};
-  BD_COLUMNS.forEach(c => {
-    const els = Array.from(document.querySelectorAll(`#rr-bd-${c}`));
-    st[c] = els.length ? els.some(el => el.checked) : true;
-  });
-  try { localStorage.setItem('rr-bd-state', JSON.stringify(st)); } catch {}
-}
-
-// === Wiring der Controls (einmalig) ===
-function wireBreakdownControlsOnce() {
-  BD_COLUMNS.forEach(c => {
-    const el = document.getElementById('rr-bd-' + c);
-    if (el && !el.dataset.bound) {
-      el.addEventListener('change', () => {
-        saveBdStateFromDOM();
-        try { scheduleRiskPreviewRender(); } catch {}
-      });
-      el.dataset.bound = '1';
-    }
-  });
-}
 
 // ersetzt Debounce:
 function panelVisible() {
@@ -421,58 +468,9 @@ export function teardownRiskPreview() {
 }
 
 
+// THUMBNAILS: Mini-Helfer: aus einem Canvas ein kleines PNG bauen
 
-// REPORT OPTIONS=============================================
-
-export function getRiskReportOptions() {
-  const d = REPORT_DEFAULTS;
-
-  return {
-    includeTOC: d.includeTOC ?? true,
-    sections: {
-      portfolioBreakdown: {
-        enabled:  d.sections?.portfolioBreakdown?.enabled ?? true,
-        issuer:   d.sections?.portfolioBreakdown?.issuer  ?? true,
-        product:  d.sections?.portfolioBreakdown?.product ?? true,
-        general:  d.sections?.portfolioBreakdown?.general ?? true,
-      },
-      performance: d.sections?.performance ?? true,
-
-      marketRisk: {
-        enabled:       d.sections?.marketRisk?.enabled       ?? true,
-        details:       d.sections?.marketRisk?.details       ?? true,
-        sensitivities: d.sections?.marketRisk?.sensitivities ?? true,
-      },
-
-      creditRisk: {
-        enabled: d.sections?.creditRisk?.enabled ?? true,
-        details: d.sections?.creditRisk?.details ?? true,
-      },
-
-      liquidity: {
-        enabled: d.sections?.liquidity?.enabled ?? true,
-      },
-
-      marketData: {
-        enabled:       d.sections?.marketData?.enabled       ?? true,
-        interestRates: d.sections?.marketData?.interestRates ?? true,
-        creditSpreads: d.sections?.marketData?.creditSpreads ?? true,
-      },
-
-      historic: {
-        enabled: d.sections?.historic?.enabled ?? true,
-      },
-
-      appendixProducts: d.sections?.appendixProducts ?? false,
-    },
-    fileName:    d.fileName    || 'Risk.pdf',
-    paper:       d.paper       || 'A4',
-    orientation: d.orientation || 'p',
-  };
-}
-
-// Mini-Helfer: aus einem Canvas ein kleines PNG bauen
-const __thumbCache = new Map(); // key = id@WxH -> HTML
+const __thumbCache = new Map(); 
 
 function clearThumbCache() {
   __thumbCache.clear();
@@ -527,6 +525,61 @@ function canvasThumb(id, targetWidth = 160) {
   }
 }
 
+function smartThumb(id, label, w = 160) {
+  // ✅ Spezialfall: Plotly Swaption Surface Preview
+  if (id === "swaption-atm-surface-3d") {
+    const png = appState?.swaptionATMSurfacePng;
+    if (png) {
+      const ratio = 900 / 520;
+      const h = Math.round(w / ratio);
+      return `
+        <img
+          src="${png}"
+          width="${w}"
+          height="${h}"
+          style="border:1px solid #444;border-radius:6px;background:#111;"
+        />
+      `.trim();
+    }
+    return `
+      <div style="
+        width:${w}px;min-height:60px;border:1px dashed #555;border-radius:6px;
+        padding:6px;font-size:11px;color:#aaa;display:flex;align-items:center;
+        justify-content:center;text-align:center;background:#111;">
+        ${label || id}<br><span style="opacity:.7">Surface PNG noch nicht verfügbar</span>
+      </div>
+    `;
+  }
+
+  if (id === "swaption-cube-surface-3d") {
+  const png = appState?.swaptionCubeSurfacePng;
+  if (png) {
+    const ratio = 900 / 520;
+    const h = Math.round(w / ratio);
+    return `
+      <img
+        src="${png}"
+        width="${w}"
+        height="${h}"
+        style="border:1px solid #444;border-radius:6px;background:#111;"
+      />
+    `.trim();
+  }
+  return `
+    <div style="
+      width:${w}px;min-height:60px;border:1px dashed #555;border-radius:6px;
+      padding:6px;font-size:11px;color:#aaa;display:flex;align-items:center;
+      justify-content:center;text-align:center;background:#111;">
+      ${label || id}<br><span style="opacity:.7">Cube PNG noch nicht verfügbar</span>
+    </div>
+  `;
+}
+
+
+  // Default: Canvas
+  return safeThumb(id, label, w);
+}
+
 function safeThumb(id, label, w = 160) {
   const html = canvasThumb(id, w);
   if (html) return html;
@@ -562,9 +615,7 @@ function isVisible(el) {
 }
 
 //RENDER:========================================================================================================RENDER
-// ─────────────────────────────────────────────
-// NEUE automatische renderRiskPreview()
-// ─────────────────────────────────────────────
+
 function renderRiskPreview() {
   if (__riskRendering) return;
 
@@ -578,33 +629,44 @@ function renderRiskPreview() {
   try {
     clearThumbCache?.();
 
-    const opts    = getRiskReportOptions() || {};
-    const secOpts = opts.sections || {};
+    // Nur noch: Toggle-State laden
     const chartState = loadChartToggleState?.() || {};
 
-    // AUTOMATISCH: Sections aus DOM + Optionen
-    const sections = buildPreviewSections(secOpts, chartState);
+    // AUTOMATISCH: Sections aus DOM
+    const sections = buildPreviewSections(chartState);
 
-    wrap.innerHTML = `
-      <div style="padding:10px">
+wrap.innerHTML = `
+  <div style="padding:10px">
 
-        ${sections.map(sec => `
-          <div style="margin:12px 0 10px">
-            <div style="font-weight:600;margin:0 0 6px">${sec.title}</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <button id="rr-all-on"  style="padding:6px 10px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#ddd;cursor:pointer;">
+        Alles anhacken
+      </button>
+      <button id="rr-all-off" style="padding:6px 10px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#ddd;cursor:pointer;">
+        Alles aushacken
+      </button>
+      <span style="opacity:.7;font-size:12px;margin-left:auto;">Preview Controls</span>
+    </div>
 
-            ${sec.extraHTML || ''}
+    ${sections.map(sec => `
+      <div style="margin:12px 0 10px">
+        <div style="font-weight:600;margin:0 0 6px">${sec.title}</div>
 
-            ${sec.thumbs.length
-              ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${sec.thumbs.join('')}</div>`
-              : ''}
-          </div>
-        `).join('')}
+        ${sec.extraHTML || ''}
 
+        ${sec.thumbs.length
+          ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${sec.thumbs.join('')}</div>`
+          : `<div style="opacity:.65;font-size:12px;margin-top:6px;">(Noch keine Thumbnails – Daten laden/Panel rendern)</div>`
+        }
       </div>
-    `;
+    `).join('')}
+
+  </div>
+`;
+
+
 
     // Controls (falls vorhanden)
-    wireBreakdownControlsOnce?.();
     wireChartControlsOnce?.();
 
   } finally {
@@ -613,6 +675,8 @@ function renderRiskPreview() {
   }
 }
 
+
+// WIRE:==============================================================================================================WIRE
 
 export function wireRiskPreview(force = false) {
   if (force) { try { teardownRiskPreview(); } catch {} }
@@ -624,13 +688,19 @@ export function wireRiskPreview(force = false) {
   // --- 1) Globaler, erzwungener Delegations-Mechanismus ---
   const evtTypes = ['input', 'change', 'click', 'keyup', 'pointerup'];
 __riskDocDelegatedHandler = (ev) => {
-  if (__riskRendering) return; // während Render ignorieren
+  if (__riskRendering) return;
   const t = ev.target;
+
+  // ✅ Global Buttons
+  if (t && t.id === 'rr-all-on')  { setAllRRCheckboxes(true);  return; }
+  if (t && t.id === 'rr-all-off') { setAllRRCheckboxes(false); return; }
+
   const isRiskCtl = !!(t && t.id && t.id.startsWith('rr-'));
   const inRiskPanel = !!t?.closest?.('#panel-reports-risk');
   if (!isRiskCtl && !inRiskPanel) return;
   scheduleSafe();
 };
+
 
   try { evtTypes.forEach(tp => document.addEventListener(tp, __riskDocDelegatedHandler, true)); } catch {}
 
@@ -854,6 +924,52 @@ document.addEventListener('reports:enter', () => {
 document.addEventListener('reports:leave', () => {
   try { teardownRiskPreview?.(); } catch (e) { console.error(e); }
 });
+
+
+
+
+function setAllRRCheckboxes(checked) {
+  const panel = document.getElementById('panel-reports-risk') || document;
+
+  // ✅ Sections NICHT anfassen – sonst verschwindet alles
+  // panel.querySelectorAll('input[data-section-key]').forEach(el => { el.checked = true; });
+
+  // Charts + Tables toggeln
+  panel.querySelectorAll('input[data-chart-section][data-chart-key]').forEach(el => {
+    el.checked = !!checked;
+  });
+
+  saveChartToggleStateFromDOM();
+  try { scheduleRiskPreviewRender(); } catch {}
+}
+
+// ─────────────────────────────────────────────
+// Export: Aktives Layout für Risk-PDF
+// ─────────────────────────────────────────────
+
+export function getActiveRiskSectionsForPdf() {
+  const chartState = loadChartToggleState?.() || {};
+  const layout = computeRiskLayout(chartState);
+
+  // Nur Sections, die:
+  //  1. eingeschaltet sind
+  //  2. mind. 1 aktiven Chart ODER Table besitzen
+  return layout
+    .filter(sec =>
+      sec.sectionEnabled &&
+      ((sec.enabledCharts && sec.enabledCharts.length) ||
+       (sec.enabledTables && sec.enabledTables.length))
+    )
+    .map(sec => ({
+      key: sec.key,
+      title: sec.title,
+      enabledCharts: sec.enabledCharts,
+      enabledTables: sec.enabledTables,
+    }));
+}
+
+
+
 
 
 

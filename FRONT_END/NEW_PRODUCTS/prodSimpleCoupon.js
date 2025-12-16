@@ -17,7 +17,7 @@ export function handleProdAllFields(fieldName, rowData, formRow, label) {
   formRow.setAttribute('data-coupon-section', couponSection);
 
   // 🔍 Debug: Was passiert wirklich?
-  console.log('FIELD', fieldName, '→ section', couponSection);
+  //console.log('FIELD', fieldName, '→ section', couponSection);
 
   const ctSelect = document.querySelector('select[data-field="CouponType"]');
   if (ctSelect && (couponSection === 'FIX' || couponSection === 'FLOATER')) {

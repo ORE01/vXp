@@ -1,6 +1,6 @@
 // initForwardPanelGlobal.js
-import { handleFWDData } from "./FORWARDS.js";
-import { handleSwapForwardCurve } from "./FORWARDS.js";
+import { handleFWDData } from "./forwards.js";
+import { handleSwapForwardCurve } from "./forwards.js";
 
 export function initForwardPanelGlobalOnce() {
   const root = document.getElementById("panel-forward");

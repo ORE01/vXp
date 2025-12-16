@@ -18,11 +18,6 @@ import { appState } from '../../renderer.js';
           }
         }
       };
-
-      /**
-       * Standard-Options für Zeitreihen-Charts in Prozent.
-       * yTitle: Beschriftung der Y-Achse
-       */
       function createPercentChartOptions(yTitle) {
         return {
           responsive: true,
@@ -68,11 +63,6 @@ import { appState } from '../../renderer.js';
           }
         };
       }
-
-      /**
-       * Erzeugt einen Chart.js-Chart für Zeitreihen.
-       * baseType: optionaler Chart-Typ (z. B. "line" oder "bar"), default "line".
-       */
       function createTimeSeriesChart(canvasId, data, options, baseType = "line") {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
@@ -95,21 +85,23 @@ import { appState } from '../../renderer.js';
 
 // HISORIC CHARTS:      
 
-// ------------------------------------------------------------
-// Market Risk Line Chart (MVaR / ES) – robust render + refresh
-// ------------------------------------------------------------
 let _riskLastData = null;
 let _riskLastOptions = null;
 
 
 let historicMarketRiskChart = null;
 let historicMarketRiskRafId = null;
+let historicCreditRiskChart = null;
+let historicPortfolioYieldChart = null;
+let historicPortfolioSensChart = null;
+let historicPortfolioValueChart = null;
 
-export function renderHistoricMarketRiskChart() {
-  const historyData = appState.getPortfolioHistoryData() || [];
 
-  if (!Array.isArray(historyData) || historyData.length === 0) {
-    console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
+function renderHistoricMarketRiskChart(historyData) {
+  historyData = Array.isArray(historyData) ? historyData : [];
+
+  if (historyData.length === 0) {
+    destroyChartByCanvasId("historicMarketRiskChart");
     return;
   }
 
@@ -296,16 +288,11 @@ export function renderHistoricMarketRiskChart() {
 
   historicMarketRiskRafId = requestAnimationFrame(tryRender);
 }
+function renderHistoricCreditRiskChart(historyData) {
+  historyData = Array.isArray(historyData) ? historyData : [];
 
-
-let historicCreditRiskChart = null;
-
-export function renderHistoricCreditRiskChart() {
-  const historyData = appState.getPortfolioHistoryData() || [];
-  console.log("🎯 renderHistoricCreditRiskChart CALLED with rows:", historyData.length);
-
-  if (!Array.isArray(historyData) || historyData.length === 0) {
-    console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden (Credit Metrics).");
+  if (historyData.length === 0) {
+    destroyChartByCanvasId("historicMarketRiskChart");
     return;
   }
 
@@ -391,11 +378,13 @@ export function renderHistoricCreditRiskChart() {
     console.error("💥 Fehler beim Erzeugen von historicCreditRiskChart:", err);
   }
 }
+function renderHistoricPortfolioYieldChart(historyData) {
+  historyData = Array.isArray(historyData) ? historyData : [];
 
-let historicPortfolioYieldChart = null;
-
-export function renderHistoricPortfolioYieldChart() {
-  const historyData = appState.getPortfolioHistoryData() || [];
+  if (historyData.length === 0) {
+    destroyChartByCanvasId("historicMarketRiskChart");
+    return;
+  }
   const tsData = appState.getTblTSData();
 
   console.log('EU_1Y', tsData)
@@ -520,18 +509,13 @@ export function renderHistoricPortfolioYieldChart() {
     "line"
   );
 }
+function renderHistoricPortfolioSensChart(historyData) {
+  historyData = Array.isArray(historyData) ? historyData : [];
 
-let historicPortfolioSensChart = null;
-
-export function renderHistoricPortfolioSensChart() {
-  const historyData = appState.getPortfolioHistoryData() || [];
-  console.log("📈 renderHistoricPortfolioSensChart CALLED, rows:", historyData.length);
-
-  if (!Array.isArray(historyData) || historyData.length === 0) {
-    console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
+  if (historyData.length === 0) {
+    destroyChartByCanvasId("historicMarketRiskChart");
     return;
   }
-
   const sortedData = [...historyData].sort(
     (a, b) => new Date(a.DATE) - new Date(b.DATE)
   );
@@ -624,15 +608,11 @@ export function renderHistoricPortfolioSensChart() {
     console.error("💥 Fehler beim Erzeugen von historicPortfolioSensChart:", err);
   }
 }
+function renderHistoricPortfolioValueChart(historyData) {
+  historyData = Array.isArray(historyData) ? historyData : [];
 
-
-let historicPortfolioValueChart = null;
-
-export function renderHistoricPortfolioValueChart() {
-  const historyData = appState.getPortfolioHistoryData() || [];
-
-  if (!Array.isArray(historyData) || historyData.length === 0) {
-    console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
+  if (historyData.length === 0) {
+    destroyChartByCanvasId("historicMarketRiskChart");
     return;
   }
 
@@ -740,53 +720,167 @@ historicPortfolioValueChart = createTimeSeriesChart(
 }
 
 
-
-
-
-
-// MASTER: Alle Charts sofort rendern – unabhängig von LazyRender
-export function renderAllChartsNow() {
-  console.log("🚀 renderAllChartsNow(): building ALL charts eagerly...");
-
-  try { renderHistoricMarketRiskChart(); } catch (e) { console.error(e); }
-  try { renderHistoricCreditRiskChart(); } catch (e) { console.error(e); }
-  try { renderHistoricPortfolioYieldChart(); } catch (e) { console.error(e); }
-  try { renderHistoricPortfolioSensChart(); } catch (e) { console.error(e); }
-  try { renderHistoricPortfolioValueChart(); } catch (e) { console.error(e); }
-
-  // Falls du die Performance-Charts auch eager willst:
-  try { renderEUSwapPortfolioYieldChart(); } catch (e) {}
-  try { renderEUSwapProductYieldChart(); } catch (e) {}
-  try { renderDurationSwapChart(); } catch (e) {}
-  try { renderDurationProductYieldChart(); } catch (e) {}
-
-  // Market Risk (nicht historic – die live Charts)
-  try { renderMarketRiskChartLine(); } catch (e) {}
-
-  // Credit Risk live
-  try { renderCreditMetricsChartLine(); } catch (e) {}
-
-  // Sensitivities live
-  try { renderPortfolioSensChartLine(); } catch (e) {}
-
-  // Portfolio Value live
-  try { renderPortfolioValueChartLine(); } catch (e) {}
-
-  // Interest Rates
-  try { renderIRLineChart(); } catch (e) {}
-
-  // Forward Charts
-  try { renderForwardLineChart(); } catch (e) {}
-  try { renderForwardCurveChart(); } catch (e) {}
-
-  // Liquidity
-  try { renderLiquidityChart(); } catch (e) {}
-
-  // TimeSeries / Historic Data Panel
-  try { renderTSLineChart(); } catch (e) {}
-
-  console.log("✅ ALL charts built.");
+// ✅ Registry bleibt – Renderer bekommen NUR die gefilterten Daten für das aktive port_name
+export function getHistoricChartsRegistry() {
+  return {
+    yield:  { canvasId: "historicPortfolioYieldChart",  render: (hist) => renderHistoricPortfolioYieldChart(hist) },
+    value:  { canvasId: "historicPortfolioValueChart",  render: (hist) => renderHistoricPortfolioValueChart(hist) },
+    sens:   { canvasId: "historicPortfolioSensChart",   render: (hist) => renderHistoricPortfolioSensChart(hist) },
+    market: { canvasId: "historicMarketRiskChart",      render: (hist) => renderHistoricMarketRiskChart(hist) },
+    credit: { canvasId: "historicCreditRiskChart",      render: (hist) => renderHistoricCreditRiskChart(hist) },
+  };
 }
+
+function destroyChartByCanvasId(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  const existing = window.Chart?.getChart ? window.Chart.getChart(canvas) : null;
+  if (existing) {
+    try { existing.destroy(); } catch (_) {}
+  }
+
+  const ctx = canvas.getContext?.("2d");
+  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+export function destroyHistoricCharts(keys = null) {
+  const reg = getHistoricChartsRegistry();
+  const list = Array.isArray(keys) && keys.length ? keys : Object.keys(reg);
+
+  for (const k of list) {
+    const canvasId = reg[k]?.canvasId;
+    if (canvasId) destroyChartByCanvasId(canvasId);
+  }
+}
+
+export function renderHistoricCharts(keys = null, hist = []) {
+  const reg = getHistoricChartsRegistry();
+  const list = Array.isArray(keys) && keys.length ? keys : Object.keys(reg);
+
+  for (const k of list) {
+    const fn = reg[k]?.render;
+    if (typeof fn === "function") fn(hist);
+  }
+}
+
+/**
+ * ✅ EIN EINZIGER Ort für die port_name-Selektion:
+ * - holt ALL rows
+ * - filtert STRICT nach r.port_name === selectedPortName
+ * - wenn leer: destroy
+ * - sonst: render (lazy nach keys)
+ */
+export function rerenderHistoricCharts({ keys = null } = {}) {
+  const selectedPortNameRaw = appState.getSelectedPortTableName?.();
+  const selectedPortName = String(selectedPortNameRaw ?? "").trim();
+
+  const all =
+    (typeof appState.getPortfolioHistoryData === "function")
+      ? (appState.getPortfolioHistoryData() || [])
+      : [];
+
+  const histForPort = Array.isArray(all)
+    ? all.filter(r => String(r?.port_name ?? "").trim() === selectedPortName)
+    : [];
+
+  // Debug (kannst du später entfernen)
+  console.log("[HIST] selectedPortName:", selectedPortNameRaw, "->", selectedPortName,
+              "all:", Array.isArray(all) ? all.length : "NOT_ARRAY",
+              "filtered:", histForPort.length);
+
+  if (!selectedPortName || histForPort.length === 0) {
+    destroyHistoricCharts(keys);
+    return;
+  }
+
+  renderHistoricCharts(keys, histForPort);
+}
+
+
+
+
+
+
+
+
+
+// // ✅ Registry sitzt im selben File und referenziert lokale Renderer.
+// // Wichtig: render bekommt (hist) übergeben.
+// export function getHistoricChartsRegistry() {
+//   return {
+//     yield:  { canvasId: "historicPortfolioYieldChart",  render: (hist) => renderHistoricPortfolioYieldChart(hist) },
+//     value:  { canvasId: "historicPortfolioValueChart",  render: (hist) => renderHistoricPortfolioValueChart(hist) },
+//     sens:   { canvasId: "historicPortfolioSensChart",   render: (hist) => renderHistoricPortfolioSensChart(hist) },
+//     market: { canvasId: "historicMarketRiskChart",      render: (hist) => renderHistoricMarketRiskChart(hist) },
+//     credit: { canvasId: "historicCreditRiskChart",      render: (hist) => renderHistoricCreditRiskChart(hist) },
+//   };
+// }
+
+// function destroyChartByCanvasId(canvasId) {
+//   const canvas = document.getElementById(canvasId);
+//   if (!canvas) return;
+
+//   const existing = window.Chart?.getChart ? window.Chart.getChart(canvas) : null;
+//   if (existing) {
+//     try { existing.destroy(); } catch (_) {}
+//   }
+
+//   const ctx = canvas.getContext?.("2d");
+//   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+// }
+
+// // keys: ["market"] oder null (alle)
+// export function destroyHistoricCharts(keys = null) {
+//   const reg = getHistoricChartsRegistry();
+//   const list = Array.isArray(keys) && keys.length ? keys : Object.keys(reg);
+
+//   for (const k of list) {
+//     const canvasId = reg[k]?.canvasId;
+//     if (canvasId) destroyChartByCanvasId(canvasId);
+//   }
+// }
+
+// // keys: ["market"] oder null (alle); hist wird in Renderer durchgereicht
+// export function renderHistoricCharts(keys = null, hist = []) {
+//   const reg = getHistoricChartsRegistry();
+//   const list = Array.isArray(keys) && keys.length ? keys : Object.keys(reg);
+
+//   for (const k of list) {
+//     const fn = reg[k]?.render;
+//     if (typeof fn === "function") fn(hist);
+//   }
+// }
+
+// export function rerenderHistoricCharts({ index, selectedTableName, keys = null } = {}) {
+//   const hist =
+//     (typeof appState.getPortfolioHistoryData === "function")
+//       ? (appState.getPortfolioHistoryData(index, selectedTableName) || [])
+//       : [];
+
+//   // Wenn KEINE Daten: alte Charts weg!
+//   if (!Array.isArray(hist) || hist.length === 0) {
+//     destroyHistoricCharts(keys);
+//     return;
+//   }
+
+//   // Wenn Daten: Charts rendern (lazy nach keys)
+//   renderHistoricCharts(keys, hist);
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
