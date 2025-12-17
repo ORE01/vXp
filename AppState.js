@@ -742,7 +742,7 @@ getEUSWData() {
 
   setSwaptionSmile(rows) {
     this.swaptionSmile = Array.isArray(rows) ? rows : [];
-    console.log('swaptionSmile' , this.swaptionSmile );
+    //console.log('swaptionSmile' , this.swaptionSmile );
   }
 
   // Optional: Helper, um gefilterte Views zu bekommen

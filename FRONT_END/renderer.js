@@ -950,24 +950,44 @@ const isOfferName = (name) =>
   typeof name === 'string' && /^OFFERS?_/.test(name.toUpperCase());
 
   /** NUR Namen ohne OFFER(S)_ ins Deals-Dropdown **/
-  function handleDealsNameList(receivedData) {
-    try {
-      const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
-      const unique = [...new Set(names)];
-      const dealsOnly = unique.filter(n => !isOfferName(n));
-      const dealsList = dealsOnly.map(name => ({ table_name: name }));
+  // function handleDealsNameList(receivedData) {
+  //   try {
+  //     const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
+  //     const unique = [...new Set(names)];
+  //     const dealsOnly = unique.filter(n => !isOfferName(n));
+  //     const dealsList = dealsOnly.map(name => ({ table_name: name }));
 
-      // Speichern & Dropdown aktualisieren
-      if (typeof appState.setDealsNameList === 'function') {
-        appState.setDealsNameList(dealsList, 'createdDealsDropdown');
-      }
-      if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
-        appState.applyFiltersAndUpdateDropdowns('dealsTables');
-      }
-    } catch (error) {
-      console.error("❌ Error processing deals name list:", error);
+  //     // Speichern & Dropdown aktualisieren
+  //     if (typeof appState.setDealsNameList === 'function') {
+  //       appState.setDealsNameList(dealsList, 'createdDealsDropdown');
+  //     }
+  //     if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
+  //       appState.applyFiltersAndUpdateDropdowns('dealsTables');
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ Error processing deals name list:", error);
+  //   }
+  // }
+
+  /** ALLE Namen ins Deals-Dropdown (kein OFFERS-Filter) **/
+function handleDealsNameList(receivedData) {
+  try {
+    const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
+    const unique = [...new Set(names)];
+    const dealsList = unique.map(name => ({ table_name: name }));
+
+    // Speichern & Dropdown aktualisieren
+    if (typeof appState.setDealsNameList === 'function') {
+      appState.setDealsNameList(dealsList, 'createdDealsDropdown');
     }
+    if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
+      appState.applyFiltersAndUpdateDropdowns('dealsTables');
+    }
+  } catch (error) {
+    console.error("❌ Error processing deals name list:", error);
   }
+}
+
 
   /** NUR Namen mit OFFER(S)_ ins Offers-Dropdown **/
   function handleOffersNameList(receivedData) {
@@ -1004,14 +1024,30 @@ const isOfferName = (name) =>
 
 
 
-  function handlePortNameList(receivedData) {
-  try {
-    const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/i.test(n);
+//   function handlePortNameList(receivedData) {
+//   try {
+//     const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/i.test(n);
 
+//     const names = (receivedData || [])
+//       .map(e => e?.port_name)
+//       .filter(Boolean)
+//       .filter(n => !isOffer(n)); // ❗ Angebote rausfiltern
+
+//     const uniquePortfolios = [...new Set(names)].map(name => ({ table_name: name }));
+
+//     ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
+//       appState.setPortNameList(uniquePortfolios, dropdown);
+//       appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
+//     });
+//   } catch (error) {
+//     console.error("❌ Error processing created port data:", error);
+//   }
+// }
+function handlePortNameList(receivedData) {
+  try {
     const names = (receivedData || [])
       .map(e => e?.port_name)
-      .filter(Boolean)
-      .filter(n => !isOffer(n)); // ❗ Angebote rausfiltern
+      .filter(Boolean);
 
     const uniquePortfolios = [...new Set(names)].map(name => ({ table_name: name }));
 
@@ -1023,6 +1059,7 @@ const isOfferName = (name) =>
     console.error("❌ Error processing created port data:", error);
   }
 }
+
 
 
 

@@ -2,9 +2,19 @@
 
 
 
-// Zentrale Format-Konfiguration: EINMAL pflegen
+// Zentrale Format-Konfiguration: EINMAL pflegen    'FORWARDS', 'RATES', 'EUSWAP', 'EUSWAP_SZ1'
 const FIELD_FORMAT_CONFIG = {
-  COUPON: { decimals: 3, isPercentage: true, multiplyBy100: false },
+  COUPON:     { decimals: 3, isPercentage: true, multiplyBy100: true },
+  GEARING:    { decimals: 3, isPercentage: true, multiplyBy100: true },
+  FLOOR:      { decimals: 3, isPercentage: true, multiplyBy100: true },
+  CAP:        { decimals: 3, isPercentage: true, multiplyBy100: true },
+  SPREADS:    { decimals: 3, isPercentage: true, multiplyBy100: true },
+  clean_price:{ decimals: 3, isPercentage: true, multiplyBy100: true },
+
+  FORWARDS:   { decimals: 3, isPercentage: true, multiplyBy100: true },
+  RATES:      { decimals: 3, isPercentage: true, multiplyBy100: true },
+  EUSWAP:     { decimals: 3, isPercentage: true, multiplyBy100: true },
+  EUSWAP_SZ1: { decimals: 3, isPercentage: true, multiplyBy100: true },
 
   PD:         { decimals: 3, isPercentage: true, multiplyBy100: true },
   PD_M:       { decimals: 3, isPercentage: true, multiplyBy100: true },
@@ -341,9 +351,13 @@ export function toISODate(s) {
 
 
 export function formatNumberWithGrouping(value) {
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  // return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+
+  // 0 Nachkommastellen (wie NOTIONAL/NAV typischerweise)
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
+
 
 export function formatPercentage(value) {
   const number = parseFloat(value);

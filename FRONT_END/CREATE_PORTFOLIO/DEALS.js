@@ -15,6 +15,7 @@ export function dealsAddButtonHandler (event, selectedTableName) {
 
 export function handleDealsData(receivedData, dealsTableName) {
   console.log('Deals Data', receivedData, dealsTableName);
+  
   const tableName = dealsTableName || '';
   const norm = String(tableName).trim().toUpperCase();
   const isOffer = /^OFFERS?_/.test(norm); // OFFER_ oder OFFERS_

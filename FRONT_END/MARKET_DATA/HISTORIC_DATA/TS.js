@@ -152,38 +152,160 @@ function saveTSSelectionToDB(modalIndex, headers, checkboxes) {
 
 
 // ===== Deine Funktion: jetzt mit Persistenz (async wegen Lade-Prozess) =====
+// export async function handleTSData(receivedData, modalIndex) {
+//   // 1) State & DOM
+//   appState.setTblTSData(receivedData);
+
+//   const checkboxContainer       = document.getElementById(`checkboxContainer_${modalIndex}`);
+//   const targetCheckboxContainer = document.getElementById('targetCheckboxContainer');
+//   const loadButton              = document.getElementById(`loadButton_${modalIndex}`);
+//   const TSData                  = receivedData;
+
+//   if (!(TSData && checkboxContainer && targetCheckboxContainer && loadButton)) return;
+
+//   // 2) Hidden-Table bauen, Headers/Rows
+//   const TSDataHTML = processData(TSData, 'tblTS');
+//   const tempDiv = document.createElement('div');
+//   tempDiv.innerHTML = TSDataHTML;
+
+//   const table   = tempDiv.querySelector('#dataTable');
+//   const rows    = Array.from(table.rows);
+//   const headers = Array.from(rows.shift().cells).map((c) => c.textContent.trim());
+
+//   // 3) UI-Container leeren
+//   checkboxContainer.innerHTML = '';
+//   targetCheckboxContainer.innerHTML = '';
+
+//   // 4) Defaults, wenn nichts gespeichert
+//   const defaultCheckedIndices = { 1:[0,1], 2:[7,8], 3:[17], 4:[15] };
+
+//   // 5) Gespeicherte Auswahl + Settings laden
+//   const saved = await loadTSSelectionFromDB(modalIndex, headers) || {};
+//   const savedIndices = Array.isArray(saved.indices) ? saved.indices : [];
+
+//   // 6) Controls referenzieren
+//   const selNormalization = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
+//   const chkVolatility    = document.getElementById(`showDailyVolatility_${modalIndex}`);
+
+//   const chkSMA1 = document.getElementById(`applySMA1_${modalIndex}`);
+//   const perSMA1 = document.getElementById(`movingAveragePeriod1_${modalIndex}`);
+//   const chkSMA2 = document.getElementById(`applySMA2_${modalIndex}`);
+//   const perSMA2 = document.getElementById(`movingAveragePeriod2_${modalIndex}`);
+//   const chkSMA3 = document.getElementById(`applySMA3_${modalIndex}`);
+//   const perSMA3 = document.getElementById(`movingAveragePeriod3_${modalIndex}`);
+
+//   // 7) Gespeicherte Settings → UI
+//   if (selNormalization) selNormalization.value = saved.normalization_type ?? 'none';
+//   if (chkVolatility)    chkVolatility.checked  = !!saved.show_daily_volatility;
+
+//   if (chkSMA1) chkSMA1.checked = !!saved.apply_sma1;
+//   if (perSMA1) perSMA1.value   = saved.sma1_period ?? 20;
+
+//   if (chkSMA2) chkSMA2.checked = !!saved.apply_sma2;
+//   if (perSMA2) perSMA2.value   = saved.sma2_period ?? 50;
+
+//   if (chkSMA3) chkSMA3.checked = !!saved.apply_sma3;
+//   if (perSMA3) perSMA3.value   = saved.sma3_period ?? 200;
+
+//   // 8) Daten-Checkboxen erstellen
+//   const checkboxes = headers.slice(1).map((header, index) => {
+//     const cb = document.createElement('input');
+//     cb.type  = 'checkbox';
+//     cb.id    = `checkbox-${modalIndex}-${index}`;
+//     cb.value = header;
+
+//     const isSaved   = savedIndices.includes(index);
+//     const isDefault = defaultCheckedIndices[modalIndex]?.includes(index) || false;
+//     cb.checked = isSaved || (!savedIndices.length && isDefault);
+
+//     checkboxContainer.appendChild(cb);
+//     const label = document.createElement('label');
+//     label.htmlFor = cb.id; label.textContent = header;
+//     checkboxContainer.appendChild(label);
+//     checkboxContainer.appendChild(document.createElement('br'));
+//     return cb;
+//   });
+
+//   // 9) Target-Checkboxen (exklusiv)
+//   headers.slice(1).forEach((header, index) => {
+//     const tcb = document.createElement('input');
+//     tcb.type = 'checkbox';
+//     tcb.id   = `target-checkbox-${index}`;
+//     tcb.value = header;
+
+//     targetCheckboxContainer.appendChild(tcb);
+//     const label = document.createElement('label');
+//     label.htmlFor = tcb.id; label.textContent = header;
+//     targetCheckboxContainer.appendChild(label);
+//     targetCheckboxContainer.appendChild(document.createElement('br'));
+
+//     tcb.addEventListener('change', (e) => {
+//       if (e.target.checked) {
+//         const all = targetCheckboxContainer.querySelectorAll('input[type="checkbox"]');
+//         all.forEach(cb => { if (cb !== e.target) cb.checked = false; });
+//       }
+//     });
+//   });
+
+//   // 10) Persist (Indices + Settings)
+//   const persistNow = () => saveTSSelectionToDB(modalIndex, headers, checkboxes);
+
+//   // 11) Live speichern bei Änderungen
+//   checkboxes.forEach(cb => cb.addEventListener('change', persistNow));
+//   if (selNormalization) selNormalization.addEventListener('change', persistNow);
+//   if (chkVolatility)    chkVolatility.addEventListener('change', persistNow);
+
+//   [chkSMA1, chkSMA2, chkSMA3].forEach(el => el && el.addEventListener('change', persistNow));
+//   [perSMA1, perSMA2, perSMA3].forEach(el => el && el.addEventListener('input', persistNow));
+
+//   // 12) Load-Button neu binden
+//   loadButton.replaceWith(loadButton.cloneNode(true));
+//   const newLoadButton = document.getElementById(`loadButton_${modalIndex}`);
+//   newLoadButton.onclick = async () => {
+//     await persistNow(); // vor Rendern speichern
+//     const chartContainer = document.querySelector(`#TSlineChart_${modalIndex}`).parentElement;
+//     const mainTableContainer = document.getElementById(`TSDataContainer_${modalIndex}`);
+//     if (chartContainer && mainTableContainer) {
+//       chartContainer.style.display = 'block';
+//       mainTableContainer.style.display = 'none';
+//     }
+//     //refreshTableAndChart(rows, headers, checkboxes, modalIndex);
+//     refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey);
+
+//   };
+
+//   loadButton.style.display = 'block';
+// }
 export async function handleTSData(receivedData, modalIndex) {
-  // 1) State & DOM
   appState.setTblTSData(receivedData);
 
   const checkboxContainer       = document.getElementById(`checkboxContainer_${modalIndex}`);
   const targetCheckboxContainer = document.getElementById('targetCheckboxContainer');
   const loadButton              = document.getElementById(`loadButton_${modalIndex}`);
-  const TSData                  = receivedData;
 
-  if (!(TSData && checkboxContainer && targetCheckboxContainer && loadButton)) return;
+  // ✅ raw rows
+  const rowsRaw = Array.isArray(receivedData) ? receivedData : (receivedData?.rows || receivedData?.data || []);
+  if (!(rowsRaw && rowsRaw.length && checkboxContainer && loadButton)) return;
 
-  // 2) Hidden-Table bauen, Headers/Rows
-  const TSDataHTML = processData(TSData, 'tblTS');
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = TSDataHTML;
+  // ✅ dateKey bestimmen (falls bei dir fix "DATE" ist: const dateKey = "DATE";)
+  const first = rowsRaw[0];
+  const dateKey =
+    ('DATE' in first) ? 'DATE' :
+    ('date' in first) ? 'date' :
+    ('Date' in first) ? 'Date' :
+    Object.keys(first)[0];
 
-  const table   = tempDiv.querySelector('#dataTable');
-  const rows    = Array.from(table.rows);
-  const headers = Array.from(rows.shift().cells).map((c) => c.textContent.trim());
+  // ✅ headers: [dateKey, ...rest]
+  const headers = [dateKey, ...Object.keys(first).filter(k => k !== dateKey)];
 
-  // 3) UI-Container leeren
   checkboxContainer.innerHTML = '';
   targetCheckboxContainer.innerHTML = '';
 
-  // 4) Defaults, wenn nichts gespeichert
   const defaultCheckedIndices = { 1:[0,1], 2:[7,8], 3:[17], 4:[15] };
 
-  // 5) Gespeicherte Auswahl + Settings laden
   const saved = await loadTSSelectionFromDB(modalIndex, headers) || {};
   const savedIndices = Array.isArray(saved.indices) ? saved.indices : [];
 
-  // 6) Controls referenzieren
   const selNormalization = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
   const chkVolatility    = document.getElementById(`showDailyVolatility_${modalIndex}`);
 
@@ -194,7 +316,6 @@ export async function handleTSData(receivedData, modalIndex) {
   const chkSMA3 = document.getElementById(`applySMA3_${modalIndex}`);
   const perSMA3 = document.getElementById(`movingAveragePeriod3_${modalIndex}`);
 
-  // 7) Gespeicherte Settings → UI
   if (selNormalization) selNormalization.value = saved.normalization_type ?? 'none';
   if (chkVolatility)    chkVolatility.checked  = !!saved.show_daily_volatility;
 
@@ -207,7 +328,6 @@ export async function handleTSData(receivedData, modalIndex) {
   if (chkSMA3) chkSMA3.checked = !!saved.apply_sma3;
   if (perSMA3) perSMA3.value   = saved.sma3_period ?? 200;
 
-  // 8) Daten-Checkboxen erstellen
   const checkboxes = headers.slice(1).map((header, index) => {
     const cb = document.createElement('input');
     cb.type  = 'checkbox';
@@ -226,7 +346,6 @@ export async function handleTSData(receivedData, modalIndex) {
     return cb;
   });
 
-  // 9) Target-Checkboxen (exklusiv)
   headers.slice(1).forEach((header, index) => {
     const tcb = document.createElement('input');
     tcb.type = 'checkbox';
@@ -247,10 +366,8 @@ export async function handleTSData(receivedData, modalIndex) {
     });
   });
 
-  // 10) Persist (Indices + Settings)
   const persistNow = () => saveTSSelectionToDB(modalIndex, headers, checkboxes);
 
-  // 11) Live speichern bei Änderungen
   checkboxes.forEach(cb => cb.addEventListener('change', persistNow));
   if (selNormalization) selNormalization.addEventListener('change', persistNow);
   if (chkVolatility)    chkVolatility.addEventListener('change', persistNow);
@@ -258,18 +375,19 @@ export async function handleTSData(receivedData, modalIndex) {
   [chkSMA1, chkSMA2, chkSMA3].forEach(el => el && el.addEventListener('change', persistNow));
   [perSMA1, perSMA2, perSMA3].forEach(el => el && el.addEventListener('input', persistNow));
 
-  // 12) Load-Button neu binden
   loadButton.replaceWith(loadButton.cloneNode(true));
   const newLoadButton = document.getElementById(`loadButton_${modalIndex}`);
   newLoadButton.onclick = async () => {
-    await persistNow(); // vor Rendern speichern
-    const chartContainer = document.querySelector(`#TSlineChart_${modalIndex}`).parentElement;
+    await persistNow();
+
+    const chartContainer = document.querySelector(`#TSlineChart_${modalIndex}`)?.parentElement;
     const mainTableContainer = document.getElementById(`TSDataContainer_${modalIndex}`);
     if (chartContainer && mainTableContainer) {
       chartContainer.style.display = 'block';
       mainTableContainer.style.display = 'none';
     }
-    refreshTableAndChart(rows, headers, checkboxes, modalIndex);
+
+    refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey);
   };
 
   loadButton.style.display = 'block';
@@ -278,6 +396,28 @@ export async function handleTSData(receivedData, modalIndex) {
 
 
 
+
+function toIsoDateString(d) {
+  if (d == null) return null;
+
+  // ISO already
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 10);
+
+  // "DD-MM-YYYY" oder "DD.MM.YYYY"
+  if (typeof d === 'string') {
+    const m = d.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  }
+
+  // Date object
+  if (d instanceof Date && !isNaN(d)) return d.toISOString().slice(0, 10);
+
+  // last resort
+  const dt = new Date(d);
+  if (!isNaN(dt)) return dt.toISOString().slice(0, 10);
+
+  return null;
+}
 
 
     function refreshTableAndChart(rows, headers, checkboxes, modalIndex, containerId = 'modal-content-container') {
@@ -365,6 +505,74 @@ export async function handleTSData(receivedData, modalIndex) {
       );
     }
 
+    function refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey, containerId = 'modal-content-container') {
+  const normalizationTypeSelector = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
+  const normalizationType = normalizationTypeSelector ? normalizationTypeSelector.value : 'none';
+  const showDailyVolatility = document.getElementById(`showDailyVolatility_${modalIndex}`)?.checked ?? false;
+
+  // Moving averages unverändert
+  let movingAverages = { period1: null, period2: null, period3: null };
+  if (containerId === 'modal-content-container') {
+    try { movingAverages = getMovingAverages(modalIndex); } catch (e) {}
+  }
+
+  // ✅ Checkbox -> Dataset mapping bleibt gleich,
+  // ABER dataset.index ist jetzt Header-Index im headers-Array (ab 1 sind Y-Spalten)
+  const selectedDatasets = checkboxes
+    .map((checkbox, index) => checkbox.checked ? {
+      label: headers[index + 1],
+      data: [],
+      key: headers[index + 1],     // ✅ raw key statt numeric index
+    } : null)
+    .filter(Boolean);
+
+  if (!selectedDatasets.length) return;
+
+  selectedDatasets.forEach((dataset) => {
+    dataset.data = [];
+
+    for (const row of rowsRaw) {
+
+
+  const xValue = toIsoDateString(row?.[dateKey]);
+  if (!xValue) continue;
+
+
+      
+
+      // robustes Number-Parsing (falls DB Strings mit , liefert)
+      const raw = row?.[dataset.key];
+      const yNum = (raw === null || raw === undefined || raw === '') ? NaN : Number(String(raw).replace(',', '.'));
+
+      dataset.data.push({
+        x: xValue,
+        y: Number.isFinite(yNum) ? yNum : null,
+        originalY: Number.isFinite(yNum) ? yNum : null
+      });
+    }
+
+    applyNormalization(dataset, normalizationType);
+
+    if (containerId === 'modal-content-container') {
+      try { applyMovingAverages(dataset, movingAverages); } catch (e) {}
+    }
+    if (showDailyVolatility) applyDailyVolatility(dataset);
+  });
+
+  // Chart destroy bleibt gleich
+  if (chartInstances[modalIndex]) chartInstances[modalIndex].destroy();
+
+  chartInstances[modalIndex] = createLineChart(
+    selectedDatasets,
+    `TSlineChart_${modalIndex}`,
+    'Timeseries',
+    0,
+    modalIndex,
+    { sma1: movingAverages?.period1, sma2: movingAverages?.period2, sma3: movingAverages?.period3 }
+  );
+}
+
+
     // MAs
     function getMovingAverages(modalIndex) {
       return {
@@ -385,7 +593,7 @@ export async function handleTSData(receivedData, modalIndex) {
             x: point.x,
             y: sma1[idx]
           }));
-          console.log(`Calculated SMA 20 for dataset [${dataset.label}]:`, dataset.smaData1);
+          //console.log(`Calculated SMA 20 for dataset [${dataset.label}]:`, dataset.smaData1);
         } else {
           console.error(`Error calculating SMA 20 for dataset [${dataset.label}]`);
         }
@@ -398,7 +606,7 @@ export async function handleTSData(receivedData, modalIndex) {
             x: point.x,
             y: sma2[idx]
           }));
-          console.log(`Calculated SMA 50 for dataset [${dataset.label}]`, dataset.smaData2);
+          //console.log(`Calculated SMA 50 for dataset [${dataset.label}]`, dataset.smaData2);
         } else {
           console.error(`Error calculating SMA 50 for dataset [${dataset.label}]`);
         }
@@ -411,7 +619,7 @@ export async function handleTSData(receivedData, modalIndex) {
             x: point.x,
             y: sma3[idx]
           }));
-          console.log(`Calculated SMA 200 for dataset [${dataset.label}]`, dataset.smaData3);
+          //console.log(`Calculated SMA 200 for dataset [${dataset.label}]`, dataset.smaData3);
         } else {
           console.error(`Error calculating SMA 200 for dataset [${dataset.label}]`);
         }
@@ -423,7 +631,7 @@ export async function handleTSData(receivedData, modalIndex) {
         case 'dynamic':
           if (typeof dynamicNormalization === 'function') {
             dataset.data = dynamicNormalization(dataset).data;  
-            console.log('Applied dynamicNormalization:', dataset.data);
+            //console.log('Applied dynamicNormalization:', dataset.data);
           } else {
             console.error('dynamicNormalization function is not defined.');
           }
@@ -431,14 +639,14 @@ export async function handleTSData(receivedData, modalIndex) {
         case 'normalize':
           if (typeof normalizeDataset === 'function') {
             dataset.data = normalizeDataset(dataset).data;  
-            console.log('Applied normalizeDataset:', dataset.data);
+            //console.log('Applied normalizeDataset:', dataset.data);
           } else {
             console.error('normalizeDataset function is not defined.');
           }
           break;
         case 'none':
         default:
-          console.log(`Using original data for dataset [${dataset.label}]`);
+          //console.log(`Using original data for dataset [${dataset.label}]`);
           break;
       }
     }
@@ -510,23 +718,196 @@ export async function handleTSData(receivedData, modalIndex) {
 
 
 // TIMESERIES:Modal Hier wird die Anzahl bestimmt!
+// export function createTSModals(data) {
+//   const modalContentContainer = document.getElementById('modal-content-container');
+//   if (!modalContentContainer) {
+//     console.error('modal-content-container not found in the DOM.');
+//     return;
+//   }
+
+//   // Clear existing modals
+//   modalContentContainer.innerHTML = '';
+
+//   // Add new modals
+//   const sectionCount = 4;
+//   for (let i = 1; i <= sectionCount; i++) {
+//     insertModal(i, data);
+//   }
+// }
 export function createTSModals(data) {
+  //console.log('data:', data)
   const modalContentContainer = document.getElementById('modal-content-container');
   if (!modalContentContainer) {
     console.error('modal-content-container not found in the DOM.');
     return;
   }
 
-  // Clear existing modals
   modalContentContainer.innerHTML = '';
 
-  // Add new modals
   const sectionCount = 4;
+
+  // ✅ Daten pro Modal extrahieren
+  const perModal = normalizeTSModalPayload(data, sectionCount);
+
   for (let i = 1; i <= sectionCount; i++) {
-    insertModal(i, data);
+    insertModal(i, perModal[i]); // ✅ nicht mehr "data" überall
   }
 }
 
+/** Liefert ein Objekt: {1: rows[], 2: rows[], 3: rows[], 4: rows[]} */
+// function normalizeTSModalPayload(data, sectionCount) {
+//   const out = {};
+//   for (let i = 1; i <= sectionCount; i++) out[i] = [];
+
+//   // Fall A: Array mit 4 Blöcken
+//   if (Array.isArray(data) && data.length && (Array.isArray(data[0]) || typeof data[0] === 'object')) {
+//     // Wenn data[0] selbst schon rows ist (Objekte mit DATE etc.), dann ist es EIN Block -> an alle geben
+//     const looksLikeRows = Array.isArray(data) && data.length && !Array.isArray(data[0]) && typeof data[0] === 'object';
+//     if (looksLikeRows) {
+//       for (let i = 1; i <= sectionCount; i++) out[i] = data;
+//       return out;
+//     }
+
+//     // Wenn data[0] ein Array ist, interpretieren wir als 4 Blöcke
+//     if (Array.isArray(data[0])) {
+//       for (let i = 1; i <= sectionCount; i++) out[i] = data[i - 1] || [];
+//       return out;
+//     }
+//   }
+
+//   // Fall B: Objekt mit Keys "1".."4"
+//   if (data && typeof data === 'object') {
+//     for (let i = 1; i <= sectionCount; i++) {
+//       out[i] = data[i] || data[String(i)] || data[`section${i}`] || [];
+//     }
+//     return out;
+//   }
+
+//   return out;
+// }
+function normalizeTSModalPayload(data, sectionCount) {
+  const out = {};
+  for (let i = 1; i <= sectionCount; i++) out[i] = [];
+
+  // ---- DEBUG: Basis-Infos
+  const typeLabel =
+    Array.isArray(data) ? 'array' :
+    (data === null ? 'null' : typeof data);
+
+  //console.log('[TS normalize] input type:', typeLabel);
+
+  if (Array.isArray(data)) {
+    //console.log('[TS normalize] array length:', data.length);
+    const first = data[0];
+    //console.log('[TS normalize] first item type:', Array.isArray(first) ? 'array' : (first === null ? 'null' : typeof first));
+    if (first && typeof first === 'object' && !Array.isArray(first)) {
+      //console.log('[TS normalize] first item keys sample:', Object.keys(first).slice(0, 12));
+    }
+  } else if (data && typeof data === 'object') {
+    //console.log('[TS normalize] object keys sample:', Object.keys(data).slice(0, 20));
+  }
+
+  // ---- FALL 1: data ist rows[] (Array von Objekten) -> an alle Modals spiegeln
+  // Dein Log zeigt genau das: (11970) [{...}, {...}, ...]
+  if (Array.isArray(data) && data.length && data[0] && typeof data[0] === 'object' && !Array.isArray(data[0])) {
+    for (let i = 1; i <= sectionCount; i++) out[i] = data;
+
+    //console.log('[TS normalize] detected rows[] -> mirrored to all modals');
+    // console.log('[TS normalize] perModal lengths:', Object.fromEntries(
+    //   Object.keys(out).map(k => [k, out[k]?.length ?? 0])
+    // ));
+
+    return out;
+  }
+
+  // ---- FALL 2: data ist [rows1, rows2, rows3, rows4]
+  if (Array.isArray(data) && data.length && Array.isArray(data[0])) {
+    for (let i = 1; i <= sectionCount; i++) out[i] = data[i - 1] || [];
+
+    console.log('[TS normalize] detected [rows1..] -> distributed by index');
+    console.log('[TS normalize] perModal lengths:', Object.fromEntries(
+      Object.keys(out).map(k => [k, out[k]?.length ?? 0])
+    ));
+
+    return out;
+  }
+
+  // ---- FALL 3: data ist Objekt mit Keys "1"/"2"/... oder "section1"/...
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    for (let i = 1; i <= sectionCount; i++) {
+      out[i] = data[i] || data[String(i)] || data[`section${i}`] || [];
+    }
+
+    console.log('[TS normalize] detected object-of-modals -> extracted by keys');
+    console.log('[TS normalize] perModal lengths:', Object.fromEntries(
+      Object.keys(out).map(k => [k, out[k]?.length ?? 0])
+    ));
+
+    return out;
+  }
+
+  console.warn('[TS normalize] could not classify payload -> returning empty perModal');
+  return out;
+}
+
+
+
+// function insertModal(modalIndex, receivedData) {
+//   const template = document.getElementById('TS_Modal_Template');
+//   if (!template) {
+//     console.error('Template not found');
+//     return;
+//   }
+
+//   const clone = document.importNode(template.content, true);
+
+//   // Assign unique IDs to the cloned elements (nur Indizes ergänzt)
+//   const elementsToUpdate = [
+//     // Root hilft beim Scoping pro Instanz
+//     { selector: '.table-content', id: `tsRoot_${modalIndex}` },
+
+//     // ✅ Toolbox & Toggle mit Index
+//     { selector: '#tsTools', id: `tsTools_${modalIndex}` },
+//     { selector: '#tsToolsToggle', id: `tsToolsToggle_${modalIndex}` },
+
+//     { selector: '#checkboxContainer', id: `checkboxContainer_${modalIndex}` },
+//     { selector: '#loadButton', id: `loadButton_${modalIndex}` },
+//     { selector: '#TSDataContainer', id: `TSDataContainer_${modalIndex}` },
+//     { selector: '#TSlineChart', id: `TSlineChart_${modalIndex}` },
+//     { selector: '#oneYearButton', id: `oneYearButton_${modalIndex}` },
+//     { selector: '#fiveYearButton', id: `fiveYearButton_${modalIndex}` },
+//     { selector: '#tenYearButton', id: `tenYearButton_${modalIndex}` },
+//     { selector: '#maxButton', id: `maxButton_${modalIndex}` },
+//     { selector: '#normalizationTypeSelector', id: `normalizationTypeSelector_${modalIndex}` },
+//     { selector: '#applySMA1', id: `applySMA1_${modalIndex}` },
+//     { selector: '#movingAveragePeriod1', id: `movingAveragePeriod1_${modalIndex}` },
+//     { selector: '#applySMA2', id: `applySMA2_${modalIndex}` },
+//     { selector: '#movingAveragePeriod2', id: `movingAveragePeriod2_${modalIndex}` },
+//     { selector: '#applySMA3', id: `applySMA3_${modalIndex}` },
+//     { selector: '#movingAveragePeriod3', id: `movingAveragePeriod3_${modalIndex}` }
+//   ];
+
+//   elementsToUpdate.forEach(({ selector, id }) => {
+//     const element = clone.querySelector(selector);
+//     if (element) {
+//       element.id = id;
+//     } else {
+//       console.warn(`Element with selector '${selector}' not found in the template.`);
+//     }
+//   });
+
+//   // Append the cloned modal to the modal-content-container inside TS_Modal
+//   const modalContentContainer = document.getElementById('modal-content-container');
+//   if (modalContentContainer) {
+//     modalContentContainer.appendChild(clone);
+//   } else {
+//     console.error('modal-content-container not found in the DOM.');
+//     return;
+//   }
+
+//   // Call handleTSData for this modal and pass the modal index and received data
+//   handleTSData(receivedData, modalIndex);
+// }
 function insertModal(modalIndex, receivedData) {
   const template = document.getElementById('TS_Modal_Template');
   if (!template) {
@@ -534,55 +915,74 @@ function insertModal(modalIndex, receivedData) {
     return;
   }
 
+  // ✅ 1) Pro Modal die richtigen Daten herausziehen (unterstützt mehrere Payload-Formen)
+  const dataForThisModal =
+    // Fall: receivedData = [ [rowsModal1], [rowsModal2], ... ]
+    (Array.isArray(receivedData) && Array.isArray(receivedData[0]))
+      ? (receivedData[modalIndex - 1] || [])
+      : (
+        // Fall: receivedData = {1: rows1, 2: rows2, 3: rows3, 4: rows4}
+        (receivedData && typeof receivedData === 'object' && !Array.isArray(receivedData) &&
+          (receivedData[modalIndex] || receivedData[String(modalIndex)]))
+          ? (receivedData[modalIndex] || receivedData[String(modalIndex)])
+          // Fall: receivedData = rows[]
+          : receivedData
+      );
+
   const clone = document.importNode(template.content, true);
 
-  // Assign unique IDs to the cloned elements (nur Indizes ergänzt)
+  // ✅ 2) IDs pro Instanz eindeutig machen
   const elementsToUpdate = [
-    // Root hilft beim Scoping pro Instanz
     { selector: '.table-content', id: `tsRoot_${modalIndex}` },
 
-    // ✅ Toolbox & Toggle mit Index
-    { selector: '#tsTools', id: `tsTools_${modalIndex}` },
+    { selector: '#tsTools',       id: `tsTools_${modalIndex}` },
     { selector: '#tsToolsToggle', id: `tsToolsToggle_${modalIndex}` },
 
     { selector: '#checkboxContainer', id: `checkboxContainer_${modalIndex}` },
-    { selector: '#loadButton', id: `loadButton_${modalIndex}` },
-    { selector: '#TSDataContainer', id: `TSDataContainer_${modalIndex}` },
-    { selector: '#TSlineChart', id: `TSlineChart_${modalIndex}` },
-    { selector: '#oneYearButton', id: `oneYearButton_${modalIndex}` },
-    { selector: '#fiveYearButton', id: `fiveYearButton_${modalIndex}` },
-    { selector: '#tenYearButton', id: `tenYearButton_${modalIndex}` },
-    { selector: '#maxButton', id: `maxButton_${modalIndex}` },
+    { selector: '#loadButton',        id: `loadButton_${modalIndex}` },
+    { selector: '#TSDataContainer',   id: `TSDataContainer_${modalIndex}` },
+    { selector: '#TSlineChart',       id: `TSlineChart_${modalIndex}` },
+
+    { selector: '#oneYearButton',     id: `oneYearButton_${modalIndex}` },
+    { selector: '#fiveYearButton',    id: `fiveYearButton_${modalIndex}` },
+    { selector: '#tenYearButton',     id: `tenYearButton_${modalIndex}` },
+    { selector: '#maxButton',         id: `maxButton_${modalIndex}` },
+
     { selector: '#normalizationTypeSelector', id: `normalizationTypeSelector_${modalIndex}` },
-    { selector: '#applySMA1', id: `applySMA1_${modalIndex}` },
+
+    { selector: '#applySMA1',           id: `applySMA1_${modalIndex}` },
     { selector: '#movingAveragePeriod1', id: `movingAveragePeriod1_${modalIndex}` },
-    { selector: '#applySMA2', id: `applySMA2_${modalIndex}` },
+    { selector: '#applySMA2',           id: `applySMA2_${modalIndex}` },
     { selector: '#movingAveragePeriod2', id: `movingAveragePeriod2_${modalIndex}` },
-    { selector: '#applySMA3', id: `applySMA3_${modalIndex}` },
-    { selector: '#movingAveragePeriod3', id: `movingAveragePeriod3_${modalIndex}` }
+    { selector: '#applySMA3',           id: `applySMA3_${modalIndex}` },
+    { selector: '#movingAveragePeriod3', id: `movingAveragePeriod3_${modalIndex}` },
+
+    // ✅ Optional, aber wichtig falls du es in handleTSData verwendest:
+    // { selector: '#showDailyVolatility', id: `showDailyVolatility_${modalIndex}` },
+
+    // ✅ Optional, falls Targets pro Modal sein sollen:
+    // { selector: '#targetCheckboxContainer', id: `targetCheckboxContainer_${modalIndex}` },
   ];
 
   elementsToUpdate.forEach(({ selector, id }) => {
     const element = clone.querySelector(selector);
-    if (element) {
-      element.id = id;
-    } else {
-      console.warn(`Element with selector '${selector}' not found in the template.`);
-    }
+    if (element) element.id = id;
+    else console.warn(`Element with selector '${selector}' not found in the template.`);
   });
 
-  // Append the cloned modal to the modal-content-container inside TS_Modal
+  // ✅ 3) In DOM einhängen
   const modalContentContainer = document.getElementById('modal-content-container');
-  if (modalContentContainer) {
-    modalContentContainer.appendChild(clone);
-  } else {
+  if (!modalContentContainer) {
     console.error('modal-content-container not found in the DOM.');
     return;
   }
+  modalContentContainer.appendChild(clone);
 
-  // Call handleTSData for this modal and pass the modal index and received data
-  handleTSData(receivedData, modalIndex);
+  // ✅ 4) Daten an dieses Modal binden (nach dem Append!)
+  Promise.resolve(handleTSData(dataForThisModal, modalIndex))
+    .catch(err => console.error(`handleTSData failed for modal ${modalIndex}`, err));
 }
+
 
 
 // ---- TS Tools Toggle (Historic Data) -------------------------------
@@ -671,11 +1071,11 @@ export function loadTrendlines(modalIndex, chartName) {
     const okCh  = `ts-trendlines:load-success:${requestId}`;
     const errCh = `ts-trendlines:load-error:${requestId}`;
 
-    console.log(`[TS-TL][LOAD->SEND] req=${requestId} modal_index=${modalIndex} chart_name=${chartName}`);
+    //console.log(`[TS-TL][LOAD->SEND] req=${requestId} modal_index=${modalIndex} chart_name=${chartName}`);
 
     // ⬇️ WICHTIG: nur EIN Argument (payload)
     window.api.once(okCh, (payload) => {
-      console.log('[TS-TL][LOAD<-RAW]', payload);
+      //console.log('[TS-TL][LOAD<-RAW]', payload);
       const lines = Array.isArray(payload?.lines) ? payload.lines : [];
       console.log(`[TS-TL][LOAD<-OK] req=${requestId} | lines.count=${lines.length} | sample=${lines.length ? JSON.stringify(lines[0]) : 'null'}`);
       resolve(lines);

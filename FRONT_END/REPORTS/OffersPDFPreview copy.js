@@ -29,6 +29,23 @@ function scheduleOffersPreviewRender(containerPreviewId = 'reportsOffersPreview'
   });
 }
 
+function toNum(v) {
+  if (v == null) return NaN;
+  const s = String(v).trim()
+    .replace(/\s+/g, '')
+    .replace('%', '')
+    .replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function toDate(v) {
+  if (!v) return null;
+  const d = new Date(String(v).trim());
+  return isNaN(d) ? null : d;
+}
+
+
 
 
 
@@ -311,6 +328,15 @@ export function renderOffersPreview(
   if (sections.durationChart) enabled.push('Duration Chart');
   if (sections.signature)    enabled.push('Signature Block');
 
+
+console.log('[OffersPreview] rowsToShow.len=', rowsToShow.length);
+console.log('[OffersPreview] sample row keys=', Object.keys(rowsToShow[0] || {}).slice(0, 30));
+console.log('[OffersPreview] sample row=', rowsToShow[0]);
+
+
+
+
+
   // --- Charts (einmalig) ---
   let chartHTML = '';
   if (sections.productChart) {
@@ -399,10 +425,10 @@ export function renderOffersPreview(
 
   // Charts erst nach DOM-Einbau zeichnen
   if (sections.productChart || sections.durationChart) {
-    try { if (sections.productChart) renderOffersProductChart(); } catch (e) { console.warn('[OffersPreview] product chart failed:', e); }
+    try { if (sections.productChart) renderOffersProductChart(rowsToShow); } catch (e) { console.warn('[OffersPreview] product chart failed:', e); }
     try {
       if (sections.durationChart && typeof renderOffersDurationProductChart === 'function') {
-        renderOffersDurationProductChart();
+        renderOffersDurationProductChart(rowsToShow);
       } else if (sections.durationChart) {
         console.warn('[OffersPreview] renderOffersDurationProductChart() not found');
       }
@@ -731,213 +757,376 @@ function handleOffersHeaderEditAction() {
       return null; // handleFormAction kann i.d.R. auch nur mit {id,...} arbeiten
     }
 
-export function renderOffersProductChart() {
+// export function renderOffersProductChart() {
+//   const CID = 'offersProductYieldChart';
+
+//   // Canvas vorhanden?
+//   const canvas = document.getElementById(CID);
+//   if (!canvas) {
+//     console.warn('[Offers] Canvas nicht gefunden:', CID);
+//     return;
+//   }
+
+//   // === alte Chart-Instanz sicher zerstören (v3+ kompatibel) ===
+//   try {
+//     if (window.Chart?.getChart) {
+//       const ex = window.Chart.getChart(CID);
+//       if (ex && typeof ex.destroy === 'function') ex.destroy();
+//     } else if (window.__offersCharts?.[CID]?.destroy) {
+//       window.__offersCharts[CID].destroy();
+//       delete window.__offersCharts[CID];
+//     }
+//   } catch (e) {
+//     console.warn('[Offers] destroy (product) warn:', e);
+//   }
+
+//   // === Daten holen/aufbereiten ===
+//   const EUSWData = appState.getEUSWData?.() || [];
+//   const TSData   = appState.getTblTSData?.() || [];
+//   if (!EUSWData.length || !TSData.length) {
+//     console.warn('[Offers] EUSW/TS fehlen.');
+//     return;
+//   }
+
+//   const latestRow  = TSData[TSData.length - 1];
+//   const yieldCurve = transformTSDataToEUSWFormat(latestRow) || [];
+
+//   // Nur echte Offers-Zeilen (beginnt mit OFFER/OFFERS)
+//   const rawAll = appState.getFilteredPortData?.('OFFERS_DATA') || [];
+//   const raw = rawAll.filter(r => {
+//     const idStr = String(
+//       r.PORTFOLIO ?? r.Portfolio ?? r.portfolio ??
+//       r.Depotbank ?? r.DEPOTBANK ??
+//       r.ACCOUNT ?? r.account ??
+//       r.BOOK ?? r.Book ?? ''
+//     ).trim();
+//     return /^offers?/i.test(idStr);
+//   });
+
+//   // Produktpunkte wie im Summary, aber defensiv normalisiert
+//   const points = raw.map((r, i) => {
+//     let TtM = Number.isFinite(+r.TtM) ? +r.TtM
+//             : Number.isFinite(+r.x)   ? +r.x
+//             : NaN;
+//     if (!Number.isFinite(TtM) && r.MATURITY) {
+//       const mat = new Date(r.MATURITY);
+//       if (!isNaN(mat)) {
+//         const MSY = 365.25 * 24 * 3600 * 1000;
+//         TtM = Math.max(0, (mat - new Date()) / MSY);
+//       }
+//     }
+
+//     let ytm = (typeof r.ytm === 'number') ? r.ytm
+//             : (typeof r.ytm === 'string'
+//                 ? (r.ytm.includes('%')
+//                     ? parseFloat(r.ytm.replace(',', '.')) / 100
+//                     : parseFloat(r.ytm.replace(',', '.')))
+//                 : NaN);
+
+//     const PROD_ID = String(r.PROD_ID ?? `Produkt_${i+1}`);
+//     return (Number.isFinite(TtM) && Number.isFinite(ytm)) ? { TtM, ytm, PROD_ID } : null;
+//   }).filter(Boolean);
+
+//   console.log('[Offers] lens:', {
+//     yieldCurve: yieldCurve.length,
+//     EUSWData: EUSWData.length,
+//     points: points.length
+//   });
+
+//   // === Chart neu zeichnen ===
+//   drawYieldVsTimeChart({
+//     targetId: CID,
+//     heading: 'Product Yields vs Maturity',
+//     yieldCurve,
+//     pastYieldCurve: [],          // bewusst leer
+//     euswDataOriginal: EUSWData,
+//     points
+//   });
+
+//   // Instanz registrieren (für späteres Destroy)
+//   try {
+//     window.__offersCharts = window.__offersCharts || {};
+//     if (window.Chart?.getChart) {
+//       const inst = window.Chart.getChart(CID);
+//       if (inst) window.__offersCharts[CID] = inst;
+//     }
+//   } catch (e) {
+//     console.warn('[Offers] register (product) warn:', e);
+//   }
+// }
+export function renderOffersProductChart(rowsToShow = []) {
   const CID = 'offersProductYieldChart';
-
-  // Canvas vorhanden?
   const canvas = document.getElementById(CID);
-  if (!canvas) {
-    console.warn('[Offers] Canvas nicht gefunden:', CID);
-    return;
-  }
+  if (!canvas) { console.warn('[Offers] Canvas nicht gefunden:', CID); return; }
 
-  // === alte Chart-Instanz sicher zerstören (v3+ kompatibel) ===
+  // Height-Safety (sonst 0px Container = unsichtbar)
+  try { canvas.parentElement && (canvas.parentElement.style.minHeight = '320px'); } catch {}
+
+  // Destroy
   try {
     if (window.Chart?.getChart) {
       const ex = window.Chart.getChart(CID);
-      if (ex && typeof ex.destroy === 'function') ex.destroy();
+      if (ex?.destroy) ex.destroy();
     } else if (window.__offersCharts?.[CID]?.destroy) {
       window.__offersCharts[CID].destroy();
       delete window.__offersCharts[CID];
     }
-  } catch (e) {
-    console.warn('[Offers] destroy (product) warn:', e);
-  }
+  } catch (e) { console.warn('[Offers] destroy(product) warn:', e); }
 
-  // === Daten holen/aufbereiten ===
+  const rows = Array.isArray(rowsToShow) ? rowsToShow : [];
+  if (!rows.length) { console.warn('[Offers] rowsToShow leer -> kein Chart'); return; }
+
+  // Curve: TS optional, fallback nur EUSW (wenn draw-Funktion das akzeptiert)
   const EUSWData = appState.getEUSWData?.() || [];
   const TSData   = appState.getTblTSData?.() || [];
-  if (!EUSWData.length || !TSData.length) {
-    console.warn('[Offers] EUSW/TS fehlen.');
+  const latestRow = Array.isArray(TSData) && TSData.length ? TSData[TSData.length - 1] : null;
+
+  const yieldCurve = latestRow ? (transformTSDataToEUSWFormat(latestRow) || []) : [];
+  if (!yieldCurve.length && !EUSWData.length) {
+    console.warn('[Offers] Weder TS yieldCurve noch EUSWData vorhanden -> skip');
     return;
   }
 
-  const latestRow  = TSData[TSData.length - 1];
-  const yieldCurve = transformTSDataToEUSWFormat(latestRow) || [];
+  // Punkte aus rowsToShow (DB/DOM)
+  const MSY = 365.25 * 24 * 3600 * 1000;
 
-  // Nur echte Offers-Zeilen (beginnt mit OFFER/OFFERS)
-  const rawAll = appState.getFilteredPortData?.('OFFERS_DATA') || [];
-  const raw = rawAll.filter(r => {
-    const idStr = String(
-      r.PORTFOLIO ?? r.Portfolio ?? r.portfolio ??
-      r.Depotbank ?? r.DEPOTBANK ??
-      r.ACCOUNT ?? r.account ??
-      r.BOOK ?? r.Book ?? ''
-    ).trim();
-    return /^offers?/i.test(idStr);
-  });
+  const points = rows.map((r, i) => {
+    const PROD_ID = String(r.PROD_ID ?? r.ISIN ?? `Produkt_${i+1}`);
 
-  // Produktpunkte wie im Summary, aber defensiv normalisiert
-  const points = raw.map((r, i) => {
-    let TtM = Number.isFinite(+r.TtM) ? +r.TtM
-            : Number.isFinite(+r.x)   ? +r.x
-            : NaN;
-    if (!Number.isFinite(TtM) && r.MATURITY) {
-      const mat = new Date(r.MATURITY);
-      if (!isNaN(mat)) {
-        const MSY = 365.25 * 24 * 3600 * 1000;
-        TtM = Math.max(0, (mat - new Date()) / MSY);
-      }
+    // X: TtM oder MATURITY (Datum) -> Years-to-maturity
+    let TtM = toNum(r.TtM ?? r.ttm ?? r.x);
+    if (!Number.isFinite(TtM)) {
+      const mat = toDate(r.MATURITY ?? r.maturity);
+      if (mat) TtM = Math.max(0, (mat - new Date()) / MSY);
     }
+    if (!Number.isFinite(TtM)) return null;
 
-    let ytm = (typeof r.ytm === 'number') ? r.ytm
-            : (typeof r.ytm === 'string'
-                ? (r.ytm.includes('%')
-                    ? parseFloat(r.ytm.replace(',', '.')) / 100
-                    : parseFloat(r.ytm.replace(',', '.')))
-                : NaN);
+    // Y: Rendite (ytm / YTM / Rendite in %)
+    // Hier tolerant: ytm kann in % oder als Dezimal kommen
+    let ytm = toNum(r.ytm ?? r.YTM ?? r.yield ?? r.YIELD ?? r['Rendite in % aktuell']);
+    if (!Number.isFinite(ytm)) return null;
+    // wenn 0.0245 geliefert wurde -> auf % skalieren
+    if (ytm > 0 && ytm < 1) ytm = ytm * 100;
 
-    const PROD_ID = String(r.PROD_ID ?? `Produkt_${i+1}`);
-    return (Number.isFinite(TtM) && Number.isFinite(ytm)) ? { TtM, ytm, PROD_ID } : null;
+    return { TtM, ytm, PROD_ID };
   }).filter(Boolean);
 
-  console.log('[Offers] lens:', {
+  console.log('[Offers] product chart inputs:', {
+    rows: rows.length,
+    points: points.length,
     yieldCurve: yieldCurve.length,
-    EUSWData: EUSWData.length,
-    points: points.length
+    EUSWData: EUSWData.length
   });
 
-  // === Chart neu zeichnen ===
   drawYieldVsTimeChart({
     targetId: CID,
     heading: 'Product Yields vs Maturity',
-    yieldCurve,
-    pastYieldCurve: [],          // bewusst leer
+    yieldCurve: yieldCurve.length ? yieldCurve : (EUSWData || []),
+    pastYieldCurve: [],
     euswDataOriginal: EUSWData,
     points
   });
 
-  // Instanz registrieren (für späteres Destroy)
+  // Register
   try {
     window.__offersCharts = window.__offersCharts || {};
     if (window.Chart?.getChart) {
       const inst = window.Chart.getChart(CID);
       if (inst) window.__offersCharts[CID] = inst;
     }
-  } catch (e) {
-    console.warn('[Offers] register (product) warn:', e);
-  }
+  } catch (e) { console.warn('[Offers] register(product) warn:', e); }
 }
 
 
-export function renderOffersDurationProductChart() {
+
+// export function renderOffersDurationProductChart() {
+//   const CID = 'durationOffersProductYieldChart';
+
+//   // === Canvas sicherstellen (im richtigen Section) ===
+//   const getOrCreateCanvas = (canvasId, sectionId = 'durationChartSection') => {
+//     let canvas = document.getElementById(canvasId);
+//     if (canvas) return canvas;
+//     const container =
+//       document.getElementById(sectionId) ||
+//       document.getElementById('reportsOffersPreview') ||
+//       document.body;
+//     canvas = document.createElement('canvas');
+//     canvas.id = canvasId;
+//     canvas.className = 'lineChart'; // Styling kommt aus CSS (schwarzer BG etc.)
+//     container.appendChild(canvas);
+//     return canvas;
+//   };
+//   const canvas = getOrCreateCanvas(CID, 'durationChartSection');
+
+//   // === Alte Chart-Instanz zerstören (Chart.js v3+) ===
+//   try {
+//     if (window.Chart?.getChart) {
+//       const ex = window.Chart.getChart(CID);
+//       if (ex && typeof ex.destroy === 'function') ex.destroy();
+//     } else if (window.__offersCharts?.[CID]?.destroy) {
+//       window.__offersCharts[CID].destroy();
+//       delete window.__offersCharts[CID];
+//     }
+//   } catch (e) {
+//     console.warn('[DurationChart] destroy warn:', e);
+//   }
+
+//   // === Daten laden ===
+//   const EUSWData = appState.getEUSWData?.() || [];
+//   const TSData   = appState.getTblTSData?.() || [];
+//   if (!Array.isArray(EUSWData) || !EUSWData.length || !Array.isArray(TSData) || !TSData.length) {
+//     console.warn('[DurationChart] EUSW/TS fehlen – übersprungen');
+//     return;
+//   }
+
+//   const latestRow  = TSData[TSData.length - 1];
+//   const yieldCurve = transformTSDataToEUSWFormat(latestRow) || [];
+//   if (!yieldCurve.length) {
+//     console.warn('[DurationChart] yieldCurve leer – übersprungen');
+//     return;
+//   }
+
+//   // === Hilfsfunktionen ===
+//   const parsePctToNumber = (v) => {
+//     if (v == null) return NaN;
+//     if (typeof v === 'number') return v;
+//     const s = String(v).replace(',', '.').replace('%','').trim();
+//     const n = parseFloat(s);
+//     return Number.isFinite(n) ? n : NaN;
+//   };
+//   // PV01rel (%/bp) → Duration[J] (vereinfachte Mod->Macaulay)
+//   const pv01relToDurationYears = (pv01rel, ytm) => {
+//     const pv01PctPerBp = Math.abs(parsePctToNumber(pv01rel)); // z.B. 0.45
+//     if (!Number.isFinite(pv01PctPerBp)) return NaN;
+//     const yPct = parsePctToNumber(ytm); // 2.45
+//     const y    = Number.isFinite(yPct) ? (yPct / 100) : 0;
+//     return pv01PctPerBp * (1 + y);
+//   };
+
+//   // === Duration-Kurven aus Swap-Daten ableiten ===
+//   const durationCurve    = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
+//   const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
+
+//   // === Produktpunkte: x = Duration[J], y = YTM[%] ===
+//   const rawAll = appState.getFilteredPortData?.('OFFERS_DATA') || [];
+//   const raw = rawAll.filter(r => {
+//     const idStr = String(
+//       r.PORTFOLIO ?? r.Portfolio ?? r.portfolio ??
+//       r.Depotbank ?? r.DEPOTBANK ??
+//       r.ACCOUNT ?? r.account ??
+//       r.BOOK ?? r.Book ?? ''
+//     ).trim();
+//     return /^offers?/i.test(idStr);
+//   });
+
+//   const productDurationPoints = raw.map((r, i) => {
+//     const xSource = r.PV01rel ?? r.PV01 ?? r.duration;
+//     const x = pv01relToDurationYears(xSource, r.ytm);
+
+//     let y;
+//     if (typeof r.ytm === 'number') {
+//       y = (r.ytm <= 1 ? r.ytm * 100 : r.ytm);
+//     } else if (typeof r.ytm === 'string') {
+//       const s = r.ytm.replace(',', '.').replace('%', '').trim();
+//       const n = parseFloat(s);
+//       y = Number.isFinite(n) ? n : NaN;
+//     } else {
+//       y = NaN;
+//     }
+
+//     const PROD_ID = String(r.PROD_ID ?? `Produkt_${i+1}`);
+//     const ok = Number.isFinite(x) && x >= 0 && x <= 15 &&
+//                Number.isFinite(y) && Math.abs(y) <= 50;
+//     if (!ok) {
+//       console.warn('[DurationChart] skip product point', {
+//         i, PROD_ID, x, y, src: { PV01rel: r.PV01rel, PV01: r.PV01, duration: r.duration, ytm: r.ytm }
+//       });
+//       return null;
+//     }
+//     return { x, y, PROD_ID };
+//   }).filter(Boolean);
+
+//   // === Zeichnen ===
+//   drawYieldVsTimeChart({
+//     targetId: CID,
+//     heading: 'Product Yields vs Duration',
+//     yieldCurve: durationCurve,
+//     pastYieldCurve: [],
+//     euswDataOriginal: durationEUSWData,
+//     points: productDurationPoints
+//   });
+
+//   // Instanz registrieren (für späteres Destroy)
+//   try {
+//     window.__offersCharts = window.__offersCharts || {};
+//     if (window.Chart?.getChart) {
+//       const inst = window.Chart.getChart(CID);
+//       if (inst) window.__offersCharts[CID] = inst;
+//     }
+//   } catch (e) {
+//     console.warn('[DurationChart] register warn:', e);
+//   }
+// }
+
+export function renderOffersDurationProductChart(rowsToShow = []) {
   const CID = 'durationOffersProductYieldChart';
 
-  // === Canvas sicherstellen (im richtigen Section) ===
-  const getOrCreateCanvas = (canvasId, sectionId = 'durationChartSection') => {
-    let canvas = document.getElementById(canvasId);
-    if (canvas) return canvas;
-    const container =
-      document.getElementById(sectionId) ||
-      document.getElementById('reportsOffersPreview') ||
-      document.body;
-    canvas = document.createElement('canvas');
-    canvas.id = canvasId;
-    canvas.className = 'lineChart'; // Styling kommt aus CSS (schwarzer BG etc.)
-    container.appendChild(canvas);
-    return canvas;
-  };
-  const canvas = getOrCreateCanvas(CID, 'durationChartSection');
+  const canvas = document.getElementById(CID);
+  if (!canvas) { console.warn('[DurationChart] Canvas nicht gefunden:', CID); return; }
+  try { canvas.parentElement && (canvas.parentElement.style.minHeight = '320px'); } catch {}
 
-  // === Alte Chart-Instanz zerstören (Chart.js v3+) ===
+  // Destroy
   try {
     if (window.Chart?.getChart) {
       const ex = window.Chart.getChart(CID);
-      if (ex && typeof ex.destroy === 'function') ex.destroy();
+      if (ex?.destroy) ex.destroy();
     } else if (window.__offersCharts?.[CID]?.destroy) {
       window.__offersCharts[CID].destroy();
       delete window.__offersCharts[CID];
     }
-  } catch (e) {
-    console.warn('[DurationChart] destroy warn:', e);
-  }
+  } catch (e) { console.warn('[DurationChart] destroy warn:', e); }
 
-  // === Daten laden ===
+  const rows = Array.isArray(rowsToShow) ? rowsToShow : [];
+  if (!rows.length) { console.warn('[DurationChart] rowsToShow leer -> skip'); return; }
+
   const EUSWData = appState.getEUSWData?.() || [];
   const TSData   = appState.getTblTSData?.() || [];
-  if (!Array.isArray(EUSWData) || !EUSWData.length || !Array.isArray(TSData) || !TSData.length) {
-    console.warn('[DurationChart] EUSW/TS fehlen – übersprungen');
+  const latestRow = Array.isArray(TSData) && TSData.length ? TSData[TSData.length - 1] : null;
+
+  const yieldCurve = latestRow ? (transformTSDataToEUSWFormat(latestRow) || []) : [];
+  if (!yieldCurve.length && !EUSWData.length) {
+    console.warn('[DurationChart] keine Curve-Daten (TS/EUSW) -> skip');
     return;
   }
 
-  const latestRow  = TSData[TSData.length - 1];
-  const yieldCurve = transformTSDataToEUSWFormat(latestRow) || [];
-  if (!yieldCurve.length) {
-    console.warn('[DurationChart] yieldCurve leer – übersprungen');
-    return;
-  }
+  // Duration-Kurven (wenn swapPointToDurationAsYearRate robust ist)
+  const durationCurve    = (yieldCurve.length ? yieldCurve : EUSWData).map(swapPointToDurationAsYearRate).filter(Boolean);
+  const durationEUSWData = (EUSWData || []).map(swapPointToDurationAsYearRate).filter(Boolean);
 
-  // === Hilfsfunktionen ===
-  const parsePctToNumber = (v) => {
-    if (v == null) return NaN;
-    if (typeof v === 'number') return v;
-    const s = String(v).replace(',', '.').replace('%','').trim();
-    const n = parseFloat(s);
-    return Number.isFinite(n) ? n : NaN;
-  };
-  // PV01rel (%/bp) → Duration[J] (vereinfachte Mod->Macaulay)
-  const pv01relToDurationYears = (pv01rel, ytm) => {
-    const pv01PctPerBp = Math.abs(parsePctToNumber(pv01rel)); // z.B. 0.45
-    if (!Number.isFinite(pv01PctPerBp)) return NaN;
-    const yPct = parsePctToNumber(ytm); // 2.45
-    const y    = Number.isFinite(yPct) ? (yPct / 100) : 0;
-    return pv01PctPerBp * (1 + y);
-  };
+  // Produktpunkte: x=Duration (Years), y=YTM (%)
+  // x-Sources: PV01rel / duration / DURATION / mod_duration
+  const productDurationPoints = rows.map((r, i) => {
+    const PROD_ID = String(r.PROD_ID ?? r.ISIN ?? `Produkt_${i+1}`);
 
-  // === Duration-Kurven aus Swap-Daten ableiten ===
-  const durationCurve    = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
-  const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
+    let x = toNum(r.PV01rel ?? r.duration ?? r.DURATION ?? r.mod_duration);
+    if (!Number.isFinite(x)) return null;
 
-  // === Produktpunkte: x = Duration[J], y = YTM[%] ===
-  const rawAll = appState.getFilteredPortData?.('OFFERS_DATA') || [];
-  const raw = rawAll.filter(r => {
-    const idStr = String(
-      r.PORTFOLIO ?? r.Portfolio ?? r.portfolio ??
-      r.Depotbank ?? r.DEPOTBANK ??
-      r.ACCOUNT ?? r.account ??
-      r.BOOK ?? r.Book ?? ''
-    ).trim();
-    return /^offers?/i.test(idStr);
-  });
+    let y = toNum(r.ytm ?? r.YTM ?? r.yield ?? r.YIELD);
+    if (!Number.isFinite(y)) return null;
+    if (y > 0 && y < 1) y = y * 100;
 
-  const productDurationPoints = raw.map((r, i) => {
-    const xSource = r.PV01rel ?? r.PV01 ?? r.duration;
-    const x = pv01relToDurationYears(xSource, r.ytm);
+    // Guards (wie gehabt, aber nicht zu aggressiv)
+    if (!(x >= 0 && x <= 30 && Math.abs(y) <= 50)) return null;
 
-    let y;
-    if (typeof r.ytm === 'number') {
-      y = (r.ytm <= 1 ? r.ytm * 100 : r.ytm);
-    } else if (typeof r.ytm === 'string') {
-      const s = r.ytm.replace(',', '.').replace('%', '').trim();
-      const n = parseFloat(s);
-      y = Number.isFinite(n) ? n : NaN;
-    } else {
-      y = NaN;
-    }
-
-    const PROD_ID = String(r.PROD_ID ?? `Produkt_${i+1}`);
-    const ok = Number.isFinite(x) && x >= 0 && x <= 15 &&
-               Number.isFinite(y) && Math.abs(y) <= 50;
-    if (!ok) {
-      console.warn('[DurationChart] skip product point', {
-        i, PROD_ID, x, y, src: { PV01rel: r.PV01rel, PV01: r.PV01, duration: r.duration, ytm: r.ytm }
-      });
-      return null;
-    }
     return { x, y, PROD_ID };
   }).filter(Boolean);
 
-  // === Zeichnen ===
+  console.log('[DurationChart] inputs:', {
+    rows: rows.length,
+    points: productDurationPoints.length,
+    durationCurve: durationCurve.length
+  });
+
   drawYieldVsTimeChart({
     targetId: CID,
     heading: 'Product Yields vs Duration',
@@ -947,17 +1136,17 @@ export function renderOffersDurationProductChart() {
     points: productDurationPoints
   });
 
-  // Instanz registrieren (für späteres Destroy)
+  // Register
   try {
     window.__offersCharts = window.__offersCharts || {};
     if (window.Chart?.getChart) {
       const inst = window.Chart.getChart(CID);
       if (inst) window.__offersCharts[CID] = inst;
     }
-  } catch (e) {
-    console.warn('[DurationChart] register warn:', e);
-  }
+  } catch (e) { console.warn('[DurationChart] register warn:', e); }
 }
+
+
 
 
 

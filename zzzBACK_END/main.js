@@ -19,7 +19,7 @@ const { getAllTableNames,
         updateCustomerTexts,
         db,
         getAllRowsFromTable} = require('./main_fct.js');
-const { formatColumns, formatDate} = require('../utils/main_format.js');
+
 const {getExcelPath} = require('./main_path.js');
 const { spawn } = require('child_process');
 const XLSX = require('xlsx');
@@ -838,16 +838,16 @@ getAllTableNames((err, receivedTableNames) => {
           console.error("Error fetching data:", err.message);
           return;
         }
-
         if (rows.length === 0) {
           console.log("No data available.");
           return;
         }
 
-        const formattedRows = formatColumns(rows);
-        mainWindow.webContents.send(event, formattedRows);
+        // ✅ Nur RAW senden
+        mainWindow.webContents.send(event, rows);
       });
     }
+
     function sendDataToRenderer() {
       //console.log('tableNames:', tableNames);
       tableNames.forEach(tableName => {

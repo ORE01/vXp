@@ -47,7 +47,7 @@ export function handleEADData(receivedData) {
   );
 
   if (filtered.length === 0) {
-    console.warn('handleEADData: keine passenden EAD-Zeilen für', port_name);
+    //console.warn('handleEADData: keine passenden EAD-Zeilen für', port_name);
     EADDataContainer.innerHTML = '<p>No EAD data for selected portfolio.</p>';
     filteredEADMainData = [];
     try {
@@ -341,7 +341,7 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
     ? appState.getCvarInputThreshold('CVaR')
     : null;
 
-  console.log('getCvarInputThreshold("CVaR") →', thrRaw);
+  //console.log('getCvarInputThreshold("CVaR") →', thrRaw);
 
   if (!thrRaw) {
     console.warn('⚠️ CVaR-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
@@ -365,10 +365,10 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   let YELLOW = Number(thrObj.yellow_threshold);
   let RED    = Number(thrObj.red_threshold);
 
-  console.log('Rohe Thresholds aus DB (CVaR-Zeile):', {
-    rawYellow: YELLOW,
-    rawRed: RED,
-  });
+  // console.log('Rohe Thresholds aus DB (CVaR-Zeile):', {
+  //   rawYellow: YELLOW,
+  //   rawRed: RED,
+  // });
 
   if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
     console.warn('⚠️ CVaR-Thresholds sind keine gültigen Zahlen:', thrObj);
@@ -387,7 +387,7 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   YELLOW = Math.abs(YELLOW);
   RED    = Math.abs(RED);
 
-  console.log('Normierte Thresholds (Brüche, Betrag):', { YELLOW, RED });
+  //console.log('Normierte Thresholds (Brüche, Betrag):', { YELLOW, RED });
 
   // 4) Daten für aktuelles Flag holen
   const key = (flag === 'Historic') ? 'rating' : flag;
@@ -404,13 +404,13 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   // VaR_rel ist bei Verlusten negativ → Betrag
   const lossLevel = Math.abs(raw);   // z.B. -0.0552 → 0.0552 = 5.52 %
 
-  console.log('CVaR Ampel Check:', {
-    flag,
-    VaR_rel_raw: raw,
-    lossLevel,
-    YELLOW,
-    RED
-  });
+  // console.log('CVaR Ampel Check:', {
+  //   flag,
+  //   VaR_rel_raw: raw,
+  //   lossLevel,
+  //   YELLOW,
+  //   RED
+  // });
 
   if (lossLevel >= RED)    return 'red';
   if (lossLevel >= YELLOW) return 'yellow';
@@ -431,7 +431,7 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
     ? appState.getCvarInputThreshold('MSD')
     : null;
 
-  console.log('getCvarInputThreshold("MSD") →', thrRaw);
+  //console.log('getCvarInputThreshold("MSD") →', thrRaw);
 
   if (!thrRaw) {
     console.warn('⚠️ MSD-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
@@ -455,10 +455,10 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   let YELLOW = Number(thrObj.yellow_threshold);
   let RED    = Number(thrObj.red_threshold);
 
-  console.log('Rohe MSD-Thresholds aus DB:', {
-    rawYellow: YELLOW,
-    rawRed: RED,
-  });
+  // console.log('Rohe MSD-Thresholds aus DB:', {
+  //   rawYellow: YELLOW,
+  //   rawRed: RED,
+  // });
 
   if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
     console.warn('⚠️ MSD-Thresholds sind keine gültigen Zahlen:', thrObj);
@@ -477,7 +477,7 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   YELLOW = Math.abs(YELLOW);
   RED    = Math.abs(RED);
 
-  console.log('Normierte MSD-Thresholds (Brüche, Betrag):', { YELLOW, RED });
+  //console.log('Normierte MSD-Thresholds (Brüche, Betrag):', { YELLOW, RED });
 
   // 4) rating/norm-Daten holen
   const ratingArr = allFilteredDataByPdFlag['rating'];
@@ -516,14 +516,14 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   const diffRel = esNorm - esRating;
   const valueToCompare = Math.abs(diffRel);
 
-  console.log('Credit Risk Ampel MSD (ES):', {
-    esRating,
-    esNorm,
-    diffRel,
-    absDiff: valueToCompare,
-    YELLOW,
-    RED
-  });
+  // console.log('Credit Risk Ampel MSD (ES):', {
+  //   esRating,
+  //   esNorm,
+  //   diffRel,
+  //   absDiff: valueToCompare,
+  //   YELLOW,
+  //   RED
+  // });
 
   // Schwellen sind positiv:
   // Beispiel: YELLOW = 0.01, RED = 0.02
@@ -548,7 +548,7 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
     ? appState.getCvarInputThreshold('TSI')
     : null;
 
-  console.log('getCvarInputThreshold("TSI") →', thrRaw);
+  //console.log('getCvarInputThreshold("TSI") →', thrRaw);
 
   if (!thrRaw) {
     console.warn('⚠️ TSI-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
@@ -572,10 +572,10 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   let YELLOW = Number(thrObj.yellow_threshold);
   let RED    = Number(thrObj.red_threshold);
 
-  console.log('Rohe TSI-Thresholds aus DB:', {
-    rawYellow: YELLOW,
-    rawRed: RED,
-  });
+  // console.log('Rohe TSI-Thresholds aus DB:', {
+  //   rawYellow: YELLOW,
+  //   rawRed: RED,
+  // });
 
   if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
     console.warn('⚠️ TSI-Thresholds sind keine gültigen Zahlen:', thrObj);
@@ -594,7 +594,7 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   YELLOW = Math.abs(YELLOW);
   RED    = Math.abs(RED);
 
-  console.log('Normierte TSI-Thresholds (Brüche, Betrag):', { YELLOW, RED });
+  //console.log('Normierte TSI-Thresholds (Brüche, Betrag):', { YELLOW, RED });
 
   // 4) Wir schauen nur auf "rating"
   const ratingArr = allFilteredDataByPdFlag['rating'];
@@ -630,16 +630,16 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   const tsiDiff = esVal - varVal;
   const valueToCompare = Math.abs(tsiDiff);  // 0.02
 
-  console.log('TSI (rating, Prozentpunkte):', {
-    esKey,
-    varKey,
-    esVal,
-    varVal,
-    tsiDiff,
-    absDiff: valueToCompare,
-    YELLOW,
-    RED
-  });
+  // console.log('TSI (rating, Prozentpunkte):', {
+  //   esKey,
+  //   varKey,
+  //   esVal,
+  //   varVal,
+  //   tsiDiff,
+  //   absDiff: valueToCompare,
+  //   YELLOW,
+  //   RED
+  // });
 
   // Schwellen sind positiv:
   // |TSI_diff| >= RED    → rot

@@ -413,28 +413,53 @@ options: {
         return ctx;
       }
 
+      // export function transformTSDataToEUSWFormat(tsRow) {
+      // const maturityMap = {
+      //     EU_1Y: '1Y',
+      //     EU_5Y: '5Y',
+      //     EU_10Y: '10Y',
+      //     EU_20Y: '20Y'
+      // };
+
+      // return Object.entries(maturityMap)
+      //     .map(([key, yearLabel]) => {
+      //     const rawValue = tsRow[key];
+      //     const cleanValue = rawValue?.trim();
+
+      //     if (!cleanValue || isNaN(parseFloat(cleanValue))) return null;
+
+      //     return {
+      //         YEAR: yearLabel,
+      //         RATES: cleanValue.includes('%') ? cleanValue : `${cleanValue}%`
+      //     };
+      //     })
+      //     .filter(Boolean);
+      // }
       export function transformTSDataToEUSWFormat(tsRow) {
-      const maturityMap = {
-          EU_1Y: '1Y',
-          EU_5Y: '5Y',
-          EU_10Y: '10Y',
-          EU_20Y: '20Y'
+  const maturityMap = {
+    EU_1Y: '1Y',
+    EU_5Y: '5Y',
+    EU_10Y: '10Y',
+    EU_20Y: '20Y'
+  };
+
+  return Object.entries(maturityMap)
+    .map(([key, yearLabel]) => {
+      const rawValue = tsRow[key];
+
+      // ✅ rawValue kann jetzt number sein -> immer sicher zu String
+      const cleanValue = String(rawValue ?? '').trim();
+
+      if (!cleanValue || isNaN(parseFloat(cleanValue))) return null;
+
+      return {
+        YEAR: yearLabel,
+        RATES: cleanValue.includes('%') ? cleanValue : `${cleanValue}%`
       };
+    })
+    .filter(Boolean);
+}
 
-      return Object.entries(maturityMap)
-          .map(([key, yearLabel]) => {
-          const rawValue = tsRow[key];
-          const cleanValue = rawValue?.trim();
-
-          if (!cleanValue || isNaN(parseFloat(cleanValue))) return null;
-
-          return {
-              YEAR: yearLabel,
-              RATES: cleanValue.includes('%') ? cleanValue : `${cleanValue}%`
-          };
-          })
-          .filter(Boolean);
-      }
 
 
       export function swapPointToDurationAsYearRate(point) {

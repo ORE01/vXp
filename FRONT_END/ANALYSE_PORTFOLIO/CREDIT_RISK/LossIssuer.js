@@ -13,7 +13,7 @@ let marketData = [];
 let marketNormData = [];
 
 export function handleLossIssuerMainData(receivedData) {
-  console.log('LossIssuer receivedData:', receivedData);
+  //console.log('LossIssuer receivedData:', receivedData);
 
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
   //console.log('port_name:', port_name);

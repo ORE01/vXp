@@ -609,10 +609,39 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
 
 
 // Function to parse 'dd-mm-yyyy' format into a valid Date object
-function parseDateString(dateString) {
-  const [day, month, year] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+// function parseDateString(dateString) {
+//   const [day, month, year] = dateString.split('-').map(Number);
+//   return new Date(year, month - 1, day); // month is 0-indexed in JS Date
+// }
+
+function parseDateString(s) {
+  if (!s) return null;
+
+  // 1) "YYYY-MM-DD HH:mm:ss"  -> ISO machen
+  if (typeof s === 'string') {
+    const m1 = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (m1) {
+      const yyyy = m1[1], mm = m1[2], dd = m1[3];
+      const HH = m1[4] ?? '00', MM = m1[5] ?? '00', SS = m1[6] ?? '00';
+      const iso = `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}`;
+      const d = new Date(iso);
+      return isNaN(d) ? null : d;
+    }
+
+    // 2) "DD-MM-YYYY" oder "DD.MM.YYYY"
+    const m2 = s.match(/^(\d{2})[-.](\d{2})[-.](\d{4})$/);
+    if (m2) {
+      const iso = `${m2[3]}-${m2[2]}-${m2[1]}T00:00:00`;
+      const d = new Date(iso);
+      return isNaN(d) ? null : d;
+    }
+  }
+
+  // 3) last resort
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
 }
+
 
 // Function to get color from the color palette based on the index
 // function getColorFromPalette(index) {

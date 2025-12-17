@@ -20,7 +20,7 @@ const CVAR_CONFIG_COLUMNS = [
 const TABLE_CVAR_CONFIG = 'CreditVaRInput';
 
 export function handleCvarInput() {
-  console.log('handleCvarInputConfigView');
+  //console.log('handleCvarInputConfigView');
 
   const container = document.getElementById('inputCreditVaRConfigContainer');
   if (!container) {
