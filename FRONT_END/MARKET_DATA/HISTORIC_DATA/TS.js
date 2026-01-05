@@ -1,6 +1,7 @@
 import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createLineChart from '../../../charts/LineChart.js';
 import { calculateSMA, calculateRSI } from './ChartAnalyses.js';
+import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 //import { normalizeDataset } from './charts/LineChart.js';
 
 // Store chart instances in an object with modalIndex as key
@@ -43,8 +44,7 @@ const chartInstances = {};
           return [];
         }
 
-// ===== Renderer-Helper: TS-Auswahl aus DB/appState laden =====
-// ===== Renderer-Helper: TS-Auswahl aus DB/appState laden =====
+
 async function loadTSSelectionFromDB(modalIndex, headers) {
   const customer_id = getCurrentCustomerId();
   const seriesNames = (headers || []).slice(1);
@@ -150,132 +150,6 @@ function saveTSSelectionToDB(modalIndex, headers, checkboxes) {
 }
 
 
-
-// ===== Deine Funktion: jetzt mit Persistenz (async wegen Lade-Prozess) =====
-// export async function handleTSData(receivedData, modalIndex) {
-//   // 1) State & DOM
-//   appState.setTblTSData(receivedData);
-
-//   const checkboxContainer       = document.getElementById(`checkboxContainer_${modalIndex}`);
-//   const targetCheckboxContainer = document.getElementById('targetCheckboxContainer');
-//   const loadButton              = document.getElementById(`loadButton_${modalIndex}`);
-//   const TSData                  = receivedData;
-
-//   if (!(TSData && checkboxContainer && targetCheckboxContainer && loadButton)) return;
-
-//   // 2) Hidden-Table bauen, Headers/Rows
-//   const TSDataHTML = processData(TSData, 'tblTS');
-//   const tempDiv = document.createElement('div');
-//   tempDiv.innerHTML = TSDataHTML;
-
-//   const table   = tempDiv.querySelector('#dataTable');
-//   const rows    = Array.from(table.rows);
-//   const headers = Array.from(rows.shift().cells).map((c) => c.textContent.trim());
-
-//   // 3) UI-Container leeren
-//   checkboxContainer.innerHTML = '';
-//   targetCheckboxContainer.innerHTML = '';
-
-//   // 4) Defaults, wenn nichts gespeichert
-//   const defaultCheckedIndices = { 1:[0,1], 2:[7,8], 3:[17], 4:[15] };
-
-//   // 5) Gespeicherte Auswahl + Settings laden
-//   const saved = await loadTSSelectionFromDB(modalIndex, headers) || {};
-//   const savedIndices = Array.isArray(saved.indices) ? saved.indices : [];
-
-//   // 6) Controls referenzieren
-//   const selNormalization = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
-//   const chkVolatility    = document.getElementById(`showDailyVolatility_${modalIndex}`);
-
-//   const chkSMA1 = document.getElementById(`applySMA1_${modalIndex}`);
-//   const perSMA1 = document.getElementById(`movingAveragePeriod1_${modalIndex}`);
-//   const chkSMA2 = document.getElementById(`applySMA2_${modalIndex}`);
-//   const perSMA2 = document.getElementById(`movingAveragePeriod2_${modalIndex}`);
-//   const chkSMA3 = document.getElementById(`applySMA3_${modalIndex}`);
-//   const perSMA3 = document.getElementById(`movingAveragePeriod3_${modalIndex}`);
-
-//   // 7) Gespeicherte Settings → UI
-//   if (selNormalization) selNormalization.value = saved.normalization_type ?? 'none';
-//   if (chkVolatility)    chkVolatility.checked  = !!saved.show_daily_volatility;
-
-//   if (chkSMA1) chkSMA1.checked = !!saved.apply_sma1;
-//   if (perSMA1) perSMA1.value   = saved.sma1_period ?? 20;
-
-//   if (chkSMA2) chkSMA2.checked = !!saved.apply_sma2;
-//   if (perSMA2) perSMA2.value   = saved.sma2_period ?? 50;
-
-//   if (chkSMA3) chkSMA3.checked = !!saved.apply_sma3;
-//   if (perSMA3) perSMA3.value   = saved.sma3_period ?? 200;
-
-//   // 8) Daten-Checkboxen erstellen
-//   const checkboxes = headers.slice(1).map((header, index) => {
-//     const cb = document.createElement('input');
-//     cb.type  = 'checkbox';
-//     cb.id    = `checkbox-${modalIndex}-${index}`;
-//     cb.value = header;
-
-//     const isSaved   = savedIndices.includes(index);
-//     const isDefault = defaultCheckedIndices[modalIndex]?.includes(index) || false;
-//     cb.checked = isSaved || (!savedIndices.length && isDefault);
-
-//     checkboxContainer.appendChild(cb);
-//     const label = document.createElement('label');
-//     label.htmlFor = cb.id; label.textContent = header;
-//     checkboxContainer.appendChild(label);
-//     checkboxContainer.appendChild(document.createElement('br'));
-//     return cb;
-//   });
-
-//   // 9) Target-Checkboxen (exklusiv)
-//   headers.slice(1).forEach((header, index) => {
-//     const tcb = document.createElement('input');
-//     tcb.type = 'checkbox';
-//     tcb.id   = `target-checkbox-${index}`;
-//     tcb.value = header;
-
-//     targetCheckboxContainer.appendChild(tcb);
-//     const label = document.createElement('label');
-//     label.htmlFor = tcb.id; label.textContent = header;
-//     targetCheckboxContainer.appendChild(label);
-//     targetCheckboxContainer.appendChild(document.createElement('br'));
-
-//     tcb.addEventListener('change', (e) => {
-//       if (e.target.checked) {
-//         const all = targetCheckboxContainer.querySelectorAll('input[type="checkbox"]');
-//         all.forEach(cb => { if (cb !== e.target) cb.checked = false; });
-//       }
-//     });
-//   });
-
-//   // 10) Persist (Indices + Settings)
-//   const persistNow = () => saveTSSelectionToDB(modalIndex, headers, checkboxes);
-
-//   // 11) Live speichern bei Änderungen
-//   checkboxes.forEach(cb => cb.addEventListener('change', persistNow));
-//   if (selNormalization) selNormalization.addEventListener('change', persistNow);
-//   if (chkVolatility)    chkVolatility.addEventListener('change', persistNow);
-
-//   [chkSMA1, chkSMA2, chkSMA3].forEach(el => el && el.addEventListener('change', persistNow));
-//   [perSMA1, perSMA2, perSMA3].forEach(el => el && el.addEventListener('input', persistNow));
-
-//   // 12) Load-Button neu binden
-//   loadButton.replaceWith(loadButton.cloneNode(true));
-//   const newLoadButton = document.getElementById(`loadButton_${modalIndex}`);
-//   newLoadButton.onclick = async () => {
-//     await persistNow(); // vor Rendern speichern
-//     const chartContainer = document.querySelector(`#TSlineChart_${modalIndex}`).parentElement;
-//     const mainTableContainer = document.getElementById(`TSDataContainer_${modalIndex}`);
-//     if (chartContainer && mainTableContainer) {
-//       chartContainer.style.display = 'block';
-//       mainTableContainer.style.display = 'none';
-//     }
-//     //refreshTableAndChart(rows, headers, checkboxes, modalIndex);
-//     refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey);
-
-//   };
-
-//   loadButton.style.display = 'block';
-// }
 export async function handleTSData(receivedData, modalIndex) {
   appState.setTblTSData(receivedData);
 
@@ -377,18 +251,32 @@ export async function handleTSData(receivedData, modalIndex) {
 
   loadButton.replaceWith(loadButton.cloneNode(true));
   const newLoadButton = document.getElementById(`loadButton_${modalIndex}`);
-  newLoadButton.onclick = async () => {
-    await persistNow();
 
-    const chartContainer = document.querySelector(`#TSlineChart_${modalIndex}`)?.parentElement;
-    const mainTableContainer = document.getElementById(`TSDataContainer_${modalIndex}`);
-    if (chartContainer && mainTableContainer) {
-      chartContainer.style.display = 'block';
-      mainTableContainer.style.display = 'none';
+newLoadButton.onclick = async () => {
+  await persistNow();
+
+  const chartContainer = document.querySelector(`#TSlineChart_${modalIndex}`)?.parentElement;
+  const mainTableContainer = document.getElementById(`TSDataContainer_${modalIndex}`);
+  if (chartContainer && mainTableContainer) {
+    chartContainer.style.display = 'block';
+    mainTableContainer.style.display = 'none';
+  }
+
+  // Chart + Tabelle aktualisieren
+  refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey);
+
+  // 🔔 Risk-Preview nach dem Render anstoßen
+  // ein Frame warten, damit Chart.js Zeit hat, den Canvas zu zeichnen
+  requestAnimationFrame(() => {
+    try {
+      console.log('[TS] notifyRiskPreview for modal', modalIndex);
+      notifyRiskPreview('historicTS'); // Label ist egal, dient nur dem Logging
+    } catch (e) {
+      console.warn('[TS] notifyRiskPreview failed', e);
     }
+  });
+};
 
-    refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey);
-  };
 
   loadButton.style.display = 'block';
 }
@@ -419,91 +307,6 @@ function toIsoDateString(d) {
   return null;
 }
 
-
-    function refreshTableAndChart(rows, headers, checkboxes, modalIndex, containerId = 'modal-content-container') {
-      const normalizationTypeSelector = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
-      const normalizationType = normalizationTypeSelector ? normalizationTypeSelector.value : 'none';
-      const showDailyVolatility = document.getElementById(`showDailyVolatility_${modalIndex}`)?.checked ?? false;
-
-      // ✅ Get moving averages only for TS modals
-      let movingAverages = { period1: null, period2: null, period3: null };
-      if (containerId === 'modal-content-container') {
-        try {
-          movingAverages = getMovingAverages(modalIndex); // Use getMovingAverages function instead of duplicating logic
-          console.log(`🎉 Moving Averages Retrieved:`, movingAverages);
-        } catch (error) {
-          console.warn(`❌ Failed to retrieve moving averages for modalIndex ${modalIndex}:`, error);
-        }
-      } else {
-        console.log(`Skipping Moving Averages for modal ${modalIndex} (container: ${containerId})`);
-      }
-
-      console.log('Normalization type selected:', normalizationType);
-
-      const selectedDatasets = checkboxes
-        .map((checkbox, index) => checkbox.checked ? {
-          label: headers[index + 1], // Add +1 to skip the date column
-          data: [],
-          index: index + 1 // Save the index to match with the table columns
-        } : null)
-        .filter(Boolean);
-
-      if (selectedDatasets.length === 0) {
-        console.warn('⚠️ No datasets selected. Skipping chart update.');
-        return;
-      }
-
-      selectedDatasets.forEach((dataset) => {
-        dataset.data = [];
-
-        rows.slice(1).forEach((row) => {
-          const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
-          const xValue = rowData[0];
-          const yValue = parseFloat(rowData[dataset.index]);
-
-          dataset.data.push({
-            x: xValue,
-            y: isNaN(yValue) ? null : yValue,
-            originalY: isNaN(yValue) ? null : yValue
-          });
-        });
-
-        console.log(`Dataset before normalization [${dataset.label}]:`, dataset.data);
-
-        applyNormalization(dataset, normalizationType);
-        
-        if (containerId === 'modal-content-container') {
-          try {
-            applyMovingAverages(dataset, movingAverages);
-          } catch (error) {
-            console.warn(`❌ Failed to apply moving averages for modalIndex ${modalIndex}:`, error);
-          }
-        }
-
-        if (showDailyVolatility) {
-          applyDailyVolatility(dataset);
-        }
-      });
-
-      if (chartInstances[modalIndex]) {
-        chartInstances[modalIndex].destroy();
-      }
-
-      console.log("Parsed data with normalization type:", normalizationType, selectedDatasets);
-
-      chartInstances[modalIndex] = createLineChart(
-        selectedDatasets, 
-        `TSlineChart_${modalIndex}`, 
-        'Timeseries', 
-        0, 
-        modalIndex, 
-        { 
-          sma1: movingAverages?.period1, 
-          sma2: movingAverages?.period2, 
-          sma3: movingAverages?.period3 
-        }  
-      );
-    }
 
     function refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey, containerId = 'modal-content-container') {
   const normalizationTypeSelector = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
@@ -570,6 +373,26 @@ function toIsoDateString(d) {
     modalIndex,
     { sma1: movingAverages?.period1, sma2: movingAverages?.period2, sma3: movingAverages?.period3 }
   );
+
+// 🔄 Risk-Preview updaten – HISTORIC DATA ist jetzt „wirklich“ da
+  try {
+    // 1) Globaler Thumbnail-Refresh
+    document.dispatchEvent(new Event('risk:refresh-thumbnails'));
+  } catch (e) {
+    console.warn('[TS] risk:refresh-thumbnails dispatch failed', e);
+  }
+
+  try {
+    // 2) Section-spezifisch – exakt denselben Key verwenden,
+    //    den du in RiskPDFPreview für HISTORIC DATA verwendest!
+    notifyRiskPreview('historicData'); // oder z.B. 'historicTS' / 'PORTFOLIO_HISTORY_TS'
+  } catch (e) {
+    console.warn('[TS] notifyRiskPreview(historicData) failed', e);
+  }
+
+
+
+
 }
 
 

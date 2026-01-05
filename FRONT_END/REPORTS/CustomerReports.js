@@ -3,6 +3,7 @@ import { appState } from '../../FRONT_END/renderer.js';
 import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../utils/domHelpers.js';
 
+
 const TABLE_CUSTOMER_REPORTS = 'CustomerReports';
 
 // ✅ Nimm A oder B:
@@ -221,5 +222,7 @@ export function deleteCustomerReport(name) {
     });
   });
 }
+
+
 
 

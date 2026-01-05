@@ -63,25 +63,43 @@ import { appState } from '../../renderer.js';
           }
         };
       }
-      function createTimeSeriesChart(canvasId, data, options, baseType = "line") {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-          console.error(`❌ Canvas #${canvasId} wurde nicht gefunden.`);
-          return null;
-        }
+      function createTimeSeriesChart(canvasId, data, options = {}, baseType = "line") {
+  // 🔹 1) Canvas robust holen
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    console.info(
+      `[HistoricCharts] Canvas #${canvasId} wurde nicht gefunden – Panel vermutlich nicht gemountet, Chart wird übersprungen.`
+    );
+    return null;
+  }
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          console.error(`❌ Konnte 2D-Context von #${canvasId} nicht holen.`);
-          return null;
-        }
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.info(
+      `[HistoricCharts] Konnte 2D-Context von #${canvasId} nicht holen – Chart wird übersprungen.`
+    );
+    return null;
+  }
 
-        return new Chart(ctx, {
-          type: baseType,
-          data,
-          options
-        });
-      }
+  // 🔹 2) Fallbacks für data/options
+  const safeData = data && typeof data === "object"
+    ? data
+    : { labels: [], datasets: [] };
+
+  const safeOptions = options && typeof options === "object"
+    ? options
+    : {};
+
+  // 🔹 3) Chart erstellen
+  const chart = new Chart(ctx, {
+    type: baseType || "line",
+    data: safeData,
+    options: safeOptions
+  });
+
+  return chart;
+}
+
 
 // HISORIC CHARTS:      
 
@@ -764,13 +782,7 @@ export function renderHistoricCharts(keys = null, hist = []) {
   }
 }
 
-/**
- * ✅ EIN EINZIGER Ort für die port_name-Selektion:
- * - holt ALL rows
- * - filtert STRICT nach r.port_name === selectedPortName
- * - wenn leer: destroy
- * - sonst: render (lazy nach keys)
- */
+
 export function rerenderHistoricCharts({ keys = null } = {}) {
   const selectedPortNameRaw = appState.getSelectedPortTableName?.();
   const selectedPortName = String(selectedPortNameRaw ?? "").trim();
@@ -796,103 +808,4 @@ export function rerenderHistoricCharts({ keys = null } = {}) {
 
   renderHistoricCharts(keys, histForPort);
 }
-
-
-
-
-
-
-
-
-
-// // ✅ Registry sitzt im selben File und referenziert lokale Renderer.
-// // Wichtig: render bekommt (hist) übergeben.
-// export function getHistoricChartsRegistry() {
-//   return {
-//     yield:  { canvasId: "historicPortfolioYieldChart",  render: (hist) => renderHistoricPortfolioYieldChart(hist) },
-//     value:  { canvasId: "historicPortfolioValueChart",  render: (hist) => renderHistoricPortfolioValueChart(hist) },
-//     sens:   { canvasId: "historicPortfolioSensChart",   render: (hist) => renderHistoricPortfolioSensChart(hist) },
-//     market: { canvasId: "historicMarketRiskChart",      render: (hist) => renderHistoricMarketRiskChart(hist) },
-//     credit: { canvasId: "historicCreditRiskChart",      render: (hist) => renderHistoricCreditRiskChart(hist) },
-//   };
-// }
-
-// function destroyChartByCanvasId(canvasId) {
-//   const canvas = document.getElementById(canvasId);
-//   if (!canvas) return;
-
-//   const existing = window.Chart?.getChart ? window.Chart.getChart(canvas) : null;
-//   if (existing) {
-//     try { existing.destroy(); } catch (_) {}
-//   }
-
-//   const ctx = canvas.getContext?.("2d");
-//   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-// }
-
-// // keys: ["market"] oder null (alle)
-// export function destroyHistoricCharts(keys = null) {
-//   const reg = getHistoricChartsRegistry();
-//   const list = Array.isArray(keys) && keys.length ? keys : Object.keys(reg);
-
-//   for (const k of list) {
-//     const canvasId = reg[k]?.canvasId;
-//     if (canvasId) destroyChartByCanvasId(canvasId);
-//   }
-// }
-
-// // keys: ["market"] oder null (alle); hist wird in Renderer durchgereicht
-// export function renderHistoricCharts(keys = null, hist = []) {
-//   const reg = getHistoricChartsRegistry();
-//   const list = Array.isArray(keys) && keys.length ? keys : Object.keys(reg);
-
-//   for (const k of list) {
-//     const fn = reg[k]?.render;
-//     if (typeof fn === "function") fn(hist);
-//   }
-// }
-
-// export function rerenderHistoricCharts({ index, selectedTableName, keys = null } = {}) {
-//   const hist =
-//     (typeof appState.getPortfolioHistoryData === "function")
-//       ? (appState.getPortfolioHistoryData(index, selectedTableName) || [])
-//       : [];
-
-//   // Wenn KEINE Daten: alte Charts weg!
-//   if (!Array.isArray(hist) || hist.length === 0) {
-//     destroyHistoricCharts(keys);
-//     return;
-//   }
-
-//   // Wenn Daten: Charts rendern (lazy nach keys)
-//   renderHistoricCharts(keys, hist);
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

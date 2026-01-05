@@ -9,6 +9,9 @@ import { handleFWDData, handleSwapForwardCurve } from "./MARKET_DATA/FORWARDS/fo
 
 // Swaption Vols: 3D-ATM-Surface (Plotly) + Smile (Chart.js)
 import { renderSwaptionIfReady } from "./MARKET_DATA/VOLS/swaptionVols.js";
+import { notifyRiskPreview } from './REPORTS/RiskPDFPreview.js';
+
+import { createTSModals } from "./MARKET_DATA/HISTORIC_DATA/TS.js";
 
 
 // ────────────────────────────────────────────────────────────
@@ -31,16 +34,25 @@ export function getMarketDataPanelRenderers() {
       renderSwaptionAndPreview();
     },
 
+        
+    "panel-ts": () => {
+      const data = window.appState?.getTblTSData?.();
+      if (data && data.length) {
+        // Daten sind schon da → Modals bauen
+        createTSModals(data);
+      } else {
+        console.log("[TS] waiting for tblTSData – render will happen on data receive");
+      }
+    },
+
+
+
     // "panel-creditspreads": () => renderCreditSpreadsPanel(),
     // "panel-ts": () => renderHistoricTsPanel(),
     // "panel-ml": () => renderMLPanel(),
   };
 }
 
-
-// ────────────────────────────────────────────────────────────
-// 2) Initialisierung der Market-Data-Panels mit Lazy Loading
-// ────────────────────────────────────────────────────────────
 export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
 
   // 1) Lazy Panels Setup
@@ -54,52 +66,59 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
   // 2) Curve-Selector initialisieren (erst NACH Modal-DOM)
   initCurveSelectorGlobal();
 
-  // OPTIONAL aber sehr empfehlenswert:
-  // Wenn IPC-Daten (ATM/Smile) reinkommen → wenn Panel offen & ready → rendern
-document.addEventListener("swaption:atm:ready",   renderSwaptionAndPreview);
-document.addEventListener("swaption:smile:ready", renderSwaptionAndPreview);
+  // 3) Swaption-IPC: ATM/Smile → wenn ready, Surface + Preview neu rendern
+  document.addEventListener("swaption:atm:ready",   renderSwaptionAndPreview);
+  document.addEventListener("swaption:smile:ready", renderSwaptionAndPreview);
 
-
-  // 3) Re-render offene Panels, wenn sich die Curve ändert
+  // 4) Re-render bei Curve-Change
   document.addEventListener("curve:changed", () => {
     const pRates    = document.getElementById("panel-rates");
     const pForward  = document.getElementById("panel-forward");
     const pSwaption = document.getElementById("panel-swaption");
 
-    if (pRates && !pRates.hidden) {
+    // ⬅️ IR IMMER aktualisieren, sobald es das Panel gibt
+    if (pRates) {
       renderIRPanel();
     }
 
+    // Forward nur, wenn Panel tatsächlich offen ist (Inputs etc.)
     if (pForward && !pForward.hidden) {
       handleFWDData();
-      // handleSwapForwardCurve(); // bei Bedarf
+      // handleSwapForwardCurve(); // bei Bedarf separat triggern
     }
 
+    // Swaption nur, wenn Panel offen ist
     if (pSwaption && !pSwaption.hidden) {
       renderSwaptionAndPreview();
     }
   });
 
-  // 4) Wenn neue EUSW-Daten reinkommen → offene Panels refreshen
+  // 5) Wenn neue EUSW-Daten reinkommen → Panels refreshen
   document.addEventListener("eusw:data:ready", () => {
     const pRates    = document.getElementById("panel-rates");
     const pForward  = document.getElementById("panel-forward");
     const pSwaption = document.getElementById("panel-swaption");
 
-    if (pRates && !pRates.hidden) {
+    // ⬅️ IR IMMER aktualisieren, damit IRDataContainer eine Tabelle hat
+    if (pRates) {
       renderIRPanel();
     }
 
+    // Forward weiterhin nur, wenn Panel offen
     if (pForward && !pForward.hidden) {
       handleFWDData();
-      // handleSwapForwardCurve(); // bei Bedarf
+      // handleSwapForwardCurve(); // optional
     }
 
+    // Swaption nur bei offenem Panel
     if (pSwaption && !pSwaption.hidden) {
       renderSwaptionIfReady();
     }
   });
 }
+
+
+
 
 
 
@@ -109,11 +128,7 @@ function renderSwaptionAndPreview() {
   // Plotly/WebGL braucht oft einen Tick länger → 2 Frames warten
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      try {
-        document.dispatchEvent(new Event("risk:refresh-thumbnails"));
-      } catch (e) {
-        console.warn("[MarketDataPanels] risk:refresh-thumbnails failed", e);
-      }
+      notifyRiskPreview('swaption');   // <— HIER
     });
   });
 }

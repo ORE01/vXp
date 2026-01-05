@@ -2050,14 +2050,62 @@ ipcMain.on('ts-trendlines:load', async (event, query = {}) => {
 
 //CUSTOMER REPORT
 
+// ipcMain.on('customerReports:save', async (event, payload = {}) => {
+//   const {
+//     requestId,
+//     name,
+//     report_type = 'risk',
+//     state = null,        // optional: object
+//     state_json = null    // optional: string
+//   } = payload;
+
+//   const okCh  = `customerReports:save-success:${requestId}`;
+//   const errCh = `customerReports:save-error:${requestId}`;
+
+//   try {
+//     const presetName = String(name || '').trim();
+//     if (!presetName) throw new Error('name fehlt/ungültig');
+
+//     // state_json bevorzugen, sonst state serialisieren
+//     const json = typeof state_json === 'string'
+//       ? state_json
+//       : JSON.stringify(state || {});
+
+//     // exists?
+//     const existing = await new Promise((resolve, reject) => {
+//       db.get(
+//         `SELECT id FROM CustomerReports WHERE name=?`,
+//         [presetName],
+//         (e, row) => e ? reject(e) : resolve(row)
+//       );
+//     });
+
+//     if (existing?.id) {
+//       await runSQL(
+//         `UPDATE CustomerReports
+//          SET report_type=?,
+//              state_json=?,
+//              updated_at=datetime('now')
+//          WHERE id=?`,
+//         [String(report_type || 'risk'), json, existing.id]
+//       );
+//     } else {
+//       await runSQL(
+//         `INSERT INTO CustomerReports (name, report_type, state_json, created_at, updated_at)
+//          VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
+//         [presetName, String(report_type || 'risk'), json]
+//       );
+//     }
+
+//     event.reply(okCh);
+//   } catch (err) {
+//     console.error('customerReports:save error:', err);
+//     event.reply(errCh, err?.message || String(err));
+//   }
+// });
+
 ipcMain.on('customerReports:save', async (event, payload = {}) => {
-  const {
-    requestId,
-    name,
-    report_type = 'risk',
-    state = null,        // optional: object
-    state_json = null    // optional: string
-  } = payload;
+  const { requestId, name, report_type = 'risk', state = null, state_json = null } = payload;
 
   const okCh  = `customerReports:save-success:${requestId}`;
   const errCh = `customerReports:save-error:${requestId}`;
@@ -2066,26 +2114,20 @@ ipcMain.on('customerReports:save', async (event, payload = {}) => {
     const presetName = String(name || '').trim();
     if (!presetName) throw new Error('name fehlt/ungültig');
 
-    // state_json bevorzugen, sonst state serialisieren
     const json = typeof state_json === 'string'
       ? state_json
       : JSON.stringify(state || {});
 
-    // exists?
     const existing = await new Promise((resolve, reject) => {
-      db.get(
-        `SELECT id FROM CustomerReports WHERE name=?`,
-        [presetName],
-        (e, row) => e ? reject(e) : resolve(row)
+      db.get(`SELECT id FROM CustomerReports WHERE name=?`, [presetName], (e, row) =>
+        e ? reject(e) : resolve(row)
       );
     });
 
     if (existing?.id) {
       await runSQL(
         `UPDATE CustomerReports
-         SET report_type=?,
-             state_json=?,
-             updated_at=datetime('now')
+         SET report_type=?, state_json=?, updated_at=datetime('now')
          WHERE id=?`,
         [String(report_type || 'risk'), json, existing.id]
       );
@@ -2097,12 +2139,27 @@ ipcMain.on('customerReports:save', async (event, payload = {}) => {
       );
     }
 
-    event.reply(okCh);
+    // ✅ UI-Refresh (ohne refreshTable / ohne fetchDataAndSendEvent)
+    db.all(
+      `SELECT id, name, report_type, state_json, created_at, updated_at
+       FROM CustomerReports
+       WHERE report_type=?
+       ORDER BY name COLLATE NOCASE`,
+      [String(report_type || 'risk')],
+      (e, rows) => {
+        if (e) console.warn('[CR] refresh after save failed:', e.message);
+        // Wichtig: Event-Name muss zu deiner bestehenden Frontend-Logik passen
+        mainWindow.webContents.send('CustomerReportsData', rows || []);
+        event.reply(okCh);
+      }
+    );
+
   } catch (err) {
     console.error('customerReports:save error:', err);
     event.reply(errCh, err?.message || String(err));
   }
 });
+
 
 
 ipcMain.on('customerReports:load', async (event, query = {}) => {

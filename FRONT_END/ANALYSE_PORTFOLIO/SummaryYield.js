@@ -1,4 +1,12 @@
 import { appState } from '../renderer.js';
+import {
+  getColorFromPalette,
+  getColorForPieChart,
+  getPortfolioColor,
+  getEuswCurveColor
+} from '../../utils/colors.js';
+
+
 
 export function handleSummaryYieldData(filteredData, index, port_name) {
   //console.log('summaryData:', filteredData);
@@ -148,9 +156,10 @@ export function drawYieldVsTimeChart({
   let canvas = document.getElementById(targetId);
 
   // passender Container
-  const targetContainerId = targetId === 'durationSwapChart'
-    ? 'durationChartSection'
-    : (targetId === 'durationOffersProductYieldChart' ? 'durationChartSection' : 'yieldChartSection');
+  const targetContainerId =
+    targetId === 'durationSwapChart'
+      ? 'durationChartSection'
+      : (targetId === 'durationOffersProductYieldChart' ? 'durationChartSection' : 'yieldChartSection');
 
   let container = document.getElementById(targetContainerId);
 
@@ -198,68 +207,85 @@ export function drawYieldVsTimeChart({
   const originalPoints = parsePoints(euswDataOriginal);
 
   // Produktpunkte (Scatter-Datensätze oder einzelner Portfolio-Punkt)
-const isSinglePoint =
-  points.length === 1 &&
-  'x' in points[0] && 'y' in points[0] &&
-  !('TtM' in points[0]) && !('ytm' in points[0]) &&
-  !('PROD_ID' in points[0]); // 👈 wenn PROD_ID da ist: KEIN Portfolio-Point
-
+  const isSinglePoint =
+    points.length === 1 &&
+    points[0] &&
+    ('x' in points[0]) && ('y' in points[0]) &&
+    !('TtM' in points[0]) && !('ytm' in points[0]) &&
+    !('PROD_ID' in points[0]); // wenn PROD_ID da ist: KEIN Portfolio-Point
 
   const portfolioPoint = isSinglePoint ? points[0] : null;
 
-  const productDatasets = !isSinglePoint ? points.map((entry, index) => {
-    const x = entry.x ?? parseFloat(entry.TtM);
-    const y = entry.y ?? (typeof entry.ytm === 'number' ? entry.ytm * 100 : parseFloat(entry.ytm));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  // Farb-Index-Plan: Produkte sollen nicht mit semantischen Farben kollidieren
+  const COLOR_IDX = {
+    swap: 2,
+    productStart: 4,
+  };
 
-    const color = `hsl(${(index * 47) % 360}, 80%, 50%)`;
-    return {
-      label: entry.PROD_ID || `Produkt ${index + 1}`,
-      type: 'scatter',
-      data: [{ x, y }],
-      backgroundColor: color,
-      borderColor: color,
-      pointRadius: 5,
-      pointHoverRadius: 7,
-      isProduct: true, 
-    };
-  }).filter(Boolean) : [];
+  const productDatasets = !isSinglePoint
+    ? points.map((entry, index) => {
+        const x = entry.x ?? parseFloat(entry.TtM);
+        const y = entry.y ?? (typeof entry.ytm === 'number' ? entry.ytm * 100 : parseFloat(entry.ytm));
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+        const c = getColorForPieChart(COLOR_IDX.productStart + index); // {backgroundColor, borderColor}
+        return {
+          label: entry.PROD_ID || `Produkt ${index + 1}`,
+          type: 'scatter',
+          data: [{ x, y }],
+          backgroundColor: c.backgroundColor,
+          borderColor: c.borderColor,
+          borderWidth: 1,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          isProduct: true,
+        };
+      }).filter(Boolean)
+    : [];
 
   // ---- Datasets nur hinzufügen, wenn data.length > 0 ----
   const datasets = [];
 
+  // Semantische Farben: EU Yield Curve (blau) + Portfolio (pink)
+  const euswSolid = getEuswCurveColor(1);
+  const euswFill  = getEuswCurveColor(0.2);
+
+  // EU Yield Curve (blau, solid)
   if (euswPoints.length) {
     datasets.push({
       label: 'EU Yield Curve',
       data: euswPoints,
       showLine: true,
-      borderColor: 'rgba(54, 162, 235, 1)',
-      backgroundColor: 'rgba(54, 162, 235, 0.2)',
+      borderColor: euswSolid.borderColor,
+      backgroundColor: euswFill.backgroundColor,
       tension: 0.3,
       pointRadius: 3
     });
   }
 
+  // EU Yield Curve 5 Years Back (gleiches Blau, gestrichelt)
+  // Ja: geht exakt so mit borderDash
   if (pastPoints.length) {
     datasets.push({
       label: 'EU Yield Curve 5 Years Back',
       data: pastPoints,
       showLine: true,
-      borderColor: 'rgba(255, 159, 64, 1)',
-      backgroundColor: 'rgba(255, 159, 64, 0.2)',
-      borderDash: [5, 5],
+      borderColor: euswSolid.borderColor,
+      backgroundColor: euswFill.backgroundColor,
+      borderDash: [6, 6],
       tension: 0.3,
       pointRadius: 3
     });
   }
 
+  // EU Swap (bleibt indexbasiert aus Palette)
   if (originalPoints.length) {
     datasets.push({
       label: 'EU Swap',
       data: originalPoints,
       showLine: true,
-      borderColor: 'rgba(0, 200, 140, 1)',
-      backgroundColor: 'rgba(0, 200, 140, 0.2)',
+      borderColor: getColorFromPalette(COLOR_IDX.swap, 1),
+      backgroundColor: getColorFromPalette(COLOR_IDX.swap, 0.2),
       borderDash: [2, 4],
       tension: 0.3,
       pointRadius: 3
@@ -269,15 +295,19 @@ const isSinglePoint =
   // Produkt-Scatter
   datasets.push(...productDatasets);
 
-  // Portfolio-Einzelpunkt
+  // Portfolio-Einzelpunkt (GARMIN-PINK)
   if (portfolioPoint && Number.isFinite(portfolioPoint.x) && Number.isFinite(portfolioPoint.y)) {
+    const pCol = getPortfolioColor(1);
+
     datasets.push({
       label: 'Portfolio Yield',
       type: 'scatter',
       data: [portfolioPoint],
-      backgroundColor: 'rgba(255, 99, 132, 1)',
-      pointRadius: 6,
-      pointHoverRadius: 8
+      backgroundColor: pCol.backgroundColor,
+      borderColor: pCol.borderColor,
+      borderWidth: 3,
+      pointRadius: 8,
+      pointHoverRadius: 10
     });
   }
 
@@ -309,86 +339,84 @@ const isSinglePoint =
   window[targetId + '_chartInstance'] = new Chart(ctx, {
     type: 'scatter',
     data: { datasets },
-options: {
-  responsive: false,
-  maintainAspectRatio: false,
+    options: {
+      responsive: false,
+      maintainAspectRatio: false,
 
-  // ✅ NUR Tooltip wenn Cursor wirklich auf einem Punkt ist
-  interaction: {
-    mode: 'nearest',
-    intersect: true   // war vorher nicht gesetzt
-  },
-  hover: {
-    mode: 'nearest',
-    intersect: true
-  },
-
-  // ✅ Punkte leichter treffen (ohne anderes Verhalten zu ändern)
-  elements: {
-    point: {
-      hitRadius: 8,
-      hoverRadius: 7
-    }
-  },
-
-  scales: {
-    x: {
-      type: 'linear',
-      title: { display: true, text: 'Years', font: { size: 16 } },
-      ticks: { font: { size: 14 } },
-      min: 0,
-      max: xMax + 1
-    },
-    y: {
-      title: { display: true, text: 'Yield (%)', font: { size: 16 } },
-      ticks: {
-        font: { size: 14 },
-        callback: val => `${Number(val).toFixed(2)}%`
+      // ✅ NUR Tooltip wenn Cursor wirklich auf einem Punkt ist
+      interaction: {
+        mode: 'nearest',
+        intersect: true
       },
-      min: Math.floor(yMin),
-      max: Math.ceil(yMax)
-    }
-  },
+      hover: {
+        mode: 'nearest',
+        intersect: true
+      },
 
-  plugins: {
-    title: {
-      display: false,
-      text: heading,
-      font: { size: 16, weight: 'bold' },
-      color: '#fff',
-      padding: { top: 10, bottom: 15 }
-    },
+      // ✅ Punkte leichter treffen (ohne anderes Verhalten zu ändern)
+      elements: {
+        point: {
+          hitRadius: 8,
+          hoverRadius: 7
+        }
+      },
 
-    // ✅ bleibt exakt wie bei dir
-    legend: {
-      display: showLegend,
-      position: 'top',
-      labels: {
-        font: { size: 14 },
-        filter: (legendItem, data) => {
-          const ds = data.datasets?.[legendItem.datasetIndex];
-          if (!ds || !Array.isArray(ds.data) || ds.data.length === 0) return false;
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'Years', font: { size: 16 } },
+          ticks: { font: { size: 14 } },
+          min: 0,
+          max: xMax + 1
+        },
+        y: {
+          title: { display: true, text: 'Yield (%)', font: { size: 16 } },
+          ticks: {
+            font: { size: 14 },
+            callback: val => `${Number(val).toFixed(2)}%`
+          },
+          min: Math.floor(yMin),
+          max: Math.ceil(yMax)
+        }
+      },
 
-          const productCount = (data.datasets || []).filter(d => d && d.isProduct).length;
-          if (ds.isProduct && productCount > 1) return false;
+      plugins: {
+        title: {
+          display: false,
+          text: heading,
+          font: { size: 16, weight: 'bold' },
+          color: '#fff',
+          padding: { top: 10, bottom: 15 }
+        },
 
-          return true;
+        legend: {
+          display: showLegend,
+          position: 'top',
+          labels: {
+            font: { size: 14 },
+            filter: (legendItem, data) => {
+              const ds = data.datasets?.[legendItem.datasetIndex];
+              if (!ds || !Array.isArray(ds.data) || ds.data.length === 0) return false;
+
+              const productCount = (data.datasets || []).filter(d => d && d.isProduct).length;
+              if (ds.isProduct && productCount > 1) return false;
+
+              return true;
+            }
+          }
+        },
+
+        tooltip: {
+          callbacks: {
+            label: context =>
+              context.dataset.label === 'Portfolio Yield'
+                ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+                : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+          },
+          bodyFont: { size: 13 }
         }
       }
-    },
-
-    tooltip: {
-      callbacks: {
-        label: context =>
-          context.dataset.label === 'Portfolio Yield'
-            ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-            : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-      },
-      bodyFont: { size: 13 }
     }
-  }
-}
-
   });
 }
 

@@ -1,4 +1,4 @@
-import { getColorFromPalette } from '../utils/colors.js';
+import { getColorFromPalette, getEuswCurveColor } from '../utils/colors.js';
 import { saveTrendlines, loadTrendlines } from '../FRONT_END/MARKET_DATA/HISTORIC_DATA/TS.js';
 
 
@@ -643,72 +643,71 @@ function parseDateString(s) {
 }
 
 
-// Function to get color from the color palette based on the index
-// function getColorFromPalette(index) {
-//   const colorPalette = [
-//     "rgba(255, 255, 0, 1)",     // Bright Yellow
-//     "rgba(255, 87, 34, 1)",     // Bright Red-Orange
-//     "rgba(255, 193, 7, 1)",     // Bright Yellow-Orange
-//     "rgba(0, 255, 255, 1)",     // Bright Cyan
-//     "rgba(173, 255, 47, 1)",    // Bright Green
-//     "rgba(255, 105, 180, 1)",   // Hot Pink
-//     "rgba(75, 0, 130, 1)",      // Indigo
-//     "rgba(255, 140, 0, 1)",     // Dark Orange
-//     "rgba(0, 191, 255, 1)",     // Deep Sky Blue
-//     "rgba(50, 205, 50, 1)",     // Lime Green
-//   ];
-
-//   // Wrap around the palette if the index exceeds its length
-//   return colorPalette[index % colorPalette.length];
-// }
 
 export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);
+  if (!canvas) return null;
 
-  // Clear existing event listeners and destroy the previous chart instance, if it exists
-  if (FWDlineChartInstance) {
+  // Destroy previous chart instance, if it exists
+  if (typeof FWDlineChartInstance !== 'undefined' && FWDlineChartInstance) {
     FWDlineChartInstance.destroy();
   }
 
   const newCanvas = canvas.cloneNode(true);
   canvas.parentNode.replaceChild(newCanvas, canvas);
 
-  var ctx = newCanvas.getContext("2d");
+  const ctx = newCanvas.getContext("2d");
   Chart.defaults.font.color = "rgb(161, 160, 160)";
 
-  // Define a color palette with brighter colors for a dark gray background
-  const colorPalette = [
-    "rgba(255, 255, 0, 1)",     // Bright Yellow
-    "rgba(255, 87, 34, 1)",     // Bright Red-Orange
-    "rgba(255, 193, 7, 1)",     // Bright Yellow-Orange
-    "rgba(0, 255, 255, 1)",     // Bright Cyan
-    "rgba(173, 255, 47, 1)",    // Bright Green
-    "rgba(255, 105, 180, 1)",   // Hot Pink
-    "rgba(75, 0, 130, 1)",      // Indigo
-    "rgba(255, 140, 0, 1)",     // Dark Orange
-    "rgba(0, 191, 255, 1)",     // Deep Sky Blue
-    "rgba(50, 205, 50, 1)",     // Lime Green
-  ];
+  const euswColor = getEuswCurveColor(1);
+  let paletteIndex = 0;
 
-  const xValues = datasets[0].data.map((dataPoint) => dataPoint.x);
+  const xValues = datasets?.[0]?.data?.map(dp => dp.x) ?? [];
 
-  // Create the chart
   FWDlineChartInstance = new Chart(ctx, {
     type: "line",
     data: {
       labels: xValues,
-      datasets: datasets.map((dataset, index) => ({
-        label: dataset.label,
-        data: dataset.data,
-        fill: false,
-        borderColor: colorPalette[index % colorPalette.length], // Assign a color from the color palette
-        tension: 0.1,
-        pointRadius: pointRadius,
-        borderWidth: 1,
-      })),
+      datasets: datasets.map((dataset, index) => {
+        const isOriginalCurve = index === 0; // ✅ erste Kurve = Original/EUSW
+
+        if (isOriginalCurve) {
+          return {
+            label: dataset.label,
+            data: dataset.data,
+            fill: false,
+            borderColor: euswColor.borderColor,
+            backgroundColor: euswColor.backgroundColor, // Legend-Kästchen gefüllt
+            pointBackgroundColor: euswColor.borderColor,
+            pointBorderColor: euswColor.borderColor,
+            tension: 0.1,
+            pointRadius: pointRadius,
+            borderWidth: 1,
+          };
+        }
+
+        // Nicht-Original: Palette-Farbe + Background für gefülltes Legend-Kästchen
+        const border = getColorFromPalette(paletteIndex, 1);
+        const bg     = getColorFromPalette(paletteIndex, 0.6);
+        paletteIndex++;
+
+        return {
+          label: dataset.label,
+          data: dataset.data,
+          fill: false,
+          borderColor: border,
+          backgroundColor: bg,             // ✅ damit Legende gefüllt ist
+          pointBackgroundColor: border,    // optional: Punkte gefüllt
+          pointBorderColor: border,
+          tension: 0.1,
+          pointRadius: pointRadius,
+          borderWidth: 1,
+        };
+      }),
     },
     options: {
       responsive: true,
+
       scales: {
         x: {
           display: true,
@@ -717,57 +716,60 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
             text: "Year",
             color: "rgb(161, 160, 160)",
           },
-          ticks: {
-            color: "rgb(161, 160, 160)",
-          },
+          ticks: { color: "rgb(161, 160, 160)" },
           grid: {
-            color: "rgb(90, 90, 90)",
+            color: "rgba(255, 255, 255, 0.2)",
+            lineWidth: 0.4,
+            drawBorder: false,
+            drawTicks: false,
           },
+          border: { display: false }
         },
+
         y: {
           display: true,
           title: {
             display: true,
             text: "Rate (%)",
-            color: "rgb(161, 160, 160)",
+            color: "rgb(161, 160, 160)"
           },
           ticks: {
             color: "rgb(161, 160, 160)",
-            callback: function(value) {
-              return value.toFixed(2); // Rundet Werte auf 2 Nachkommastellen
-            }
+            callback: value => value.toFixed(2)
           },
           grid: {
-            color: "rgb(90, 90, 90)",
+            color: "rgba(255, 255, 255, 0.2)",
+            lineWidth: 0.4,
+            drawBorder: false,
+            drawTicks: false,
           },
-          suggestedMin: Math.min(...datasets.flatMap(ds => ds.data.map(d => d.y))) - 0.1, // Dynamisches Minimum mit Puffer
-          suggestedMax: Math.max(...datasets.flatMap(ds => ds.data.map(d => d.y))) + 0.1, // Dynamisches Maximum mit Puffer
-        },
-        
-      },
-      plugins: {
-        annotation: {},  // Ensure annotations are disabled completely
-        zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x',  // Enable panning on the x-axis
-          },
-          zoom: {
-            wheel: {
-              enabled: true,  // Enable zooming with mouse wheel
-            },
-            pinch: {
-              enabled: true,  // Enable zooming with pinch gestures
-            },
-            mode: 'x',  // Zoom in only on the x-axis
-          }
+          border: { display: false },
+          suggestedMin: Math.min(...datasets.flatMap(ds => ds.data.map(d => d.y))) - 0.1,
+          suggestedMax: Math.max(...datasets.flatMap(ds => ds.data.map(d => d.y))) + 0.1,
         }
       },
-    },
+
+      plugins: {
+        annotation: {},
+        zoom: {
+          pan: { enabled: true, mode: "x" },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "x"
+          }
+        }
+      }
+    }
   });
 
-  return FWDlineChartInstance; // Return the created chart instance
+  return FWDlineChartInstance;
 }
+
+
+
+
+
 
 export function createCSLineChart(data, chartConfig) {
   const ctx = document.getElementById('CS_ChartCanvas').getContext('2d');
@@ -807,189 +809,217 @@ export function createCSLineChart(data, chartConfig) {
 
 export function createForwardSwapChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);
+  if (!canvas) return null;
 
-  // Clear existing event listeners and destroy the previous chart instance, if it exists
+  // alte Instanz sauber entfernen
   if (window.forwardSwapChartInstance) {
     window.forwardSwapChartInstance.destroy();
   }
 
   const newCanvas = canvas.cloneNode(true);
   canvas.parentNode.replaceChild(newCanvas, canvas);
+  const ctx = newCanvas.getContext("2d");
 
-  var ctx = newCanvas.getContext("2d");
   Chart.defaults.font.color = "rgb(161, 160, 160)";
 
-  // Define a color palette for the forward swap curve chart
-  const colorPalette = [
-    "rgba(255, 255, 0, 1)",     // Bright Yellow
-    "rgba(255, 87, 34, 1)",     // Bright Red-Orange
-    "rgba(255, 193, 7, 1)",     // Bright Yellow-Orange
-    "rgba(0, 255, 255, 1)",     // Bright Cyan
-    "rgba(173, 255, 47, 1)",    // Bright Green
-    "rgba(255, 105, 180, 1)",   // Hot Pink
-    "rgba(75, 0, 130, 1)",      // Indigo
-    "rgba(255, 140, 0, 1)",     // Dark Orange
-    "rgba(0, 191, 255, 1)",     // Deep Sky Blue
-    "rgba(50, 205, 50, 1)",     // Lime Green
-  ];
+  const euswColor = getEuswCurveColor(1);
+  let paletteIndex = 0;
 
-  // Create the forward swap chart
   window.forwardSwapChartInstance = new Chart(ctx, {
     type: "line",
     data: {
-      labels: datasets[0].data.map(dataPoint => dataPoint.x),  // Use the years for the labels from the first dataset
-      datasets: datasets.map((dataset, index) => ({
-        label: dataset.label,
-        data: dataset.data,
-        fill: false,
-        borderColor: colorPalette[index % colorPalette.length], // Assign a color from the color palette
-        tension: 0.1,
-        pointRadius: pointRadius,
-        borderWidth: 1,
-      })),
+      labels: datasets?.[0]?.data?.map(dp => dp.x) ?? [],
+      datasets: datasets.map((dataset, index) => {
+        const isOriginalCurve = index === 0; // ✅ erste Kurve = Original/EUSW
+
+        if (isOriginalCurve) {
+          return {
+            label: dataset.label,
+            data: dataset.data,
+            fill: false,
+            borderColor: euswColor.borderColor,
+            backgroundColor: euswColor.backgroundColor, // ✅ Legende gefüllt
+            pointBackgroundColor: euswColor.borderColor,
+            pointBorderColor: euswColor.borderColor,
+            tension: 0.1,
+            pointRadius,
+            borderWidth: 1
+          };
+        }
+
+        // Nicht-Original: Palette-Farbe + Background für gefülltes Legend-Kästchen
+        const border = getColorFromPalette(paletteIndex, 1);
+        const bg     = getColorFromPalette(paletteIndex, 0.6);
+        paletteIndex++;
+
+        return {
+          label: dataset.label,
+          data: dataset.data,
+          fill: false,
+          borderColor: border,
+          backgroundColor: bg,             // ✅ damit Legende gefüllt ist
+          pointBackgroundColor: border,    // optional: Punkte gefüllt
+          pointBorderColor: border,
+          tension: 0.1,
+          pointRadius,
+          borderWidth: 1
+        };
+      }),
     },
     options: {
       responsive: true,
+
       scales: {
         x: {
           display: true,
-          title: {
-            display: true,
-            text: "Year",
-            color: "rgb(161, 160, 160)",
-          },
-          ticks: {
-            color: "rgb(161, 160, 160)",
-          },
+          title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
+          ticks: { color: "rgb(161, 160, 160)" },
           grid: {
-            color: "rgb(90, 90, 90)",
+            color: "rgba(255, 255, 255, 0.2)",
+            lineWidth: 0.4,
+            drawBorder: false,
+            drawTicks: false
           },
+          border: { display: false }
         },
+
         y: {
           display: true,
-          title: {
-            display: true,
-            text: "Rate (%)",
-            color: "rgb(161, 160, 160)",
-          },
+          title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
           ticks: {
             color: "rgb(161, 160, 160)",
-            callback: function(value) {
-              return value.toFixed(2); // Rundet Werte auf 2 Nachkommastellen
-            }
+            callback: v => v.toFixed(2)
           },
           grid: {
-            color: "rgb(90, 90, 90)",
+            color: "rgba(255, 255, 255, 0.2)",
+            lineWidth: 0.4,
+            drawBorder: false,
+            drawTicks: false
           },
-          suggestedMin: Math.min(...datasets.flatMap(ds => ds.data.map(d => d.y))) - 0.1, // Dynamisches Minimum mit Puffer
-          suggestedMax: Math.max(...datasets.flatMap(ds => ds.data.map(d => d.y))) + 0.1, // Dynamisches Maximum mit Puffer
-        },
-        
+          border: { display: false },
+          suggestedMin: Math.min(...datasets.flatMap(ds => ds.data.map(d => d.y))) - 0.1,
+          suggestedMax: Math.max(...datasets.flatMap(ds => ds.data.map(d => d.y))) + 0.1
+        }
       },
+
       plugins: {
-        annotation: {},  // Ensure annotations are disabled completely
         zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x',  // Enable panning on the x-axis
-          },
+          pan: { enabled: true, mode: "x" },
           zoom: {
-            wheel: {
-              enabled: true,  // Enable zooming with mouse wheel
-            },
-            pinch: {
-              enabled: true,  // Enable zooming with pinch gestures
-            },
-            mode: 'x',  // Zoom in only on the x-axis
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "x"
           }
         }
+      }
+    }
+  });
+
+  return window.forwardSwapChartInstance;
+}
+
+
+
+
+
+
+
+export function createRatesLineChart(datasets, chartName, chartTitle, pointRadius) {
+  const ctx = document.getElementById(chartName).getContext("2d");
+  Chart.defaults.font.color = "rgb(161, 160, 160)";
+
+  const xValues = datasets?.[0]?.data?.map(dp => dp.x) ?? [];
+
+  // Palette-Index nur für Nicht-Original-Serien hochzählen (damit nach der blauen Kurve sauber weitergezählt wird)
+  let paletteIndex = 0;
+
+  const chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: xValues,
+      datasets: datasets.map((dataset, index) => {
+        const isOriginalCurve = String(dataset?.label ?? '').toUpperCase() === 'RATES';
+        const eusw = getEuswCurveColor(1);
+
+        return {
+          label: dataset.label,
+          data: dataset.data,
+          fill: false,
+
+          // ✅ RATES = fix blau, Rest = Palette-Getter
+          borderColor: isOriginalCurve
+            ? eusw.borderColor
+            : getColorFromPalette(paletteIndex++, 1),
+
+          // Optional – nur falls du irgendwo fill/points nutzt
+          backgroundColor: isOriginalCurve
+            ? eusw.backgroundColor
+            : undefined,
+
+          tension: 0.1,
+          pointRadius: pointRadius,
+          borderWidth: 1,
+        };
+      }),
+    },
+    options: {
+      responsive: true,
+      resizeDelay: 150,
+      animation: { duration: 0 },
+      normalized: true,
+
+      plugins: {
+        decimation: { enabled: true, algorithm: "min-max" },
+
+        zoom: {
+          pan: { enabled: true, mode: "x", threshold: 10 },
+          zoom: {
+            drag: { enabled: true },
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "x",
+          },
+          limits: { x: { minRange: 1 } },
+        },
+      },
+
+      scales: {
+        x: {
+          display: true,
+          title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
+          ticks: { color: "rgb(161, 160, 160)" },
+          grid: {
+            color: "rgba(255, 255, 255, 0.2)",
+            lineWidth: 0.4,
+            drawBorder: false,
+            drawTicks: false,
+          },
+          border: { display: false }
+        },
+
+        y: {
+          display: true,
+          title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
+          ticks: {
+            color: "rgb(161, 160, 160)",
+            callback: value => value.toFixed?.(2) ?? value
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.2)",
+            lineWidth: 0.4,
+            drawBorder: false,
+            drawTicks: false,
+          },
+          border: { display: false }
+        },
       },
     },
   });
 
-  return window.forwardSwapChartInstance; // Return the created chart instance
+  return chart;
 }
 
-export function createRatesLineChart(datasets, chartName, chartTitle, pointRadius) {
-  var ctx = document.getElementById(chartName).getContext("2d");
-  Chart.defaults.font.color = "rgb(161, 160, 160)";
 
-  // Define a color palette with fixed colors
-  const colorPalette = [
-    "rgba(255, 255, 0, 1)",     // Bright Yellow
-    "rgba(255, 87, 34, 1)",     // Bright Red-Orange
-    "rgba(255, 193, 7, 1)",     // Bright Yellow-Orange
-    "rgba(0, 255, 255, 1)",     // Bright Cyan
-    "rgba(173, 255, 47, 1)",    // Bright Green
-    "rgba(255, 105, 180, 1)",   // Hot Pink
-    "rgba(75, 0, 130, 1)",      // Indigo
-    "rgba(255, 140, 0, 1)",     // Dark Orange
-    "rgba(0, 191, 255, 1)",     // Deep Sky Blue
-    "rgba(50, 205, 50, 1)",     // Lime Green
-  ];
-  
-
-  const xValues = datasets[0].data.map((dataPoint) => dataPoint.x);
-
-// Create the chart and store it in a variable
-const chart = new Chart(ctx, {
-  type: "line",
-  data: {
-    labels: xValues,
-    datasets: datasets.map((dataset, index) => ({
-      label: dataset.label,
-      data: dataset.data,
-      fill: false,
-      borderColor: colorPalette[index % colorPalette.length],
-      tension: 0.1,
-      pointRadius: pointRadius,
-      borderWidth: 1,
-    })),
-  },
-  options: {
-    responsive: true,
-
-    // ✅ Performance-/Resize-Entlastung (minimaler Eingriff)
-    resizeDelay: 150,           // throttled Resize-Handler
-    animation: { duration: 0 }, // keine Animationsframes beim Resize/Update
-    normalized: true,           // stabilisiert interne Berechnungen
-
-    // ✅ Für Linien mit vielen Punkten: decimation beschleunigt Rendering
-    plugins: {
-      decimation: { enabled: true, algorithm: 'min-max' },
-
-      zoom: {
-        pan: { enabled: true, mode: 'x', threshold: 10 },
-        zoom: {
-          drag: { enabled: true },
-          wheel: { enabled: true },
-          pinch: { enabled: true },
-          mode: 'x',
-        },
-        limits: { x: { minRange: 1 } },
-      },
-      // (Legende bleibt unverändert; falls du sie färben willst → plugins.legend.labels.color)
-    },
-
-    scales: {
-      x: {
-        display: true,
-        title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
-        ticks: { color: "rgb(161, 160, 160)" },
-        grid: { color: "rgb(90, 90, 90)" },
-      },
-      y: {
-        display: true,
-        title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
-        ticks: { color: "rgb(161, 160, 160)" },
-        grid: { color: "rgb(90, 90, 90)" },
-      },
-    },
-  },
-});
-return chart;
-
-}
 
 export function futurePredictionsChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);

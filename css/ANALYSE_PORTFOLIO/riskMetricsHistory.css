@@ -39,4 +39,16 @@
   }
 }
 
+/* Add-Button soll wie section-trigger aussehen, aber grün */
+.section-trigger.edit-button{
+  background:#2e7d32 !important;
+  border:1px solid rgba(255,255,255,0.18) !important;
+  color:#fff !important;
+}
+
+.section-trigger.edit-button:hover{
+  background:#256a2a !important;
+}
+
+
 

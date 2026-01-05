@@ -30,24 +30,6 @@ function scheduleOffersPreviewRender(containerPreviewId = 'reportsOffersPreview'
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // === Chart.js Helper ===
 window.__offersCharts = window.__offersCharts || {}; // { [canvasId]: ChartInstance }
 
