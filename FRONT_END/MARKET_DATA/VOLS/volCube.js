@@ -207,9 +207,30 @@ export function renderSwaptionCubeSurface3D() {
     displaylogo: false
   };
 
-  Plotly.newPlot(el, data, layout, config)
-    .then(() => console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.'))
-    .catch(err => console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err));
+Plotly.newPlot(el, data, layout, config)
+  .then(async () => {
+    console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.');
+
+    try {
+      const png = await Plotly.toImage(el, {
+        format: "png",
+        width: 900,
+        height: 520,
+        scale: 2
+      });
+
+      // ✅ im State ablegen
+      appState.swaptionCubeSurfacePng = png;
+
+      // ✅ Preview refreshen
+      document.dispatchEvent(new Event("risk:refresh-thumbnails"));
+    } catch (e) {
+      console.warn("[renderSwaptionCubeSurface3D] Plotly.toImage failed", e);
+      appState.swaptionCubeSurfacePng = null;
+    }
+  })
+  .catch(err => console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err));
+
 }
 
 export function renderSwaptionCubeSummary() {

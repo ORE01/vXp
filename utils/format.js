@@ -4,6 +4,8 @@
 
 // Zentrale Format-Konfiguration: EINMAL pflegen
 const FIELD_FORMAT_CONFIG = {
+  COUPON: { decimals: 3, isPercentage: true, multiplyBy100: false },
+
   PD:         { decimals: 3, isPercentage: true, multiplyBy100: true },
   PD_M:       { decimals: 3, isPercentage: true, multiplyBy100: true },
   PD_M_norm:  { decimals: 3, isPercentage: true, multiplyBy100: true },
@@ -181,42 +183,81 @@ export function formatDisplayValue(fieldName, value) {
 
 
   //=============================================================================SPEICHERUNG DB============================================================
+
+
+
 // export function formatInputFieldValue(fieldName, value) {
-//   // console.log('fieldNameFF:', fieldName);
-//   // console.log('value', value);
 //   let formattedValue = value;
 
-//   if (fieldName === 'COUPON' ||
-//       fieldName === 'FIX_CF' ||
-//       fieldName === 'GEARING' ||
-//       fieldName === 'FLOOR' ||
-//       fieldName === 'CAP' ||
-//       fieldName === 'SPREADS' ||
-//       fieldName === 'clean_price' ||
-//       fieldName === 'FORWARDS' ||
-//       fieldName === 'RATES'||
-//       fieldName === 'EUSWAP'||
-//       fieldName === 'EUSWAP_SZ1') {
-//       formattedValue = parseFloat(formattedValue) / 100;
-//       //console.log('formattedValue:', formattedValue); 
+//   // 1) Alle Felder, die in der DB als Dezimal liegen,
+//   //    aber im UI als Prozent angezeigt werden
+//   if (PERCENT_DECIMAL_FIELDS.includes(fieldName)) {
+//     if (formattedValue === null || formattedValue === undefined || formattedValue === '') {
+//       return null;
+//     }
 
+//     let str = String(formattedValue).trim();
+
+//     // % entfernen, falls der User  "25%" oder "25.00 %" eingibt
+//     str = str.replace('%', '').trim();
+//     // Komma in Punkt wandeln (z.B. "25,5")
+//     str = str.replace(',', '.');
+
+//     const num = parseFloat(str);
+//     if (isNaN(num)) {
+//       return null; // oder: return formattedValue; wenn du lieber "roh" speicherst
+//     }
+
+//     // Zurück in dein DB-Format: 25.00 -> 0.25
+//     formattedValue = num / 100;
+
+//   // 2) Ganzzahlige Notional
 //   } else if (fieldName === 'NOTIONAL') {
-//       formattedValue = parseInt(formattedValue); // Convert to whole number
-//       //console.log('formattedValue:', formattedValue);
-      
-//   } else if (fieldName === 'RATING') {
-//     formattedValue = String(formattedValue); // Convert to whole number
-//     //console.log('formattedValue:', formattedValue);
+//     formattedValue = parseInt(formattedValue, 10);
 
+//   // 3) Rating als String
+//   } else if (fieldName === 'RATING') {
+//     formattedValue = String(formattedValue);
+
+//   // 4) Sonstige numerische Felder
 //   } else if (['a', 'b', 'c', 'd', 'Shift_percent', 'Shift_bp'].includes(fieldName)) {
-//     formattedValue = parseFloat(formattedValue) || 0; // Convert text to number (default to 0)
-// }
+//     formattedValue = parseFloat(formattedValue) || 0;
+//   }
 
 //   return formattedValue;
 // }
 
+// ✅ Ganz oben im Modul platzieren (außerhalb der Funktion)
+export const COUPON_DECIMAL_FIELDS = new Set([
+  'COUPON', 'FIX_CF', 'GEARING', 'FLOOR', 'CAP', 'SPREADS',
+  'clean_price', 'FORWARDS', 'RATES', 'EUSWAP', 'EUSWAP_SZ1'
+]);
+
 export function formatInputFieldValue(fieldName, value) {
   let formattedValue = value;
+
+  // ✅ FIX: COUPON & Co. liegen in der DB als Dezimal (0.03),
+  // werden im UI aber oft als "3%" oder "3.000%" angezeigt.
+  if (COUPON_DECIMAL_FIELDS.has(fieldName)) {
+    if (formattedValue === null || formattedValue === undefined || formattedValue === '') {
+      return null;
+    }
+
+    let str = String(formattedValue).trim();
+    const hadPercent = str.includes('%');
+
+    str = str.replace('%', '').trim();
+    str = str.replace(',', '.');
+
+    const num = parseFloat(str);
+    if (isNaN(num)) return null;
+
+    // 3% / "3.000%"  -> 0.03
+    // 3 (ohne %)      -> 0.03 (User tippt Prozent ohne %)
+    // 0.03            -> 0.03 (Dezimal bleibt Dezimal)
+    formattedValue = (hadPercent || num > 1) ? (num / 100) : num;
+    return formattedValue;
+  }
 
   // 1) Alle Felder, die in der DB als Dezimal liegen,
   //    aber im UI als Prozent angezeigt werden
@@ -226,29 +267,22 @@ export function formatInputFieldValue(fieldName, value) {
     }
 
     let str = String(formattedValue).trim();
-
-    // % entfernen, falls der User  "25%" oder "25.00 %" eingibt
     str = str.replace('%', '').trim();
-    // Komma in Punkt wandeln (z.B. "25,5")
     str = str.replace(',', '.');
 
     const num = parseFloat(str);
     if (isNaN(num)) {
-      return null; // oder: return formattedValue; wenn du lieber "roh" speicherst
+      return null;
     }
 
-    // Zurück in dein DB-Format: 25.00 -> 0.25
     formattedValue = num / 100;
 
-  // 2) Ganzzahlige Notional
   } else if (fieldName === 'NOTIONAL') {
     formattedValue = parseInt(formattedValue, 10);
 
-  // 3) Rating als String
   } else if (fieldName === 'RATING') {
     formattedValue = String(formattedValue);
 
-  // 4) Sonstige numerische Felder
   } else if (['a', 'b', 'c', 'd', 'Shift_percent', 'Shift_bp'].includes(fieldName)) {
     formattedValue = parseFloat(formattedValue) || 0;
   }
@@ -257,13 +291,8 @@ export function formatInputFieldValue(fieldName, value) {
 }
 
 
-// export function convertDateToISO(dateStr) {
-//   const parts = dateStr.split('-');
-//   if (parts.length === 3) {
-//     return `${parts[2]}-${parts[1]}-${parts[0]}`;
-//   }
-//   return dateStr;
-// }
+
+
 export function convertDateToISO(s) {
   if (!s) return '';
   s = String(s).trim();

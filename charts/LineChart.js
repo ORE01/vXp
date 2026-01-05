@@ -2,7 +2,7 @@ import { getColorFromPalette } from '../utils/colors.js';
 import { saveTrendlines, loadTrendlines } from '../FRONT_END/MARKET_DATA/HISTORIC_DATA/TS.js';
 
 
-
+const chartsByCanvasId = new Map(); 
 let chartInstance = null;
 let futurePredictionsChartInstance = null;
 let FWDlineChartInstance;
@@ -13,6 +13,16 @@ let debounceTimeout;
 export default function createLineChart(datasets, chartName, chartTitle, pointRadius, modalIndex, smaPeriods) {
   const canvasElement = document.getElementById(chartName);
   if (!canvasElement) { console.error(`Canvas element with ID "${chartName}" not found.`); return null; }
+
+
+  // ✅ Immer den alten Chart dieser Canvas-ID zerstören
+  const prev = chartsByCanvasId.get(chartName);
+  if (prev) {
+    prev.destroy();                 // triggert auch deine überschriebenen destroy-cleanups
+    chartsByCanvasId.delete(chartName);
+  }
+
+
   const ctx = canvasElement.getContext("2d");
   if (!ctx) { console.error(`Failed to get 2D context for ${chartName}.`); return null; }
 
@@ -253,15 +263,24 @@ const onMouseMove = (evt) => {
   setupChartButtons(chartInstance, datasets, modalIndex);
 
   // Cleanup beim Destroy (+ persist)
-  const _destroy = chartInstance.destroy.bind(chartInstance);
-  chartInstance.destroy = async () => {
-    try { await saveTrendlines(modalIndex, chartName, trendState.lines); } catch {}
-    canvasElement.removeEventListener('click', onClick);
-    canvasElement.removeEventListener('mousemove', onMouseMove);
-    canvasElement.removeEventListener('contextmenu', onContextOrEsc);
-    window.removeEventListener('keydown', onContextOrEsc);
-    _destroy();
-  };
+const _destroy = chartInstance.destroy.bind(chartInstance);
+
+chartInstance.destroy = () => {
+  // Speichern NICHT awaiten
+  Promise.resolve(saveTrendlines(modalIndex, chartName, trendState.lines)).catch(()=>{});
+
+  canvasElement.removeEventListener('click', onClick);
+  canvasElement.removeEventListener('mousemove', onMouseMove);
+  canvasElement.removeEventListener('contextmenu', onContextOrEsc);
+  window.removeEventListener('keydown', onContextOrEsc);
+
+  _destroy(); // Canvas wird SOFORT freigegeben
+};
+
+
+
+    // ✅ Chart merken
+  chartsByCanvasId.set(chartName, chartInstance);
 
   return chartInstance;
 }

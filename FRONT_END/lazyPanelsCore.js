@@ -41,6 +41,7 @@ export function initLazyPanels({
       requestAnimationFrame(() => {
         const fn = panelRenderers[panelId];
         if (typeof fn === "function") {
+          console.log("[LazyRender] calling renderer for panelId =", panelId);
 
           try {
             fn(); // Panel rendert hier (z.B. Chart)

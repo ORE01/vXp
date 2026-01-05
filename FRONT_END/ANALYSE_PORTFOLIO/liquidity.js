@@ -20,7 +20,8 @@ const $$ = (sel, root = liquRoot) => Array.from(root?.querySelectorAll(sel) || [
  * 3) Emittenten-Tabelle
  * 4) Reset-Button
  */
-export function handleLiquidityData(filteredData, index, port_name) {
+export function handleLiquidityData(filteredData) {
+  console.log('filteredData:', filteredData)
   const data = Array.isArray(filteredData) ? filteredData : [];
 
   // Panel-DOM schon vorhanden?

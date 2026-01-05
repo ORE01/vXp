@@ -1,7 +1,8 @@
 import { refreshOpenPanels} from './lazyPanelsCore.js';
-import { renderAllChartsNow} from './allChartsRenderer.js';
 import { initPortfolioPanelsLazyRender} from './initAnalysePortfolioPanels.js';
 import { initMarketDataPanelsLazyRender} from './initMarketDataPanels.js';
+import { initMarketDataChartsAutoRefresh} from './initMarketDataRefresh.js';
+
 import { createTSModals, observePanelTsOpen} from './MARKET_DATA/HISTORIC_DATA/TS.js';
 import { renderVolSurfacePanel, renderSwaptionSmile } from './MARKET_DATA/VOLS/swaptionVols.js';
 import { handleExcelComplete } from './UPDATES/updatesExcel.js';
@@ -15,20 +16,21 @@ import { handleCvarInput} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInput.js';
 import { handleCvarInputThresholdView} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInputThreshold.js'; 
 
 import { handleCVaRData, handleEADData} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js'; 
-import { handleSwapForwardCurve, handleFWDData } from './MARKET_DATA/FORWARDS/FORWARDS.js';
+import { handleSwapForwardCurve, handleFWDData } from './MARKET_DATA/FORWARDS/forwards.js';
 import { handleProviderData } from './DATA_PROVIDER/DATAProvider.js'; 
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './MARKET_DATA/FORCASTING/ML.js'; 
 import { handleLossIssuerMainData, setupLossIssuerUI } from './ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js'; 
 import { handleLiquidityData } from './ANALYSE_PORTFOLIO/liquidity.js';
-import { renderHistoricPortfolioYieldChart, renderHistoricPortfolioValueChart, renderHistoricMarketRiskChart, renderHistoricPortfolioSensChart, renderHistoricCreditRiskChart} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
-import { handleSummaryRMData } from './ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRM.js';
+
+import { rerenderHistoricCharts} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
+import { handleSummaryMarketRiskData } from './ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRisk.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './NEW_PRODUCTS/offers.js';
-
-import { generateOfferPDF} from './PDF/OffersPDF.js';
-import { getOffersReportData, getOffersReportOptions, renderOffersPreview, rowsAsObjectsFrom, setOffersReportData, wireOffersPreview } from './PDF/OffersPDFPreview.js';
-
-import { generateRiskPDF } from './PDF/RiskPDF.js';
-import { getRiskReportOptions, wireRiskPreview } from './PDF/RiskPDFPreview.js';
+//REPORT:
+import { generateOfferPDF} from './REPORTS/OffersPDF.js';
+import { getOffersReportData, getOffersReportOptions, renderOffersPreview, rowsAsObjectsFrom, setOffersReportData, wireOffersPreview } from './REPORTS/OffersPDFPreview.js';
+import { generateRiskPDF } from './REPORTS/RiskPDF.js';
+import { wireRiskPreview } from './REPORTS/RiskPDFPreview.js';
+import { setupCustomerReportsPresetUI} from './REPORTS/CustomerReportsPresetUI.js';
 
 import { handleHistoricMetricsAddClick} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';
 
@@ -40,6 +42,8 @@ import { initializeTabs } from '../utils/tabs.js';
 
 
 import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
+
+import { refreshOpenPortfolioPanels } from "./initAnalysePortfolioPanels.js";
 
 
 
@@ -85,6 +89,25 @@ function setupReportsEnterLeaveBridge() {
   const tabBar = document.querySelector('.tab');
   if (!tabBar) return;
 
+  // ✅ NEW: Reports enter/leave hooks (nur einmal)
+  if (!window.__reportsEnterLeaveHooksBound) {
+    window.__reportsEnterLeaveHooksBound = true;
+
+    document.addEventListener('reports:enter', () => {
+      try {
+        // Risk UI existiert jetzt (Panel wird geöffnet) → Preset UI binden + Liste laden
+        setupCustomerReportsPresetUI();
+      } catch (e) {
+        console.warn('[reports:enter] setupCustomerReportsPresetUI failed', e);
+      }
+    }, true);
+
+    document.addEventListener('reports:leave', () => {
+      // optional: nichts nötig
+      // Wenn du später mal teardown willst: hier.
+    }, true);
+  }
+
   // A) Clicks auf die Tab-Buttons abfangen
   const buttons = tabBar.querySelectorAll('.tablinks');
   for (let i = 0; i < buttons.length; i++) {
@@ -113,6 +136,7 @@ function setupReportsEnterLeaveBridge() {
     document.dispatchEvent(new CustomEvent(id === 'REPORTS_Tab' ? 'reports:enter' : 'reports:leave'));
   });
 }
+
 // ==== IPC-Bridge zu Bulk-Update-Events (vom Main gesendet) ====
 function setupBulkUpdateBridge() {
   // a) Falls preload/bridge existiert
@@ -221,10 +245,12 @@ function setupEventListeners() {
 
   initPortfolioPanelsLazyRender({ panelRenderState });
   initMarketDataPanelsLazyRender({ panelRenderState });
+  initMarketDataChartsAutoRefresh();
 
 // CUSTOMER-Data
   window.api.receive('CustomerData', handleCustomerData);
   window.api.receive('CustomerTSSelectionData', handleCustomerTSData);
+  // window.api.receive('CustomerReportsData', handleCustomerReportsData); daten kommen über: setupReportsEnterLeaveBridge!!!!!
 
 
   // Market Data: Fixed Income
@@ -274,7 +300,6 @@ function setupEventListeners() {
   window.api.receive('PortfoliosData', (data) => {
     handlePortNameList(data);
     handlePortfolioData(data);
-    handleLiquidityData(data);
   });
 
 
@@ -325,6 +350,17 @@ function setupEventListeners() {
     handleProviderData
   );
 
+    // TS CLONED
+  window.api.receive('tblTSData', (data) => {createTSModals(data);});
+  // TS Tools panel
+  observePanelTsOpen();
+
+    // PortfolioHistoryMetrics
+  window.api.receive('PortfolioHistoryMetricsData', (data) => {
+  handlePortfolioHistoryData(data);
+
+});
+
   // PYTHON PROJECTS: helper
   window.api.receive('py-fairValue-complete', handleFairValueComplete);
   window.api.receive('py-mvar-complete', handleMVaRComplete);
@@ -337,23 +373,11 @@ function setupEventListeners() {
 
   window.api.receive('project-finished', handleProjectFinished);
 
-  // TS CLONED
-  window.api.receive('tblTSData', (data) => {createTSModals(data);});
-  // TS Tools panel
-  observePanelTsOpen();
 
-    // PortfolioHistoryMetrics
-  window.api.receive('PortfolioHistoryMetricsData', (data) => {
-  handlePortfolioHistoryData(data);
-  refreshOpenPanels(panelRenderState);
-});
 
 
   //===================================== END LISTENERS ===============================
-  
-  // setTimeout(() => {
-  //   setupLossIssuerUI(); // Call your function after a delay
-  // }, 300); // Wait for 0.3 seconds
+
 }
 
 
@@ -554,62 +578,69 @@ if (cubeOptSel && cubeSwpSel) {
       }, ms);
       return d;
     };
-    function setupDropdown({
-      dropdownId,
-      getDataFunction,
-      updateDataFunction,
-      updateMvarDataFunction,
-      updateCvarDataFunction,
-      updateEADDataFunction,
-      setSelectedPortTableName,
-      setSelectedDealsTableName,
-      setActiveTable,
+
+//============================================================DAS IST DIE FUNKTION DIE FÜR DIE ÄNDERUNGEN ZUSTÄNDIG IST===================================
+
+
+function setupDropdown({
+  dropdownId,
+  getDataFunction,
+  updateDataFunction,
+  updateMvarDataFunction,
+  updateCvarDataFunction,
+  updateEADDataFunction,
+  updateLiquidityDataFunction,
+  setSelectedPortTableName,
+  setSelectedDealsTableName,
+  setActiveTable,
+  index,
+}) {
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+
+  const isPortfolioDropdown = dropdownId.startsWith('createdPortDropdown');
+
+  const getData         = getDataFunction?.bind(appState);
+  const updateData      = updateDataFunction?.bind(appState);
+  const updateMvar      = updateMvarDataFunction?.bind(appState);
+  const updateCvar      = updateCvarDataFunction?.bind(appState);
+  const updateEAD       = updateEADDataFunction?.bind(appState);
+  const updateLiquidity = updateLiquidityDataFunction?.bind(appState);
+
+  const scheduleOptionsUpdate = debounceRaf((selectedTableName) => {
+    appState.updateDropdownOptions({
+      dropdownElementId: dropdownId,
+      getDataFunction: getData,
+      updateDataFunction: updateData,
+      updateMvarDataFunction: updateMvar,
+      updateCvarDataFunction: updateCvar,
+      updateEADDataFunction: updateEAD,
+      updateLiquidityDataFunction: updateLiquidity,
+      selectedTableName,
       index,
-    }) {
-      const dropdown = document.getElementById(dropdownId);
-      if (!dropdown) return;
+    });
 
-      // ❗️Pre-bind EINMAL (nicht in jedem change-Event neu binden)
-      const getData = getDataFunction?.bind(appState);
-      const updateData = updateDataFunction?.bind(appState);
-      const updateMvar = updateMvarDataFunction?.bind(appState);
-      const updateCvar = updateCvarDataFunction?.bind(appState);
-      const updateEAD  = updateEADDataFunction?.bind(appState);
 
-      // Schweren UI-Update-Aufruf entkoppeln
-      const scheduleOptionsUpdate = debounceRaf((selectedTableName) => {
-        appState.updateDropdownOptions({
-          dropdownElementId: dropdownId,
-          getDataFunction: getData,
-          updateDataFunction: updateData,
-          updateMvarDataFunction: updateMvar,
-          updateCvarDataFunction: updateCvar,
-          updateEADDataFunction: updateEAD,
-          selectedTableName,
-          index,
-        });
-      }, 120);
 
-      dropdown.addEventListener('change', (event) => {
-        const selectedTableName = event.currentTarget.value;
-        console.log('START!!!!')
 
-        // 🔹 nur leichter State im Handler (kein DOM!)
-        if (setSelectedDealsTableName) appState.setSelectedDealsTableName(selectedTableName);
-        if (setSelectedPortTableName)  appState.setSelectedPortTableName(selectedTableName);
-        if (setActiveTable)            setActiveTable();
+  rerenderHistoricCharts({ index, selectedTableName });
 
-        // 🔹 schwere Arbeit (Rendern/Layouts) erst im nächsten Frame
-        scheduleOptionsUpdate(selectedTableName);
 
-        requestAnimationFrame(() => {
-          if (typeof renderAllChartsNow === 'function') {
-            renderAllChartsNow();
-          }
-        });
+    
+  }, 120);
 
-      });
-    }
+  dropdown.addEventListener('change', (event) => {
+    const selectedTableName = event.currentTarget.value;
+
+    if (setSelectedDealsTableName) appState.setSelectedDealsTableName(selectedTableName);
+    if (setSelectedPortTableName)  appState.setSelectedPortTableName(selectedTableName);
+    if (setActiveTable)            setActiveTable();
+
+    scheduleOptionsUpdate(selectedTableName);
+  });
+}
+
+
 
 
 
@@ -1238,6 +1269,7 @@ function handleAddDealsToNewPortfolio(event) {
                 updateDataFunction: appState.updatePortDataTable.bind(appState),
                 updateMvarDataFunction: appState.updateMvarDataTable.bind(appState),
                 updateCvarDataFunction: appState.updateCvarDataTable.bind(appState),
+                updateLiquidityDataFunction: appState.updateLiquidityDataFunction.bind(appState),
                 selectedTableName: null
               });
             });
@@ -1326,6 +1358,26 @@ function handleCustomerTSData(data) {
   window.__tsSelectionsReady = true;
   window.dispatchEvent(new Event('ts-selections-ready'));
 }
+
+// CustomerReports
+
+
+export function handleCustomerReportsData(payload) {
+  try {
+    // akzeptiere beide gängigen Formen: Array direkt oder { data: [...] } / { rows: [...] }
+    const data =
+      Array.isArray(payload) ? payload :
+      Array.isArray(payload?.data) ? payload.data :
+      Array.isArray(payload?.rows) ? payload.rows :
+      [];
+
+    appState?.setCustomerReportsData?.(data);
+  } catch (e) {
+    console.warn('[CustomerReports] handleCustomerReportsData failed', e);
+  }
+}
+
+
   // DEALS
   function handleDealsMainData(receivedData) {
     appState.setAllDealsData(receivedData);
@@ -1414,7 +1466,7 @@ function handleCustomerTSData(data) {
   }
 
 
-function sortTenors(tenors) {
+export function sortTenors(tenors) {
   function parseTenor(t) {
     if (typeof t !== 'string') return { totalYears: 9999 };
 
@@ -1481,101 +1533,47 @@ function fillSwaptionDropdowns(optionTenors, swapTenors) {
   }
 }
 
-// ⭐ NEU: Komplett überarbeiteter Handler
+// Nur setzen der Daten:
 function handleSwaptionATMData(rows) {
-  if (!rows || rows.length === 0) {
-    console.warn('[handleSwaptionATMData] Keine Rows erhalten.');
-    if (appState) appState.swaptionATM = null;
-    return;
-  }
+  if (!appState) return console.warn('[handleSwaptionATMData] appState fehlt.');
 
-  if (!appState) {
-    console.warn('[handleSwaptionATMData] appState ist nicht initialisiert.');
-    return;
-  }
+  const safeRows = Array.isArray(rows) ? rows : [];
+  appState.setSwaptionATM(safeRows);
 
-  console.log('[handleSwaptionATMData] rows:', rows);
-
-  // 1) Einzigartige Tenöre sammeln
+  // Dropdowns füllen (aus rows)
   const optionSet = new Set();
-  const swapSet   = new Set();
-
-  for (const r of rows) {
-    optionSet.add(r.option_tenor); // Feldnamen ggf. anpassen
-    swapSet.add(r.swap_tenor);
+  const swapSet = new Set();
+  for (const r of safeRows) {
+    if (r?.option_tenor != null) optionSet.add(String(r.option_tenor));
+    if (r?.swap_tenor   != null) swapSet.add(String(r.swap_tenor));
   }
+  const optionTenors = sortTenors([...optionSet]);
+  const swapTenors   = sortTenors([...swapSet]);
 
-  // 2) Fachlich sinnvolle Sortierung
-  const optionTenors = sortTenors(Array.from(optionSet)); // X-Achse
-  const swapTenors   = sortTenors(Array.from(swapSet));   // Y-Achse
-
-  // 3) Leere Matrix: ZEILE = SwapTenor (y), SPALTE = OptionTenor (x)
-  const volMatrix = swapTenors.map(() => optionTenors.map(() => null));
-
-  // 4) Matrix füllen: volMatrix[row_y][col_x]
-  for (const r of rows) {
-    const rowIdx = swapTenors.indexOf(r.swap_tenor);     // y
-    const colIdx = optionTenors.indexOf(r.option_tenor); // x
-
-    if (rowIdx >= 0 && colIdx >= 0) {
-      const vol = Number(r.atm_vol);
-      volMatrix[rowIdx][colIdx] = isNaN(vol) ? null : vol;
-    }
-  }
-
-  // 5) Im AppState speichern
-  appState.swaptionATM = {
-    optionTenors, // X
-    swapTenors,   // Y
-    volMatrix     // [y][x]
-  };
-
-  console.log('[handleSwaptionATMData] swaptionATM (structured):');
-  console.log('optionTenors (X):', optionTenors);
-  console.log('swapTenors   (Y):', swapTenors);
-  console.table(volMatrix);
-
-  // 6) Dropdowns für Option/Swap-Tenor befüllen/aktualisieren
   fillSwaptionDropdowns(optionTenors, swapTenors);
 
-  // 7) Falls Swaption-Panel offen → Surface & Smile neu rendern
-  const pSwaption = document.getElementById("panel-swaption");
-  if (pSwaption && !pSwaption.hidden) {
-    if (typeof renderVolSurfacePanel === 'function') {
-      renderVolSurfacePanel();
-    }
-    if (typeof renderSwaptionSmile === 'function') {
-      renderSwaptionSmile();
-    }
-  }
+  // ✅ Default setzen, falls leer (sonst opt/swp = '')
+  const optSel = document.getElementById("swaptionOptionTenorSelect");
+  const swpSel = document.getElementById("swaptionSwapTenorSelect");
+  if (optSel && !optSel.value && optionTenors.length) optSel.value = optionTenors[0];
+  if (swpSel && !swpSel.value && swapTenors.length)   swpSel.value = swapTenors[0];
+
+  // ✅ Signal (kein Render hier)
+  document.dispatchEvent(new CustomEvent("swaption:atm:ready", { detail: { count: safeRows.length } }));
 }
 
-export function handleSwaptionSmileData(rows) {
-  console.log('[Smile] Raw rows:', rows);
 
-  if (!appState) {
-    console.warn('[Smile] appState ist nicht initialisiert.');
-    return;
-  }
 
-  if (!rows || rows.length === 0) {
-    console.warn('[Smile] Keine Smile-Daten erhalten.');
-    appState.swaptionSmile = null;
-    // Chart hier NICHT anfassen – das macht renderSwaptionSmile bei Bedarf
-    return;
-  }
+// Nur setzen der Daten:
+function handleSwaptionSmileData(rows) {
+  if (!appState) return console.warn('[Smile] appState fehlt.');
 
-  // Deine Struktur: [{ StrikeSpreadBP, VolSpread }, ...]
-  appState.swaptionSmile = rows;
+  const safeRows = Array.isArray(rows) ? rows : [];
+  appState.setSwaptionSmile(safeRows);
 
-  // Wenn Swaption-Panel offen → sofort neu zeichnen
-  const panel = document.getElementById('panel-swaption');
-  if (panel && !panel.hidden) {
-    if (typeof renderSwaptionSmile === 'function') {
-      renderSwaptionSmile();
-    }
-  }
+  document.dispatchEvent(new CustomEvent("swaption:smile:ready", { detail: { count: safeRows.length } }));
 }
+
 
 
 
@@ -1665,36 +1663,11 @@ export function handleSwaptionSmileData(rows) {
 
   }
 
-  // PortfolioHistoryMetrics
 
-  function handlePortfolioHistoryData(receivedData) {
-    console.log("🔥 PortfolioHistoryMetricsData arrived:", receivedData?.length);
-
-    appState.setPortfolioHistoryData(receivedData);
-
-    // Wenn Panels schon einmal geöffnet wurden, dann nachziehen:
-    if (panelRenderState["PORTFOLIO_HISTORY_Modal"]) {
-      renderHistoricPortfolioYieldChart();
-    }
-    if (panelRenderState["panel-portfolio-value"]) {
-      renderHistoricPortfolioValueChart();
-    }
-    if (panelRenderState["panel-hist-sensitivities"]) {
-      renderHistoricPortfolioSensChart();
-    }
-    if (panelRenderState["panel-market-risk"]) {
-      renderHistoricMarketRiskChart();
-      //refreshMarketRiskChartLine();
-    }
-    if (panelRenderState["panel-credit-risk"]) {
-      renderHistoricCreditRiskChart();
-    }
-  }
-
-
-
-  
-
+function handlePortfolioHistoryData(receivedData) {
+  //console.log("🔥 PortfolioHistoryMetricsData arrived:", receivedData?.length);
+  appState.setPortfolioHistoryData(receivedData);
+}
 
   // PROVIDER: ECB, FED...
   function handleProviderClick(activeProviderId, providers) {
@@ -1821,17 +1794,46 @@ export function closePanel(panelId) {
 
 
   // Risk PDF
-  function handleRiskPDFClick() {
-    const data = appState.getFilteredPortData?.() || [];
-    if (!data.length) { alert('❌ Keine Angebotsdaten verfügbar!'); return; }
-    try {
-    const options = getRiskReportOptions();
-    generateRiskPDF(data, options);
-    } catch (e) {
+
+  function sanitizeFileName(name) {
+  const s = String(name || '').trim();
+  if (!s) return '';
+  return s
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')  // verbotene Zeichen (Win/macOS)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+}
+
+  function getCurrentReportPresetName() {
+  return (
+    document.getElementById('customerReportsNameInput')?.value ||
+    document.getElementById('customerReportsDropdown')?.value ||
+    ''
+  ).trim();
+}
+function handleRiskPDFClick() {
+  const data = appState.getFilteredPortData?.() || [];
+  if (!data.length) {
+    alert('❌ Keine Angebotsdaten verfügbar!');
+    return;
+  }
+
+  try {
+    const presetName = getCurrentReportPresetName();
+    const safeName = sanitizeFileName(presetName);
+    const fileName = safeName ? `Risk - ${safeName}.pdf` : 'Risk.pdf';
+
+    // ✅ PDF baut sich aus DOM + Checkbox-States, aber Dateiname kommt aus Preset
+    generateRiskPDF(data, { fileName });
+  } catch (e) {
     console.error(e);
     alert('Risk-PDF-Erstellung fehlgeschlagen.');
-    }
   }
+}
+
+
+
     wireRiskPreview();
 
 
@@ -2603,8 +2605,9 @@ function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
               handleMVaRData(mvarData, 0);
 
 
-              const mvarDistData = appState.getMvarDistData();
-              handleSummaryRMData(mvarDistData, 0, port_name);
+              // const mvarDistData = appState.getMvarDistData();
+              // handleSummaryRMData(mvarDistData, 0, port_name);
+              handleSummaryMarketRiskData(port_name);
             }
           }
               function fetchAndUpdateMVarData(port_name) {
