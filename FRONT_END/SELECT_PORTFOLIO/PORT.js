@@ -166,6 +166,7 @@ export function handlePortProdData(receivedData, index, port_name) {
     portDataContainer.innerHTML = portDataHTML;
 
     colorizeSpreadDelta(portDataContainer);  // 👈 hier einfärben
+    colorizeCleanPrice(portDataContainer); 
     attachIdLinks(portDataContainer);  // 👈 NEU
 
     addTooltipsForTruncatedText(portDataContainer);
@@ -202,6 +203,23 @@ export function handlePortProdData(receivedData, index, port_name) {
         if (val > 0) td.classList.add('delta-pos');
         else if (val < 0) td.classList.add('delta-neg');
         else td.classList.add('delta-zero');
+      });
+    }
+    function colorizeCleanPrice(container, headerText = 'clean_price') {
+      const table = container.querySelector('table');
+      if (!table) return;
+
+      const ths = Array.from(table.querySelectorAll('thead th'));
+      const colIdx = ths.findIndex(th => th.textContent.trim() === headerText);
+      if (colIdx === -1) return;
+
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(tr => {
+        const td = tr.children[colIdx];
+        if (!td) return;
+
+        td.style.color = 'orange';
+        td.style.fontWeight = '700';
       });
     }
 

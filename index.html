@@ -62,7 +62,10 @@
   <!-- <link href="./css/UPDATES/conflictModalProducts.css" rel="stylesheet"> -->
 
 
-  <link href="./css/REPORTS/reports.css" rel="stylesheet">
+  <!-- <link href="./css/REPORTS/reports.css" rel="stylesheet"> -->
+  <link href="./css/REPORTS/riskReportsModal.css" rel="stylesheet">
+  <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
+
   <link href="./css/REPORTS/offers-preview.css" rel="stylesheet">
 
   <link href="./css/zzzUTIL/Chart.css" rel="stylesheet"> 
@@ -299,13 +302,53 @@
 
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
 
-    <!-- 📊 Portfolio Breakdown – Trigger -->
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-breakdown" aria-controls="panel-breakdown" aria-expanded="false">
-        <span class="section-header">Portfolio Breakdown</span>
-        <span class="chev">▶</span>
-      </button>
-    </div>
+<!-- 📊 Portfolio Breakdown – Trigger -->
+<div class="chart-section">
+  <button class="section-trigger"
+          data-panel="panel-breakdown"
+          aria-controls="panel-breakdown"
+          aria-expanded="false">
+    <span class="section-header">Portfolio Breakdown</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+      <!-- 🔹 Breakdown Sub-Trigger: Issuer -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="Issuer"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">Issuer Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
+      <!-- 🔹 Breakdown Sub-Trigger: Product -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="Product"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">Product Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
+      <!-- 🔹 Breakdown Sub-Trigger: General -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="General"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">General Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
 
     <!-- 📈 Performance – Trigger -->
     <div class="chart-section">
@@ -381,13 +424,17 @@
       </button>
     </div>
 
-    <button
-  id="historicMetricsAddButton"
-  type="button"
-  class="btn btn-secondary"
->
-  Add Historic Metric
-</button>
+
+<div class="chart-section">
+  <button
+    id="historicMetricsAddButton"
+    type="button"
+    class="section-trigger edit-button"
+  >
+    <span class="section-header">Save to Historic Metrics</span>
+    <span class="chev">＋</span>
+  </button>
+</div>
 
 
 <!-- 📈 Historic Performance – Trigger (Hauptpunkt) -->
@@ -456,38 +503,54 @@
     <!-- Backdrop innerhalb des Modals -->
     <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
 
-    <!-- ========= PANELS ========= -->
+    <!-- ========= PANELS ==========================================================================================PANELS=========================================== -->
 
-    <!-- Panel: Breakdown -->
-    <div id="panel-breakdown" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-breakdown-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-breakdown-title" class="sub-panel-title">Portfolio Breakdown</div>
-        <button class="sub-panel-close" data-close="panel-breakdown" aria-label="Schließen">&times;</button>
+<!-- Panel: Breakdown -->
+<div id="panel-breakdown"
+     class="sub-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-breakdown-title"
+     hidden>
+  <div class="sub-panel-header">
+    <div id="panel-breakdown-title" class="sub-panel-title">
+      Portfolio Breakdown
+    </div>
+    <button class="sub-panel-close"
+            data-close="panel-breakdown"
+            aria-label="Schließen">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <!-- Übersicht + Value-Selector -->
+    <div class="portfolio-info">
+
+      <!-- 🔹 Übersicht: Issuer / Product / General (wird von JS mit Breakdown-Text befüllt) -->
+      <div class="data-wrapper">
+        <div class="data-container" id="portAggDataContainer5"></div>
       </div>
 
-      <div class="sub-panel-body">
-            <div class="portfolio-info">
-      <!-- <h2 class="section-header">SUMMARY</h2> -->
-      <div class="data-wrapper">
-        <!-- <div class="data-container" id="portAggDataContainer5"></div> -->
-
+      <!-- 🔹 Value-Basis Auswahl -->
+      <div class="data-wrapper" style="margin-top: 8px;">
         <label for="valueSelector" class="select-label">Value basis</label>
-        <select id="valueSelector">
+        <select id="valueSelector" class="deals-dropdown">
           <option value="NAV">NAV</option>
           <option value="NOTIONAL">Notional</option>
         </select>
       </div>
     </div>
 
-
-
-
-        <!-- ⬇️ dein ursprünglicher Breakdown-Inhalt (IDs bleiben) -->
-        <div id="pieChartGrid" class="pie-chart-grid">
-          <!-- JS fügt hier Chart-Boxen ein -->
-        </div>
-      </div>
+    <!-- ⬇️ Hier rendert JS die Issuer/Product/General-Sektionen + Charts + Legenden -->
+    <div id="pieChartGrid" class="pie-chart-grid">
+      <!-- JS fügt hier Chart- und Legend-Boxen ein -->
     </div>
+
+  </div>
+</div>
+
 
     <!-- Panel: Performance -->
     <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
@@ -508,6 +571,9 @@
       </div>
 
     </div>
+
+
+
 
 <!-- Panel: Market VaR -->
 <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
@@ -537,11 +603,17 @@
       <div class="mvar-summary-row">
         <div class="data-container" id="MVaRDataContainer0"></div>
 
-        <div class="traffic-light-wrapper small" id="traffic-mvar">
+        <!-- Market Traffic Light – analog zum Credit-Bereich -->
+        <div
+          class="traffic-light-wrapper small preview-traffic-light"
+          id="traffic-mvar"
+          data-metric="MVaR"
+          style="margin-top: 0;"
+        >
           <div class="traffic-light">
-            <div id="red" class="light red"></div>
-            <div id="yellow" class="light yellow"></div>
-            <div id="green" class="light green"></div>
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
           </div>
         </div>
       </div>
@@ -558,9 +630,6 @@
     </div>
   </div>
 </div>
-
-
-
         <!-- Panel: Market VaR (Detail) -->
         <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
           <div class="sub-panel-header">
@@ -605,7 +674,7 @@
 
         </div>
 
-        <!-- Panel: Market Sensitivities -->
+        <!-- Panel: Market Sensitivities (Detail) -->
         <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
           <div class="sub-panel-header">
             <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
@@ -623,7 +692,7 @@
                   <div class="spacer-xxl"></div>
 
                   <p class="block-title">CPV01:</p>
-                  <div class="data-container" id="CRSensDataContainer"></div>
+                  <div class="data-container" id="CSSensDataContainer"></div>
                 </div>
               </section>
 
@@ -697,11 +766,14 @@
       <!-- CVAR + Ampel -->
       <div class="cvar-col">
         <p>Credit Value at Risk (CVaR):</p>
-        <div class="traffic-light-wrapper small" id="traffic-credit-cvar" style="margin-top: 0;">
+        <div class="traffic-light-wrapper small preview-traffic-light"
+            id="traffic-credit-cvar"
+            data-metric="CVaR"
+            style="margin-top: 0;">
           <div class="traffic-light">
-            <div id="red" class="light red"></div>
-            <div id="yellow" class="light yellow"></div>
-            <div id="green" class="light green"></div>
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
           </div>
         </div>
       </div>
@@ -709,11 +781,14 @@
       <!-- TSI + Ampel -->
       <div class="cvar-col">
         <p>Tail Severity Index (TSI):</p>
-        <div class="traffic-light-wrapper small" id="traffic-credit-tsi" style="margin-top: 0;">
+        <div class="traffic-light-wrapper small preview-traffic-light"
+            id="traffic-credit-tsi"
+            data-metric="TSI"
+            style="margin-top: 0;">
           <div class="traffic-light">
-            <div id="red" class="light red"></div>
-            <div id="yellow" class="light yellow"></div>
-            <div id="green" class="light green"></div>
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
           </div>
         </div>
       </div>
@@ -721,14 +796,18 @@
       <!-- MSD + Ampel -->
       <div class="cvar-col">
         <p>Market Stress Divergence (MSD):</p>
-        <div class="traffic-light-wrapper small" id="traffic-credit-msd" style="margin-top: 0;">
+        <div class="traffic-light-wrapper small preview-traffic-light"
+            id="traffic-credit-msd"
+            data-metric="MSD"
+            style="margin-top: 0;">
           <div class="traffic-light">
-            <div id="red" class="light red"></div>
-            <div id="yellow" class="light yellow"></div>
-            <div id="green" class="light green"></div>
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
           </div>
         </div>
       </div>
+
     </div>
     <!-- 🔹 ENDE BLOCK 3 -->
 
@@ -2323,94 +2402,144 @@
       </div>
     </div>
 
-<!-- Panel: RISK -->
-<div id="panel-reports-risk"
-     class="sub-panel"
-     role="dialog"
-     aria-modal="false"
-     aria-labelledby="panel-reports-risk-title"
-     hidden>
-  <div class="sub-panel-header">
-    <div id="panel-reports-risk-title" class="sub-panel-title">RISK REPORT</div>
-    <button class="sub-panel-close"
-            data-close="panel-reports-risk"
-            aria-label="Schließen">&times;</button>
-  </div>
+    <!-- Panel: RISK -->
+    <div id="panel-reports-risk"
+        class="sub-panel"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="panel-reports-risk-title"
+        hidden>
+      <div class="sub-panel-header">
+        <div id="panel-reports-risk-title" class="sub-panel-title">RISK REPORT</div>
+        <button class="sub-panel-close"
+                data-close="panel-reports-risk"
+                aria-label="Schließen">&times;</button>
+      </div>
 
-  <div class="sub-panel-body">
-    <section class="table-card">
-      <h4 class="table-title">Risk Preview</h4>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <h4 class="table-title">Risk Preview</h4>
 
+          <!-- Risk Presets: CustomerReports -->
+          <div class="mvar-summary" style="margin-bottom:12px;">
+            <div class="mvar-summary-header" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+              <div style="min-width:260px;">
+                <p class="mvar-caption" style="margin:0;">Report Preset:</p>
+                <select id="customerReportsDropdown"
+                        style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+                </select>
+              </div>
 
+              <div style="min-width:260px;">
+                <p class="mvar-caption" style="margin:0;">Preset Name:</p>
+                <input id="customerReportsNameInput"
+                      type="text"
+                      placeholder="e.g. Board Pack"
+                      style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+              </div>
 
-<!-- Risk Presets: CustomerReports -->
-<div class="mvar-summary" style="margin-bottom:12px;">
-  <div class="mvar-summary-header" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-    <div style="min-width:260px;">
-      <p class="mvar-caption" style="margin:0;">Report Preset:</p>
-      <select id="customerReportsDropdown"
-              style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
-      </select>
+              <div class="mvar-input-buttons" style="display:flex; gap:10px; margin-left:auto;">
+                <button id="customerReportsLoadButton"   class="edit-button">Load</button>
+                <button id="customerReportsSaveButton"   class="edit-button">Save</button>
+                <button id="customerReportsAddButton"    class="edit-button">Add</button>
+                <button id="customerReportsDeleteButton" class="edit-button">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== RISK PREVIEW ===================== -->
+          <div id="reportsRiskPreview" class="data-container cp-table">
+
+            <!-- EIN BEISPIELBLOCK: INTEREST RATES -->
+            <div class="risk-section">
+              <div class="risk-section__title">INTEREST RATES</div>
+
+              <!-- Sections -->
+              <div class="risk-section__row">
+                <div class="risk-section__label">Sections</div>
+                <div class="risk-section__controls">
+                  <label>
+                    <input type="checkbox" data-chart-section="ir" data-chart-key="summary" checked>
+                    IR Summary
+                  </label>
+                  <label>
+                    <input type="checkbox" data-chart-section="ir" data-chart-key="detail" checked>
+                    IR Detail
+                  </label>
+                </div>
+              </div>
+
+              <!-- Charts -->
+              <div class="risk-section__row risk-section__row--deep">
+                <div class="risk-section__label">Charts</div>
+                <div class="risk-section__controls">
+                  <label>
+                    <input type="checkbox" data-chart-section="irCharts" data-chart-key="yieldCurve" checked>
+                    Yield Curve
+                  </label>
+                  <!-- JS fügt hier später die Thumbnails ein, z. B.:
+                      <img class="risk-thumb" src="blob:..." alt="">
+                  -->
+                </div>
+              </div>
+
+              <!-- Tables -->
+              <div class="risk-section__row risk-section__row--deep">
+                <div class="risk-section__label">Tables</div>
+                <div class="risk-section__controls">
+                  <label>
+                    <input type="checkbox" data-chart-section="irTables" data-chart-key="irTable" checked>
+                    IR Table
+                  </label>
+                  <!-- Beispiel für Mini-Table-Thumbnail -->
+                  <div class="mini-table-wrap">
+                    <!-- hier dein mini Table / Screenshot etc. -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weitere risk-section-Blöcke für CREDIT RISK, MVaR, MACRO, ... kommen hier -->
+          </div>
+
+          <!-- Buttons unter der Preview -->
+          <div class="button-wrapper buttons-row" style="margin-top:10px;">
+            <!-- Get Risk Data -->
+            <div class="btn-block">
+              <div class="btn-label" id="title-refreshRisk">Get Risk Data</div>
+              <button
+                id="refreshThumbnailsBtn"
+                class="edit-button"
+                type="button"
+                aria-describedby="title-refreshRisk"
+                title="Reload risk thumbnails">
+                Get Risk Data
+              </button>
+            </div>
+
+            <!-- Generate Risk PDF -->
+            <div class="btn-block">
+              <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>
+              <button
+                id="riskPDFButton"
+                class="edit-button"
+                type="button"
+                aria-describedby="title-riskPDFButton">
+                Risk PDF
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
-    <div style="min-width:260px;">
-      <p class="mvar-caption" style="margin:0;">Preset Name:</p>
-      <input id="customerReportsNameInput"
-             type="text"
-             placeholder="e.g. Board Pack"
-             style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
-    </div>
 
-    <div class="mvar-input-buttons" style="display:flex; gap:10px; margin-left:auto;">
-      <button id="customerReportsLoadButton"  class="edit-button">Load</button>
-      <button id="customerReportsSaveButton"  class="edit-button">Save</button>
-      <button id="customerReportsAddButton"   class="edit-button">Add</button>
-      <button id="customerReportsDeleteButton" class="edit-button">Delete</button>
-    </div>
+
   </div>
 </div>
-
-
-
       
 
-      <!-- 👉 Hier rendert dein JS die komplette Preview inkl. Checkboxen pro Chart -->
-      <div id="reportsRiskPreview" class="data-container cp-table"></div>
 
-      <!-- Buttons unter der Preview -->
-      <div class="button-wrapper buttons-row" style="margin-top:10px;">
-        <!-- Get Risk Data -->
-        <div class="btn-block">
-          <div class="btn-label" id="title-refreshRisk">Get Risk Data</div>
-          <button
-            id="refreshThumbnailsBtn"
-            class="edit-button"
-            type="button"
-            aria-describedby="title-refreshRisk"
-            title="Reload risk thumbnails">
-            Get Risk Data
-          </button>
-        </div>
-
-        <!-- Generate Risk PDF -->
-        <div class="btn-block">
-          <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>
-          <button
-            id="riskPDFButton"
-            class="edit-button"
-            type="button"
-            aria-describedby="title-riskPDFButton">
-            Risk PDF
-          </button>
-        </div>
-      </div>
-    </section>
-  </div>
-</div>
-
-
-  </div>
-</div>
 
 <!-- Modal: Updates -->
 <div id="DATA_Modal" class="table">

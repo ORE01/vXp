@@ -8,13 +8,7 @@ let LGDChart = null;
 // dient als Cache für EAD/LDG-Daten des aktuellen Portfolios
 let filteredEADMainData = [];
 
-/**
- * EAD / LGD Daten verarbeiten:
- * - nach aktuellem Portfolio + pd_flag='RATING' filtern
- * - Tabelle in EADDataContainer rendern
- * - Daten in filteredEADMainData cachen
- * - LGD-Chart zeichnen (renderLGDChart)
- */
+
 export function handleEADData(receivedData) {
   const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
   const EADDataContainer = document.getElementById('EADDataContainer');
@@ -47,7 +41,7 @@ export function handleEADData(receivedData) {
   );
 
   if (filtered.length === 0) {
-    console.warn('handleEADData: keine passenden EAD-Zeilen für', port_name);
+    //console.warn('handleEADData: keine passenden EAD-Zeilen für', port_name);
     EADDataContainer.innerHTML = '<p>No EAD data for selected portfolio.</p>';
     filteredEADMainData = [];
     try {
@@ -92,10 +86,6 @@ export function handleEADData(receivedData) {
   renderLGDChart();
 }
 
-/**
- * Reine Render-Funktion für den LGD/EAD-Bar-Chart.
- * Nutzt den Cache filteredEADMainData.
- */
 export function renderLGDChart() {
   if (!filteredEADMainData || filteredEADMainData.length === 0) {
     console.warn('renderLGDChart: keine Daten in filteredEADMainData');
@@ -162,12 +152,6 @@ export function renderLGDChart() {
   );
 }
 
-/**
- * CVaR-Daten verarbeiten:
- * - nach Portfolio filtern
- * - drei Tabellen (rating / market / norm)
- * - kombinierte Relative-VaR-Tabelle (CVaR_allRelativeContainer{index})
- */
 export function handleCVaRData(receivedData, index) {
   const port_name = appState.getSelectedPortTableName();
   const filteredByPort = Array.isArray(receivedData)
@@ -256,27 +240,36 @@ function formatPercentage(value) {
   return (Number(value) * 100).toFixed(2) + '%';
 }
 
-/**
- * Baut die kleine kombinierte Tabelle in:
- *  CVaR_allRelativeContainer{index}
- * mit Zeilen für Historic / Market Implied / Risk Adjusted VaR_rel
- */
 function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
   const containerId = `CVaR_allRelativeContainer${index}`;
-  const container = document.getElementById(containerId);
+  const container   = document.getElementById(containerId);
   if (!container) return;
 
-  // Prüfen, ob überhaupt sinnvolle Daten vorhanden sind
-  const hasValidData = Object.values(allFilteredDataByPdFlag).some(
-    data => data?.[0]?.VaR_rel !== undefined
-  );
+  // ✅ WICHTIG: Container als Section für Checkboxen markieren
+  container.classList.add('sub-panel'); // <<< DAS ist der Schlüssel
+  container.dataset.panelTitle = 'Credit Risk – Traffic Lights';
 
-  if (!hasValidData) {
+  // 🔍 Defensive: wenn kein Objekt, einfach leeren und raus
+  if (
+    !allFilteredDataByPdFlag ||
+    typeof allFilteredDataByPdFlag !== 'object' ||
+    Object.keys(allFilteredDataByPdFlag).length === 0
+  ) {
     container.innerHTML = '';
     return;
   }
 
+  // Prüfen, ob überhaupt sinnvolle Daten vorhanden sind
+  const hasValidData = Object.values(allFilteredDataByPdFlag).some(
+    data => Array.isArray(data) && data[0] && data[0].VaR_rel !== undefined
+  );
+
+  // Container immer zuerst leeren
   container.innerHTML = '';
+
+  if (!hasValidData) return;
+
+  // 🔹 Tabelle neu anlegen
   const table = document.createElement('table');
   table.classList.add('CVaRTable');
 
@@ -292,16 +285,17 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
   const labelMap = {
     rating: 'Historic',
     market: 'Market Implied',
-    norm: 'Risk Adjusted',
+    norm:   'Risk Adjusted',
   };
 
   Object.entries(allFilteredDataByPdFlag).forEach(([pd_flag, data]) => {
+    if (!Array.isArray(data) || !data.length) return;
     if (allowedPdFlags.length > 0 && !allowedPdFlags.includes(pd_flag)) return;
 
     const row = data[0];
     if (!row || !('VaR_rel' in row)) return;
 
-    const label = `${labelMap[pd_flag] || pd_flag} VaR`;
+    const label  = `${labelMap[pd_flag] || pd_flag} VaR`;
     const rawVal = row.VaR_rel;
 
     const value =
@@ -316,19 +310,36 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
 
   container.appendChild(table);
 
+  // ─────────────────────────────────────
+  // 🔴🟡🟢 Traffic Lights setzen (UI + PDF)
+  // ─────────────────────────────────────
 
-        const stateCvar = trafficLightStateForCvar(allFilteredDataByPdFlag, 'Historic');
-      if (stateCvar) updateTrafficLight('#traffic-credit-cvar', stateCvar);
+  // CVaR
+  const stateCvar = trafficLightStateForCvar(allFilteredDataByPdFlag, 'Historic');
+  if (stateCvar) {
+    const el = document.getElementById('traffic-credit-cvar');
+    if (el) el.dataset.status = stateCvar;
+    updateTrafficLight('#traffic-credit-cvar', stateCvar);
+  }
 
-        const stateMsd = trafficLightStateForMsd(allFilteredDataByPdFlag, allowedPdFlags );
-      if (stateMsd) updateTrafficLight('#traffic-credit-msd', stateMsd);
+  // MSD
+  const stateMsd = trafficLightStateForMsd(allFilteredDataByPdFlag, allowedPdFlags);
+  if (stateMsd) {
+    const el = document.getElementById('traffic-credit-msd');
+    if (el) el.dataset.status = stateMsd;
+    updateTrafficLight('#traffic-credit-msd', stateMsd);
+  }
 
-        const stateTsi = trafficLightStateForTsi(allFilteredDataByPdFlag, allowedPdFlags );
-      if (stateTsi) updateTrafficLight('#traffic-credit-tsi', stateTsi);
-
-
-  
+  // TSI
+  const stateTsi = trafficLightStateForTsi(allFilteredDataByPdFlag, allowedPdFlags);
+  if (stateTsi) {
+    const el = document.getElementById('traffic-credit-tsi');
+    if (el) el.dataset.status = stateTsi;
+    updateTrafficLight('#traffic-credit-tsi', stateTsi);
+  }
 }
+
+
 
 
 function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
@@ -341,7 +352,7 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
     ? appState.getCvarInputThreshold('CVaR')
     : null;
 
-  console.log('getCvarInputThreshold("CVaR") →', thrRaw);
+  //console.log('getCvarInputThreshold("CVaR") →', thrRaw);
 
   if (!thrRaw) {
     console.warn('⚠️ CVaR-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
@@ -365,10 +376,10 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   let YELLOW = Number(thrObj.yellow_threshold);
   let RED    = Number(thrObj.red_threshold);
 
-  console.log('Rohe Thresholds aus DB (CVaR-Zeile):', {
-    rawYellow: YELLOW,
-    rawRed: RED,
-  });
+  // console.log('Rohe Thresholds aus DB (CVaR-Zeile):', {
+  //   rawYellow: YELLOW,
+  //   rawRed: RED,
+  // });
 
   if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
     console.warn('⚠️ CVaR-Thresholds sind keine gültigen Zahlen:', thrObj);
@@ -387,7 +398,7 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   YELLOW = Math.abs(YELLOW);
   RED    = Math.abs(RED);
 
-  console.log('Normierte Thresholds (Brüche, Betrag):', { YELLOW, RED });
+  //console.log('Normierte Thresholds (Brüche, Betrag):', { YELLOW, RED });
 
   // 4) Daten für aktuelles Flag holen
   const key = (flag === 'Historic') ? 'rating' : flag;
@@ -404,23 +415,18 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   // VaR_rel ist bei Verlusten negativ → Betrag
   const lossLevel = Math.abs(raw);   // z.B. -0.0552 → 0.0552 = 5.52 %
 
-  console.log('CVaR Ampel Check:', {
-    flag,
-    VaR_rel_raw: raw,
-    lossLevel,
-    YELLOW,
-    RED
-  });
+  // console.log('CVaR Ampel Check:', {
+  //   flag,
+  //   VaR_rel_raw: raw,
+  //   lossLevel,
+  //   YELLOW,
+  //   RED
+  // });
 
   if (lossLevel >= RED)    return 'red';
   if (lossLevel >= YELLOW) return 'yellow';
   return 'green';
 }
-
-
-
-
-
 function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   if (!allFilteredDataByPdFlag || typeof allFilteredDataByPdFlag !== 'object') {
     return null;
@@ -431,7 +437,7 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
     ? appState.getCvarInputThreshold('MSD')
     : null;
 
-  console.log('getCvarInputThreshold("MSD") →', thrRaw);
+  //console.log('getCvarInputThreshold("MSD") →', thrRaw);
 
   if (!thrRaw) {
     console.warn('⚠️ MSD-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
@@ -455,10 +461,10 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   let YELLOW = Number(thrObj.yellow_threshold);
   let RED    = Number(thrObj.red_threshold);
 
-  console.log('Rohe MSD-Thresholds aus DB:', {
-    rawYellow: YELLOW,
-    rawRed: RED,
-  });
+  // console.log('Rohe MSD-Thresholds aus DB:', {
+  //   rawYellow: YELLOW,
+  //   rawRed: RED,
+  // });
 
   if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
     console.warn('⚠️ MSD-Thresholds sind keine gültigen Zahlen:', thrObj);
@@ -477,7 +483,7 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   YELLOW = Math.abs(YELLOW);
   RED    = Math.abs(RED);
 
-  console.log('Normierte MSD-Thresholds (Brüche, Betrag):', { YELLOW, RED });
+  //console.log('Normierte MSD-Thresholds (Brüche, Betrag):', { YELLOW, RED });
 
   // 4) rating/norm-Daten holen
   const ratingArr = allFilteredDataByPdFlag['rating'];
@@ -516,14 +522,14 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   const diffRel = esNorm - esRating;
   const valueToCompare = Math.abs(diffRel);
 
-  console.log('Credit Risk Ampel MSD (ES):', {
-    esRating,
-    esNorm,
-    diffRel,
-    absDiff: valueToCompare,
-    YELLOW,
-    RED
-  });
+  // console.log('Credit Risk Ampel MSD (ES):', {
+  //   esRating,
+  //   esNorm,
+  //   diffRel,
+  //   absDiff: valueToCompare,
+  //   YELLOW,
+  //   RED
+  // });
 
   // Schwellen sind positiv:
   // Beispiel: YELLOW = 0.01, RED = 0.02
@@ -533,11 +539,6 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   if (valueToCompare >= YELLOW) return 'yellow';
   return 'green';
 }
-
-
-
-
-
 function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   if (!allFilteredDataByPdFlag || typeof allFilteredDataByPdFlag !== 'object') {
     return null;
@@ -548,7 +549,7 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
     ? appState.getCvarInputThreshold('TSI')
     : null;
 
-  console.log('getCvarInputThreshold("TSI") →', thrRaw);
+  //console.log('getCvarInputThreshold("TSI") →', thrRaw);
 
   if (!thrRaw) {
     console.warn('⚠️ TSI-Thresholds: getCvarInputThreshold gibt null/undefined zurück');
@@ -572,10 +573,10 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   let YELLOW = Number(thrObj.yellow_threshold);
   let RED    = Number(thrObj.red_threshold);
 
-  console.log('Rohe TSI-Thresholds aus DB:', {
-    rawYellow: YELLOW,
-    rawRed: RED,
-  });
+  // console.log('Rohe TSI-Thresholds aus DB:', {
+  //   rawYellow: YELLOW,
+  //   rawRed: RED,
+  // });
 
   if (!Number.isFinite(YELLOW) || !Number.isFinite(RED)) {
     console.warn('⚠️ TSI-Thresholds sind keine gültigen Zahlen:', thrObj);
@@ -594,7 +595,7 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   YELLOW = Math.abs(YELLOW);
   RED    = Math.abs(RED);
 
-  console.log('Normierte TSI-Thresholds (Brüche, Betrag):', { YELLOW, RED });
+  //console.log('Normierte TSI-Thresholds (Brüche, Betrag):', { YELLOW, RED });
 
   // 4) Wir schauen nur auf "rating"
   const ratingArr = allFilteredDataByPdFlag['rating'];
@@ -630,16 +631,16 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   const tsiDiff = esVal - varVal;
   const valueToCompare = Math.abs(tsiDiff);  // 0.02
 
-  console.log('TSI (rating, Prozentpunkte):', {
-    esKey,
-    varKey,
-    esVal,
-    varVal,
-    tsiDiff,
-    absDiff: valueToCompare,
-    YELLOW,
-    RED
-  });
+  // console.log('TSI (rating, Prozentpunkte):', {
+  //   esKey,
+  //   varKey,
+  //   esVal,
+  //   varVal,
+  //   tsiDiff,
+  //   absDiff: valueToCompare,
+  //   YELLOW,
+  //   RED
+  // });
 
   // Schwellen sind positiv:
   // |TSI_diff| >= RED    → rot
@@ -650,13 +651,34 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
 }
 
 
+function ensureTrafficPanel({ id, title, hostId = 'CVaR_allRelativeContainer1' /* anpassen */ }) {
+  // hostId: wo du den Panel-Block sinnvollerweise andocken willst
+  const host = document.getElementById(hostId) || document.body;
 
+  let panel = document.getElementById(id);
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = id;
 
+    // WICHTIG: Diese Klasse muss zu deinem discoverPanels() Selector passen
+    panel.classList.add('risk-panel');
 
+    // WICHTIG: Title-Attr (oder das, was deine Discovery liest)
+    panel.dataset.panelTitle = title;
 
+    // Optional: Key stabil
+    panel.dataset.panelKey = id;
 
+    // etwas Layout, damit es im Preview nicht “fliegt”
+    panel.style.marginTop = '12px';
+    panel.style.padding = '10px';
+    panel.style.border = '1px solid rgba(255,255,255,.12)';
+    panel.style.borderRadius = '10px';
 
-
+    host.appendChild(panel);
+  }
+  return panel;
+}
 
 
 export { filteredEADMainData };

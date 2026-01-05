@@ -4,7 +4,8 @@ import { appState } from '../../renderer.js';
 import { formatNumber, formatNumberWithCommas } from '../../../utils/format.js';
 import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
-//import { startOfDay } from 'date-fns';
+import { getMarketMvarColors } from '../../../utils/colors.js';
+
 
 const TABLE_MVAR = 'MVaRInput';
 let MVaRChart = null;
@@ -212,68 +213,99 @@ export function handleMVaRData(receivedData, index) {
     container.appendChild(table);
     }
     function renderMVaRRiskParaContainers(data) {
-      const containers = [
-        { containerId: 'MVaRTotalContainer', prefix: 'T' },
-        { containerId: 'MVaRIRContainer',    prefix: 'IR' },
-        { containerId: 'MVaRCSContainer',    prefix: 'CS' }
-      ];
+  const containers = [
+    { containerId: 'MVaRTotalContainer', prefix: 'T' },
+    { containerId: 'MVaRIRContainer',    prefix: 'IR' },
+    { containerId: 'MVaRCSContainer',    prefix: 'CS' }
+  ];
 
-      containers.forEach(({ containerId, prefix }) => {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+  containers.forEach(({ containerId, prefix }) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-        container.innerHTML = '';
+    container.innerHTML = '';
 
-        const table = document.createElement('table');
-        table.classList.add('MVaRTable');
+    const table = document.createElement('table');
+    table.classList.add('MVaRTable');
 
-        // 🔹 Portfolio-Zeile über der Kopfzeile
-        const portfolioRow = table.insertRow();
-        const portfolioLabelCell = portfolioRow.insertCell();
-        portfolioLabelCell.textContent = 'Portfolio';
+    // 🔹 Kopfzeile in <thead>: Label | Value_abs | Value_rel
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Label', 'Value_abs', 'Value_rel'].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
 
-        const portfolioValueCell = portfolioRow.insertCell();
-        portfolioValueCell.colSpan = 2;          // über beide Value-Spalten spannen
-        portfolioValueCell.textContent = data.port_name || '';
+    // 🔹 Body in <tbody>
+    const tbody = document.createElement('tbody');
 
-        // 🔹 Kopfzeile: Label | Value_abs | Value_rel
-        const headerRow = table.insertRow();
-        ['Label', 'Value_abs', 'Value_rel'].forEach(text => {
-          const cell = headerRow.insertCell();
-          cell.textContent = text;
-        });
+    // 1) Portfolio-Zeile
+    {
+      const row = document.createElement('tr');
 
-        const rows = [
-          {
-            label: 'VaR',
-            abs: typeof data['VaR_' + prefix + '_abs'] === 'string'
-              ? data['VaR_' + prefix + '_abs']
-              : formatNumber()(data['VaR_' + prefix + '_abs']),
-            rel: typeof data['VaR_' + prefix + '_rel'] === 'string'
-              ? data['VaR_' + prefix + '_rel']
-              : formatNumberWithCommas(data['VaR_' + prefix + '_rel'])
-          },
-          {
-            label: 'ES',
-            abs: typeof data['ES_' + prefix + '_abs'] === 'string'
-              ? data['ES_' + prefix + '_abs']
-              : formatNumber()(data['ES_' + prefix + '_abs']),
-            rel: typeof data['ES_' + prefix + '_rel'] === 'string'
-              ? data['ES_' + prefix + '_rel']
-              : formatNumberWithCommas(data['ES_' + prefix + '_rel'])
-          }
-        ];
+      const c0 = document.createElement('td');
+      c0.textContent = 'Portfolio';
+      row.appendChild(c0);
 
-        rows.forEach(({ label, abs, rel }) => {
-          const row = table.insertRow();
-          row.insertCell(0).textContent = label;
-          row.insertCell(1).textContent = abs;
-          row.insertCell(2).textContent = rel;
-        });
+      const c1 = document.createElement('td');
+      c1.textContent = data.port_name || '';
+      row.appendChild(c1);
 
-        container.appendChild(table);
-      });
+      const c2 = document.createElement('td');
+      c2.textContent = ''; // bewusst leer, damit 3 Spalten konsistent bleiben
+      row.appendChild(c2);
+
+      tbody.appendChild(row);
     }
+
+    // 2) VaR- und ES-Zeilen
+    const rows = [
+      {
+        label: 'VaR',
+        abs: typeof data['VaR_' + prefix + '_abs'] === 'string'
+          ? data['VaR_' + prefix + '_abs']
+          : formatNumber()(data['VaR_' + prefix + '_abs']),
+        rel: typeof data['VaR_' + prefix + '_rel'] === 'string'
+          ? data['VaR_' + prefix + '_rel']
+          : formatNumberWithCommas(data['VaR_' + prefix + '_rel'])
+      },
+      {
+        label: 'ES',
+        abs: typeof data['ES_' + prefix + '_abs'] === 'string'
+          ? data['ES_' + prefix + '_abs']
+          : formatNumber()(data['ES_' + prefix + '_abs']),
+        rel: typeof data['ES_' + prefix + '_rel'] === 'string'
+          ? data['ES_' + prefix + '_rel']
+          : formatNumberWithCommas(data['ES_' + prefix + '_rel'])
+      }
+    ];
+
+    rows.forEach(({ label, abs, rel }) => {
+      const row = document.createElement('tr');
+
+      const c0 = document.createElement('td');
+      c0.textContent = label;
+      row.appendChild(c0);
+
+      const c1 = document.createElement('td');
+      c1.textContent = abs;
+      row.appendChild(c1);
+
+      const c2 = document.createElement('td');
+      c2.textContent = rel;
+      row.appendChild(c2);
+
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+  });
+}
+
     function renderMVaRRelativeTableWithIndex(data, index) {
       const containerId = `MVaRDataContainer${index}`;
       const container = document.getElementById(containerId);
@@ -357,24 +389,22 @@ export function handleMVaRData(receivedData, index) {
           {
             label: 'Total VaR',
             data: MVaRValues.Total,
-            backgroundColor: 'rgba(255, 206, 86, 0.2)',
-            borderColor: 'rgba(255, 206, 86, 1)',
+            ...getMarketMvarColors('TOTAL', 1),
             borderWidth: 1
           },
           {
             label: 'Interest Rate VaR',
             data: MVaRValues.Interest_Rate,
-            backgroundColor: 'rgba(70, 192, 230, 0.2)',
-            borderColor: 'rgba(70, 192, 230, 1)',
+            ...getMarketMvarColors('IR', 1),
             borderWidth: 1
           },
           {
             label: 'Credit Spread VaR',
             data: MVaRValues.Credit_Spread,
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            borderColor: 'rgba(255, 99, 132, 1)',
+            ...getMarketMvarColors('CS', 1),
             borderWidth: 1
           }
+
         ]
       }, 'MVaRChart', 'bar', 'x');
       

@@ -1,4 +1,6 @@
 import createBarChart from '../../../charts/BarChart.js';
+import { getIrSensitivityColor } from '../../../utils/colors.js';
+
 
 export function handleIRSensData(portMainData) {
     //console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
@@ -102,33 +104,26 @@ export function handleIRSensData(portMainData) {
 
 let PV01Chart; // Holds the PV01Chart instance for possible destruction and recreation
 
-export function createPV01Chart(data) {
-  // Limit the data to the first 10 entries
+function createPV01Chart(data) {
   const limitedData = data.slice(0, 10);
 
-  // Prepare the labels and data for the chart using the limited data
   const labels = limitedData.map(d => d.YEARS);
   const values = limitedData.map(d => d.PV01);
 
-  // Configuration for the PV01Chart
+  const irColors = getIrSensitivityColor(1);
+
   const chartConfig = {
-    labels: labels,
+    labels,
     datasets: [{
       label: 'PV01 Weighted Years (%)',
       data: values,
-      backgroundColor: 'rgba(70, 192, 230, 0.7)',
-      borderColor: 'rgba(70, 192, 230, 0.7)'
+      ...irColors
     }]
   };
 
-  // Specify the element ID where the PV01Chart should be rendered
   const canvasId = 'PV01Chart';
 
-  // Check if a PV01Chart instance already exists
-  if (PV01Chart) {
-    PV01Chart.destroy(); // Destroy the existing chart before creating a new one
-  }
+  if (PV01Chart) PV01Chart.destroy();
 
-  // Create a new PV01Chart instance
   PV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'y');
 }

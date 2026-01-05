@@ -1,5 +1,16 @@
-function createBarChart(data, chartName, Type, IndexAxis) {
-  const ctx = document.getElementById(chartName).getContext('2d');
+function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y') {
+  // 🔹 Canvas robust holen
+  const canvas = document.getElementById(chartName);
+  if (!canvas) {
+    console.warn(`[BarChart] Canvas mit ID "${chartName}" nicht gefunden – Chart wird nicht gerendert.`);
+    return null;
+  }
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    console.warn(`[BarChart] getContext('2d') für "${chartName}" ist null – Chart wird nicht gerendert.`);
+    return null;
+  }
 
   const chart = new Chart(ctx, {
     type: Type,
@@ -30,5 +41,6 @@ function createBarChart(data, chartName, Type, IndexAxis) {
 
   return chart;
 }
+
 
 export default createBarChart;

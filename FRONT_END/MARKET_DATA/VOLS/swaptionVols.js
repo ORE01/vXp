@@ -1,4 +1,5 @@
 import { sortTenors } from "../../renderer.js";
+import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
 const colorScale = [
   [0.0,  '#1a1a1a'],   // very dark
@@ -60,6 +61,109 @@ const colorScale = [
 
 
 //3D plottly Chart:
+// export function renderVolSurfacePanel() {
+//   const targetId = 'swaption-atm-surface-3d';
+//   const el = document.getElementById(targetId);
+
+//   if (!el) {
+//     console.warn(`[renderVolSurfacePanel] Element mit id="${targetId}" nicht gefunden.`);
+//     return;
+//   }
+
+//   if (typeof Plotly === 'undefined') {
+//     console.error('[renderVolSurfacePanel] Plotly ist undefined.');
+//     return;
+//   }
+
+//   // ✅ ATM ist jetzt rows[]
+//   const atmRows = appState?.swaptionATM;
+//   if (!Array.isArray(atmRows) || atmRows.length === 0) {
+//     console.warn('[renderVolSurfacePanel] Keine swaptionATM-Daten (rows[]) im appState.');
+//     return;
+//   }
+
+//   const grid = buildSwaptionATMGridFromRows(atmRows);
+//   if (!grid) {
+//     console.warn('[renderVolSurfacePanel] Konnte ATM-Grid nicht bauen.');
+//     return;
+//   }
+
+//   const { optionTenors, swapTenors, volMatrix } = grid;
+//   console.log('[renderVolSurfacePanel] swaptionATM grid:', grid);
+
+//   const data = [{
+//     type: 'surface',
+//     x: optionTenors,
+//     y: swapTenors,
+//     z: volMatrix,
+//     colorscale: colorScale,
+//     colorbar: {
+//       title: 'Vol',
+//       tickcolor: 'rgb(161,160,160)',
+//       tickfont: { color: 'rgb(161,160,160)' },
+//       titlefont: { color: 'rgb(161,160,160)' },
+//       bgcolor: 'rgb(20,20,20)',
+//       outlinecolor: 'rgb(90,90,90)'
+//     }
+//   }];
+
+//   const layout = {
+//     title: { text: 'EUR Swaption ATM Vol Surface', font: { color: 'rgb(161,160,160)', size: 14 } },
+//     paper_bgcolor: 'rgb(20, 20, 20)',
+//     plot_bgcolor:  'rgb(20, 20, 20)',
+//     scene: {
+//       bgcolor: 'rgb(20,20,20)',
+//       xaxis: {
+//         title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       },
+//       yaxis: {
+//         title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       },
+//       zaxis: {
+//         title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       }
+//     },
+//     margin: { l: 0, r: 0, t: 30, b: 0 }
+//   };
+
+//   const config = { responsive: true, displaylogo: false };
+
+// Plotly.newPlot(el, data, layout, config)
+//   .then(async () => {
+//     console.log('[renderVolSurfacePanel] Plot erfolgreich gerendert.');
+
+//     // ✅ Plotly Surface als PNG exportieren (für Preview)
+//     try {
+//       const png = await Plotly.toImage(el, {
+//         format: "png",
+//         width: 900,
+//         height: 520,
+//         scale: 2
+//       });
+
+//       // irgendwo speichern (appState)
+//       appState.swaptionATMSurfacePng = png;
+
+//       // Preview neu triggern
+//       document.dispatchEvent(new Event("risk:refresh-thumbnails"));
+//     } catch (e) {
+//       console.warn("[renderVolSurfacePanel] Plotly.toImage failed", e);
+//       appState.swaptionATMSurfacePng = null;
+//     }
+//   })
+//   .catch(err => console.error('[renderVolSurfacePanel] Fehler beim Rendern:', err));
+
+// }
+
 export function renderVolSurfacePanel() {
   const targetId = 'swaption-atm-surface-3d';
   const el = document.getElementById(targetId);
@@ -71,6 +175,11 @@ export function renderVolSurfacePanel() {
 
   if (typeof Plotly === 'undefined') {
     console.error('[renderVolSurfacePanel] Plotly ist undefined.');
+    return;
+  }
+
+  if (!appState) {
+    console.warn('[renderVolSurfacePanel] appState fehlt.');
     return;
   }
 
@@ -107,7 +216,10 @@ export function renderVolSurfacePanel() {
   }];
 
   const layout = {
-    title: { text: 'EUR Swaption ATM Vol Surface', font: { color: 'rgb(161,160,160)', size: 14 } },
+    title: {
+      text: 'EUR Swaption ATM Vol Surface',
+      font: { color: 'rgb(161,160,160)', size: 14 }
+    },
     paper_bgcolor: 'rgb(20, 20, 20)',
     plot_bgcolor:  'rgb(20, 20, 20)',
     scene: {
@@ -136,35 +248,73 @@ export function renderVolSurfacePanel() {
 
   const config = { responsive: true, displaylogo: false };
 
-Plotly.newPlot(el, data, layout, config)
-  .then(async () => {
-    console.log('[renderVolSurfacePanel] Plot erfolgreich gerendert.');
+  Plotly.newPlot(el, data, layout, config)
+    .then(async () => {
+      console.log('[renderVolSurfacePanel] Plot erfolgreich gerendert.');
 
-    // ✅ Plotly Surface als PNG exportieren (für Preview)
-    try {
-      const png = await Plotly.toImage(el, {
-        format: "png",
-        width: 900,
-        height: 520,
-        scale: 2
-      });
+      try {
+        // ✅ Plotly Surface als PNG exportieren (für Preview)
+        const png = await Plotly.toImage(el, {
+          format: "png",
+          width: 900,
+          height: 520,
+          scale: 2
+        });
 
-      // irgendwo speichern (appState)
-      appState.swaptionATMSurfacePng = png;
+        // im appState speichern
+        appState.swaptionATMSurfacePng = png;
 
-      // Preview neu triggern
-      document.dispatchEvent(new Event("risk:refresh-thumbnails"));
-    } catch (e) {
-      console.warn("[renderVolSurfacePanel] Plotly.toImage failed", e);
-      appState.swaptionATMSurfacePng = null;
-    }
-  })
-  .catch(err => console.error('[renderVolSurfacePanel] Fehler beim Rendern:', err));
-
+        // 🔔 Risk-Preview informieren (Interest-Rate-Sektion)
+        notifyRiskPreview("interestRates");
+      } catch (e) {
+        console.warn("[renderVolSurfacePanel] Plotly.toImage failed", e);
+        appState.swaptionATMSurfacePng = null;
+      }
+    })
+    .catch(err => {
+      console.error('[renderVolSurfacePanel] Fehler beim Rendern:', err);
+    });
 }
 
 
+
+// export function renderSwaptionSmile() {
+//   const rows = appState?.swaptionSmile;
+
+//   // ✅ Smile bleibt: nur StrikeSpreadBP + VolSpread
+//   if (!Array.isArray(rows) || rows.length === 0) {
+//     console.warn('[Smile] Kein Smile im State.');
+//     return;
+//   }
+
+//   const opt = document.getElementById("swaptionOptionTenorSelect")?.value || '';
+//   const swp = document.getElementById("swaptionSwapTenorSelect")?.value || '';
+//   const label = (opt && swp) ? `Smile ${opt} x ${swp}` : 'Smile';
+
+//   // 1) sortieren
+//   const sorted = [...rows].sort((a, b) =>
+//     Number(a?.StrikeSpreadBP ?? 0) - Number(b?.StrikeSpreadBP ?? 0)
+//   );
+
+//   // 2) ATM-Vol aus ATM rows[] (nicht mehr aus volMatrix)
+//   const atmVol = getAtmVolForSelectedNodeFromRows();
+
+//   // 3) absolute Vol = ATM + Spread
+//   const strikesBp = sorted.map(r => Number(r?.StrikeSpreadBP ?? 0));
+//   const volsAbs   = sorted.map(r => (atmVol ?? 0) + Number(r?.VolSpread ?? 0));
+
+//   console.log('[Smile] Plot data (abs Vol):', { strikesBp, volsAbs, atmVol, label });
+
+//   renderSmileChart(strikesBp, volsAbs, label);
+//   renderSmileSummaryTable(sorted, atmVol);
+// }
+
 export function renderSwaptionSmile() {
+  if (!appState) {
+    console.warn('[renderSwaptionSmile] appState fehlt.');
+    return;
+  }
+
   const rows = appState?.swaptionSmile;
 
   // ✅ Smile bleibt: nur StrikeSpreadBP + VolSpread
@@ -191,9 +341,18 @@ export function renderSwaptionSmile() {
 
   console.log('[Smile] Plot data (abs Vol):', { strikesBp, volsAbs, atmVol, label });
 
+  // Chart & Tabelle rendern
   renderSmileChart(strikesBp, volsAbs, label);
   renderSmileSummaryTable(sorted, atmVol);
+
+  // 🔔 Risk-Preview informieren (Interest-Rate-Sektion)
+  try {
+    notifyRiskPreview("interestRates");
+  } catch (e) {
+    console.warn("[renderSwaptionSmile] notifyRiskPreview('interestRates') failed", e);
+  }
 }
+
 
 
 

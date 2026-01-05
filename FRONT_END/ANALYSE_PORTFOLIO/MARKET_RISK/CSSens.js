@@ -3,88 +3,108 @@
 import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { formatNumberWithGrouping } from '../../../utils/format.js';
+import { getCreditSensitivityColor } from '../../../utils/colors.js';
 
 let CPV01Chart; // This will hold the chart instance
 
 export function handleCSSensData(portMainData) {
-    //console.log('Aggregating IR Sensitivity Data - Received Data:', portMainData);
+  // ✅ Immer ein Node zurückgeben
+  const wrapper = document.createElement('div');
+  wrapper.className = 'csens-wrapper';
 
-    const portValue = portMainData.reduce((sum, row) => sum + (parseFloat(row.NAV) || 0), 0);
-    const portCPV01  = portMainData.reduce((sum, row) => sum + (parseFloat(row.CPV01) || 0), 0);
-    
-    //console.log('portValue, PortPV01:', portValue, portCPV01 );
+  // 🔹 Eingabedaten prüfen
+  if (!Array.isArray(portMainData) || portMainData.length === 0) {
+    wrapper.textContent = 'No credit spread sensitivities available.';
+    return wrapper;
+  }
 
-    const groupedCPV01 = portMainData.reduce((acc, { CPV01, RATING }) => {
-        if (!acc[RATING]) {
-            acc[RATING] = 0;
-        }
-        acc[RATING] += CPV01;
-        return acc;
-    }, {});
+  const portValue = portMainData.reduce((sum, row) => sum + (parseFloat(row.NAV) || 0), 0);
+  const portCPV01 = portMainData.reduce((sum, row) => sum + (parseFloat(row.CPV01) || 0), 0);
 
-    const ratingsOrder = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB', 'BB-'];
+  if (!Number.isFinite(portValue) || portValue === 0 || !Number.isFinite(portCPV01) || portCPV01 === 0) {
+    wrapper.textContent = 'No meaningful credit spread sensitivities (NAV/CPV01 = 0).';
+    return wrapper;
+  }
 
-    const sortedCPV01 = Object.entries(groupedCPV01).sort((a, b) => {
-        return ratingsOrder.indexOf(a[0]) - ratingsOrder.indexOf(b[0]);
-    });
+  // 🔹 Gruppen nach Rating aufbauen
+  const groupedCPV01 = portMainData.reduce((acc, { CPV01, RATING }) => {
+    if (!RATING) return acc;
+    if (!acc[RATING]) acc[RATING] = 0;
+    acc[RATING] += (parseFloat(CPV01) || 0);
+    return acc;
+  }, {});
 
-    const processDataFormat = sortedCPV01.map(([RATING, CPV01]) => {
-        let cpv01Bp = (CPV01 / portValue) * 10000; // Convert to basis points
-        let weightedRatings = (CPV01 / portCPV01) * 100; // Calculate the weighted rating as a percentage
-        return {
-            RATING,
-            'CPV01_EUR': formatNumberWithGrouping(CPV01),
-            'CPV01_bp': `${cpv01Bp.toFixed(2)} bp`,
-            'Weighted_Ratings': `${weightedRatings.toFixed(2)}%`
-        };
-    });
+  const ratingsOrder = [
+    'AAA', 'AA+', 'AA', 'AA-',
+    'A+', 'A', 'A-',
+    'BBB+', 'BBB', 'BBB-',
+    'BB+', 'BB', 'BB-'
+  ];
 
-    // Assuming processData can handle this data structure
-    const htmlContent = processData(processDataFormat, 'Portfolios');
-    const container = document.getElementById('CRSensDataContainer');
-    if (container) {
-        container.innerHTML = htmlContent;
-    } else {
-        console.error('CRSensDataContainer not found');
-    }
+  const sortedCPV01 = Object.entries(groupedCPV01)
+    .filter(([, val]) => Number.isFinite(val) && val !== 0)
+    .sort((a, b) => ratingsOrder.indexOf(a[0]) - ratingsOrder.indexOf(b[0]));
 
-    // Prepare data for the chart
-   // Prepare chart data using 'weighted_ratings' and 'RATING'
-   const chartData = sortedCPV01.map(([RATING, CPV01]) => {
-    // Calculate the weighted rating as a percentage of CPV01 relative to portCPV01
-    let weightedRatingPercent = (CPV01 / portCPV01) * 100;
-    return { RATING, PV01: weightedRatingPercent };
-});
+  if (sortedCPV01.length === 0) {
+    wrapper.textContent = 'No credit spread sensitivities per rating.';
+    return wrapper;
+  }
 
-// console.log(chartData);
-createCPV01Chart(chartData);
+  // 🔹 Tabelle vorbereiten
+  const tableData = sortedCPV01.map(([RATING, CPV01]) => {
+    const cpv01Bp        = (CPV01 / portValue)  * 10000; // bp
+    const weightedRating = (CPV01 / portCPV01) * 100;    // %
+
+    return {
+      RATING,
+      CPV01_EUR: formatNumberWithGrouping(CPV01),
+      CPV01_bp: `${cpv01Bp.toFixed(2)} bp`,
+      Weighted_Ratings: `${weightedRating.toFixed(2)}%`,
+    };
+  });
+
+  // processData liefert HTML → in wrapper setzen
+  wrapper.innerHTML = processData(tableData, 'Portfolios');
+
+  // 🔹 Chart-Daten vorbereiten
+  const chartData = sortedCPV01.map(([RATING, CPV01]) => ({
+    RATING,
+    PV01: (CPV01 / portCPV01) * 100,
+  }));
+
+  // Wichtig: Chart-Funktion muss entweder selbst das Canvas finden
+  // oder du sorgst dafür, dass das Canvas im wrapper existiert.
+  // Wenn createCPV01Chart global auf ein fixes Canvas rendert, kannst du es so lassen:
+  if (chartData.length > 0) {
+    createCPV01Chart(chartData);
+  }
+
+  return wrapper;
 }
+
+
 
 function createCPV01Chart(data) {
-const labels = data.map(d => d.RATING);
-const values = data.map(d => d.PV01); // Now represents 'weighted_ratings'
+  const labels = data.map(d => d.RATING);
+  const values = data.map(d => d.PV01);
 
-const chartConfig = {
-    labels: labels,
+  const csColors = getCreditSensitivityColor(0.7);
+
+  const chartConfig = {
+    labels,
     datasets: [{
-        label: 'CPV01 Weighted Ratings (%)',
-        data: values,
-        backgroundColor: 'rgba(70, 192, 230, 0.7)',
-        borderColor: 'rgba(70, 192, 230, 0.7)',
-        borderWidth: 1
+      label: 'CPV01 Weighted Ratings (%)',
+      data: values,
+      ...csColors,
+      borderWidth: 1
     }]
-};
+  };
 
-// Specify the element ID where the chart should be rendered
-const canvasId = 'CPV01Chart';
+  const canvasId = 'CPV01Chart';
 
-// Destroy existing chart instance if it exists
-if (CPV01Chart) {
-    CPV01Chart.destroy();
-}
+  if (CPV01Chart) CPV01Chart.destroy();
 
-// Create a new chart instance
-CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'y');
+  CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'y');
 }
 
   

@@ -16,7 +16,7 @@ import { createComparisonCharts } from './FRONT_END/COMPARE_PORTFOLIOS/COMP.js';
 import { formatPercentage} from './utils/format.js';
 import { filterColumnsInData } from './MODAL_HELPER/dataProcessor.js';
 import { handleLiquidityData } from './FRONT_END/ANALYSE_PORTFOLIO/liquidity.js';
-import { handleSummaryMarketRiskData } from './FRONT_END/ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRisk.js';
+import { handleSummaryMarketRiskData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
 import { handleSummaryNotionalData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryNotional.js';
 import { handleSummaryYieldData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryYield.js';
 
@@ -471,52 +471,7 @@ export class AppState {
 
     }
 
-// OFFERS:
-// handleOffersTable(data, index = 4) {
-//   //console.log("offersName List:", data);
-//   if (!Array.isArray(data) || data.length === 0) return;
 
- 
-
-//   // 1) Port-Daten schon da?
-//   const portData = appState.getAllPortfolioData?.();
-//   if (!Array.isArray(portData) || portData.length === 0) {
-//     // ➜ einmal warten bis Port-Daten eintreffen, dann neu aufrufen
-//     const once = () => this.handleOffersTable(data, index);
-//     document.addEventListener('portData:ready', once, { once: true });
-//     return;
-//   }
-//   //console.log("portData:", portData);
-
-//   // 2) Ausgewählten Port-Namen holen (Fallback auf Offers-Dropdown)
-//   const port_name =
-//     this.getSelectedPortTableName?.() ||
-//     document.getElementById('createdOffersDropdown')?.value ||
-//     '';
-
-//   if (!port_name) return;
-
-//   const filteredData = portData.filter(item => item.port_name === port_name);
-//   if (filteredData.length === 0) return;
-
-//   // 3) Render
-//   handlePortProdData(filteredData, 4, port_name);
-
-//   // 4) IRSens / CSSens – benutze die vorhandenen Daten statt "filteredOriginalData"
-//   const IRSensTable = this.handleIRSensData?.(filteredData);
-//   const IRSensDataContainer = document.getElementById('IRSensDataContainer');
-//   if (IRSensTable && IRSensDataContainer) {
-//     IRSensDataContainer.innerHTML = '';
-//     IRSensDataContainer.appendChild(IRSensTable);
-//   }
-
-//   const CSSensTable = this.handleCSSensData?.(filteredData);
-//   const CSSensDataContainer = document.getElementById('CSSensDataContainer');
-//   if (CSSensTable && CSSensDataContainer) {
-//     CSSensDataContainer.innerHTML = '';
-//     CSSensDataContainer.appendChild(CSSensTable);
-//   }
-// }
 handleOffersTable(data, index = 0) {
   const portData = this.getAllPortfolioData?.() || [];
   const port_name =
@@ -679,6 +634,7 @@ handleOffersTable(data, index = 0) {
 
     setCustomerReportsData(data) {
     this.customerReportsData = data;
+    this.notifyObservers();
     }
 
     getCustomerReportsData() {
@@ -742,7 +698,7 @@ getEUSWData() {
 
   setSwaptionSmile(rows) {
     this.swaptionSmile = Array.isArray(rows) ? rows : [];
-    console.log('swaptionSmile' , this.swaptionSmile );
+    //console.log('swaptionSmile' , this.swaptionSmile );
   }
 
   // Optional: Helper, um gefilterte Views zu bekommen
@@ -1696,36 +1652,102 @@ setPortAggData(elementId, data) {
                 });
             }
                 populateDropdown(dropdownId, data, allText, tableType) {
-                    const config = this.dropdownConfig[tableType];
-                    const dropdown = document.getElementById(dropdownId);
-                    if (!config || !dropdown) {
-                        console.error("Configuration or Dropdown not found:", dropdownId, tableType);
-                        return; // Early exit if config or dropdown is not found
-                    }
-                    
-                    let uniqueValues = [...new Set(data.map(item => item[config[dropdownId]?.dataKey]))];
-                
-                    // Determine the appropriate sorting method based on the dropdownId
-                    if (dropdownId.endsWith('RatingDropdown')) {
-                        uniqueValues = uniqueValues.sort((a, b) => this.sortRatings(a, b));
-                    } else if (dropdownId.endsWith('MaturityDropdown')) {
-                        // Assume sortDates is another method you might have for sorting dates
-                        uniqueValues.sort(this.sortDates);
-                    } else if (dropdownId.endsWith('NotionalDropdown')) {
-                        uniqueValues.sort(this.sortNotionals);
-                    }
-                    else {
-                        uniqueValues.sort(); // Default sorting for other dropdowns
-                    }
-                
-                    // Repopulate the dropdown
-                    const currentOptions = [...dropdown.options].map(option => option.value);
-                    if (!this.arraysEqual(currentOptions, ['ALL', ...uniqueValues])) {
-                        dropdown.innerHTML = ''; // Clear existing options
-                        this.addDropdownOption(dropdown, 'ALL', allText); // Add 'ALL' option as the first option
-                        uniqueValues.forEach(value => this.addDropdownOption(dropdown, value, value)); // Add all unique values as options
-                    }
-                }
+  // 🔹 1) DOM-Element holen
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) {
+    console.info(
+      `[Dropdown] Element "${dropdownId}" für tableType "${tableType}" nicht im DOM – überspringe populateDropdown.`
+    );
+    return;
+  }
+
+  // 🔹 2) Config holen (mit Fallback) und prüfen
+  const cfgByType = (this.dropdownConfig && this.dropdownConfig[tableType]) || null;
+  if (!cfgByType) {
+    console.info(
+      `[Dropdown] Keine dropdownConfig für tableType "${tableType}" – "${dropdownId}" wird übersprungen.`
+    );
+    return;
+  }
+
+  const cfgEntry = cfgByType[dropdownId];
+  if (!cfgEntry || !cfgEntry.dataKey) {
+    console.info(
+      `[Dropdown] Keine gültige Config für "${dropdownId}" bei tableType "${tableType}" – kein dataKey.`
+    );
+    return;
+  }
+
+  const dataKey = cfgEntry.dataKey;
+
+  // 🔹 3) Daten validieren
+  if (!Array.isArray(data) || data.length === 0) {
+    // Kein harter Fehler – Dropdown bleibt einfach wie es ist
+    console.info(
+      `[Dropdown] Keine Daten für "${dropdownId}" (tableType "${tableType}") – lasse bestehende Optionen unverändert.`
+    );
+    return;
+  }
+
+  // 🔹 4) Unique Values extrahieren
+  let uniqueValues = [...new Set(
+    data
+      .map(item => (item && item[dataKey]) ?? null)
+      .filter(v => v !== null && v !== undefined && v !== '')
+  )];
+
+  // Wenn gar nichts übrig bleibt, macht ein Reset auf nur "ALL" Sinn
+  if (uniqueValues.length === 0) {
+    dropdown.innerHTML = '';
+    this.addDropdownOption(dropdown, 'ALL', allText || 'ALL');
+    return;
+  }
+
+  // 🔹 5) Sortierung je nach Dropdown-Typ
+  try {
+    if (dropdownId.endsWith('RatingDropdown')) {
+      uniqueValues.sort((a, b) => this.sortRatings(a, b));
+    } else if (dropdownId.endsWith('MaturityDropdown')) {
+      if (typeof this.sortDates === 'function') {
+        uniqueValues.sort(this.sortDates.bind(this));
+      } else {
+        uniqueValues.sort();
+      }
+    } else if (dropdownId.endsWith('NotionalDropdown')) {
+      if (typeof this.sortNotionals === 'function') {
+        uniqueValues.sort(this.sortNotionals.bind(this));
+      } else {
+        uniqueValues.sort();
+      }
+    } else {
+      uniqueValues.sort(); // Default-Sortierung
+    }
+  } catch (e) {
+    console.warn(
+      `[Dropdown] Sortierung für "${dropdownId}" (tableType "${tableType}") ist fehlgeschlagen – verwende unsortierte Werte.`,
+      e
+    );
+  }
+
+  // 🔹 6) Nur neu befüllen, wenn sich die Werte wirklich geändert haben
+  const targetValues = ['ALL', ...uniqueValues.map(String)];
+  const currentValues = [...dropdown.options].map(option => option.value);
+
+  if (this.arraysEqual(currentValues, targetValues)) {
+    // Nichts zu tun
+    return;
+  }
+
+  // 🔹 7) Dropdown neu aufbauen
+  dropdown.innerHTML = '';
+  this.addDropdownOption(dropdown, 'ALL', allText || 'ALL');
+
+  uniqueValues.forEach(value => {
+    const label = (value != null) ? String(value) : '';
+    this.addDropdownOption(dropdown, value, label);
+  });
+}
+
                     addDropdownOption(dropdown, value, text) {
                         const option = document.createElement('option');
                         option.value = value;

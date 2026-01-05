@@ -1,19 +1,11 @@
 import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import { createFWDLineChart, createForwardSwapChart } from '../../../charts/LineChart.js';
+import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
 let FWDlineChart;
 let forwardSwapChart;
 
-// -----------------------------------------------------
-// Preview-Event
-// -----------------------------------------------------
-function notifyRiskPreview() {
-  try {
-    document.dispatchEvent(new CustomEvent('risk:refresh-thumbnails'));
-  } catch (e) {
-    console.warn('[FORWARDS] risk:refresh-thumbnails dispatch failed', e);
-  }
-}
+
 
 // -----------------------------------------------------
 // HILFSFUNKTIONEN für handleFWDData (Refactoring)
@@ -138,6 +130,51 @@ function computeCmsForwards(swapRates, cms1Length, cms2Length) {
   return { forwardRatesCMS1, forwardRatesCMS2 };
 }
 
+// function rebuildForwardTableWithCms(
+//   table,
+//   swapYears,
+//   swapRates,
+//   forwardRatesCMS1,
+//   forwardRatesCMS2,
+//   cms1Length,
+//   cms2Length
+// ) {
+//   let headerRow = table.querySelector('tr');
+//   if (!headerRow) {
+//     console.error('Table header row is missing.');
+//     return;
+//   }
+
+//   while (headerRow.cells.length < 5) {
+//     headerRow.appendChild(document.createElement('th'));
+//   }
+//   headerRow.cells[3].textContent = `CMS1 (${cms1Length})`;
+//   headerRow.cells[4].textContent = `CMS2 (${cms2Length})`;
+
+//   // alte Zeilen löschen
+//   while (table.rows.length > 1) {
+//     table.deleteRow(1);
+//   }
+
+//   swapYears.forEach((year, index) => {
+//     const cms1Value = forwardRatesCMS1[index - 1]
+//       ? forwardRatesCMS1[index - 1].toFixed(3) + '%'
+//       : 'N/A';
+//     const cms2Value = forwardRatesCMS2[index - 1]
+//       ? forwardRatesCMS2[index - 1].toFixed(3) + '%'
+//       : 'N/A';
+
+//     const newRow = document.createElement('tr');
+//     newRow.innerHTML = `
+//       <td>swap</td>
+//       <td>${year}Y</td>
+//       <td>${swapRates[index].toFixed(3)}%</td>
+//       <td>${cms1Value}</td>
+//       <td>${cms2Value}</td>
+//     `;
+//     table.appendChild(newRow);
+//   });
+// }
 function rebuildForwardTableWithCms(
   table,
   swapYears,
@@ -147,23 +184,37 @@ function rebuildForwardTableWithCms(
   cms1Length,
   cms2Length
 ) {
-  let headerRow = table.querySelector('tr');
+  // 1) Header sauber holen: zuerst thead, sonst erste tr im table
+  let headerRow =
+    table.querySelector('thead tr') ||
+    table.querySelector('tr');
+
   if (!headerRow) {
     console.error('Table header row is missing.');
     return;
   }
 
+  // Header auf 5 Spalten erweitern
   while (headerRow.cells.length < 5) {
     headerRow.appendChild(document.createElement('th'));
   }
   headerRow.cells[3].textContent = `CMS1 (${cms1Length})`;
   headerRow.cells[4].textContent = `CMS2 (${cms2Length})`;
 
-  // alte Zeilen löschen
-  while (table.rows.length > 1) {
-    table.deleteRow(1);
+  // 2) Body-Teil gezielt bearbeiten
+  let tbody = table.querySelector('tbody');
+  if (!tbody) {
+    // falls processData keinen tbody angelegt hat, einen erzeugen
+    tbody = document.createElement('tbody');
+    table.appendChild(tbody);
   }
 
+  // alte Datenzeilen im tbody löschen
+  while (tbody.firstChild) {
+    tbody.removeChild(tbody.firstChild);
+  }
+
+  // 3) Neue Datenzeilen ins tbody einfügen
   swapYears.forEach((year, index) => {
     const cms1Value = forwardRatesCMS1[index - 1]
       ? forwardRatesCMS1[index - 1].toFixed(3) + '%'
@@ -180,9 +231,10 @@ function rebuildForwardTableWithCms(
       <td>${cms1Value}</td>
       <td>${cms2Value}</td>
     `;
-    table.appendChild(newRow);
+    tbody.appendChild(newRow);
   });
 }
+
 
 function createForwardDatasets(
   swapYears,
@@ -299,7 +351,7 @@ export function handleFWDData(receivedData, applyCubicSpline) {
   renderFWDChart(datasets);
 
   // 10) Preview informieren
-  //notifyRiskPreview();
+  notifyRiskPreview();
 }
 
 // -----------------------------------------------------
@@ -498,79 +550,6 @@ function calculateDynamicCMSForwardRates(swapRates, forward_length) {
   return { forwardRates: forwardSwapRates };
 }
 
-// -----------------------------------------------------
-// Forward-Curve-Handling (unverändert, nur leicht formatiert)
-// -----------------------------------------------------
-
-// Function to handle the forward curve data and use the years_forward value
-// export function handleSwapForwardCurve(receivedData) {
-//   const FWDData = receivedData;
-
-//   const yearsForwardInput = document.getElementById('yearsForwardInput').value;
-//   const yearsForwardValue = parseInt(yearsForwardInput, 10);
-
-//   const table = document
-//     .getElementById('FWDDataContainer')
-//     .querySelector('#dataTable');
-//   const rows = Array.from(table.rows);
-
-//   let swapRates = rows.slice(1).map((row) => {
-//     const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
-//     return parseFloat(rowData[2].replace('%', ''));
-//   });
-
-//   let swapYears = rows.slice(1).map((row) => {
-//     const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
-//     return rowData[1]; // e.g. "1Y", "2Y"
-//   });
-
-//   if (swapRates.length !== swapYears.length) {
-//     console.error(
-//       'Mismatch between swap rates and years. Cannot proceed with calculation.'
-//     );
-//     return;
-//   }
-
-//   const forwardRates = calculateSwapForwardCurve(swapRates, yearsForwardValue);
-
-//   const forwardSwapDataset = {
-//     label: `Forward Swap Rates (from year ${yearsForwardValue})`,
-//     data: forwardRates.map((rate, index) => ({
-//       x: swapYears[index + yearsForwardValue],
-//       y: rate,
-//     })),
-//     fill: false,
-//     borderColor: 'rgba(255, 159, 64, 1)',
-//     tension: 0.1,
-//   };
-
-//   const originalSwapDataset = {
-//     label: 'Original Swap Rates',
-//     data: swapRates.map((rate, index) => ({
-//       x: swapYears[index],
-//       y: rate,
-//     })),
-//     fill: false,
-//     borderColor: 'rgba(75, 192, 192, 1)',
-//     tension: 0.1,
-//   };
-
-//   forwardSwapChart = createForwardSwapChart(
-//     [originalSwapDataset, forwardSwapDataset],
-//     'FWDforwardCurveChart',
-//     'Swap and Forward Curves',
-//     3
-//   );
-
-//   try {
-//     document.dispatchEvent(new CustomEvent('risk:refresh-thumbnails'));
-//   } catch (e) {
-//     console.warn(
-//       'Failed to dispatch risk:refresh-thumbnails after handleSwapForwardCurve',
-//       e
-//     );
-//   }
-// }
 export function handleSwapForwardCurve() {
   const yearsForwardInputEl = document.getElementById('yearsForwardInput');
   if (!yearsForwardInputEl) {
@@ -657,6 +636,8 @@ export function handleSwapForwardCurve() {
     'Swap and Forward Curves',
     3
   );
+
+  notifyRiskPreview('forwardCurve');
 }
 
 

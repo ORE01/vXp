@@ -1,6 +1,7 @@
 import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import { createRatesLineChart } from '../../../charts/LineChart.js';
 import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
+import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
 //HELPER:
       function getIRDataForSelectedCurve() {
@@ -26,7 +27,6 @@ import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 
         return { IRData, curve };
       }
-
 export function renderIRPanel() {
   const IRDataContainer = document.getElementById("IRDataContainer");
   const ratesSelector   = document.getElementById("ratesSelector");
@@ -60,7 +60,18 @@ export function renderIRPanel() {
 
   // ============= 5) Chart rendern =============
   renderIRLineChart(IRData);
+
+  // ============= 6) Risk-Preview aktualisieren =============
+  try {
+    document.dispatchEvent(new Event('risk:refresh-thumbnails'));
+  } catch (e) {
+    console.warn('risk:refresh-thumbnails dispatch failed', e);
+  }
+
+  notifyRiskPreview('interestRates');
 }
+
+
 export function renderIRLineChart(optionalIRData) {
   const canvasId = "IRLineChart";
   const IRDataContainer = document.getElementById("IRDataContainer");

@@ -18,7 +18,7 @@ const CVAR_THRESHOLD_COLUMNS = [
 const TABLE_CVAR_THRESHOLD = 'CreditVaRInputThreshold';
 
 export function handleCvarInputThresholdView() {
-    console.log('cvarINput')
+    //console.log('cvarINput')
   const container = document.getElementById('inputCreditVaRThresholdContainer');
   if (!container) {
     console.warn('⚠️ Container #inputCreditVaRThresholdContainer nicht gefunden.');

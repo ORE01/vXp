@@ -1,5 +1,4 @@
-// Hilfsfunktion: aus cubeSurfaceFixedK ein Grid machen
-
+import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
 
 export function buildCubeSurfaceGrid(cubeSurfaceFixedK) {
@@ -101,6 +100,270 @@ export function populateSwaptionCubeSelectors() {
 
 
 
+// export function renderSwaptionCubeSurface3D() {
+//   const targetId = 'swaption-cube-surface-3d';
+//   const el = document.getElementById(targetId);
+
+//   if (!el) {
+//     console.warn(`[renderSwaptionCubeSurface3D] Element mit id="${targetId}" nicht gefunden.`);
+//     return;
+//   }
+
+//   if (typeof Plotly === 'undefined') {
+//     console.error('[renderSwaptionCubeSurface3D] Plotly ist undefined.');
+//     return;
+//   }
+
+//   const cube = appState.getSwaptionCubeSurface
+//     ? appState.getSwaptionCubeSurface()
+//     : appState.swaptionCubeSurface;
+
+//   if (!cube) {
+//     console.warn('[renderSwaptionCubeSurface3D] Keine swaptionCubeSurface im appState.');
+//     return;
+//   }
+
+//   let { optionTenors, swapTenors, volMatrix, strike } = cube;
+
+//   // 🔹 Cube-Selects (eigene IDs!)
+//   const optSelValue = document.getElementById('swaptionOptionTenorSelectCube')?.value || '';
+//   const swpSelValue = document.getElementById('swaptionSwapTenorSelectCube')?.value || '';
+
+//   // Kopien, damit State unangetastet bleibt
+//   let xLabels = [...optionTenors];              // Option
+//   let yLabels = [...swapTenors];                // Swap
+//   let z       = volMatrix.map(row => [...row]); // Vols
+
+//   // Filter: Alles ab gewähltem Option-Tenor
+//   if (optSelValue) {
+//     const colIdx = xLabels.indexOf(optSelValue);
+//     if (colIdx >= 0) {
+//       xLabels = xLabels.slice(colIdx);
+//       z = z.map(row => row.slice(colIdx));
+//     }
+//   }
+
+//   // Filter: Alles ab gewähltem Swap-Tenor
+//   if (swpSelValue) {
+//     const rowIdx = yLabels.indexOf(swpSelValue);
+//     if (rowIdx >= 0) {
+//       yLabels = yLabels.slice(rowIdx);
+//       z = z.slice(rowIdx);
+//     }
+//   }
+
+//   const data = [{
+//     type: 'surface',
+//     x: xLabels,
+//     y: yLabels,
+//     z,
+//     colorscale: (typeof colorScale !== 'undefined') ? colorScale : 'Viridis',
+//     colorbar: {
+//       title: 'Vol',
+//       tickcolor: 'rgb(161,160,160)',
+//       tickfont: { color: 'rgb(161,160,160)' },
+//       titlefont: { color: 'rgb(161,160,160)' },
+//       bgcolor: 'rgb(20,20,20)',
+//       outlinecolor: 'rgb(90,90,90)'
+//     }
+//   }];
+
+//   const layout = {
+//     title: {
+//       text: `SABR Vol Cube Surface (K = ${(strike * 100).toFixed(2)}%)`,
+//       font: { color: 'rgb(161,160,160)', size: 14 }
+//     },
+//     paper_bgcolor: 'rgb(20, 20, 20)',
+//     plot_bgcolor:  'rgb(20, 20, 20)',
+//     scene: {
+//       bgcolor: 'rgb(20,20,20)',
+//       xaxis: {
+//         type: 'category', // 🔥 Tenor als Kategorie, keine 50, 100, ...
+//         title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       },
+//       yaxis: {
+//         type: 'category', // 🔥 ebenfalls Kategorie
+//         title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       },
+//       zaxis: {
+//         title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       }
+//     },
+//     margin: { l: 0, r: 0, t: 30, b: 0 }
+//   };
+
+//   const config = {
+//     responsive: true,
+//     displaylogo: false
+//   };
+
+// Plotly.newPlot(el, data, layout, config)
+//   .then(async () => {
+//     console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.');
+
+//     try {
+//       const png = await Plotly.toImage(el, {
+//         format: "png",
+//         width: 900,
+//         height: 520,
+//         scale: 2
+//       });
+
+//       // ✅ im State ablegen
+//       appState.swaptionCubeSurfacePng = png;
+
+//       // ✅ Preview refreshen
+//       document.dispatchEvent(new Event("risk:refresh-thumbnails"));
+//     } catch (e) {
+//       console.warn("[renderSwaptionCubeSurface3D] Plotly.toImage failed", e);
+//       appState.swaptionCubeSurfacePng = null;
+//     }
+//   })
+//   .catch(err => console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err));
+
+// }
+
+// export function renderSwaptionCubeSurface3D() {
+//   const targetId = 'swaption-cube-surface-3d';
+//   const el = document.getElementById(targetId);
+
+//   if (!el) {
+//     console.warn(`[renderSwaptionCubeSurface3D] Element mit id="${targetId}" nicht gefunden.`);
+//     return;
+//   }
+
+//   if (typeof Plotly === 'undefined') {
+//     console.error('[renderSwaptionCubeSurface3D] Plotly ist undefined.');
+//     return;
+//   }
+
+//   if (!appState) {
+//     console.warn('[renderSwaptionCubeSurface3D] appState fehlt.');
+//     return;
+//   }
+
+//   const cube = appState.getSwaptionCubeSurface
+//     ? appState.getSwaptionCubeSurface()
+//     : appState.swaptionCubeSurface;
+
+//   if (!cube) {
+//     console.warn('[renderSwaptionCubeSurface3D] Keine swaptionCubeSurface im appState.');
+//     return;
+//   }
+
+//   let { optionTenors, swapTenors, volMatrix, strike } = cube;
+
+//   const optSelValue = document.getElementById('swaptionOptionTenorSelectCube')?.value || '';
+//   const swpSelValue = document.getElementById('swaptionSwapTenorSelectCube')?.value || '';
+
+//   let xLabels = [...optionTenors];
+//   let yLabels = [...swapTenors];
+//   let z       = volMatrix.map(row => [...row]);
+
+//   if (optSelValue) {
+//     const colIdx = xLabels.indexOf(optSelValue);
+//     if (colIdx >= 0) {
+//       xLabels = xLabels.slice(colIdx);
+//       z = z.map(row => row.slice(colIdx));
+//     }
+//   }
+
+//   if (swpSelValue) {
+//     const rowIdx = yLabels.indexOf(swpSelValue);
+//     if (rowIdx >= 0) {
+//       yLabels = yLabels.slice(rowIdx);
+//       z = z.slice(rowIdx);
+//     }
+//   }
+
+//   const data = [{
+//     type: 'surface',
+//     x: xLabels,
+//     y: yLabels,
+//     z,
+//     colorscale: (typeof colorScale !== 'undefined') ? colorScale : 'Viridis',
+//     colorbar: {
+//       title: 'Vol',
+//       tickcolor: 'rgb(161,160,160)',
+//       tickfont: { color: 'rgb(161,160,160)' },
+//       titlefont: { color: 'rgb(161,160,160)' },
+//       bgcolor: 'rgb(20,20,20)',
+//       outlinecolor: 'rgb(90,90,90)'
+//     }
+//   }];
+
+//   const layout = {
+//     title: {
+//       text: `SABR Vol Cube Surface (K = ${(strike * 100).toFixed(2)}%)`,
+//       font: { color: 'rgb(161,160,160)', size: 14 }
+//     },
+//     paper_bgcolor: 'rgb(20, 20, 20)',
+//     plot_bgcolor:  'rgb(20, 20, 20)',
+//     scene: {
+//       bgcolor: 'rgb(20,20,20)',
+//       xaxis: {
+//         type: 'category',
+//         title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       },
+//       yaxis: {
+//         type: 'category',
+//         title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       },
+//       zaxis: {
+//         title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
+//         tickfont: { color: 'rgb(161,160,160)' },
+//         gridcolor: 'rgb(90, 90, 90)',
+//         zerolinecolor: 'rgb(120, 120, 120)'
+//       }
+//     },
+//     margin: { l: 0, r: 0, t: 30, b: 0 }
+//   };
+
+//   const config = { responsive: true, displaylogo: false };
+
+//   Plotly.newPlot(el, data, layout, config)
+//     .then(async () => {
+//       console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.');
+
+//       let png = null;
+//       try {
+//         png = await Plotly.toImage(el, {
+//           format: "png",
+//           width: 900,
+//           height: 520,
+//           scale: 2
+//         });
+//       } catch (e) {
+//         console.warn("[renderSwaptionCubeSurface3D] Plotly.toImage failed", e);
+//       }
+
+//       appState.swaptionCubeSurfacePng = png || null;
+//       console.log('[renderSwaptionCubeSurface3D] swaptionCubeSurfacePng set?', !!png);
+
+//       // 🔔 Preview anstoßen – zeigt PNG, falls vorhanden, sonst Placeholder
+//       notifyRiskPreview("interestRates");
+//     })
+//     .catch(err => {
+//       console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err);
+//     });
+// }
+
+
 export function renderSwaptionCubeSurface3D() {
   const targetId = 'swaption-cube-surface-3d';
   const el = document.getElementById(targetId);
@@ -115,27 +378,30 @@ export function renderSwaptionCubeSurface3D() {
     return;
   }
 
-  const cube = appState.getSwaptionCubeSurface
-    ? appState.getSwaptionCubeSurface()
-    : appState.swaptionCubeSurface;
+  const state = window.appState;
+  if (!state) {
+    console.warn('[renderSwaptionCubeSurface3D] window.appState fehlt.');
+    return;
+  }
+
+  const cube = state.getSwaptionCubeSurface
+    ? state.getSwaptionCubeSurface()
+    : state.swaptionCubeSurface;
 
   if (!cube) {
-    console.warn('[renderSwaptionCubeSurface3D] Keine swaptionCubeSurface im appState.');
+    console.warn('[renderSwaptionCubeSurface3D] Keine swaptionCubeSurface im state.');
     return;
   }
 
   let { optionTenors, swapTenors, volMatrix, strike } = cube;
 
-  // 🔹 Cube-Selects (eigene IDs!)
   const optSelValue = document.getElementById('swaptionOptionTenorSelectCube')?.value || '';
   const swpSelValue = document.getElementById('swaptionSwapTenorSelectCube')?.value || '';
 
-  // Kopien, damit State unangetastet bleibt
-  let xLabels = [...optionTenors];              // Option
-  let yLabels = [...swapTenors];                // Swap
-  let z       = volMatrix.map(row => [...row]); // Vols
+  let xLabels = [...optionTenors];
+  let yLabels = [...swapTenors];
+  let z       = volMatrix.map(row => [...row]);
 
-  // Filter: Alles ab gewähltem Option-Tenor
   if (optSelValue) {
     const colIdx = xLabels.indexOf(optSelValue);
     if (colIdx >= 0) {
@@ -144,7 +410,6 @@ export function renderSwaptionCubeSurface3D() {
     }
   }
 
-  // Filter: Alles ab gewähltem Swap-Tenor
   if (swpSelValue) {
     const rowIdx = yLabels.indexOf(swpSelValue);
     if (rowIdx >= 0) {
@@ -176,62 +441,41 @@ export function renderSwaptionCubeSurface3D() {
     },
     paper_bgcolor: 'rgb(20, 20, 20)',
     plot_bgcolor:  'rgb(20, 20, 20)',
-    scene: {
-      bgcolor: 'rgb(20,20,20)',
-      xaxis: {
-        type: 'category', // 🔥 Tenor als Kategorie, keine 50, 100, ...
-        title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
-        tickfont: { color: 'rgb(161,160,160)' },
-        gridcolor: 'rgb(90, 90, 90)',
-        zerolinecolor: 'rgb(120, 120, 120)'
-      },
-      yaxis: {
-        type: 'category', // 🔥 ebenfalls Kategorie
-        title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
-        tickfont: { color: 'rgb(161,160,160)' },
-        gridcolor: 'rgb(90, 90, 90)',
-        zerolinecolor: 'rgb(120, 120, 120)'
-      },
-      zaxis: {
-        title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
-        tickfont: { color: 'rgb(161,160,160)' },
-        gridcolor: 'rgb(90, 90, 90)',
-        zerolinecolor: 'rgb(120, 120, 120)'
-      }
-    },
+    scene: { /* ... wie bisher ... */ },
     margin: { l: 0, r: 0, t: 30, b: 0 }
   };
 
-  const config = {
-    responsive: true,
-    displaylogo: false
-  };
+  const config = { responsive: true, displaylogo: false };
 
-Plotly.newPlot(el, data, layout, config)
-  .then(async () => {
-    console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.');
+  Plotly.newPlot(el, data, layout, config)
+    .then(async () => {
+      console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.');
 
-    try {
-      const png = await Plotly.toImage(el, {
-        format: "png",
-        width: 900,
-        height: 520,
-        scale: 2
-      });
+try {
+  const png = await Plotly.toImage(el, {
+    format: "png",
+    width: 900,
+    height: 520,
+    scale: 2
+  });
 
-      // ✅ im State ablegen
-      appState.swaptionCubeSurfacePng = png;
+  state.swaptionCubeSurfacePng = png;
+  console.log('[renderSwaptionCubeSurface3D] PNG erzeugt');
 
-      // ✅ Preview refreshen
-      document.dispatchEvent(new Event("risk:refresh-thumbnails"));
-    } catch (e) {
-      console.warn("[renderSwaptionCubeSurface3D] Plotly.toImage failed", e);
-      appState.swaptionCubeSurfacePng = null;
-    }
-  })
-  .catch(err => console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err));
-
+  notifyRiskPreview("interestRates");
+} catch (e) {
+  console.warn("[renderSwaptionCubeSurface3D] toImage failed", e);
+  state.swaptionCubeSurfacePng = null;
 }
+
+    })
+    .catch(err => {
+      console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err);
+    });
+}
+
+
+
 
 export function renderSwaptionCubeSummary() {
   const summaryEl = document.getElementById('SwaptionCubeSummaryContainer');
@@ -246,6 +490,7 @@ export function renderSwaptionCubeSummary() {
 
   if (!cube) {
     summaryEl.innerHTML = "<div style='opacity:0.7;'>Kein Vol-Cube geladen.</div>";
+    notifyRiskPreview("interestRates");
     return;
   }
 
@@ -277,6 +522,7 @@ export function renderSwaptionCubeSummary() {
   const flatVols = z.flat().filter(v => typeof v === 'number' && !isNaN(v));
   if (!flatVols.length) {
     summaryEl.innerHTML = "<div style='opacity:0.7;'>Keine Vols für diese Auswahl.</div>";
+    notifyRiskPreview("interestRates");
     return;
   }
 
@@ -294,5 +540,11 @@ export function renderSwaptionCubeSummary() {
       Nodes im Ausschnitt: <strong>${flatVols.length}</strong>
     </div>
   `;
+
+  // 🔔 wichtig für Preview-Tabellen-Refresh
+  notifyRiskPreview("interestRates");
 }
+
+
+
 

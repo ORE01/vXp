@@ -12,6 +12,9 @@ import { buildCubeSurfaceGrid, renderSwaptionCubeSurface3D, populateSwaptionCube
 import { handlePortAggData, handlePortProdData} from './SELECT_PORTFOLIO/PORT.js';
 import { handleMVaRData, handleMvarInputData} from './ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
 
+import { handleIRSensData } from './ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
+import { handleCSSensData } from './ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
+
 import { handleCvarInput} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInput.js'; 
 import { handleCvarInputThresholdView} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInputThreshold.js'; 
 
@@ -23,7 +26,7 @@ import { handleLossIssuerMainData, setupLossIssuerUI } from './ANALYSE_PORTFOLIO
 import { handleLiquidityData } from './ANALYSE_PORTFOLIO/liquidity.js';
 
 import { rerenderHistoricCharts} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
-import { handleSummaryMarketRiskData } from './ANALYSE_PORTFOLIO/MARKET_RISK/SummaryMarketRisk.js';
+import { handleSummaryMarketRiskData } from './ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './NEW_PRODUCTS/offers.js';
 //REPORT:
 import { generateOfferPDF} from './REPORTS/OffersPDF.js';
@@ -232,19 +235,30 @@ function setupPythonProgressBars({
 
 
 
+function initAllPanelsLazyRender() {
+  initPortfolioPanelsLazyRender({ panelRenderState });
+  initMarketDataPanelsLazyRender({ panelRenderState });
+}
+
+
+
 
 function setupEventListeners() {
 
-    if (window.__listenersBoundOnce) {
+  if (window.__listenersBoundOnce) {
     console.warn('setupEventListeners() already bound – skipping');
     return;
   }
   window.__listenersBoundOnce = true;
 
+  // 🔁 ALT:
+  // initPortfolioPanelsLazyRender({ panelRenderState });
+  // initMarketDataPanelsLazyRender({ panelRenderState });
 
+  // ✅ NEU: zentrale Registrierung aller Panels
+  initAllPanelsLazyRender({ panelRenderState });
 
-  initPortfolioPanelsLazyRender({ panelRenderState });
-  initMarketDataPanelsLazyRender({ panelRenderState });
+  // bleibt wie gehabt
   initMarketDataChartsAutoRefresh();
 
 // CUSTOMER-Data
@@ -352,6 +366,7 @@ function setupEventListeners() {
 
     // TS CLONED
   window.api.receive('tblTSData', (data) => {createTSModals(data);});
+  
   // TS Tools panel
   observePanelTsOpen();
 
@@ -950,24 +965,44 @@ const isOfferName = (name) =>
   typeof name === 'string' && /^OFFERS?_/.test(name.toUpperCase());
 
   /** NUR Namen ohne OFFER(S)_ ins Deals-Dropdown **/
-  function handleDealsNameList(receivedData) {
-    try {
-      const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
-      const unique = [...new Set(names)];
-      const dealsOnly = unique.filter(n => !isOfferName(n));
-      const dealsList = dealsOnly.map(name => ({ table_name: name }));
+  // function handleDealsNameList(receivedData) {
+  //   try {
+  //     const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
+  //     const unique = [...new Set(names)];
+  //     const dealsOnly = unique.filter(n => !isOfferName(n));
+  //     const dealsList = dealsOnly.map(name => ({ table_name: name }));
 
-      // Speichern & Dropdown aktualisieren
-      if (typeof appState.setDealsNameList === 'function') {
-        appState.setDealsNameList(dealsList, 'createdDealsDropdown');
-      }
-      if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
-        appState.applyFiltersAndUpdateDropdowns('dealsTables');
-      }
-    } catch (error) {
-      console.error("❌ Error processing deals name list:", error);
+  //     // Speichern & Dropdown aktualisieren
+  //     if (typeof appState.setDealsNameList === 'function') {
+  //       appState.setDealsNameList(dealsList, 'createdDealsDropdown');
+  //     }
+  //     if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
+  //       appState.applyFiltersAndUpdateDropdowns('dealsTables');
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ Error processing deals name list:", error);
+  //   }
+  // }
+
+  /** ALLE Namen ins Deals-Dropdown (kein OFFERS-Filter) **/
+function handleDealsNameList(receivedData) {
+  try {
+    const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
+    const unique = [...new Set(names)];
+    const dealsList = unique.map(name => ({ table_name: name }));
+
+    // Speichern & Dropdown aktualisieren
+    if (typeof appState.setDealsNameList === 'function') {
+      appState.setDealsNameList(dealsList, 'createdDealsDropdown');
     }
+    if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
+      appState.applyFiltersAndUpdateDropdowns('dealsTables');
+    }
+  } catch (error) {
+    console.error("❌ Error processing deals name list:", error);
   }
+}
+
 
   /** NUR Namen mit OFFER(S)_ ins Offers-Dropdown **/
   function handleOffersNameList(receivedData) {
@@ -1004,14 +1039,30 @@ const isOfferName = (name) =>
 
 
 
-  function handlePortNameList(receivedData) {
-  try {
-    const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/i.test(n);
+//   function handlePortNameList(receivedData) {
+//   try {
+//     const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/i.test(n);
 
+//     const names = (receivedData || [])
+//       .map(e => e?.port_name)
+//       .filter(Boolean)
+//       .filter(n => !isOffer(n)); // ❗ Angebote rausfiltern
+
+//     const uniquePortfolios = [...new Set(names)].map(name => ({ table_name: name }));
+
+//     ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
+//       appState.setPortNameList(uniquePortfolios, dropdown);
+//       appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
+//     });
+//   } catch (error) {
+//     console.error("❌ Error processing created port data:", error);
+//   }
+// }
+function handlePortNameList(receivedData) {
+  try {
     const names = (receivedData || [])
       .map(e => e?.port_name)
-      .filter(Boolean)
-      .filter(n => !isOffer(n)); // ❗ Angebote rausfiltern
+      .filter(Boolean);
 
     const uniquePortfolios = [...new Set(names)].map(name => ({ table_name: name }));
 
@@ -1023,6 +1074,7 @@ const isOfferName = (name) =>
     console.error("❌ Error processing created port data:", error);
   }
 }
+
 
 
 
@@ -1534,6 +1586,34 @@ function fillSwaptionDropdowns(optionTenors, swapTenors) {
 }
 
 // Nur setzen der Daten:
+// function handleSwaptionATMData(rows) {
+//   if (!appState) return console.warn('[handleSwaptionATMData] appState fehlt.');
+
+//   const safeRows = Array.isArray(rows) ? rows : [];
+//   appState.setSwaptionATM(safeRows);
+
+//   // Dropdowns füllen (aus rows)
+//   const optionSet = new Set();
+//   const swapSet = new Set();
+//   for (const r of safeRows) {
+//     if (r?.option_tenor != null) optionSet.add(String(r.option_tenor));
+//     if (r?.swap_tenor   != null) swapSet.add(String(r.swap_tenor));
+//   }
+//   const optionTenors = sortTenors([...optionSet]);
+//   const swapTenors   = sortTenors([...swapSet]);
+
+//   fillSwaptionDropdowns(optionTenors, swapTenors);
+
+//   // ✅ Default setzen, falls leer (sonst opt/swp = '')
+//   const optSel = document.getElementById("swaptionOptionTenorSelect");
+//   const swpSel = document.getElementById("swaptionSwapTenorSelect");
+//   if (optSel && !optSel.value && optionTenors.length) optSel.value = optionTenors[0];
+//   if (swpSel && !swpSel.value && swapTenors.length)   swpSel.value = swapTenors[0];
+
+//   // ✅ Signal (kein Render hier)
+//   document.dispatchEvent(new CustomEvent("swaption:atm:ready", { detail: { count: safeRows.length } }));
+// }
+
 function handleSwaptionATMData(rows) {
   if (!appState) return console.warn('[handleSwaptionATMData] appState fehlt.');
 
@@ -1559,20 +1639,142 @@ function handleSwaptionATMData(rows) {
   if (swpSel && !swpSel.value && swapTenors.length)   swpSel.value = swapTenors[0];
 
   // ✅ Signal (kein Render hier)
-  document.dispatchEvent(new CustomEvent("swaption:atm:ready", { detail: { count: safeRows.length } }));
+  document.dispatchEvent(
+    new CustomEvent("swaption:atm:ready", { detail: { count: safeRows.length } })
+  );
 }
+
+// 🔔 Sobald ATM-Daten da sind UND der Chart-Container existiert → Surface rendern
+document.addEventListener("swaption:atm:ready", (ev) => {
+  if (!appState) {
+    console.log("[swaption:atm:ready] appState fehlt.");
+    return;
+  }
+
+  const rows = appState.swaptionATM;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    console.log("[swaption:atm:ready] Keine swaptionATM-Daten im State.");
+    return;
+  }
+
+  const target = document.getElementById("swaption-atm-surface-3d");
+  if (!target) {
+    console.log("[swaption:atm:ready] swaption-atm-surface-3d noch nicht im DOM – wird später gerendert.");
+    return;
+  }
+
+  console.log("[swaption:atm:ready] Daten & DOM vorhanden → renderVolSurfacePanel()");
+  renderVolSurfacePanel();  // erzeugt PNG & notifyRiskPreview('interestRates')
+});
+
 
 
 
 // Nur setzen der Daten:
+// function handleSwaptionSmileData(rows) {
+//   if (!appState) return console.warn('[Smile] appState fehlt.');
+
+//   const safeRows = Array.isArray(rows) ? rows : [];
+//   appState.setSwaptionSmile(safeRows);
+
+//   document.dispatchEvent(new CustomEvent("swaption:smile:ready", { detail: { count: safeRows.length } }));
+// }
+
 function handleSwaptionSmileData(rows) {
   if (!appState) return console.warn('[Smile] appState fehlt.');
 
   const safeRows = Array.isArray(rows) ? rows : [];
   appState.setSwaptionSmile(safeRows);
 
-  document.dispatchEvent(new CustomEvent("swaption:smile:ready", { detail: { count: safeRows.length } }));
+  // ✅ Signal: Smile-Daten sind da
+  document.dispatchEvent(
+    new CustomEvent("swaption:smile:ready", { detail: { count: safeRows.length } })
+  );
 }
+
+// 🔔 Sobald Smile-Daten da sind UND der Chart-Canvas existiert → Smile rendern
+document.addEventListener("swaption:smile:ready", (ev) => {
+  if (!appState) {
+    console.log("[swaption:smile:ready] appState fehlt.");
+    return;
+  }
+
+  const rows = appState.swaptionSmile;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    console.log("[swaption:smile:ready] Keine swaptionSmile-Daten im State.");
+    return;
+  }
+
+  // Canvas für den Smile-Chart vorhanden?
+  const canvas = document.getElementById("swaption-smile-chart");
+  if (!canvas) {
+    console.log("[swaption:smile:ready] #swaption-smile-chart noch nicht im DOM – wird später gerendert.");
+    return;
+  }
+
+  console.log("[swaption:smile:ready] Daten & DOM vorhanden → renderSwaptionSmile()");
+  renderSwaptionSmile();  // rendert Chart, Summary + notifyRiskPreview("interestRates")
+});
+
+// Beispiel: wird vom Python-Bridge aufgerufen, wenn der Cube fertig ist
+// window.api.receive('EUSWAPTION_CUBE_SURFACE', handleSwaptionCubeSurfaceData);
+
+export function handleSwaptionCubeSurfaceData(cubeSurfaceFixedK) {
+  if (!appState) {
+    console.warn('[handleSwaptionCubeSurfaceData] appState fehlt.');
+    return;
+  }
+
+  const grid = buildCubeSurfaceGrid(cubeSurfaceFixedK);
+  if (!grid) {
+    console.warn('[handleSwaptionCubeSurfaceData] Grid konnte nicht gebaut werden.');
+    return;
+  }
+
+  // Im State ablegen (oder Setter verwenden, falls vorhanden)
+  if (appState.setSwaptionCubeSurface) {
+    appState.setSwaptionCubeSurface(grid);
+  } else {
+    appState.swaptionCubeSurface = grid;
+  }
+
+  // Dropdowns befüllen
+  populateSwaptionCubeSelectors();
+
+  // Signal: Cube ist ready
+  document.dispatchEvent(
+    new CustomEvent("swaption:cube:ready", { detail: { strike: grid.strike } })
+  );
+}
+
+// 🔔 Wenn Cube-Daten da sind UND der 3D-Chart-Container existiert → rendern
+document.addEventListener("swaption:cube:ready", (ev) => {
+  if (!appState) {
+    console.log("[swaption:cube:ready] appState fehlt.");
+    return;
+  }
+
+  const cube = appState.getSwaptionCubeSurface
+    ? appState.getSwaptionCubeSurface()
+    : appState.swaptionCubeSurface;
+
+  if (!cube) {
+    console.log("[swaption:cube:ready] Kein swaptionCubeSurface im State.");
+    return;
+  }
+
+  const target = document.getElementById("swaption-cube-surface-3d");
+  if (!target) {
+    console.log("[swaption:cube:ready] #swaption-cube-surface-3d noch nicht im DOM – wird später gerendert.");
+    return;
+  }
+
+  console.log("[swaption:cube:ready] Daten & DOM vorhanden → renderSwaptionCubeSurface3D()");
+  renderSwaptionCubeSurface3D();      // erzeugt PNG + notifyRiskPreview('interestRates')
+  renderSwaptionCubeSummary();       // Summary-Box aktualisieren
+});
+
+
 
 
 
@@ -1837,7 +2039,7 @@ function handleRiskPDFClick() {
     wireRiskPreview();
 
 
-    export async function handleRefreshThumbnailsClick(e) {
+export async function handleRefreshThumbnailsClick(e) {
   const btn = e?.currentTarget || document.getElementById('refreshThumbnailsBtn');
   if (!btn) return;
 
@@ -1846,24 +2048,33 @@ function handleRiskPDFClick() {
   btn.textContent = 'Refreshing…';
 
   try {
-    // Daten holen (aus State; falls du IPC willst, kannst du das hier ersetzen)
+    // Daten holen (aus State)
     const portMainData =
-      (window.appState?.getPortMainData?.() || window.appState?.getPortMainTable?.() || []);
+      (window.appState?.getPortMainData?.() ||
+       window.appState?.getPortMainTable?.() ||
+       []);
 
-    // PV01 neu aufbauen (Tabelle + Chart)
-    if (typeof handleIRSensData === 'function') {
-      const irTable = handleIRSensData(portMainData);
-      replaceContent('IRSensDataContainer', irTable);
+    // IR Sensitivity (PV01)
+    if (typeof handleIRSensData !== 'function') {
+      throw new Error('handleIRSensData is not available (import missing or wrong)');
     }
 
-    // CPV01 neu aufbauen (falls vorhanden)
-    if (typeof handleCRSensData === 'function') {
-      const crTable = handleCRSensData(portMainData);
-      replaceContent('CRSensDataContainer', crTable);
+    const irTable = handleIRSensData(portMainData);
+    replaceContent('IRSensDataContainer', irTable);
+
+    // Credit Sensitivity (CPV01)
+    if (typeof handleCSSensData === 'function') {
+      const crTable = handleCSSensData(portMainData);
+      replaceContent('CSSensDataContainer', crTable);
     }
 
-    // Optional: Event für weitere Listener
-    document.dispatchEvent(new CustomEvent('risk:refresh-thumbnails'));
+    // Optional: Event für weitere Listener (PDF / Preview etc.)
+    document.dispatchEvent(
+      new CustomEvent('risk:refresh-thumbnails', {
+        detail: { source: 'manual-refresh' }
+      })
+    );
+
   } catch (err) {
     console.error('[RiskPDF] refresh failed:', err);
   } finally {
@@ -1871,6 +2082,7 @@ function handleRiskPDFClick() {
     btn.textContent = original;
   }
 }
+
 
 // 3) Mini-Helper zum sicheren Ersetzen von Container-Inhalten
 function replaceContent(containerId, node) {
@@ -2595,18 +2807,14 @@ function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
               appState.setActiveTable('port');
           
               const port_name = appState.getSelectedPortTableName();
-              //appState.fetchAndHandlePortData(port_name, 'portDataContainer0');
-          
-              // handleProjectResponse(document.getElementById('MVaRButton'), data.projectName, data);
+
               handleProjectResponse(document.getElementById('mvaRDistButton'), data.projectName, data);
+
               fetchAndUpdateMVarData(port_name);
         
               const mvarData = appState.getAllMvarData();
               handleMVaRData(mvarData, 0);
 
-
-              // const mvarDistData = appState.getMvarDistData();
-              // handleSummaryRMData(mvarDistData, 0, port_name);
               handleSummaryMarketRiskData(port_name);
             }
           }
@@ -3026,6 +3234,43 @@ function handleProjectButtonClick(buttonElement, projectName, extraParam = {}) {
         // Startet den IPC-Call, den wir im Main definiert haben
         window.api?.send?.('start-py-swaption', payload);
       }
+// function handleSwaptionComplete(data) {
+//   console.log('📌 handleSwaptionComplete:', data);
+//   if (data.projectName !== 'py-swaption') return;
+
+//   if (!data.success) {
+//     console.error('❌ Swaption-Run fehlgeschlagen:', data.error);
+//     return;
+//   }
+
+//   const outer = data.result || {};
+//   if (outer.status !== 'ok') {
+//     console.error('❌ Swaption status != ok:', outer.message || outer.error);
+//     return;
+//   }
+
+//   const core = outer.result || {};
+//   const { cubeSurfaceFixedK } = core;
+
+//   const cubeGrid = buildCubeSurfaceGrid(cubeSurfaceFixedK);
+//   if (!cubeGrid) {
+//     console.warn('[handleSwaptionComplete] Konnte cubeGrid nicht bauen.');
+//     return;
+//   }
+
+//   if (appState.setSwaptionCubeSurface) {
+//     appState.setSwaptionCubeSurface(cubeGrid);
+//   } else {
+//     appState.swaptionCubeSurface = cubeGrid;
+//   }
+
+//   // 🔹 Selects befüllen + Default (2Y / 5Y) setzen
+//   populateSwaptionCubeSelectors();
+
+//   // 🔹 Surface rendern
+//   renderSwaptionCubeSurface3D();
+// }
+
 function handleSwaptionComplete(data) {
   console.log('📌 handleSwaptionComplete:', data);
   if (data.projectName !== 'py-swaption') return;
@@ -3044,24 +3289,39 @@ function handleSwaptionComplete(data) {
   const core = outer.result || {};
   const { cubeSurfaceFixedK } = core;
 
+  // 🔹 Cube-Grid aus Python-Result bauen
   const cubeGrid = buildCubeSurfaceGrid(cubeSurfaceFixedK);
   if (!cubeGrid) {
     console.warn('[handleSwaptionComplete] Konnte cubeGrid nicht bauen.');
     return;
   }
 
+  // 🔹 Im State ablegen
   if (appState.setSwaptionCubeSurface) {
     appState.setSwaptionCubeSurface(cubeGrid);
   } else {
     appState.swaptionCubeSurface = cubeGrid;
   }
 
-  // 🔹 Selects befüllen + Default (2Y / 5Y) setzen
+  // 🔹 Selects für Cube befüllen + Default setzen
   populateSwaptionCubeSelectors();
 
-  // 🔹 Surface rendern
+  // 🔹 3D-Cube rendern → erzeugt PNG + notifyRiskPreview("interestRates")
   renderSwaptionCubeSurface3D();
+
+  // 🔹 Summary-Box aktualisieren (optional, aber sinnvoll)
+  try {
+    renderSwaptionCubeSummary();
+  } catch (e) {
+    console.warn('[handleSwaptionComplete] renderSwaptionCubeSummary failed', e);
+  }
+
+  // (optional) Event für andere Listener
+  document.dispatchEvent(
+    new CustomEvent("swaption:cube:ready", { detail: { strike: cubeGrid.strike } })
+  );
 }
+
 
 
 
