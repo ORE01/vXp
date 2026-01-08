@@ -1,13 +1,48 @@
-# Ignorierte Verzeichnisse und Dateien
+# -----------------------
+# Node / Electron
+# -----------------------
 node_modules/
+dist/
+out/
 .env
-large_directory/
 *.log
+
+# -----------------------
+# Python
+# -----------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+
+# -----------------------
+# IDEs / Editor
+# -----------------------
+.idea/
+.vscode/
+
+# -----------------------
+# Build / Packaging (PyInstaller etc.)
+# -----------------------
+build/
+*.spec
+dist.zip
+
+# -----------------------
+# Project-specific folders
+# -----------------------
+large_directory/
 zzzApp/
 bin/
 zzzArchiv/
 files/
-out temp_folder/
-dist/
-venv/
+temp_folder/
+
+# -----------------------
+# Files
+# -----------------------
 logfile.txt
