@@ -19,19 +19,6 @@ let __riskRendering = false;
 let __lastRenderTs = 0;           // letzter erfolgreicher Render (ms)
 const RENDER_THROTTLE_MS = 200;   // Mindestabstand zwischen Renders
 
-//Report Title//
-const RISK_REPORT_TITLE_KEY = 'rr-report-title';
-
-export function setActiveRiskReportTitle(title) {
-  const t = String(title || '').trim();
-  try { localStorage.setItem(RISK_REPORT_TITLE_KEY, t); } catch {}
-  return t;
-}
-
-export function getActiveRiskReportTitle() {
-  try { return String(localStorage.getItem(RISK_REPORT_TITLE_KEY) || '').trim(); }
-  catch { return ''; }
-}
 
 
 // ─────────────────────────────────────────────
@@ -2262,12 +2249,6 @@ export function notifyRiskPreview(source) {
     );
   } catch (e) {
     console.warn('[RiskPreview] risk:refresh-thumbnails dispatch failed', e);
-  }
-}
-
-export function syncRiskPdfStateFromDOM() {
-  try { saveChartToggleStateFromDOM(); } catch (e) {
-    console.warn('[RiskPDFPreview] syncRiskPdfStateFromDOM failed', e);
   }
 }
 

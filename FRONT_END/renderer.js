@@ -1995,39 +1995,68 @@ export function closePanel(panelId) {
 
 
 
-  // Risk PDF
+  // =========================
+// Risk PDF (Renderer)
+// =========================
 
-  function sanitizeFileName(name) {
+function sanitizeFileName(name) {
   const s = String(name || '').trim();
   if (!s) return '';
   return s
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-')  // verbotene Zeichen (Win/macOS)
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '-') // forbidden chars (Win/macOS)
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 80);
 }
 
-  function getCurrentReportPresetName() {
+// DOM fallback (falls AppState nicht verfügbar oder noch nicht gesetzt)
+function getCurrentReportPresetName() {
   return (
     document.getElementById('customerReportsNameInput')?.value ||
     document.getElementById('customerReportsDropdown')?.value ||
     ''
   ).trim();
 }
-function handleRiskPDFClick() {
-  const data = appState.getFilteredPortData?.() || [];
-  if (!data.length) {
+
+// ✅ Single point: resolve report title (AppState first, then DOM fallback)
+function resolveRiskReportTitle() {
+  const t =
+    (appState?.getActiveCustomerReportName?.() ||
+     getCurrentReportPresetName() ||
+     '').trim();
+  return t;
+}
+
+export function handleRiskPDFClick() {
+  const data = appState?.getFilteredPortData?.() || [];
+
+  if (!Array.isArray(data) || data.length === 0) {
     alert('❌ Keine Angebotsdaten verfügbar!');
     return;
   }
 
   try {
-    const presetName = getCurrentReportPresetName();
-    const safeName = sanitizeFileName(presetName);
+    // 1) Title
+    const reportTitle = resolveRiskReportTitle();
+
+    // 2) Filename derived from title
+    const safeName = sanitizeFileName(reportTitle);
     const fileName = safeName ? `Risk - ${safeName}.pdf` : 'Risk.pdf';
 
-    // ✅ PDF baut sich aus DOM + Checkbox-States, aber Dateiname kommt aus Preset
-    generateRiskPDF(data, { fileName });
+    // 3) Ensure preview is wired (so getActiveRiskSectionsForPdf() has proper state)
+    try {
+      // wireRiskPreview should be idempotent
+      if (typeof wireRiskPreview === 'function') wireRiskPreview();
+    } catch (e) {
+      console.warn('[RiskPDF] wireRiskPreview failed (continuing):', e);
+    }
+
+    // 4) Generate PDF
+    generateRiskPDF(data, {
+      fileName,
+      reportTitle, // ✅ used by RiskPDF.js header (and later cover page)
+    });
+
   } catch (e) {
     console.error(e);
     alert('Risk-PDF-Erstellung fehlgeschlagen.');
@@ -2035,9 +2064,9 @@ function handleRiskPDFClick() {
 }
 
 
-
-    wireRiskPreview();
-
+// =========================
+// Refresh thumbnails (unchanged but cleaned up)
+// =========================
 
 export async function handleRefreshThumbnailsClick(e) {
   const btn = e?.currentTarget || document.getElementById('refreshThumbnailsBtn');
@@ -2048,13 +2077,11 @@ export async function handleRefreshThumbnailsClick(e) {
   btn.textContent = 'Refreshing…';
 
   try {
-    // Daten holen (aus State)
     const portMainData =
       (window.appState?.getPortMainData?.() ||
        window.appState?.getPortMainTable?.() ||
        []);
 
-    // IR Sensitivity (PV01)
     if (typeof handleIRSensData !== 'function') {
       throw new Error('handleIRSensData is not available (import missing or wrong)');
     }
@@ -2062,13 +2089,11 @@ export async function handleRefreshThumbnailsClick(e) {
     const irTable = handleIRSensData(portMainData);
     replaceContent('IRSensDataContainer', irTable);
 
-    // Credit Sensitivity (CPV01)
     if (typeof handleCSSensData === 'function') {
       const crTable = handleCSSensData(portMainData);
       replaceContent('CSSensDataContainer', crTable);
     }
 
-    // Optional: Event für weitere Listener (PDF / Preview etc.)
     document.dispatchEvent(
       new CustomEvent('risk:refresh-thumbnails', {
         detail: { source: 'manual-refresh' }
@@ -2082,6 +2107,7 @@ export async function handleRefreshThumbnailsClick(e) {
     btn.textContent = original;
   }
 }
+
 
 
 // 3) Mini-Helper zum sicheren Ersetzen von Container-Inhalten

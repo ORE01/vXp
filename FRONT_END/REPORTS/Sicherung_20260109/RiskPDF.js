@@ -1,14 +1,17 @@
-/* RiskPDF.js — FULL (centralized layout + table core + COVER PAGE)
-   ✅ Must work:
-   - Load preset (checkbox state in localStorage) -> Export -> PDF contains exactly what is checked
-   ✅ Fix included:
-   - NO dependency on getBreakdownChartDisplayLabel (was causing crash when Breakdown is included)
-   - Breakdown labels resolved safely from DOM/data-label (fallback to id)
-   - Cover page (title + date + logo)
-   - TOC on page 2 (no insertPage hacks)
+/* RiskPDF.js — FULL (centralized layout + table core)
    - Header/Footer safe areas (no overlap)
-   - Numbers never linebreak (central)
-   - Appendix ProductID never wraps (generic via noWrapColumns)
+   - TOC
+   - Charts (canvas + plotly)
+   - Breakdown (one chart + legend per page)
+   - Credit/Market traffic light sections
+   - CENTRAL TABLE LAYOUT CORE:
+       * renderTableAutoFit() => "shrink only" strategy for ALL normal tables (incl. Liquidity)
+       * forces tableWidth = layout.contentWidth + fitted columnStyles
+       * no horizontal breaks
+   - Appendix Product Table:
+       * wrap+linebreak for text
+       * numbers never linebreak (central rule)
+       * ProductID column never linebreak (generic via noWrapColumns)
 */
 
 const { jsPDF } = window.jspdf;
@@ -29,6 +32,7 @@ export const REPORT_DEFAULTS = {
 // TIMESTAMP
 // =====================================================================
 const reportTimestamp = new Date();
+
 const formatTimestamp = (d) => {
   const pad = (n) => String(n).padStart(2, '0');
   return (
@@ -36,31 +40,8 @@ const formatTimestamp = (d) => {
     `${pad(d.getHours())}:${pad(d.getMinutes())}`
   );
 };
+
 const reportTimeText = formatTimestamp(reportTimestamp);
-
-// =====================================================================
-// SAFE LABEL RESOLVER (NO external dependency)
-// =====================================================================
-function resolveBreakdownChartLabel(chartId) {
-  if (!chartId) return '';
-
-  // 1) DOM dataset label (preferred)
-  try {
-    const el = document.getElementById(chartId);
-    const dl = el?.dataset?.label;
-    if (dl && String(dl).trim()) return String(dl).trim();
-  } catch {}
-
-  // 2) Common DOM label holders (optional, safe)
-  try {
-    const el = document.getElementById(chartId);
-    const aria = el?.getAttribute?.('aria-label');
-    if (aria && String(aria).trim()) return String(aria).trim();
-  } catch {}
-
-  // 3) Fallback to id
-  return String(chartId);
-}
 
 // =====================================================================
 // LAYOUT SYSTEM (single source of truth)
@@ -85,6 +66,7 @@ export function createPdfLayout(doc, overrides = {}) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
+  // margins as distances (NOT absolute coords)
   const topMargin = cfg.headerHeight + cfg.headerGap;
   const bottomMargin = cfg.footerHeight + cfg.footerGap;
 
@@ -98,9 +80,11 @@ export function createPdfLayout(doc, overrides = {}) {
     left,
     right,
 
+    // absolute content boundaries
     topY: topMargin,
     bottomY: pageH - bottomMargin,
 
+    // margins (distances) used by autoTable
     topMargin,
     bottomMargin,
 
@@ -138,9 +122,13 @@ function safeAutoTable(doc, layout, options) {
     valign: 'top',
   };
 
+  // optional per-table no-wrap columns
   const noWrapCols = Array.isArray(options.noWrapColumns) ? options.noWrapColumns : [];
+
+  // preserve user callback if any
   const userDidParseCell = options.didParseCell;
 
+  // robust numeric detection (finance-friendly)
   const isNumericLike = (val) => {
     const t = String(val ?? '').trim();
     if (!t) return false;
@@ -173,8 +161,9 @@ function safeAutoTable(doc, layout, options) {
     styles: { ...baseStyles, ...(options.styles || {}) },
     headStyles: { ...(options.headStyles || {}) },
 
+    // central behavior
     didParseCell: (data) => {
-      // user callback first
+      // run user callback first (safe)
       try { userDidParseCell?.(data); } catch {}
 
       if (!data || data.section !== 'body') return;
@@ -182,9 +171,9 @@ function safeAutoTable(doc, layout, options) {
 
       const colIdx = data.column?.index;
 
-      // 1) Forced no-wrap columns (e.g., ProductID in appendix)
+      // 1) Hard no-wrap columns (e.g., ProductID)
       if (typeof colIdx === 'number' && noWrapCols.includes(colIdx)) {
-        data.cell.styles.overflow = 'visible';
+        data.cell.styles.overflow = 'visible'; // no linebreak
         data.cell.styles.cellWidth = 'auto';
         data.cell.styles.valign = 'middle';
         return;
@@ -198,10 +187,11 @@ function safeAutoTable(doc, layout, options) {
         if (typeof data.cell.raw === 'string' || typeof data.cell.raw === 'number') txt = String(data.cell.raw).trim();
         else if (data.cell.raw?.textContent) txt = String(data.cell.raw.textContent).trim();
       }
+
       if (!txt) return;
 
       if (isNumericLike(txt)) {
-        data.cell.styles.overflow = 'visible';
+        data.cell.styles.overflow = 'visible'; // no linebreak
         data.cell.styles.cellWidth = 'auto';
         data.cell.styles.halign = data.cell.styles.halign || 'right';
         data.cell.styles.valign = 'middle';
@@ -213,6 +203,8 @@ function safeAutoTable(doc, layout, options) {
 // =====================================================================
 // TABLE LAYOUT CORE (centralized, reusable)
 // =====================================================================
+
+// Analyze extracted table (rough “width pressure”)
 function analyzeTable(tbl) {
   const head = tbl?.head || [];
   const body = tbl?.body || [];
@@ -224,7 +216,7 @@ function analyzeTable(tbl) {
     if (!Array.isArray(row)) return;
     for (let i = 0; i < colCount; i++) {
       const v = row[i] == null ? '' : String(row[i]);
-      const len = Math.min(v.length, 80);
+      const len = Math.min(v.length, 80); // clamp
       if (len > maxLenByCol[i]) maxLenByCol[i] = len;
     }
   };
@@ -236,6 +228,7 @@ function analyzeTable(tbl) {
   return { colCount, maxLenByCol, totalLen };
 }
 
+// Fit column widths to exactly layout.contentWidth (first col wider)
 function fitColumnStyles(layout, colCount, { firstCol = 48, minOther = 7 } = {}) {
   const W = layout.contentWidth;
   if (!colCount || colCount < 1) return {};
@@ -249,14 +242,28 @@ function fitColumnStyles(layout, colCount, { firstCol = 48, minOther = 7 } = {})
   return cs;
 }
 
-function pickShrinkPreset({ colCount, totalLen }) {
+// Pick “shrink only as needed” preset
+function pickShrinkPreset(analysis) {
+  const { colCount, totalLen } = analysis;
+
+  // many columns => shrink more
   if (colCount >= 14) return { fontSize: 6.0, cellPadding: 0.9, firstCol: 44 };
   if (colCount >= 11) return { fontSize: 6.5, cellPadding: 1.0, firstCol: 44 };
-  if (colCount >= 9)  return { fontSize: 7.0, cellPadding: 1.2, firstCol: 44 };
+  if (colCount >= 9) return { fontSize: 7.0, cellPadding: 1.2, firstCol: 44 };
+
+  // fewer columns but long text => slightly compact
   if (totalLen > 220) return { fontSize: 7.5, cellPadding: 1.4, firstCol: 46 };
+
+  // default
   return { fontSize: 8.0, cellPadding: 1.8, firstCol: 48 };
 }
 
+/**
+ * Render a regular (non-appendix) table with “shrink only” strategy.
+ * - no horizontal breaks
+ * - forces fit to content width by tableWidth + columnStyles
+ * - wraps text as needed; numbers never linebreak (central)
+ */
 function renderTableAutoFit(doc, layout, { title, y, tbl, theme = 'grid', headStyles, alternateRowStyles } = {}) {
   if (!tbl) return { finalY: y };
 
@@ -282,6 +289,8 @@ function renderTableAutoFit(doc, layout, { title, y, tbl, theme = 'grid', headSt
     head,
     body: tbl.body,
     theme,
+
+    // core: fit to page width
     tableWidth: layout.contentWidth,
     columnStyles,
 
@@ -302,64 +311,25 @@ function renderTableAutoFit(doc, layout, { title, y, tbl, theme = 'grid', headSt
     alternateRowStyles: alternateRowStyles || undefined,
   });
 
-  return { finalY: doc.lastAutoTable?.finalY ?? (y + 40) };
+  const finalY = doc.lastAutoTable?.finalY ?? y + 40;
+  return { finalY };
 }
 
 // =====================================================================
-// COVER / HEADER / FOOTER
+// HEADER / FOOTER
 // =====================================================================
-function drawCoverPage(doc, layout, { title, logoEl, reportTimeText }) {
-  const { pageW, pageH, right } = layout;
-  const centerX = pageW / 2;
-
-  // Logo (top-right, larger)
-  if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
-    const maxLogoW = 55;
-    const maxLogoH = 22;
-
-    const imgW = logoEl.naturalWidth;
-    const imgH = logoEl.naturalHeight;
-    const ratio = imgW / imgH;
-
-    let logoW = maxLogoW;
-    let logoH = logoW / ratio;
-
-    if (logoH > maxLogoH) {
-      logoH = maxLogoH;
-      logoW = logoH * ratio;
-    }
-
-    doc.addImage(logoEl, 'PNG', pageW - right - logoW, 18, logoW, logoH);
-  }
-
-  const safeTitle = String(title || '').trim() || 'Risk Report';
-
-  doc.setTextColor(0);
-  doc.setFontSize(28);
-  doc.text(safeTitle, centerX, pageH * 0.40, { align: 'center' });
-
-  doc.setFontSize(12);
-  doc.setTextColor(80);
-  doc.text(`Generated: ${String(reportTimeText || '').trim()}`, centerX, pageH * 0.40 + 18, { align: 'center' });
-
-  doc.setFontSize(10);
-  doc.setTextColor(120);
-  doc.text('generated by valuationXpro', centerX, pageH - 40, { align: 'center' });
-
-  doc.setTextColor(0);
-}
-
 function drawHeaderFooter(doc, layout, { title = 'Risk Report', logoEl, reportTimeText }) {
   const { pageW, pageH, left, right, cfg } = layout;
 
   const headerTextY = Math.max(10, cfg.headerHeight - 4);
   const logoY = 8;
+
   const footerBaseY = pageH - (cfg.footerHeight - 4);
 
   const maxLogoW = 30;
   const maxLogoH = Math.max(10, cfg.headerHeight - 6);
 
-  // HEADER
+  /* HEADER */
   doc.setFontSize(10);
   doc.setTextColor(0);
   doc.text(title, left, headerTextY);
@@ -380,7 +350,7 @@ function drawHeaderFooter(doc, layout, { title = 'Risk Report', logoEl, reportTi
     doc.addImage(logoEl, 'PNG', pageW - right - logoW, logoY, logoW, logoH);
   }
 
-  // FOOTER
+  /* FOOTER */
   doc.setFontSize(8);
   doc.setTextColor(0);
   doc.text(['Report generated:', reportTimeText], left, footerBaseY - 4);
@@ -451,33 +421,22 @@ function applyPdfHierarchy(sections, config) {
 }
 
 // =====================================================================
-// GENERATE PDF (Cover + TOC + Content)
+// GENERATE PDF
 // =====================================================================
 export async function generateRiskPDF(filteredData, overrides = {}) {
   const opts = { ...REPORT_DEFAULTS, ...overrides };
-
   const doc = new jsPDF({ orientation: opts.orientation, format: opts.paper });
   const layout = createPdfLayout(doc, overrides?.layout || {});
 
-  const reportTitle = String(opts.reportTitle || 'Risk Report').trim() || 'Risk Report';
-  const logoEl = document.getElementById('logo');
-
-  // 0) COVER PAGE (page 1)
-  doc.setPage(1);
-  drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText });
-
-  // 1) TOC placeholder (page 2)
-  const includeTOC = !!opts.includeTOC;
-  if (includeTOC) doc.addPage(); // page 2 reserved for TOC
-
-  // 2) Sections from preview (reads current rr-chart-state)
+  // Sections from preview
   let sections = getActiveRiskSectionsForPdf() || [];
   sections = applyPdfHierarchy(sections, RISK_CONFIG);
 
+  // Map section numbers
   const sectionNoByKey = {};
   sections.forEach((s) => (sectionNoByKey[s.key] = s.sectionNumber));
 
-  // 3) Breakdown numbering (TOC level 2/3) — SAFE label resolver
+  // Breakdown numbering (TOC level 2/3)
   const breakdownSec = sections.find((s) => s.key === 'breakdown');
   if (breakdownSec && typeof groupBreakdownChartsBySection === 'function') {
     const sectionNo = sectionNoByKey[breakdownSec.key] || '1';
@@ -496,7 +455,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       let cIdx = 1;
       g.charts.forEach((ch) => {
         if (!ch?.id) return;
-        const label = resolveBreakdownChartLabel(ch.id);
+        const label = getBreakdownChartDisplayLabel(ch.id);
         breakdownNumbering.charts[ch.id] = { no: `${gNo}.${cIdx}`, label };
         cIdx++;
       });
@@ -506,15 +465,13 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     breakdownSec.breakdownNumbering = breakdownNumbering;
   }
 
-  // 4) Render sections
+  // TOC entries
   const tocEntries = [];
   const addTOCEntry = (number, title, page, level = 1) => {
     tocEntries.push({ title: `${number}. ${title}`, page, level });
   };
 
-  // First content page (page 3 if TOC, else page 2)
-  doc.addPage();
-
+  // Render sections
   let wroteAnySection = false;
 
   for (let i = 0; i < sections.length; i++) {
@@ -552,9 +509,10 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     await renderPanelSectionToPDF(doc, sec, layout);
   }
 
-  // 5) Appendix
+  // Appendix
   if (Array.isArray(filteredData) && filteredData.length) {
-    doc.addPage();
+    if (wroteAnySection) doc.addPage();
+
     const pageIndex = doc.internal.getNumberOfPages();
     const appendixNo = String(sections.length + 1);
 
@@ -562,9 +520,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     drawProductTableSection(doc, filteredData, layout, { appendixNo });
   }
 
-  // 6) Draw TOC into page 2
-  if (includeTOC) {
-    doc.setPage(2);
+  // Insert TOC
+  if (opts.includeTOC && tocEntries.length) {
+    doc.insertPage(1);
+    doc.setPage(1);
+
     const tocLayout = createPdfLayout(doc, layout.cfg);
 
     doc.setFontSize(16);
@@ -579,9 +539,10 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       const indent = (entry.level - 1) * 5;
       const y = lineStartY + index * lineStep;
 
-      if (y > tocLayout.bottomY - 6) return;
+      if (y > tocLayout.bottomY - 6) return; // simple; add paging later if needed
 
-      const pageText = String(entry.page);
+      const pageText = (entry.page + 1).toString(); // +1 because TOC page
+
       const marginLeft = tocLayout.left + indent;
       const marginRight = tocLayout.right;
 
@@ -598,14 +559,17 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     });
   }
 
-  // 7) Header/Footer + Page numbers on all pages except cover (page 1)
+  // Header/Footer on all pages
   const pageCount = doc.internal.getNumberOfPages();
-  const finalLayout = createPdfLayout(doc, layout.cfg);
+  const logoEl = document.getElementById('logo');
 
-  for (let p = 2; p <= pageCount; p++) {
-    doc.setPage(p);
+  const finalLayout = createPdfLayout(doc, layout.cfg);
+  const reportTitle = opts.reportTitle || overrides?.reportTitle || 'Risk Report';
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
     drawHeaderFooter(doc, finalLayout, { title: reportTitle, logoEl, reportTimeText });
-    drawPageNumber(doc, finalLayout, { pageIndex: p, pageCount });
+    drawPageNumber(doc, finalLayout, { pageIndex: i, pageCount });
   }
 
   doc.save(opts.fileName || 'Risk.pdf');
@@ -642,7 +606,7 @@ function groupBreakdownChartsBySection(charts) {
 // SECTION RENDERING
 // =====================================================================
 async function renderPanelSectionToPDF(doc, sec, layout) {
-  const { left: marginX, cfg } = layout;
+  const { pageW, left: marginX, cfg } = layout;
   const gutter = 10;
 
   let y = layout.startY();
@@ -777,7 +741,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
       }
 
       const chartMeta = breakdownNumbering?.charts[chart.id];
-      const chartLabel = chartMeta?.label || chart.label || resolveBreakdownChartLabel(chart.id);
+      const chartLabel = chartMeta?.label || chart.label || chart.id;
       const chartNumber = chartMeta?.no;
       const chartHeading = chartNumber ? `${chartNumber}. ${chartLabel}` : chartLabel;
 
@@ -786,6 +750,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
       doc.text(chartHeading, marginX, y);
       y += 6;
 
+      // chart image
       const el = document.getElementById(chart.id);
       if (el) {
         let imgData = null;
@@ -830,6 +795,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
         }
       }
 
+      // legend table under chart
       const tMeta = legendByChartId.get(chart.id);
       if (tMeta) {
         const host = document.getElementById(tMeta.id);
@@ -840,7 +806,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
         if (tableElem && typeof doc.autoTable === 'function') {
           const chartMeta2 = breakdownNumbering?.charts[chart.id];
-          const chartLabel2 = chartMeta2?.label || chart.label || tMeta.label || resolveBreakdownChartLabel(chart.id);
+          const chartLabel2 = chartMeta2?.label || chart.label || tMeta.label || tMeta.id;
           const chartNumber2 = chartMeta2?.no;
 
           const tableTitle = chartNumber2
@@ -963,6 +929,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
   doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
 
+  // Charts (2 columns)
   const chartWidth = (layout.contentWidth - gutter) / 2;
   let colInRow = 0;
   let rowHeight = 0;
@@ -1026,6 +993,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
     rowHeight = 0;
   }
 
+  // Tables — CENTRALIZED AUTOFIT
   for (const t of tablesAll) {
     const tbl = extractTableFromContainer(t.id, { maxRows: 500, maxCols: 40 });
     if (!tbl) continue;
@@ -1052,8 +1020,8 @@ function readCreditTrafficStatus() {
   const map = {};
   const defs = [
     { key: 'cvar', id: 'traffic-credit-cvar' },
-    { key: 'tsi',  id: 'traffic-credit-tsi' },
-    { key: 'msd',  id: 'traffic-credit-msd' },
+    { key: 'tsi', id: 'traffic-credit-tsi' },
+    { key: 'msd', id: 'traffic-credit-msd' },
   ];
 
   defs.forEach((d) => {
@@ -1083,14 +1051,14 @@ async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
 
   const metrics = [
     { label: 'CVaR', key: 'cvar' },
-    { label: 'TSI',  key: 'tsi'  },
-    { label: 'MSD',  key: 'msd'  },
+    { label: 'TSI', key: 'tsi' },
+    { label: 'MSD', key: 'msd' },
   ];
 
   const colors = [
-    { name: 'red',    rgb: [220, 53, 69] },
+    { name: 'red', rgb: [220, 53, 69] },
     { name: 'yellow', rgb: [255, 193, 7] },
-    { name: 'green',  rgb: [40, 167, 69] },
+    { name: 'green', rgb: [40, 167, 69] },
   ];
 
   const radius = 3;
@@ -1133,6 +1101,7 @@ async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
     y += rowHeight + 2;
   });
 
+  // legend
   const legendX = marginX + 90;
   const legendY = layout.startY() + 14;
 
@@ -1141,8 +1110,8 @@ async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
   doc.text('Legend:', legendX, legendY);
 
   const legendEntries = [
-    { label: 'Red = critical',   color: [220, 53, 69] },
-    { label: 'Yellow = watch',   color: [255, 193, 7] },
+    { label: 'Red = critical', color: [220, 53, 69] },
+    { label: 'Yellow = watch', color: [255, 193, 7] },
     { label: 'Green = in range', color: [40, 167, 69] },
   ];
 
@@ -1185,9 +1154,9 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
   const status = readMarketTrafficStatus() || 'green';
 
   const colors = [
-    { name: 'red',    rgb: [220, 53, 69] },
+    { name: 'red', rgb: [220, 53, 69] },
     { name: 'yellow', rgb: [255, 193, 7] },
-    { name: 'green',  rgb: [40, 167, 69] },
+    { name: 'green', rgb: [40, 167, 69] },
   ];
 
   const radius = 3;
@@ -1223,6 +1192,7 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
     }
   });
 
+  // legend
   const legendX = marginX + 90;
   const legendY = layout.startY() + 14;
 
@@ -1231,8 +1201,8 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
   doc.text('Legend:', legendX, legendY);
 
   const legendEntries = [
-    { label: 'Red = critical',   color: [220, 53, 69] },
-    { label: 'Yellow = watch',   color: [255, 193, 7] },
+    { label: 'Red = critical', color: [220, 53, 69] },
+    { label: 'Yellow = watch', color: [255, 193, 7] },
     { label: 'Green = in range', color: [40, 167, 69] },
   ];
 
@@ -1248,7 +1218,7 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
 }
 
 // =====================================================================
-// APPENDIX (wrap/linebreak + ProductID no wrap)
+// APPENDIX (wrap/linebreak + fixed widths; ProductID no wrap)
 // =====================================================================
 function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {}) {
   const riskData = extractProductRiskData(filteredData);
@@ -1259,7 +1229,10 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
   doc.setFontSize(14);
   doc.setTextColor(0);
 
-  const title = appendixNo ? `${appendixNo}. Appendix: Product Table` : 'Appendix: Product Table';
+  const title = appendixNo
+    ? `${appendixNo}. Appendix: Product Table`
+    : 'Appendix: Product Table';
+
   doc.text(title, marginX, y);
   y += 10;
 
@@ -1271,12 +1244,14 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     item.NAV,
   ]);
 
+  // Keep your base look (you can tune)
   const base = [22, 72, 34, 26, 22];
   const colCount = base.length;
 
   const fontSize = 8;
   const cellPadding = 1.5;
 
+  // Effective width for scaling (padding-aware)
   const contentW = layout.contentWidth;
   const safety = 4;
   const effectiveW = Math.max(40, contentW - (colCount * 2 * cellPadding) - safety);
@@ -1284,9 +1259,11 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
   const sumBase = base.reduce((a, b) => a + b, 0);
   const scale = effectiveW / sumBase;
 
+  // Minimums
   const mins = [18, 40, 26, 18, 18];
   const scaled = base.map((w, i) => Math.max(mins[i], w * scale));
 
+  // If mins overflow: reduce Description
   const sumScaled = scaled.reduce((a, b) => a + b, 0);
   if (sumScaled > effectiveW) {
     const overflow = sumScaled - effectiveW;
@@ -1298,9 +1275,11 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     head: [['Product ID', 'Description', 'Issuer', 'Notional', 'NAV']],
     body: tableData,
     theme: 'striped',
+
+    // (You can keep auto; leaving it as auto avoids some plugin quirks)
     tableWidth: 'auto',
 
-    // ✅ only ProductID no-wrap
+    // ✅ Generic: only ProductID column is no-wrap
     noWrapColumns: [0],
 
     styles: {
@@ -1393,3 +1372,8 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   return { head, body };
 }
+
+/* NOTE:
+   getBreakdownChartDisplayLabel(...) must exist in your runtime (as before).
+   If it lives in another module, import it as you already did.
+*/

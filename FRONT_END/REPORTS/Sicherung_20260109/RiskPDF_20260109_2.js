@@ -1,14 +1,10 @@
-/* RiskPDF.js — FULL (centralized layout + table core + COVER PAGE)
-   ✅ Must work:
-   - Load preset (checkbox state in localStorage) -> Export -> PDF contains exactly what is checked
-   ✅ Fix included:
-   - NO dependency on getBreakdownChartDisplayLabel (was causing crash when Breakdown is included)
-   - Breakdown labels resolved safely from DOM/data-label (fallback to id)
-   - Cover page (title + date + logo)
-   - TOC on page 2 (no insertPage hacks)
-   - Header/Footer safe areas (no overlap)
-   - Numbers never linebreak (central)
-   - Appendix ProductID never wraps (generic via noWrapColumns)
+/* RiskPDF.js — Full version with:
+   - reusable layout (header/footer safe areas)
+   - TOC
+   - charts (canvas + plotly)
+   - breakdown (one chart+legend per page + hierarchy headings)
+   - credit/market traffic light special sections
+   - SAFE autotable (no overlap, no stackoverflow)
 */
 
 const { jsPDF } = window.jspdf;
@@ -29,6 +25,7 @@ export const REPORT_DEFAULTS = {
 // TIMESTAMP
 // =====================================================================
 const reportTimestamp = new Date();
+
 const formatTimestamp = (d) => {
   const pad = (n) => String(n).padStart(2, '0');
   return (
@@ -36,31 +33,8 @@ const formatTimestamp = (d) => {
     `${pad(d.getHours())}:${pad(d.getMinutes())}`
   );
 };
+
 const reportTimeText = formatTimestamp(reportTimestamp);
-
-// =====================================================================
-// SAFE LABEL RESOLVER (NO external dependency)
-// =====================================================================
-function resolveBreakdownChartLabel(chartId) {
-  if (!chartId) return '';
-
-  // 1) DOM dataset label (preferred)
-  try {
-    const el = document.getElementById(chartId);
-    const dl = el?.dataset?.label;
-    if (dl && String(dl).trim()) return String(dl).trim();
-  } catch {}
-
-  // 2) Common DOM label holders (optional, safe)
-  try {
-    const el = document.getElementById(chartId);
-    const aria = el?.getAttribute?.('aria-label');
-    if (aria && String(aria).trim()) return String(aria).trim();
-  } catch {}
-
-  // 3) Fallback to id
-  return String(chartId);
-}
 
 // =====================================================================
 // LAYOUT SYSTEM (single source of truth)
@@ -70,10 +44,10 @@ export const PDF_LAYOUT_DEFAULTS = {
   marginRight: 14,
 
   headerHeight: 18,
-  headerGap: 10, // space between header and content
+  headerGap: 10,     // main knob: space between header and content
 
   footerHeight: 16,
-  footerGap: 8, // space between content and footer
+  footerGap: 8,      // space between content and footer
 
   sectionTitleSpacing: 12,
   blockGap: 10,
@@ -85,6 +59,7 @@ export function createPdfLayout(doc, overrides = {}) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
+  // Distances (not absolute Y):
   const topMargin = cfg.headerHeight + cfg.headerGap;
   const bottomMargin = cfg.footerHeight + cfg.footerGap;
 
@@ -98,9 +73,11 @@ export function createPdfLayout(doc, overrides = {}) {
     left,
     right,
 
+    // content area boundaries (absolute Y)
     topY: topMargin,
     bottomY: pageH - bottomMargin,
 
+    // margins as distances (for autoTable)
     topMargin,
     bottomMargin,
 
@@ -111,7 +88,7 @@ export function createPdfLayout(doc, overrides = {}) {
     },
 
     hasSpace(y, neededHeight) {
-      return y + neededHeight <= pageH - bottomMargin;
+      return y + neededHeight <= (pageH - bottomMargin);
     },
 
     newPage(doc) {
@@ -122,38 +99,59 @@ export function createPdfLayout(doc, overrides = {}) {
 }
 
 // =====================================================================
-// SAFE AUTOTABLE WRAPPER (header/footer-safe)
-// + central rule: numbers never linebreak
-// + optional: noWrapColumns (e.g., ProductID col)
+// SAFE AUTOTABLE WRAPPER (fix for multi-page overlap + stackoverflow)
 // =====================================================================
+// function safeAutoTable(doc, layout, options) {
+//   const startY = Math.max(options.startY ?? layout.startY(), layout.topY);
+
+//   return doc.autoTable({
+//     ...options,
+//     startY,
+
+//     // margins are distances, not absolute coordinates
+//     margin: {
+//       left: options.margin?.left ?? layout.left,
+//       right: options.margin?.right ?? layout.right,
+//       top: options.margin?.top ?? layout.topMargin,
+//       bottom: options.margin?.bottom ?? layout.bottomMargin,
+//     },
+
+//     pageBreak: options.pageBreak ?? 'auto',
+//     rowPageBreak: options.rowPageBreak ?? 'auto',
+
+//     // helps if any long text would otherwise create insane row heights
+//     styles: {
+//       ...(options.styles || {}),
+//       overflow: (options.styles && options.styles.overflow) || 'linebreak',
+//       cellWidth: (options.styles && options.styles.cellWidth) || 'wrap',
+//     },
+//   });
+// }
+
 function safeAutoTable(doc, layout, options) {
   const startY = Math.max(options.startY ?? layout.startY(), layout.topY);
 
   const baseStyles = {
     fontSize: 8,
-    cellPadding: 2,
+    cellPadding: 1.5,
     overflow: 'linebreak',
     cellWidth: 'wrap',
-    minCellWidth: 0,
+    minCellWidth: 0,   // ✅ IMPORTANT: allow columns to shrink more
     valign: 'top',
   };
 
-  const noWrapCols = Array.isArray(options.noWrapColumns) ? options.noWrapColumns : [];
-  const userDidParseCell = options.didParseCell;
+  const mergedStyles = {
+    ...baseStyles,
+    ...(options.styles || {}),
+  };
 
-  const isNumericLike = (val) => {
-    const t = String(val ?? '').trim();
-    if (!t) return false;
-
-    const cleaned = t
-      .replace(/\s+/g, '')
-      .replace(/[€$£¥]/g, '')
-      .replace(/%/g, '')
-      .replace(/^\(/, '-')
-      .replace(/\)$/, '');
-
-    if (!/\d/.test(cleaned)) return false;
-    return /^-?\d+(?:[.,']\d+)*$/.test(cleaned);
+  const mergedHeadStyles = {
+    fontSize: mergedStyles.fontSize,
+    cellPadding: mergedStyles.cellPadding,
+    overflow: 'linebreak',
+    cellWidth: 'wrap',
+    minCellWidth: 0,
+    ...(options.headStyles || {}),
   };
 
   return doc.autoTable({
@@ -167,199 +165,33 @@ function safeAutoTable(doc, layout, options) {
       bottom: options.margin?.bottom ?? layout.bottomMargin,
     },
 
+    // ✅ wrap tends to reduce total width better than 'auto' in wide tables
+    tableWidth: options.tableWidth ?? 'wrap',
+
     pageBreak: options.pageBreak ?? 'auto',
     rowPageBreak: options.rowPageBreak ?? 'auto',
 
-    styles: { ...baseStyles, ...(options.styles || {}) },
-    headStyles: { ...(options.headStyles || {}) },
-
-    didParseCell: (data) => {
-      // user callback first
-      try { userDidParseCell?.(data); } catch {}
-
-      if (!data || data.section !== 'body') return;
-      if (!data.cell || !data.cell.styles) return;
-
-      const colIdx = data.column?.index;
-
-      // 1) Forced no-wrap columns (e.g., ProductID in appendix)
-      if (typeof colIdx === 'number' && noWrapCols.includes(colIdx)) {
-        data.cell.styles.overflow = 'visible';
-        data.cell.styles.cellWidth = 'auto';
-        data.cell.styles.valign = 'middle';
-        return;
-      }
-
-      // 2) Numbers never linebreak
-      let txt = '';
-      if (Array.isArray(data.cell.text)) txt = data.cell.text.join(' ').trim();
-      else if (typeof data.cell.text === 'string') txt = data.cell.text.trim();
-      else if (data.cell.raw != null) {
-        if (typeof data.cell.raw === 'string' || typeof data.cell.raw === 'number') txt = String(data.cell.raw).trim();
-        else if (data.cell.raw?.textContent) txt = String(data.cell.raw.textContent).trim();
-      }
-      if (!txt) return;
-
-      if (isNumericLike(txt)) {
-        data.cell.styles.overflow = 'visible';
-        data.cell.styles.cellWidth = 'auto';
-        data.cell.styles.halign = data.cell.styles.halign || 'right';
-        data.cell.styles.valign = 'middle';
-      }
-    },
+    styles: mergedStyles,
+    headStyles: mergedHeadStyles,
   });
 }
 
-// =====================================================================
-// TABLE LAYOUT CORE (centralized, reusable)
-// =====================================================================
-function analyzeTable(tbl) {
-  const head = tbl?.head || [];
-  const body = tbl?.body || [];
-
-  const colCount = head.length || (body[0] ? body[0].length : 0);
-  const maxLenByCol = Array.from({ length: colCount }, () => 0);
-
-  const scanRow = (row) => {
-    if (!Array.isArray(row)) return;
-    for (let i = 0; i < colCount; i++) {
-      const v = row[i] == null ? '' : String(row[i]);
-      const len = Math.min(v.length, 80);
-      if (len > maxLenByCol[i]) maxLenByCol[i] = len;
-    }
-  };
-
-  scanRow(head);
-  for (let r = 0; r < Math.min(body.length, 80); r++) scanRow(body[r]);
-
-  const totalLen = maxLenByCol.reduce((a, b) => a + b, 0);
-  return { colCount, maxLenByCol, totalLen };
-}
-
-function fitColumnStyles(layout, colCount, { firstCol = 48, minOther = 7 } = {}) {
-  const W = layout.contentWidth;
-  if (!colCount || colCount < 1) return {};
-  if (colCount === 1) return { 0: { cellWidth: W } };
-
-  const rest = Math.max(10, W - firstCol);
-  const other = Math.max(minOther, rest / (colCount - 1));
-
-  const cs = { 0: { cellWidth: firstCol } };
-  for (let i = 1; i < colCount; i++) cs[i] = { cellWidth: other };
-  return cs;
-}
-
-function pickShrinkPreset({ colCount, totalLen }) {
-  if (colCount >= 14) return { fontSize: 6.0, cellPadding: 0.9, firstCol: 44 };
-  if (colCount >= 11) return { fontSize: 6.5, cellPadding: 1.0, firstCol: 44 };
-  if (colCount >= 9)  return { fontSize: 7.0, cellPadding: 1.2, firstCol: 44 };
-  if (totalLen > 220) return { fontSize: 7.5, cellPadding: 1.4, firstCol: 46 };
-  return { fontSize: 8.0, cellPadding: 1.8, firstCol: 48 };
-}
-
-function renderTableAutoFit(doc, layout, { title, y, tbl, theme = 'grid', headStyles, alternateRowStyles } = {}) {
-  if (!tbl) return { finalY: y };
-
-  const analysis = analyzeTable(tbl);
-  const preset = pickShrinkPreset(analysis);
-
-  const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
-
-  const columnStyles = fitColumnStyles(layout, analysis.colCount, {
-    firstCol: preset.firstCol,
-    minOther: 7,
-  });
-
-  if (title) {
-    doc.setFontSize(11);
-    doc.setTextColor(0);
-    doc.text(title, layout.left, y);
-    y += 6;
-  }
-
-  safeAutoTable(doc, layout, {
-    startY: y,
-    head,
-    body: tbl.body,
-    theme,
-    tableWidth: layout.contentWidth,
-    columnStyles,
-
-    styles: {
-      fontSize: preset.fontSize,
-      cellPadding: preset.cellPadding,
-      overflow: 'linebreak',
-      cellWidth: 'wrap',
-      valign: 'top',
-    },
-
-    headStyles: {
-      ...(headStyles || {}),
-      fontSize: preset.fontSize,
-      cellPadding: preset.cellPadding,
-    },
-
-    alternateRowStyles: alternateRowStyles || undefined,
-  });
-
-  return { finalY: doc.lastAutoTable?.finalY ?? (y + 40) };
-}
 
 // =====================================================================
-// COVER / HEADER / FOOTER
+// HEADER / FOOTER
 // =====================================================================
-function drawCoverPage(doc, layout, { title, logoEl, reportTimeText }) {
-  const { pageW, pageH, right } = layout;
-  const centerX = pageW / 2;
-
-  // Logo (top-right, larger)
-  if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
-    const maxLogoW = 55;
-    const maxLogoH = 22;
-
-    const imgW = logoEl.naturalWidth;
-    const imgH = logoEl.naturalHeight;
-    const ratio = imgW / imgH;
-
-    let logoW = maxLogoW;
-    let logoH = logoW / ratio;
-
-    if (logoH > maxLogoH) {
-      logoH = maxLogoH;
-      logoW = logoH * ratio;
-    }
-
-    doc.addImage(logoEl, 'PNG', pageW - right - logoW, 18, logoW, logoH);
-  }
-
-  const safeTitle = String(title || '').trim() || 'Risk Report';
-
-  doc.setTextColor(0);
-  doc.setFontSize(28);
-  doc.text(safeTitle, centerX, pageH * 0.40, { align: 'center' });
-
-  doc.setFontSize(12);
-  doc.setTextColor(80);
-  doc.text(`Generated: ${String(reportTimeText || '').trim()}`, centerX, pageH * 0.40 + 18, { align: 'center' });
-
-  doc.setFontSize(10);
-  doc.setTextColor(120);
-  doc.text('generated by valuationXpro', centerX, pageH - 40, { align: 'center' });
-
-  doc.setTextColor(0);
-}
-
 function drawHeaderFooter(doc, layout, { title = 'Risk Report', logoEl, reportTimeText }) {
   const { pageW, pageH, left, right, cfg } = layout;
 
   const headerTextY = Math.max(10, cfg.headerHeight - 4);
   const logoY = 8;
+
   const footerBaseY = pageH - (cfg.footerHeight - 4);
 
   const maxLogoW = 30;
   const maxLogoH = Math.max(10, cfg.headerHeight - 6);
 
-  // HEADER
+  /* HEADER */
   doc.setFontSize(10);
   doc.setTextColor(0);
   doc.text(title, left, headerTextY);
@@ -380,7 +212,7 @@ function drawHeaderFooter(doc, layout, { title = 'Risk Report', logoEl, reportTi
     doc.addImage(logoEl, 'PNG', pageW - right - logoW, logoY, logoW, logoH);
   }
 
-  // FOOTER
+  /* FOOTER */
   doc.setFontSize(8);
   doc.setTextColor(0);
   doc.text(['Report generated:', reportTimeText], left, footerBaseY - 4);
@@ -397,7 +229,7 @@ function drawPageNumber(doc, layout, { pageIndex, pageCount }) {
 }
 
 // =====================================================================
-// HIERARCHY
+// HIERARCHY (same idea as before)
 // =====================================================================
 function applyPdfHierarchy(sections, config) {
   const parents = config?.sectionParents || {};
@@ -451,33 +283,22 @@ function applyPdfHierarchy(sections, config) {
 }
 
 // =====================================================================
-// GENERATE PDF (Cover + TOC + Content)
+// GENERATE PDF
 // =====================================================================
 export async function generateRiskPDF(filteredData, overrides = {}) {
   const opts = { ...REPORT_DEFAULTS, ...overrides };
-
   const doc = new jsPDF({ orientation: opts.orientation, format: opts.paper });
   const layout = createPdfLayout(doc, overrides?.layout || {});
 
-  const reportTitle = String(opts.reportTitle || 'Risk Report').trim() || 'Risk Report';
-  const logoEl = document.getElementById('logo');
-
-  // 0) COVER PAGE (page 1)
-  doc.setPage(1);
-  drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText });
-
-  // 1) TOC placeholder (page 2)
-  const includeTOC = !!opts.includeTOC;
-  if (includeTOC) doc.addPage(); // page 2 reserved for TOC
-
-  // 2) Sections from preview (reads current rr-chart-state)
+  // Sections from preview
   let sections = getActiveRiskSectionsForPdf() || [];
   sections = applyPdfHierarchy(sections, RISK_CONFIG);
 
+  // Map section numbers
   const sectionNoByKey = {};
   sections.forEach((s) => (sectionNoByKey[s.key] = s.sectionNumber));
 
-  // 3) Breakdown numbering (TOC level 2/3) — SAFE label resolver
+  // Breakdown numbering (for TOC level 2/3 entries)
   const breakdownSec = sections.find((s) => s.key === 'breakdown');
   if (breakdownSec && typeof groupBreakdownChartsBySection === 'function') {
     const sectionNo = sectionNoByKey[breakdownSec.key] || '1';
@@ -496,7 +317,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       let cIdx = 1;
       g.charts.forEach((ch) => {
         if (!ch?.id) return;
-        const label = resolveBreakdownChartLabel(ch.id);
+        const label = getBreakdownChartDisplayLabel(ch.id);
         breakdownNumbering.charts[ch.id] = { no: `${gNo}.${cIdx}`, label };
         cIdx++;
       });
@@ -506,15 +327,13 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     breakdownSec.breakdownNumbering = breakdownNumbering;
   }
 
-  // 4) Render sections
+  // TOC entries
   const tocEntries = [];
   const addTOCEntry = (number, title, page, level = 1) => {
     tocEntries.push({ title: `${number}. ${title}`, page, level });
   };
 
-  // First content page (page 3 if TOC, else page 2)
-  doc.addPage();
-
+  // Render sections
   let wroteAnySection = false;
 
   for (let i = 0; i < sections.length; i++) {
@@ -552,9 +371,9 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     await renderPanelSectionToPDF(doc, sec, layout);
   }
 
-  // 5) Appendix
+  // Appendix
   if (Array.isArray(filteredData) && filteredData.length) {
-    doc.addPage();
+    if (wroteAnySection) doc.addPage();
     const pageIndex = doc.internal.getNumberOfPages();
     const appendixNo = String(sections.length + 1);
 
@@ -562,9 +381,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     drawProductTableSection(doc, filteredData, layout, { appendixNo });
   }
 
-  // 6) Draw TOC into page 2
-  if (includeTOC) {
-    doc.setPage(2);
+  // Insert TOC
+  if (opts.includeTOC && tocEntries.length) {
+    doc.insertPage(1);
+    doc.setPage(1);
+
     const tocLayout = createPdfLayout(doc, layout.cfg);
 
     doc.setFontSize(16);
@@ -579,9 +400,10 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       const indent = (entry.level - 1) * 5;
       const y = lineStartY + index * lineStep;
 
-      if (y > tocLayout.bottomY - 6) return;
+      if (y > tocLayout.bottomY - 6) return; // keep it simple; paging can be added later
 
-      const pageText = String(entry.page);
+      const pageText = (entry.page + 1).toString(); // +1 wegen TOC-Seite
+
       const marginLeft = tocLayout.left + indent;
       const marginRight = tocLayout.right;
 
@@ -598,16 +420,20 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     });
   }
 
-  // 7) Header/Footer + Page numbers on all pages except cover (page 1)
+  // Header/Footer on all pages
   const pageCount = doc.internal.getNumberOfPages();
-  const finalLayout = createPdfLayout(doc, layout.cfg);
+  const logoEl = document.getElementById('logo');
 
-  for (let p = 2; p <= pageCount; p++) {
-    doc.setPage(p);
+  const finalLayout = createPdfLayout(doc, layout.cfg);
+  const reportTitle = opts.reportTitle || overrides?.reportTitle || 'Risk Report';
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
     drawHeaderFooter(doc, finalLayout, { title: reportTitle, logoEl, reportTimeText });
-    drawPageNumber(doc, finalLayout, { pageIndex: p, pageCount });
+    drawPageNumber(doc, finalLayout, { pageIndex: i, pageCount });
   }
 
+  // Save
   doc.save(opts.fileName || 'Risk.pdf');
 }
 
@@ -642,7 +468,7 @@ function groupBreakdownChartsBySection(charts) {
 // SECTION RENDERING
 // =====================================================================
 async function renderPanelSectionToPDF(doc, sec, layout) {
-  const { left: marginX, cfg } = layout;
+  const { pageW, pageH, left: marginX, cfg } = layout;
   const gutter = 10;
 
   let y = layout.startY();
@@ -725,6 +551,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
   const chartsAll = sec.enabledCharts || [];
   const tablesAll = sec.enabledTables || [];
+  const chartWidth = (pageW - marginX * 2 - gutter) / 2;
 
   const isBreakdown = sec.key === 'breakdown';
 
@@ -744,7 +571,9 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
     const blocks = [];
 
     if (groups?.length) {
-      for (const g of groups) (g.charts || []).forEach((ch) => blocks.push({ chart: ch, groupTitle: g.title }));
+      for (const g of groups) {
+        (g.charts || []).forEach((ch) => blocks.push({ chart: ch, groupTitle: g.title }));
+      }
     } else {
       chartsAll.forEach((ch) => blocks.push({ chart: ch, groupTitle: null }));
     }
@@ -777,7 +606,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
       }
 
       const chartMeta = breakdownNumbering?.charts[chart.id];
-      const chartLabel = chartMeta?.label || chart.label || resolveBreakdownChartLabel(chart.id);
+      const chartLabel = chartMeta?.label || chart.label || chart.id;
       const chartNumber = chartMeta?.no;
       const chartHeading = chartNumber ? `${chartNumber}. ${chartLabel}` : chartLabel;
 
@@ -786,6 +615,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
       doc.text(chartHeading, marginX, y);
       y += 6;
 
+      // chart image
       const el = document.getElementById(chart.id);
       if (el) {
         let imgData = null;
@@ -830,6 +660,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
         }
       }
 
+      // legend table under chart
       const tMeta = legendByChartId.get(chart.id);
       if (tMeta) {
         const host = document.getElementById(tMeta.id);
@@ -840,7 +671,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
         if (tableElem && typeof doc.autoTable === 'function') {
           const chartMeta2 = breakdownNumbering?.charts[chart.id];
-          const chartLabel2 = chartMeta2?.label || chart.label || tMeta.label || resolveBreakdownChartLabel(chart.id);
+          const chartLabel2 = chartMeta2?.label || chart.label || tMeta.label || tMeta.id;
           const chartNumber2 = chartMeta2?.no;
 
           const tableTitle = chartNumber2
@@ -963,7 +794,6 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
   doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
 
-  const chartWidth = (layout.contentWidth - gutter) / 2;
   let colInRow = 0;
   let rowHeight = 0;
 
@@ -1032,16 +862,24 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
     ensurePageSpace(40, `${sectionTitle} (cont.)`);
 
-    const out = renderTableAutoFit(doc, layout, {
-      title: t.label || t.id,
-      y,
-      tbl,
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.text(t.label || t.id, marginX, y);
+
+    const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
+
+    safeAutoTable(doc, layout, {
+      startY: y + 6,
+      head,
+      body: tbl.body,
+      styles: { fontSize: 8, cellPadding: 2 },
       theme: 'grid',
       headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
       alternateRowStyles: { fillColor: [245, 245, 245] },
+      tableWidth: 'auto',
     });
 
-    y = (out.finalY || y) + cfg.blockGap;
+    y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 60;
   }
 }
 
@@ -1052,8 +890,8 @@ function readCreditTrafficStatus() {
   const map = {};
   const defs = [
     { key: 'cvar', id: 'traffic-credit-cvar' },
-    { key: 'tsi',  id: 'traffic-credit-tsi' },
-    { key: 'msd',  id: 'traffic-credit-msd' },
+    { key: 'tsi', id: 'traffic-credit-tsi' },
+    { key: 'msd', id: 'traffic-credit-msd' },
   ];
 
   defs.forEach((d) => {
@@ -1083,14 +921,14 @@ async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
 
   const metrics = [
     { label: 'CVaR', key: 'cvar' },
-    { label: 'TSI',  key: 'tsi'  },
-    { label: 'MSD',  key: 'msd'  },
+    { label: 'TSI', key: 'tsi' },
+    { label: 'MSD', key: 'msd' },
   ];
 
   const colors = [
-    { name: 'red',    rgb: [220, 53, 69] },
+    { name: 'red', rgb: [220, 53, 69] },
     { name: 'yellow', rgb: [255, 193, 7] },
-    { name: 'green',  rgb: [40, 167, 69] },
+    { name: 'green', rgb: [40, 167, 69] },
   ];
 
   const radius = 3;
@@ -1133,6 +971,7 @@ async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
     y += rowHeight + 2;
   });
 
+  // legend
   const legendX = marginX + 90;
   const legendY = layout.startY() + 14;
 
@@ -1141,8 +980,8 @@ async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
   doc.text('Legend:', legendX, legendY);
 
   const legendEntries = [
-    { label: 'Red = critical',   color: [220, 53, 69] },
-    { label: 'Yellow = watch',   color: [255, 193, 7] },
+    { label: 'Red = critical', color: [220, 53, 69] },
+    { label: 'Yellow = watch', color: [255, 193, 7] },
     { label: 'Green = in range', color: [40, 167, 69] },
   ];
 
@@ -1185,9 +1024,9 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
   const status = readMarketTrafficStatus() || 'green';
 
   const colors = [
-    { name: 'red',    rgb: [220, 53, 69] },
+    { name: 'red', rgb: [220, 53, 69] },
     { name: 'yellow', rgb: [255, 193, 7] },
-    { name: 'green',  rgb: [40, 167, 69] },
+    { name: 'green', rgb: [40, 167, 69] },
   ];
 
   const radius = 3;
@@ -1223,6 +1062,7 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
     }
   });
 
+  // legend
   const legendX = marginX + 90;
   const legendY = layout.startY() + 14;
 
@@ -1231,8 +1071,8 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
   doc.text('Legend:', legendX, legendY);
 
   const legendEntries = [
-    { label: 'Red = critical',   color: [220, 53, 69] },
-    { label: 'Yellow = watch',   color: [255, 193, 7] },
+    { label: 'Red = critical', color: [220, 53, 69] },
+    { label: 'Yellow = watch', color: [255, 193, 7] },
     { label: 'Green = in range', color: [40, 167, 69] },
   ];
 
@@ -1248,8 +1088,39 @@ async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
 }
 
 // =====================================================================
-// APPENDIX (wrap/linebreak + ProductID no wrap)
+// APPENDIX
 // =====================================================================
+// function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {}) {
+//   const riskData = extractProductRiskData(filteredData);
+
+//   let y = layout.startY();
+//   const marginX = layout.left;
+
+//   doc.setFontSize(14);
+//   doc.setTextColor(0);
+
+//   const title = appendixNo ? `${appendixNo}. Appendix: Product Table` : 'Appendix: Product Table';
+//   doc.text(title, marginX, y);
+//   y += 10;
+
+//   const tableData = riskData.map((item) => [
+//     item.PROD_ID,
+//     item.DESCRIPTION,
+//     item.ISSUER,
+//     item.NOTIONAL,
+//     item.NAV,
+//   ]);
+
+//   safeAutoTable(doc, layout, {
+//     head: [['Produkt-ID', 'Beschreibung', 'Issuer', 'Notional', 'NAV']],
+//     body: tableData,
+//     startY: y,
+//     styles: { cellPadding: 2, fontSize: 10 },
+//     headStyles: { fillColor: [255, 102, 102] },
+//     theme: 'striped',
+//   });
+// }
+
 function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {}) {
   const riskData = extractProductRiskData(filteredData);
 
@@ -1259,11 +1130,14 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
   doc.setFontSize(14);
   doc.setTextColor(0);
 
-  const title = appendixNo ? `${appendixNo}. Appendix: Product Table` : 'Appendix: Product Table';
+  const title = appendixNo
+    ? `${appendixNo}. Appendix: Product Table`
+    : 'Appendix: Product Table';
+
   doc.text(title, marginX, y);
   y += 10;
 
-  const tableData = riskData.map((item) => [
+  const tableData = riskData.map(item => [
     item.PROD_ID,
     item.DESCRIPTION,
     item.ISSUER,
@@ -1271,68 +1145,70 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     item.NAV,
   ]);
 
-  const base = [22, 72, 34, 26, 22];
-  const colCount = base.length;
-
-  const fontSize = 8;
-  const cellPadding = 1.5;
-
-  const contentW = layout.contentWidth;
-  const safety = 4;
-  const effectiveW = Math.max(40, contentW - (colCount * 2 * cellPadding) - safety);
-
-  const sumBase = base.reduce((a, b) => a + b, 0);
-  const scale = effectiveW / sumBase;
-
-  const mins = [18, 40, 26, 18, 18];
-  const scaled = base.map((w, i) => Math.max(mins[i], w * scale));
-
-  const sumScaled = scaled.reduce((a, b) => a + b, 0);
-  if (sumScaled > effectiveW) {
-    const overflow = sumScaled - effectiveW;
-    scaled[1] = Math.max(mins[1], scaled[1] - overflow);
-  }
+  // ✅ Spaltenbreiten so wählen, dass es in A4 (Portrait) sicher passt
+  // contentWidth ist pageW - left - right
+  // Beispielwerte sind konservativ und funktionieren gut für typische Daten
+  const colW = {
+    prodId: 22,
+    desc:   72,
+    issuer: 34,
+    notional: 26,
+    nav:    22,
+  };
 
   safeAutoTable(doc, layout, {
     startY: y,
     head: [['Product ID', 'Description', 'Issuer', 'Notional', 'NAV']],
     body: tableData,
     theme: 'striped',
+
+    // ✅ wichtig: Auto soll in verfügbare Breite arbeiten
     tableWidth: 'auto',
 
-    // ✅ only ProductID no-wrap
-    noWrapColumns: [0],
-
+    // ✅ global: Umbruch + Wrap
     styles: {
-      fontSize,
-      cellPadding,
+      fontSize: 8,
+      cellPadding: 1.5,
       overflow: 'linebreak',
       cellWidth: 'wrap',
       valign: 'top',
     },
 
+    // ✅ Header etwas kompakter/lesbar
     headStyles: {
-      fontSize,
-      cellPadding,
+      fontSize: 8,
+      cellPadding: 1.5,
       overflow: 'linebreak',
       cellWidth: 'wrap',
     },
 
+    // ✅ Spalten hart begrenzen (das ist das "Zusammenschieben")
     columnStyles: {
-      0: { cellWidth: scaled[0] },
-      1: { cellWidth: scaled[1] },
-      2: { cellWidth: scaled[2] },
-      3: { cellWidth: scaled[3] },
-      4: { cellWidth: scaled[4] },
+      0: { cellWidth: colW.prodId },   // Product ID
+      1: { cellWidth: colW.desc },     // Description (Wrap!)
+      2: { cellWidth: colW.issuer },   // Issuer
+      3: { cellWidth: colW.notional }, // Notional
+      4: { cellWidth: colW.nav },      // NAV
+    },
+
+    // optional: lange Wörter/Strings ohne spaces besser brechen
+    didParseCell: (data) => {
+      if (data.section !== 'body') return;
+      // Description-Spalte aggressiver wrappen
+      if (data.column.index === 1 && typeof data.cell.text?.[0] === 'string') {
+        data.cell.styles.overflow = 'linebreak';
+        data.cell.styles.cellWidth = colW.desc;
+      }
     },
   });
 }
+
 
 function extractProductRiskData(filteredData) {
   if (!filteredData || !Array.isArray(filteredData)) return [];
   return filteredData.map((entry) => ({
     PROD_ID: entry.PROD_ID || '',
-    DESCRIPTION: (entry.DESCRIPTION || '').toString().substring(0, 160),
+    DESCRIPTION: (entry.DESCRIPTION || '').toString().substring(0, 100),
     ISSUER: entry.ISSUER || '',
     NOTIONAL: entry.NOTIONAL != null ? entry.NOTIONAL.toString() : '',
     NAV: entry.NAV != null ? entry.NAV.toString() : '',
@@ -1356,10 +1232,7 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
   if (!host) return null;
 
   const table =
-    host.tagName && host.tagName.toLowerCase() === 'table'
-      ? host
-      : host.querySelector('table');
-
+    host.tagName && host.tagName.toLowerCase() === 'table' ? host : host.querySelector('table');
   if (!table) return null;
 
   let headCells = Array.from(table.querySelectorAll('thead th')).slice(0, maxCols);
@@ -1367,7 +1240,6 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   let rows = Array.from(table.querySelectorAll('tbody tr'));
 
-  // fallback if no tbody
   if (!rows.length) {
     const allRows = Array.from(table.querySelectorAll('tr'));
     if (allRows.length) {
@@ -1393,3 +1265,8 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   return { head, body };
 }
+
+/* NOTE:
+   getBreakdownChartDisplayLabel(...) must exist in your runtime (as before).
+   If it lives in another module, import it like you did previously.
+*/
