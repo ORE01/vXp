@@ -35,7 +35,6 @@ function runIdle(fn, timeout = 200) {
 
 
 
-
 export class AppState {
     constructor() {
         this.euswData = [];
@@ -645,14 +644,43 @@ handleOffersTable(data, index = 0) {
         return this.customerTSData;
     }
 
-    setCustomerReportsData(data) {
-    this.customerReportsData = data;
-    this.notifyObservers();
-    }
+    // setCustomerReportsData(data) {
+    // this.customerReportsData = data;
+    // this.notifyObservers();
+    // }
 
-    getCustomerReportsData() {
-    return this.customerReportsData;
-    }
+    // getCustomerReportsData() {
+    // return this.customerReportsData;
+    // }
+
+    // =========================
+// CUSTOMER REPORTS (Risk)
+// =========================
+
+setCustomerReportsData(rows) {
+  this.customerReportsData = Array.isArray(rows) ? rows : [];
+
+  // Wenn noch kein Active Name gesetzt ist, nimm den ersten Preset-Namen als Default
+  if (!this.getActiveCustomerReportName() && this.customerReportsData.length) {
+    this.activeCustomerReportName = String(this.customerReportsData[0]?.name || '').trim();
+  }
+
+  this.notifyObservers();
+}
+
+getCustomerReportsData() {
+  return Array.isArray(this.customerReportsData) ? this.customerReportsData : [];
+}
+
+// ✅ Active report name = Titel in Header / Deckblatt
+setActiveCustomerReportName(name) {
+  this.activeCustomerReportName = String(name || '').trim();
+  this.notifyObservers();
+}
+
+getActiveCustomerReportName() {
+  return String(this.activeCustomerReportName || '').trim();
+}
 
 
 
@@ -1652,7 +1680,6 @@ console.log("refreshMarketRiskUI:");
         return notionalA - notionalB;
     }
     
-
 
     // app start
 

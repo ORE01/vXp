@@ -1,4 +1,3 @@
-// CustomerReportsPresetUI.js
 import { applyRiskPresetState } from './RiskPDFPreview.js';
 import {
   listCustomerReports,
@@ -21,20 +20,11 @@ export function setupCustomerReportsPresetUI() {
 
     if (!dd || !inp || !btnLoad || !btnSave || !btnDel) return;
 
-    // Helper: Active report name in AppState (safe)
-    const setActiveName = (name) => {
-      const t = String(name || '').trim();
-      try { appState?.setActiveCustomerReportName?.(t); } catch {}
-      return t;
-    };
-
     // ✅ Zentraler Refresh (damit Save/Delete den Dropdown aktualisieren)
     const refreshPresets = async (preferName = '') => {
       const prev = (preferName || dd.value || inp.value || '').trim();
 
       const rows = await listCustomerReports('risk');
-
-      // Keep existing behavior (rows into appState)
       appState.setCustomerReportsData(rows);
 
       dd.innerHTML = rows.length
@@ -44,12 +34,8 @@ export function setupCustomerReportsPresetUI() {
       // Auswahl wiederherstellen (falls möglich)
       const names = new Set(rows.map(r => String(r.name)));
       const next = (prev && names.has(prev)) ? prev : (rows[0]?.name || '');
-
       dd.value = next;
       inp.value = next;
-
-      // ✅ Single Source of Truth for current title
-      setActiveName(next);
     };
 
     // 1) Initial load presets
@@ -58,24 +44,13 @@ export function setupCustomerReportsPresetUI() {
     if (!wired) {
       wired = true;
 
-      // ✅ Dropdown selection = active report name
       dd.addEventListener('change', () => {
-        const name = (dd.value || '').trim();
-        inp.value = name;
-        setActiveName(name);
-      });
-
-      // ✅ Typing a name should also update active name (useful for export)
-      inp.addEventListener('input', () => {
-        setActiveName(inp.value);
+        inp.value = dd.value || '';
       });
 
       btnLoad.addEventListener('click', async () => {
         const name = (dd.value || inp.value || '').trim();
         if (!name) return;
-
-        // ✅ set active title immediately
-        setActiveName(name);
 
         const row = await loadCustomerReport(name);
         if (!row?.state_json) return;
@@ -85,19 +60,11 @@ export function setupCustomerReportsPresetUI() {
         } catch (e) {
           console.warn('Invalid preset JSON', e);
         }
-
-        // ✅ ensure UI reflects loaded preset name
-        dd.value = name;
-        inp.value = name;
-        setActiveName(name);
       });
 
       btnSave.addEventListener('click', async () => {
         const name = (inp.value || '').trim();
         if (!name) return;
-
-        // ✅ set active title immediately
-        setActiveName(name);
 
         let state = {};
         try {
@@ -124,3 +91,4 @@ export function setupCustomerReportsPresetUI() {
     }
   });
 }
+

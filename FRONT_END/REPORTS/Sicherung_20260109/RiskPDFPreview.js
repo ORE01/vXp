@@ -1,7 +1,6 @@
 
-import { handleIRSensData } from '../ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
-import { handleCSSensData } from '../ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
-
+import { handleRefreshThumbnailsClick } from '../renderer.js';
+//import { getSectionTitleFromPanel } from './RiskPDF.js';
 
 
 // ==== oben ins Modul (Modul-Scope-Variablen) ====
@@ -20,19 +19,6 @@ let __riskRendering = false;
 let __lastRenderTs = 0;           // letzter erfolgreicher Render (ms)
 const RENDER_THROTTLE_MS = 200;   // Mindestabstand zwischen Renders
 
-//Report Title//
-const RISK_REPORT_TITLE_KEY = 'rr-report-title';
-
-export function setActiveRiskReportTitle(title) {
-  const t = String(title || '').trim();
-  try { localStorage.setItem(RISK_REPORT_TITLE_KEY, t); } catch {}
-  return t;
-}
-
-export function getActiveRiskReportTitle() {
-  try { return String(localStorage.getItem(RISK_REPORT_TITLE_KEY) || '').trim(); }
-  catch { return ''; }
-}
 
 
 // ─────────────────────────────────────────────
@@ -115,59 +101,37 @@ function discoverSectionsFull() {
 }
 
 function injectBreakdownChildren(sections, chartState = {}) {
-  // 1) Wenn es keinen Breakdown-Parent gibt: nichts tun
   const hasBreakdown = sections.some(s => s.key === 'breakdown');
   if (!hasBreakdown) return sections;
 
-  // 2) Welche Breakdown-Children sollen injected werden? -> aus Config
-  const childKeys = RISK_CONFIG?.sectionChildrenOrder?.breakdown || [];
-  if (!Array.isArray(childKeys) || childKeys.length === 0) return sections;
+  // Mapping ChildKey -> GroupName in RISK_CONFIG.breakdownGroups
+  const map = {
+    breakdownIssuer:   'Issuer',
+    breakdownProducts: 'Product',  // ⚠️ Gruppe heißt "Product" in deiner breakdownGroups
+    breakdownGeneral:  'General',
+  };
 
-  const existing = new Set(sections.map(s => s?.key).filter(Boolean));
-
-  // 3) Alle Breakdown-Charts aus dem DOM holen (einmal)
+  // Breakdown-Charts direkt aus dem DOM holen
   const breakdownPanel = document.getElementById('panel-breakdown');
   const breakdownCharts = breakdownPanel ? discoverChartsFromPanel(breakdownPanel) : [];
 
-  // byId: chartId -> chartMeta
+  // Nur die Charts, die wir kennen, sauber mapbar
   const byId = new Map(breakdownCharts.map(ch => [ch.id, ch]));
 
-  // 4) Helper: childKey -> groupName, rein aus Config (fallback: aus Key ableiten)
-  // Erwartung: breakdownIssuer -> "Issuer", breakdownProducts -> "Products" oder "Product" (siehe unten)
-  const resolveGroupName = (childKey) => {
-    // a) explizite Zuordnung, falls du das in die Config packen willst
-    const explicit = RISK_CONFIG?.breakdownChildToGroup?.[childKey];
-    if (explicit) return explicit;
+  const existing = new Set(sections.map(s => s?.key).filter(Boolean));
 
-    // b) heuristisch: "breakdown" prefix strippen, Rest TitleCase
-    // breakdownIssuer -> Issuer, breakdownGeography -> Geography
-    const rest = String(childKey).replace(/^breakdown/, '');
-    if (!rest) return null;
+  const injected = Object.entries(map)
+    .filter(([childKey]) => !existing.has(childKey))
+    .map(([childKey, groupName]) => {
+      const ids = (RISK_CONFIG.breakdownGroups?.[groupName] || []);
+      const chartsInGroup = ids.map(id => byId.get(id)).filter(Boolean);
 
-    // "Products" bleibt "Products"; du kannst aber in Config bewusst "Product" nutzen.
-    return rest.charAt(0).toUpperCase() + rest.slice(1);
-  };
-
-  // 5) Inject: in der Reihenfolge aus sectionChildrenOrder.breakdown
-  const injected = childKeys
-    .filter(childKey => !existing.has(childKey))
-    .map(childKey => {
-      const groupName = resolveGroupName(childKey);
-
-      // IDs der Charts, die zu dieser Group gehören: aus breakdownGroups
-      // WICHTIG: breakdownGroups muss den groupName als Key haben
-      const ids = (groupName && RISK_CONFIG?.breakdownGroups?.[groupName]) ? RISK_CONFIG.breakdownGroups[groupName] : [];
-
-      const chartsInGroup = Array.isArray(ids)
-        ? ids.map(id => byId.get(id)).filter(Boolean)
-        : [];
-
-      const sectionOn = isSectionEnabled(childKey, chartState);
-
-      // enabledCharts: hier entscheidest du, ob du nur "sichtbare" Thumbs willst
+      // enabledCharts soll auf breakdown:* schauen (wegen canonicalChartSection)
       const enabledCharts = chartsInGroup.filter(ch =>
         isChartEnabled(childKey, ch.id, chartState)
       );
+
+      const sectionOn = isSectionEnabled(childKey, chartState);
 
       const breakdownControlsHtml = sectionOn
         ? buildBreakdownControlsWithThumbs(
@@ -180,14 +144,14 @@ function injectBreakdownChildren(sections, chartState = {}) {
 
       return {
         key: childKey,
-        title: sectionTitleFromKey(childKey),            // kommt aus RISK_CONFIG.sectionTitles
+        title: sectionTitleFromKey(childKey),
         sectionControls: buildSectionControlsHTML(childKey, chartState),
         chartItems: [],
         chartThumbs: [],
         tableItems: [],
         tableThumbs: [],
         breakdownControlsHtml,
-        hasThumbs: true,
+        hasThumbs: true,     // keine "Noch keine Thumbnails"
         injected: true,
         sectionEnabled: sectionOn,
       };
@@ -195,7 +159,6 @@ function injectBreakdownChildren(sections, chartState = {}) {
 
   return [...sections, ...injected];
 }
-
 
 
 function canonicalChartSection(sectionKey, chartKey) {
@@ -289,34 +252,33 @@ export const RISK_CONFIG = {
     // ===== Breakdown =====
     breakdown: 'Portfolio Breakdown',
 
-    // ✅ Injected Breakdown Children (künstliche Sections)
-    breakdownIssuer: 'Issuer',
-    breakdownProducts: 'Products',
+      // ✅ Injected Breakdown Children (künstliche Sections)
+    breakdownIssuer:  'Issuer',
+    breakdownProducts:'Products',
     breakdownGeneral: 'General',
-    breakdownGeography: 'Geography',
 
     // ===== Performance (optional, falls du dieses Panel wirklich hast) =====
     performance: 'Performance',
 
     // ===== Market (Parent + Children) =====
     market: 'Market Risk',
-    marketTraffic: 'Market Risk — Traffic Light', // injected special section (key = marketTraffic)
-    mvar: 'Market Risk — VaR Details', // panel-mvar -> "mvar"
-    sensitivities: 'Market Risk — Sensitivities', // panel-sensitivities -> "sensitivities"
+    marketTraffic: 'Market Risk — Traffic Light',     // injected special section (key = marketTraffic)
+    mvar: 'Market Risk — VaR Details',                 // panel-mvar -> "mvar"
+    sensitivities: 'Market Risk — Sensitivities',      // panel-sensitivities -> "sensitivities"
 
     // ===== Credit (Parent + Children) =====
-    credit: 'Credit Risk', // panel-credit -> "credit"
-    creditTraffic: 'Credit Risk — Traffic Lights', // injected special section (key = creditTraffic)
-    EAD: 'Credit Risk — EAD / LGD / PD', // panel-EAD -> "EAD"
-    cvar: 'Credit Risk — VaR & ES', // panel-cvar -> "cvar"
+    credit: 'Credit Risk',                             // panel-credit -> "credit"
+    creditTraffic: 'Credit Risk — Traffic Lights',     // injected special section (key = creditTraffic)
+    EAD: 'Credit Risk — EAD / LGD / PD',                // panel-EAD -> "EAD"
+    cvar: 'Credit Risk — VaR & ES',                     // panel-cvar -> "cvar"
 
     // ===== Historic Performance (Parent + Children) =====
     // PORTFOLIO_HISTORY_Modal -> "PORTFOLIO_HISTORY"
     PORTFOLIO_HISTORY: 'Historic Performance',
-    'portfolio-value': 'Portfolio Value', // panel-portfolio-value -> "portfolio-value"
-    'hist-sensitivities': 'Historical Sensitivities', // panel-hist-sensitivities -> "hist-sensitivities"
-    'market-risk': 'Historic Market Risk', // panel-market-risk -> "market-risk"
-    'credit-risk': 'Historic Credit Risk', // panel-credit-risk -> "credit-risk"
+    'portfolio-value': 'Portfolio Value',              // panel-portfolio-value -> "portfolio-value"
+    'hist-sensitivities': 'Historical Sensitivities',  // panel-hist-sensitivities -> "hist-sensitivities"
+    'market-risk': 'Historic Market Risk',             // panel-market-risk -> "market-risk"
+    'credit-risk': 'Historic Credit Risk',             // panel-credit-risk -> "credit-risk"
 
     // ===== Other =====
     liquidity: 'Liquidity',
@@ -337,12 +299,11 @@ export const RISK_CONFIG = {
   // Regel: Nur Keys, die es auch wirklich in sections[] gibt (oder injected specials)
   // -------------------------------------------------------------------
   sectionParents: {
-    // ✅ Breakdown children
-    breakdownIssuer: 'breakdown',
-    breakdownProducts: 'breakdown',
-    breakdownGeneral: 'breakdown',
-    breakdownGeography: 'breakdown',
 
+      // ✅ Breakdown children
+  breakdownIssuer:   'breakdown',
+  breakdownProducts: 'breakdown',
+  breakdownGeneral:  'breakdown',
     // Market children
     marketTraffic: 'market',
     mvar: 'market',
@@ -364,13 +325,9 @@ export const RISK_CONFIG = {
   // ✅ Reihenfolge der Children pro Parent
   // -------------------------------------------------------------------
   sectionChildrenOrder: {
-    // ✅ Breakdown children order
-    breakdown: [
-      'breakdownIssuer',
-      'breakdownProducts',
-      'breakdownGeneral',
-      'breakdownGeography',
-    ],
+
+      // ✅ Breakdown children order
+  breakdown: ['breakdownIssuer', 'breakdownProducts', 'breakdownGeneral'],
 
     market: ['marketTraffic', 'mvar', 'sensitivities'],
     credit: ['creditTraffic', 'EAD', 'cvar'],
@@ -402,26 +359,7 @@ export const RISK_CONFIG = {
     Issuer: ['issuerPieChart', 'ratingPieChart', 'rankPieChart'],
     Product: ['ratingresPieChart', 'categoryPieChart', 'coupontypePieChart'],
     General: ['depotbankPieChart'],
-
-    // ✅ NEU: Geography (IDs müssen exakt zu `${columnName.toLowerCase()}PieChart` passen)
-    // Empfohlen: nutze die "Issuer..." Keys aus deiner v_Portfolios_enriched
-    Geography: [
-      'issuerregionPieChart',       // IssuerRegion
-      'issuercountrynamePieChart',  // IssuerCountryName
-      'issueriseuPieChart',         // IssuerIsEU
-      'issueriseuroPieChart',       // IssuerIsEuro
-      'issueriseeaPieChart',        // IssuerIsEEA
-      'issuerisoecdPieChart',       // IssuerIsOECD
-    ],
   },
-
-  breakdownChildToGroup: {
-  breakdownIssuer:   'Issuer',
-  breakdownProducts: 'Product',     // oder 'Products' – aber dann überall konsistent
-  breakdownGeneral:  'General',
-  breakdownGeography:'Geography',
-},
-
 
   // -------------------------------------------------------------------
   // Defaults für Mini-Tabellen
@@ -441,7 +379,6 @@ export const RISK_CONFIG = {
 export const IGNORED_SECTION_TITLES = RISK_CONFIG.ignoredSectionTitles;
 export const IGNORED_SECTION_KEYS   = RISK_CONFIG.ignoredSectionKeys;
 export const IGNORED_TABLE_IDS      = RISK_CONFIG.ignoredTableIds;
-
 
 
 
@@ -2315,65 +2252,7 @@ export function notifyRiskPreview(source) {
   }
 }
 
-export function syncRiskPdfStateFromDOM() {
-  try { saveChartToggleStateFromDOM(); } catch (e) {
-    console.warn('[RiskPDFPreview] syncRiskPdfStateFromDOM failed', e);
-  }
-}
 
-
-export async function handleRefreshThumbnailsClick(e) {
-  const btn = e?.currentTarget || document.getElementById('refreshThumbnailsBtn');
-  if (!btn) return;
-
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Refreshing…';
-
-  try {
-    // Daten holen (aus State)
-    const portMainData =
-      (window.appState?.getPortMainData?.() ||
-       window.appState?.getPortMainTable?.() ||
-       []);
-
-    // IR Sensitivity (PV01)
-    if (typeof handleIRSensData !== 'function') {
-      throw new Error('handleIRSensData is not available (import missing or wrong)');
-    }
-
-    const irTable = handleIRSensData(portMainData);
-    replaceContent('IRSensDataContainer', irTable);
-
-    // Credit Sensitivity (CPV01)
-    if (typeof handleCSSensData === 'function') {
-      const crTable = handleCSSensData(portMainData);
-      replaceContent('CSSensDataContainer', crTable);
-    }
-
-    // Optional: Event für weitere Listener (PDF / Preview etc.)
-    document.dispatchEvent(
-      new CustomEvent('risk:refresh-thumbnails', {
-        detail: { source: 'manual-refresh' }
-      })
-    );
-
-  } catch (err) {
-    console.error('[RiskPDF] refresh failed:', err);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
-  }
-}
-
-
-// 3) Mini-Helper zum sicheren Ersetzen von Container-Inhalten
-function replaceContent(containerId, node) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = '';
-  if (node) el.appendChild(node);
-}
 
 
 

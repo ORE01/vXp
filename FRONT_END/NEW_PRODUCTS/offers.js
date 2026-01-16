@@ -102,6 +102,9 @@ export async function quickImportWithStandardMapping() {
 
     const tableName = importResult.tempTableName;
 
+    // // NEU: RANK-Spalte normalisieren
+    // await normalizeRankOnTempTable(tableName);
+
     const columnMap = [
       { from: "PROD_ID", to: "PROD_ID" },
       { from: "SECURITY_DES", to: "DESCRIPTION" },
@@ -293,11 +296,108 @@ async function showSheetSelectionDialog(sheetNames) {
   });
 }
 
+//lange Auswahlliste im Dropdown
+// function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
+//   const container = document.getElementById("matchingContainer");
+//   container.innerHTML = "";
+//   container.dataset.table = tempTableName; // ⬅️ wichtig für spätere Verarbeitung
+
+//   const preferredFields = [
+//     "PROD_ID",
+//     "ISSUER",
+//     "COUPON",
+//     "RATING",
+//     "RATING_PROD",
+//     "MATURITY",
+//     "RANK",
+//     "PRICE_BUY",
+//     "TICKER",
+//     "DESCRIPTION",
+//     "TENOR"
+//   ];
+
+//   const usedPortfoliosCols = new Set();
+//   const dropdowns = [];
+
+//   tempTableCols.forEach((sourceCol) => {
+//     const row = document.createElement("div");
+//     row.className = "match-row";
+//     row.style.marginBottom = "8px";
+
+//     const label = document.createElement("span");
+//     label.textContent = sourceCol;
+//     label.style.display = "inline-block";
+//     label.style.width = "200px";
+
+//     const select = document.createElement("select");
+//     select.dataset.source = sourceCol;
+
+//     const renderOptions = (selectEl, currentValue = "") => {
+//       selectEl.innerHTML = "";
+
+//       const defaultOption = document.createElement("option");
+//       defaultOption.value = "";
+//       defaultOption.textContent = "Nicht zuordnen";
+//       selectEl.appendChild(defaultOption);
+
+//       // bevorzugte Felder zuerst
+//       preferredFields
+//         .filter(field => PortfoliosCols.includes(field))
+//         .forEach((field) => {
+//           if (!usedPortfoliosCols.has(field) || field === currentValue) {
+//             const option = document.createElement("option");
+//             option.value = field;
+//             option.textContent = field;
+//             selectEl.appendChild(option);
+//           }
+//         });
+
+//       // Trennlinie
+//       const separator = document.createElement("option");
+//       separator.disabled = true;
+//       separator.textContent = "──────── Weitere Spalten ────────";
+//       selectEl.appendChild(separator);
+
+//       // restliche Spalten alphabetisch
+//       PortfoliosCols
+//         .filter(col => !preferredFields.includes(col))
+//         .sort()
+//         .forEach((col) => {
+//           if (!usedPortfoliosCols.has(col) || col === currentValue) {
+//             const option = document.createElement("option");
+//             option.value = col;
+//             option.textContent = col;
+//             selectEl.appendChild(option);
+//           }
+//         });
+
+//       selectEl.value = currentValue;
+//     };
+
+//     renderOptions(select);
+
+//     select.addEventListener("change", () => {
+//       usedPortfoliosCols.clear();
+//       dropdowns.forEach((d) => {
+//         if (d.value) usedPortfoliosCols.add(d.value);
+//       });
+
+//       dropdowns.forEach((d) => {
+//         renderOptions(d, d.value);
+//       });
+//     });
+
+//     row.appendChild(label);
+//     row.appendChild(select);
+//     container.appendChild(row);
+//     dropdowns.push(select);
+//   });
+// }
 
 function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
   const container = document.getElementById("matchingContainer");
   container.innerHTML = "";
-  container.dataset.table = tempTableName; // ⬅️ wichtig für spätere Verarbeitung
+  container.dataset.table = tempTableName; // wichtig für spätere Verarbeitung
 
   const preferredFields = [
     "PROD_ID",
@@ -310,8 +410,12 @@ function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
     "PRICE_BUY",
     "TICKER",
     "DESCRIPTION",
-    "TENOR"
+    "TENOR",
+    "START_DATE"
   ];
+
+  // Nur relevante Felder verwenden (Schnittmenge)
+  const relevantFields = preferredFields.filter(f => PortfoliosCols.includes(f));
 
   const usedPortfoliosCols = new Set();
   const dropdowns = [];
@@ -332,53 +436,34 @@ function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
     const renderOptions = (selectEl, currentValue = "") => {
       selectEl.innerHTML = "";
 
+      // Standard-Option
       const defaultOption = document.createElement("option");
       defaultOption.value = "";
       defaultOption.textContent = "Nicht zuordnen";
       selectEl.appendChild(defaultOption);
 
-      // bevorzugte Felder zuerst
-      preferredFields
-        .filter(field => PortfoliosCols.includes(field))
-        .forEach((field) => {
-          if (!usedPortfoliosCols.has(field) || field === currentValue) {
-            const option = document.createElement("option");
-            option.value = field;
-            option.textContent = field;
-            selectEl.appendChild(option);
-          }
-        });
+      // Nur relevante Felder anzeigen, keine weiteren Spalten
+      relevantFields.forEach((field) => {
+        if (!usedPortfoliosCols.has(field) || field === currentValue) {
+          const option = document.createElement("option");
+          option.value = field;
+          option.textContent = field;
+          selectEl.appendChild(option);
+        }
+      });
 
-      // Trennlinie
-      const separator = document.createElement("option");
-      separator.disabled = true;
-      separator.textContent = "──────── Weitere Spalten ────────";
-      selectEl.appendChild(separator);
-
-      // restliche Spalten alphabetisch
-      PortfoliosCols
-        .filter(col => !preferredFields.includes(col))
-        .sort()
-        .forEach((col) => {
-          if (!usedPortfoliosCols.has(col) || col === currentValue) {
-            const option = document.createElement("option");
-            option.value = col;
-            option.textContent = col;
-            selectEl.appendChild(option);
-          }
-        });
-
+      // aktuelle Auswahl beibehalten
       selectEl.value = currentValue;
     };
 
     renderOptions(select);
 
+    // Bei Änderung: verwendete Felder neu berechnen und alle Dropdowns neu rendern
     select.addEventListener("change", () => {
       usedPortfoliosCols.clear();
       dropdowns.forEach((d) => {
         if (d.value) usedPortfoliosCols.add(d.value);
       });
-
       dropdowns.forEach((d) => {
         renderOptions(d, d.value);
       });
@@ -390,6 +475,7 @@ function showMatchingUI(PortfoliosCols, tempTableCols, tempTableName) {
     dropdowns.push(select);
   });
 }
+
 
 export async function handleSubmitMatching() {
   const dropdowns = Array.from(document.querySelectorAll(".match-row select"));
@@ -403,6 +489,8 @@ export async function handleSubmitMatching() {
     }
   });
 
+  columnMap.push({ value: "FIX", to: "CouponType" });
+
   if (columnMap.length === 0) {
     await showCustomAlert("⚠️ Keine Zuordnungen vorgenommen.");
     return;
@@ -413,6 +501,16 @@ export async function handleSubmitMatching() {
     await showCustomAlert("❌ Fehler: Tabellenname nicht gefunden.");
     return;
   }
+
+  
+  // RANK-Werte in der Temp-Tabelle normalisieren
+  // ⬇️ EINMAL in offers.js definieren (vor der ersten Nutzung)
+  // async function normalizeRankOnTempTable(tableName) {
+  // return await window.api.invoke("normalize-rank", { tableName });
+  // }
+
+  // await normalizeRankOnTempTable(tempTableName);
+
 
   window.api.send("import-matched-columns", {
     sourceTable: tempTableName,
