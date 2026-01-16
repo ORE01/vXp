@@ -22,7 +22,7 @@ function formatDateTime(d = new Date()) {
 /**
  * Draw cover page (you can extend later with logo, subtitle, etc.)
  */
-function drawCoverPage(doc, { title, subtitle, metaLines = [] }) {
+export function drawCoverPage(doc, { title, subtitle, metaLines = [] }) {
   doc.addPage();
 
   doc.fontSize(24).text(title || 'Report', { align: 'center' });

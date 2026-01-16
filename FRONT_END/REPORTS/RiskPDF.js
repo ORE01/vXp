@@ -13,7 +13,13 @@
 
 const { jsPDF } = window.jspdf;
 
-import { getActiveRiskSectionsForPdf, RISK_CONFIG } from './RiskPDFPreview.js';
+
+
+
+
+
+import { getActiveRiskSectionsForPdf, RISK_CONFIG} from './RiskPDFPreview.js';
+
 
 // =====================================================================
 // REPORT DEFAULTS
@@ -57,7 +63,18 @@ function getBreakdownChartDisplayLabel(chartId) {
 export const PDF_LAYOUT_DEFAULTS = {
   marginLeft: 14,
   marginRight: 14,
-}
+
+  // header/footer safe area
+  headerHeight: 10,
+  headerGap: 8,
+  footerHeight: 10,
+  footerGap: 10,
+
+  // spacing
+  sectionTitleSpacing: 10,
+  blockGap: 10,
+};
+
 
 
 
@@ -123,6 +140,13 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
   const reportTitle = String(opts.reportTitle || 'Risk Report').trim() || 'Risk Report';
   const logoEl = document.getElementById('logo');
+
+    const reportTimeText = (() => {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
+
 
   // 0) COVER PAGE (page 1)
   doc.setPage(1);
@@ -522,7 +546,7 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
             styles: { fontSize: 8, cellPadding: 2 },
             headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
             alternateRowStyles: { fillColor: [255, 255, 255] },
-            tableWidth: 'auto',
+            tableWidth: layout.contentWidth,
 
             didParseCell(data) {
               if (data.section === 'head') return;
@@ -933,26 +957,44 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     item.NAV,
   ]);
 
+  // Desired relative widths (will be normalized to fit exactly)
   const base = [22, 72, 34, 26, 22];
-  const colCount = base.length;
-
-  const fontSize = 8;
-  const cellPadding = 1.5;
-
-  const contentW = layout.contentWidth;
-  const safety = 4;
-  const effectiveW = Math.max(40, contentW - (colCount * 2 * cellPadding) - safety);
-
-  const sumBase = base.reduce((a, b) => a + b, 0);
-  const scale = effectiveW / sumBase;
-
   const mins = [18, 40, 26, 18, 18];
-  const scaled = base.map((w, i) => Math.max(mins[i], w * scale));
 
-  const sumScaled = scaled.reduce((a, b) => a + b, 0);
-  if (sumScaled > effectiveW) {
-    const overflow = sumScaled - effectiveW;
-    scaled[1] = Math.max(mins[1], scaled[1] - overflow);
+  // Single source for typography
+  const fontSize = 7;
+  const cellPadding = 1.2;
+
+  // Hard target width (slight epsilon for borders/rounding inside autoTable)
+  const targetW = Math.max(40, (layout.contentWidth || 180) - 2);
+
+  // 1) Scale base -> scaled with mins
+  const sumBase = base.reduce((a, b) => a + b, 0) || 1;
+  let scaled = base.map((w, i) => Math.max(mins[i], (w / sumBase) * targetW));
+
+  // 2) Normalize to fit EXACTLY into targetW (guarantees no "could not fit page")
+  const sumScaled1 = scaled.reduce((a, b) => a + b, 0) || 1;
+  const f = targetW / sumScaled1;
+  scaled = scaled.map((w, i) => Math.max(mins[i], w * f));
+
+  // 3) If mins forced us over targetW, shave from Description column (idx 1), then Issuer (idx 2)
+  const sumScaled2 = scaled.reduce((a, b) => a + b, 0);
+  if (sumScaled2 > targetW) {
+    let overflow = sumScaled2 - targetW;
+
+    const shave = (idx, min) => {
+      if (overflow <= 0) return;
+      const can = Math.max(0, scaled[idx] - min);
+      const cut = Math.min(can, overflow);
+      scaled[idx] -= cut;
+      overflow -= cut;
+    };
+
+    shave(1, mins[1]); // Description first
+    shave(2, mins[2]); // then Issuer
+    // If still overflow, shave Notional/NAV a bit (rare)
+    shave(3, mins[3]);
+    shave(4, mins[4]);
   }
 
   safeAutoTable(doc, layout, {
@@ -960,9 +1002,9 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     head: [['Product ID', 'Description', 'Issuer', 'Notional', 'NAV']],
     body: tableData,
     theme: 'striped',
-    tableWidth: 'auto',
+    tableWidth: targetW,
 
-    // ✅ only ProductID no-wrap
+    // Only ProductID no-wrap
     noWrapColumns: [0],
 
     styles: {
@@ -978,17 +1020,22 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
       cellPadding,
       overflow: 'linebreak',
       cellWidth: 'wrap',
+      fillColor: [245, 245, 245],
+      textColor: [60, 60, 60],
     },
+
+    alternateRowStyles: { fillColor: [255, 255, 255] },
 
     columnStyles: {
       0: { cellWidth: scaled[0] },
       1: { cellWidth: scaled[1] },
       2: { cellWidth: scaled[2] },
-      3: { cellWidth: scaled[3] },
-      4: { cellWidth: scaled[4] },
+      3: { cellWidth: scaled[3], halign: 'right' },
+      4: { cellWidth: scaled[4], halign: 'right' },
     },
   });
 }
+
 
 function extractProductRiskData(filteredData) {
   if (!filteredData || !Array.isArray(filteredData)) return [];
@@ -1055,3 +1102,259 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   return { head, body };
 }
+
+function createPdfLayout(doc, overrides = {}) {
+  const cfg = { ...PDF_LAYOUT_DEFAULTS, ...overrides };
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const left = Number(cfg.marginLeft ?? 14);
+  const right = Number(cfg.marginRight ?? 14);
+
+  const headerHeight = Number(cfg.headerHeight ?? 10);
+  const headerGap = Number(cfg.headerGap ?? 8);
+  const footerHeight = Number(cfg.footerHeight ?? 10);
+  const footerGap = Number(cfg.footerGap ?? 10);
+
+  const topSafe = headerHeight + headerGap;                 // ✅ number
+  const bottomSafe = pageH - (footerHeight + footerGap);    // ✅ number
+
+  return {
+    cfg,
+    pageW,
+    pageH,
+    left,
+    right,
+
+    // aliases (du nutzt später bottomY)
+    topSafe,
+    bottomSafe,
+    bottomY: bottomSafe,
+
+    contentWidth: pageW - left - right,
+
+    startY() {
+      return topSafe;
+    },
+
+    hasSpace(y, neededHeight) {
+      return Number(y) + Number(neededHeight) <= bottomSafe;
+    },
+
+    newPage(doc) {
+      doc.addPage();
+      return topSafe;
+    },
+  };
+}
+
+function drawCoverPage(doc, layout, { title, subtitle, metaLines = [], logoEl, reportTimeText } = {}) {
+  // Du machst davor doc.setPage(1) -> hier KEIN doc.addPage()
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const centerX = pageW / 2;
+
+  // Hintergrund
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, pageW, pageH, 'F');
+
+  // Logo (optional)
+  try {
+    if (logoEl && logoEl.tagName === 'IMG' && logoEl.src) {
+      const maxW = 70;
+      const maxH = 35;
+      const x = (pageW - maxW) / 2;
+      const y = 28;
+
+      // Wenn dein Logo jpg ist -> 'JPEG'
+      doc.addImage(logoEl.src, 'PNG', x, y, maxW, maxH);
+    }
+  } catch (e) {
+    console.warn('[PDF] cover logo addImage failed', e);
+  }
+
+  // Titel
+  const t = String(title || 'Report');
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  doc.text(t, centerX, pageH * 0.38, { align: 'center' });
+
+  // Subtitle (optional)
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(70);
+    doc.text(String(subtitle), centerX, pageH * 0.38 + 12, { align: 'center' });
+  }
+
+  // Meta lines (optional)
+  const lines = [];
+  if (reportTimeText) lines.push(`Generated: ${reportTimeText}`);
+  if (Array.isArray(metaLines) && metaLines.length) lines.push(...metaLines.map((x) => String(x)));
+
+  if (lines.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+
+    const startY = pageH * 0.38 + 28;
+    const step = 6;
+
+    lines.forEach((line, i) => {
+      doc.text(line, centerX, startY + i * step, { align: 'center' });
+    });
+  }
+
+  // Fußzeile
+  doc.setFontSize(9);
+  doc.setTextColor(130);
+  doc.text('Risk Report', centerX, pageH - 18, { align: 'center' });
+}
+function resolveBreakdownChartLabel(chartId) {
+  if (!chartId) return '';
+
+  // 1) Versuch: aus BREAKDOWN_CHART_LABELS
+  const key = String(chartId).toLowerCase();
+  if (BREAKDOWN_CHART_LABELS[key]) {
+    return BREAKDOWN_CHART_LABELS[key];
+  }
+
+  // 2) Versuch: data-label vom DOM
+  try {
+    const el = document.getElementById(chartId);
+    const lbl = el?.dataset?.label;
+    if (lbl) return lbl;
+  } catch {}
+
+  // 3) Fallback: ID
+  return chartId;
+}
+function safeAutoTable(doc, layout, options = {}) {
+  if (!doc || typeof doc.autoTable !== 'function') {
+    console.warn('[PDF] autoTable not available (jspdf-autotable missing?)');
+    return null;
+  }
+
+  const startY =
+    options.startY != null
+      ? Number(options.startY)
+      : (typeof layout?.startY === 'function' ? Number(layout.startY()) : Number(layout?.topSafe ?? 20));
+
+  const safeStartY = Number.isFinite(startY) ? startY : 20;
+
+  try {
+    doc.autoTable({
+      ...options,
+      startY: safeStartY,
+    });
+    return doc.lastAutoTable || null;
+  } catch (e) {
+    console.warn('[PDF] autoTable failed', e);
+    return null;
+  }
+}
+function renderTableAutoFit(doc, layout, opts = {}) {
+  const {
+    title,
+    y,
+    tbl,
+    theme = 'grid',
+    styles,
+    headStyles,
+    alternateRowStyles,
+  } = opts;
+
+  let startY = Number.isFinite(y)
+    ? y
+    : (typeof layout?.startY === 'function' ? layout.startY() : 20);
+
+  const marginX = layout?.left ?? 14;
+
+  // Titel
+  if (title) {
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(String(title), marginX, startY);
+    startY += 6;
+  }
+
+  // Tabelle
+  const res = safeAutoTable(doc, layout, {
+    startY,
+    head: tbl.head ? [tbl.head] : undefined,
+    body: tbl.body || [],
+    theme,
+    styles,
+    headStyles,
+    alternateRowStyles,
+    tableWidth: 'auto',
+  });
+
+  return {
+    finalY: res?.finalY ?? startY + 20,
+  };
+}
+function drawHeaderFooter(doc, layout, { title, logoEl, reportTimeText } = {}) {
+  const pageW = doc.internal.pageSize.getWidth();
+
+  const left = layout?.left ?? 14;
+  const right = layout?.right ?? 14;
+
+  const headerY = Math.max(10, (layout?.cfg?.headerHeight ?? 10)); // safe y
+  const footerY = doc.internal.pageSize.getHeight() - 10;
+
+  // HEADER LINE
+  doc.setDrawColor(220);
+  doc.setLineWidth(0.2);
+  doc.line(left, headerY + 4, pageW - right, headerY + 4);
+
+  // Header title (links)
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60);
+  if (title) doc.text(String(title), left, headerY);
+
+  // Header time (rechts)
+  if (reportTimeText) {
+    const txt = String(reportTimeText);
+    doc.text(txt, pageW - right, headerY, { align: 'right' });
+  }
+
+  // Logo klein rechts oben (optional)
+  try {
+    if (logoEl && logoEl.tagName === 'IMG' && logoEl.src) {
+      const w = 18;
+      const h = 9;
+      const x = pageW - right - w;
+      const y = 6;
+      doc.addImage(logoEl.src, 'PNG', x, y, w, h);
+    }
+  } catch {}
+  
+  // FOOTER LINE
+  doc.setDrawColor(220);
+  doc.setLineWidth(0.2);
+  doc.line(left, footerY - 6, pageW - right, footerY - 6);
+}
+function drawPageNumber(doc, layout, { pageIndex, pageCount } = {}) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const right = layout?.right ?? 14;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+
+  const txt = (pageIndex && pageCount) ? `Page ${pageIndex} / ${pageCount}` : String(pageIndex ?? '');
+  doc.text(txt, pageW - right, pageH - 8, { align: 'right' });
+}
+
+
+
+
+
