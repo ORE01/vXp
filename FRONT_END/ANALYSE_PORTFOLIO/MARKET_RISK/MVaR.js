@@ -21,6 +21,12 @@ export const MVAR_COLUMNS = [
 
 export function handleMvarInputData(receivedData) {
   const container = document.getElementById('inputMvarContainer');
+  if (!container) {
+    console.warn('[MVaRInput] #inputMvarContainer not found');
+    return;
+  }
+
+  // reset
   while (container.firstChild) container.removeChild(container.firstChild);
 
   // Nur gewünschte Spalten für die TABELLE aufbereiten – in definierter Reihenfolge
@@ -39,19 +45,23 @@ export function handleMvarInputData(receivedData) {
   // Tabelle rendern
   container.innerHTML = processData(tableData, TABLE_MVAR);
 
-  // AppState mit ORIGINAL-Daten aktualisieren (wichtig für Edit/Add)
+  // State speichern (Originaldaten)
   appState.setMvarInputData(receivedData);
 
   // Nach DOM-Rendern Buttons & Radios binden
-  ensureRendered(async () => {
+  ensureRendered(() => {
+    console.log('[MVaRInput] ensureRendered done');
+    console.log('[MVaRInput] refreshMarketRiskUI type:', typeof appState.refreshMarketRiskUI);
+    console.log('[MVaRInput] appState identity:', appState);
+
     const reloadMVar = async () => {
       await fetchAndUpdateMVarDataInputData(TABLE_MVAR);
     };
 
-    // 🔹 ADD-Button
+    // ADD
     const mvarAddButton = document.getElementById('mvarAddButton');
     if (mvarAddButton) {
-      mvarAddButton.addEventListener('click', (event) => {
+      mvarAddButton.onclick = (event) => {
         handleModalAction(
           event,
           appState.mvarInputData,
@@ -60,13 +70,13 @@ export function handleMvarInputData(receivedData) {
           'add',
           { modalId: 'editModal', onReload: reloadMVar }
         );
-      });
+      };
     }
 
-    // 🔹 EDIT-Buttons (pro Zeile)
-    const mvarEditButtons = document.querySelectorAll('#inputMvarContainer .edit-button');
+    // EDIT (pro Zeile)
+    const mvarEditButtons = container.querySelectorAll('.edit-button');
     mvarEditButtons.forEach((button) => {
-      button.addEventListener('click', (event) => {
+      button.onclick = (event) => {
         const rowIndex = parseInt(button.getAttribute('data-row'), 10);
         handleModalAction(
           event,
@@ -76,42 +86,71 @@ export function handleMvarInputData(receivedData) {
           'edit',
           { modalId: 'editModal', onReload: reloadMVar }
         );
-      });
+      };
     });
 
-    // 🔹 RADIO: Szenario-Auswahl (schreibt id in appState)
-    const radios = container.querySelectorAll('input.scenario-radio[name="scenario-select"]');
+    // Radios finden (debug: zeig mal, was wirklich im DOM ist)
+    const radios = container.querySelectorAll('input.scenario-radio');
+    console.log('[MVaRInput] radios found:', radios.length);
 
-    radios.forEach((radio) => {
-      radio.addEventListener('change', () => {
-        if (!radio.checked) return;
+    if (!radios.length) {
+      // Das ist der häufigste Grund, warum "nichts passiert"
+      console.warn('[MVaRInput] No radios found. Check your HTML: class="scenario-radio" and data attributes.');
+      // hilfreich: ein peek ins HTML
+      console.log('[MVaRInput] container HTML snippet:', container.innerHTML.slice(0, 500));
+      return;
+    }
 
-        radios.forEach(other => {
-          if (other !== radio) other.checked = false;
-        });
+    // Helper: selection übernehmen + refresh
+    const applySelection = (radio) => {
+      if (!radio) return;
 
-        const idAttr = radio.getAttribute('data-id');
-        const selectedId = idAttr != null ? parseInt(idAttr, 10) : null;
+      // ausschließliches Verhalten
+      radios.forEach(other => { if (other !== radio) other.checked = false; });
+      radio.checked = true;
 
-        if (!Number.isNaN(selectedId) && selectedId != null) {
-          appState.selectedMvarId = selectedId;
-          appState.selectedMvarInterval = radio.getAttribute('data-interval');
-        }
-      });
-    });
-
-    // Initial: Default-Szenario (z.B. STRESSED) in State übernehmen
-    const initiallyChecked = container.querySelector('input.scenario-radio[name="scenario-select"]:checked');
-    if (initiallyChecked) {
-      const idAttr = initiallyChecked.getAttribute('data-id');
+      const idAttr = radio.getAttribute('data-id');
       const selectedId = idAttr != null ? parseInt(idAttr, 10) : null;
+      const interval = radio.getAttribute('data-interval');
+
+      console.log('[MVAR APPLY]', { idAttr, selectedId, interval });
+
       if (!Number.isNaN(selectedId) && selectedId != null) {
         appState.selectedMvarId = selectedId;
-        appState.selectedMvarInterval = initiallyChecked.getAttribute('data-interval');
       }
-    }
+      if (interval) {
+        appState.selectedMvarInterval = interval;
+      }
+
+      console.log('[MVAR STATE AFTER]', {
+        selectedMvarId: appState.selectedMvarId,
+        selectedMvarInterval: appState.selectedMvarInterval
+      });
+
+      if (typeof appState.refreshMarketRiskUI === 'function') {
+        appState.refreshMarketRiskUI(0);
+      } else {
+        console.warn('[MVaRInput] refreshMarketRiskUI not a function on THIS appState instance');
+      }
+    };
+
+    // Bind: click + change (robust)
+    radios.forEach((radio) => {
+      radio.addEventListener('click', () => applySelection(radio));
+      radio.addEventListener('change', () => { if (radio.checked) applySelection(radio); });
+    });
+
+    // Initial selection: checked oder erster
+    const initiallyChecked =
+      container.querySelector('input.scenario-radio[name="scenario-select"]:checked') ||
+      container.querySelector('input.scenario-radio:checked') ||
+      radios[0];
+
+    console.log('[MVaRInput] initial radio:', initiallyChecked);
+    applySelection(initiallyChecked);
   });
 }
+
 
 
 
@@ -122,12 +161,16 @@ function fetchAndUpdateMVarDataInputData(tableName = TABLE_MVAR) {
 
 
 export function handleMVaRData(receivedData, index) {
-  const port_name = appState.getSelectedPortTableName();
 
-  const containerIds = [
-    'MVaRDataContainer',
-    `MVaRDataContainer${index}`
-  ];
+  const port_name = appState.getSelectedPortTableName();
+  if (!port_name) {
+    console.warn('[MVaR] No portfolio selected yet -> skip render', { scenario_name: appState.selectedMvarInterval });
+    return;
+  }
+
+  const scenario_name = appState.selectedMvarInterval; // <- wichtig
+
+  const containerIds = ['MVaRDataContainer', `MVaRDataContainer${index}`];
 
   if (!receivedData || receivedData.length === 0) {
     containerIds.forEach(id => {
@@ -137,36 +180,42 @@ export function handleMVaRData(receivedData, index) {
     return;
   }
 
-  let filteredData = receivedData.find(dataPoint => dataPoint.port_name === port_name);
+  // 1) Port + Scenario match
+  const matches = receivedData.filter(r =>
+    r &&
+    r.port_name === port_name &&
+    (!scenario_name || r.scenario_name === scenario_name)
+  );
 
-  if (!filteredData) {
+  if (!matches.length) {
     containerIds.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '';
     });
+    console.warn('[MVaR] No header match', { port_name, scenario_name, rows: receivedData.length });
     return;
   }
 
-  // console.log('filteredDataMVaR:', filteredData);
+  // 2) latest asof_date
+  const filteredData = matches
+    .slice()
+    .sort((a, b) => String(a.asof_date).slice(0, 10).localeCompare(String(b.asof_date).slice(0, 10)))
+    .at(-1);
 
+  // --- Render wie gehabt ---
   renderMVaRFullTable(filteredData, 'MVaRDataContainer');
   renderMVaRRiskParaContainers(filteredData);
   renderMVaRRelativeTableWithIndex(filteredData, index);
   updateMVaRChart(filteredData);
 
-  // 🔴🟡 Schwellen aus MVaRInput holen
   let thresholds = getMVaRThresholdsFromInputUsingState();
-
-  // Fallback, falls DB-Werte fehlen
-  if (!thresholds) {
-    thresholds = { RED_THRESHOLD: -3, YELLOW_THRESHOLD: -1 };
-  }
+  if (!thresholds) thresholds = { RED_THRESHOLD: -3, YELLOW_THRESHOLD: -1 };
 
   const { RED_THRESHOLD, YELLOW_THRESHOLD } = thresholds;
-
   const state = trafficLightStateForMVaR(filteredData, RED_THRESHOLD, YELLOW_THRESHOLD);
   if (state) updateTrafficLight('#traffic-mvar', state);
 }
+
 
     function renderMVaRFullTable(data, containerId) {
     const container = document.getElementById(containerId);
@@ -439,8 +488,12 @@ export function handleMVaRData(receivedData, index) {
         return null;
       }
 
-      const redRel = typeof row.red_threshold_rel === 'number' ? row.red_threshold_rel : null;
+      // const redRel = typeof row.red_threshold_rel === 'number' ? row.red_threshold_rel : null;
+      // const yellowRel = typeof row.yellow_threshold === 'number' ? row.yellow_threshold : null;
+
+      const redRel = typeof row.red_threshold === 'number' ? row.red_threshold : null;
       const yellowRel = typeof row.yellow_threshold === 'number' ? row.yellow_threshold : null;
+
 
       if (redRel == null || yellowRel == null) {
         console.warn('getMVaRThresholdsFromInputUsingState: Thresholds fehlen in row:', row);

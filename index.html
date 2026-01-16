@@ -275,6 +275,15 @@
               <p>Select Depotbank:</p>
               <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
             </div>
+            <div>
+              <p>Select Country:</p>
+              <select id="portCountryDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Region:</p>
+              <select id="portRegionDropdown" multiple class="select-dropdown"></select>
+            </div>
+
           </div>
 
           <!-- Reset rechts -->
@@ -349,6 +358,18 @@
         </button>
       </div>
 
+      <!-- ✅ Breakdown Sub-Trigger: Geography -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="Geography"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">Geography Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
 
     <!-- 📈 Performance – Trigger -->
     <div class="chart-section">
@@ -366,17 +387,30 @@
       </button>
     </div>
 
-        <!-- Market VaR – Unterpunkt -->
+        <!-- Market Factor VaR – Unterpunkt -->
         <div class="chart-section chart-section--sub">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-mvar"
                   aria-controls="panel-mvar"
                   aria-expanded="false"
                   style="max-width: 184px;">
-            <span class="section-header">Market Risk Detail</span>
+            <span class="section-header">Market Factor Detail</span>
             <span class="chev">▶</span>
           </button>
         </div>
+
+        <!-- Market Product VaR – Unterpunkt -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-mvar-products"
+                  aria-controls="panel-mvar-products"
+                  aria-expanded="false"
+                  style="max-width: 184px;">
+            <span class="section-header">Market Product Detail</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
 
         <!-- 📉 Market Sensitivities – Unterpunkt von Market Risk -->
         <div class="chart-section chart-section--sub">
@@ -628,9 +662,13 @@
         <canvas id="plMvarDistChart"></canvas>
       </div>
     </div>
+
+
+
+
   </div>
 </div>
-        <!-- Panel: Market VaR (Detail) -->
+        <!-- Panel: Market Factor VaR (Detail) -->
         <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
           <div class="sub-panel-header">
             <div id="panel-mvar-title" class="sub-panel-title">MARKET VaR</div>
@@ -673,6 +711,72 @@
 
 
         </div>
+
+<!-- Panel: Market Product VaR (Detail) -->
+<div id="panel-mvar-products" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-products-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-mvar-products-title" class="sub-panel-title">MARKET Product VaR</div>
+    <button class="sub-panel-close" data-close="panel-mvar-products" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- Optional: kleine Summary-Zeile oben (Portfolio + Szenario) -->
+    <div class="mvar-summary-header" style="margin-bottom: 10px;">
+      <p class="mvar-caption">Product contributions (VaR / ES) for selected Portfolio & Scenario</p>
+      <!-- <button id="mvarProductRefreshButton" class="edit-button">Refresh</button> -->
+    </div>
+
+    <!-- Haupttabelle -->
+    <div class="data-container" id="mvarProductTableContainer"></div>
+
+    <!-- Top-N VaR contrib: Chart + Rangliste -->
+    <div class="mvar-prod-split" style="margin-top: 14px;">
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="mvarProdIdVarContribChart"></canvas>
+      </div>
+
+      <div class="mvar-prod-table chart-box">
+        <div id="mvarProdIdVarContribTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================================================== -->
+<!-- Panel: Product Details (Right Sidepanel)               -->
+<!-- ===================================================== -->
+<div id="panel-prod-details"
+     class="sub-panel sub-panel-right"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-prod-details-title"
+     hidden>
+
+  <div class="sub-panel-header">
+    <div id="panel-prod-details-title" class="sub-panel-title">
+      Product Details
+    </div>
+    <button class="sub-panel-close"
+            data-close="panel-prod-details"
+            aria-label="Schließen">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- kurze Meta-Zeile -->
+    <div id="prodDetailsMeta"
+         class="muted"
+         style="margin-bottom:10px;"></div>
+
+    <!-- Produkt-Stammdaten aus ProdAll -->
+    <div id="prodDetailsContainer"></div>
+  </div>
+</div>
+
+
+
 
         <!-- Panel: Market Sensitivities (Detail) -->
         <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>

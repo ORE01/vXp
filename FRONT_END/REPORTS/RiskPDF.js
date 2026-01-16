@@ -11,20 +11,34 @@ export const REPORT_DEFAULTS = {
   orientation: 'p',
 };
 
-// Schöne Labels für Breakdown-Charts im TOC und im PDF
-function getBreakdownChartDisplayLabel(chartId) {
-  const map = {
-    issuerPieChart:      'Issuer',
-    ratingPieChart:      'Rating',
-    rankPieChart:        'Rank',
-    ratingresPieChart:   'Rating',
-    categoryPieChart:    'Category',
-    coupontypePieChart:  'Coupon Type',
-    depotbankPieChart:   'Depotbank',
-  };
+export const BREAKDOWN_CHART_LABELS = {
+  // Issuer
+  issuerpiechart:       'Issuer',
+  ratingpiechart:       'Issuer Rating',
+  rankpiechart:         'Capital Structure',
 
-  return map[chartId] || chartId;
+  // Product
+  ratingrespiechart:    'Product Rating',
+  categorypiechart:     'Product Category',
+  coupontypepiechart:   'Coupon Type',
+
+  // General
+  depotbankpiechart:    'Depot Bank',
+
+  // Geography
+  regionpiechart:       'Region',
+  countrypiechart:      'Country',
+  issueriseupiechart:   'EU Exposure',
+  issueriseuropiechart: 'Euro Area Exposure',
+};
+
+function getBreakdownChartDisplayLabel(chartId) {
+  const key = String(chartId || '').toLowerCase();
+  return BREAKDOWN_CHART_LABELS[key] || chartId;
 }
+
+
+
 
 
 function applyPdfHierarchy(sections, config) {

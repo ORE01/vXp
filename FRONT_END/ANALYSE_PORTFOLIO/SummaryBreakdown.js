@@ -68,7 +68,27 @@ const BREAKDOWN_CONFIG = [
       { key: 'Depotbank', label: 'Depot Bank' },
     ],
   },
+
+  // ✅ NEU
+{
+  key: 'Geography',
+  title: 'Geography',
+  overview: 'Region, Country, EU/EEA/OECD/Euro',
+  columns: [
+    { key: 'IssuerRegion',  label: 'Region' },         // falls du das so im View hast
+    { key: 'IssuerCountryName', label: 'Country' },    // oder 'Country' – je nachdem was du wirklich im Data-Objekt hast
+
+    // ✅ diese fehlen dir aktuell:
+    { key: 'IssuerIsEU',   label: 'EU' },
+    { key: 'IssuerIsEEA',  label: 'EEA' },
+    { key: 'IssuerIsOECD', label: 'OECD' },
+    { key: 'IssuerIsEuro', label: 'Euro' },
+  ],
+},
+
+
 ];
+
 
 
 export function handleSummaryNotionalData(filteredData, index, port_name) {
@@ -343,24 +363,33 @@ function drawPieChartByColumn(filteredData, columnName) {
   });
 }
 
-      function getValuesByColumn(data, columnName, valueType = 'NAV') {
-        const map = {};
+function getValuesByColumn(data, columnName, valueType = 'NAV') {
+  const map = {};
 
-        data.forEach(entry => {
-          const key = entry[columnName] || 'Unknown';
-          const value = parseFloat(entry[valueType]) || 0;
-          map[key] = (map[key] || 0) + value;
-        });
+  data.forEach(entry => {
+    const raw = entry[columnName];
 
-        // Einträge sortieren (absteigend nach Wert)
-        const sorted = Object.entries(map)
-          .sort((a, b) => b[1] - a[1]);
+    if (raw === undefined || raw === null || raw === '') {
+      console.log('[BREAKDOWN UNKNOWN]', {
+        columnName,
+        raw,
+        PROD_ID: entry.PROD_ID,
+        ISSUER: entry.ISSUER,
+        TICKER: entry.TICKER,
+        NAV: entry.NAV,
+        NOTIONAL: entry.NOTIONAL,
+      });
+    }
 
-        return {
-          labels: sorted.map(([key]) => key),
-          values: sorted.map(([, value]) => value)
-        };
-      }
+    const key = (raw === undefined || raw === null || raw === '') ? 'Unknown' : raw;
+    const value = parseFloat(entry[valueType]) || 0;
+    map[key] = (map[key] || 0) + value;
+  });
+
+  const sorted = Object.entries(map).sort((a,b) => b[1]-a[1]);
+  return { labels: sorted.map(([k]) => k), values: sorted.map(([,v]) => v) };
+}
+
 
 
 

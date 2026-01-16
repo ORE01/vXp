@@ -60,13 +60,16 @@
    Risk-Market Charts (dein bestehendes CSS)
    =========================== */
 
-#panel-market .chart-2x1-row{
+/* gilt für Market Panel UND MVaR Product Panel */
+#panel-market .chart-2x1-row,
+#panel-mvar-products .chart-2x1-row{
   display:flex;
   gap:20px;
   flex-wrap:wrap;
 }
 
-#panel-market .chart-box{
+#panel-market .chart-box,
+#panel-mvar-products .chart-box{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
@@ -77,11 +80,38 @@
   min-width: 320px;
 }
 
-#panel-market .chart-box canvas{
+#panel-market .chart-box canvas,
+#panel-mvar-products .chart-box canvas{
   display:block;
   width:100% !important;
   height:360px !important;
 }
+
+@media (max-width: 1200px){
+  #panel-market .chart-box canvas,
+  #panel-mvar-products .chart-box canvas{
+    height: 320px !important;
+  }
+}
+
+@media (max-width: 800px){
+  #panel-market .chart-2x1-row,
+  #panel-mvar-products .chart-2x1-row{
+    gap:16px;
+  }
+
+  #panel-market .chart-box,
+  #panel-mvar-products .chart-box{
+    min-width:0;
+    width:100%;
+  }
+
+  #panel-market .chart-box canvas,
+  #panel-mvar-products .chart-box canvas{
+    height: 280px !important;
+  }
+}
+
 
 @media (max-width: 1200px){
   #panel-market .chart-box canvas{ height: 320px !important; }
@@ -99,5 +129,34 @@
     gap: 10px;
   }
 }
+
+#panel-mvar-products .mvar-prod-split{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+#panel-mvar-products .mvar-prod-chart{ flex: 2 1 520px; min-width: 320px; }
+#panel-mvar-products .mvar-prod-table{ flex: 1 1 320px; min-width: 260px; overflow:auto; }
+
+#panel-mvar-products .mvar-mini-table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+#panel-mvar-products .mvar-mini-table th,
+#panel-mvar-products .mvar-mini-table td{
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+#panel-mvar-products .mvar-mini-table td:last-child,
+#panel-mvar-products .mvar-mini-table th:last-child{
+  text-align:right;
+}
+#panel-mvar-products .mvar-mini-table .clickable{
+  cursor:pointer;
+  text-decoration: underline;
+}
+
 
 

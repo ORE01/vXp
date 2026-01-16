@@ -13,6 +13,7 @@ const tableHandlers = {
   CSParameter: handleCSParameterFields,
   CreditVaRInput: handleCreditVaRInputFields,
   MVaRInput: handleMVaRInputFields,
+  Issuer: handleIssuerFields,
 };
 
 // Felder, die im Modal NICHT angezeigt werden sollen – je Tabelle
@@ -201,6 +202,32 @@ input.classList.add('input-field');
   formRow.appendChild(input);
   return true;  // sagt dem Generator: "Ich habe dieses Feld behandelt."
 }
+
+function handleIssuerFields(fieldName, rowData, formRow, label) {
+  switch (fieldName) {
+
+    case 'Country': {
+      const countries = (appState.getCountryLookup?.() || appState.countryLookup || [])
+        .filter(c => Number(c.is_active ?? 1) === 1)
+        .map(c => c.code);
+
+      // Fallback, falls Lookup noch nicht geladen ist
+      if (!countries.length) countries.push('GENERAL');
+
+      const selected = rowData[fieldName] ?? 'GENERAL';
+      const dropdown = createDropdown(fieldName, countries, selected);
+
+      formRow.appendChild(label);
+      formRow.appendChild(dropdown);
+      return true;
+    }
+
+    default:
+      return false;
+  }
+}
+
+
 
 
 

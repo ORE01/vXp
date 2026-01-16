@@ -832,29 +832,60 @@ getAllTableNames((err, receivedTableNames) => {
     sendDataToRenderer(tableNames);
   }
 });
-    function fetchDataAndSendEvent(query, event) {
-      queryDB(query, (err, rows) => {
-        if (err) {
-          console.error("Error fetching data:", err.message);
-          return;
-        }
-        if (rows.length === 0) {
-          console.log("No data available.");
-          return;
-        }
+    // function fetchDataAndSendEvent(query, event) {
+    //   queryDB(query, (err, rows) => {
+    //     if (err) {
+    //       console.error("Error fetching data:", err.message);
+    //       return;
+    //     }
+    //     if (rows.length === 0) {
+    //       console.log("No data available.");
+    //       return;
+    //     }
 
-        // ✅ Nur RAW senden
-        mainWindow.webContents.send(event, rows);
-      });
+    //     // ✅ Nur RAW senden
+    //     mainWindow.webContents.send(event, rows);
+    //   });
+    // }
+
+    function fetchDataAndSendEvent(query, eventName, cb) {
+  queryDB(query, (err, rows) => {
+    if (err) {
+      console.error("Error fetching data:", err.message);
+      cb?.(err);
+      return;
     }
+
+    // ✅ Immer senden – auch wenn leer, sonst bleiben Dropdowns leer/hängen
+    mainWindow.webContents.send(eventName, rows || []);
+
+    cb?.(null, rows || []);
+  });
+}
+
+
+    // function sendDataToRenderer() {
+    //   //console.log('tableNames:', tableNames);
+    //   tableNames.forEach(tableName => {
+    //     //console.log('query:', tableName);
+    //     fetchDataAndSendEvent(tableName, `${tableName}Data`);
+    //   });
+    // }
 
     function sendDataToRenderer() {
-      //console.log('tableNames:', tableNames);
-      tableNames.forEach(tableName => {
-        //console.log('query:', tableName);
-        fetchDataAndSendEvent(tableName, `${tableName}Data`);
-      });
-    }
+  tableNames.forEach(tableName => {
+    const resolved =
+      tableName === 'Portfolios'
+        ? 'v_Portfolios_enriched'
+        : tableName;
+
+    // Event-Name bleibt PortfoliosData, damit dein Renderer NICHT angepasst werden muss
+    const eventName = `${tableName}Data`;
+
+    fetchDataAndSendEvent(resolved, eventName);
+  });
+}
+
 
 //====================================PYTHON====================================================================
 
@@ -931,7 +962,14 @@ ipcMain.on('start-py-fairValue', async (event, args) => {
 });
 ipcMain.on('start-py-MVaR', async (event, args) => {
   const { tableName, selectedInterval } = args;
-  const tablesToRefresh = ['MarketVaR'];
+
+  const tablesToRefresh = [
+  'MarketVaR',
+  'MarketVaR_Dist',
+  'MarketVaR_Product',
+  'MarketVaR_FactorReturns',
+  'MarketVaR_FactorPL',
+];
 
   if (!tableName) {
     console.error('❌ Missing required argument: "tableName".');
@@ -960,25 +998,15 @@ ipcMain.on('start-py-MVaR', async (event, args) => {
 
   startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', pythonArgs)
     .then(() => {
-      //console.log('Python script executed successfully');
-
-      // Non-blocking refresh
-      tablesToRefresh.forEach(table => {
-        refreshTable(table, () => {
-          //console.log('Refreshed table:', table);
-        });
-      });
-
-      //console.log('All tables refresh initiated');
+      tablesToRefresh.forEach(table => refreshTable(table, () => {}));
     })
-    .catch(error => {
-      console.error('❌ Python script execution failed:', error);
-    })
+    .catch(error => console.error('❌ Python script execution failed:', error))
     .finally(() => {
       event.reply('py-mvar-complete', { success: true, projectName: 'py-MVaR' });
       event.reply('project-finished', { success: true, projectName: 'py-MVaR' });
     });
 });
+
 ipcMain.on('start-py-CVaR', async (event, args) => {
   const tablesToRefresh = [
     'EAD', 
@@ -1652,16 +1680,29 @@ ipcMain.on('delete-selected-table', (event, selectedTableName) => {
 
 
 // GET THE DATA FROM ANY TABLE:
+// ipcMain.on('fetch-table-data', (event, selectedTableName) => {
+//   console.log('fetch-table-data:', selectedTableName);
+
+//   refreshTable(selectedTableName, (data) => {
+//     console.log(`Sende Daten für Tabelle "${selectedTableName}" zurück`, data);
+
+//     // Wichtig: Passender Channel-Name!
+//     event.reply(`${selectedTableName}`, data);
+//   });
+// });
+
 ipcMain.on('fetch-table-data', (event, selectedTableName) => {
   console.log('fetch-table-data:', selectedTableName);
 
-  refreshTable(selectedTableName, (data) => {
-    console.log(`Sende Daten für Tabelle "${selectedTableName}" zurück`, data);
+  // Wichtig: logischer Name rein → refreshTable mappt Portfolios intern auf die View
+  refreshTable(selectedTableName);
 
-    // Wichtig: Passender Channel-Name!
-    event.reply(`${selectedTableName}`, data);
-  });
+  // optionales Ack
+  event.reply('fetch-table-data-ack', { ok: true, table: selectedTableName });
 });
+
+
+
 
 
 ipcMain.on('start-training', (event) => {
@@ -1712,21 +1753,36 @@ const handleCSParameterUpdate = (event, { newRowData, cleanTableName }) => {
 ipcMain.on('csparameter-update', handleCSParameterUpdate);
 
 
+// function refreshTable(tableName, callback) {
+//   let eventIdentifier = tableName + 'Data';
+//   // console.log(`🔄 [refreshTable] Starting refresh for table: ${tableName} (event: ${eventIdentifier})`);
+
+//   fetchDataAndSendEvent(tableName, eventIdentifier, () => {
+//     // console.log(`✅ [refreshTable] Data fetched for ${eventIdentifier}`);
+
+//     if (typeof callback === 'function') {
+//       // console.log(`➡️ [refreshTable] Executing callback for ${tableName}`);
+//       callback();  // Ensure this is being called
+//     } else {
+//       console.warn(`⚠️ [refreshTable] No callback provided for ${tableName}`);
+//     }
+//   });
+// }
+
 function refreshTable(tableName, callback) {
-  let eventIdentifier = tableName + 'Data';
-  // console.log(`🔄 [refreshTable] Starting refresh for table: ${tableName} (event: ${eventIdentifier})`);
+  const eventIdentifier = tableName + 'Data';
 
-  fetchDataAndSendEvent(tableName, eventIdentifier, () => {
-    // console.log(`✅ [refreshTable] Data fetched for ${eventIdentifier}`);
+  const resolvedTableName =
+    tableName === 'Portfolios'
+      ? 'v_Portfolios_enriched'
+      : tableName;
 
-    if (typeof callback === 'function') {
-      // console.log(`➡️ [refreshTable] Executing callback for ${tableName}`);
-      callback();  // Ensure this is being called
-    } else {
-      console.warn(`⚠️ [refreshTable] No callback provided for ${tableName}`);
-    }
+  fetchDataAndSendEvent(resolvedTableName, eventIdentifier, (err, rows) => {
+    if (typeof callback === 'function') callback(err, rows);
   });
 }
+
+
 
 // Import Columns
 ipcMain.on('import-matched-columns', async (event, args) => {

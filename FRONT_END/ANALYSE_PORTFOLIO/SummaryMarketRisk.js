@@ -1,19 +1,20 @@
 import { getColorFromPalette, getPortfolioColor } from '../../utils/colors.js';
 import { appState } from '../renderer.js';
+import { openPanel } from '../../FRONT_END/UI/panels.js'; 
 
-export function handleSummaryMarketRiskData(port_name) {
-  console.log('port_name:', port_name);
+
+
+export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date = null) {
+  console.log('port_name:', port_name, 'scenario_name:', scenario_name, 'asof_date:', asof_date);
 
   const elementId = `portDataContainer${0}`;
-
-  // get Portfolio aggregate Data
   const portfolioData = appState.getPortAggData(elementId) || {};
-  console.log('portfolioData:', portfolioData);
-
-  let portValueRel = 1;
-  let portfolioEndValue = 100;
 
   const num = (x) => Number(String(x ?? '').replace(/[^\d.-]/g, '').replace(',', ''));
+
+  // --- Portfolio ratios ---
+  let portValueRel = 1;
+  let portfolioEndValue = 100;
 
   const portValue    = num(portfolioData.formPortValue);
   const portNotional = num(portfolioData.formPortNotional);
@@ -22,26 +23,9 @@ export function handleSummaryMarketRiskData(port_name) {
   if (Number.isFinite(portValue) && Number.isFinite(portNotional) && portNotional !== 0) {
     portValueRel = portValue / portNotional;
     portfolioEndValue = portValueRel * 100;
-  } else {
-    console.warn("Missing or invalid data for portValueRel calculation", { portValue, portNotional });
   }
 
-  // --- VaR source may not be ready yet ---
-  const mvarAggData = appState.getAllMvarData() || [];
-  const matchingEntry = mvarAggData.find(item => item && item.port_name === port_name);
-  const varTRel = Number(matchingEntry?.VaR_T_rel) || 0; // default to 0 if missing
-  if (!matchingEntry) {
-    console.warn(`No matching MVaR aggregate for port_name=${port_name}; using VaR_T_rel=0`);
-  }
-
-  // --- Distribution data + NAV guard ---
-  const mvarDistData = appState.getMvarDistData() || [];
-  if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
-    console.warn("No MVaR distribution data available yet");
-    return;
-  }
-
-  // für NAV
+  // --- NAV ---
   const OriPortData = appState.getAllPortfolioData() || [];
   const portNav = OriPortData
     .filter(item => item && item.port_name === port_name)
@@ -52,33 +36,88 @@ export function handleSummaryMarketRiskData(port_name) {
     return;
   }
 
+  // --- VaR aggregate (header): pick latest if asof_date not provided ---
+  const mvarAggData = appState.getAllMvarData() || [];
+  const aggMatches = mvarAggData.filter(item =>
+    item &&
+    item.port_name === port_name &&
+    (!scenario_name || item.scenario_name === scenario_name)
+  );
+
+  let chosenAgg = null;
+  if (asof_date) {
+    chosenAgg = aggMatches.find(x => String(x.asof_date) === String(asof_date)) || null;
+  } else if (aggMatches.length) {
+    const sorted = aggMatches
+      .slice()
+      .sort((a, b) => String(a.asof_date).localeCompare(String(b.asof_date)));
+    chosenAgg = sorted[sorted.length - 1] || null;
+  }
+
+  const chosenAsof = asof_date || chosenAgg?.asof_date || null;
+  const varTRel = Number(chosenAgg?.VaR_T_rel) || 0;
+
+  // --- Distribution data: try exact (port, scenario, asof) first ---
+const mvarDistData = appState.getMvarDistData({
+  port_name,
+  scenario_name,
+  asof_date: chosenAsof,
+}) || [];
+
+// console.log('[DBG] dist lookup:', {
+//   port_name,
+//   scenario_name,
+//   chosenAsof,
+//   len: Array.isArray(mvarDistData) ? mvarDistData.length : null,
+// });
+
+if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
+  console.warn(
+    '[DIST] No distribution for EXACT selection – nothing rendered (expected in test mode)',
+    { port_name, scenario_name, chosenAsof }
+  );
+  return;
+}
+
+
+  // console.log('mvarDistData sample keys:', mvarDistData[0] ? Object.keys(mvarDistData[0]) : null);
+  // console.log('mvarDistData sample row:', mvarDistData[0] || null);
+
+  // --- Robust P/L field handling (supports new + old schemas) ---
   const plValues = mvarDistData
-    .map(row => Number(row?.["P/L"]))
+    .map(row => {
+      const raw =
+        row?.pl_total ??
+        row?.PL_TOTAL ??
+        row?.["P/L"] ??
+        row?.pl ??
+        row?.PL ??
+        null;
+      return Number(raw);
+    })
     .filter(v => Number.isFinite(v))
     .map(v => (v / portNav) * 100);
 
   if (plValues.length === 0) {
-    console.warn("No numeric P/L values in distribution data");
+    console.warn("No numeric P/L values found in distribution data. Check column name mapping.", {
+      sample_keys: mvarDistData?.[0] ? Object.keys(mvarDistData[0]) : null,
+      sample_row: mvarDistData?.[0] || null,
+    });
     return;
   }
 
-  // --- Ensure canvas exists before drawing ---
+  // --- Render chart ---
   const canvas = document.getElementById('plMvarDistChart');
-  if (!canvas) {
-    console.warn("Canvas #plMvarDistChart not found in DOM");
-    return;
-  }
+  if (!canvas) return console.warn("Canvas #plMvarDistChart not found in DOM");
+
   const ctx = canvas.getContext('2d');
   if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
 
   const { data, options } = drawMvarHistogram(plValues, portValueRel, varTRel);
   window.plMvarDistChartInstance = new Chart(ctx, { type: 'bar', data, options });
 
-  // CMB chart (guard PV01)
   if (Number.isFinite(portPV01)) {
     drawSyntheticPortfolioChart(portfolioEndValue, portPV01, 5);
-  } else {
-    console.warn("portPV01 not available; skipping CMB chart");
   }
 }
 
@@ -518,6 +557,428 @@ function formatDateLabel(val) {
 
   return String(val);
 }
+
+//MarketVaR_Product
+export function handleMvarProductTable(port_name, scenario_name, asof_date = null) {
+  const container = document.getElementById('mvarProductTableContainer');
+  if (!container) {
+    console.warn('[PRODUCT] Container #mvarProductTableContainer not found');
+    return;
+  }
+
+  // Daten holen (latest asof_date, wenn null -> übernimmt get() Logik)
+  const rows = appState.getMvarProductData({
+    port_name,
+    scenario_name,
+    asof_date
+  }) || [];
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    container.innerHTML = `<div class="muted">No product VaR data for selection.</div>`;
+    return;
+  }
+
+  // Optional: sortiere nach größtem Risiko zuerst (passende Key-Reihenfolge)
+  const riskKeyCandidates = [
+  'var_contrib_total',   // ✅ neu
+  'var_contrib',
+  'VaR_Contrib',
+  'var', 'VaR',
+  'pl_var', 'PL_VaR'
+];
+
+  const riskKey = riskKeyCandidates.find(k => k in (rows[0] || {})) || null;
+
+  const sorted = rows.slice().sort((a, b) => {
+    if (!riskKey) return 0;
+    const av = Number(a?.[riskKey]);
+    const bv = Number(b?.[riskKey]);
+    if (!Number.isFinite(av) || !Number.isFinite(bv)) return 0;
+    return Math.abs(bv) - Math.abs(av);
+  });
+
+  // Spalten: robuste Default-Auswahl + Fallback auf alle Keys
+  const columns = pickProductColumns(sorted);
+
+  // Render
+  container.innerHTML = '';
+  container.appendChild(renderHtmlTable(sorted, columns));
+
+  renderMvarProdIdVarContribChart(rows);
+  //renderMvarProdIdEsContribChart(rows);
+
+
+
+}
+
+function pickProductColumns(rows) {
+  const sample = rows?.[0] || {};
+  const keys = Object.keys(sample);
+
+  // Diese Spalten sind typischerweise sinnvoll (falls vorhanden)
+  const preferred = [
+    'prod_id',  
+    'product_id', 'instrument_id', 'isin', 'ric', 'ticker', 'name',
+    'currency', 'ccy',
+    'notional', 'qty', 'position',
+    'pv', 'value', 'price',
+    'var_contrib_total', 'var_contrib', 'VaR_Contrib', 'VaR', 'var',
+    'es_contrib_total', 'es_contrib', 'ES_Contrib', 'ES', 'es'
+
+  ].filter(k => keys.includes(k));
+
+  // Wenn preferred leer ist: nimm einfach die ersten 10 Keys
+  if (preferred.length < 4) {
+  const base = keys.slice(0, 12);
+  if (keys.includes('prod_id')) {
+    return ['prod_id', ...base.filter(k => k !== 'prod_id')].slice(0, 12);
+  }
+  return base;
+}
+
+
+
+  // Stelle sicher: nicht zu viele Spalten (UI)
+  return preferred.slice(0, 12);
+}
+
+function renderHtmlTable(rows, columns) {
+  const table = document.createElement('table');
+  table.className = 'risk-table';
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  for (const c of columns) {
+    const th = document.createElement('th');
+    th.textContent = c;
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+
+  const tbody = document.createElement('tbody');
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    for (const c of columns) {
+      const td = document.createElement('td');
+      td.textContent = formatCell(r?.[c]);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  return table;
+}
+
+function formatCell(v) {
+  if (v == null) return '';
+  if (typeof v === 'number') {
+    // klein & robust: max 6 decimals, keine scientific notation
+    return Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '';
+  }
+  return String(v);
+}
+
+function buildProdIdVarContribSeries(rows, {
+  valueKey = 'var_contrib_total',
+  idKey = 'prod_id',
+  topN = 20,
+  sortByAbs = true,
+} = {}) {
+  const arr = Array.isArray(rows) ? rows : [];
+
+  const series = arr
+    .map(r => {
+      const id = String(r?.[idKey] ?? '').trim();
+      const v = Number(r?.[valueKey]);
+      const value = Number.isFinite(v) ? v : null;
+      return { id, value };
+    })
+    .filter(x => x.id && x.value != null);
+
+  series.sort((a, b) => {
+    const av = sortByAbs ? Math.abs(a.value) : a.value;
+    const bv = sortByAbs ? Math.abs(b.value) : b.value;
+    return bv - av;
+  });
+
+  return series.slice(0, topN);
+}
+
+let __mvarProdIdChart = null;
+
+export function renderMvarProdIdVarContribChart(rows) {
+  const canvas = document.getElementById('mvarProdIdVarContribChart');
+  if (!canvas) {
+    console.warn('[MVAR-PROD-CHART] canvas #mvarProdIdVarContribChart not found');
+    return;
+  }
+
+
+
+  // nur var_contrib_total verwenden (wie gewünscht)
+  const series = buildProdIdVarContribSeries(rows, {
+    valueKey: 'var_contrib_total',
+    idKey: 'prod_id',
+    topN: 20,
+    sortByAbs: true,
+  });
+
+    // ... series ist schon sortiert (Top-N)
+  renderProdContribMiniTable(series, {
+    containerId: 'mvarProdIdVarContribTable',
+    valueLabel: 'var_contrib_total',
+  });
+
+  bindProdIdClicksForDetailsTable();
+
+
+  const labels = series.map(x => x.id);
+  const values = series.map(x => x.value);
+
+  // optional: Farben nach Vorzeichen
+  const bg = values.map(v => v >= 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)');
+  const br = values.map(v => v >= 0 ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)');
+
+  if (__mvarProdIdChart) { __mvarProdIdChart.destroy(); __mvarProdIdChart = null; }
+
+  __mvarProdIdChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Top Product VaR Contribution (var_contrib_total)',
+        data: values,
+        backgroundColor: bg,
+        borderColor: br,
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: true },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${Number(ctx.raw).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            callback: (v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })
+          }
+        }
+      }
+    }
+  });
+}
+
+function buildProdIdEsContribSeries(rows, {
+  valueKey = 'es_contrib_total',
+  idKey = 'prod_id',
+  topN = 20,
+  sortByAbs = true,
+} = {}) {
+  const arr = Array.isArray(rows) ? rows : [];
+
+  const series = arr
+    .map(r => {
+      const id = String(r?.[idKey] ?? '').trim();
+      const v = Number(r?.[valueKey]);
+      const value = Number.isFinite(v) ? v : null;
+      return { id, value };
+    })
+    .filter(x => x.id && x.value != null);
+
+  series.sort((a, b) => {
+    const av = sortByAbs ? Math.abs(a.value) : a.value;
+    const bv = sortByAbs ? Math.abs(b.value) : b.value;
+    return bv - av;
+  });
+
+  return series.slice(0, topN);
+}
+
+let __mvarProdIdESChart = null;
+
+export function renderMvarProdIdEsContribChart(rows) {
+  const canvas = document.getElementById('mvarProdIdEsContribChart');
+  if (!canvas) {
+    console.warn('[MVAR-PROD-ES-CHART] canvas #mvarProdIdEsContribChart not found');
+    return;
+  }
+
+
+
+  const series = buildProdIdEsContribSeries(rows, {
+    valueKey: 'es_contrib_total',
+    idKey: 'prod_id',
+    topN: 20,
+    sortByAbs: true,
+  });
+
+  const labels = series.map(x => x.id);
+  const values = series.map(x => x.value);
+
+  const bg = values.map(v => v >= 0 ? 'rgba(59,130,246,0.75)' : 'rgba(239,68,68,0.75)');
+  const br = values.map(v => v >= 0 ? 'rgba(59,130,246,1)' : 'rgba(239,68,68,1)');
+
+  if (__mvarProdIdESChart) { __mvarProdIdESChart.destroy(); __mvarProdIdESChart = null; }
+
+  __mvarProdIdESChart = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Top Product ES Contribution (es_contrib_total)',
+        data: values,
+        backgroundColor: bg,
+        borderColor: br,
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: true },
+        tooltip: {
+          callbacks: {
+            label: (ctx) =>
+              ` ${Number(ctx.raw).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            callback: (v) =>
+              Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })
+          }
+        }
+      }
+    }
+  });
+}
+
+
+
+
+function renderProdContribMiniTable(series, {
+  containerId,
+  valueLabel = 'var_contrib_total',
+} = {}) {
+  const el = document.getElementById(containerId);
+  if (!el) {
+    console.warn('[MVAR-MINI-TABLE] container not found:', containerId);
+    return;
+  }
+
+  if (!Array.isArray(series) || series.length === 0) {
+    el.innerHTML = `<div class="muted">No data.</div>`;
+    return;
+  }
+
+  const fmt = (v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  el.innerHTML = `
+    <table class="mvar-mini-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>prod_id</th>
+          <th>${valueLabel}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${series.map((x, i) => `
+          <tr>
+            <td>${i + 1}</td>
+            <td><span class="clickable" data-prod-id="${x.id}">${x.id}</span></td>
+            <td>${fmt(x.value)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+
+export function showProdDetailsSidepanel(prod_id) {
+  const meta = document.getElementById('prodDetailsMeta');
+  const container = document.getElementById('prodDetailsContainer');
+
+  if (!meta || !container) {
+    console.warn('[PROD-DETAILS] panel containers missing');
+    return;
+  }
+
+  const id = String(prod_id ?? '').trim();
+  meta.innerHTML = `PROD_ID: <b>${id}</b>`;
+
+  const row = appState.getProdById?.(id);
+
+  if (!row) {
+    container.innerHTML = `<div class="muted">No details found in ProdAll for PROD_ID: ${id}</div>`;
+  } else {
+    const entries = Object.entries(row);
+    container.innerHTML = `
+      <table class="risk-table">
+        <tbody>
+          ${entries.map(([k, v]) => `
+            <tr>
+              <td style="opacity:.7; padding-right:12px; white-space:nowrap;">${k}</td>
+              <td>${v == null ? '' : String(v)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+const panel = document.getElementById('panel-prod-details');
+if (!panel) {
+  console.warn('[PROD-DETAILS] panel #panel-prod-details not found');
+  return;
+}
+panel.hidden = false;
+
+}
+
+let __prodDetailsClickBound = false;
+
+export function bindProdIdClicksForDetailsTable() {
+  if (__prodDetailsClickBound) return;
+
+  const root = document.getElementById('mvarProdIdVarContribTable');
+  if (!root) return;
+
+  root.addEventListener('click', (e) => {
+    const prodId = e?.target?.dataset?.prodId;
+    if (!prodId) return;
+    showProdDetailsSidepanel(prodId);
+  });
+
+  __prodDetailsClickBound = true;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -16,8 +16,8 @@ import { createComparisonCharts } from './FRONT_END/COMPARE_PORTFOLIOS/COMP.js';
 import { formatPercentage} from './utils/format.js';
 import { filterColumnsInData } from './MODAL_HELPER/dataProcessor.js';
 import { handleLiquidityData } from './FRONT_END/ANALYSE_PORTFOLIO/liquidity.js';
-import { handleSummaryMarketRiskData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
-import { handleSummaryNotionalData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryNotional.js';
+import { handleSummaryMarketRiskData, handleMvarProductTable} from './FRONT_END/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
+import { handleSummaryNotionalData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryBreakdown.js';
 import { handleSummaryYieldData } from './FRONT_END/ANALYSE_PORTFOLIO/SummaryYield.js';
 
 import { appState } from './FRONT_END/renderer.js';
@@ -83,6 +83,7 @@ export class AppState {
         this.mvarInputData = null;
         this.mvarData = null,
         this.mvarDistData = [],
+        this.mvarDistDataMap = new Map();
         this.mlModel = null; 
 
         this.cvarInputData = null,
@@ -232,6 +233,9 @@ export class AppState {
                 'portRankDropdown': { dataKey: 'RANK', selection: ['ALL'] },
                 'portDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
                 'liquMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
+                'portRegionDropdown':  { dataKey: 'IssuerRegion', selection: ['ALL'] },
+                'portCountryDropdown': { dataKey: 'IssuerCountry',      selection: ['ALL'] },
+                
             },
             prod: {
                 'prodIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },
@@ -380,7 +384,7 @@ export class AppState {
                 filtersConfig: this.filtersConfig.port,
                 dataHandler: (data) => {
                     const index = this.getPortIndex?.() ?? 0; // Fallback auf 0, falls Methode nicht existiert
-                    // console.log(`📥 port aufgerufen mit data (port), Index: ${index}`, data);
+                    console.log(`📥 port aufgerufen mit data (port), Index: ${index}`, data);
                     this.handlePortTable(data, index);
                 }
                 },
@@ -500,7 +504,7 @@ handleOffersTable(data, index = 0) {
 
 // PORFOLIOS:
     handlePortTable(data, index) {
-        // console.log("index:", data, index);
+        console.log("index:", data, index);
 
         if (!Array.isArray(data) || data.length === 0) {
             //console.warn(`⚠️ Kein gültiges Portfoliodaten-Array empfangen für Index ${index}:`, data);
@@ -530,7 +534,16 @@ handleOffersTable(data, index = 0) {
         handleSummaryYieldData(filteredData, index, port_name);
 
         //handleSummaryRMData(filteredData, index, port_name);
-        handleSummaryMarketRiskData(port_name);
+        //handleSummaryMarketRiskData(port_name);
+
+        // 2) UI neu rendern mit aktueller Scenario-Auswahl
+        const scenario_name = appState.selectedMvarInterval;
+        console.log("scenario_name:", scenario_name);
+
+        handleSummaryMarketRiskData(port_name, scenario_name, '2021-01-03');
+        handleMvarProductTable(port_name, scenario_name, null);
+        
+
 
         
         // 2️⃣ MVaR-Daten
@@ -804,6 +817,16 @@ getEUSWDataWithSelectedCurve() {
     return this.issuerData;
 }
 
+    // COUNTRY LOOKUP
+    setCountryLookup(data) {
+    this.countryLookup = Array.isArray(data) ? data : [];
+    }
+
+    getCountryLookup() {
+    return this.countryLookup;
+}
+
+
 
 
 
@@ -825,14 +848,29 @@ getEUSWDataWithSelectedCurve() {
         });
     }
 
-    setProdData(data) {
-        this.prodData = data;
-        // this.notifyObservers(); 
-    }
+setProdData(data) {
+  const arr = Array.isArray(data) ? data : [];
+  this.prodData = arr;
 
-    getProdData() {
-        return this.prodData || []; // Return prodData or an empty array if not set
-    }
+  // ✅ Map by PROD_ID für schnellen Lookup
+  const m = new Map();
+  for (const r of arr) {
+    const id = String(r?.PROD_ID ?? '').trim();
+    if (id) m.set(id, r);
+  }
+  this.prodById = m;
+
+  console.log('[SET] prodData len=', arr.length, 'prodById=', m.size);
+}
+
+getProdData() {
+  return this.prodData || [];
+}
+
+getProdById(prod_id) {
+  const id = String(prod_id ?? '').trim();
+  return this.prodById?.get(id) || null;
+}
 
     // Set couponData and notify observers
     setCouponData(data) {
@@ -957,15 +995,148 @@ setPortAggData(elementId, data) {
         
     }
 
-    setMvarDistData(data) {
-        //console.log('setMvarData:', data)
-        this.mvarDistData = data;
-        // this.notifyObservers(); 
+    setMvarDistData(rows) {
+    const arr = Array.isArray(rows) ? rows : [];
+    if (!Array.isArray(this.mvarDistDataAll)) this.mvarDistDataAll = [];
+
+    // append (avoid duplicates by simple key if you want)
+    this.mvarDistDataAll = this.mvarDistDataAll.concat(arr);
+
+    console.log('[SET] mvarDistDataAll len=', this.mvarDistDataAll.length);
     }
-    getMvarDistData() {
-        return this.mvarDistData;
-        
+    getMvarDistData({ port_name, scenario_name, asof_date } = {}) {
+    const all = Array.isArray(this.mvarDistDataAll) ? this.mvarDistDataAll : [];
+
+    // Kein Filter => alles (alte Nutzung bleibt möglich)
+    if (!port_name && !scenario_name && !asof_date) return all;
+
+    const port = String(port_name ?? '').trim();
+    const scen = String(scenario_name ?? '').trim();
+    const asof = asof_date ? String(asof_date).slice(0, 10) : null;
+
+    // 1) zuerst nach port/scenario filtern
+    let matches = all.filter(r =>
+        r &&
+        (!port || r.port_name === port) &&
+        (!scen || r.scenario_name === scen)
+    );
+
+    if (!matches.length) return [];
+
+    // 2) Wenn asof_date explizit gegeben: exakt auf dieses Datum filtern
+    if (asof) {
+        const exact = matches.filter(r => String(r.asof_date).slice(0, 10) === asof);
+        return exact;
     }
+
+    // 3) Sonst: nimm latest asof_date für dieses port/scenario
+    let latestAsof = null;
+    for (const r of matches) {
+        const d = String(r.asof_date ?? '').slice(0, 10);
+        if (!d) continue;
+        if (latestAsof === null || d > latestAsof) latestAsof = d;
+    }
+    if (!latestAsof) return [];
+
+    return matches.filter(r => String(r.asof_date).slice(0, 10) === latestAsof);
+    }
+
+    // ====== ProductData ======
+
+    setMvarProductData(rows) {
+        const arr = Array.isArray(rows) ? rows : [];
+        if (!Array.isArray(this.mvarProductDataAll)) this.mvarProductDataAll = [];
+
+        const makeKey = (r) => {
+            const port = String(r?.port_name ?? '').trim();
+            const scen = String(r?.scenario_name ?? '').trim();
+            const asof = String(r?.asof_date ?? '').slice(0, 10);
+
+            const pid =
+            r?.prod_id ??          // ✅ bei dir wichtig
+            r?.product_id ??
+            r?.instrument_id ??
+            r?.isin ??
+            r?.ric ??
+            r?.ticker ??
+            r?.name ??
+            '';
+
+            return `${port}||${scen}||${asof}||${String(pid).trim()}`;
+        };
+
+        // ✅ Index bestehender Keys -> Array-Index
+        const existing = this.mvarProductDataAll;
+        const idxByKey = new Map();
+        for (let i = 0; i < existing.length; i++) {
+            const k = makeKey(existing[i]);
+            if (!idxByKey.has(k)) idxByKey.set(k, i);
+        }
+
+        let added = 0;
+        let updated = 0;
+
+        for (const r of arr) {
+            if (!r) continue;
+            const k = makeKey(r);
+            const idx = idxByKey.get(k);
+
+            if (idx === undefined) {
+            existing.push(r);
+            idxByKey.set(k, existing.length - 1);
+            added++;
+            } else {
+            // ✅ overwrite row values (Upsert)
+            existing[idx] = r;
+            updated++;
+            }
+        }
+
+        this.mvarProductDataAll = existing;
+        console.log('[SET] mvarProductDataAll len=', existing.length, 'added=', added, 'updated=', updated);
+        }
+
+
+    getMvarProductData({ port_name, scenario_name, asof_date } = {}) {
+    const all = Array.isArray(this.mvarProductDataAll) ? this.mvarProductDataAll : [];
+
+    // Kein Filter => alles (alte Nutzung bleibt möglich)
+    if (!port_name && !scenario_name && !asof_date) return all;
+
+    const port = String(port_name ?? '').trim();
+    const scen = String(scenario_name ?? '').trim();
+    const asof = asof_date ? String(asof_date).slice(0, 10) : null;
+
+    // 1) port/scenario filtern
+    let matches = all.filter(r =>
+        r &&
+        (!port || r.port_name === port) &&
+        (!scen || r.scenario_name === scen)
+    );
+
+    if (!matches.length) return [];
+
+    // 2) asof_date explizit => exakt
+    if (asof) {
+        return matches.filter(r => String(r.asof_date).slice(0, 10) === asof);
+    }
+
+    // 3) sonst latest asof_date für dieses port/scenario
+    let latestAsof = null;
+    for (const r of matches) {
+        const d = String(r.asof_date ?? '').slice(0, 10);
+        if (!d) continue;
+        if (latestAsof === null || d > latestAsof) latestAsof = d;
+    }
+    if (!latestAsof) return [];
+
+    return matches.filter(r => String(r.asof_date).slice(0, 10) === latestAsof);
+    }
+
+
+
+
+
     setCvarInput(data) {
         // Erwartet: Array der Rows aus CreditVaRInputThreshold
         // z.B. [{ metric: 'CVaR', yellow_threshold: 10.0, red_threshold: 20.0, is_percent: 1 }, ...]
@@ -1327,9 +1498,27 @@ setPortAggData(elementId, data) {
 
     this.setMvarDistData(receivedData);
     //handleSummaryRMData(receivedData, 0, port_name);
-    handleSummaryMarketRiskData(port_name);
-
+    //handleSummaryMarketRiskData(port_name);
+    const scenario_name = appState.selectedMvarInterval
+    console.log("scenario_name:", scenario_name);
+    handleSummaryMarketRiskData(port_name, scenario_name) 
     }
+
+    updateMvarProductData(receivedData, index, port_name) {
+    console.log('📌 updateMvarProductData', receivedData);
+
+    // 1) in State schreiben (append + optional dedup – wie wir es gebaut haben)
+    this.setMvarProductData(receivedData);
+
+    // 2) UI neu rendern mit aktueller Scenario-Auswahl
+    const scenario_name = appState.selectedMvarInterval;
+    console.log("scenario_name:", scenario_name);
+
+    // 3) MarketRisk Summary zieht sich jetzt Dist + Agg + Product aus appState
+    handleMvarProductTable(port_name, scenario_name);
+    
+    }
+   
     updateCvarDataTable(receivedData) {
         console.log('📌 updateCvarDataTable', receivedData);
         this.setCvarData(receivedData);
@@ -1340,6 +1529,29 @@ setPortAggData(elementId, data) {
         //this.setEADData(receivedData);
         this.setAllEADData(receivedData);
     }
+
+
+    // AppState.js
+refreshMarketRiskUI(index = 0) {
+console.log("refreshMarketRiskUI:");
+  const port = this.getSelectedPortTableName?.();
+  if (!port) return;
+
+  const allMvar = this.getAllMvarData?.();
+  if (!Array.isArray(allMvar) || !allMvar.length) return;
+
+  handleMVaRData(allMvar, index);
+  handleSummaryMarketRiskData(
+    port,
+    this.selectedMvarInterval ?? null,
+    null
+  );
+      // 2) UI neu rendern mit aktueller Scenario-Auswahl
+    const scenario_name = appState.selectedMvarInterval;
+    console.log("scenario_name:", scenario_name);
+  handleMvarProductTable(port, scenario_name, null)
+}
+
 
 // SET/GET DATA:    
     setSelectedTradeIDs(ids) {
@@ -1529,6 +1741,10 @@ setPortAggData(elementId, data) {
                 'portRankDropdown': 'port',
                 'portDepotbankDropdown': 'port',
                 'liquMaturityDropdown': 'port',
+                'portCountryDropdown': 'port',
+                'portRegionDropdown': 'port',
+                
+                
 
                 'offersIssuerDropdown': 'offers',
                 'offersProdIdDropdown': 'offers',

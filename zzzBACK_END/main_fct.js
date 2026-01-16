@@ -329,11 +329,48 @@ pythonProcess.stdout.on('data', (data) => {
 });
 
 
-          // ----------------- STDERR -----------------
-          pythonProcess.stderr.on('data', (data) => {
-              console.error(`stderr: ${data}`);
-              event.sender.send(`${eventType}-error`, data.toString());
+// ----------------- STDERR -----------------
+let stderrBuffer = ''; // 🔑 wichtig: Zeilen-Buffer
+
+pythonProcess.stderr.on('data', (data) => {
+  const chunk = data.toString();
+  console.error(`stderr: ${chunk}`);
+
+  stderrBuffer += chunk;
+
+  // Zeilenweise verarbeiten
+  let lines = stderrBuffer.split(/\r?\n/);
+  stderrBuffer = lines.pop(); // letzte unvollständige Zeile behalten
+
+  for (const line of lines) {
+    const text = line.trim();
+    if (!text) continue;
+
+    // 1) Progress-JSON aus stderr?
+    if (text[0] === '{') {
+      try {
+        const msg = JSON.parse(text);
+
+        if (msg && typeof msg.progress !== 'undefined') {
+          event.sender.send('py-progress', {
+            script: scriptIdentifier,
+            provider: msg.provider || 'GLOBAL',
+            progress: msg.progress,
+            message: msg.message || ''
           });
+          continue; // 🚫 nicht als Error weiterreichen
+        }
+
+      } catch (e) {
+        // kein JSON → normaler stderr-Text
+      }
+    }
+
+    // 2) Normale stderr-Logs weiterleiten
+    event.sender.send(`${eventType}-error`, text + '\n');
+  }
+});
+
 
           // ----------------- CLOSE -----------------
           pythonProcess.on('close', (code) => {
