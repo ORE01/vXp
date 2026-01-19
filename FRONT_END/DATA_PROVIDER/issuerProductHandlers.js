@@ -10,9 +10,26 @@ export function createIssuerProductHandlers({ appState } = {}) {
 
     const issuerResetButton = document.getElementById('issuerResetFiltersButton');
     issuerResetButton?.addEventListener('click', () => {
-      appState.resetFiltersForActiveTable?.(receivedData, 'issuer');
+      // ✅ Issuer-Filter Selections zurücksetzen
+      const cfg = appState?.dropdownConfig?.issuer;
+      if (cfg) {
+        Object.keys(cfg).forEach((dropdownId) => {
+          cfg[dropdownId].selection = ['ALL'];
+        });
+      }
+
+      // optional: falls filtersConfig noch aktiv verwendet wird
+      const fcfg = appState?.filtersConfig?.issuer;
+      if (fcfg) {
+        Object.keys(fcfg).forEach((k) => {
+          fcfg[k] = new Set(['ALL']);
+        });
+      }
+
+      appState.applyFiltersAndUpdateDropdowns?.('issuer');
     });
   }
+
 
   function handleCountryLookupDataInit(receivedData) {
     if (typeof appState.setCountryLookup === 'function') {
@@ -53,9 +70,26 @@ export function createIssuerProductHandlers({ appState } = {}) {
 
     const prodResetButton = document.getElementById('prodResetFiltersButton');
     prodResetButton?.addEventListener('click', () => {
-      appState.resetFiltersForActiveTable?.(updatedData, 'prod');
+      // ✅ Dropdown-Selections zurücksetzen
+      const cfg = appState?.dropdownConfig?.prod;
+      if (cfg) {
+        Object.keys(cfg).forEach((dropdownId) => {
+          cfg[dropdownId].selection = ['ALL'];
+        });
+      }
+
+      // optional – falls filtersConfig noch relevant ist
+      const fcfg = appState?.filtersConfig?.prod;
+      if (fcfg) {
+        Object.keys(fcfg).forEach((k) => {
+          fcfg[k] = new Set(['ALL']);
+        });
+      }
+
+      appState.applyFiltersAndUpdateDropdowns?.('prod');
     });
   }
+
 
   return {
     handleIssuerDataInit,

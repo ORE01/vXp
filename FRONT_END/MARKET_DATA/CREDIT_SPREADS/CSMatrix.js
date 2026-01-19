@@ -2,6 +2,9 @@ import { createCSLineChart } from '../../../charts/LineChart.js';
 import { getCSColors } from '../../../utils/colors.js'; 
 
 export function handleCSMatrixData(receivedData) {
+ console.log('handleCSMatrixData:', receivedData )
+
+
   const ratings = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB'];
 
   const dataArrayWithRating = receivedData.map((data, index) => ({

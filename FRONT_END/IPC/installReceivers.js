@@ -1,60 +1,59 @@
+export function installReceivers(deps = {}) {
+  const {
+    api,
+    appState,
+    panelRenderState,
+    initAllPanelsLazyRender,
+    initMarketDataChartsAutoRefresh,
 
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
 
-export function installReceivers({
-  api,
-  appState,
-  panelRenderState,
-  initAllPanelsLazyRender,
-  initMarketDataChartsAutoRefresh,
+    handleCustomerData,
+    handleCustomerTSData,
+    handleEUSWData,
+    handleForwardData,
 
-  
-  handleSwaptionATMData,
-  handleSwaptionSmileData,
-  handleSwaptionCubeSurfaceData,
+    handleIssuerDataInit,
+    handleCountryLookupDataInit,
+    handleCSMatrixData,
+    handleCSParameterData,
+    handleRankData,
 
-  handleCustomerData,
-  handleCustomerTSData,
-  handleEUSWData,
-  handleForwardData,
+    handleProdDataInit,
 
-  handleIssuerDataInit,
-  handleCountryLookupDataInit,
-  handleCSMatrixData,
-  handleCSParameterData,
-  handleRankData,
+    handleDealsNameList,
+    handleOffersNameList,
+    handleDealsMainData,
 
-  handleProdDataInit,
+    handlePortNameList,
+    handlePortfolioData,
 
-  handleDealsNameList,
-  handleOffersNameList,
-  handleDealsMainData,
+    handleMvarInputData,
+    handleAllMVaRData,
+    handleMvarDistData,
+    handleMvarProductData,
 
-  handlePortNameList,
-  handlePortfolioData,
+    handleAllEADData,
 
-  handleMvarInputData,
-  handleAllMVaRData,
-  handleMvarDistData,
-  handleMvarProductData,
+    initHandleCvarInput,
+    handleCvarInputThreshold,
+    handleAllCVaRData,
 
-  handleAllEADData,
+    handleAllLossData,
 
-  initHandleCvarInput,
-  handleCvarInputThreshold,
-  handleAllCVaRData,
+    handleFuturePredictions,
+    handleMLTestData,
+    handleMLTrainedModels,
+    handleMLModels,
 
-  handleAllLossData,
+    createTSModals,
+    observePanelTsOpen,
 
-  handleFuturePredictions,
-  handleMLTestData,
-  handleMLTrainedModels,
-  handleMLModels,
+    handlePortfolioHistoryData,
+  } = deps;
 
-  createTSModals,
-  observePanelTsOpen,
-
-  handlePortfolioHistoryData,
-} = {}) {
   if (!api) throw new Error('[installReceivers] api missing');
 
   if (window.__listenersBoundOnce) {
@@ -63,87 +62,93 @@ export function installReceivers({
   }
   window.__listenersBoundOnce = true;
 
+  const safeReceive = (channel, fn, { required = false } = {}) => {
+    if (typeof fn === 'function') {
+      api.receive(channel, fn);
+    } else if (required) {
+      console.warn(`[IPC] Missing REQUIRED handler for ${channel}`);
+    } else {
+      console.warn(`[IPC] Missing handler for ${channel}`);
+    }
+  };
+
   // Panels + auto refresh
   initAllPanelsLazyRender?.({ panelRenderState });
   initMarketDataChartsAutoRefresh?.();
 
   // CUSTOMER
-  api.receive('CustomerData', handleCustomerData);
-  api.receive('CustomerTSSelectionData', handleCustomerTSData);
+  safeReceive('CustomerData', handleCustomerData, { required: true });
+  safeReceive('CustomerTSSelectionData', handleCustomerTSData);
 
-  // MARKET DATA (Rates)
-  api.receive('EUSWData', handleEUSWData);
-  
-  if (typeof handleForwardData === 'function') {
-  api.receive('FWDData', handleForwardData);
-} else {
-  console.warn('[IPC] Missing handleForwardData');
-}
-
+  // MARKET DATA
+  safeReceive('EUSWData', handleEUSWData, { required: true });
+  safeReceive('FWDData', handleForwardData);
 
   // SWAPTION
-  if (typeof handleSwaptionATMData === 'function') {
-    api.receive('EUSWAPTION_ATMData', handleSwaptionATMData);
-  } else {
-    console.warn('[IPC] Missing handleSwaptionATMData');
-  }
-
-  if (typeof handleSwaptionSmileData === 'function') {
-    api.receive('EUSWAPTION_SMILEData', handleSwaptionSmileData);
-  } else {
-    console.warn('[IPC] Missing handleSwaptionSmileData');
-  }
-
-  // optional: Cube channel (nur wenn du einen Channel hast)
-  // if (typeof handleSwaptionCubeSurfaceData === 'function') {
-  //   api.receive('EUSWAPTION_CUBEData', handleSwaptionCubeSurfaceData);
-  // }
+  safeReceive('EUSWAPTION_ATMData', handleSwaptionATMData);
+  safeReceive('EUSWAPTION_SMILEData', handleSwaptionSmileData);
+  // optional cube...
 
   // ISSUER
-  api.receive('IssuerData', handleIssuerDataInit);
-  api.receive('CountryLookupData', handleCountryLookupDataInit);
-  api.receive('CSMatrixData', handleCSMatrixData);
-  api.receive('CSParameterData', handleCSParameterData);
-  api.receive('RankData', handleRankData);
+  safeReceive('IssuerData', handleIssuerDataInit);
+  safeReceive('CountryLookupData', handleCountryLookupDataInit);
+  safeReceive('CSMatrixData', handleCSMatrixData);
+  safeReceive('CSParameterData', handleCSParameterData);
+  safeReceive('RankData', handleRankData);
 
   // PRODUCTS
-  api.receive('ProdAllData', handleProdDataInit);
+  safeReceive('ProdAllData', handleProdDataInit);
   api.receive('ProdCouponSchedulesData', (receivedData) => {
     if (appState && typeof appState.setCouponData === 'function') {
       appState.setCouponData(receivedData);
     } else {
-      console.error('appState or setCouponData is not defined!');
+      console.error('[IPC] appState.setCouponData missing');
     }
   });
 
   // DEALS
+  // DEALS (includes OFFERS via port_name prefix)
   api.receive('DealsMainData', (data) => {
-    handleDealsNameList?.(data);
-    handleOffersNameList?.(data);
-    handleDealsMainData?.(data);
+    const rows = Array.isArray(data) ? data : [];
+
+    // robust: port_name may be missing or not string
+    const isOfferRow = (r) => String(r?.port_name ?? '').toUpperCase().startsWith('OFFERS');
+
+    const offers = rows.filter(isOfferRow);
+    const deals  = rows.filter(r => !isOfferRow(r));
+
+    // Store it in state for UI consumers (IMPORTANT: match the keys your UI expects)
+    if (appState) {
+      // pick ONE pattern that matches your existing codebase:
+      appState.OFFERS_DATA = offers;
+      appState.DEALS_DATA = deals;
+
+      // if you have setters, even better:
+      appState.setOffersData?.(offers);
+      appState.setDealsData?.(deals);
+    }
+
+    // Keep your existing handlers working (no behavior loss)
+    handleDealsNameList?.(deals);       // deals-only
+    handleOffersNameList?.(offers);     // offers-only
+    handleDealsMainData?.(rows);        // full raw if you still need it somewhere
   });
 
-  // OFFERS / LGT
-  api.receive('LGTData', (data) => {
-    appState?.setOfferData?.(data);
-  });
+
+  // OFFERS
+  //api.receive('LGTData', (data) => appState?.setOfferData?.(data));
 
   // PORTFOLIO
   api.receive('PortfoliosData', (data) => {
-    console.log('PortfoliosData', data);
     handlePortNameList?.(data);
     handlePortfolioData?.(data);
   });
 
   // MVaR
-  api.receive('MVaRInputData', handleMvarInputData);
-  api.receive('MarketVaRData', handleAllMVaRData);
+  safeReceive('MVaRInputData', handleMvarInputData);
+  safeReceive('MarketVaRData', handleAllMVaRData);
   api.receive('MarketVaR_DistData', (data) => handleMvarDistData?.(data));
-  
-  api.receive('MarketVaR_ProductData', (data) => {
-  console.log('[RECV] MarketVaR_ProductData len=', Array.isArray(data) ? data.length : 'non-array', data?.[0]);
-  handleMvarProductData?.(data);
-});
+  api.receive('MarketVaR_ProductData', (data) => handleMvarProductData?.(data));
 
   // EAD
   api.receive('EADData', (data) => handleAllEADData?.(data));
@@ -159,15 +164,14 @@ export function installReceivers({
   // ML
   api.receive('ML_FuturePredictionsData', (data) => handleFuturePredictions?.(data));
   api.receive('ML_MergedDataData', (data) => handleMLTestData?.(data));
-  api.receive('ML_TrainedModelsData', handleMLTrainedModels);
-  api.receive('ML_ModelsData', handleMLModels);
+  safeReceive('ML_TrainedModelsData', handleMLTrainedModels);
+  safeReceive('ML_ModelsData', handleMLModels);
 
-  // TS cloned + panel observer
-  api.receive('tblTSData', (data) => { createTSModals?.(data); });
+  // TS
+  api.receive('tblTSData', (data) => createTSModals?.(data));
   observePanelTsOpen?.();
 
-  // PortfolioHistoryMetrics
-  api.receive('PortfolioHistoryMetricsData', (data) => {
-    handlePortfolioHistoryData?.(data);
-  });
+  // HISTORY
+  api.receive('PortfolioHistoryMetricsData', (data) => handlePortfolioHistoryData?.(data));
 }
+

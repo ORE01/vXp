@@ -1,6 +1,4 @@
 import { getColorForPieChart} from '../../utils/colors.js';
-import processData from '../../MODAL_HELPER/dataProcessor.js';
-import { appState } from '../renderer.js';
 import { setupHiDPICanvas } from './SummaryYield.js';
 import { getFormatRules } from '../../utils/format.js';
 

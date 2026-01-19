@@ -1,133 +1,141 @@
 // FRONT_END/IPC/ipcBridge.js
 /**
- * IPC Bridge
+ * IPC Bridge (Public API)
  *
- * Exact wiring wrapper around installReceivers(...)
- * - No behavior change
- * - Renderer stays clean
+ * This module intentionally re-exports the receiver installer
+ * so the renderer imports only from "ipcBridge".
+ *
+ * ✅ No behavior change
+ * ✅ No duplicate dependency list
  */
 
 import { installReceivers } from './installReceivers.js';
 
-export function installIpcBridge({
-  api,
-  appState,
-  panelRenderState,
-  initAllPanelsLazyRender,
-  initMarketDataChartsAutoRefresh,
+// Option B: exact alias / pass-through
+export const installIpcBridge = installReceivers;
 
-  // Swaption handlers
-  handleSwaptionATMData,
-  handleSwaptionSmileData,
-  handleSwaptionCubeSurfaceData,
+// das wäre die Installation wenn man public von privat trennt. dann hat man aber zwei Listen!
+// import { installReceivers } from './installReceivers.js';
 
-  // Customer / Rates / Forwards
-  handleCustomerData,
-  handleCustomerTSData,
-  handleEUSWData,
-  handleForwardData,
+// export function installIpcBridge({
+//   api,
+//   appState,
+//   panelRenderState,
+//   initAllPanelsLazyRender,
+//   initMarketDataChartsAutoRefresh,
 
-  // Issuer / Product
-  handleIssuerDataInit,
-  handleCountryLookupDataInit,
-  handleCSMatrixData,
-  handleCSParameterData,
-  handleRankData,
-  handleProdDataInit,
+//   // Swaption handlers
+//   handleSwaptionATMData,
+//   handleSwaptionSmileData,
+//   handleSwaptionCubeSurfaceData,
 
-  // Deals
-  handleDealsNameList,
-  handleOffersNameList,
-  handleDealsMainData,
+//   // Customer / Rates / Forwards
+//   handleCustomerData,
+//   handleCustomerTSData,
+//   handleEUSWData,
+//   handleForwardData,
 
-  // Portfolio
-  handlePortNameList,
-  handlePortfolioData,
+//   // Issuer / Product
+//   handleIssuerDataInit,
+//   handleCountryLookupDataInit,
+//   handleCSMatrixData,
+//   handleCSParameterData,
+//   handleRankData,
+//   handleProdDataInit,
 
-  // MVaR
-  handleMvarInputData,
-  handleAllMVaRData,
-  handleMvarDistData,
-  handleMvarProductData,
+//   // Deals
+//   handleDealsNameList,
+//   handleOffersNameList,
+//   handleDealsMainData,
 
-  // EAD
-  handleAllEADData,
+//   // Portfolio
+//   handlePortNameList,
+//   handlePortfolioData,
 
-  // CVaR
-  initHandleCvarInput,
-  handleCvarInputThreshold,
-  handleAllCVaRData,
+//   // MVaR
+//   handleMvarInputData,
+//   handleAllMVaRData,
+//   handleMvarDistData,
+//   handleMvarProductData,
 
-  // Losses
-  handleAllLossData,
+//   // EAD
+//   handleAllEADData,
 
-  // ML
-  handleFuturePredictions,
-  handleMLTestData,
-  handleMLTrainedModels,
-  handleMLModels,
+//   // CVaR
+//   initHandleCvarInput,
+//   handleCvarInputThreshold,
+//   handleAllCVaRData,
 
-  // TS
-  createTSModals,
-  observePanelTsOpen,
+//   // Losses
+//   handleAllLossData,
 
-  // History
-  handlePortfolioHistoryData,
-} = {}) {
-  // installReceivers does the guard (window.__listenersBoundOnce)
-  installReceivers({
-    api,
-    appState,
-    panelRenderState,
-    initAllPanelsLazyRender,
-    initMarketDataChartsAutoRefresh,
+//   // ML
+//   handleFuturePredictions,
+//   handleMLTestData,
+//   handleMLTrainedModels,
+//   handleMLModels,
 
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+//   // TS
+//   createTSModals,
+//   observePanelTsOpen,
 
-    handleCustomerData,
-    handleCustomerTSData,
-    handleEUSWData,
-    handleForwardData,
+//   // History
+//   handlePortfolioHistoryData,
+// } = {}) {
+//   // installReceivers does the guard (window.__listenersBoundOnce)
+//   installReceivers({
+//     api,
+//     appState,
+//     panelRenderState,
+//     initAllPanelsLazyRender,
+//     initMarketDataChartsAutoRefresh,
 
-    handleIssuerDataInit,
-    handleCountryLookupDataInit,
-    handleCSMatrixData,
-    handleCSParameterData,
-    handleRankData,
+//     handleSwaptionATMData,
+//     handleSwaptionSmileData,
+//     handleSwaptionCubeSurfaceData,
 
-    handleProdDataInit,
+//     handleCustomerData,
+//     handleCustomerTSData,
+//     handleEUSWData,
+//     handleForwardData,
 
-    handleDealsNameList,
-    handleOffersNameList,
-    handleDealsMainData,
+//     handleIssuerDataInit,
+//     handleCountryLookupDataInit,
+//     handleCSMatrixData,
+//     handleCSParameterData,
+//     handleRankData,
 
-    handlePortNameList,
-    handlePortfolioData,
+//     handleProdDataInit,
 
-    handleMvarInputData,
-    handleAllMVaRData,
-    handleMvarDistData,
-    handleMvarProductData,
+//     handleDealsNameList,
+//     handleOffersNameList,
+//     handleDealsMainData,
 
-    handleAllEADData,
+//     handlePortNameList,
+//     handlePortfolioData,
 
-    initHandleCvarInput,
-    handleCvarInputThreshold,
-    handleAllCVaRData,
+//     handleMvarInputData,
+//     handleAllMVaRData,
+//     handleMvarDistData,
+//     handleMvarProductData,
 
-    handleAllLossData,
+//     handleAllEADData,
 
-    handleFuturePredictions,
-    handleMLTestData,
-    handleMLTrainedModels,
-    handleMLModels,
+//     initHandleCvarInput,
+//     handleCvarInputThreshold,
+//     handleAllCVaRData,
 
-    createTSModals,
-    observePanelTsOpen,
+//     handleAllLossData,
 
-    handlePortfolioHistoryData,
-  });
-}
+//     handleFuturePredictions,
+//     handleMLTestData,
+//     handleMLTrainedModels,
+//     handleMLModels,
+
+//     createTSModals,
+//     observePanelTsOpen,
+
+//     handlePortfolioHistoryData,
+//   });
+// }
 

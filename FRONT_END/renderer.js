@@ -1,3 +1,20 @@
+import { installDropdownFilterEngine } from './STATE/dropdownFilterEngine.js';
+import { installDataUpdatePipeline } from './STATE/dataUpdatePipeline.js';
+import { createPortfolioUIOrchestrator } from './STATE/portfolioUIOrchestrator.js';
+import { installMarketDataStore } from './STATE/marketDataStore.js';
+import { installCustomerReportsStore } from './STATE/customerReportsStore.js';
+import { installProductsStore } from './STATE/productsStore.js';
+import { installNameListsStore } from './STATE/nameListsStore.js';
+import { installPortfolioDataStore } from './STATE/portfolioDataStore.js';
+import { installMarketRiskStore } from './STATE/marketRiskStore.js';
+import { installCreditRiskStore } from './STATE/creditRiskStore.js';
+import { installUIStateStore } from './STATE/uiStateStore.js';
+
+import { createPortfolioDropdownUI } from './UI/portfolioDropdownUI.js';
+import { createMarketRiskRefresh } from './UI/marketRiskRefresh.js';
+
+
+
 import { openPanel} from './UI/panels.js';
 import { installBulkUpdateBridge } from './UI/bulkUpdateBridge.js';
 import { bindGlobalChangeDelegation } from './UI/globalChangeDelegation.js';
@@ -16,6 +33,12 @@ import { showMessageBox, showConfirmationBox } from './UI/modals/confirm.js';
 import { createDealsPortfolioActions } from './SELECT_PORTFOLIO/dealsPortfolioActions.js';
 
 import { createIssuerProductHandlers } from './DATA_PROVIDER/issuerProductHandlers.js';
+
+import { handleCSMatrixData } from './MARKET_DATA/CREDIT_SPREADS/CSMatrix.js';
+import { handleCSParameterData } from './MARKET_DATA/CREDIT_SPREADS/CSParameter.js';
+
+
+
 import { createCustomerHandlers } from './CUSTOMER/customerHandlers.js';
 import { createAnalysePortfolioHandlers } from './ANALYSE_PORTFOLIO/analysePortfolioHandlers.js';
 import { createRatesHandlers } from './MARKET_DATA/INTEREST_RATES/ratesHandlers.js';
@@ -77,7 +100,35 @@ const panelRenderState = Object.create(null);
 
 
 document.addEventListener('DOMContentLoaded', () => {
+
   appState = new AppState();
+
+  installUIStateStore({ appState });          // 1) UI state sofort
+  installDropdownFilterEngine({ appState });  // 2) dropdown engine
+  installPortfolioDataStore({ appState });    // 3) core data stores
+  installMarketRiskStore({ appState });
+  installCreditRiskStore({ appState });
+  installMarketDataStore({ appState });
+  installProductsStore({ appState });
+  installNameListsStore({ appState });
+  installCustomerReportsStore({ appState });
+  installDataUpdatePipeline({ appState });
+
+
+    const portfolioUI = createPortfolioUIOrchestrator({ appState });
+
+  // ✅ AppState delegiert nur noch (Backwards compatible)
+  appState.handlePortTable = portfolioUI.renderPortTable;
+  appState.handleOffersTable = portfolioUI.renderOffersTable;
+  const portfolioDropdownUI = createPortfolioDropdownUI({ appState });
+  const marketRiskRefresh   = createMarketRiskRefresh({ appState });
+
+  // Backwards compatible: wenn du irgendwo noch appState.* aufrufst
+  appState.updateDropdownOptions    = portfolioDropdownUI.updateDropdownOptions;
+  appState.fetchAndHandlePortData   = portfolioDropdownUI.fetchAndHandlePortData;
+  appState.getFormElementsForContainer = portfolioDropdownUI.getFormElementsForContainer;
+
+  appState.refreshMarketRiskUI = marketRiskRefresh.refreshMarketRiskUI;
 
   const issuerProdHandlers = createIssuerProductHandlers({ appState });
   const customerHandlers = createCustomerHandlers({ appState });
@@ -90,6 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const ratesHandlers = createRatesHandlers({ appState });
+
+  appState.handleCSMatrixData = handleCSMatrixData;
+  appState.handleCSParameterData = handleCSParameterData;
+
 
   // ✅ Swaption Handler sofort erzeugen (vor jeder Nutzung!)
   const {
