@@ -1,25 +1,14 @@
-/* RiskPDF.js — FULL (centralized layout + table core + COVER PAGE)
-   ✅ Must work:
-   - Load preset (checkbox state in localStorage) -> Export -> PDF contains exactly what is checked
-   ✅ Fix included:
-   - NO dependency on getBreakdownChartDisplayLabel (was causing crash when Breakdown is included)
-   - Breakdown labels resolved safely from DOM/data-label (fallback to id)
-   - Cover page (title + date + logo)
-   - TOC on page 2 (no insertPage hacks)
-   - Header/Footer safe areas (no overlap)
-   - Numbers never linebreak (central)
-   - Appendix ProductID never wraps (generic via noWrapColumns)
+/* RiskPDF.js — FULL (jsPDF + autoTable) — fixed top-safe for ALL content
+   ✅ Header/content overlap fixed
+   ✅ Footer layout
+   ✅ Logo aspect ratio
+   ✅ No global number formatting
+   ✅ PROD_ID + number columns: NEVER wrap in autoTable (robust across autoTable versions)
 */
 
 const { jsPDF } = window.jspdf;
 
-
-
-
-
-
-import { getActiveRiskSectionsForPdf, RISK_CONFIG} from './RiskPDFPreview.js';
-
+import { getActiveRiskSectionsForPdf, RISK_CONFIG } from './RiskPDFPreview.js';
 
 // =====================================================================
 // REPORT DEFAULTS
@@ -31,30 +20,44 @@ export const REPORT_DEFAULTS = {
   orientation: 'p',
 };
 
+// =====================================================================
+// BREAKDOWN LABELS (optional mapping)
+// =====================================================================
 export const BREAKDOWN_CHART_LABELS = {
-  // Issuer
   issuerpiechart:       'Issuer',
   ratingpiechart:       'Issuer Rating',
   rankpiechart:         'Capital Structure',
-
-  // Product
   ratingrespiechart:    'Product Rating',
   categorypiechart:     'Product Category',
   coupontypepiechart:   'Coupon Type',
-
-  // General
   depotbankpiechart:    'Depot Bank',
-
-  // Geography
   regionpiechart:       'Region',
   countrypiechart:      'Country',
   issueriseupiechart:   'EU Exposure',
   issueriseuropiechart: 'Euro Area Exposure',
 };
 
-function getBreakdownChartDisplayLabel(chartId) {
-  const key = String(chartId || '').toLowerCase();
-  return BREAKDOWN_CHART_LABELS[key] || chartId;
+function resolveBreakdownChartLabel(chartId) {
+  if (!chartId) return '';
+  const key = String(chartId).toLowerCase();
+  if (BREAKDOWN_CHART_LABELS[key]) return BREAKDOWN_CHART_LABELS[key];
+
+  try {
+    const el = document.getElementById(chartId);
+    const lbl = el?.dataset?.label;
+    if (lbl && String(lbl).trim()) return String(lbl).trim();
+  } catch {}
+
+  return String(chartId);
+}
+
+// =====================================================================
+// TIMESTAMP
+// =====================================================================
+function formatNowTimestamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // =====================================================================
@@ -64,20 +67,132 @@ export const PDF_LAYOUT_DEFAULTS = {
   marginLeft: 14,
   marginRight: 14,
 
-  // header/footer safe area
-  headerHeight: 10,
-  headerGap: 8,
+  headerHeight: 16,
+  headerGap: 12,
+
   footerHeight: 10,
   footerGap: 10,
 
-  // spacing
   sectionTitleSpacing: 10,
   blockGap: 10,
 };
 
+function createPdfLayout(doc, overrides = {}) {
+  const cfg = { ...PDF_LAYOUT_DEFAULTS, ...overrides };
 
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
 
+  const left = Number(cfg.marginLeft ?? 14);
+  const right = Number(cfg.marginRight ?? 14);
 
+  const headerHeight = Number(cfg.headerHeight ?? 16);
+  const headerGap = Number(cfg.headerGap ?? 12);
+  const footerHeight = Number(cfg.footerHeight ?? 10);
+  const footerGap = Number(cfg.footerGap ?? 10);
+
+  const topSafe = headerHeight + headerGap;
+  const bottomSafe = pageH - (footerHeight + footerGap);
+
+  return {
+    cfg,
+    pageW,
+    pageH,
+    left,
+    right,
+
+    topSafe,
+    bottomSafe,
+    bottomY: bottomSafe,
+
+    contentWidth: pageW - left - right,
+
+    startY() {
+      return topSafe;
+    },
+
+    hasSpace(y, neededHeight) {
+      return Number(y) + Number(neededHeight) <= bottomSafe;
+    },
+
+    newPage(doc) {
+      doc.addPage();
+      return topSafe;
+    },
+  };
+}
+
+// =====================================================================
+// IMAGE HELPERS (logo aspect ratio)
+// =====================================================================
+function addLogoKeepAspect(doc, logoElOrSrc, { x, y, maxW, maxH, format = 'PNG' }) {
+  try {
+    let src = logoElOrSrc;
+    let w0 = 0, h0 = 0;
+
+    if (logoElOrSrc && typeof logoElOrSrc === 'object' && logoElOrSrc.tagName === 'IMG') {
+      src = logoElOrSrc.src;
+      w0 = logoElOrSrc.naturalWidth || 0;
+      h0 = logoElOrSrc.naturalHeight || 0;
+    }
+    if (!src) return;
+
+    if (!w0 || !h0) {
+      doc.addImage(src, format, x, y, maxW, maxH);
+      return;
+    }
+
+    const ratio = w0 / h0;
+    let w = maxW;
+    let h = w / ratio;
+
+    if (h > maxH) {
+      h = maxH;
+      w = h * ratio;
+    }
+
+    doc.addImage(src, format, x, y, w, h);
+  } catch (e) {
+    console.warn('[PDF] addLogoKeepAspect failed', e);
+  }
+}
+
+// =====================================================================
+// AUTOTABLE SAFE WRAPPER
+// =====================================================================
+function safeAutoTable(doc, layout, options = {}) {
+  if (!doc || typeof doc.autoTable !== 'function') {
+    console.warn('[PDF] autoTable not available (jspdf-autotable missing?)');
+    return null;
+  }
+
+  const topSafe = Number.isFinite(layout?.topSafe) ? Number(layout.topSafe) : 28;
+  const bottomMargin = (layout?.cfg?.footerHeight ?? 10) + (layout?.cfg?.footerGap ?? 10);
+
+  const startY = options.startY != null ? Number(options.startY) : topSafe;
+  const safeStartY = Number.isFinite(startY) ? Math.max(startY, topSafe) : topSafe;
+
+  try {
+    doc.autoTable({
+      ...options,
+      startY: safeStartY,
+      margin: {
+        left: options.margin?.left ?? (layout?.left ?? 14),
+        right: options.margin?.right ?? (layout?.right ?? 14),
+        top: options.margin?.top ?? topSafe,
+        bottom: options.margin?.bottom ?? bottomMargin,
+      },
+    });
+    return doc.lastAutoTable || null;
+  } catch (e) {
+    console.warn('[PDF] autoTable failed', e);
+    return null;
+  }
+}
+
+// =====================================================================
+// HIERARCHY
+// =====================================================================
 function applyPdfHierarchy(sections, config) {
   const parents = config?.sectionParents || {};
   const orderByParent = config?.sectionChildrenOrder || {};
@@ -97,7 +212,10 @@ function applyPdfHierarchy(sections, config) {
     const pref = orderByParent[p];
     if (Array.isArray(pref) && pref.length) {
       const set = new Set(arr);
-      const ordered = [...pref.filter((k) => set.has(k)), ...arr.filter((k) => !pref.includes(k))];
+      const ordered = [
+        ...pref.filter((k) => set.has(k)),
+        ...arr.filter((k) => !pref.includes(k)),
+      ];
       childrenMap.set(p, ordered);
     }
   }
@@ -130,6 +248,146 @@ function applyPdfHierarchy(sections, config) {
 }
 
 // =====================================================================
+// COVER / HEADER / FOOTER
+// =====================================================================
+function drawCoverPage(doc, layout, { title, subtitle, metaLines = [], logoEl, reportTimeText } = {}) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const centerX = pageW / 2;
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, pageW, pageH, 'F');
+
+  if (logoEl && logoEl.tagName === 'IMG' && logoEl.src) {
+    const maxW = 70;
+    const maxH = 35;
+    const x = (pageW - maxW) / 2;
+    const y = 26;
+    addLogoKeepAspect(doc, logoEl, { x, y, maxW, maxH, format: 'PNG' });
+  }
+
+  const t = String(title || 'Report');
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(26);
+  doc.text(t, centerX, pageH * 0.38, { align: 'center' });
+
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.setTextColor(70);
+    doc.text(String(subtitle), centerX, pageH * 0.38 + 12, { align: 'center' });
+  }
+
+  const lines = [];
+  if (reportTimeText) lines.push(`Generated: ${reportTimeText}`);
+  if (Array.isArray(metaLines) && metaLines.length) lines.push(...metaLines.map((x) => String(x)));
+
+  if (lines.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+
+    const startY = pageH * 0.38 + 28;
+    const step = 6;
+
+    lines.forEach((line, i) => {
+      doc.text(line, centerX, startY + i * step, { align: 'center' });
+    });
+  }
+
+  doc.setFontSize(9);
+  doc.setTextColor(130);
+  doc.text('generated by valuationXpro', centerX, pageH - 18, { align: 'center' });
+  doc.setTextColor(0);
+}
+
+function drawHeaderFooter(doc, layout, { title, logoEl, reportTimeText } = {}) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const left = layout?.left ?? 14;
+  const right = layout?.right ?? 14;
+
+  const headerY = 12;
+  const footerY = pageH - 10;
+
+  doc.setDrawColor(220);
+  doc.setLineWidth(0.2);
+  doc.line(left, headerY + 4, pageW - right, headerY + 4);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(60);
+  if (title) doc.text(String(title), left, headerY);
+
+  if (logoEl && logoEl.tagName === 'IMG' && logoEl.src) {
+    const maxW = 18;
+    const maxH = 9;
+    const x = pageW - right - maxW;
+    const y = 6;
+    addLogoKeepAspect(doc, logoEl, { x, y, maxW, maxH, format: 'PNG' });
+  }
+
+  doc.setDrawColor(220);
+  doc.setLineWidth(0.2);
+  doc.line(left, footerY - 6, pageW - right, footerY - 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+
+  if (reportTimeText) doc.text(String(reportTimeText), left, footerY);
+  doc.text('generated by valuationXpro', pageW / 2, footerY, { align: 'center' });
+
+  doc.setTextColor(0);
+}
+
+function drawPageNumber(doc, layout, { pageIndex, pageCount } = {}) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const right = layout?.right ?? 14;
+  const footerY = pageH - 10;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+
+  const txt = (pageIndex && pageCount) ? `Page ${pageIndex} / ${pageCount}` : String(pageIndex ?? '');
+  doc.text(txt, pageW - right, footerY, { align: 'right' });
+
+  doc.setTextColor(0);
+}
+
+// =====================================================================
+// BREAKDOWN GROUPING (from DOM)
+// =====================================================================
+function groupBreakdownChartsBySection(charts) {
+  if (!charts || !charts.length) return [];
+  const groupsMap = new Map();
+
+  for (const ch of charts) {
+    const el = document.getElementById(ch.id);
+    if (!el) continue;
+
+    const section = el.closest?.('.pie-section');
+    let groupTitle = 'Breakdown';
+
+    if (section) {
+      const titleEl = section.querySelector('.pie-section-title');
+      const txt = titleEl?.textContent?.trim();
+      if (txt) groupTitle = txt;
+    }
+
+    if (!groupsMap.has(groupTitle)) groupsMap.set(groupTitle, { title: groupTitle, charts: [] });
+    groupsMap.get(groupTitle).charts.push(ch);
+  }
+
+  return Array.from(groupsMap.values());
+}
+
+// =====================================================================
 // GENERATE PDF (Cover + TOC + Content)
 // =====================================================================
 export async function generateRiskPDF(filteredData, overrides = {}) {
@@ -140,30 +398,20 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
   const reportTitle = String(opts.reportTitle || 'Risk Report').trim() || 'Risk Report';
   const logoEl = document.getElementById('logo');
+  const reportTimeText = formatNowTimestamp();
 
-    const reportTimeText = (() => {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  })();
-
-
-  // 0) COVER PAGE (page 1)
   doc.setPage(1);
   drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText });
 
-  // 1) TOC placeholder (page 2)
   const includeTOC = !!opts.includeTOC;
-  if (includeTOC) doc.addPage(); // page 2 reserved for TOC
+  if (includeTOC) doc.addPage();
 
-  // 2) Sections from preview (reads current rr-chart-state)
   let sections = getActiveRiskSectionsForPdf() || [];
   sections = applyPdfHierarchy(sections, RISK_CONFIG);
 
   const sectionNoByKey = {};
   sections.forEach((s) => (sectionNoByKey[s.key] = s.sectionNumber));
 
-  // 3) Breakdown numbering (TOC level 2/3) — SAFE label resolver
   const breakdownSec = sections.find((s) => s.key === 'breakdown');
   if (breakdownSec && typeof groupBreakdownChartsBySection === 'function') {
     const sectionNo = sectionNoByKey[breakdownSec.key] || '1';
@@ -192,13 +440,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     breakdownSec.breakdownNumbering = breakdownNumbering;
   }
 
-  // 4) Render sections
   const tocEntries = [];
   const addTOCEntry = (number, title, page, level = 1) => {
     tocEntries.push({ title: `${number}. ${title}`, page, level });
   };
 
-  // First content page (page 3 if TOC, else page 2)
   doc.addPage();
 
   let wroteAnySection = false;
@@ -216,7 +462,6 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
     addTOCEntry(sec.sectionNumber, title, pageIndex, sec.tocLevel || 1);
 
-    // Breakdown: groups + charts in TOC
     if (sec.key === 'breakdown' && sec.breakdownNumbering && typeof groupBreakdownChartsBySection === 'function') {
       const chartsForGroups = sec.enabledCharts || [];
       const groups = groupBreakdownChartsBySection(chartsForGroups) || [];
@@ -238,7 +483,6 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     await renderPanelSectionToPDF(doc, sec, layout);
   }
 
-  // 5) Appendix
   if (Array.isArray(filteredData) && filteredData.length) {
     doc.addPage();
     const pageIndex = doc.internal.getNumberOfPages();
@@ -248,7 +492,6 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     drawProductTableSection(doc, filteredData, layout, { appendixNo });
   }
 
-  // 6) Draw TOC into page 2
   if (includeTOC) {
     doc.setPage(2);
     const tocLayout = createPdfLayout(doc, layout.cfg);
@@ -284,7 +527,6 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     });
   }
 
-  // 7) Header/Footer + Page numbers on all pages except cover (page 1)
   const pageCount = doc.internal.getNumberOfPages();
   const finalLayout = createPdfLayout(doc, layout.cfg);
 
@@ -298,33 +540,6 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 }
 
 // =====================================================================
-// BREAKDOWN GROUPING (from DOM)
-// =====================================================================
-function groupBreakdownChartsBySection(charts) {
-  if (!charts || !charts.length) return [];
-  const groupsMap = new Map();
-
-  for (const ch of charts) {
-    const el = document.getElementById(ch.id);
-    if (!el) continue;
-
-    const section = el.closest?.('.pie-section');
-    let groupTitle = 'Breakdown';
-
-    if (section) {
-      const titleEl = section.querySelector('.pie-section-title');
-      const txt = titleEl?.textContent?.trim();
-      if (txt) groupTitle = txt;
-    }
-
-    if (!groupsMap.has(groupTitle)) groupsMap.set(groupTitle, { title: groupTitle, charts: [] });
-    groupsMap.get(groupTitle).charts.push(ch);
-  }
-
-  return Array.from(groupsMap.values());
-}
-
-// =====================================================================
 // SECTION RENDERING
 // =====================================================================
 async function renderPanelSectionToPDF(doc, sec, layout) {
@@ -332,22 +547,11 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
   const gutter = 10;
 
   let y = layout.startY();
+  y = Math.max(y, layout.topSafe ?? y);
 
   const sectionTitle = sec.title || sec.key || '';
   const sectionNumber = sec.sectionNumber || '';
   const breakdownNumbering = sec.breakdownNumbering || null;
-
-  // SPECIAL: Credit Traffic
-  if (sec.isCreditTraffic || sec.key === 'creditTraffic') {
-    await renderCreditTrafficSectionToPDF(doc, sec, layout);
-    return;
-  }
-
-  // SPECIAL: Market Traffic
-  if (sec.isMarketTraffic || sec.key === 'marketTraffic') {
-    await renderMarketTrafficSectionToPDF(doc, sec, layout);
-    return;
-  }
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -399,7 +603,9 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
   function ensurePageSpace(needsHeight, contTitle = null) {
     if (layout.hasSpace(y, needsHeight)) return;
+
     y = layout.newPage(doc);
+    y = Math.max(y, layout.topSafe ?? y);
 
     if (contTitle) {
       doc.setFontSize(14);
@@ -411,12 +617,8 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
   const chartsAll = sec.enabledCharts || [];
   const tablesAll = sec.enabledTables || [];
-
   const isBreakdown = sec.key === 'breakdown';
 
-  // ─────────────────────────────────────────────
-  // BREAKDOWN – one chart + legend per page
-  // ─────────────────────────────────────────────
   if (isBreakdown) {
     const legendByChartId = new Map();
     tablesAll.forEach((t) => {
@@ -440,8 +642,13 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
     let lastGroupTitle = null;
 
     for (const { chart, groupTitle } of blocks) {
-      if (blockIndex === 0) y = layout.startY();
-      else y = layout.newPage(doc);
+      if (blockIndex === 0) {
+        y = layout.startY();
+        y = Math.max(y, layout.topSafe ?? y);
+      } else {
+        y = layout.newPage(doc);
+        y = Math.max(y, layout.topSafe ?? y);
+      }
 
       if (firstPageOfSec) {
         doc.setFontSize(14);
@@ -490,7 +697,6 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
           const targetHeight = srcH * scale;
 
           const boxHeight = targetHeight + 22;
-
           ensurePageSpace(boxHeight + 10, `${sectionTitle} (cont.)`);
 
           const boxX = marginX;
@@ -499,14 +705,14 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
           const imgY = boxY + 11;
           const imgX = boxX + (maxW - targetWidth) / 2;
 
+          doc.setFillColor(245);
+          doc.rect(boxX - 2, boxY, maxW + 4, boxHeight - 4, 'F');
+
+          doc.setFontSize(9);
+          doc.setTextColor(0);
+          doc.text(chartLabel, boxX + maxW / 2, labelY, { align: 'center' });
+
           try {
-            doc.setFillColor(245);
-            doc.rect(boxX - 2, boxY, maxW + 4, boxHeight - 4, 'F');
-
-            doc.setFontSize(9);
-            doc.setTextColor(0);
-            doc.text(chartLabel, boxX + maxW / 2, labelY, { align: 'center' });
-
             doc.addImage(imgData.dataUrl, 'PNG', imgX, imgY, targetWidth, targetHeight);
           } catch (e) {
             console.warn('[PDF] addImage failed for breakdown chart', chart.id, e);
@@ -524,20 +730,12 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
             ? host
             : host?.querySelector?.('table');
 
-        if (tableElem && typeof doc.autoTable === 'function') {
-          const chartMeta2 = breakdownNumbering?.charts[chart.id];
-          const chartLabel2 = chartMeta2?.label || chart.label || tMeta.label || resolveBreakdownChartLabel(chart.id);
-          const chartNumber2 = chartMeta2?.no;
-
-          const tableTitle = chartNumber2
-            ? `${chartNumber2}. ${chartLabel2} Breakdown`
-            : `${chartLabel2} Breakdown`;
-
+        if (tableElem) {
           ensurePageSpace(40, `${sectionTitle} (cont.)`);
 
           doc.setFontSize(10);
           doc.setTextColor(0);
-          doc.text(tableTitle, marginX, y);
+          doc.text(`${chartHeading} Breakdown`, marginX, y);
 
           safeAutoTable(doc, layout, {
             html: tableElem,
@@ -547,88 +745,6 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
             headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
             alternateRowStyles: { fillColor: [255, 255, 255] },
             tableWidth: layout.contentWidth,
-
-            didParseCell(data) {
-              if (data.section === 'head') return;
-              if (data.section !== 'body' || data.column.index !== 0) return;
-
-              const raw = data.cell.raw;
-              if (!raw) return;
-
-              let bg = '';
-
-              const swatchEl =
-                raw.querySelector?.('[data-color]') ||
-                raw.querySelector?.('.color-swatch') ||
-                raw.firstElementChild;
-
-              if (swatchEl) {
-                bg =
-                  (swatchEl.dataset && swatchEl.dataset.color) ||
-                  swatchEl.style?.backgroundColor ||
-                  '';
-                if (!bg) {
-                  try {
-                    const cs = getComputedStyle(swatchEl);
-                    if (
-                      cs &&
-                      cs.backgroundColor &&
-                      cs.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-                      cs.backgroundColor !== 'transparent'
-                    ) {
-                      bg = cs.backgroundColor;
-                    }
-                  } catch {}
-                }
-              }
-
-              if (!bg) {
-                try {
-                  const csTd = getComputedStyle(raw);
-                  if (
-                    csTd &&
-                    csTd.backgroundColor &&
-                    csTd.backgroundColor !== 'rgba(0,0,0,0)' &&
-                    csTd.backgroundColor !== 'transparent'
-                  ) {
-                    bg = csTd.backgroundColor;
-                  }
-                } catch {}
-              }
-
-              if (!bg) return;
-
-              const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)\s*\)/);
-              if (!m) return;
-
-              const r = parseInt(m[1], 10);
-              const g = parseInt(m[2], 10);
-              const b = parseInt(m[3], 10);
-
-              data.cell.text = [''];
-              data.cell.styles.fillColor = [255, 255, 255];
-              data.cell.styles.textColor = [0, 0, 0];
-              data.cell._swatchColor = [r, g, b];
-            },
-
-            didDrawCell(data) {
-              if (data.section !== 'body' || data.column.index !== 0) return;
-              const c = data.cell._swatchColor;
-              if (!c) return;
-
-              const x = data.cell.x;
-              const yCell = data.cell.y;
-              const h = data.cell.height;
-
-              const size = Math.min(h - 4, 8);
-              const padY = (h - size) / 2;
-              const squareX = x + 4;
-              const squareY = yCell + padY;
-
-              doc.setFillColor(c[0], c[1], c[2]);
-              doc.setDrawColor(200, 200, 200);
-              doc.rect(squareX, squareY, size, size, 'FD');
-            },
           });
 
           y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 60;
@@ -641,9 +757,6 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
     return;
   }
 
-  // ─────────────────────────────────────────────
-  // STANDARD SECTIONS (charts + tables)
-  // ─────────────────────────────────────────────
   doc.setFontSize(14);
   doc.setTextColor(0);
   doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
@@ -674,7 +787,6 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
     const targetHeight = srcH * scale;
 
     const blockHeight = targetHeight + 22;
-
     ensurePageSpace(blockHeight + 10, `${sectionTitle} (cont.)`);
 
     const cellX = marginX + colInRow * (chartWidth + gutter);
@@ -683,22 +795,22 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
     const imgY = boxY + 11;
     const imgX = cellX + (chartWidth - targetWidth) / 2;
 
+    doc.setFillColor(245);
+    doc.rect(cellX - 2, boxY, chartWidth + 4, blockHeight - 4, 'F');
+
+    doc.setFontSize(9);
+    doc.setTextColor(0);
+    doc.text(ch.label || ch.id, cellX + chartWidth / 2, labelY, { align: 'center' });
+
     try {
-      doc.setFillColor(245);
-      doc.rect(cellX - 2, boxY, chartWidth + 4, blockHeight - 4, 'F');
-
-      doc.setFontSize(9);
-      doc.setTextColor(0);
-      doc.text(ch.label || ch.id, cellX + chartWidth / 2, labelY, { align: 'center' });
-
       doc.addImage(imgData.dataUrl, 'PNG', imgX, imgY, targetWidth, targetHeight);
     } catch (e) {
       console.warn('[PDF] addImage failed for', ch.id, e);
     }
 
     rowHeight = Math.max(rowHeight, blockHeight);
-
     colInRow++;
+
     if (colInRow >= 2) {
       colInRow = 0;
       y += rowHeight + 4;
@@ -708,8 +820,6 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
   if (colInRow !== 0) {
     y += rowHeight + 4;
-    colInRow = 0;
-    rowHeight = 0;
   }
 
   for (const t of tablesAll) {
@@ -718,228 +828,36 @@ async function renderPanelSectionToPDF(doc, sec, layout) {
 
     ensurePageSpace(40, `${sectionTitle} (cont.)`);
 
-    const out = renderTableAutoFit(doc, layout, {
-      title: t.label || t.id,
-      y,
-      tbl,
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(String(t.label || t.id), marginX, y);
+
+    const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
+
+    safeAutoTable(doc, layout, {
+      startY: y + 6,
+      head,
+      body: tbl.body,
       theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
       alternateRowStyles: { fillColor: [245, 245, 245] },
+      tableWidth: layout.contentWidth,
     });
 
-    y = (out.finalY || y) + cfg.blockGap;
+    y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 60;
   }
 }
 
 // =====================================================================
-// CREDIT TRAFFIC
-// =====================================================================
-function readCreditTrafficStatus() {
-  const map = {};
-  const defs = [
-    { key: 'cvar', id: 'traffic-credit-cvar' },
-    { key: 'tsi',  id: 'traffic-credit-tsi' },
-    { key: 'msd',  id: 'traffic-credit-msd' },
-  ];
-
-  defs.forEach((d) => {
-    const el = document.getElementById(d.id);
-    if (!el) return;
-    const status = (el.dataset.status || '').toLowerCase();
-    if (status === 'red' || status === 'yellow' || status === 'green') map[d.key] = status;
-  });
-
-  return map;
-}
-
-async function renderCreditTrafficSectionToPDF(doc, sec, layout) {
-  const { left: marginX } = layout;
-  let y = layout.startY();
-
-  doc.setFontSize(14);
-  doc.setTextColor(0);
-  doc.text(sec.title || 'Credit Risk – Traffic Lights', marginX, y);
-  y += 8;
-
-  doc.setFontSize(10);
-  doc.text('Summary of CVaR, TSI and MSD traffic lights.', marginX, y);
-  y += 6;
-
-  const statuses = readCreditTrafficStatus();
-
-  const metrics = [
-    { label: 'CVaR', key: 'cvar' },
-    { label: 'TSI',  key: 'tsi'  },
-    { label: 'MSD',  key: 'msd'  },
-  ];
-
-  const colors = [
-    { name: 'red',    rgb: [220, 53, 69] },
-    { name: 'yellow', rgb: [255, 193, 7] },
-    { name: 'green',  rgb: [40, 167, 69] },
-  ];
-
-  const radius = 3;
-  const rowHeight = 14;
-  const circleGap = 14;
-
-  const neededHeight = metrics.length * (rowHeight + 2) + 24;
-  if (!layout.hasSpace(y, neededHeight)) y = layout.newPage(doc);
-
-  const boxX = marginX;
-  const labelX = boxX + 6;
-  const circleStartX = boxX + 35;
-
-  metrics.forEach((m) => {
-    const active = statuses[m.key] || 'green';
-
-    doc.setDrawColor(210, 210, 210);
-    doc.setFillColor(250, 250, 250);
-    doc.roundedRect(boxX, y, 80, rowHeight, 2, 2, 'FD');
-
-    doc.setFontSize(9);
-    doc.setTextColor(50, 50, 50);
-    doc.text(m.label + ':', labelX, y + rowHeight / 2 + 2);
-
-    colors.forEach((c, idx) => {
-      const cx = circleStartX + idx * circleGap;
-      const cy = y + rowHeight / 2;
-
-      doc.setDrawColor(120, 120, 120);
-
-      if (c.name === active) {
-        doc.setFillColor(c.rgb[0], c.rgb[1], c.rgb[2]);
-        doc.circle(cx, cy, radius, 'FD');
-      } else {
-        doc.setFillColor(255, 255, 255);
-        doc.circle(cx, cy, radius, 'S');
-      }
-    });
-
-    y += rowHeight + 2;
-  });
-
-  const legendX = marginX + 90;
-  const legendY = layout.startY() + 14;
-
-  doc.setFontSize(8);
-  doc.setTextColor(80, 80, 80);
-  doc.text('Legend:', legendX, legendY);
-
-  const legendEntries = [
-    { label: 'Red = critical',   color: [220, 53, 69] },
-    { label: 'Yellow = watch',   color: [255, 193, 7] },
-    { label: 'Green = in range', color: [40, 167, 69] },
-  ];
-
-  let ly = legendY + 5;
-  legendEntries.forEach((entry) => {
-    doc.setFillColor(entry.color[0], entry.color[1], entry.color[2]);
-    doc.setDrawColor(120, 120, 120);
-    doc.rect(legendX, ly - 3, 3, 3, 'FD');
-    doc.setTextColor(60, 60, 60);
-    doc.text(entry.label, legendX + 6, ly);
-    ly += 5;
-  });
-}
-
-// =====================================================================
-// MARKET TRAFFIC
-// =====================================================================
-function readMarketTrafficStatus() {
-  const el = document.getElementById('traffic-mvar');
-  if (!el) return null;
-
-  const status = (el.dataset.status || '').toLowerCase();
-  if (status === 'red' || status === 'yellow' || status === 'green') return status;
-  return null;
-}
-
-async function renderMarketTrafficSectionToPDF(doc, sec, layout) {
-  const { left: marginX } = layout;
-  let y = layout.startY();
-
-  doc.setFontSize(14);
-  doc.setTextColor(0);
-  doc.text(sec.title || 'Market Risk – Traffic Light', marginX, y);
-  y += 8;
-
-  doc.setFontSize(10);
-  doc.text('Summary of Market VaR / ES traffic light.', marginX, y);
-  y += 6;
-
-  const status = readMarketTrafficStatus() || 'green';
-
-  const colors = [
-    { name: 'red',    rgb: [220, 53, 69] },
-    { name: 'yellow', rgb: [255, 193, 7] },
-    { name: 'green',  rgb: [40, 167, 69] },
-  ];
-
-  const radius = 3;
-  const rowHeight = 14;
-  const circleGap = 14;
-
-  if (!layout.hasSpace(y, rowHeight + 24)) y = layout.newPage(doc);
-
-  const boxX = marginX;
-  const labelX = boxX + 6;
-  const circleStartX = boxX + 35;
-
-  doc.setDrawColor(210, 210, 210);
-  doc.setFillColor(250, 250, 250);
-  doc.roundedRect(boxX, y, 80, rowHeight, 2, 2, 'FD');
-
-  doc.setFontSize(9);
-  doc.setTextColor(50, 50, 50);
-  doc.text('MVaR:', labelX, y + rowHeight / 2 + 2);
-
-  colors.forEach((c, idx) => {
-    const cx = circleStartX + idx * circleGap;
-    const cy = y + rowHeight / 2;
-
-    doc.setDrawColor(120, 120, 120);
-
-    if (c.name === status) {
-      doc.setFillColor(c.rgb[0], c.rgb[1], c.rgb[2]);
-      doc.circle(cx, cy, radius, 'FD');
-    } else {
-      doc.setFillColor(255, 255, 255);
-      doc.circle(cx, cy, radius, 'S');
-    }
-  });
-
-  const legendX = marginX + 90;
-  const legendY = layout.startY() + 14;
-
-  doc.setFontSize(8);
-  doc.setTextColor(80, 80, 80);
-  doc.text('Legend:', legendX, legendY);
-
-  const legendEntries = [
-    { label: 'Red = critical',   color: [220, 53, 69] },
-    { label: 'Yellow = watch',   color: [255, 193, 7] },
-    { label: 'Green = in range', color: [40, 167, 69] },
-  ];
-
-  let ly = legendY + 5;
-  legendEntries.forEach((entry) => {
-    doc.setFillColor(entry.color[0], entry.color[1], entry.color[2]);
-    doc.setDrawColor(120, 120, 120);
-    doc.rect(legendX, ly - 3, 3, 3, 'FD');
-    doc.setTextColor(60, 60, 60);
-    doc.text(entry.label, legendX + 6, ly);
-    ly += 5;
-  });
-}
-
-// =====================================================================
-// APPENDIX (wrap/linebreak + ProductID no wrap)
+// APPENDIX TABLE — HARD NO-WRAP for PROD_ID + numeric cols (0,3,4)
 // =====================================================================
 function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {}) {
   const riskData = extractProductRiskData(filteredData);
 
   let y = layout.startY();
+  y = Math.max(y, layout.topSafe ?? y);
+
   const marginX = layout.left;
 
   doc.setFontSize(14);
@@ -957,31 +875,20 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     item.NAV,
   ]);
 
-  // Desired relative widths (will be normalized to fit exactly)
   const base = [22, 72, 34, 26, 22];
   const mins = [18, 40, 26, 18, 18];
-
-  // Single source for typography
-  const fontSize = 7;
-  const cellPadding = 1.2;
-
-  // Hard target width (slight epsilon for borders/rounding inside autoTable)
   const targetW = Math.max(40, (layout.contentWidth || 180) - 2);
 
-  // 1) Scale base -> scaled with mins
   const sumBase = base.reduce((a, b) => a + b, 0) || 1;
   let scaled = base.map((w, i) => Math.max(mins[i], (w / sumBase) * targetW));
 
-  // 2) Normalize to fit EXACTLY into targetW (guarantees no "could not fit page")
   const sumScaled1 = scaled.reduce((a, b) => a + b, 0) || 1;
   const f = targetW / sumScaled1;
   scaled = scaled.map((w, i) => Math.max(mins[i], w * f));
 
-  // 3) If mins forced us over targetW, shave from Description column (idx 1), then Issuer (idx 2)
   const sumScaled2 = scaled.reduce((a, b) => a + b, 0);
   if (sumScaled2 > targetW) {
     let overflow = sumScaled2 - targetW;
-
     const shave = (idx, min) => {
       if (overflow <= 0) return;
       const can = Math.max(0, scaled[idx] - min);
@@ -989,10 +896,8 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
       scaled[idx] -= cut;
       overflow -= cut;
     };
-
-    shave(1, mins[1]); // Description first
-    shave(2, mins[2]); // then Issuer
-    // If still overflow, shave Notional/NAV a bit (rare)
+    shave(1, mins[1]);
+    shave(2, mins[2]);
     shave(3, mins[3]);
     shave(4, mins[4]);
   }
@@ -1004,47 +909,58 @@ function drawProductTableSection(doc, filteredData, layout, { appendixNo } = {})
     theme: 'striped',
     tableWidth: targetW,
 
-    // Only ProductID no-wrap
-    noWrapColumns: [0],
-
+    // ✅ KEY CHANGE:
+    // Default overflow is hidden => NO column wraps by default.
+    // Only text columns (1,2) explicitly use linebreak.
     styles: {
-      fontSize,
-      cellPadding,
-      overflow: 'linebreak',
+      fontSize: 7,
+      cellPadding: 1.2,
+      overflow: 'hidden',     // <-- prevents wrapping in older autoTable versions
       cellWidth: 'wrap',
       valign: 'top',
     },
-
-    headStyles: {
-      fontSize,
-      cellPadding,
-      overflow: 'linebreak',
-      cellWidth: 'wrap',
-      fillColor: [245, 245, 245],
-      textColor: [60, 60, 60],
-    },
-
+    headStyles: { fontSize: 7, cellPadding: 1.2, fillColor: [245, 245, 245], textColor: [60, 60, 60] },
     alternateRowStyles: { fillColor: [255, 255, 255] },
 
     columnStyles: {
-      0: { cellWidth: scaled[0] },
-      1: { cellWidth: scaled[1] },
-      2: { cellWidth: scaled[2] },
-      3: { cellWidth: scaled[3], halign: 'right' },
-      4: { cellWidth: scaled[4], halign: 'right' },
+      // ✅ No-wrap cols: 0,3,4 keep hidden overflow (single-line, clipped)
+      0: { cellWidth: scaled[0], halign: 'left', overflow: 'hidden' },
+      3: { cellWidth: scaled[3], halign: 'right', overflow: 'hidden' },
+      4: { cellWidth: scaled[4], halign: 'right', overflow: 'hidden' },
+
+      // ✅ Wrap-allowed cols
+      1: { cellWidth: scaled[1], overflow: 'linebreak' },
+      2: { cellWidth: scaled[2], overflow: 'linebreak' },
+    },
+
+    // ✅ Absolute enforcement: kill any pre-split lines
+    didParseCell: function (data) {
+      const c = data?.column?.index;
+
+      // Hard no-wrap for PROD_ID and numeric cols
+      if (c === 0 || c === 3 || c === 4) {
+        const raw = data?.cell?.raw;
+        const oneLine = raw == null ? '' : String(raw).replace(/\r?\n/g, ' ');
+        data.cell.text = [oneLine];                 // single line only
+        data.cell.styles.overflow = 'hidden';       // ensure no split
+      }
+
+      // Ensure right alignment for numeric cols
+      if (c === 3 || c === 4) {
+        data.cell.styles.halign = 'right';
+      }
     },
   });
 }
 
-
 function extractProductRiskData(filteredData) {
   if (!filteredData || !Array.isArray(filteredData)) return [];
   return filteredData.map((entry) => ({
-    PROD_ID: entry.PROD_ID || '',
+    PROD_ID: entry.PROD_ID != null ? String(entry.PROD_ID) : '',
     DESCRIPTION: (entry.DESCRIPTION || '').toString().substring(0, 160),
     ISSUER: entry.ISSUER || '',
-    NOTIONAL: entry.NOTIONAL != null ? entry.NOTIONAL.toString() : '',
-    NAV: entry.NAV != null ? entry.NAV.toString() : '',
+    NOTIONAL: entry.NOTIONAL != null ? String(entry.NOTIONAL) : '',
+    NAV: entry.NAV != null ? String(entry.NAV) : '',
   }));
 }
 
@@ -1057,10 +973,7 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   for (const id of ids) {
     const el = document.getElementById(id);
-    if (el) {
-      host = el;
-      break;
-    }
+    if (el) { host = el; break; }
   }
   if (!host) return null;
 
@@ -1076,7 +989,6 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   let rows = Array.from(table.querySelectorAll('tbody tr'));
 
-  // fallback if no tbody
   if (!rows.length) {
     const allRows = Array.from(table.querySelectorAll('tr'));
     if (allRows.length) {
@@ -1102,259 +1014,3 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20 }
 
   return { head, body };
 }
-
-function createPdfLayout(doc, overrides = {}) {
-  const cfg = { ...PDF_LAYOUT_DEFAULTS, ...overrides };
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  const left = Number(cfg.marginLeft ?? 14);
-  const right = Number(cfg.marginRight ?? 14);
-
-  const headerHeight = Number(cfg.headerHeight ?? 10);
-  const headerGap = Number(cfg.headerGap ?? 8);
-  const footerHeight = Number(cfg.footerHeight ?? 10);
-  const footerGap = Number(cfg.footerGap ?? 10);
-
-  const topSafe = headerHeight + headerGap;                 // ✅ number
-  const bottomSafe = pageH - (footerHeight + footerGap);    // ✅ number
-
-  return {
-    cfg,
-    pageW,
-    pageH,
-    left,
-    right,
-
-    // aliases (du nutzt später bottomY)
-    topSafe,
-    bottomSafe,
-    bottomY: bottomSafe,
-
-    contentWidth: pageW - left - right,
-
-    startY() {
-      return topSafe;
-    },
-
-    hasSpace(y, neededHeight) {
-      return Number(y) + Number(neededHeight) <= bottomSafe;
-    },
-
-    newPage(doc) {
-      doc.addPage();
-      return topSafe;
-    },
-  };
-}
-
-function drawCoverPage(doc, layout, { title, subtitle, metaLines = [], logoEl, reportTimeText } = {}) {
-  // Du machst davor doc.setPage(1) -> hier KEIN doc.addPage()
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  const centerX = pageW / 2;
-
-  // Hintergrund
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, pageW, pageH, 'F');
-
-  // Logo (optional)
-  try {
-    if (logoEl && logoEl.tagName === 'IMG' && logoEl.src) {
-      const maxW = 70;
-      const maxH = 35;
-      const x = (pageW - maxW) / 2;
-      const y = 28;
-
-      // Wenn dein Logo jpg ist -> 'JPEG'
-      doc.addImage(logoEl.src, 'PNG', x, y, maxW, maxH);
-    }
-  } catch (e) {
-    console.warn('[PDF] cover logo addImage failed', e);
-  }
-
-  // Titel
-  const t = String(title || 'Report');
-  doc.setTextColor(0);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(26);
-  doc.text(t, centerX, pageH * 0.38, { align: 'center' });
-
-  // Subtitle (optional)
-  if (subtitle) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(12);
-    doc.setTextColor(70);
-    doc.text(String(subtitle), centerX, pageH * 0.38 + 12, { align: 'center' });
-  }
-
-  // Meta lines (optional)
-  const lines = [];
-  if (reportTimeText) lines.push(`Generated: ${reportTimeText}`);
-  if (Array.isArray(metaLines) && metaLines.length) lines.push(...metaLines.map((x) => String(x)));
-
-  if (lines.length) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(90);
-
-    const startY = pageH * 0.38 + 28;
-    const step = 6;
-
-    lines.forEach((line, i) => {
-      doc.text(line, centerX, startY + i * step, { align: 'center' });
-    });
-  }
-
-  // Fußzeile
-  doc.setFontSize(9);
-  doc.setTextColor(130);
-  doc.text('Risk Report', centerX, pageH - 18, { align: 'center' });
-}
-function resolveBreakdownChartLabel(chartId) {
-  if (!chartId) return '';
-
-  // 1) Versuch: aus BREAKDOWN_CHART_LABELS
-  const key = String(chartId).toLowerCase();
-  if (BREAKDOWN_CHART_LABELS[key]) {
-    return BREAKDOWN_CHART_LABELS[key];
-  }
-
-  // 2) Versuch: data-label vom DOM
-  try {
-    const el = document.getElementById(chartId);
-    const lbl = el?.dataset?.label;
-    if (lbl) return lbl;
-  } catch {}
-
-  // 3) Fallback: ID
-  return chartId;
-}
-function safeAutoTable(doc, layout, options = {}) {
-  if (!doc || typeof doc.autoTable !== 'function') {
-    console.warn('[PDF] autoTable not available (jspdf-autotable missing?)');
-    return null;
-  }
-
-  const startY =
-    options.startY != null
-      ? Number(options.startY)
-      : (typeof layout?.startY === 'function' ? Number(layout.startY()) : Number(layout?.topSafe ?? 20));
-
-  const safeStartY = Number.isFinite(startY) ? startY : 20;
-
-  try {
-    doc.autoTable({
-      ...options,
-      startY: safeStartY,
-    });
-    return doc.lastAutoTable || null;
-  } catch (e) {
-    console.warn('[PDF] autoTable failed', e);
-    return null;
-  }
-}
-function renderTableAutoFit(doc, layout, opts = {}) {
-  const {
-    title,
-    y,
-    tbl,
-    theme = 'grid',
-    styles,
-    headStyles,
-    alternateRowStyles,
-  } = opts;
-
-  let startY = Number.isFinite(y)
-    ? y
-    : (typeof layout?.startY === 'function' ? layout.startY() : 20);
-
-  const marginX = layout?.left ?? 14;
-
-  // Titel
-  if (title) {
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text(String(title), marginX, startY);
-    startY += 6;
-  }
-
-  // Tabelle
-  const res = safeAutoTable(doc, layout, {
-    startY,
-    head: tbl.head ? [tbl.head] : undefined,
-    body: tbl.body || [],
-    theme,
-    styles,
-    headStyles,
-    alternateRowStyles,
-    tableWidth: 'auto',
-  });
-
-  return {
-    finalY: res?.finalY ?? startY + 20,
-  };
-}
-function drawHeaderFooter(doc, layout, { title, logoEl, reportTimeText } = {}) {
-  const pageW = doc.internal.pageSize.getWidth();
-
-  const left = layout?.left ?? 14;
-  const right = layout?.right ?? 14;
-
-  const headerY = Math.max(10, (layout?.cfg?.headerHeight ?? 10)); // safe y
-  const footerY = doc.internal.pageSize.getHeight() - 10;
-
-  // HEADER LINE
-  doc.setDrawColor(220);
-  doc.setLineWidth(0.2);
-  doc.line(left, headerY + 4, pageW - right, headerY + 4);
-
-  // Header title (links)
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(60);
-  if (title) doc.text(String(title), left, headerY);
-
-  // Header time (rechts)
-  if (reportTimeText) {
-    const txt = String(reportTimeText);
-    doc.text(txt, pageW - right, headerY, { align: 'right' });
-  }
-
-  // Logo klein rechts oben (optional)
-  try {
-    if (logoEl && logoEl.tagName === 'IMG' && logoEl.src) {
-      const w = 18;
-      const h = 9;
-      const x = pageW - right - w;
-      const y = 6;
-      doc.addImage(logoEl.src, 'PNG', x, y, w, h);
-    }
-  } catch {}
-  
-  // FOOTER LINE
-  doc.setDrawColor(220);
-  doc.setLineWidth(0.2);
-  doc.line(left, footerY - 6, pageW - right, footerY - 6);
-}
-function drawPageNumber(doc, layout, { pageIndex, pageCount } = {}) {
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  const right = layout?.right ?? 14;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(90);
-
-  const txt = (pageIndex && pageCount) ? `Page ${pageIndex} / ${pageCount}` : String(pageIndex ?? '');
-  doc.text(txt, pageW - right, pageH - 8, { align: 'right' });
-}
-
-
-
-
-
