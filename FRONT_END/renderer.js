@@ -117,7 +117,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-const handlers = bootstrapHandlers(appState);
+const {
+  issuerProdHandlers,
+  customerHandlers,
+  dealsActions,
+  ratesHandlers,
+  forwardsHandlers,
+  analyseHandlers,
+  handleSwaptionATMData,
+  handleSwaptionSmileData,
+  handleSwaptionCubeSurfaceData,
+} = bootstrapHandlers(appState);
 
 
 
