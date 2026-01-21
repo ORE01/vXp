@@ -131,22 +131,13 @@ const {
 
 
 
-  // Für GLOBALE SZENARIEN!
-  bindGlobalChangeDelegation({
-    appState,
-    handleEUSWData: ratesHandlers.handleEUSWData,
-  });
-
-  bindClearCSScenario({
-    appState,
+  bootstrapBridges(appState, {
     api: window.api,
+    ratesHandlers,
     handlePortProdData,
-  });
-
-  installMarketProvidersBridge({
-    api: window.api,
     handleProviderData,
   });
+
 
   const { py } = bootstrapPython(appState, {
     handlePortAggData,
@@ -167,10 +158,7 @@ const {
   });
 
 
-  // Debug (optional): remove later
-  window.appState = appState;
 
-  bindSwaptionReadyListeners({ appState });
 
   bootstrapIPC({
     api: window.api,
@@ -493,6 +481,38 @@ function bootstrapBindings(appState, deps) {
 
   installDealsEnhancerBridge({ appState });
 }
+
+function bootstrapBridges(appState, deps) {
+  const {
+    api,
+    ratesHandlers,
+    handlePortProdData,
+    handleProviderData,
+  } = deps;
+
+  // Für GLOBALE SZENARIEN!
+  bindGlobalChangeDelegation({
+    appState,
+    handleEUSWData: ratesHandlers.handleEUSWData,
+  });
+
+  bindClearCSScenario({
+    appState,
+    api,
+    handlePortProdData,
+  });
+
+  installMarketProvidersBridge({
+    api,
+    handleProviderData,
+  });
+
+  // Debug (optional)
+  window.appState = appState;
+
+  bindSwaptionReadyListeners({ appState });
+}
+
 
 
 
