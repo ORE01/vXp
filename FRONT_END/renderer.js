@@ -2,6 +2,8 @@ import { bootstrapStores } from './bootstrap/bootstrapStores.js';
 import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
 import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
 import { bootstrapBridges } from './bootstrap/bootstrapBridges.js';
+import { bootstrapPython } from './bootstrap/bootstrapPython.js';
+
 
 
 
@@ -297,54 +299,6 @@ function bootstrapIPC(deps) {
     observePanelTsOpen,
   });
 
-}
-
-function bootstrapPython(appState, deps) {
-  const {
-    handlePortAggData,
-    handlePortProdData,
-    handleMVaRData,
-    handleSummaryMarketRiskData,
-    handleMvarProductTable,
-    handleCVaRData,
-
-    buildCubeSurfaceGrid,
-    populateSwaptionCubeSelectors,
-
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-
-    onExcelComplete,
-  } = deps;
-
-  const { py } = installPythonBridge({
-    appState,
-
-    handlePortAggData,
-    handlePortProdData,
-    handleMVaRData,
-    handleSummaryMarketRiskData,
-    handleMvarProductTable,
-    handleCVaRData,
-
-    buildCubeSurfaceGrid,
-    populateSwaptionCubeSelectors,
-
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-
-    openPortAnalyseAndFocus: (typeof openPortAnalyseAndFocus === 'function') ? openPortAnalyseAndFocus : null,
-
-    onExcelComplete,
-
-    exposeGlobal: true,
-  });
-
-  installPythonProgressBarsBridge();
-
-  return { py };
 }
 
 function bootstrapBindings(appState, deps) {
