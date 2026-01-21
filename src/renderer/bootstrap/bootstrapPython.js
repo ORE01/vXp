@@ -1,7 +1,7 @@
-// FRONT_END/bootstrap/bootstrapPython.js
+﻿// FRONT_END/bootstrap/bootstrapPython.js
 
-import { installPythonBridge } from '../../PYTHON/pythonBridge.js';
-import { installPythonProgressBarsBridge } from '../../PYTHON/pythonProgressBarsBridge.js';
+import { installPythonBridge } from '../../../PYTHON/pythonBridge.js';
+import { installPythonProgressBarsBridge } from '../../../PYTHON/pythonProgressBarsBridge.js';
 
 export function bootstrapPython(appState, deps) {
   const {
@@ -50,3 +50,4 @@ export function bootstrapPython(appState, deps) {
 
   return { py };
 }
+

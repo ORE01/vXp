@@ -1,0 +1,672 @@
+import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import { createFWDLineChart, createForwardSwapChart } from '../../../charts/LineChart.js';
+import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
+
+let FWDlineChart;
+let forwardSwapChart;
+
+
+
+// -----------------------------------------------------
+// HILFSFUNKTIONEN für handleFWDData (Refactoring)
+// -----------------------------------------------------
+
+function prepareForwardData(receivedData) {
+  // Rohdaten nur in EUSW speichern, NICHT in ForwardCache
+  if (Array.isArray(receivedData) && receivedData.length > 0) {
+    appState.setEUSWData(receivedData);
+  }
+
+  // immer mit aktueller Curve mappen
+  const dataToUse = appState.getEUSWDataWithSelectedCurve();
+
+  if (!Array.isArray(dataToUse) || dataToUse.length === 0) {
+    console.error('No valid data available for processing in handleFWDData.');
+    return null;
+  }
+  return dataToUse;
+}
+
+function readCmsLengths() {
+  const cms1Length = parseInt(document.getElementById('cmsForwardInput1')?.value, 10) || 1;
+  const cms2Length = parseInt(document.getElementById('cmsForwardInput2')?.value, 10) || 1;
+  return { cms1Length, cms2Length };
+}
+
+function renderForwardBaseTable(container, dataToUse) {
+  container.innerHTML = '';
+  const FWDDataHTML = processData(dataToUse);
+  container.innerHTML = FWDDataHTML;
+
+  const table = container.querySelector('#dataTable');
+  if (!table) {
+    console.error('Table not found in FWDDataContainer.');
+    return null;
+  }
+
+  if (table.rows.length < 2) {
+    console.error('No data rows found in the table.');
+    return null;
+  }
+
+  return table;
+}
+
+function extractSwapCurveFromTable(table) {
+  const rows = Array.from(table.rows);
+  const headers = Array.from(rows[0].cells).map((cell) => cell.textContent.trim());
+
+  const ratesIndex = headers.indexOf('RATES');
+  const yearIndex = headers.indexOf('YEAR');
+
+  if (ratesIndex === -1 || yearIndex === -1) {
+    console.error("Column 'RATES' or 'YEAR' not found in the table!");
+    return { swapRates: [], swapYears: [] };
+  }
+
+  const dataRows = rows.slice(1);
+
+  const swapRates = dataRows.map((row) => {
+    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
+    return parseFloat(rowData[ratesIndex].replace('%', ''));
+  });
+
+  const swapYears = dataRows.map((row) => {
+    const rowData = Array.from(row.cells).map((cell) => cell.textContent.trim());
+    return parseInt(rowData[yearIndex].replace('Y', ''), 10);
+  });
+
+  if (!swapRates.length || !swapYears.length) {
+    console.error('Failed to extract swap rates or years from data table.');
+  }
+
+  return { swapRates, swapYears };
+}
+
+const INTERPOLATION_POINTS = [
+  { startYear: 15, endYear: 20, startIndex: 14, endIndex: 15 },
+  { startYear: 20, endYear: 25, startIndex: 19, endIndex: 20 },
+  { startYear: 25, endYear: 30, startIndex: 24, endIndex: 25 },
+];
+
+function enrichSwapCurve(swapRates, swapYears, applyCubicSpline) {
+  // lineare Einfügung der Zwischenjahre
+  INTERPOLATION_POINTS.forEach(({ startYear, endYear, startIndex, endIndex }) => {
+    const interpolatedRates = linearInterpolateRates(
+      swapRates,
+      startYear,
+      endYear,
+      startIndex,
+      endIndex
+    );
+
+    interpolatedRates.forEach(({ year, rate }, i) => {
+      swapYears.splice(startIndex + 1 + i, 0, year);
+      swapRates.splice(startIndex + 1 + i, 0, rate);
+    });
+  });
+
+  if (applyCubicSpline) {
+    const cubicSplineRates = monotonicCubicInterpolate(swapRates, 1, 30);
+    cubicSplineRates.forEach(({ year, rate }) => {
+      const index = year - 1;
+      swapRates[index] = rate;
+    });
+  }
+
+  const sortedData = swapYears
+    .map((year, index) => ({ year, rate: swapRates[index] }))
+    .sort((a, b) => a.year - b.year);
+
+  return {
+    swapYears: sortedData.map((item) => item.year),
+    swapRates: sortedData.map((item) => item.rate),
+  };
+}
+
+function computeCmsForwards(swapRates, cms1Length, cms2Length) {
+  const forwardRatesCMS1 = calculateDynamicCMSForwardRates(swapRates, cms1Length).forwardRates;
+  const forwardRatesCMS2 = calculateDynamicCMSForwardRates(swapRates, cms2Length).forwardRates;
+  return { forwardRatesCMS1, forwardRatesCMS2 };
+}
+
+// function rebuildForwardTableWithCms(
+//   table,
+//   swapYears,
+//   swapRates,
+//   forwardRatesCMS1,
+//   forwardRatesCMS2,
+//   cms1Length,
+//   cms2Length
+// ) {
+//   let headerRow = table.querySelector('tr');
+//   if (!headerRow) {
+//     console.error('Table header row is missing.');
+//     return;
+//   }
+
+//   while (headerRow.cells.length < 5) {
+//     headerRow.appendChild(document.createElement('th'));
+//   }
+//   headerRow.cells[3].textContent = `CMS1 (${cms1Length})`;
+//   headerRow.cells[4].textContent = `CMS2 (${cms2Length})`;
+
+//   // alte Zeilen löschen
+//   while (table.rows.length > 1) {
+//     table.deleteRow(1);
+//   }
+
+//   swapYears.forEach((year, index) => {
+//     const cms1Value = forwardRatesCMS1[index - 1]
+//       ? forwardRatesCMS1[index - 1].toFixed(3) + '%'
+//       : 'N/A';
+//     const cms2Value = forwardRatesCMS2[index - 1]
+//       ? forwardRatesCMS2[index - 1].toFixed(3) + '%'
+//       : 'N/A';
+
+//     const newRow = document.createElement('tr');
+//     newRow.innerHTML = `
+//       <td>swap</td>
+//       <td>${year}Y</td>
+//       <td>${swapRates[index].toFixed(3)}%</td>
+//       <td>${cms1Value}</td>
+//       <td>${cms2Value}</td>
+//     `;
+//     table.appendChild(newRow);
+//   });
+// }
+function rebuildForwardTableWithCms(
+  table,
+  swapYears,
+  swapRates,
+  forwardRatesCMS1,
+  forwardRatesCMS2,
+  cms1Length,
+  cms2Length
+) {
+  // 1) Header sauber holen: zuerst thead, sonst erste tr im table
+  let headerRow =
+    table.querySelector('thead tr') ||
+    table.querySelector('tr');
+
+  if (!headerRow) {
+    console.error('Table header row is missing.');
+    return;
+  }
+
+  // Header auf 5 Spalten erweitern
+  while (headerRow.cells.length < 5) {
+    headerRow.appendChild(document.createElement('th'));
+  }
+  headerRow.cells[3].textContent = `CMS1 (${cms1Length})`;
+  headerRow.cells[4].textContent = `CMS2 (${cms2Length})`;
+
+  // 2) Body-Teil gezielt bearbeiten
+  let tbody = table.querySelector('tbody');
+  if (!tbody) {
+    // falls processData keinen tbody angelegt hat, einen erzeugen
+    tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+  }
+
+  // alte Datenzeilen im tbody löschen
+  while (tbody.firstChild) {
+    tbody.removeChild(tbody.firstChild);
+  }
+
+  // 3) Neue Datenzeilen ins tbody einfügen
+  swapYears.forEach((year, index) => {
+    const cms1Value = forwardRatesCMS1[index - 1]
+      ? forwardRatesCMS1[index - 1].toFixed(3) + '%'
+      : 'N/A';
+    const cms2Value = forwardRatesCMS2[index - 1]
+      ? forwardRatesCMS2[index - 1].toFixed(3) + '%'
+      : 'N/A';
+
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+      <td>swap</td>
+      <td>${year}Y</td>
+      <td>${swapRates[index].toFixed(3)}%</td>
+      <td>${cms1Value}</td>
+      <td>${cms2Value}</td>
+    `;
+    tbody.appendChild(newRow);
+  });
+}
+
+
+function createForwardDatasets(
+  swapYears,
+  swapRates,
+  forwardRatesCMS1,
+  forwardRatesCMS2,
+  cms1Length,
+  cms2Length
+) {
+  const originalSwapDataset = {
+    label: 'Original Swap Rates',
+    data: swapYears.map((year, index) => ({ x: `${year}Y`, y: swapRates[index] })),
+    fill: false,
+    borderColor: 'rgba(99, 132, 255, 1)',
+    tension: 0.1,
+  };
+
+  const cms1Dataset = {
+    label: `CMS1 (Length ${cms1Length})`,
+    data: forwardRatesCMS1.map((rate, index) => ({
+      x: `${swapYears[index + 1]}Y`,
+      y: rate,
+    })),
+    fill: false,
+    borderColor: 'rgba(75, 192, 192, 1)',
+    tension: 0.1,
+  };
+
+  const cms2Dataset = {
+    label: `CMS2 (Length ${cms2Length})`,
+    data: forwardRatesCMS2.map((rate, index) => ({
+      x: `${swapYears[index + 1]}Y`,
+      y: rate,
+    })),
+    fill: false,
+    borderColor: 'rgba(255, 99, 132, 1)',
+    tension: 0.1,
+  };
+
+  return [originalSwapDataset, cms1Dataset, cms2Dataset];
+}
+
+export function renderFWDChart(datasets) {
+  if (typeof FWDlineChart !== 'undefined' && FWDlineChart) {
+    FWDlineChart.destroy();
+  }
+
+  FWDlineChart = createFWDLineChart(
+    datasets,
+    'FWDlineChart',
+    'Interest Rates and Forwards',
+    3
+  );
+  FWDlineChart.update();
+}
+
+// -----------------------------------------------------
+// REFACTORED: handleFWDData (Top-Level-Flow)
+// -----------------------------------------------------
+export function handleFWDData(receivedData, applyCubicSpline) {
+  const FWDDataContainer = document.getElementById('FWDDataContainer');
+  if (!FWDDataContainer) {
+    console.error('FWDDataContainer element is not found.');
+    return;
+  }
+
+  // 1) Daten vorbereiten (Cache + selectedCurve)
+  const dataToUse = prepareForwardData(receivedData);
+  if (!dataToUse) return;
+
+  // 2) CMS-Längen einlesen
+  const { cms1Length, cms2Length } = readCmsLengths();
+
+  // 3) Basistabelle rendern
+  const table = renderForwardBaseTable(FWDDataContainer, dataToUse);
+  if (!table) return;
+
+  // 4) Swap-Kurve aus Tabelle ziehen
+  let { swapRates, swapYears } = extractSwapCurveFromTable(table);
+  if (!swapRates.length || !swapYears.length) return;
+
+  // 5) Interpolation + optional Spline
+  ({ swapRates, swapYears } = enrichSwapCurve(swapRates, swapYears, applyCubicSpline));
+
+  // 6) CMS-Forwards berechnen
+  const { forwardRatesCMS1, forwardRatesCMS2 } = computeCmsForwards(
+    swapRates,
+    cms1Length,
+    cms2Length
+  );
+
+  // 7) Tabelle inkl. CMS-Spalten neu aufbauen
+  rebuildForwardTableWithCms(
+    table,
+    swapYears,
+    swapRates,
+    forwardRatesCMS1,
+    forwardRatesCMS2,
+    cms1Length,
+    cms2Length
+  );
+
+  // 8) Datasets für Chart erstellen
+  const datasets = createForwardDatasets(
+    swapYears,
+    swapRates,
+    forwardRatesCMS1,
+    forwardRatesCMS2,
+    cms1Length,
+    cms2Length
+  );
+
+  // 9) Chart rendern
+  renderFWDChart(datasets);
+
+  // 10) Preview informieren
+  notifyRiskPreview();
+}
+
+// -----------------------------------------------------
+// Bestehende Helper-Funktionen (unverändert)
+// -----------------------------------------------------
+
+function linearInterpolateRates(swapRates, startYear, endYear, startIndex, endIndex) {
+  const interpolatedRates = [];
+
+  const x1 = startYear;
+  const y1 = swapRates[startIndex];
+  const x2 = endYear;
+  const y2 = swapRates[endIndex];
+
+  for (let i = startYear + 1; i < endYear; i++) {
+    const interpolatedRate = y1 + ((i - x1) / (x2 - x1)) * (y2 - y1);
+    interpolatedRates.push({ year: i, rate: interpolatedRate });
+  }
+
+  return interpolatedRates;
+}
+
+function piecewiseLinearInterpolate(swapRates, startYear, endYear, startIndex, endIndex) {
+  const interpolatedRates = [];
+
+  const x1 = startYear;
+  const y1 = swapRates[startIndex];
+  const x2 = endYear;
+  const y2 = swapRates[endIndex];
+
+  for (let i = startYear + 1; i < endYear; i++) {
+    const rate = y1 + ((i - x1) / (x2 - x1)) * (y2 - y1);
+    interpolatedRates.push({ year: i, rate: parseFloat(rate.toFixed(3)) });
+  }
+
+  return interpolatedRates;
+}
+
+// Function for cubic spline interpolation 
+function monotonicCubicInterpolate(swapRates, startYear, endYear) {
+  const n = endYear - startYear;
+  const a = swapRates.slice(startYear - 1, endYear); // Slicing swapRates based on the range
+  const b = Array(n).fill(0);
+  const d = Array(n).fill(0);
+  const c = Array(n + 1).fill(0);
+
+  console.log('Starting monotonic cubic interpolation');
+  console.log(`Range of years: ${startYear} to ${endYear}`);
+  console.log('Initial swap rates (a):', a);
+
+  // Slopes between points
+  const slopes = [];
+  for (let i = 0; i < n; i++) {
+    slopes[i] = a[i + 1] - a[i];
+    console.log(`Slope between ${startYear + i}Y and ${startYear + i + 1}Y:`, slopes[i]);
+  }
+
+  // Initialize tangents to prevent overshooting
+  const tangents = [slopes[0]];
+  for (let i = 1; i < n - 1; i++) {
+    const slope = slopes[i];
+    if (slope * slopes[i - 1] <= 0) {
+      tangents[i] = 0; // Flat if change in slope direction
+      console.log(`Tangent set to 0 at ${startYear + i}Y due to slope direction change`);
+    } else {
+      tangents[i] = (slopes[i - 1] + slope) / 2;
+      console.log(
+        `Tangent at ${startYear + i}Y (average of adjacent slopes):`,
+        tangents[i]
+      );
+    }
+  }
+  tangents.push(slopes[n - 2]);
+
+  // Calculate the coefficients
+  for (let i = 0; i < n; i++) {
+    const t = tangents[i];
+    const t1 = tangents[i + 1];
+    b[i] = a[i];
+    c[i] = t;
+    d[i] = 3 * slopes[i] - 2 * t - t1;
+    c[i] = t + t1 - 2 * slopes[i];
+
+    console.log(`Coefficients for interval starting at ${startYear + i}Y:`);
+    console.log(`  a: ${a[i]}`);
+    console.log(`  b: ${b[i]}`);
+    console.log(`  c: ${c[i]}`);
+    console.log(`  d: ${d[i]}`);
+  }
+
+  // Generate interpolated values, with direct assignment for known years
+  const interpolatedRates = [];
+  const knownYears = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 25, 30];
+
+  for (let i = 0; i < n; i++) {
+    const year = startYear + i;
+
+    // Directly assign known rates for 15Y, 20Y, 25Y, and 30Y
+    const rate = knownYears.includes(year)
+      ? swapRates[year - 1]
+      : b[i] + c[i] * (year - startYear) + d[i] * Math.pow(year - startYear, 2);
+
+    interpolatedRates.push({ year, rate: parseFloat(rate.toFixed(3)) });
+    console.log(`Interpolated rate for ${year}Y:`, rate);
+  }
+
+  console.log('Completed monotonic cubic interpolation\n');
+  return interpolatedRates;
+}
+
+// Function to bootstrap discount factors and calculate forward rates
+function calculateForwardRates(swapRates) {
+  const discountFactors = [];
+  const forwardRates = [];
+
+  swapRates.forEach((swapRate, n) => {
+    const S_n = swapRate / 100; // Convert percentage to decimal
+    let sumDiscountFactors = 0;
+
+    for (let i = 0; i < n; i++) {
+      sumDiscountFactors += discountFactors[i];
+    }
+
+    const D_n = (1 - S_n * sumDiscountFactors) / (1 + S_n);
+    discountFactors.push(D_n);
+
+    if (n > 0) {
+      const fwdRate = discountFactors[n - 1] / D_n - 1;
+      forwardRates.push(fwdRate * 100); // Convert back to percentage
+    }
+  });
+
+  return { forwardRates };
+}
+
+// CMS
+function calculateDynamicCMSForwardRates(swapRates, forward_length) {
+  if (!Array.isArray(swapRates) || swapRates.length === 0) {
+    throw new Error('swapRates must be a non-empty array');
+  }
+  if (typeof forward_length !== 'number' || forward_length < 1) {
+    throw new Error('forward_length must be a positive integer');
+  }
+
+  const discountFactors = [];
+  const forwardSwapRates = [];
+
+  // First pass: Calculate all discount factors
+  swapRates.forEach((swapRate, n) => {
+    if (typeof swapRate !== 'number' || isNaN(swapRate)) {
+      console.warn(`Invalid swap rate at index ${n}:`, swapRate);
+      return;
+    }
+
+    const S_n = swapRate / 100; // Convert percentage to decimal
+    let sumDiscountFactors = 0;
+
+    for (let i = 0; i < n; i++) {
+      if (typeof discountFactors[i] === 'number') {
+        sumDiscountFactors += discountFactors[i];
+      } else {
+        console.warn(`Invalid discount factor at index ${i}:`, discountFactors[i]);
+      }
+    }
+
+    const D_n = (1 - S_n * sumDiscountFactors) / (1 + S_n);
+    if (isNaN(D_n)) {
+      console.warn(`NaN discount factor calculated for year ${n + 1}`);
+    }
+    discountFactors.push(D_n);
+  });
+
+  // Second pass: Calculate forward swap rates using the precomputed discount factors
+  swapRates.forEach((swapRate, n) => {
+    if (n + forward_length < swapRates.length) {
+      const sliceStart = n + 1;
+      const sliceEnd = n + forward_length + 1;
+      const discountFactorsSlice = discountFactors.slice(sliceStart, sliceEnd);
+
+      const sumOfDiscountFactors = discountFactorsSlice.reduce((a, b) => a + b, 0);
+
+      if (sumOfDiscountFactors === 0) {
+        console.warn(
+          `Sum of discount factors is zero for period starting at year ${n + 1}`
+        );
+      }
+
+      const forwardSwapRate =
+        ((discountFactors[n] - discountFactors[n + forward_length]) /
+          sumOfDiscountFactors) *
+        100;
+      forwardSwapRates.push(forwardSwapRate);
+    }
+  });
+
+  return { forwardRates: forwardSwapRates };
+}
+
+export function handleSwapForwardCurve() {
+  const yearsForwardInputEl = document.getElementById('yearsForwardInput');
+  if (!yearsForwardInputEl) {
+    console.warn('handleSwapForwardCurve: #yearsForwardInput not found');
+    return;
+  }
+
+  const yearsForwardValue = parseInt(yearsForwardInputEl.value, 10);
+  if (isNaN(yearsForwardValue) || yearsForwardValue < 1) {
+    console.warn('handleSwapForwardCurve: invalid yearsForwardValue', yearsForwardInputEl.value);
+    return;
+  }
+
+  const container = document.getElementById('FWDDataContainer');
+  if (!container) {
+    console.warn('handleSwapForwardCurve: #FWDDataContainer not found');
+    return;
+  }
+
+  const table = container.querySelector('#dataTable');
+  if (!table) {
+    console.warn('handleSwapForwardCurve: #dataTable not found in FWDDataContainer');
+    return;
+  }
+
+  const rows = Array.from(table.rows);
+  if (rows.length < 2) {
+    console.warn('handleSwapForwardCurve: no data rows in table');
+    return;
+  }
+
+  // swapRates aus Spalte 3, swapYears aus Spalte 2
+  const swapRates = rows.slice(1).map(row => {
+    const rowData = Array.from(row.cells).map(c => c.textContent.trim());
+    return parseFloat(rowData[2].replace('%', ''));
+  });
+
+  const swapYears = rows.slice(1).map(row => {
+    const rowData = Array.from(row.cells).map(c => c.textContent.trim());
+    return rowData[1]; // e.g. "1Y", "2Y"
+  });
+
+  if (swapRates.length !== swapYears.length) {
+    console.error('handleSwapForwardCurve: Mismatch between swap rates and years.');
+    return;
+  }
+
+  const forwardRates = calculateSwapForwardCurve(swapRates, yearsForwardValue);
+  if (!Array.isArray(forwardRates) || !forwardRates.length) {
+    console.warn('handleSwapForwardCurve: no forwardRates calculated');
+    return;
+  }
+
+  const forwardSwapDataset = {
+    label: `Forward Swap Rates (from year ${yearsForwardValue})`,
+    data: forwardRates.map((rate, index) => ({
+      x: swapYears[index + yearsForwardValue],  // align to forward years
+      y: rate,
+    })),
+    fill: false,
+    borderColor: 'rgba(255, 159, 64, 1)',
+    tension: 0.1,
+  };
+
+  const originalSwapDataset = {
+    label: 'Original Swap Rates',
+    data: swapRates.map((rate, index) => ({
+      x: swapYears[index],
+      y: rate,
+    })),
+    fill: false,
+    borderColor: 'rgba(75, 192, 192, 1)',
+    tension: 0.1,
+  };
+
+  // alten Chart ggf. zerstören
+  if (typeof forwardSwapChart !== 'undefined' && forwardSwapChart) {
+    forwardSwapChart.destroy();
+  }
+
+  forwardSwapChart = createForwardSwapChart(
+    [originalSwapDataset, forwardSwapDataset],
+    'FWDforwardCurveChart',
+    'Swap and Forward Curves',
+    3
+  );
+
+  notifyRiskPreview('forwardCurve');
+}
+
+
+function calculateSwapForwardCurve(swapRates, years_forward) {
+  const discountFactors = [];
+  const forwardSwapRates = [];
+
+  swapRates.forEach((swapRate, n) => {
+    const S_n = swapRate / 100;
+    let sumDiscountFactors = 0;
+
+    for (let i = 0; i < n; i++) {
+      sumDiscountFactors += discountFactors[i];
+    }
+
+    const D_n = (1 - S_n * sumDiscountFactors) / (1 + S_n);
+    discountFactors.push(D_n);
+
+    if (n >= years_forward) {
+      const sumOfDiscountFactors = discountFactors
+        .slice(years_forward, n + 1)
+        .reduce((a, b) => a + b, 0);
+
+      const forwardSwapRate =
+        ((discountFactors[years_forward - 1] - D_n) / sumOfDiscountFactors) *
+        100;
+      forwardSwapRates.push(forwardSwapRate);
+    }
+  });
+
+  return forwardSwapRates;
+}

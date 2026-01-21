@@ -1,4 +1,4 @@
-// FRONT_END/bootstrap/bootstrapBindings.js
+﻿// FRONT_END/bootstrap/bootstrapBindings.js
 
 import { bindDropdowns } from '../UI/bindDropdowns.js';
 import { bindForwardsButtons } from '../MARKET_DATA/FORWARDS/forwardsUI.js';
@@ -11,7 +11,7 @@ import { installBulkUpdateBridge } from '../UI/bulkUpdateBridge.js';
 
 import { installDealsEnhancerBridge } from '../OFFERS/dealsEnhancerBridge.js';
 
-import { initializeTabs } from '../../utils/tabs.js';
+import { initializeTabs } from '../../../utils/tabs.js';
 
 export function bootstrapBindings(appState, deps) {
   const {
@@ -79,3 +79,4 @@ export function bootstrapBindings(appState, deps) {
   installBulkUpdateBridge();
   installDealsEnhancerBridge({ appState });
 }
+

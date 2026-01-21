@@ -1,1 +1,1 @@
-﻿import '../../FRONT_END/app/initApp.js';
+﻿import './bootstrap.js';
