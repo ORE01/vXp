@@ -3,6 +3,8 @@ import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
 import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
 import { bootstrapBridges } from './bootstrap/bootstrapBridges.js';
 import { bootstrapPython } from './bootstrap/bootstrapPython.js';
+import { bootstrapIPC } from './bootstrap/bootstrapIPC.js';
+
 
 
 
@@ -191,12 +193,14 @@ const {
     handleSwaptionSmileData,
     handleSwaptionCubeSurfaceData,
 
-    customerHandlers,
-    ratesHandlers,
-    forwardsHandlers,
-    issuerProdHandlers,
-    dealsActions,
-    analyseHandlers,
+    handleMvarInputData,
+
+    ...issuerProdHandlers,
+    ...customerHandlers,
+    ...ratesHandlers,
+    ...forwardsHandlers,
+    ...dealsActions,
+    ...analyseHandlers,
 
     handleFuturePredictions,
     handleMLTestData,
@@ -206,6 +210,7 @@ const {
     createTSModals,
     observePanelTsOpen,
   });
+
 
 
   bootstrapBindings(appState, {
@@ -235,70 +240,6 @@ const {
 
 function bootstrapCreateAppState() {
   return new AppState();
-}
-
-function bootstrapIPC(deps) {
-  const {
-    api,
-    appState,
-    panelRenderState,
-    initAllPanelsLazyRender,
-    initMarketDataChartsAutoRefresh,
-
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-
-    customerHandlers,
-    ratesHandlers,
-    forwardsHandlers,
-    issuerProdHandlers,
-    dealsActions,
-    analyseHandlers,
-
-    handleFuturePredictions,
-    handleMLTestData,
-    handleMLTrainedModels,
-    handleMLModels,
-
-    createTSModals,
-    observePanelTsOpen,
-  } = deps;
-
-  installIpcBridge({
-    api: window.api,
-    appState,
-    panelRenderState,
-    initAllPanelsLazyRender,
-    initMarketDataChartsAutoRefresh,
-
-    // Swaption (kommt NICHT aus Handler-Objekten)
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-
-    // MVaR Input (kommt bei dir als Import)
-    handleMvarInputData,
-
-    // ✅ Handler-Objekte 1:1 reinspreadden (keine zweite Liste pflegen!)
-    ...issuerProdHandlers,
-    ...customerHandlers,
-    ...ratesHandlers,
-    ...forwardsHandlers,
-    ...dealsActions,
-    ...analyseHandlers,
-
-    // ML (freie Imports/Funktionen)
-    handleFuturePredictions,
-    handleMLTestData,
-    handleMLTrainedModels,
-    handleMLModels,
-
-    // TS (freie Imports/Funktionen)
-    createTSModals,
-    observePanelTsOpen,
-  });
-
 }
 
 function bootstrapBindings(appState, deps) {
