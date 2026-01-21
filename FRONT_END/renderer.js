@@ -1,3 +1,6 @@
+import { bootstrapStores } from './bootstrap/bootstrapStores.js';
+
+
 import { installDropdownFilterEngine } from './STATE/dropdownFilterEngine.js';
 import { installDataUpdatePipeline } from './STATE/dataUpdatePipeline.js';
 import { createPortfolioUIOrchestrator } from './STATE/portfolioUIOrchestrator.js';
@@ -217,18 +220,18 @@ function bootstrapCreateAppState() {
   return new AppState();
 }
 
-function bootstrapStores(appState) {
-  installUIStateStore({ appState });
-  installDropdownFilterEngine({ appState });
-  installPortfolioDataStore({ appState });
-  installMarketRiskStore({ appState });
-  installCreditRiskStore({ appState });
-  installMarketDataStore({ appState });
-  installProductsStore({ appState });
-  installNameListsStore({ appState });
-  installCustomerReportsStore({ appState });
-  installDataUpdatePipeline({ appState });
-}
+// function bootstrapStores(appState) {
+//   installUIStateStore({ appState });
+//   installDropdownFilterEngine({ appState });
+//   installPortfolioDataStore({ appState });
+//   installMarketRiskStore({ appState });
+//   installCreditRiskStore({ appState });
+//   installMarketDataStore({ appState });
+//   installProductsStore({ appState });
+//   installNameListsStore({ appState });
+//   installCustomerReportsStore({ appState });
+//   installDataUpdatePipeline({ appState });
+// }
 
 function bootstrapUIBasics(appState) {
   const portfolioUI = createPortfolioUIOrchestrator({ appState });
