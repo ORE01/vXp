@@ -180,71 +180,33 @@ const {
 
   bindSwaptionReadyListeners({ appState });
 
-  installIpcBridge({
+  bootstrapIPC({
     api: window.api,
     appState,
     panelRenderState,
     initAllPanelsLazyRender,
     initMarketDataChartsAutoRefresh,
 
-    // Swaption
     handleSwaptionATMData,
     handleSwaptionSmileData,
     handleSwaptionCubeSurfaceData,
 
-    // Customer / Rates / Forwards
-    handleCustomerData: customerHandlers.handleCustomerData,
-    handleCustomerTSData: customerHandlers.handleCustomerTSData,
-    handleEUSWData: ratesHandlers.handleEUSWData,
-    handleForwardData: forwardsHandlers.handleForwardData,
+    customerHandlers,
+    ratesHandlers,
+    forwardsHandlers,
+    issuerProdHandlers,
+    dealsActions,
+    analyseHandlers,
 
-    // Issuer / Product
-    handleIssuerDataInit: issuerProdHandlers.handleIssuerDataInit,
-    handleCountryLookupDataInit: issuerProdHandlers.handleCountryLookupDataInit,
-    handleCSMatrixData: issuerProdHandlers.handleCSMatrixData,
-    handleCSParameterData: issuerProdHandlers.handleCSParameterData,
-    handleRankData: issuerProdHandlers.handleRankData,
-    handleProdDataInit: issuerProdHandlers.handleProdDataInit,
-
-    // Deals
-    handleDealsNameList: dealsActions.handleDealsNameList,
-    handleOffersNameList: dealsActions.handleOffersNameList,
-    handleDealsMainData: dealsActions.handleDealsMainData,
-
-    // Portfolio
-    handlePortNameList: dealsActions.handlePortNameList,
-    handlePortfolioData: dealsActions.handlePortfolioData,
-
-    // MVaR
-    handleMvarInputData,
-    handleAllMVaRData: analyseHandlers.handleAllMVaRData,
-    handleMvarDistData: analyseHandlers.handleMvarDistData,
-    handleMvarProductData: analyseHandlers.handleMvarProductData,
-
-    // EAD
-    handleAllEADData: analyseHandlers.handleAllEADData,
-
-    // CVaR
-    initHandleCvarInput: analyseHandlers.initHandleCvarInput,
-    handleCvarInputThreshold: analyseHandlers.handleCvarInputThreshold,
-    handleAllCVaRData: analyseHandlers.handleAllCVaRData,
-
-    // Losses
-    handleAllLossData: analyseHandlers.handleAllLossData,
-
-    // ML
     handleFuturePredictions,
     handleMLTestData,
     handleMLTrainedModels,
     handleMLModels,
 
-    // TS
     createTSModals,
     observePanelTsOpen,
-
-    // PortfolioHistory
-    handlePortfolioHistoryData: analyseHandlers.handlePortfolioHistoryData,
   });
+
 
   bindDropdowns({ appState });
 
@@ -381,6 +343,102 @@ function bootstrapHandlers(appState) {
     handleSwaptionCubeSurfaceData,
   };
 }
+
+function bootstrapIPC(deps) {
+  const {
+    api,
+    appState,
+    panelRenderState,
+    initAllPanelsLazyRender,
+    initMarketDataChartsAutoRefresh,
+
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
+
+    customerHandlers,
+    ratesHandlers,
+    forwardsHandlers,
+    issuerProdHandlers,
+    dealsActions,
+    analyseHandlers,
+
+    handleFuturePredictions,
+    handleMLTestData,
+    handleMLTrainedModels,
+    handleMLModels,
+
+    createTSModals,
+    observePanelTsOpen,
+  } = deps;
+
+  installIpcBridge({
+    api,
+    appState,
+    panelRenderState,
+    initAllPanelsLazyRender,
+    initMarketDataChartsAutoRefresh,
+
+    // Swaption
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
+
+    // Customer / Rates / Forwards
+    handleCustomerData: customerHandlers.handleCustomerData,
+    handleCustomerTSData: customerHandlers.handleCustomerTSData,
+    handleEUSWData: ratesHandlers.handleEUSWData,
+    handleForwardData: forwardsHandlers.handleForwardData,
+
+    // Issuer / Product
+    handleIssuerDataInit: issuerProdHandlers.handleIssuerDataInit,
+    handleCountryLookupDataInit: issuerProdHandlers.handleCountryLookupDataInit,
+    handleCSMatrixData: issuerProdHandlers.handleCSMatrixData,
+    handleCSParameterData: issuerProdHandlers.handleCSParameterData,
+    handleRankData: issuerProdHandlers.handleRankData,
+    handleProdDataInit: issuerProdHandlers.handleProdDataInit,
+
+    // Deals
+    handleDealsNameList: dealsActions.handleDealsNameList,
+    handleOffersNameList: dealsActions.handleOffersNameList,
+    handleDealsMainData: dealsActions.handleDealsMainData,
+
+    // Portfolio
+    handlePortNameList: dealsActions.handlePortNameList,
+    handlePortfolioData: dealsActions.handlePortfolioData,
+
+    // MVaR
+    handleMvarInputData,
+    handleAllMVaRData: analyseHandlers.handleAllMVaRData,
+    handleMvarDistData: analyseHandlers.handleMvarDistData,
+    handleMvarProductData: analyseHandlers.handleMvarProductData,
+
+    // EAD
+    handleAllEADData: analyseHandlers.handleAllEADData,
+
+    // CVaR
+    initHandleCvarInput: analyseHandlers.initHandleCvarInput,
+    handleCvarInputThreshold: analyseHandlers.handleCvarInputThreshold,
+    handleAllCVaRData: analyseHandlers.handleAllCVaRData,
+
+    // Losses
+    handleAllLossData: analyseHandlers.handleAllLossData,
+
+    // ML
+    handleFuturePredictions,
+    handleMLTestData,
+    handleMLTrainedModels,
+    handleMLModels,
+
+    // TS
+    createTSModals,
+    observePanelTsOpen,
+
+    // PortfolioHistory
+    handlePortfolioHistoryData: analyseHandlers.handlePortfolioHistoryData,
+  });
+}
+
 
 
 
