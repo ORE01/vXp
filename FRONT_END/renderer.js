@@ -1,6 +1,8 @@
 import { bootstrapStores } from './bootstrap/bootstrapStores.js';
 import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
 import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
+import { bootstrapBridges } from './bootstrap/bootstrapBridges.js';
+
 
 
 
@@ -412,45 +414,6 @@ function bootstrapBindings(appState, deps) {
 
   installDealsEnhancerBridge({ appState });
 }
-
-function bootstrapBridges(appState, deps) {
-  const {
-    api,
-    ratesHandlers,
-    handlePortProdData,
-    handleProviderData,
-  } = deps;
-
-  // Für GLOBALE SZENARIEN!
-  bindGlobalChangeDelegation({
-    appState,
-    handleEUSWData: ratesHandlers.handleEUSWData,
-  });
-
-  bindClearCSScenario({
-    appState,
-    api,
-    handlePortProdData,
-  });
-
-  installMarketProvidersBridge({
-    api,
-    handleProviderData,
-  });
-
-  // Debug (optional)
-  window.appState = appState;
-
-  bindSwaptionReadyListeners({ appState });
-}
-
-
-
-
-
-
-
-
 
 
 
