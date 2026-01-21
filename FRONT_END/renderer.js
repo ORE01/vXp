@@ -148,9 +148,7 @@ const {
     handleProviderData,
   });
 
-  const { py } = installPythonBridge({
-    appState,
-
+  const { py } = bootstrapPython(appState, {
     handlePortAggData,
     handlePortProdData,
     handleMVaRData,
@@ -165,15 +163,9 @@ const {
     handleSwaptionSmileData,
     handleSwaptionCubeSurfaceData,
 
-    openPortAnalyseAndFocus: (typeof openPortAnalyseAndFocus === 'function') ? openPortAnalyseAndFocus : null,
-
     onExcelComplete: handleExcelComplete,
-
-    // optional: später wenn du UI mapping komplett rausziehst
-    // onAIColumnComplete: handleAIColumnComplete,
-
-    exposeGlobal: true, // kannst du später auf false setzen, wenn alles DI-only ist
   });
+
 
   // Debug (optional): remove later
   window.appState = appState;
@@ -407,6 +399,55 @@ function bootstrapIPC(deps) {
   });
 
 }
+
+function bootstrapPython(appState, deps) {
+  const {
+    handlePortAggData,
+    handlePortProdData,
+    handleMVaRData,
+    handleSummaryMarketRiskData,
+    handleMvarProductTable,
+    handleCVaRData,
+
+    buildCubeSurfaceGrid,
+    populateSwaptionCubeSelectors,
+
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
+
+    onExcelComplete,
+  } = deps;
+
+  const { py } = installPythonBridge({
+    appState,
+
+    handlePortAggData,
+    handlePortProdData,
+    handleMVaRData,
+    handleSummaryMarketRiskData,
+    handleMvarProductTable,
+    handleCVaRData,
+
+    buildCubeSurfaceGrid,
+    populateSwaptionCubeSelectors,
+
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
+
+    openPortAnalyseAndFocus: (typeof openPortAnalyseAndFocus === 'function') ? openPortAnalyseAndFocus : null,
+
+    onExcelComplete,
+
+    exposeGlobal: true,
+  });
+
+  installPythonProgressBarsBridge();
+
+  return { py };
+}
+
 
 
 
