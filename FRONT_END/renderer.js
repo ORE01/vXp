@@ -91,6 +91,11 @@ import { initializeTabs } from '../utils/tabs.js';
 
 import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
 
+// =========================
+// Renderer Bootstrap Sections
+// =========================
+
+
 
 let appState;
 
@@ -101,34 +106,16 @@ const panelRenderState = Object.create(null);
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  appState = new AppState();
+  appState = bootstrapCreateAppState();
 
-  installUIStateStore({ appState });          // 1) UI state sofort
-  installDropdownFilterEngine({ appState });  // 2) dropdown engine
-  installPortfolioDataStore({ appState });    // 3) core data stores
-  installMarketRiskStore({ appState });
-  installCreditRiskStore({ appState });
-  installMarketDataStore({ appState });
-  installProductsStore({ appState });
-  installNameListsStore({ appState });
-  installCustomerReportsStore({ appState });
-  installDataUpdatePipeline({ appState });
+  bootstrapStores(appState);
+
+  bootstrapUIBasics(appState);
 
 
-    const portfolioUI = createPortfolioUIOrchestrator({ appState });
 
-  // ✅ AppState delegiert nur noch (Backwards compatible)
-  appState.handlePortTable = portfolioUI.renderPortTable;
-  appState.handleOffersTable = portfolioUI.renderOffersTable;
-  const portfolioDropdownUI = createPortfolioDropdownUI({ appState });
-  const marketRiskRefresh   = createMarketRiskRefresh({ appState });
 
-  // Backwards compatible: wenn du irgendwo noch appState.* aufrufst
-  appState.updateDropdownOptions    = portfolioDropdownUI.updateDropdownOptions;
-  appState.fetchAndHandlePortData   = portfolioDropdownUI.fetchAndHandlePortData;
-  appState.getFormElementsForContainer = portfolioDropdownUI.getFormElementsForContainer;
 
-  appState.refreshMarketRiskUI = marketRiskRefresh.refreshMarketRiskUI;
 
   const issuerProdHandlers = createIssuerProductHandlers({ appState });
   const customerHandlers = createCustomerHandlers({ appState });
@@ -330,6 +317,46 @@ document.addEventListener('DOMContentLoaded', () => {
   installDealsEnhancerBridge({ appState });
 
 });
+
+function bootstrapCreateAppState() {
+  return new AppState();
+}
+
+function bootstrapStores(appState) {
+  installUIStateStore({ appState });
+  installDropdownFilterEngine({ appState });
+  installPortfolioDataStore({ appState });
+  installMarketRiskStore({ appState });
+  installCreditRiskStore({ appState });
+  installMarketDataStore({ appState });
+  installProductsStore({ appState });
+  installNameListsStore({ appState });
+  installCustomerReportsStore({ appState });
+  installDataUpdatePipeline({ appState });
+}
+
+function bootstrapUIBasics(appState) {
+  const portfolioUI = createPortfolioUIOrchestrator({ appState });
+
+  // ✅ AppState delegiert nur noch (Backwards compatible)
+  appState.handlePortTable = portfolioUI.renderPortTable;
+  appState.handleOffersTable = portfolioUI.renderOffersTable;
+
+  const portfolioDropdownUI = createPortfolioDropdownUI({ appState });
+  const marketRiskRefresh   = createMarketRiskRefresh({ appState });
+
+  // Backwards compatible: wenn du irgendwo noch appState.* aufrufst
+  appState.updateDropdownOptions = portfolioDropdownUI.updateDropdownOptions;
+  appState.fetchAndHandlePortData = portfolioDropdownUI.fetchAndHandlePortData;
+  appState.getFormElementsForContainer = portfolioDropdownUI.getFormElementsForContainer;
+
+  appState.refreshMarketRiskUI = marketRiskRefresh.refreshMarketRiskUI;
+
+  return { portfolioUI, portfolioDropdownUI, marketRiskRefresh };
+}
+
+
+
 
 
 function initAllPanelsLazyRender() {
