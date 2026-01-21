@@ -4,6 +4,7 @@ import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
 import { bootstrapBridges } from './bootstrap/bootstrapBridges.js';
 import { bootstrapPython } from './bootstrap/bootstrapPython.js';
 import { bootstrapIPC } from './bootstrap/bootstrapIPC.js';
+import { bootstrapBindings } from './bootstrap/bootstrapBindings.js';
 
 
 
@@ -241,76 +242,6 @@ const {
 function bootstrapCreateAppState() {
   return new AppState();
 }
-
-function bootstrapBindings(appState, deps) {
-  const {
-    dealsActions,
-    py,
-
-    handleFWDData,
-    handleIRSensData,
-    handleCSSensData,
-
-    handleHistoricMetricsAddClick,
-    handleExcelImport,
-
-    startOfferImport,
-    handleSubmitMatching,
-    quickImportWithStandardMapping,
-
-    updateTooltipsFn,
-
-    openPanel,
-
-    setupCustomerReportsPresetUI,
-  } = deps;
-
-  bindDropdowns({ appState });
-
-  bindForwardsButtons({
-    appState,
-    handleFWDData,
-    bindings: [
-      { buttonId: 'applyCMSButton', applyCubicSpline: false },
-      { buttonId: 'applyCMSCubicButton', applyCubicSpline: true },
-    ],
-  });
-
-  bindSwaptionDropdownListeners();
-
-  bindAppButtons({
-    dealsActions,
-    py,
-
-    handleHistoricMetricsAddClick,
-    handleExcelImport,
-
-    handleSubmitMatchedColumns:
-      (typeof handleSubmitMatchedColumns === 'function') ? handleSubmitMatchedColumns : null,
-
-    startOfferImport,
-    handleSubmitMatching,
-    quickImportWithStandardMapping,
-
-    updateTooltipsFn,
-  });
-
-  installReportsUIBridge({
-    openPanel,
-    appState,
-    handleIRSensData,
-    handleCSSensData,
-  });
-
-  initializeTabs();
-  setupReportsEnterLeaveBridge({ setupCustomerReportsPresetUI });
-
-  installBulkUpdateBridge();
-
-  installDealsEnhancerBridge({ appState });
-}
-
-
 
 function initAllPanelsLazyRender() {
   initPortfolioPanelsLazyRender({ panelRenderState });
