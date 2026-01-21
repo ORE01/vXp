@@ -200,50 +200,28 @@ const {
   });
 
 
-  bindDropdowns({ appState });
-
-  bindForwardsButtons({
-    appState,
-    handleFWDData,
-    bindings: [
-      { buttonId: 'applyCMSButton', applyCubicSpline: false },
-      { buttonId: 'applyCMSCubicButton', applyCubicSpline: true },
-    ],
-  });
-
-  bindSwaptionDropdownListeners();
-
-  bindAppButtons({
+  bootstrapBindings(appState, {
     dealsActions,
     py,
 
-  handleHistoricMetricsAddClick,
-  handleExcelImport,
-
-  
-  handleSubmitMatchedColumns: (typeof handleSubmitMatchedColumns === 'function') ? handleSubmitMatchedColumns : null,
-  startOfferImport,
-  handleSubmitMatching,
-  quickImportWithStandardMapping,
-
-  updateTooltipsFn: updateTooltips, // deine bestehende Funktion
-  });
-
-  installReportsUIBridge({
-    openPanel,
-    appState,
+    handleFWDData,
     handleIRSensData,
     handleCSSensData,
+
+    handleHistoricMetricsAddClick,
+    handleExcelImport,
+
+    startOfferImport,
+    handleSubmitMatching,
+    quickImportWithStandardMapping,
+
+    updateTooltipsFn: updateTooltips,
+
+    openPanel,
+
+    setupCustomerReportsPresetUI,
   });
 
-  initializeTabs();
-  setupReportsEnterLeaveBridge({ setupCustomerReportsPresetUI });
-  installBulkUpdateBridge();
-
-  installPythonProgressBarsBridge();
-
-
-  installDealsEnhancerBridge({ appState });
 
 });
 
@@ -447,6 +425,76 @@ function bootstrapPython(appState, deps) {
 
   return { py };
 }
+
+function bootstrapBindings(appState, deps) {
+  const {
+    dealsActions,
+    py,
+
+    handleFWDData,
+    handleIRSensData,
+    handleCSSensData,
+
+    handleHistoricMetricsAddClick,
+    handleExcelImport,
+
+    startOfferImport,
+    handleSubmitMatching,
+    quickImportWithStandardMapping,
+
+    updateTooltipsFn,
+
+    openPanel,
+
+    setupCustomerReportsPresetUI,
+  } = deps;
+
+  bindDropdowns({ appState });
+
+  bindForwardsButtons({
+    appState,
+    handleFWDData,
+    bindings: [
+      { buttonId: 'applyCMSButton', applyCubicSpline: false },
+      { buttonId: 'applyCMSCubicButton', applyCubicSpline: true },
+    ],
+  });
+
+  bindSwaptionDropdownListeners();
+
+  bindAppButtons({
+    dealsActions,
+    py,
+
+    handleHistoricMetricsAddClick,
+    handleExcelImport,
+
+    handleSubmitMatchedColumns:
+      (typeof handleSubmitMatchedColumns === 'function') ? handleSubmitMatchedColumns : null,
+
+    startOfferImport,
+    handleSubmitMatching,
+    quickImportWithStandardMapping,
+
+    updateTooltipsFn,
+  });
+
+  installReportsUIBridge({
+    openPanel,
+    appState,
+    handleIRSensData,
+    handleCSSensData,
+  });
+
+  initializeTabs();
+  setupReportsEnterLeaveBridge({ setupCustomerReportsPresetUI });
+
+  installBulkUpdateBridge();
+
+  installDealsEnhancerBridge({ appState });
+}
+
+
 
 
 
