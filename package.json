@@ -2,30 +2,44 @@
   "name": "merciful-front-are-3a6cn",
   "productName": "valueXpro",
   "description": "Risk Management Application",
-  "keywords": [],
-  "main": "./zzzBACK_END/main.js",
   "version": "1.0.0",
   "author": "ronal",
+  "main": "./src/main/index.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
   },
   "build": {
+    "appId": "com.example.valueXpro",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!dist.zip",
+      "!venv/**",
+      "!docs/**",
+      "!*.code-workspace",
+      "!renderer_py-flow.txt",
+      "!logfile.txt",
+      "!files/**"
+    ],
+    "extraResources": [
+      {
+        "from": "files",
+        "to": "files"
+      },
+      {
+        "from": "bin/main",
+        "to": "bin/main"
+      }
+    ],
     "win": {
-      "icon": "./zzzBACK_END/vXp.ico",
-      "asar": true,
-      "asarUnpack": [
-        "files/UNI.db",
-        "files/AGG_Timeseries.xlsx",
-        "files/HISTORIC_DATA.xlsm",
-        "files/UNI_DATA.xlsm"
-      ],
-      "extraResources": [
-        {
-          "from": "./bin/main/",
-          "to": "./bin/main/"
-        }
-      ]
+      "target": "nsis",
+      "artifactName": "valueXpro.${ext}",
+      "icon": "src/main/vXp.ico"
     }
   },
   "dependencies": {
@@ -50,3 +64,4 @@
     "electron-builder": "^24.4.0"
   }
 }
+

@@ -1,12 +1,19 @@
 {
-    "appId": "com.example.valueXpro",
-    "directories": {
-      "output": "dist"
-    },
-    "win": {
-      "target": "nsis",
-      "artifactName": "valueXpro.${ext}"
+  "appId": "com.example.valueXpro",
+  "directories": {
+    "output": "dist"
+  },
+  "asar": true,
+  "extraResources": [
+    {
+      "from": "files",
+      "to": "files"
     }
+  ],
+  "win": {
+    "target": "nsis",
+    "artifactName": "valueXpro.${ext}"
   }
-  
+}
+
   

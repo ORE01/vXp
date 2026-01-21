@@ -46,3 +46,7 @@ temp_folder/
 # Files
 # -----------------------
 logfile.txt
+
+# archives
+_archive/
+
