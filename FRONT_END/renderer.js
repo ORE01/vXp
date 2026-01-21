@@ -117,43 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  const issuerProdHandlers = createIssuerProductHandlers({ appState });
-  const customerHandlers = createCustomerHandlers({ appState });
-  const dealsActions = createDealsPortfolioActions({
-    appState,
-    api: window.api,
-    showMessageBox,
-    showConfirmationBox,
-    handleModalAction,
-  });
+const handlers = bootstrapHandlers(appState);
 
-  const ratesHandlers = createRatesHandlers({ appState });
-
-  appState.handleCSMatrixData = handleCSMatrixData;
-  appState.handleCSParameterData = handleCSParameterData;
-
-
-  // ✅ Swaption Handler sofort erzeugen (vor jeder Nutzung!)
-  const {
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-  } = createSwaptionDataHandlers({ appState });
-
-  const forwardsHandlers = createForwardsHandlers({ appState });
-
-
-  const analyseHandlers = createAnalysePortfolioHandlers({
-    appState,
-
-    handleMVaRData,
-    handleCVaRData,
-    handleEADData,
-    handleLossIssuerMainData,
-
-    handleCvarInput,
-    handleCvarInputThresholdView,
-  });
 
 
   // Für GLOBALE SZENARIEN!
@@ -354,6 +319,59 @@ function bootstrapUIBasics(appState) {
 
   return { portfolioUI, portfolioDropdownUI, marketRiskRefresh };
 }
+
+function bootstrapHandlers(appState) {
+  const issuerProdHandlers = createIssuerProductHandlers({ appState });
+  const customerHandlers = createCustomerHandlers({ appState });
+
+  const dealsActions = createDealsPortfolioActions({
+    appState,
+    api: window.api,
+    showMessageBox,
+    showConfirmationBox,
+    handleModalAction,
+  });
+
+  const ratesHandlers = createRatesHandlers({ appState });
+
+  // Backwards compatibility
+  appState.handleCSMatrixData = handleCSMatrixData;
+  appState.handleCSParameterData = handleCSParameterData;
+
+  const {
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
+  } = createSwaptionDataHandlers({ appState });
+
+  const forwardsHandlers = createForwardsHandlers({ appState });
+
+  const analyseHandlers = createAnalysePortfolioHandlers({
+    appState,
+
+    handleMVaRData,
+    handleCVaRData,
+    handleEADData,
+    handleLossIssuerMainData,
+
+    handleCvarInput,
+    handleCvarInputThresholdView,
+  });
+
+  return {
+    issuerProdHandlers,
+    customerHandlers,
+    dealsActions,
+    ratesHandlers,
+    forwardsHandlers,
+    analyseHandlers,
+
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionCubeSurfaceData,
+  };
+}
+
 
 
 
