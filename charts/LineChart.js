@@ -772,7 +772,18 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
 
 
 export function createCSLineChart(data, chartConfig) {
-  const ctx = document.getElementById('CS_ChartCanvas').getContext('2d');
+  const canvas = document.getElementById('CS_ChartCanvas');
+  if (!canvas) {
+    console.warn('[Chart] CS_ChartCanvas not found – skip createCSLineChart');
+    return;
+  }
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    console.warn('[Chart] No 2D context for CS_ChartCanvas – skip');
+    return;
+  }
+
   const lineChart = new Chart(ctx, {
     type: 'line',
     data: data,
@@ -925,11 +936,20 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
 
 
 export function createRatesLineChart(datasets, chartName, chartTitle, pointRadius) {
-  const ctx = document.getElementById(chartName).getContext("2d");
+  const canvas = document.getElementById(chartName);
+  if (!canvas) {
+    console.warn(`[Chart] canvas missing: #${chartName} – skip createRatesLineChart`);
+    return null;
+  }
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    console.warn(`[Chart] no 2D context: #${chartName} – skip createRatesLineChart`);
+    return null;
+  }
+
   Chart.defaults.font.color = "rgb(161, 160, 160)";
-
   const xValues = datasets?.[0]?.data?.map(dp => dp.x) ?? [];
-
   // Palette-Index nur für Nicht-Original-Serien hochzählen (damit nach der blauen Kurve sauber weitergezählt wird)
   let paletteIndex = 0;
 

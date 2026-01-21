@@ -1,6 +1,6 @@
-import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import processData from '../../UI/MODAL_HELPER/dataProcessor.js';
 import { appState } from '../../renderer.js';
-import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from '../../UI/MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 
 // Spalten der CreditVaRInput-Tabelle – ggf. an dein Schema anpassen

@@ -1,4 +1,4 @@
-// CustomerReportsPresetUI.js
+﻿// CustomerReportsPresetUI.js
 import { applyRiskPresetState } from './RiskPDFPreview.js';
 import {
   listCustomerReports,
@@ -6,7 +6,7 @@ import {
   saveCustomerReport,
   deleteCustomerReport
 } from './CustomerReports.js';
-import { appState } from '../../FRONT_END/renderer.js';
+import { appState } from '../../renderer/renderer.js';
 import { ensureRendered } from '../../utils/domHelpers.js';
 
 let wired = false;
@@ -28,7 +28,7 @@ export function setupCustomerReportsPresetUI() {
       return t;
     };
 
-    // ✅ Zentraler Refresh (damit Save/Delete den Dropdown aktualisieren)
+    // âœ… Zentraler Refresh (damit Save/Delete den Dropdown aktualisieren)
     const refreshPresets = async (preferName = '') => {
       const prev = (preferName || dd.value || inp.value || '').trim();
 
@@ -41,14 +41,14 @@ export function setupCustomerReportsPresetUI() {
         ? rows.map(r => `<option value="${r.name}">${r.name}</option>`).join('')
         : `<option value="">(no presets)</option>`;
 
-      // Auswahl wiederherstellen (falls möglich)
+      // Auswahl wiederherstellen (falls mÃ¶glich)
       const names = new Set(rows.map(r => String(r.name)));
       const next = (prev && names.has(prev)) ? prev : (rows[0]?.name || '');
 
       dd.value = next;
       inp.value = next;
 
-      // ✅ Single Source of Truth for current title
+      // âœ… Single Source of Truth for current title
       setActiveName(next);
     };
 
@@ -58,14 +58,14 @@ export function setupCustomerReportsPresetUI() {
     if (!wired) {
       wired = true;
 
-      // ✅ Dropdown selection = active report name
+      // âœ… Dropdown selection = active report name
       dd.addEventListener('change', () => {
         const name = (dd.value || '').trim();
         inp.value = name;
         setActiveName(name);
       });
 
-      // ✅ Typing a name should also update active name (useful for export)
+      // âœ… Typing a name should also update active name (useful for export)
       inp.addEventListener('input', () => {
         setActiveName(inp.value);
       });
@@ -74,7 +74,7 @@ export function setupCustomerReportsPresetUI() {
         const name = (dd.value || inp.value || '').trim();
         if (!name) return;
 
-        // ✅ set active title immediately
+        // âœ… set active title immediately
         setActiveName(name);
 
         const row = await loadCustomerReport(name);
@@ -86,7 +86,7 @@ export function setupCustomerReportsPresetUI() {
           console.warn('Invalid preset JSON', e);
         }
 
-        // ✅ ensure UI reflects loaded preset name
+        // âœ… ensure UI reflects loaded preset name
         dd.value = name;
         inp.value = name;
         setActiveName(name);
@@ -96,7 +96,7 @@ export function setupCustomerReportsPresetUI() {
         const name = (inp.value || '').trim();
         if (!name) return;
 
-        // ✅ set active title immediately
+        // âœ… set active title immediately
         setActiveName(name);
 
         let state = {};
@@ -108,7 +108,7 @@ export function setupCustomerReportsPresetUI() {
 
         const ok = await saveCustomerReport(name, state, 'risk');
 
-        // ✅ NACH SAVE: Dropdown neu laden (damit neuer Eintrag sofort sichtbar ist)
+        // âœ… NACH SAVE: Dropdown neu laden (damit neuer Eintrag sofort sichtbar ist)
         if (ok) await refreshPresets(name);
       });
 
@@ -118,9 +118,10 @@ export function setupCustomerReportsPresetUI() {
 
         const ok = await deleteCustomerReport(name);
 
-        // ✅ NACH DELETE: Dropdown neu laden (damit gelöschter Eintrag verschwindet)
+        // âœ… NACH DELETE: Dropdown neu laden (damit gelÃ¶schter Eintrag verschwindet)
         if (ok) await refreshPresets('');
       });
     }
   });
 }
+

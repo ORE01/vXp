@@ -1,5 +1,5 @@
-import { getColorFromPalette, getEuswCurveColor } from '../utils/colors.js';
-import { saveTrendlines, loadTrendlines } from '../FRONT_END/MARKET_DATA/HISTORIC_DATA/TS.js';
+﻿import { getColorFromPalette, getEuswCurveColor } from '../utils/colors.js';
+import { saveTrendlines, loadTrendlines } from '../renderer/MARKET_DATA/HISTORIC_DATA/TS.js';
 
 
 const chartsByCanvasId = new Map(); 
@@ -15,10 +15,10 @@ export default function createLineChart(datasets, chartName, chartTitle, pointRa
   if (!canvasElement) { console.error(`Canvas element with ID "${chartName}" not found.`); return null; }
 
 
-  // ✅ Immer den alten Chart dieser Canvas-ID zerstören
+  // âœ… Immer den alten Chart dieser Canvas-ID zerstÃ¶ren
   const prev = chartsByCanvasId.get(chartName);
   if (prev) {
-    prev.destroy();                 // triggert auch deine überschriebenen destroy-cleanups
+    prev.destroy();                 // triggert auch deine Ã¼berschriebenen destroy-cleanups
     chartsByCanvasId.delete(chartName);
   }
 
@@ -33,7 +33,7 @@ export default function createLineChart(datasets, chartName, chartTitle, pointRa
     tempStart: null   // {x,y} Datenkoordinaten
   };
 
-  // --- Zeichen-Plugin: rendert Linien nach den Datensätzen ---
+  // --- Zeichen-Plugin: rendert Linien nach den DatensÃ¤tzen ---
 const trendlinePlugin = {
   id: 'trendlineDrawer',
   afterDatasetsDraw(chart, args, pluginOpts) {
@@ -51,13 +51,13 @@ const trendlinePlugin = {
     trendState.lines.forEach(l => {
       const px1 = xPixel(chart, l.x1);
       const px2 = xPixel(chart, l.x2);
-      if (px1 == null || px2 == null) return; // außerhalb des sichtbaren Bereichs/Labels nicht vorhanden
+      if (px1 == null || px2 == null) return; // auÃŸerhalb des sichtbaren Bereichs/Labels nicht vorhanden
       const y1 = sy.getPixelForValue(l.y1);
       const y2 = sy.getPixelForValue(l.y2);
       ctx.beginPath(); ctx.moveTo(px1, y1); ctx.lineTo(px2, y2); ctx.stroke();
     });
 
-    // Vorschau (während Ziehen)
+    // Vorschau (wÃ¤hrend Ziehen)
     if (trendState.tempStart && pluginOpts?.preview && pluginOpts.preview.x !== undefined) {
       const px1 = xPixel(chart, trendState.tempStart.x);
       const px2 = xPixel(chart, pluginOpts.preview.x);
@@ -75,7 +75,7 @@ const trendlinePlugin = {
 };
 
 
-  // --- Datensätze + SMAs zusammenbauen ---
+  // --- DatensÃ¤tze + SMAs zusammenbauen ---
   const allDatasets = [];
   datasets.forEach((dataset, index) => {
     const originalDataset = {
@@ -109,7 +109,7 @@ const trendlinePlugin = {
     });
   });
 
-  // --- Chart erstellen (Plugin einhängen) ---
+  // --- Chart erstellen (Plugin einhÃ¤ngen) ---
   const chartInstance = new Chart(ctx, {
     type: "line",
     data: {
@@ -174,7 +174,7 @@ ensureDrawToolbar(
     chartInstance.options.plugins.trendlineDrawer.preview = null;
     chartInstance.update();
   },
-  async () => { // Undo last line (statt alles löschen)
+  async () => { // Undo last line (statt alles lÃ¶schen)
     if (!trendState.lines.length) return;           // nichts zu tun
     trendState.lines.pop();                         // letzte Linie entfernen
     trendState.tempStart = null;
@@ -185,7 +185,7 @@ ensureDrawToolbar(
 );
 
 
-  // --- Canvas-Events für Zeichnen ---
+  // --- Canvas-Events fÃ¼r Zeichnen ---
   const getDataPointFromEvent = (evt) => {
     const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
     const sx = chartInstance.scales.x;
@@ -201,7 +201,7 @@ const onClick = async (evt) => {
   const pt = xValueFromEvent(chartInstance, evt);
   if (!pt) return;
 
-  // y aus Pixel → Datenwert
+  // y aus Pixel â†’ Datenwert
   const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
   const sy  = chartInstance.scales.y;
   const y   = sy.getValueForPixel(pos.y);
@@ -279,16 +279,16 @@ chartInstance.destroy = () => {
 
 
 
-    // ✅ Chart merken
+    // âœ… Chart merken
   chartsByCanvasId.set(chartName, chartInstance);
 
   return chartInstance;
 }
 
 
-/** Fügt pro Chart (modalIndex) eine kleine Zeichen-Toolbar ein */
+/** FÃ¼gt pro Chart (modalIndex) eine kleine Zeichen-Toolbar ein */
 function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
-  // wir hängen an den gleichen Container wie dein Chart
+  // wir hÃ¤ngen an den gleichen Container wie dein Chart
   const holder = canvasEl.closest('.TSChart-container') || canvasEl.parentElement;
   if (!holder) return;
 
@@ -306,7 +306,7 @@ function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
   const btnDraw = document.createElement('button');
   btnDraw.type = 'button';
   btnDraw.title = 'Trendline zeichnen (Shift = horizontal)';
-  btnDraw.innerHTML = '🔨 Draw Line';
+  btnDraw.innerHTML = 'ðŸ”¨ Draw Line';
   btnDraw.style.padding = '6px 10px';
   btnDraw.style.borderRadius = '8px';
   btnDraw.style.border = '1px solid rgba(255,255,255,.12)';
@@ -316,8 +316,8 @@ function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
 
   const btnClear = document.createElement('button');
   btnClear.type = 'button';
-  btnClear.title = 'Alle Trendlines löschen';
-  btnClear.innerHTML = '✕ Clear';
+  btnClear.title = 'Alle Trendlines lÃ¶schen';
+  btnClear.innerHTML = 'âœ• Clear';
   btnClear.style.padding = '6px 10px';
   btnClear.style.borderRadius = '8px';
   btnClear.style.border = '1px solid rgba(255,255,255,.12)';
@@ -332,20 +332,20 @@ function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
   const chartCard = canvasEl.closest('.chart-container') || holder;
   chartCard.parentElement.insertBefore(bar, chartCard);
 }
-// Hilfsfunktionen: X-Wert ↔ Pixel abhängig vom Scale-Typ
+// Hilfsfunktionen: X-Wert â†” Pixel abhÃ¤ngig vom Scale-Typ
 function xValueFromEvent(chart, evt) {
   const pos = Chart.helpers.getRelativePosition(evt, chart);
   const sx = chart.scales.x;
   if (!sx) return null;
 
-  // category → getValueForPixel gibt Index zurück → auf Label mappen
+  // category â†’ getValueForPixel gibt Index zurÃ¼ck â†’ auf Label mappen
   if (sx.type === 'category') {
     const idx = Math.round(sx.getValueForPixel(pos.x));
     const label = chart.data.labels?.[idx];
     return (label !== undefined) ? { x: label } : null;
   }
 
-  // time/linear → numerischer Wert
+  // time/linear â†’ numerischer Wert
   const x = sx.getValueForPixel(pos.x);
   return (x == null) ? null : { x };
 }
@@ -386,7 +386,7 @@ function pickXLabelFromEvent(chart, evt) {
 
 // === Helpers: Date/Label utils ===
 function parseDateMaybe(s) {
-  // versuche ISO/Label → Date
+  // versuche ISO/Label â†’ Date
   const d = new Date(s);
   return isNaN(d) ? null : d;
 }
@@ -410,7 +410,7 @@ function findNearestIndexForDate(labels, target) {
     if (md === t) return mid;
     if (md < t) lo = mid + 1; else hi = mid - 1;
   }
-  // lo ist nun Insert-Position → nimm nächstliegend
+  // lo ist nun Insert-Position â†’ nimm nÃ¤chstliegend
   if (lo <= 0) return 0;
   if (lo >= labels.length) return labels.length - 1;
   const dl = Math.abs(+new Date(labels[lo]) - t);
@@ -445,7 +445,7 @@ function clampXLabelToView(chart, xLabelOrNum) {
   const labels = getLabels(chart);
   if (!labels.length) return xLabelOrNum;
 
-  // wenn numerisch → unverändert (alte Datensätze)
+  // wenn numerisch â†’ unverÃ¤ndert (alte DatensÃ¤tze)
   if (typeof xLabelOrNum === 'number') return xLabelOrNum;
 
   const d = parseDateMaybe(xLabelOrNum);
@@ -669,7 +669,7 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
     data: {
       labels: xValues,
       datasets: datasets.map((dataset, index) => {
-        const isOriginalCurve = index === 0; // ✅ erste Kurve = Original/EUSW
+        const isOriginalCurve = index === 0; // âœ… erste Kurve = Original/EUSW
 
         if (isOriginalCurve) {
           return {
@@ -677,7 +677,7 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
             data: dataset.data,
             fill: false,
             borderColor: euswColor.borderColor,
-            backgroundColor: euswColor.backgroundColor, // Legend-Kästchen gefüllt
+            backgroundColor: euswColor.backgroundColor, // Legend-KÃ¤stchen gefÃ¼llt
             pointBackgroundColor: euswColor.borderColor,
             pointBorderColor: euswColor.borderColor,
             tension: 0.1,
@@ -686,7 +686,7 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
           };
         }
 
-        // Nicht-Original: Palette-Farbe + Background für gefülltes Legend-Kästchen
+        // Nicht-Original: Palette-Farbe + Background fÃ¼r gefÃ¼lltes Legend-KÃ¤stchen
         const border = getColorFromPalette(paletteIndex, 1);
         const bg     = getColorFromPalette(paletteIndex, 0.6);
         paletteIndex++;
@@ -696,8 +696,8 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
           data: dataset.data,
           fill: false,
           borderColor: border,
-          backgroundColor: bg,             // ✅ damit Legende gefüllt ist
-          pointBackgroundColor: border,    // optional: Punkte gefüllt
+          backgroundColor: bg,             // âœ… damit Legende gefÃ¼llt ist
+          pointBackgroundColor: border,    // optional: Punkte gefÃ¼llt
           pointBorderColor: border,
           tension: 0.1,
           pointRadius: pointRadius,
@@ -774,13 +774,13 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
 export function createCSLineChart(data, chartConfig) {
   const canvas = document.getElementById('CS_ChartCanvas');
   if (!canvas) {
-    console.warn('[Chart] CS_ChartCanvas not found – skip createCSLineChart');
+    console.warn('[Chart] CS_ChartCanvas not found â€“ skip createCSLineChart');
     return;
   }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    console.warn('[Chart] No 2D context for CS_ChartCanvas – skip');
+    console.warn('[Chart] No 2D context for CS_ChartCanvas â€“ skip');
     return;
   }
 
@@ -841,7 +841,7 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
     data: {
       labels: datasets?.[0]?.data?.map(dp => dp.x) ?? [],
       datasets: datasets.map((dataset, index) => {
-        const isOriginalCurve = index === 0; // ✅ erste Kurve = Original/EUSW
+        const isOriginalCurve = index === 0; // âœ… erste Kurve = Original/EUSW
 
         if (isOriginalCurve) {
           return {
@@ -849,7 +849,7 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
             data: dataset.data,
             fill: false,
             borderColor: euswColor.borderColor,
-            backgroundColor: euswColor.backgroundColor, // ✅ Legende gefüllt
+            backgroundColor: euswColor.backgroundColor, // âœ… Legende gefÃ¼llt
             pointBackgroundColor: euswColor.borderColor,
             pointBorderColor: euswColor.borderColor,
             tension: 0.1,
@@ -858,7 +858,7 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
           };
         }
 
-        // Nicht-Original: Palette-Farbe + Background für gefülltes Legend-Kästchen
+        // Nicht-Original: Palette-Farbe + Background fÃ¼r gefÃ¼lltes Legend-KÃ¤stchen
         const border = getColorFromPalette(paletteIndex, 1);
         const bg     = getColorFromPalette(paletteIndex, 0.6);
         paletteIndex++;
@@ -868,8 +868,8 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
           data: dataset.data,
           fill: false,
           borderColor: border,
-          backgroundColor: bg,             // ✅ damit Legende gefüllt ist
-          pointBackgroundColor: border,    // optional: Punkte gefüllt
+          backgroundColor: bg,             // âœ… damit Legende gefÃ¼llt ist
+          pointBackgroundColor: border,    // optional: Punkte gefÃ¼llt
           pointBorderColor: border,
           tension: 0.1,
           pointRadius,
@@ -938,19 +938,19 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
 export function createRatesLineChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);
   if (!canvas) {
-    console.warn(`[Chart] canvas missing: #${chartName} – skip createRatesLineChart`);
+    console.warn(`[Chart] canvas missing: #${chartName} â€“ skip createRatesLineChart`);
     return null;
   }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    console.warn(`[Chart] no 2D context: #${chartName} – skip createRatesLineChart`);
+    console.warn(`[Chart] no 2D context: #${chartName} â€“ skip createRatesLineChart`);
     return null;
   }
 
   Chart.defaults.font.color = "rgb(161, 160, 160)";
   const xValues = datasets?.[0]?.data?.map(dp => dp.x) ?? [];
-  // Palette-Index nur für Nicht-Original-Serien hochzählen (damit nach der blauen Kurve sauber weitergezählt wird)
+  // Palette-Index nur fÃ¼r Nicht-Original-Serien hochzÃ¤hlen (damit nach der blauen Kurve sauber weitergezÃ¤hlt wird)
   let paletteIndex = 0;
 
   const chart = new Chart(ctx, {
@@ -966,12 +966,12 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
           data: dataset.data,
           fill: false,
 
-          // ✅ RATES = fix blau, Rest = Palette-Getter
+          // âœ… RATES = fix blau, Rest = Palette-Getter
           borderColor: isOriginalCurve
             ? eusw.borderColor
             : getColorFromPalette(paletteIndex++, 1),
 
-          // Optional – nur falls du irgendwo fill/points nutzt
+          // Optional â€“ nur falls du irgendwo fill/points nutzt
           backgroundColor: isOriginalCurve
             ? eusw.backgroundColor
             : undefined,
@@ -1256,3 +1256,4 @@ export function MLTestDataChart(datasets, chartName, chartTitle, pointRadius) {
 
   return window.chartInstance;
 }
+

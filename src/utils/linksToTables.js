@@ -1,8 +1,8 @@
 
 // utils/linksToTables.js
-import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
-import { appState } from '../FRONT_END/renderer.js';
-import { handleCouponModal } from '../FRONT_END/NEW_PRODUCTS/PRODCoupon.js';
+import { handleModalAction } from '../renderer/UI/MODAL_HELPER/ModalActionHandler.js';
+import { appState } from '../renderer/renderer.js';
+import { handleCouponModal } from '../renderer/NEW_PRODUCTS/PRODCoupon.js';
 
 
 // 1) attachIdLinks – IDs in Tabellen anklickbar machen

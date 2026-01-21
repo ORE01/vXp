@@ -1,6 +1,6 @@
-import processData from '../../MODAL_HELPER/dataProcessor.js';
-import { appState } from '../../FRONT_END/renderer.js';
-import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
+import processData from '../UI/MODAL_HELPER/dataProcessor.js';
+import { appState } from '../../renderer/renderer.js';
+import { handleModalAction } from '../UI/MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../utils/domHelpers.js';
 
 
@@ -222,6 +222,7 @@ export function deleteCustomerReport(name) {
     });
   });
 }
+
 
 
 

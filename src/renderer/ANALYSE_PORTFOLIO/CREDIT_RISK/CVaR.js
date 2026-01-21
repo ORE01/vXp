@@ -1,7 +1,10 @@
-import { filterColumnsInData } from '../../../MODAL_HELPER/dataProcessor.js';
-import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import { filterColumnsInData } from '../../UI/MODAL_HELPER/dataProcessor.js';
+import processData from '../../UI/MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/format.js';
+import { updateTrafficLight } from '../../../utils/trafficlight.js';
+
+
 
 // === Modul-Scope ===
 let LGDChart = null;

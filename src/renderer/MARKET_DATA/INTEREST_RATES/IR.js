@@ -1,6 +1,6 @@
-import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import processData from '../../UI/MODAL_HELPER/dataProcessor.js';
 import { createRatesLineChart } from '../../../charts/LineChart.js';
-import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from '../../UI/MODAL_HELPER/ModalActionHandler.js';
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
 //HELPER:

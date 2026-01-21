@@ -161,7 +161,7 @@
 
 
   <!-- 2) DEINE EIGENTLICHE APP â€“ am Anfang VERSTECKT -->
-  <div id="app-root" class="app-hidden">
+  <div id="app-root">
 
     <img id="logo" src="assets/logo.png" style="display:none;" />
 
@@ -535,7 +535,7 @@
 
 
     <!-- Backdrop innerhalb des Modals -->
-    <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
+    <div id="subPanelBackdrop_ANALYSE" class="sub-panel-backdrop" hidden></div>
 
     <!-- ========= PANELS ==========================================================================================PANELS=========================================== -->
 
@@ -2447,7 +2447,7 @@
     </div>
 
     <!-- Backdrop nur fÃ¼r dieses Modal -->
-    <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
+    <div id="subPanelBackdrop_REPORTS" class="sub-panel-backdrop" hidden></div>
 
     <!-- ===== PANELS ===== -->
 
@@ -3007,15 +3007,8 @@
 
 
 
-  <script src="./src/renderer/app/initApp.js" type="module"></script>
-
-  <script src="./utils/trafficLight.js"></script>
-  <!-- <script type="module" src="./liquidity.js"></script> -->
-  <script type="module" src="./utils/slideIn.js"></script>
+  <script type="module" src="./src/renderer/renderer.js"></script>
   <script src="./login.js"></script>
-
-  
-
 
 </body>
 </html>

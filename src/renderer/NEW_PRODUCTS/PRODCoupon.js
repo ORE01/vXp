@@ -1,7 +1,7 @@
 import { appState } from '../renderer.js';
-import { handleModalAction, saveChanges, addSaveButtonHandler, addNewRow} from '../../MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction, saveChanges, addSaveButtonHandler, addNewRow} from '../UI/MODAL_HELPER/ModalActionHandler.js';
 import { convertDateToISO, toISODate} from '../../utils/format.js';
-import { makeModalDraggable} from '../../MODAL_HELPER/DraggableModal.js';
+import { makeModalDraggable} from '../UI/MODAL_HELPER/DraggableModal.js';
 
 
 export function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfreq) {

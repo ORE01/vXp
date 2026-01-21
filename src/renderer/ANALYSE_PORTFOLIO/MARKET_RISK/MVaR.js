@@ -1,8 +1,11 @@
-import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import processData from '../../UI/MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../UI/MODAL_HELPER/ModalActionHandler.js';
+
+
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../renderer.js';
 import { formatNumber, formatNumberWithCommas } from '../../../utils/format.js';
-import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
+
 import { ensureRendered } from '../../../utils/domHelpers.js';
 import { getMarketMvarColors } from '../../../utils/colors.js';
 

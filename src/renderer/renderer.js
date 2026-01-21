@@ -1,3 +1,6 @@
+console.log("[BOOT] renderer.js loaded");
+
+import { bootstrapTriggers } from './bootstrap/bootstrapTriggers.js';
 import { bootstrapStores } from './bootstrap/bootstrapStores.js';
 import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
 import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
@@ -37,9 +40,9 @@ import { setupCustomerReportsPresetUI} from './REPORTS/CustomerReportsPresetUI.j
 import { handleHistoricMetricsAddClick} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';
 
 import { tooltips } from '../utils/ToolTip.js';
-import { AppState } from '../AppState.js';
+import { AppState } from './STATE/AppState.js';
 
-import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from './UI/MODAL_HELPER/ModalActionHandler.js';
 
 // =========================
 // Renderer Bootstrap Sections
@@ -56,11 +59,20 @@ const panelRenderState = Object.create(null);
 
 document.addEventListener('DOMContentLoaded', () => {
 
+// ✅ STABILITÄTSMODUS: App darf nicht hidden bleiben
+  const appRoot = document.getElementById('app-root');
+  if (appRoot) {
+    appRoot.classList.remove('app-hidden');
+    appRoot.style.display = 'block';
+  }
+
   appState = bootstrapCreateAppState();
 
   bootstrapStores(appState);
 
   bootstrapUIBasics(appState);
+  bootstrapTriggers(appState);
+
 
 
 

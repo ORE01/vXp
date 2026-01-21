@@ -1,0 +1,3022 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: blob:;
+  font-src 'self' data:;
+  connect-src 'self' ws://localhost:* http://localhost:*;
+  base-uri 'self';
+  form-action 'self';
+">
+
+  <link href="./css/LOGIN.css" rel="stylesheet">  
+
+  <link href="./css/tableDark.css" rel="stylesheet">  
+  <link href="./css/modalDark.css" rel="stylesheet">
+  
+  <link href="./css/Tables.css" rel="stylesheet">
+
+  
+  <link href="./css/CREDITSPREADS.css" rel="stylesheet">
+  <link href="./css/CouponModal.css" rel="stylesheet">
+
+  <link href="./css/SELECT_PORTFOLIO/selectPort.css" rel="stylesheet">
+
+  <link href="./css/aaaSLIDEIN/slideIn.base.css" rel="stylesheet">
+
+  <link href="./css/ANALYSE_PORTFOLIO/analyse.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/breakdown.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
+
+  <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
+
+  <link href="./css/ANALYSE_PORTFOLIO/creditRisk.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/liquidity.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/riskMetricsHistory.css" rel="stylesheet">
+
+  <link href="./css/COMPARE/compare.css" rel="stylesheet">
+
+  <link href="./css/CREATE_PORTFOLIO/CreatePortfolio.css" rel="stylesheet">
+
+  <link href="./css/NEW_PRODUCT/offers.css" rel="stylesheet">
+  <link href="./css/NEW_PRODUCT/newProducts.css" rel="stylesheet">
+  <link href="./css/NEW_PRODUCT/issuer.css" rel="stylesheet">
+  <link href="./css/NEW_PRODUCT/products.css" rel="stylesheet">
+  
+
+  <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
+  <link href="./css/MARKET_DATA/forcasting.css" rel="stylesheet">
+  <link href="./css/MARKET_DATA/MarketDataSlideIn.css" rel="stylesheet">
+
+  <link href="./css/DATA_PROVIDER/DataProvider.css" rel="stylesheet">
+
+  <link href="./css/UPDATES/updates.css" rel="stylesheet">
+  <link href="./css/UPDATES/excelImport.css" rel="stylesheet">
+  <link href="./css/UPDATES/historicDataImport.css" rel="stylesheet">
+  <link href="./css/UPDATES/vxpImports.css" rel="stylesheet">
+  <!-- <link href="./css/UPDATES/conflictModalProducts.css" rel="stylesheet"> -->
+
+
+  <!-- <link href="./css/REPORTS/reports.css" rel="stylesheet"> -->
+  <link href="./css/REPORTS/riskReportsModal.css" rel="stylesheet">
+  <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
+
+  <link href="./css/REPORTS/offers-preview.css" rel="stylesheet">
+
+  <link href="./css/zzzUTIL/Chart.css" rel="stylesheet"> 
+  <link href="./css/zzzUTIL/Dropdown.css" rel="stylesheet">
+  <link href="./css/zzzUTIL/Button.css" rel="stylesheet">
+  <link href="./css/zzzUTIL/ToolTip.css" rel="stylesheet">
+  <link href="./css/zzzUTIL/trafficLight.css" rel="stylesheet">
+  <link href="./css/zzzUTIL/messageBox.css" rel="stylesheet">
+  <link href="./css/zzzUTIL/Warnings.css" rel="stylesheet">
+
+
+ 
+
+<!-- LIBRARIES IMPORT -->
+
+  <!-- Chart.js 4.0.1 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"></script>
+
+  <!-- Chart.js Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
+  <!-- Math.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjs/lib/browser/math.js"></script>
+
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Plotly über jsDelivr (CSP-kompatibel) -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.35.2/plotly.min.js"></script>
+
+
+
+  <title>ValuationXpro</title>
+</head>
+<body>
+
+<!-- 1) LOGIN SCREEN (Startup Screen) -->
+<div class="login-page">
+  <div class="login-overlay"></div>
+
+  <div class="login-card">
+    <!-- Linke Seite: Hero-Content -->
+    <div class="login-image">
+      <div class="login-hero">
+        <h2>Risk. Visualized.</h2>
+        <p>
+          Build, monitor and stress-test your portfolios in one console.
+        </p>
+        <ul>
+          <li>Instant VaR &amp; CVaR per portfolio</li>
+          <li>Swaption cube &amp; SABR surface explorer</li>
+          <li>Export-ready reports for Risk Committees</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Rechte Seite: Login -->
+    <div class="login-content">
+      <img src="assets/vXp.png" alt="vXp Logo" class="login-logo" />
+
+      <h1>vXp Console</h1>
+      <p class="login-subtitle">
+        Sign in to access your risk analyses, scenarios, and reports.
+      </p>
+
+      <div class="login-fields">
+        <div class="login-field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="your.name@example.com" />
+        </div>
+
+        <div class="login-field">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="••••••••" />
+        </div>
+
+        <button class="login-button" type="button">
+          Sign In
+        </button>
+
+        <p class="login-hint">
+          This login is currently only a placeholder for the upcoming authentication.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+  <!-- 2) DEINE EIGENTLICHE APP – am Anfang VERSTECKT -->
+  <div id="app-root" class="app-hidden">
+
+    <img id="logo" src="assets/logo.png" style="display:none;" />
+
+    <!-- Toolbar for Language Toggle -->
+    <div id="toolbar" class="toolbar">
+      <div class="language-toggle">
+        <button id="lang-en" class="language-button">EN</button>
+        <button id="lang-de" class="language-button">DE</button>
+        <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
+
+        <!-- Curve Szenario Warning -->
+        <div id="curveWarningContainer" class="warning-container">
+          <span class="warning-text">Curve Szenario Set</span>
+          <div id="curveWarning" class="warning-light"></div>
+        </div>
+
+        <!-- Credit Spread Szenario Warning -->
+        <div id="creditWarningContainer" class="warning-container">
+          <span class="warning-text">Credit Spread Szenario Set</span>
+          <div id="creditWarning" class="warning-light"></div>
+        </div>
+
+        <!-- CS Szenario Warning -->
+        <div id="csWarningContainer" class="warning-container">
+          <span class="warning-text">CS Szenario for ID Set:</span>
+          <div id="csWarning" class="warning-light"></div> 
+          <span id="csWarningText" class="warning-text"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab">
+      <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
+      <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button> 
+      <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
+      <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button> 
+      <button class="tablinks" id="NEW_PRODUCTS_Tab">NEW PRODUCTS</button> 
+      <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
+      <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
+      <button class="tablinks" id="DATA_Tab">UPDATES</button> 
+      <button class="tablinks" id="REPORTS_Tab">REPORTS</button> 
+    </div>
+
+
+
+
+<!-- Modal: PORT / ANALYSE PORTFOLIO -->
+<div id="PORT_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+
+    <!-- Kopfbereich bleibt wie gehabt -->
+    <div class="portfolio-info">
+      <h2 class="section-header">PORTFOLIO</h2>
+
+      <div class="created-tables-dropdown portfolio-select-spacing" style="display:flex; margin-bottom:10px;">
+        <select id="createdPortDropdown0" class="deals-dropdown" style="color:#f9f9f9;"></select>
+      </div>
+
+      <div class="button-wrapper">
+        <button id="fairValueButton" class="edit-button">Recalculate Portfolio</button>
+      </div>
+    </div>
+
+    <!-- NEU: 2-Spalten-Layout -->
+    <div class="port-layout">
+      <!-- LINKE SPALTE: Agg-Container -->
+      <aside class="port-left">
+        <div class="data-container" id="portAggDataContainer3"></div>
+
+        <div>
+          <p style="margin:6px 0 4px;">filtered:</p>
+          <div class="data-container" id="portAggDataContainer0"></div>
+        </div>
+      </aside>
+
+      <!-- RECHTE SPALTE: Filterleiste + Tabelle -->
+      <section class="port-right">
+        <!-- Controls-Bar: Filter + Reset -->
+        <div class="controls-bar">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Product Ids:</p>
+              <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Coupon Type:</p>
+              <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Category:</p>
+              <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="portRatingDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rank:</p>
+              <select id="portRankDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Maturity Year:</p>
+              <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Depotbank:</p>
+              <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Country:</p>
+              <select id="portCountryDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Region:</p>
+              <select id="portRegionDropdown" multiple class="select-dropdown"></select>
+            </div>
+
+          </div>
+
+          <!-- Reset rechts -->
+          <button id="portResetFiltersButton"
+                  class="reset-FiltersButton"
+                  type="button"
+                  title="Reset filters"
+                  aria-label="Reset filters"></button>
+        </div>
+
+        <!-- Tabelle -->
+        <div class="data-container" id="portDataContainer0"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Modal: ANALYSE_Modal -->
+<div id="ANALYSE_Modal" class="table">
+  <div class="table-content" style="display: block;"> <!-- 👈 Force vertical stacking -->
+
+    <span class="close">&times;</span>
+
+    <!-- ===== Trigger-Reihen statt Inhalt ===== -->
+
+<!-- 📊 Portfolio Breakdown – Trigger -->
+<div class="chart-section">
+  <button class="section-trigger"
+          data-panel="panel-breakdown"
+          aria-controls="panel-breakdown"
+          aria-expanded="false">
+    <span class="section-header">Portfolio Breakdown</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+      <!-- 🔹 Breakdown Sub-Trigger: Issuer -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="Issuer"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">Issuer Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
+      <!-- 🔹 Breakdown Sub-Trigger: Product -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="Product"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">Product Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
+      <!-- 🔹 Breakdown Sub-Trigger: General -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="General"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">General Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
+      <!-- ✅ Breakdown Sub-Trigger: Geography -->
+      <div class="chart-section chart-section--sub">
+        <button class="section-trigger section-trigger--sub"
+                data-panel="panel-breakdown"
+                data-breakdown-group="Geography"
+                aria-controls="panel-breakdown"
+                aria-expanded="false">
+          <span class="section-header">Geography Breakdown</span>
+          <span class="chev">▶</span>
+        </button>
+      </div>
+
+
+    <!-- 📈 Performance – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
+        <span class="section-header">Performance</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Market Risk – Trigger (Hauptpunkt) -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
+        <span class="section-header">Market Risk</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+        <!-- Market Factor VaR – Unterpunkt -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-mvar"
+                  aria-controls="panel-mvar"
+                  aria-expanded="false"
+                  style="max-width: 184px;">
+            <span class="section-header">Market Factor Detail</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+        <!-- Market Product VaR – Unterpunkt -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-mvar-products"
+                  aria-controls="panel-mvar-products"
+                  aria-expanded="false"
+                  style="max-width: 184px;">
+            <span class="section-header">Market Product Detail</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+
+        <!-- 📉 Market Sensitivities – Unterpunkt von Market Risk -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
+            <span class="section-header">Market Sensitivities</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+    <!-- 📉 Credit Risk – Trigger -->
+    <div class="chart-section no-after-divider">
+      <button class="section-trigger" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
+        <span class="section-header">Credit Risk</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+        <!-- 📉 EAD – Sub-Trigger -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-EAD"
+                  aria-controls="panel-EAD"
+                  aria-expanded="false">
+            <span class="section-header">EAD/LGD/PD</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+        <!-- 📉 CVaR – Sub-Trigger -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-cvar"
+                  aria-controls="panel-cvar"
+                  aria-expanded="false">
+            <span class="section-header">Credit VaR/ES</span>
+            <span class="chev">▶</span>
+          </button>
+        </div>
+
+    <!-- 📉 Liquidity – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-liquidity" aria-controls="panel-liquidity" aria-expanded="false">
+        <span class="section-header">Liquidity</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+
+<div class="chart-section">
+  <button
+    id="historicMetricsAddButton"
+    type="button"
+    class="section-trigger edit-button"
+  >
+    <span class="section-header">Save to Historic Metrics</span>
+    <span class="chev">＋</span>
+  </button>
+</div>
+
+
+<!-- 📈 Historic Performance – Trigger (Hauptpunkt) -->
+<div class="chart-section">
+  <button
+    class="section-trigger"
+    data-panel="PORTFOLIO_HISTORY_Modal"
+    aria-controls="PORTFOLIO_HISTORY_Modal"
+    aria-expanded="false">
+    <span class="section-header">Performance History</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 💰 Historic Portfolio Value – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-portfolio-value"
+    aria-controls="panel-portfolio-value"
+    aria-expanded="false">
+    <span class="section-header">Portfolio Value</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 📊 Historic Sensitivities – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-hist-sensitivities"
+    aria-controls="panel-hist-sensitivities"
+    aria-expanded="false">
+    <span class="section-header">Historical Sensitivities</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 📉 Historic Market Risk – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-market-risk"
+    aria-controls="panel-market-risk"
+    aria-expanded="false">
+    <span class="section-header">Market Risk</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+<!-- 📉 Historic Credit Risk – Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-credit-risk"
+    aria-controls="panel-credit-risk"
+    aria-expanded="false">
+    <span class="section-header">Credit Risk</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+
+
+
+    <!-- Backdrop innerhalb des Modals -->
+    <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
+
+    <!-- ========= PANELS ==========================================================================================PANELS=========================================== -->
+
+<!-- Panel: Breakdown -->
+<div id="panel-breakdown"
+     class="sub-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-breakdown-title"
+     hidden>
+  <div class="sub-panel-header">
+    <div id="panel-breakdown-title" class="sub-panel-title">
+      Portfolio Breakdown
+    </div>
+    <button class="sub-panel-close"
+            data-close="panel-breakdown"
+            aria-label="Schließen">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <!-- Übersicht + Value-Selector -->
+    <div class="portfolio-info">
+
+      <!-- 🔹 Übersicht: Issuer / Product / General (wird von JS mit Breakdown-Text befüllt) -->
+      <div class="data-wrapper">
+        <div class="data-container" id="portAggDataContainer5"></div>
+      </div>
+
+      <!-- 🔹 Value-Basis Auswahl -->
+      <div class="data-wrapper" style="margin-top: 8px;">
+        <label for="valueSelector" class="select-label">Value basis</label>
+        <select id="valueSelector" class="deals-dropdown">
+          <option value="NAV">NAV</option>
+          <option value="NOTIONAL">Notional</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ⬇️ Hier rendert JS die Issuer/Product/General-Sektionen + Charts + Legenden -->
+    <div id="pieChartGrid" class="pie-chart-grid">
+      <!-- JS fügt hier Chart- und Legend-Boxen ein -->
+    </div>
+
+  </div>
+</div>
+
+
+    <!-- Panel: Performance -->
+    <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-performance-title" class="sub-panel-title">Performance</div>
+        <button class="sub-panel-close" data-close="panel-performance" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
+          <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
+            <div class="chart-box"><canvas id="euswapPortfolioYieldChart"></canvas></div>
+            <div class="chart-box"><canvas id="euswapProductYieldChart"></canvas></div>
+            <div class="chart-box"><canvas id="durationSwapChart"></canvas></div>
+            <div class="chart-box"><canvas id="durationProductYieldChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+
+
+<!-- Panel: Market VaR -->
+<div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
+    <button class="sub-panel-close" data-close="panel-market" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- 1) INPUT OBEN: Tabelle + Buttons darunter -->
+    <div class="mvar-input">
+      <div class="data-container" id="inputMvarContainer"></div>
+
+      <div class="mvar-input-buttons">
+        <!-- <button id="inputMVaRSave-button" class="edit-button">Save Changes</button> -->
+        <button id="mvarAddButton" class="edit-button">Add Entry</button>
+      </div>
+    </div>
+
+    <!-- 2) MVaR/ES: Caption + Profit/Loss Dist oben, darunter Tabelle + Ampel nebeneinander -->
+    <div class="mvar-summary">
+      <div class="mvar-summary-header">
+        <p class="mvar-caption">Market Value at Risk / Expected Shortfall:</p>
+        <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
+      </div>
+
+      <div class="mvar-summary-row">
+        <div class="data-container" id="MVaRDataContainer0"></div>
+
+        <!-- Market Traffic Light – analog zum Credit-Bereich -->
+        <div
+          class="traffic-light-wrapper small preview-traffic-light"
+          id="traffic-mvar"
+          data-metric="MVaR"
+          style="margin-top: 0;"
+        >
+          <div class="traffic-light">
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3) CHARTS NEBENEINANDER -->
+    <div class="chart-2x1-row">
+      <div class="chart-box">
+        <canvas id="tsEU1YChart"></canvas>
+      </div>
+      <div class="chart-box">
+        <canvas id="plMvarDistChart"></canvas>
+      </div>
+    </div>
+
+
+
+
+  </div>
+</div>
+        <!-- Panel: Market Factor VaR (Detail) -->
+        <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-mvar-title" class="sub-panel-title">MARKET VaR</div>
+            <button class="sub-panel-close" data-close="panel-mvar" aria-label="Schließen">&times;</button>
+          </div>
+
+<div class="sub-panel-body">
+  <div class="mvar-grid">
+    
+    <!-- LINKER BEREICH: Total oben, IR & CS darunter -->
+    <section class="mvar-left">
+      <!-- Total immer oben, volle Breite -->
+      <div class="MVaR-block MVaR-block--total">
+        <h3>Total (T)</h3>
+        <div class="data-container" id="MVaRTotalContainer"></div>
+      </div>
+
+      <!-- Darunter: IR & CS nebeneinander (bzw. untereinander auf Mobile) -->
+      <div class="mvar-pair">
+        <div class="MVaR-block">
+          <h3>Interest Rate (IR)</h3>
+          <div class="data-container" id="MVaRIRContainer"></div>
+        </div>
+
+        <div class="MVaR-block">
+          <h3>Credit Spread (CS)</h3>
+          <div class="data-container" id="MVaRCSContainer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECHTER BEREICH: Chart -->
+    <section class="mvar-right table-card">
+      <h4 class="table-title">Market VaR Chart</h4>
+      <canvas id="MVaRChart" height="360"></canvas>
+    </section>
+
+  </div>
+</div>
+
+
+        </div>
+
+<!-- Panel: Market Product VaR (Detail) -->
+<div id="panel-mvar-products" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-products-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-mvar-products-title" class="sub-panel-title">MARKET Product VaR</div>
+    <button class="sub-panel-close" data-close="panel-mvar-products" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- Optional: kleine Summary-Zeile oben (Portfolio + Szenario) -->
+    <div class="mvar-summary-header" style="margin-bottom: 10px;">
+      <p class="mvar-caption">Product contributions (VaR / ES) for selected Portfolio & Scenario</p>
+      <!-- <button id="mvarProductRefreshButton" class="edit-button">Refresh</button> -->
+    </div>
+
+    <!-- Haupttabelle -->
+    <div class="data-container" id="mvarProductTableContainer"></div>
+
+    <!-- Top-N VaR contrib: Chart + Rangliste -->
+    <div class="mvar-prod-split" style="margin-top: 14px;">
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="mvarProdIdVarContribChart"></canvas>
+      </div>
+
+      <div class="mvar-prod-table chart-box">
+        <div id="mvarProdIdVarContribTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================================================== -->
+<!-- Panel: Product Details (Right Sidepanel)               -->
+<!-- ===================================================== -->
+<div id="panel-prod-details"
+     class="sub-panel sub-panel-right"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-prod-details-title"
+     hidden>
+
+  <div class="sub-panel-header">
+    <div id="panel-prod-details-title" class="sub-panel-title">
+      Product Details
+    </div>
+    <button class="sub-panel-close"
+            data-close="panel-prod-details"
+            aria-label="Schließen">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- kurze Meta-Zeile -->
+    <div id="prodDetailsMeta"
+         class="muted"
+         style="margin-bottom:10px;"></div>
+
+    <!-- Produkt-Stammdaten aus ProdAll -->
+    <div id="prodDetailsContainer"></div>
+  </div>
+</div>
+
+
+
+
+        <!-- Panel: Market Sensitivities (Detail) -->
+        <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
+            <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="Schließen">&times;</button>
+          </div>
+
+          <div class="sub-panel-body">
+            <div class="sens-layout">
+              <!-- Left Part (Tables) -->
+              <section class="sens-left table-card">
+                <div class="data-wrapper">
+                  <p class="block-title">PV01:</p>
+                  <div class="data-container" id="IRSensDataContainer"></div>
+
+                  <div class="spacer-xxl"></div>
+
+                  <p class="block-title">CPV01:</p>
+                  <div class="data-container" id="CSSensDataContainer"></div>
+                </div>
+              </section>
+
+              <!-- Right Part (Charts) -->
+              <section class="sens-right">
+                <div class="pv01-chart-container chart-container">
+                  <canvas id="PV01Chart"></canvas>
+                </div>
+
+                <div class="spacer-xxl"></div>
+
+                <div class="cpv01-chart-container chart-container">
+                  <canvas id="CPV01Chart" width="400" height="400"></canvas>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+<!-- Panel: Credit Risk  -->
+<div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-credit-title" class="sub-panel-title">Credit Loss Distribution</div>
+    <button class="sub-panel-close" data-close="panel-credit" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- 🔹 BLOCK 1: Allgemeine CVaR Settings (Konfidenzniveau, Horizont, Szenarien, etc.) -->
+    <div class="cvar-config-section">
+      <div class="sub-panel-subtitle" style="margin-top: 12px; margin-bottom: 6px;">
+        CVaR General Settings
+      </div>
+
+      <div class="button-wrapper" style="margin-bottom: 8px;">
+        <button id="cvarConfigAddButton" class="edit-button">Add Config</button>
+      </div>
+
+      <!-- Hier rendert handleCvarInputConfigView() die Tabelle -->
+      <div class="data-container" id="inputCreditVaRConfigContainer"></div>
+    </div>
+    <!-- 🔹 ENDE BLOCK 1 -->
+
+    <!-- 🔹 BLOCK 2: Threshold-Input für CVaR / TSI / MSD -->
+    <div class="threshold-section">
+      <div class="sub-panel-subtitle" style="margin-top: 16px; margin-bottom: 6px;">
+        Threshold Settings (CVaR / TSI / MSD)
+      </div>
+
+      <!-- <div class="button-wrapper" style="margin-bottom: 8px;">
+        <button id="cvarThresholdAddButton" class="edit-button">Add Threshold</button>
+      </div> -->
+
+      <!-- Hier rendert handleCvarInputThresholdView() die Tabelle -->
+      <div class="data-container" id="inputCreditVaRThresholdContainer"></div>
+    </div>
+    <!-- 🔹 ENDE BLOCK 2 -->
+
+    <!-- 🔹 BLOCK 2.1: Calculate PL Button unter Threshold Settings -->
+    <div class="button-wrapper" style="margin-top: 12px; margin-bottom: 16px;">
+      <button id="CVaRButton" class="edit-button">Calculate PL</button>
+    </div>
+    <!-- 🔹 ENDE BLOCK 2.1 -->
+
+    <!-- 🔹 BLOCK 3: CVaR/TSI/MSD Ampeln + Output-Tabelle -->
+    <div class="cvar-pair" style="margin-top: 4px;">
+      <!-- Linke Spalte: CVaR Kennzahlen-Tabelle -->
+      <div class="cvar-col">
+        <div class="data-container" id="CVaR_allRelativeContainer0"></div>
+      </div>
+
+      <!-- CVAR + Ampel -->
+      <div class="cvar-col">
+        <p>Credit Value at Risk (CVaR):</p>
+        <div class="traffic-light-wrapper small preview-traffic-light"
+            id="traffic-credit-cvar"
+            data-metric="CVaR"
+            style="margin-top: 0;">
+          <div class="traffic-light">
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TSI + Ampel -->
+      <div class="cvar-col">
+        <p>Tail Severity Index (TSI):</p>
+        <div class="traffic-light-wrapper small preview-traffic-light"
+            id="traffic-credit-tsi"
+            data-metric="TSI"
+            style="margin-top: 0;">
+          <div class="traffic-light">
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MSD + Ampel -->
+      <div class="cvar-col">
+        <p>Market Stress Divergence (MSD):</p>
+        <div class="traffic-light-wrapper small preview-traffic-light"
+            id="traffic-credit-msd"
+            data-metric="MSD"
+            style="margin-top: 0;">
+          <div class="traffic-light">
+            <div class="light red"    data-role="red"></div>
+            <div class="light yellow" data-role="yellow"></div>
+            <div class="light green"  data-role="green"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- 🔹 ENDE BLOCK 3 -->
+
+    <!-- 🔹 BLOCK 4: Charts -->
+    <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 20px;">
+      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+        <p style="text-align: center;">Value at Risk:</p>
+        <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
+      </div>
+      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
+        <p style="text-align: center;">Expected Shortfall:</p>
+        <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
+      </div>
+    </div>
+    <!-- 🔹 ENDE BLOCK 4 -->
+  </div>
+</div>
+
+
+
+        <!-- Panel: Credit Risk – Details -->
+        <div id="panel-EAD" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-EAD-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-EAD-title" class="sub-panel-title">Exposure at Default (EAD) – Loss Given Default (LGD) – Probability of Default (PD)</div>
+            <button class="sub-panel-close" data-close="panel-EAD" aria-label="Schließen">&times;</button>
+          </div>
+
+          <div class="sub-panel-body">
+            <div class="cvar-grid">
+              <aside class="cvar-left">
+                <!-- Data-Tabellen für die einzelnen Views -->
+                <div class="data-container" id="EADDataContainer"></div>
+              </aside>
+
+              <section class="cvar-right">
+                <!-- Gleiche Klasse wie bei den anderen Panels -->
+                <div class="chart-container-inner" id="LGDChartContainer">
+                  <canvas id="LGDChart"></canvas>
+                </div>
+              </section>
+            </div><!-- /.cvar-grid -->
+          </div><!-- /.sub-panel-body -->
+        </div><!-- /#panel-EAD -->
+
+
+        <!-- Panel: Credit Risk – Details -->
+        <div id="panel-cvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-cvar-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-cvar-title" class="sub-panel-title">Credit Value at Risk (VaR) & Expected Shortfall (ES)</div>
+            <button class="sub-panel-close" data-close="panel-cvar" aria-label="Schließen">&times;</button>
+          </div>
+
+          <div class="sub-panel-body">
+            <!-- Oben: drei Metrik-Tabellen -->
+            <section class="table-card" style="margin-bottom:12px;">
+              <p>Historical Credit Metrics:</p>
+              <div class="data-container" id="CVaR_ratingDataContainer"></div>
+
+              <p style="margin-top:10px;">Market Implied Credit Metrics:</p>
+              <div class="data-container" id="CVaR_marketDataContainer"></div>
+
+              <p style="margin-top:10px;">Risk Adjusted Credit Metrics:</p>
+              <div class="data-container" id="CVaR_normDataContainer"></div>
+            </section>
+
+
+            <!-- 2-Spalten-Layout -->
+            <div class="cvar-grid"><!-- 👈 WICHTIG: öffnend, NICHT sofort schließen -->
+
+              <aside class="cvar-left">
+                <!-- Data-Tabellen für die einzelnen Views -->
+                <!-- <div class="data-container" id="EADDataContainer"></div> -->
+                <div class="data-container" id="LossIssuerDataContainerRating"></div>
+                <div class="data-container" id="LossIssuerDataContainerMarket"></div>
+                <div class="data-container" id="LossIssuerDataContainerMarketNorm"></div>
+              </aside>
+
+              <section class="cvar-right">
+
+
+                <!-- <div class="chart-container-table" id="LGDChartContainer">
+                  <canvas id="LGDChart"></canvas>
+                </div> -->
+
+                <div class="chart-container-inner" id="LossIssuerChartContainerRating">
+                  <canvas id="LossIssuerChartRating"></canvas>
+                </div>
+
+                <div class="chart-container-inner" id="LossIssuerChartContainerMarket">
+                  <canvas id="LossIssuerChartMarket"></canvas>
+                </div>
+
+                <div class="chart-container-inner" id="LossIssuerChartContainerMarketNorm">
+                  <canvas id="LossIssuerChartMarketNorm"></canvas>
+                </div>
+              </section>
+
+            </div><!-- /.cvar-grid -->
+          </div><!-- /.sub-panel-body -->
+        </div><!-- /#panel-cvar -->
+
+    <!-- Panel: Liquidity (SAUBERES GESCHWISTER-ELEMENT, nicht verschachtelt) -->
+    <div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-liquidity-title" class="sub-panel-title">Liquidity</div>
+        <button class="sub-panel-close" data-close="panel-liquidity" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Controls -->
+        <div id="liquControlsContainer" class="controls-bar" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+          <div class="data-wrapper">
+            <div class="dropdown-wrapper">
+              <label for="liquMaturityDropdown" class="select-label" style="display:block; font-weight:600; margin-bottom:6px;">
+                Select Maturity
+              </label>
+              <select id="liquMaturityDropdown" multiple class="select-dropdown" aria-multiselectable="true"></select>
+            </div>
+          </div>
+
+<p style="margin:10px 0;">
+<button id="liquResetFiltersButton"
+        class="reset-FiltersButton"
+        type="button"
+        title="Reset filters"
+        aria-label="Reset filters"></button>
+
+</p>
+        </div>
+
+        <!-- Tabellen -->
+        <div class="liqu-flex-row">
+          <section class="table-card">
+            <h4 class="table-title">Fälligkeiten × Kategorien</h4>
+            <div id="liquDataContainer" class="data-container"></div>
+          </section>
+
+          <section class="table-card">
+            <h4 class="table-title">Emittenten</h4>
+            <div id="issuerDataContainerLiqu" class="data-container"></div>
+          </section>
+        </div>
+
+        <!-- Chart -->
+        <div class="liqu-chart-container" style="margin-top:18px;">
+          <canvas id="liquChart"></canvas>
+        </div>
+      </div><!-- /.sub-panel-body -->
+    </div>
+
+<!-- Panel: Historic Performance -->
+<div
+  id="PORTFOLIO_HISTORY_Modal"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="PORTFOLIO_HISTORY_Modal-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="PORTFOLIO_HISTORY_Modal-title" class="sub-panel-title">
+      Performance History
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="PORTFOLIO_HISTORY_Modal"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="historicPortfolioYieldChart" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Portfolio Value -->
+<div
+  id="panel-portfolio-value"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-portfolio-value-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-portfolio-value-title" class="sub-panel-title">
+      Portfolio Value
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-portfolio-value"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="historicPortfolioValueChart" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Sensitivities -->
+<div
+  id="panel-hist-sensitivities"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-hist-sensitivities-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-hist-sensitivities-title" class="sub-panel-title">
+      Historical Sensitivities
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-hist-sensitivities"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="historicPortfolioSensChart" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Market Risk (Performance-Bereich) -->
+<div
+  id="panel-market-risk"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-market-risk-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-market-risk-title" class="sub-panel-title">
+      Market Risk
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-market-risk"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="historicMarketRiskChart" width="600" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Panel: Historic Credit Risk (Performance-Bereich) -->
+<div
+  id="panel-credit-risk"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-credit-risk-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-credit-risk-title" class="sub-panel-title">
+      Credit Risk
+    </div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-credit-risk"
+      aria-label="Schließen"
+    >
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <canvas id="historicCreditRiskChart" width="600" height="280"></canvas>
+  </div>
+</div>
+
+
+
+
+
+
+
+  </div><!-- /table-content -->
+</div>
+
+<!-- Modal: Create Portfolio -->
+<div id="CREATE_PORTFOLIO_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-cp-close="1">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header">CREATE PORTFOLIO</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Issuer • Products • Trades</p>
+    </div>
+
+    <!-- Triggers -->
+    <!-- <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
+        <span class="section-header">Issuer</span><span class="chev">▶</span>
+      </button>
+    </div>-->
+
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
+        <span class="section-header">New Portfolio</span><span class="chev">▶</span>
+      </button>
+    </div> 
+
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
+        <span class="section-header">Change Existing Portfolio</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ===== PANELS ===== -->
+
+    <!-- Panel: NEW DEALS / NEW PORTFOLIO (reduziert) -->
+    <div id="panel-newDeals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-newDeals-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-newDeals-title" class="sub-panel-title">NEW PORTFOLIO</div>
+        <button class="sub-panel-close" data-close="panel-newDeals" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="cp-card">
+          <h2 class="small-section-header">Create Portfolio</h2>
+
+          <div class="cp-form-grid">
+            <label for="PortfolioNameInput">New Portfolio Name:</label>
+            <div class="cp-field">
+              <input type="text" id="PortfolioNameInput" class="input-field" />
+            </div>
+
+            <label for="PortfolioTagInputField">Tag selection <small>(optional)</small>:</label>
+            <div class="cp-field">
+              <input type="text" id="PortfolioTagInputField" class="input-field" />
+            </div>
+
+            <div class="cp-actions" style="grid-column: 1/-1;">
+              <button id="savePortfolioButton" class="edit-button">Save Portfolio</button>
+
+              <div class="button-wrapper">
+                <button id="portfolioDealsAddButton" class="edit-button">ADD</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+          <!-- 🆕 Hier: Deals-Preview für das aktuelle Portfolio -->
+          <div class="data-container cp-table" id="newPortfolioDealsDataContainer"></div>
+        
+      </div>
+    </div>
+
+
+
+
+<!-- Panel: DEALS / CHANGE PORTFOLIO -->
+<div id="panel-deals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-deals-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-deals-title" class="sub-panel-title">EDIT / CREATE PORTFOLIO</div>
+    <button class="sub-panel-close" data-close="panel-deals" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <!-- Card 1: Portfolio wählen -->
+    <section class="cp-card">
+      <h2 class="small-section-header">Select Portfolio</h2>
+
+      <div class="cp-form-grid">
+        <!-- <label for="createdDealsDropdown">Select PORTFOLIO:</label> -->
+        <div class="cp-field">
+          <select id="createdDealsDropdown" class="deals-dropdown"></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 2: Filter-Dropdowns -->
+    <section class="cp-card">
+      <h2 class="small-section-header">Filter Deals</h2>
+
+      <div class="dropdown-wrapper">
+        <div>
+          <p>Select Products:</p>
+          <select id="dealsProdIdDropdown" multiple class="select-dropdown"></select>
+        </div>
+
+        <div>
+          <p>Select Category:</p>
+          <select id="dealsCategoryDropdown" multiple class="select-dropdown"></select>
+        </div>
+
+        <div>
+          <p>Select Notional:</p>
+          <select id="dealsNotionalDropdown" multiple class="select-dropdown"></select>
+        </div>
+
+        <div>
+          <p>Select Depotbank:</p>
+          <select id="dealsDepotbankDropdown" multiple class="select-dropdown"></select>
+        </div>
+      </div>
+
+      <p style="margin:10px 0;">
+        <button id="dealsResetFiltersButton"
+                class="reset-FiltersButton"
+                type="button"
+                title="Reset filters"
+                aria-label="Reset filters"></button>
+      </p>
+
+      <div class="button-wrapper">
+        <button id="dealsAddButton" class="edit-button">ADD</button>
+      </div>
+    </section>
+
+    <!-- Card 3: Edit / Save Portfolio -->
+    <section class="cp-card cp-card--edit">
+      <h2 class="small-section-header">Edit Portfolio</h2>
+
+      <div class="cp-form-grid">
+        <!-- Trade IDs -->
+        <label for="tradeDropdown">Select TRADE_ID:</label>
+        <div class="cp-field">
+          <select id="tradeDropdown" multiple class="select-dropdown"></select>
+        </div>
+
+        <!-- New Name -->
+        <label for="nameInput">New Portfolio Name:</label>
+        <div class="cp-field">
+          <input type="text" id="nameInput" class="input-field" />
+        </div>
+
+        <!-- Tags -->
+        <label for="tagInputField">Tag selection:</label>
+        <div class="cp-field">
+          <input type="text" id="tagInputField" class="input-field" />
+        </div>
+
+        <!-- Actions -->
+        <div class="cp-actions" style="grid-column: 1/-1;">
+          <button id="saveSelectionButton" class="edit-button">Save Selection</button>
+          <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Calculate & Tabelle -->
+    <div class="button-wrapper">
+      <button id="fairValueButton1" class="edit-button">Calculate Portfolio</button>
+    </div>
+
+    <!-- Ergebnis-Tabelle -->
+    <div class="data-container cp-table" id="dealsDataContainer"></div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<!-- Modal: Market Data -->
+<div id="MARKETDATA_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-md-close="1">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header">MARKET DATA</h2>
+      <p style="opacity:.8; margin: 6px 0 0;">Rates • Forward • Credit Spreads</p>
+    </div>
+
+    <!-- Triggers -->
+
+    <!-- 📉 Interest Rates – Trigger (Hauptpunkt) -->
+    <div class="chart-section">
+      <button
+        class="section-trigger"
+        data-panel="panel-rates"
+        aria-controls="panel-rates"
+        aria-expanded="false">
+        <span class="section-header">Interest Rates</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Forwards – Unterpunkt von Interest Rates -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-forward"
+        aria-controls="panel-forward"
+        aria-expanded="false">
+        <span class="section-header">Forward</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+        <!-- 📉 Swaption Vols – Unterpunkt von Interest Rates -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-swaption"
+        aria-controls="panel-swaption"
+        aria-expanded="false">
+        <span class="section-header">Swaption Vols</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Swaption Smile – eigener Unterpunkt von Interest Rates -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-swaption-smile"
+        aria-controls="panel-swaption-smile"
+        aria-expanded="false">
+        <span class="section-header">Swaption Smile</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Swaption Vol Cube – eigener Unterpunkt von Interest Rates -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-swaption-cube"
+    aria-controls="panel-swaption-cube"
+    aria-expanded="false">
+    <span class="section-header">Swaption Vol Cube</span>
+    <span class="chev">▶</span>
+  </button>
+</div>
+
+
+
+    <!-- 📉 Credit Spreads – Trigger -->
+    <div class="chart-section">
+      <button
+        class="section-trigger"
+        data-panel="panel-creditspreads"
+        aria-controls="panel-creditspreads"
+        aria-expanded="false">
+        <span class="section-header">Credit Spreads</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Historic Data – Trigger -->
+    <div class="chart-section">
+      <button
+        class="section-trigger"
+        data-panel="panel-ts"
+        aria-controls="panel-ts"
+        aria-expanded="false">
+        <span class="section-header">Historic Data</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- 📉 Machine Learning – Trigger -->
+    <div class="chart-section">
+      <button
+        class="section-trigger"
+        data-panel="panel-ml"
+        aria-controls="panel-ml"
+        aria-expanded="false">
+        <span class="section-header">Forcasting</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ====== PANELS ====== -->
+
+    <!-- Panel: RATES (IR Data Modal adapted for Slide-In) -->
+    <div id="panel-rates" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-rates-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-rates-title" class="sub-panel-title">INTEREST RATES</div>
+        <button class="sub-panel-close" data-close="panel-rates" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <label for="ratesSelector" style="display:block; font-weight:600; margin-bottom:6px;">Select Curve:</label>
+        <select id="ratesSelector" class="ir-select">
+          <option value="EUSWAP">EUSWAP</option>
+          <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
+        </select>
+
+        <section class="table-card" style="margin-top:12px;">
+          <h4 class="table-title">Rates Table</h4>
+          <div id="IRDataContainer" class="data-container"></div>
+        </section>
+
+        <div class="chart-container" style="margin-top:16px;">
+          <canvas id="IRLineChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: FORWARD (Slide-In) -->
+    <div id="panel-forward" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-forward-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-forward-title" class="sub-panel-title">FORWARD RATES</div>
+        <button class="sub-panel-close" data-close="panel-forward" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="forward-layout-wrapper">
+          <div class="data-container" id="FWDDataContainer"></div>
+
+          <div class="forward-charts-wrapper">
+            <div id="cmsInputContainer1">
+              <label for="cmsForwardInput1">CMS Forward Length 1:</label>
+              <input type="number" id="cmsForwardInput1" value="1" min="1" />
+              <button id="CMSButton1">Apply CMS Rate 1</button>
+            </div>
+
+            <div id="cmsInputContainer2">
+              <label for="cmsForwardInput2">CMS Forward Length 2:</label>
+              <input type="number" id="cmsForwardInput2" value="5" min="1" />
+              <button id="CMSButton2">Apply CMS Rate 2</button>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="FWDlineChart" class="forward-line-chart"></canvas>
+            </div>
+
+            <div id="inputContainer">
+              <label for="yearsForwardInput">Years Forward:</label>
+              <input type="number" id="yearsForwardInput" value="1" min="1" />
+              <button id="applyYearsForwardButton">Apply</button>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Panel: SWAPTION VOLS (Slide-In) -->
+<div id="panel-swaption" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-swaption-title" class="sub-panel-title">SWAPTION VOLS</div>
+    <button class="sub-panel-close" data-close="panel-swaption" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <div class="swaption-layout-wrapper">
+      
+
+
+      <!-- Rechte Seite: ATM Surface (3D) -->
+      <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+
+        <div class="table-card chart-card" style="flex:1; min-height:320px;">
+          <h4 class="table-title">ATM Surface (3D)</h4>
+          <div class="chart-container" style="height:100%;">
+            <div id="swaption-atm-surface-3d" style="width:100%; height:100%;"></div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Panel: SWAPTION SMILE (Slide-In) -->
+<div id="panel-swaption-smile" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-smile-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-swaption-smile-title" class="sub-panel-title">SWAPTION SMILE</div>
+    <button class="sub-panel-close" data-close="panel-swaption-smile" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <div class="swaption-layout-wrapper" style="display:flex; gap:16px; align-items:stretch;">
+
+      <!-- Linke Seite: Auswahl + Summary-Tabelle -->
+      <section class="table-card" style="flex: 0 0 30%; margin-right:16px;">
+        <h4 class="table-title">ATM Vols</h4>
+
+        <div class="swaption-select-row" style="display:flex; gap:8px; margin-bottom:8px;">
+          <div class="input-container" style="flex:1;">
+            <label for="swaptionOptionTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+              Option Tenor
+            </label>
+            <select id="swaptionOptionTenorSelect" class="ir-select"></select>
+          </div>
+
+          <div class="input-container" style="flex:1;">
+            <label for="swaptionSwapTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+              Swap Tenor
+            </label>
+            <select id="swaptionSwapTenorSelect" class="ir-select"></select>
+          </div>
+        </div>
+
+        <!-- Hier kommt die ATM + Resulting Vol Tabelle rein -->
+        <div id="SwaptionATMDataContainer" class="data-container"></div>
+      </section>
+
+      <!-- Rechte Seite: Smile-Chart -->
+      <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+        <div class="table-card chart-card" style="flex:1;">
+          <h4 class="table-title">Smile / Skew</h4>
+          <div class="chart-container" style="height:260px; max-height:260px;">
+            <canvas id="swaption-smile-chart" style="width:100%; height:100%;"></canvas>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Panel: SWAPTION VOL CUBE (Slide-In) -->
+<div id="panel-swaption-cube"
+     class="sub-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-swaption-cube-title"
+     hidden>
+  <div class="sub-panel-header">
+    <div id="panel-swaption-cube-title" class="sub-panel-title">
+      SWAPTION VOL CUBE
+    </div>
+    <button class="sub-panel-close"
+            data-close="panel-swaption-cube"
+            aria-label="Schließen">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="swaption-layout-wrapper"
+         style="display:flex; gap:16px; align-items:stretch;">
+
+      <!-- LINKE SPALTE: Run-Button + Filter + Summary -->
+      <section style="flex:0 0 32%; display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Run-Button (vollbreit) -->
+        <button
+          id="swaptionCubeRunButton"
+          class="exec-button"
+          type="button"
+          style="width:100%; padding:10px 12px; font-weight:600;">
+          Run Vol Cube
+        </button>
+
+        <!-- Karte: Filter + Summary -->
+        <div class="table-card" style="flex:1;">
+          <h4 class="table-title">Node Filter &amp; Summary</h4>
+
+          <!-- Filter-Row -->
+          <div class="swaption-select-row"
+               style="display:flex; gap:8px; margin-bottom:8px; margin-top:4px;">
+            <div class="input-container" style="flex:1;">
+              <label for="swaptionOptionTenorSelectCube"
+                     style="display:block; font-weight:600; margin-bottom:2px;">
+                Option Tenor
+              </label>
+              <select id="swaptionOptionTenorSelectCube" class="ir-select"></select>
+            </div>
+
+            <div class="input-container" style="flex:1;">
+              <label for="swaptionSwapTenorSelectCube"
+                     style="display:block; font-weight:600; margin-bottom:2px;">
+                Swap Tenor
+              </label>
+              <select id="swaptionSwapTenorSelectCube" class="ir-select"></select>
+            </div>
+          </div>
+
+          <!-- Summary / Node-Info für gewählten Ausschnitt -->
+          <div id="SwaptionCubeSummaryContainer" class="data-container"></div>
+        </div>
+      </section>
+
+      <!-- RECHTE SPALTE: 3D Vol Cube Surface -->
+      <section class="swaption-charts-wrapper"
+               style="flex:1; display:flex; flex-direction:column;">
+        <div class="table-card chart-card" style="flex:1;">
+          <h4 class="table-title">
+            SABR Vol Cube Surface
+          </h4>
+          <div class="chart-container"
+               style="height:260px; max-height:260px;">
+            <!-- Plotly-Target für 3D Surface -->
+            <div id="swaption-cube-surface-3d"
+                 style="width:100%; height:100%;"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+    <!-- Panel: CREDIT SPREADS (Slide-In) -->
+    <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-creditspreads-title" class="sub-panel-title">CREDIT SPREADS</div>
+        <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cs-layout-wrapper">
+          <div class="chart-container cs-chart">
+            <canvas id="CS_ChartCanvas"></canvas>
+          </div>
+
+          <aside class="parameters-container">
+            <p>CS Curve Parameter:</p>
+            <p>e: Relative Displacement in %. Default 1</p>
+            <p>f: Absolute Displacement in Basis Points. Default 0</p>
+
+            <div id="CSParameterDataContainer" class="data-container"></div>
+
+            <div class="button-wrapper" style="margin-top:10px;">
+              <button id="CSParButton" class="edit-button">CSParameter</button>
+              <button id="CSParameterAddButton" class="edit-button">Add New CSParameter</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+<!-- Panel: HISTORIC DATA [%] -->
+<div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA</div>
+    <button class="sub-panel-close" data-close="panel-ts" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div id="TS_Modal" class="ts-panel-adapter">
+      <div id="modal-content-container"></div>
+    </div>
+
+    <!-- HIER muss der echte Template-Content rein -->
+    <template id="TS_Modal_Template">
+      <div class="table-content">
+        <div class="ts-layout">
+
+          <!-- TOOLS-LEISTE LINKS -->
+          <aside class="ts-tools" id="tsTools">
+            <div class="ts-tools-header">
+              <h4 class="ts-tools-title">Tools</h4>
+              <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Toggle tools">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
+                  <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="filter-wrapper">
+              <label>Select Data:</label>
+
+              <div id="checkboxContainer" class="table-wrapper"></div>
+
+              <div class="table-wrapper">
+                <div class="moving-average-container">
+                  <label class="section-label">Apply Moving Averages:</label>
+
+                  <div class="sma-row">
+                    <label class="sma-toggle" for="applySMA1">
+                      <input type="checkbox" id="applySMA1" />
+                      <span>SMA 1</span>
+                    </label>
+                    <input type="number" id="movingAveragePeriod1" value="20" min="1" />
+                  </div>
+
+                  <div class="sma-row">
+                    <label class="sma-toggle" for="applySMA2">
+                      <input type="checkbox" id="applySMA2" />
+                      <span>SMA 2</span>
+                    </label>
+                    <input type="number" id="movingAveragePeriod2" value="50" min="1" />
+                  </div>
+
+                  <div class="sma-row">
+                    <label class="sma-toggle" for="applySMA3">
+                      <input type="checkbox" id="applySMA3" />
+                      <span>SMA 3</span>
+                    </label>
+                    <input type="number" id="movingAveragePeriod3" value="200" min="1" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-wrapper">
+                <div class="normalization-container">
+                  <label for="normalizationTypeSelector">Normalization Type:</label>
+                  <select id="normalizationTypeSelector">
+                    <option value="none">None</option>
+                    <option value="dynamic">Dynamic</option>
+                    <option value="firstValue">First Value</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="load-and-toggle-container">
+                <button id="loadButton" class="edit-button">Load Data</button>
+              </div>
+            </div>
+          </aside>
+
+          <!-- CHART RECHTS -->
+          <section class="ts-chart">
+            <div class="ts-chart-toolbar">
+              <div class="time-range-buttons">
+                <button id="oneYearButton">1Y</button>
+                <button id="fiveYearButton">5Y</button>
+                <button id="tenYearButton">10Y</button>
+                <button id="maxButton">Max</button>
+              </div>
+            </div>
+
+            <div class="TSChart-container">
+              <div class="chart-container">
+                <canvas id="TSlineChart" width="1000" height="400"></canvas>
+              </div>
+            </div>
+
+            <div class="data-wrapper">
+              <div class="data-container" id="TSDataContainer"></div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
+
+    <!-- Panel: MACHINE LEARNING (Slide-In) -->
+    <div id="panel-ml" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ml-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-ml-title" class="sub-panel-title">Machine Learning (ML)</div>
+        <button class="sub-panel-close" data-close="panel-ml" aria-label="Schließen">&times;</button>
+      </div>
+
+<div class="sub-panel-body">
+  <!-- Optional: Language Toggle -->
+  <div class="language-toggle" style="margin-bottom:8px;">
+    <!--
+    <button id="lang-en" class="language-button">EN</button>
+    <button id="lang-de" class="language-button">DE</button>
+    -->
+  </div>
+
+  <!-- Content Grid -->
+  <div class="ml-layout">
+    <!-- Left Column: Inputs & Tables -->
+    <section class="ml-left">
+      <h3 class="ml-h3">Select Target</h3>
+      <div class="table-wrapper MLInputWrapper">
+        <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Optional: TS helper container used by your JS -->
+      <div id="MLTS-modal-container"></div>
+
+      <h3 class="ml-h3">Use Trained ML Model</h3>
+      <div class="data-container table-card" style="padding:0;">
+        <table id="MLTrainedModelsTable" class="ml-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Target</th><th>Model Name</th><th>Created At</th><th>Model Type</th>
+              <th>Epochs</th><th>Batch Size</th><th>Optimizer</th><th>Loss</th><th>Metrics</th>
+              <th>Select Model</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <h3 class="ml-h3">Select Untrained ML Model</h3>
+      <div class="data-container table-card" style="padding:0;">
+        <table id="MLModelsTable" class="ml-table">
+          <thead>
+            <tr><th>ID</th><th>Model Type</th><th>Description</th><th>Select</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="table-wrapper MLInputWrapper">
+        <label for="newModelCheckbox" class="ml-inline">
+          <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
+          Use new model
+        </label>
+
+        <div class="ml-params-row">
+          <div class="input-container">
+            <label for="epochsInput">Epochs <span class="info-icon" id="tooltip-epochs">?</span></label>
+            <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
+          </div>
+
+          <div class="input-container">
+            <label for="batchSizeInput">Batch Size <span class="info-icon" id="tooltip-batch-size">?</span></label>
+            <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
+          </div>
+        </div>
+      </div>
+
+      <h3 class="ml-h3">Start ML Model</h3>
+      <div class="button-container">
+        <button id="MLButton" class="edit-button">Run ML</button>
+      </div>
+    </section>
+
+    <!-- Right Column: Charts -->
+    <section class="ml-right">
+      <div class="table-card chart-card">
+        <h4 class="ml-h4">ML Test Data Chart</h4>
+        <canvas id="MLTestDataChart"></canvas>
+      </div>
+
+      <div class="table-card chart-card">
+        <h4 class="ml-h4">ML Predictions Chart</h4>
+        <canvas id="MLFuturePredictionChart"></canvas>
+      </div>
+    </section>
+  </div>
+</div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Modal: Data Provider (Slide-In) -->
+<div id="DataProvider_Modal" class="table">
+  <div class="table-content">
+    <span class="close" data-provider-close="1">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header Provider">PROVIDER</h2>
+
+      <!-- Triggers direkt im Header -->
+      <div class="provider-triggers">
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-ecb" aria-controls="panel-ecb" aria-expanded="false">
+            <span class="section-header">ECB</span><span class="chev">▶</span>
+          </button>
+        </div>
+
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-fed" aria-controls="panel-fed" aria-expanded="false">
+            <span class="section-header">Fed</span><span class="chev">▶</span>
+          </button>
+        </div>
+
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-yahoo" aria-controls="panel-yahoo" aria-expanded="false">
+            <span class="section-header">Yahoo</span><span class="chev">▶</span>
+          </button>
+        </div>
+
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
+            <span class="section-header">Issuer (PDF)</span><span class="chev">▶</span>
+          </button>
+        </div>
+
+
+
+      </div>
+    </div>
+
+
+
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ========== PANELS ========== -->
+
+    <!-- Panel: ECB -->
+    <div id="panel-ecb" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ecb-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-ecb-title" class="sub-panel-title">ECB</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://www.ecb.europa.eu" target="_blank" rel="noopener" class="provider-link" aria-label="Open ECB website in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            ECB Website
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-ecb" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputEcb-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="ecbAddButton" class="edit-button">Add ECB Row</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Fed -->
+    <div id="panel-fed" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-fed-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-fed-title" class="sub-panel-title">Fed (FRED)</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener" class="provider-link" aria-label="Open FRED website in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            FRED Website
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-fed" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputFed-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="fedAddButton" class="edit-button">Add Fed Row</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Yahoo -->
+    <div id="panel-yahoo" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-yahoo-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-yahoo-title" class="sub-panel-title">Yahoo Finance</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://finance.yahoo.com/" target="_blank" rel="noopener" class="provider-link" aria-label="Open Yahoo Finance in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            Yahoo Finance
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-yahoo" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputYahoo-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="yahooAddButton" class="edit-button">Add Yahoo Row</button>
+        </div>
+      </div>
+    </div>
+
+<!-- Panel: Issuer (PDF) -->
+    <div id="panel-issuer" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-issuer-title" class="sub-panel-title">Issuer (PDF) – Final Terms Parser</div>
+        <div class="sub-panel-actions">
+          <span class="provider-link">PDFs: <code>/files/finalterms/ISIN.pdf</code></span>
+        </div>
+        <button class="sub-panel-close" data-close="panel-issuer" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <label for="isinInputIssuer">ISINs (eine pro Zeile)</label>
+          <textarea id="isinInputIssuer"
+                    style="width:100%;height:100px;"
+                    placeholder="Beispiele:
+    XS2887172067
+    XS1309529680 @ euronext.com, bourse.lu"></textarea>
+
+          <!-- Domain-Helfer -->
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+            <input id="issuerDomainsInput" placeholder="Domains z.B. bngbank.com, afm.nl" style="flex:1;">
+            <button id="issuerAddDomainsBtn" class="edit-button" title="Anhängen an Zeilen ohne Domains">@ Domains an Zeilen anhängen</button>
+          </div>
+
+          <!-- PDF-Shortcut & Suche -->
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+            <input id="issuerPdfUrl" placeholder="Direkte PDF-URL hier einfügen (Final Terms / Pricing Supplement)" style="flex:1;">
+            <button id="issuerParsePdfBtn" class="edit-button">Parse PDF</button>
+            <button id="issuerOpenSearchBtn" class="edit-button" title="Google mit filetype:pdf öffnen">Search in browser</button>
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button id="issuerFetchButton" class="edit-button">Fetch Terms &amp; Schedule</button>
+            <!-- optional später: <button id="issuerSaveButton" class="edit-button" disabled>Save to DB</button> -->
+          </div>
+
+          <pre id="issuerOut" class="log" style="margin-top:10px;white-space:pre-wrap;">– ready –</pre>
+          <div id="issuerTable" style="margin-top:10px;"></div>
+        </section>
+      </div>
+    </div>
+
+
+
+
+
+
+
+  </div>
+</div>
+
+<!-- Modal: New Products -->
+<div id="NEW_PRODUCTS_Modal" class="table">
+  <div class="table-content">
+    <!-- <span class="close" data-off-close="1">&times;</span> -->
+
+    <div class="portfolio-info">
+      <h2 class="section-header">NEW PRODUCTS</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Issuer • Products • Offers</p>
+    </div>
+
+    <!-- Triggers -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-issuer-np"
+              aria-controls="panel-issuer-np"
+              aria-expanded="false">
+        <span class="section-header">Issuer</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-products-np"
+              aria-controls="panel-products-np"
+              aria-expanded="false">
+        <span class="section-header">Products</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- NEW: READ OFFERS Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-read-offers-np"
+              aria-controls="panel-read-offers-np"
+              aria-expanded="false">
+        <span class="section-header">Read Offers</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- NEW: OFFERS Trigger (bestehend) -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-offers-np"
+              aria-controls="panel-offers-np"
+              aria-expanded="false">
+        <span class="section-header">Offers</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ===== PANELS ===== -->
+
+    <!-- Panel: ISSUER -->
+    <div id="panel-issuer-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-issuer-title" class="sub-panel-title">ISSUER</div>
+        <button class="sub-panel-close" data-close="panel-issuer-np" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+<p style="margin:10px 0;">
+<button id="issuerResetFiltersButton"
+        class="reset-FiltersButton"
+        type="button"
+        title="Reset filters"
+        aria-label="Reset filters"></button>
+
+</p>
+
+
+          <div class="button-wrapper">
+            <button id="issuerAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        <div class="data-container cp-table" id="issuerDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Panel: PRODUCTS -->
+    <div id="panel-products-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-products-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-products-title" class="sub-panel-title">PRODUCTS</div>
+        <button class="sub-panel-close" data-close="panel-products-np" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Product Ids:</p>
+              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Coupon Type:</p>
+              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Maturity:</p>
+              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rank:</p>
+              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+<p style="margin:10px 0;">
+<button id="prodResetFiltersButton"
+        class="reset-FiltersButton"
+        type="button"
+        title="Reset filters"
+        aria-label="Reset filters"></button>
+
+</p>
+
+          <div class="button-wrapper">
+            <button id="prodAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        <div class="data-container cp-table" id="prodDataContainer"></div>
+      </div>
+    </div>
+
+    <!-- Panel: READ OFFERS (NEU) -->
+    <div id="panel-read-offers-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-read-offers-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-read-offers-title" class="sub-panel-title">READ OFFERS</div>
+        <button class="sub-panel-close" data-close="panel-read-offers-np" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="cp-card" style="margin-top:12px;">
+          <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <span class="button-label">Match Columns (AI)</span>
+            <button id="matchColumnsButton" class="edit-button">Columns AI</button>
+
+            <div id="productTargetsOverview"></div>
+            <button id="submitToProductsBtn" class="edit-button">📥 vXp Products</button>
+
+            <div id="offerTargetsOverview"></div>
+            <button id="submitToOffersBtn" class="edit-button">📥 vXp Offers</button>
+
+            <button id="btnQuickImport" class="edit-button">📥 Schnellimport (Testdatei Aufbau LLB)</button>
+            <button id="importOffersBtn" class="edit-button">📥 Import Offers aus externer Quelle</button>
+          </div>
+
+          <div id="matchingContainer" style="margin-top:10px;"></div>
+
+          <div class="button-wrapper" style="margin-top:10px;">
+            <button id="submitMatchingBtn" class="edit-button">Daten prüfen und importieren</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Panel: OFFERS (bereinigt) -->
+    <div id="panel-offers-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-offers-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-offers-title" class="sub-panel-title">OFFERS</div>
+        <button class="sub-panel-close" data-close="panel-offers-np" aria-label="Schließen">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+
+        <section class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <label for="createdOffersDropdown">Select Offers:</label>
+              <select id="createdOffersDropdown"></select>
+            </div>
+          </div>
+
+<div class="button-wrapper buttons-row" style="margin-top:10px;">
+  <div class="btn-block">
+    <div class="btn-label" id="title-fairValueButton3">Calculate Offers</div>
+    <button id="fairValueButton3" class="edit-button" aria-describedby="title-fairValueButton3">
+      Calculate Offers
+    </button>
+  </div>
+
+  <div class="btn-block">
+    <div class="btn-label" id="title-fairValueButton2">Calibrate Offers</div>
+    <button id="fairValueButton2" class="edit-button" aria-describedby="title-fairValueButton2">
+      Calibrate Offers
+    </button>
+  </div>
+
+  <div class="btn-block">
+    <div class="btn-label" id="title-clearCSButton">Clear CS_Szenario</div>
+    <button id="clearCSButton" class="edit-button" aria-describedby="title-clearCSButton">
+      Clear CS
+    </button>
+  </div>
+
+  <!-- Button: Clear INCLUDE (DealsMain) -->
+  <div class="btn-block">
+    <div class="btn-label" id="title-clearIncludeButton">Clear INCLUDE (DealsMain)</div>
+    <button id="clearIncludeButton" class="edit-button" aria-describedby="title-clearIncludeButton">
+      Clear INCLUDE
+    </button>
+  </div>
+
+</div>
+
+
+        </section>
+
+<div class="offers-two-col">
+  <section class="table-card">
+    <h4 class="table-title">Offers</h4>
+    <div id="offersDataContainer" class="data-container cp-table"></div>
+  </section>
+
+  <div class="data-wrapper">
+  <div class="dropdown-wrapper">
+    <div><p>Select Issuers:</p><select id="offersIssuerDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Product Ids:</p><select id="offersProdIdDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Coupon Type:</p><select id="offersCouponTypeDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Category:</p><select id="offersCategoryDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Rating:</p><select id="offersRatingDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Rank:</p><select id="offersRankDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Maturity Year:</p><select id="offersMaturityDropdown" multiple class="select-dropdown"></select></div>
+    <div><p>Select Depotbank:</p><select id="offersDepotbankDropdown" multiple class="select-dropdown"></select></div>
+  </div>
+<p style="margin:10px 0;">
+<button id="offersResetFiltersButton"
+        class="reset-FiltersButton"
+        type="button"
+        title="Reset filters"
+        aria-label="Reset filters"></button>
+
+</p>
+</div>
+
+
+  <section class="table-card">
+    <h4 class="table-title">Preview</h4>
+    <div id="portDataContainer4" class="data-container cp-table"></div>
+  </section>
+</div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: Reports -->
+<div id="REPORTS_Modal" class="table">
+  <div class="table-content">
+    <!-- <span class="close" data-off-close="1">&times;</span> -->
+
+    <div class="portfolio-info">
+      <h2 class="section-header">REPORTS</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Offers • Risk</p>
+    </div>
+
+    <!-- Triggers -->
+
+    <!-- 📈 OFFERS – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-reports-offers"
+              aria-controls="panel-reports-offers"
+              aria-expanded="false">
+        <span class="section-header">Offers</span><span class="chev">▶</span>
+      </button>
+    </div>
+    <!-- 📈 RISK – Trigger -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-reports-risk"
+              aria-controls="panel-reports-risk"
+              aria-expanded="false">
+        <span class="section-header">Risk</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div id="subPanelBackdrop" class="sub-panel-backdrop" hidden></div>
+
+    <!-- ===== PANELS ===== -->
+
+    <!-- Panel: OFFERS -->
+    <div id="panel-reports-offers" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-reports-offers-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-reports-offers-title" class="sub-panel-title">OFFERS REPORT</div>
+        <button class="sub-panel-close" data-close="panel-reports-offers" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="cp-card">
+          <div class="dropdown-wrapper">
+            <!-- <div>
+              <label for="reportsOffersDropdown">Select Offers:</label>
+              <select id="reportsOffersDropdown"></select>
+            </div> -->
+          </div>
+
+          <div class="button-wrapper buttons-row" style="margin-top:10px;">
+
+            <!-- Get Offers Data -->
+            <div class="btn-block">
+              <div class="btn-label" id="title-offersFetch">Get Offers Data</div>
+              <button
+                id="offersGoToReportButton"
+                class="edit-button"
+                type="button"
+                aria-describedby="title-offersFetch">
+                Get Offers Data
+              </button>
+            </div>
+
+            <!-- Generate Offers PDF -->
+            <div class="btn-block">
+              <div class="btn-label" id="title-offersPDFButton">Generate Offers PDF</div>
+              <button
+                id="offerPDFButton"
+                class="edit-button"
+                type="button"
+                aria-describedby="title-offersPDFButton">
+                Offers PDF
+              </button>
+            </div>
+
+          </div>
+
+
+        </section>
+
+        <section class="table-card">
+          <h4 class="table-title">Offers Preview</h4>
+          <div id="reportsOffersPreview" class="data-container cp-table"></div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Panel: RISK -->
+    <div id="panel-reports-risk"
+        class="sub-panel"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="panel-reports-risk-title"
+        hidden>
+      <div class="sub-panel-header">
+        <div id="panel-reports-risk-title" class="sub-panel-title">RISK REPORT</div>
+        <button class="sub-panel-close"
+                data-close="panel-reports-risk"
+                aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <h4 class="table-title">Risk Preview</h4>
+
+          <!-- Risk Presets: CustomerReports -->
+          <div class="mvar-summary" style="margin-bottom:12px;">
+            <div class="mvar-summary-header" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+              <div style="min-width:260px;">
+                <p class="mvar-caption" style="margin:0;">Report Preset:</p>
+                <select id="customerReportsDropdown"
+                        style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+                </select>
+              </div>
+
+              <div style="min-width:260px;">
+                <p class="mvar-caption" style="margin:0;">Preset Name:</p>
+                <input id="customerReportsNameInput"
+                      type="text"
+                      placeholder="e.g. Board Pack"
+                      style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+              </div>
+
+              <div class="mvar-input-buttons" style="display:flex; gap:10px; margin-left:auto;">
+                <button id="customerReportsLoadButton"   class="edit-button">Load</button>
+                <button id="customerReportsSaveButton"   class="edit-button">Save</button>
+                <button id="customerReportsAddButton"    class="edit-button">Add</button>
+                <button id="customerReportsDeleteButton" class="edit-button">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== RISK PREVIEW ===================== -->
+          <div id="reportsRiskPreview" class="data-container cp-table">
+
+            <!-- EIN BEISPIELBLOCK: INTEREST RATES -->
+            <div class="risk-section">
+              <div class="risk-section__title">INTEREST RATES</div>
+
+              <!-- Sections -->
+              <div class="risk-section__row">
+                <div class="risk-section__label">Sections</div>
+                <div class="risk-section__controls">
+                  <label>
+                    <input type="checkbox" data-chart-section="ir" data-chart-key="summary" checked>
+                    IR Summary
+                  </label>
+                  <label>
+                    <input type="checkbox" data-chart-section="ir" data-chart-key="detail" checked>
+                    IR Detail
+                  </label>
+                </div>
+              </div>
+
+              <!-- Charts -->
+              <div class="risk-section__row risk-section__row--deep">
+                <div class="risk-section__label">Charts</div>
+                <div class="risk-section__controls">
+                  <label>
+                    <input type="checkbox" data-chart-section="irCharts" data-chart-key="yieldCurve" checked>
+                    Yield Curve
+                  </label>
+                  <!-- JS fügt hier später die Thumbnails ein, z. B.:
+                      <img class="risk-thumb" src="blob:..." alt="">
+                  -->
+                </div>
+              </div>
+
+              <!-- Tables -->
+              <div class="risk-section__row risk-section__row--deep">
+                <div class="risk-section__label">Tables</div>
+                <div class="risk-section__controls">
+                  <label>
+                    <input type="checkbox" data-chart-section="irTables" data-chart-key="irTable" checked>
+                    IR Table
+                  </label>
+                  <!-- Beispiel für Mini-Table-Thumbnail -->
+                  <div class="mini-table-wrap">
+                    <!-- hier dein mini Table / Screenshot etc. -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Weitere risk-section-Blöcke für CREDIT RISK, MVaR, MACRO, ... kommen hier -->
+          </div>
+
+          <!-- Buttons unter der Preview -->
+          <div class="button-wrapper buttons-row" style="margin-top:10px;">
+            <!-- Get Risk Data -->
+            <div class="btn-block">
+              <div class="btn-label" id="title-refreshRisk">Get Risk Data</div>
+              <button
+                id="refreshThumbnailsBtn"
+                class="edit-button"
+                type="button"
+                aria-describedby="title-refreshRisk"
+                title="Reload risk thumbnails">
+                Get Risk Data
+              </button>
+            </div>
+
+            <!-- Generate Risk PDF -->
+            <div class="btn-block">
+              <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>
+              <button
+                id="riskPDFButton"
+                class="edit-button"
+                type="button"
+                aria-describedby="title-riskPDFButton">
+                Risk PDF
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+
+
+  </div>
+</div>
+      
+
+
+
+<!-- Modal: Updates -->
+<div id="DATA_Modal" class="table">
+  <div class="table-content">
+    <!-- Optional: eigenes Close-Icon (falls globaler Handler vorhanden) -->
+    <!-- <span class="close" data-off-close="1">&times;</span> -->
+
+    <!-- Kopfbereich konsistent zu NEW/REPORTS -->
+    <div class="portfolio-info">
+      <h2 class="section-header">UPDATES</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Products • Deals • Market Data</p>
+    </div>
+
+    <!-- ===== Trigger-Leiste ===== -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-upd-excel"
+              aria-controls="panel-upd-excel"
+              aria-expanded="false">
+        <span class="section-header">Excel Import</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-upd-historic"
+              aria-controls="panel-upd-historic"
+              aria-expanded="false">
+        <span class="section-header">Historic Data (APIs)</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-upd-vxp"
+              aria-controls="panel-upd-vxp"
+              aria-expanded="false">
+        <span class="section-header">vXp Imports</span><span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop nur für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ===== PANELS ===== -->
+
+<!-- Panel: Excel Import -->
+<div id="panel-upd-excel" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-upd-excel-title" class="sub-panel-title">EXCEL IMPORT</div>
+    <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <!-- Full Import -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="button-label">Vollimport (alle Tabellen)</span>
+        <button id="updateExcelAllButton" class="edit-button" type="button">
+          Import: ALL
+        </button>
+      </div>
+    </section>
+
+    <!-- Core Portfoliodaten -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="button-label">Stammdaten & Portfoliodaten</span>
+        <button id="updateExcelIssuerButton" class="edit-button" type="button">
+          Issuer + Rank
+        </button>
+        <button id="updateExcelProductsButton" class="edit-button" type="button">
+          Products (Bonds)
+        </button>
+        <button id="updateExcelDealsButton" class="edit-button" type="button">
+          Deals (DealsMain)
+        </button>
+      </div>
+    </section>
+
+    <!-- Curves & Swaptions -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="button-label">Zinskurven & Swaptions</span>
+        <button id="updateExcelEuswButton" class="edit-button" type="button">
+          EUSW + ATM + Smile
+        </button>
+      </div>
+    </section>
+
+    <!-- Progress-Bar für Excel, für setupPythonProgressBars -->
+    <section class="cp-card" style="margin-top:12px;">
+      <div class="hist-row">
+        <div id="excelProgressBarsContainer" class="hist-progress-wrap"></div>
+        <div id="progressText_EXCEL" class="progress-text global-text"></div>
+      </div>
+    </section>
+
+<!-- Produkt-Konflikte Modal -->
+<div id="prod-conflict-overlay" class="modal-overlay" style="display:none;"></div>
+<div id="prod-conflict-modal" class="modal-root" style="display:none;"></div>
+
+
+
+  </div>
+</div>
+
+
+
+<!-- Panel: Historic Data (APIs) -->
+<div id="panel-upd-historic" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-historic-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-upd-historic-title" class="sub-panel-title">HISTORIC DATA (APIs)</div>
+    <button class="sub-panel-close" data-close="panel-upd-historic" aria-label="Schließen">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <section class="cp-card hist-card" style="margin-top:12px;">
+
+      <div class="hist-hint">
+        This update can take several minutes
+      </div>
+
+<div class="hist-row">
+  <button id="updateHistoricDataButton" class="edit-button" type="button">
+    Historic Data (All)
+  </button>
+
+  <div id="progressBarsContainer" class="hist-progress-wrap"></div>
+
+  <div id="progressText_GLOBAL" class="progress-text global-text"></div>
+</div>
+
+
+
+
+    </section>
+  </div>
+</div>
+
+
+    <!-- Panel: vXp Imports -->
+    <div id="panel-upd-vxp" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-vxp-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-upd-vxp-title" class="sub-panel-title">VXP IMPORTS</div>
+        <button class="sub-panel-close" data-close="panel-upd-vxp" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <section class="cp-card" style="margin-top:12px;">
+          <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <span class="button-label">Data from Basis-EXCEL via vXp</span>
+            <button id="importExcelButtonVXP" class="edit-button" type="button">Basis-Excel importieren</button>
+
+            <span class="button-label">Nur EUSW importieren</span>
+            <button id="importEUSWButton" class="edit-button" type="button">Nur EUSW</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Modal - COMPARE PORTFOLIOS--> 
+<div id="COMP_Modal" class="table">
+  <div class="table-content">
+    <span class="close">&times;</span>
+
+    <div class="portfolio-info">
+      <h2 class="section-header">COMPARE PORTFOLIOS</h2>
+      <p style="opacity:.8; margin:6px 0 0;">Select 2 portfolios and compare risk & performance</p>
+    </div>
+
+    <!-- Trigger-Leiste -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-comp-port1"
+              aria-controls="panel-comp-port1"
+              aria-expanded="false">
+        <span class="section-header">Portfolio 1</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-comp-port2"
+              aria-controls="panel-comp-port2"
+              aria-expanded="false">
+        <span class="section-header">Portfolio 2</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-comp-charts"
+              aria-controls="panel-comp-charts"
+              aria-expanded="false">
+        <span class="section-header">Charts</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Backdrop für dieses Modal -->
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- ================== PANEL: PORTFOLIO 1 ================== -->
+    <div id="panel-comp-port1" class="sub-panel" role="dialog"
+         aria-modal="false" aria-labelledby="panel-comp-port1-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-comp-port1-title" class="sub-panel-title">Portfolio 1</div>
+        <button class="sub-panel-close" data-close="panel-comp-port1" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <h2 class="small-section-header">Select Portfolio 1</h2>
+        <div class="portfolio-comparison-container">
+          <div class="portfolio-details-container">
+            <div class="created-tables-dropdown portfolio-select-spacing"
+                 style="display:flex; margin-bottom:10px;">
+              <select id="createdPortDropdown1" class="deals-dropdown" style="color:#f9f9f9;"></select>
+            </div>
+            <div class="data-container" id="portAggDataContainer1"></div>
+            <p>Market VaR:</p>
+            <div class="data-container" id="MVaRDataContainer1"></div>
+            <p>Credit VaR:</p>
+            <div class="data-container" id="CVaR_allRelativeContainer1"></div>
+          </div>
+
+          <div class="data-wrapper">
+            <div class="data-container" id="portDataContainer1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================== PANEL: PORTFOLIO 2 ================== -->
+    <div id="panel-comp-port2" class="sub-panel" role="dialog"
+         aria-modal="false" aria-labelledby="panel-comp-port2-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-comp-port2-title" class="sub-panel-title">Portfolio 2</div>
+        <button class="sub-panel-close" data-close="panel-comp-port2" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <h2 class="small-section-header">Select Portfolio 2</h2>
+        <div class="portfolio-comparison-container">
+          <div class="portfolio-details-container">
+            <div class="created-tables-dropdown portfolio-select-spacing"
+                 style="display:flex; margin-bottom:10px;">
+              <select id="createdPortDropdown2" class="deals-dropdown" style="color:#f9f9f9;"></select>
+            </div>
+            <div class="data-container" id="portAggDataContainer2"></div>
+            <p>Market VaR:</p>
+            <div class="data-container" id="MVaRDataContainer2"></div>
+            <p>Credit VaR:</p>
+            <div class="data-container" id="CVaR_allRelativeContainer2"></div>
+          </div>
+
+          <div class="data-wrapper">
+            <div class="data-container" id="portDataContainer2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================== PANEL: CHARTS ================== -->
+    <div id="panel-comp-charts" class="sub-panel" role="dialog"
+         aria-modal="false" aria-labelledby="panel-comp-charts-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-comp-charts-title" class="sub-panel-title">Comparison Charts</div>
+        <button class="sub-panel-close" data-close="panel-comp-charts" aria-label="Schließen">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <!-- Group 1 Charts -->
+        <div class="chart-group">
+          <div id="compChartContainer1" class="comp-chart-container"></div>
+          <div id="compChartContainer2" class="comp-chart-container"></div>
+        </div>
+
+        <!-- Group 2 Charts -->
+        <div class="chart-group">
+          <div id="compChartContainer3" class="comp-chart-container"></div>
+          <div id="compChartContainer4" class="comp-chart-container"></div>
+          <div id="compChartContainer5" class="comp-chart-container"></div>
+        </div>
+
+        <!-- Group 3 Charts -->
+        <div class="chart-group">
+          <div id="compChartContainer6" class="comp-chart-container"></div>
+          <div id="compChartContainer7" class="comp-chart-container"></div>
+          <div id="compChartContainer8" class="comp-chart-container"></div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- /.table-content -->
+</div>
+
+
+  <!-- Modal - Edit Row -->
+  <div id="modal" class="modal">
+    <div class="modal-content draggable">
+      <span class="close">&times;</span>
+      <h2>Edit Row</h2>
+      <form id="editForm">
+        
+        <label for="issuerSelect">Select Issuer:</label>
+        <select id="issuerSelect" class="input-field"></select>
+        
+      </form>
+      <div id="modalBody">
+        
+      </div>
+      <button id="saveButton">Save</button>
+      <button id="eraseButton">Delete</button>
+      <div id="errorMessage"></div>
+    </div>
+  </div>
+
+  <!-- PDF-OFFER-TEXTE -->
+<div id="pdfTextModal" class="modal">
+  <div class="modal-content draggable">
+    <span class="close" id="closePDFModal">&times;</span>
+    <h3>PDF-Begleittexte eingeben</h3>
+
+    <div class="form-row">
+      <label class="label" for="headerText">Text oben:</label>
+      <textarea id="headerText" class="input-field" rows="3"></textarea>
+    </div>
+
+    <div class="form-row">
+      <label class="label" for="footerText">Anmerkungen:</label>
+      <textarea id="footerText" class="input-field" rows="3"></textarea>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <button id="confirmPDF" class="btn" style="background-color: #4CAF50; color: white;">PDF erzeugen</button>
+      <button id="cancelPDF" class="btn" style="background-color: #800000; color: white;">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- unsichtbarer IR chart für pdf -->
+<canvas id="IRLineChartExport" width="400" height="200" style="display:none;"></canvas>
+<canvas id="ProductCurveExport" width="400" height="200" style="display:none;"></canvas>
+<canvas id="euswapYieldChartExport" style="display: none"></canvas>
+
+
+
+
+
+
+
+  <script src="./FRONT_END/app/initApp.js" type="module"></script>
+
+  <script src="./utils/trafficLight.js"></script>
+  <!-- <script type="module" src="./liquidity.js"></script> -->
+  <script type="module" src="./utils/slideIn.js"></script>
+  <script src="./login.js"></script>
+
+  
+
+
+</body>
+</html>
+

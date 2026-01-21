@@ -5,6 +5,8 @@ import { formatNumber, formatNumberWithCommas } from '../../../utils/format.js';
 import { handleModalAction } from '../../../MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 import { getMarketMvarColors } from '../../../utils/colors.js';
+import { updateTrafficLight } from '../../../utils/trafficlight.js';
+
 
 
 const TABLE_MVAR = 'MVaRInput';

@@ -1,8 +1,7 @@
-import processData from '../../../MODAL_HELPER/dataProcessor.js';
 import createLineChart from '../../../charts/LineChart.js';
 import { calculateSMA, calculateRSI } from './ChartAnalyses.js';
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
-//import { normalizeDataset } from './charts/LineChart.js';
+
 
 // Store chart instances in an object with modalIndex as key
 const chartInstances = {};

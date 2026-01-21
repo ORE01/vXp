@@ -1,7 +1,7 @@
 import { REPORT_DEFAULTS_OFFERS } from './OffersPDF.js';
-import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
-import { appState } from '../../FRONT_END/renderer.js';
-import { drawYieldVsTimeChart, transformTSDataToEUSWFormat, swapPointToDurationAsYearRate } from '../../FRONT_END/ANALYSE_PORTFOLIO/SummaryYield.js';
+import { handleModalAction } from '../UI/MODAL_HELPER/ModalActionHandler.js';
+import { appState } from '../../renderer/renderer.js';
+import { drawYieldVsTimeChart, transformTSDataToEUSWFormat, swapPointToDurationAsYearRate } from '../../renderer/ANALYSE_PORTFOLIO/SummaryYield.js';
 
 
 
@@ -1503,6 +1503,7 @@ function getEUSWCurveAsSeries() {
 
   return { curve, series };
 }
+
 
 
 

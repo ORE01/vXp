@@ -7,70 +7,9 @@ import { bootstrapIPC } from './bootstrap/bootstrapIPC.js';
 import { bootstrapBindings } from './bootstrap/bootstrapBindings.js';
 
 
-
-
-
-
-
-import { installDropdownFilterEngine } from './STATE/dropdownFilterEngine.js';
-import { installDataUpdatePipeline } from './STATE/dataUpdatePipeline.js';
-import { createPortfolioUIOrchestrator } from './STATE/portfolioUIOrchestrator.js';
-import { installMarketDataStore } from './STATE/marketDataStore.js';
-import { installCustomerReportsStore } from './STATE/customerReportsStore.js';
-import { installProductsStore } from './STATE/productsStore.js';
-import { installNameListsStore } from './STATE/nameListsStore.js';
-import { installPortfolioDataStore } from './STATE/portfolioDataStore.js';
-import { installMarketRiskStore } from './STATE/marketRiskStore.js';
-import { installCreditRiskStore } from './STATE/creditRiskStore.js';
-import { installUIStateStore } from './STATE/uiStateStore.js';
-
-import { createPortfolioDropdownUI } from './UI/portfolioDropdownUI.js';
-import { createMarketRiskRefresh } from './UI/marketRiskRefresh.js';
-
-
-
 import { openPanel} from './UI/panels.js';
-import { installBulkUpdateBridge } from './UI/bulkUpdateBridge.js';
-import { bindGlobalChangeDelegation } from './UI/globalChangeDelegation.js';
-import { bindSwaptionReadyListeners } from './MARKET_DATA/VOLS/swaptionReadyListeners.js';
-import { bindSwaptionDropdownListeners } from './MARKET_DATA/VOLS/swaptionDropdownListeners.js';
 
-import { installReportsUIBridge } from './REPORTS/reportsUIBridge.js';
-
-
-import { createSwaptionDataHandlers } from './MARKET_DATA/VOLS/swaptionDataHandlers.js';
-
-import { installIpcBridge } from './IPC/ipcBridge.js';
-
-import { bindDropdowns } from './UI/bindDropdowns.js';
 import { showMessageBox, showConfirmationBox } from './UI/modals/confirm.js';
-import { createDealsPortfolioActions } from './SELECT_PORTFOLIO/dealsPortfolioActions.js';
-
-import { createIssuerProductHandlers } from './DATA_PROVIDER/issuerProductHandlers.js';
-
-import { handleCSMatrixData } from './MARKET_DATA/CREDIT_SPREADS/CSMatrix.js';
-import { handleCSParameterData } from './MARKET_DATA/CREDIT_SPREADS/CSParameter.js';
-
-
-
-import { createCustomerHandlers } from './CUSTOMER/customerHandlers.js';
-import { createAnalysePortfolioHandlers } from './ANALYSE_PORTFOLIO/analysePortfolioHandlers.js';
-import { createRatesHandlers } from './MARKET_DATA/INTEREST_RATES/ratesHandlers.js';
-
-import { bindClearCSScenario } from './OFFERS/csScenarioUI.js';
-import { bindForwardsButtons } from './MARKET_DATA/FORWARDS/forwardsUI.js';
-import { createForwardsHandlers } from './MARKET_DATA/FORWARDS/forwardsHandlers.js';
-import { bindAppButtons } from './UI/bindAppButtons.js';
-import { setupReportsEnterLeaveBridge } from './REPORTS/reportsEnterLeaveBridge.js';
-
-import { installPythonBridge } from '../PYTHON/pythonBridge.js';
-import { installPythonProgressBarsBridge } from '../PYTHON/pythonProgressBarsBridge.js';
-import { installMarketProvidersBridge } from './MARKET_DATA/PROVIDERS/marketProvidersBridge.js';
-import { installDealsEnhancerBridge } from './OFFERS/dealsEnhancerBridge.js';
-
-
-
-
 
 
 import { initPortfolioPanelsLazyRender} from './initAnalysePortfolioPanels.js';
@@ -83,13 +22,12 @@ import { handlePortAggData, handlePortProdData} from './SELECT_PORTFOLIO/PORT.js
 import { handleMVaRData, handleMvarInputData} from './ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
 import { handleIRSensData } from './ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
 import { handleCSSensData } from './ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
-import { handleCvarInput} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInput.js'; 
-import { handleCvarInputThresholdView} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInputThreshold.js'; 
+
 import { handleCVaRData, handleEADData} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js'; 
 import { handleFWDData } from './MARKET_DATA/FORWARDS/forwards.js';
 import { handleProviderData } from './DATA_PROVIDER/DATAProvider.js'; 
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './MARKET_DATA/FORCASTING/ML.js'; 
-import { handleLossIssuerMainData,} from './ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js'; 
+
 
 import { handleSummaryMarketRiskData, handleMvarProductTable} from './ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './NEW_PRODUCTS/offers.js';
@@ -100,8 +38,6 @@ import { handleHistoricMetricsAddClick} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_
 
 import { tooltips } from '../utils/ToolTip.js';
 import { AppState } from '../AppState.js';
-import { initializeTabs } from '../utils/tabs.js';
-
 
 import { handleModalAction } from '../MODAL_HELPER/ModalActionHandler.js';
 

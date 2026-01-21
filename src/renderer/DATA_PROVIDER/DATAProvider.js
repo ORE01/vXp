@@ -1,5 +1,6 @@
-import processData from '../../MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
+import processData from '../UI/MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../UI/MODAL_HELPER/ModalActionHandler.js';
+
 
 // Universal function to handle both ECB and Fed data and display in a table
 export function handleProviderData(receivedData, tableName) {

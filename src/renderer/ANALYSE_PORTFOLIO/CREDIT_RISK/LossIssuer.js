@@ -1,5 +1,5 @@
-import { filterColumnsInData } from '../../../MODAL_HELPER/dataProcessor.js';
-import processData from '../../../MODAL_HELPER/dataProcessor.js';
+import { filterColumnsInData } from '../../UI/MODAL_HELPER/dataProcessor.js';
+import processData from '../../UI/MODAL_HELPER/dataProcessor.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../renderer.js';
 // import {handleTrafficLight} from './trafficLight.js';

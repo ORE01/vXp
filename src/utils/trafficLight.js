@@ -1,4 +1,4 @@
-function updateTrafficLight(wrapperSelector, state) {
+export function updateTrafficLight(wrapperSelector, state) {
   const wrap = document.querySelector(wrapperSelector);
   if (!wrap) {
     console.error('Traffic light wrapper not found:', wrapperSelector);

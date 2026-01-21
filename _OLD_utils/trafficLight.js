@@ -1,9 +1,7 @@
-function updateTrafficLight(wrapperSelector, state) {
+export function updateTrafficLight(wrapperSelector, state) {
   const wrap = document.querySelector(wrapperSelector);
-  if (!wrap) {
-    console.error('Traffic light wrapper not found:', wrapperSelector);
-    return;
-  }
+  if (!wrap) return;
+
   const red    = wrap.querySelector('.light.red');
   const yellow = wrap.querySelector('.light.yellow');
   const green  = wrap.querySelector('.light.green');
@@ -15,6 +13,8 @@ function updateTrafficLight(wrapperSelector, state) {
   if (state === 'red'    && red)    red.classList.add('active');
 }
 
-window.updateTrafficLight = updateTrafficLight; // optional global
+// ❌ erstmal entfernen im ESM-Modus
+// window.updateTrafficLight = updateTrafficLight;
+
 
 

@@ -1,6 +1,6 @@
-import { getColorFromPalette, getPortfolioColor } from '../../utils/colors.js';
+﻿import { getColorFromPalette, getPortfolioColor } from '../../utils/colors.js';
 import { appState } from '../renderer.js';
-import { openPanel } from '../../FRONT_END/UI/panels.js'; 
+import { openPanel } from '../../renderer/UI/panels.js'; 
 
 
 
@@ -73,7 +73,7 @@ const mvarDistData = appState.getMvarDistData({
 
 if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
   console.warn(
-    '[DIST] No distribution for EXACT selection – nothing rendered (expected in test mode)',
+    '[DIST] No distribution for EXACT selection â€“ nothing rendered (expected in test mode)',
     { port_name, scenario_name, chosenAsof }
   );
   return;
@@ -125,12 +125,12 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
 
 function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   // 1. In absolute Performance umrechnen
-  const adjusted = values.map(v => portValueRel * (1 + v / 100)); // z. B. -2% → 0.97
+  const adjusted = values.map(v => portValueRel * (1 + v / 100)); // z. B. -2% â†’ 0.97
 
   // 2. Basiswerte
   const avg = adjusted.reduce((sum, v) => sum + v, 0) / adjusted.length;
   const spread = Math.max(...adjusted) - Math.min(...adjusted);
-  const padding = spread * 0.2; // ⬅️ Optional: Padding für Symmetrie
+  const padding = spread * 0.2; // â¬…ï¸ Optional: Padding fÃ¼r Symmetrie
 
   // 3. Symmetrischer Bereich um avg
   const min = avg - spread / 2 - padding;
@@ -139,7 +139,7 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
 
   const bins = Array(numBins).fill(0);
 
-  // 4. Zählen
+  // 4. ZÃ¤hlen
   adjusted.forEach(v => {
     const binIndex = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
     bins[binIndex]++;
@@ -149,7 +149,7 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   const labels = bins.map((_, i) => {
     const start = ((min + i * binWidth) * 100).toFixed(2);
     const end = ((min + (i + 1) * binWidth) * 100).toFixed(2);
-    return `${start}% – ${end}%`;
+    return `${start}% â€“ ${end}%`;
   });
 
   return { labels, bins };
@@ -165,13 +165,13 @@ function drawMvarHistogram(plValues, portValueRel, varTRel) {
 
   const thresholdPercent = portPercent + varPercent;
 
-  // ✅ Robust: entfernt ALLE Prozentzeichen, normalisiert Dash-Varianten, parst sauber
+  // âœ… Robust: entfernt ALLE Prozentzeichen, normalisiert Dash-Varianten, parst sauber
   const findBinIndexForValue = (value, labels) =>
     labels.findIndex(label => {
-      // Beispiel-Label: "95.12% – 96.34%"
+      // Beispiel-Label: "95.12% â€“ 96.34%"
       const cleaned = String(label)
         .replace(/%/g, '')          // <- ALLE % entfernen (dein Bug)
-        .replace(/[–—]/g, '-')      // <- En-Dash/Em-Dash auf normales '-' normalisieren
+        .replace(/[â€“â€”]/g, '-')      // <- En-Dash/Em-Dash auf normales '-' normalisieren
         .replace(/\s+/g, ' ')       // <- Whitespace normalisieren
         .trim();
 
@@ -187,14 +187,14 @@ function drawMvarHistogram(plValues, portValueRel, varTRel) {
       const lo = Math.min(start, end);
       const hi = Math.max(start, end);
 
-      // Wichtig: include hi, weil dein Label "start – end" inkl. Endpunkt wirken soll
+      // Wichtig: include hi, weil dein Label "start â€“ end" inkl. Endpunkt wirken soll
       return value >= lo && value <= hi;
     });
 
   const portBinIndex = findBinIndexForValue(portPercent, histogram.labels);
   const thresholdBinIndex = findBinIndexForValue(thresholdPercent, histogram.labels);
 
-  const pCol = getPortfolioColor(1); // Garmin-Pink für Portfolio-Bin
+  const pCol = getPortfolioColor(1); // Garmin-Pink fÃ¼r Portfolio-Bin
 
   const backgroundColor = histogram.bins.map((_, i) => {
     if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
@@ -322,7 +322,7 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
     pointRadius: 0
   };
 
-  // ✅ Synthetic Portfolio = Garmin-Pink, gestrichelt
+  // âœ… Synthetic Portfolio = Garmin-Pink, gestrichelt
   const pCol = getPortfolioColor(1);
   const portfolioValueDataset = {
     label: `Synthetic Portfolio`,
@@ -336,7 +336,7 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
 
   const lastPoint = syntheticData[syntheticData.length - 1];
 
-  // ✅ Current Portfolio Value Marker = Garmin-Pink
+  // âœ… Current Portfolio Value Marker = Garmin-Pink
   const endMarker = {
     label: `Current Portfolio Value (${targetEndValue.toFixed(2)}%)`,
     data: [{ x: lastPoint.x, y: targetEndValue }],
@@ -349,7 +349,7 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
     backgroundColor: pCol.backgroundColor,
   };
 
-  // 🔄 Chart generieren
+  // ðŸ”„ Chart generieren
   window.tsEU1YChartInstance = createSimpleLineChart(
     [cmbValueDataset, portfolioValueDataset, endMarker],
     'tsEU1YChart',
@@ -411,8 +411,8 @@ function normalizeCurveToEndValue(curve, targetEndValue) {
   }));
 }
 
-// NOTE: createSimpleLineChart bleibt bei dir unverändert nutzbar,
-// weil wir die Farben im Dataset selbst setzen (inkl. borderDash für Synthetic Portfolio).
+// NOTE: createSimpleLineChart bleibt bei dir unverÃ¤ndert nutzbar,
+// weil wir die Farben im Dataset selbst setzen (inkl. borderDash fÃ¼r Synthetic Portfolio).
 function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Chart', pointRadius = 0) {
   const canvasElement = document.getElementById(chartName);
   if (!canvasElement) {
@@ -535,11 +535,11 @@ data: dataset.data.map(dataPoint => ({
 function formatDateLabel(val) {
   if (val == null) return '';
 
-  // 1) Strings: immer versuchen sauber auf YYYY-MM-DD zu kürzen
+  // 1) Strings: immer versuchen sauber auf YYYY-MM-DD zu kÃ¼rzen
   if (typeof val === 'string') {
     const s = val.trim();
 
-    // Wenn es mit YYYY-MM-DD beginnt → IMMER auf die ersten 10 Zeichen kürzen
+    // Wenn es mit YYYY-MM-DD beginnt â†’ IMMER auf die ersten 10 Zeichen kÃ¼rzen
     // (deckt "YYYY-MM-DD", "YYYY-MM-DD 00:00:00", "YYYY-MM-DDTHH:MM:SS..." ab)
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
 
@@ -547,7 +547,7 @@ function formatDateLabel(val) {
     const d = new Date(s);
     if (!isNaN(d)) return d.toISOString().slice(0, 10);
 
-    // Wenn gar nichts geht: original zurück
+    // Wenn gar nichts geht: original zurÃ¼ck
     return s;
   }
 
@@ -566,7 +566,7 @@ export function handleMvarProductTable(port_name, scenario_name, asof_date = nul
     return;
   }
 
-  // Daten holen (latest asof_date, wenn null -> übernimmt get() Logik)
+  // Daten holen (latest asof_date, wenn null -> Ã¼bernimmt get() Logik)
   const rows = appState.getMvarProductData({
     port_name,
     scenario_name,
@@ -578,9 +578,9 @@ export function handleMvarProductTable(port_name, scenario_name, asof_date = nul
     return;
   }
 
-  // Optional: sortiere nach größtem Risiko zuerst (passende Key-Reihenfolge)
+  // Optional: sortiere nach grÃ¶ÃŸtem Risiko zuerst (passende Key-Reihenfolge)
   const riskKeyCandidates = [
-  'var_contrib_total',   // ✅ neu
+  'var_contrib_total',   // âœ… neu
   'var_contrib',
   'VaR_Contrib',
   'var', 'VaR',
@@ -717,7 +717,7 @@ export function renderMvarProdIdVarContribChart(rows) {
 
 
 
-  // nur var_contrib_total verwenden (wie gewünscht)
+  // nur var_contrib_total verwenden (wie gewÃ¼nscht)
   const series = buildProdIdVarContribSeries(rows, {
     valueKey: 'var_contrib_total',
     idKey: 'prod_id',
@@ -967,6 +967,7 @@ export function bindProdIdClicksForDetailsTable() {
 
   __prodDetailsClickBound = true;
 }
+
 
 
 

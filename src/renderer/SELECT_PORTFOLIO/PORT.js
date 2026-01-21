@@ -1,5 +1,6 @@
-import { filterColumnsInData } from '../../MODAL_HELPER/dataProcessor.js';
-import processData from '../../MODAL_HELPER/dataProcessor.js';
+import { filterColumnsInData } from '../UI/MODAL_HELPER/dataProcessor.js';
+import processData from '../UI/MODAL_HELPER/dataProcessor.js';
+
 import { appState } from '../renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { formatNumberWithGrouping } from '../../utils/format.js';

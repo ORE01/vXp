@@ -1,7 +1,5 @@
-import processData from '../../MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../../MODAL_HELPER/ModalActionHandler.js';
-import { filterColumnsInData } from '../../MODAL_HELPER/dataProcessor.js';
-import { AppState } from '../../AppState.js';
+import processData from '../UI/MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../UI/MODAL_HELPER/ModalActionHandler.js';
 import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { ensureRendered } from '../../utils/domHelpers.js';
 
