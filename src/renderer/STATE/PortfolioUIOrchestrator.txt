@@ -1,0 +1,66 @@
+createPortfolioUIOrchestrator({ appState })
+│
+├─ renderPortTable(data, index)                           (Portfolio-Flow, unverändert)
+│   │
+│   ├─ filter: port_name = appState.getSelectedPortTableName()
+│   │        filteredData = data.filter(port_name)
+│   │
+│   ├─ Standard UI
+│   │   ├─ handlePortAggData(filteredData, index, port_name)        → portDataContainer{index}
+│   │   ├─ handlePortProdData(filteredData, index, port_name)       → portDataContainer{index}
+│   │   └─ handleLiquidityData(filteredData, { appState })          → Liquidity UI
+│   │
+│   ├─ Summaries
+│   │   ├─ handleSummaryNotionalData(filteredData, index, port_name)
+│   │   └─ handleSummaryYieldData(filteredData, index, port_name)
+│   │
+│   ├─ MarketRisk Summary/ProductTable (Scenario)
+│   │   ├─ handleSummaryMarketRiskData(port_name, scenario, date)
+│   │   └─ handleMvarProductTable(port_name, scenario, null)
+│   │
+│   ├─ MVaR / CVaR
+│   │   ├─ handleMVaRData(mvarData, index)
+│   │   └─ handleCVaRData(cvarData, index)
+│   │
+│   ├─ Aggregation in appState.portDataMap
+│   │   └─ appState.setPortAggData(elementId, { formatted VaR values })
+│   │
+│   ├─ Comparison
+│   │   └─ createComparisonCharts(appState.portDataMap, false)
+│   │
+│   ├─ Special Container 3 (Original)
+│   │   └─ handlePortAggData(filteredOriginal, 3, port_name)        → portDataContainer3
+│   │
+│   ├─ Sens Tables (Portfolio)
+│   │   ├─ appState.handleIRSensData(filteredOriginal)              → IRSensDataContainer
+│   │   └─ appState.handleCSSensData(filteredOriginal)              → CSSensDataContainer
+│   │
+│   └─ Credit Extras
+│       ├─ appState.handleEADData(EADData)
+│       └─ handleLossIssuerMainData(LossData)
+│
+└─ renderOffersTable(data, opts = {})
+    │
+    ├─ offerName = appState.getSelectedOffersTableName() OR createdOffersDropdown.value
+    │
+    ├─ UI-Steuerung offersDataContainer (show/hide)
+    │
+    ├─ baseRows (RAW)
+    │   └─ baseRows = appState.getAllDealsData() filtered by port_name == offerName
+    │
+    ├─ enriched (ENRICHED)  ✅ wichtig
+    │   ├─ primary: enriched = data (wenn Array; optional nochmal nach offerName gefiltert)
+    │   └─ fallback: enriched = appState.getAllPortfolioData() filtered by port_name == offerName
+    │
+    ├─ renderOffersRawDealsTable({ offerName, baseRows })
+    │   └─ handleDealsData(baseRows, offerName, { forceTarget:'offers', restoreDropdown:false })
+    │      → offersDataContainer
+    │
+    ├─ renderOffersEnrichedPortfolio({ offerName, enriched })
+    │   └─ handlePortProdData(enriched, 4, offerName)
+    │      → portDataContainer4
+    │
+    └─ renderOffersSensTables({ baseRows, enriched })
+        └─ sensRows = enriched.length ? enriched : baseRows
+        → IRSensDataContainer / CSSensDataContainer
+
