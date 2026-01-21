@@ -373,70 +373,39 @@ function bootstrapIPC(deps) {
   } = deps;
 
   installIpcBridge({
-    api,
+    api: window.api,
     appState,
     panelRenderState,
     initAllPanelsLazyRender,
     initMarketDataChartsAutoRefresh,
 
-    // Swaption
+    // Swaption (kommt NICHT aus Handler-Objekten)
     handleSwaptionATMData,
     handleSwaptionSmileData,
     handleSwaptionCubeSurfaceData,
 
-    // Customer / Rates / Forwards
-    handleCustomerData: customerHandlers.handleCustomerData,
-    handleCustomerTSData: customerHandlers.handleCustomerTSData,
-    handleEUSWData: ratesHandlers.handleEUSWData,
-    handleForwardData: forwardsHandlers.handleForwardData,
-
-    // Issuer / Product
-    handleIssuerDataInit: issuerProdHandlers.handleIssuerDataInit,
-    handleCountryLookupDataInit: issuerProdHandlers.handleCountryLookupDataInit,
-    handleCSMatrixData: issuerProdHandlers.handleCSMatrixData,
-    handleCSParameterData: issuerProdHandlers.handleCSParameterData,
-    handleRankData: issuerProdHandlers.handleRankData,
-    handleProdDataInit: issuerProdHandlers.handleProdDataInit,
-
-    // Deals
-    handleDealsNameList: dealsActions.handleDealsNameList,
-    handleOffersNameList: dealsActions.handleOffersNameList,
-    handleDealsMainData: dealsActions.handleDealsMainData,
-
-    // Portfolio
-    handlePortNameList: dealsActions.handlePortNameList,
-    handlePortfolioData: dealsActions.handlePortfolioData,
-
-    // MVaR
+    // MVaR Input (kommt bei dir als Import)
     handleMvarInputData,
-    handleAllMVaRData: analyseHandlers.handleAllMVaRData,
-    handleMvarDistData: analyseHandlers.handleMvarDistData,
-    handleMvarProductData: analyseHandlers.handleMvarProductData,
 
-    // EAD
-    handleAllEADData: analyseHandlers.handleAllEADData,
+    // ✅ Handler-Objekte 1:1 reinspreadden (keine zweite Liste pflegen!)
+    ...issuerProdHandlers,
+    ...customerHandlers,
+    ...ratesHandlers,
+    ...forwardsHandlers,
+    ...dealsActions,
+    ...analyseHandlers,
 
-    // CVaR
-    initHandleCvarInput: analyseHandlers.initHandleCvarInput,
-    handleCvarInputThreshold: analyseHandlers.handleCvarInputThreshold,
-    handleAllCVaRData: analyseHandlers.handleAllCVaRData,
-
-    // Losses
-    handleAllLossData: analyseHandlers.handleAllLossData,
-
-    // ML
+    // ML (freie Imports/Funktionen)
     handleFuturePredictions,
     handleMLTestData,
     handleMLTrainedModels,
     handleMLModels,
 
-    // TS
+    // TS (freie Imports/Funktionen)
     createTSModals,
     observePanelTsOpen,
-
-    // PortfolioHistory
-    handlePortfolioHistoryData: analyseHandlers.handlePortfolioHistoryData,
   });
+
 }
 
 
