@@ -1,5 +1,7 @@
 import { bootstrapStores } from './bootstrap/bootstrapStores.js';
 import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
+import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
+
 
 
 
@@ -129,10 +131,19 @@ const {
   ratesHandlers,
   forwardsHandlers,
   analyseHandlers,
+
   handleSwaptionATMData,
   handleSwaptionSmileData,
   handleSwaptionCubeSurfaceData,
-} = bootstrapHandlers(appState);
+
+  handleMvarInputData,
+} = bootstrapHandlers(appState, {
+  api: window.api,
+  showMessageBox,
+  showConfirmationBox,
+  handleModalAction,
+});
+
 
 
 
@@ -220,58 +231,6 @@ const {
 
 function bootstrapCreateAppState() {
   return new AppState();
-}
-
-function bootstrapHandlers(appState) {
-  const issuerProdHandlers = createIssuerProductHandlers({ appState });
-  const customerHandlers = createCustomerHandlers({ appState });
-
-  const dealsActions = createDealsPortfolioActions({
-    appState,
-    api: window.api,
-    showMessageBox,
-    showConfirmationBox,
-    handleModalAction,
-  });
-
-  const ratesHandlers = createRatesHandlers({ appState });
-
-  // Backwards compatibility
-  appState.handleCSMatrixData = handleCSMatrixData;
-  appState.handleCSParameterData = handleCSParameterData;
-
-  const {
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-  } = createSwaptionDataHandlers({ appState });
-
-  const forwardsHandlers = createForwardsHandlers({ appState });
-
-  const analyseHandlers = createAnalysePortfolioHandlers({
-    appState,
-
-    handleMVaRData,
-    handleCVaRData,
-    handleEADData,
-    handleLossIssuerMainData,
-
-    handleCvarInput,
-    handleCvarInputThresholdView,
-  });
-
-  return {
-    issuerProdHandlers,
-    customerHandlers,
-    dealsActions,
-    ratesHandlers,
-    forwardsHandlers,
-    analyseHandlers,
-
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
-  };
 }
 
 function bootstrapIPC(deps) {
