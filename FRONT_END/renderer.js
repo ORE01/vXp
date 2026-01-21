@@ -1,4 +1,6 @@
 import { bootstrapStores } from './bootstrap/bootstrapStores.js';
+import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
+
 
 
 import { installDropdownFilterEngine } from './STATE/dropdownFilterEngine.js';
@@ -218,39 +220,6 @@ const {
 
 function bootstrapCreateAppState() {
   return new AppState();
-}
-
-// function bootstrapStores(appState) {
-//   installUIStateStore({ appState });
-//   installDropdownFilterEngine({ appState });
-//   installPortfolioDataStore({ appState });
-//   installMarketRiskStore({ appState });
-//   installCreditRiskStore({ appState });
-//   installMarketDataStore({ appState });
-//   installProductsStore({ appState });
-//   installNameListsStore({ appState });
-//   installCustomerReportsStore({ appState });
-//   installDataUpdatePipeline({ appState });
-// }
-
-function bootstrapUIBasics(appState) {
-  const portfolioUI = createPortfolioUIOrchestrator({ appState });
-
-  // ✅ AppState delegiert nur noch (Backwards compatible)
-  appState.handlePortTable = portfolioUI.renderPortTable;
-  appState.handleOffersTable = portfolioUI.renderOffersTable;
-
-  const portfolioDropdownUI = createPortfolioDropdownUI({ appState });
-  const marketRiskRefresh   = createMarketRiskRefresh({ appState });
-
-  // Backwards compatible: wenn du irgendwo noch appState.* aufrufst
-  appState.updateDropdownOptions = portfolioDropdownUI.updateDropdownOptions;
-  appState.fetchAndHandlePortData = portfolioDropdownUI.fetchAndHandlePortData;
-  appState.getFormElementsForContainer = portfolioDropdownUI.getFormElementsForContainer;
-
-  appState.refreshMarketRiskUI = marketRiskRefresh.refreshMarketRiskUI;
-
-  return { portfolioUI, portfolioDropdownUI, marketRiskRefresh };
 }
 
 function bootstrapHandlers(appState) {
