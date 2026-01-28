@@ -6,14 +6,14 @@
 } */
 
 /* Falls du die Card-Styles noch nicht global hast */
-.md-flex-row{ display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; }
-.table-card{
+#MARKETDATA_Modal .md-flex-row{ display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; }
+#MARKETDATA_Modal .table-card{
   flex:1 1 420px; min-width:320px;
   background: var(--panel-surface, #0f0f10);
   border:1px solid rgba(255,255,255,.08);
   border-radius:12px; padding:12px; overflow:auto;
 }
-.table-title{ margin:0 0 8px; font-size:14px; font-weight:600; opacity:.9; }
+#MARKETDATA_Modal .table-title{ margin:0 0 8px; font-size:14px; font-weight:600; opacity:.9; }
 
 /* Erzwinge vertikales Stacking nur im Market-Data-Modal */
 #MARKETDATA_Modal .table-content {
@@ -43,11 +43,14 @@
 /* RATES: Tabelle + Chart wieder nebeneinander */
 #MARKETDATA_Modal #panel-rates .sub-panel-body{
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr); /* links Tabelle, rechts Chart größer */
+  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr);
+  grid-auto-rows: max-content;
   gap: 16px;
+  align-items: start;
   max-width: 1380px;
   margin: 0 auto;
 }
+
 
 /* Falls eine frühere Media-Query auf 1 Spalte umstellt: hier überschreiben */
 @media (max-width: 1100px){
@@ -213,28 +216,7 @@
 }
 
 
-
-/* MARKETDATA: Sub-Trigger default hidden */
-#MARKETDATA_Modal .chart-section--sub {
-  display: none;
-}
-
-/* MARKETDATA: Sub-Trigger only visible if parent trigger is open */
-#MARKETDATA_Modal .section-trigger.is-open
-  + .chart-section--sub {
-  display: block;
-}
-
 /* ===== RATES: Placement FIX (NO DUPES, INLINE OVERRIDE SAFE) ===== */
-
-/* Grid placement for the 4 direct children in panel-rates body */
-#MARKETDATA_Modal #panel-rates .sub-panel-body{
-  display: grid !important;
-  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr);
-  grid-auto-rows: max-content;
-  gap: 16px;
-  align-items: start;
-}
 
 /* Label links oben */
 #MARKETDATA_Modal #panel-rates .sub-panel-body > label[for="ratesSelector"]{

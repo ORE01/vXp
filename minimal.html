@@ -1,0 +1,487 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Minimal Skeleton</title>
+  <style>
+    /* Minimal CSS nur für Trigger-Visibility */
+    .chart-section--sub { display:none; }
+    .chart-section.is-open + .chart-section--sub { display:block; }
+  </style>
+</head>
+<body>
+
+
+    <div style="background:#900;color:#fff;padding:10px;font-weight:700;">
+  MINIMAL.HTML LOADED
+</div>
+
+
+<!-- Minimal: Analyse Modal (falls dein JS genau diese Struktur erwartet) -->
+<div id="ANALYSE_Modal" class="table">
+  <div class="table-content">
+
+    <!-- Parent Trigger -->
+    <div class="chart-section" id="__debug_parent">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-breakdown"
+              aria-controls="panel-breakdown"
+              aria-expanded="false">
+        <span class="section-header">Portfolio Breakdown</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+    <!-- Sub Trigger -->
+    <div class="chart-section chart-section--sub" id="__debug_sub1">
+      <button class="section-trigger section-trigger--sub"
+              type="button"
+              data-panel="panel-breakdown"
+              data-breakdown-group="Issuer"
+              aria-controls="panel-breakdown"
+              aria-expanded="false">
+        <span class="section-header">Issuer Breakdown</span>
+        <span class="chev">▶</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<hr />
+
+
+
+
+<!-- ID-Skeleton: alle IDs aus original index.html -->
+<div id="__ID_SKELETON__">
+ 
+  <div id="ANALYSE_Tab"></div>
+  <div id="applySMA1"></div>
+  <div id="applySMA2"></div>
+  <div id="applySMA3"></div>
+  <div id="applyYearsForwardButton"></div>
+ 
+  <div id="batchSizeInput"></div>
+  <div id="btnQuickImport"></div>
+  <div id="cancelPDF"></div>
+  <div id="checkboxContainer"></div>
+  <div id="clearCSButton"></div>
+  <div id="clearIncludeButton"></div>
+  <div id="closePDFModal"></div>
+  <div id="CMSButton1"></div>
+  <div id="CMSButton2"></div>
+  <div id="cmsForwardInput1"></div>
+  <div id="cmsForwardInput2"></div>
+  <div id="cmsInputContainer1"></div>
+  <div id="cmsInputContainer2"></div>
+  <div id="COMP_Modal"></div>
+  <div id="COMP_Tab"></div>
+  <div id="compChartContainer1"></div>
+  <div id="compChartContainer2"></div>
+  <div id="compChartContainer3"></div>
+  <div id="compChartContainer4"></div>
+  <div id="compChartContainer5"></div>
+  <div id="compChartContainer6"></div>
+  <div id="compChartContainer7"></div>
+  <div id="compChartContainer8"></div>
+  <div id="confirmPDF"></div>
+  <div id="CPV01Chart"></div>
+  <div id="CREATE_PORTFOLIO_Modal"></div>
+  <div id="CREATE_PORTFOLIO_Tab"></div>
+  <div id="createdDealsDropdown"></div>
+  <div id="createdOffersDropdown"></div>
+  <div id="createdPortDropdown0"></div>
+  <div id="createdPortDropdown1"></div>
+  <div id="createdPortDropdown2"></div>
+  <div id="creditWarning"></div>
+  <div id="creditWarningContainer"></div>
+  <div id="CS_ChartCanvas"></div>
+  <div id="CSParameterAddButton"></div>
+  <div id="CSParameterDataContainer"></div>
+  <div id="CSParButton"></div>
+  <div id="CSSensDataContainer"></div>
+  <div id="csWarning"></div>
+  <div id="csWarningContainer"></div>
+  <div id="csWarningText"></div>
+  <div id="curveWarning"></div>
+  <div id="curveWarningContainer"></div>
+  <div id="customerReportsAddButton"></div>
+  <div id="customerReportsDeleteButton"></div>
+  <div id="customerReportsDropdown"></div>
+  <div id="customerReportsLoadButton"></div>
+  <div id="customerReportsNameInput"></div>
+  <div id="customerReportsSaveButton"></div>
+  <div id="CVaR_allRelativeContainer0"></div>
+  <div id="CVaR_allRelativeContainer1"></div>
+  <div id="CVaR_allRelativeContainer2"></div>
+  <div id="CVaR_marketDataContainer"></div>
+  <div id="CVaR_normDataContainer"></div>
+  <div id="CVaR_ratingDataContainer"></div>
+  <div id="CVaRButton"></div>
+  <div id="cvarConfigAddButton"></div>
+  <div id="cvarThresholdAddButton"></div>
+  <div id="DATA_Modal"></div>
+  <div id="DATA_Tab"></div>
+  <div id="DataProvider_Modal"></div>
+  <div id="DataProvider_Tab"></div>
+  <div id="dealsAddButton"></div>
+  <div id="dealsCategoryDropdown"></div>
+  <div id="dealsDataContainer"></div>
+  <div id="dealsDepotbankDropdown"></div>
+  <div id="dealsNotionalDropdown"></div>
+  <div id="dealsProdIdDropdown"></div>
+  <div id="dealsResetFiltersButton"></div>
+  <div id="deleteTableButton"></div>
+  <div id="durationProductYieldChart"></div>
+  <div id="durationSwapChart"></div>
+  <div id="EADDataContainer"></div>
+  <div id="ecbAddButton"></div>
+  <div id="editForm"></div>
+  <div id="email"></div>
+  <div id="epochsInput"></div>
+  <div id="eraseButton"></div>
+  <div id="errorMessage"></div>
+  <div id="euswapPortfolioYieldChart"></div>
+  <div id="euswapProductYieldChart"></div>
+  <div id="euswapYieldChartExport"></div>
+  <div id="excelProgressBarsContainer"></div>
+  <div id="fairValueButton"></div>
+  <div id="fairValueButton1"></div>
+  <div id="fairValueButton2"></div>
+  <div id="fairValueButton3"></div>
+  <div id="fedAddButton"></div>
+  <div id="fiveYearButton"></div>
+  <div id="footerText"></div>
+  <div id="FWDDataContainer"></div>
+  <div id="FWDforwardCurveChart"></div>
+  <div id="FWDlineChart"></div>
+  <div id="headerText"></div>
+  <div id="historicCreditRiskChart"></div>
+  <div id="historicMarketRiskChart"></div>
+  <div id="historicMetricsAddButton"></div>
+  <div id="historicPortfolioSensChart"></div>
+  <div id="historicPortfolioValueChart"></div>
+  <div id="historicPortfolioYieldChart"></div>
+  <div id="importEUSWButton"></div>
+  <div id="importExcelButtonVXP"></div>
+  <div id="importOffersBtn"></div>
+  <div id="inputContainer"></div>
+  <div id="inputCreditVaRConfigContainer"></div>
+  <div id="inputCreditVaRThresholdContainer"></div>
+  <div id="inputEcb-container"></div>
+  <div id="inputFed-container"></div>
+  <div id="inputMvarContainer"></div>
+  <div id="inputMVaRSave-button"></div>
+  <div id="inputYahoo-container"></div>
+  <div id="IRDataContainer"></div>
+  <div id="IRLineChart"></div>
+  <div id="IRLineChartExport"></div>
+  <div id="IRSensDataContainer"></div>
+  <div id="isinInputIssuer"></div>
+  <div id="issuerAddButton"></div>
+  <div id="issuerAddDomainsBtn"></div>
+  <div id="issuerDataContainer"></div>
+  <div id="issuerDataContainerLiqu"></div>
+  <div id="issuerDomainsInput"></div>
+  <div id="issuerFetchButton"></div>
+  <div id="issuerIssuerDropdown"></div>
+  <div id="issuerOpenSearchBtn"></div>
+  <div id="issuerOut"></div>
+  <div id="issuerParsePdfBtn"></div>
+  <div id="issuerPdfUrl"></div>
+  <div id="issuerRatingDropdown"></div>
+  <div id="issuerResetFiltersButton"></div>
+  <div id="issuerSaveButton"></div>
+  <div id="issuerSelect"></div>
+  <div id="issuerTable"></div>
+  <div id="lang-de"></div>
+  <div id="lang-en"></div>
+  <div id="LGDChart"></div>
+  <div id="LGDChartContainer"></div>
+  <div id="liquChart"></div>
+  <div id="liquControlsContainer"></div>
+  <div id="liquDataContainer"></div>
+  <div id="liquMaturityDropdown"></div>
+  <div id="liquResetFiltersButton"></div>
+  <div id="loadButton"></div>
+  <div id="logo"></div>
+  <div id="LossIssuerChartContainerMarket"></div>
+  <div id="LossIssuerChartContainerMarketNorm"></div>
+  <div id="LossIssuerChartContainerRating"></div>
+  <div id="LossIssuerChartMarket"></div>
+  <div id="LossIssuerChartMarketNorm"></div>
+  <div id="LossIssuerChartRating"></div>
+  <div id="LossIssuerCombinedChart"></div>
+  <div id="LossIssuerCombinedESChart"></div>
+  <div id="LossIssuerDataContainerMarket"></div>
+  <div id="LossIssuerDataContainerMarketNorm"></div>
+  <div id="LossIssuerDataContainerRating"></div>
+  <div id="MARKETDATA_Modal"></div>
+  <div id="MARKETDATA_Tab"></div>
+  <div id="matchColumnsButton"></div>
+  <div id="matchingContainer"></div>
+  <div id="maxButton"></div>
+  <div id="MLButton"></div>
+  <div id="MLFuturePredictionChart"></div>
+  <div id="MLModelsTable"></div>
+  <div id="MLTestDataChart"></div>
+  <div id="MLTrainedModelsTable"></div>
+  <div id="MLTS-modal-container"></div>
+  <div id="modal"></div>
+  <div id="modalBody"></div>
+  <div id="modal-content-container"></div>
+  <div id="movingAveragePeriod1"></div>
+  <div id="movingAveragePeriod2"></div>
+  <div id="movingAveragePeriod3"></div>
+  <div id="mvarAddButton"></div>
+  <div id="MVaRChart"></div>
+  <div id="MVaRCSContainer"></div>
+  <div id="MVaRDataContainer0"></div>
+  <div id="MVaRDataContainer1"></div>
+  <div id="MVaRDataContainer2"></div>
+  <div id="mvaRDistButton"></div>
+  <div id="MVaRIRContainer"></div>
+  <div id="mvarProdIdVarContribChart"></div>
+  <div id="mvarProdIdVarContribTable"></div>
+  <div id="mvarProductRefreshButton"></div>
+  <div id="mvarProductTableContainer"></div>
+  <div id="MVaRTotalContainer"></div>
+  <div id="nameInput"></div>
+  <div id="NEW_PRODUCTS_Modal"></div>
+  <div id="NEW_PRODUCTS_Tab"></div>
+  <div id="newModelCheckbox"></div>
+  <div id="newPortfolioDealsDataContainer"></div>
+  <div id="normalizationTypeSelector"></div>
+  <div id="offerPDFButton"></div>
+  <div id="offersCategoryDropdown"></div>
+  <div id="offersCouponTypeDropdown"></div>
+  <div id="offersDataContainer"></div>
+  <div id="offersDepotbankDropdown"></div>
+  <div id="offersGoToReportButton"></div>
+  <div id="offersIssuerDropdown"></div>
+  <div id="offersMaturityDropdown"></div>
+  <div id="offersProdIdDropdown"></div>
+  <div id="offersRankDropdown"></div>
+  <div id="offersRatingDropdown"></div>
+  <div id="offersResetFiltersButton"></div>
+  <div id="offerTargetsOverview"></div>
+  <div id="oneYearButton"></div>
+  <div id="panel-breakdown"></div>
+  <div id="panel-breakdown-title"></div>
+  <div id="panel-comp-charts"></div>
+  <div id="panel-comp-charts-title"></div>
+  <div id="panel-comp-port1"></div>
+  <div id="panel-comp-port1-title"></div>
+  <div id="panel-comp-port2"></div>
+  <div id="panel-comp-port2-title"></div>
+  <div id="panel-credit"></div>
+  <div id="panel-credit-risk"></div>
+  <div id="panel-credit-risk-title"></div>
+  <div id="panel-creditspreads"></div>
+  <div id="panel-creditspreads-title"></div>
+  <div id="panel-credit-title"></div>
+  <div id="panel-cvar"></div>
+  <div id="panel-cvar-title"></div>
+  <div id="panel-deals"></div>
+  <div id="panel-deals-title"></div>
+  <div id="panel-EAD"></div>
+  <div id="panel-EAD-title"></div>
+  <div id="panel-ecb"></div>
+  <div id="panel-ecb-title"></div>
+  <div id="panel-fed"></div>
+  <div id="panel-fed-title"></div>
+  <div id="panel-forward"></div>
+  <div id="panel-forward-title"></div>
+  <div id="panel-hist-sensitivities"></div>
+  <div id="panel-hist-sensitivities-title"></div>
+  <div id="panel-issuer"></div>
+  <div id="panel-issuer-np"></div>
+  <div id="panel-issuer-title-np"></div>
+  <div id="panel-issuer-title-provider"></div>
+  <div id="panel-liquidity"></div>
+  <div id="panel-liquidity-title"></div>
+  <div id="panel-market"></div>
+  <div id="panel-market-risk"></div>
+  <div id="panel-market-risk-title"></div>
+  <div id="panel-market-title"></div>
+  <div id="panel-ml"></div>
+  <div id="panel-ml-title"></div>
+  <div id="panel-mvar"></div>
+  <div id="panel-mvar-products"></div>
+  <div id="panel-mvar-products-title"></div>
+  <div id="panel-mvar-title"></div>
+  <div id="panel-newDeals"></div>
+  <div id="panel-newDeals-title"></div>
+  <div id="panel-offers-np"></div>
+  <div id="panel-offers-title"></div>
+  <div id="panel-performance"></div>
+  <div id="panel-performance-title"></div>
+  <div id="panel-portfolio-value"></div>
+  <div id="panel-portfolio-value-title"></div>
+  <div id="panel-prod-details"></div>
+  <div id="panel-prod-details-title"></div>
+  <div id="panel-products-np"></div>
+  <div id="panel-products-title"></div>
+  <div id="panel-rates"></div>
+  <div id="panel-rates-title"></div>
+  <div id="panel-read-offers-np"></div>
+  <div id="panel-read-offers-title"></div>
+  <div id="panel-reports-offers"></div>
+  <div id="panel-reports-offers-title"></div>
+  <div id="panel-reports-risk"></div>
+  <div id="panel-reports-risk-title"></div>
+  <div id="panel-sensitivities"></div>
+  <div id="panel-sensitivities-title"></div>
+  <div id="panel-swaption"></div>
+  <div id="panel-swaption-cube"></div>
+  <div id="panel-swaption-cube-title"></div>
+  <div id="panel-swaption-smile"></div>
+  <div id="panel-swaption-smile-title"></div>
+  <div id="panel-swaption-title"></div>
+  <div id="panel-ts"></div>
+  <div id="panel-ts-title"></div>
+  <div id="panel-upd-excel"></div>
+  <div id="panel-upd-excel-title"></div>
+  <div id="panel-upd-historic"></div>
+  <div id="panel-upd-historic-title"></div>
+  <div id="panel-upd-vxp"></div>
+  <div id="panel-upd-vxp-title"></div>
+  <div id="panel-yahoo"></div>
+  <div id="panel-yahoo-title"></div>
+  <div id="password"></div>
+  <div id="pdfTextModal"></div>
+  <div id="pieChartGrid"></div>
+  <div id="plMvarDistChart"></div>
+  <div id="PORT_Modal"></div>
+  <div id="PORT_Tab"></div>
+  <div id="portAggDataContainer0"></div>
+  <div id="portAggDataContainer1"></div>
+  <div id="portAggDataContainer2"></div>
+  <div id="portAggDataContainer3"></div>
+  <div id="portAggDataContainer5"></div>
+  <div id="portCategoryDropdown"></div>
+  <div id="portCountryDropdown"></div>
+  <div id="portCouponTypeDropdown"></div>
+  <div id="portDataContainer0"></div>
+  <div id="portDataContainer1"></div>
+  <div id="portDataContainer2"></div>
+  <div id="portDataContainer4"></div>
+  <div id="portDepotbankDropdown"></div>
+  <div id="PORTFOLIO_HISTORY_Modal"></div>
+  <div id="PORTFOLIO_HISTORY_Modal-title"></div>
+  <div id="portfolioDealsAddButton"></div>
+  <div id="PortfolioNameInput"></div>
+  <div id="PortfolioTagInputField"></div>
+  <div id="portIssuerDropdown"></div>
+  <div id="portMaturityDropdown"></div>
+  <div id="portProdIdDropdown"></div>
+  <div id="portRankDropdown"></div>
+  <div id="portRatingDropdown"></div>
+  <div id="portRegionDropdown"></div>
+  <div id="portResetFiltersButton"></div>
+  <div id="prodAddButton"></div>
+  <div id="prod-conflict-modal"></div>
+  <div id="prod-conflict-overlay"></div>
+  <div id="prodCouponTypeDropdown"></div>
+  <div id="prodDataContainer"></div>
+  <div id="prodDetailsContainer"></div>
+  <div id="prodDetailsMeta"></div>
+  <div id="prodIssuerDropdown"></div>
+  <div id="prodMaturityDropdown"></div>
+  <div id="prodProdIdDropdown"></div>
+  <div id="prodRankDropdown"></div>
+  <div id="prodRatingProdDropdown"></div>
+  <div id="prodResetFiltersButton"></div>
+  <div id="ProductCurveExport"></div>
+  <div id="productTargetsOverview"></div>
+  <div id="progressBarsContainer"></div>
+  <div id="progressText_EXCEL"></div>
+  <div id="progressText_GLOBAL"></div>
+  <div id="PV01Chart"></div>
+  <div id="ratesSelector"></div>
+  <div id="refreshThumbnailsBtn"></div>
+  <div id="report-root"></div>
+  <div id="REPORTS_Modal"></div>
+  <div id="REPORTS_Tab"></div>
+  <div id="reportsOffersDropdown"></div>
+  <div id="reportsOffersPreview"></div>
+  <div id="reportsRiskPreview"></div>
+  <div id="riskPDFButton"></div>
+  <div id="saveButton"></div>
+  <div id="savePortfolioButton"></div>
+  <div id="saveSelectionButton"></div>
+  <div id="submitMatchingBtn"></div>
+  <div id="submitToOffersBtn"></div>
+  <div id="submitToProductsBtn"></div>
+  
+  <div id="subPanelBackdrop_REPORTS"></div>
+  <div id="SwaptionATMDataContainer"></div>
+  <div id="swaption-atm-surface-3d"></div>
+  <div id="swaptionCubeRunButton"></div>
+  <div id="SwaptionCubeSummaryContainer"></div>
+  <div id="swaption-cube-surface-3d"></div>
+  <div id="swaptionOptionTenorSelect"></div>
+  <div id="swaptionOptionTenorSelectCube"></div>
+  <div id="swaption-smile-chart"></div>
+  <div id="swaptionSwapTenorSelect"></div>
+  <div id="swaptionSwapTenorSelectCube"></div>
+  <div id="tagInputField"></div>
+  <div id="targetCheckboxContainer"></div>
+  <div id="tenYearButton"></div>
+  <div id="themeToggle"></div>
+  <div id="title-clearCSButton"></div>
+  <div id="title-clearIncludeButton"></div>
+  <div id="title-fairValueButton2"></div>
+  <div id="title-fairValueButton3"></div>
+  <div id="title-offersFetch"></div>
+  <div id="title-offersPDFButton"></div>
+  <div id="title-refreshRisk"></div>
+  <div id="title-riskPDFButton"></div>
+  <div id="toolbar"></div>
+  <div id="tooltip-batch-size"></div>
+  <div id="tooltip-epochs"></div>
+  <div id="tradeDropdown"></div>
+  <div id="traffic-credit-cvar"></div>
+  <div id="traffic-credit-msd"></div>
+  <div id="traffic-credit-tsi"></div>
+  <div id="traffic-mvar"></div>
+  <div id="TS_Modal"></div>
+  <div id="TS_Modal_Template"></div>
+  <div id="TSDataContainer"></div>
+  <div id="tsEU1YChart"></div>
+  <div id="TSlineChart"></div>
+  <div id="tsTools"></div>
+  <div id="tsToolsToggle"></div>
+  <div id="updateExcelAllButton"></div>
+  <div id="updateExcelDealsButton"></div>
+  <div id="updateExcelEuswButton"></div>
+  <div id="updateExcelIssuerButton"></div>
+  <div id="updateExcelProductsButton"></div>
+  <div id="updateHistoricDataButton"></div>
+  <div id="valueSelector"></div>
+  <div id="yahooAddButton"></div>
+  <div id="yearsForwardInput"></div>
+  <div id="yieldChartGrid"></div>
+  <div id="yieldChartSection"></div>
+</div>
+
+<!-- Original scripts (optional): hier nur einfügen, wenn du willst, dass deine App-Logik läuft -->
+<!-- <script type="module" src="./src/renderer/renderer.js"></script> -->
+<!-- <script src="./login.js"></script> -->
+
+<!-- ===== Renderer Skeleton ===== -->
+<div id="app-root"></div>
+
+<div id="subPanelBackdrop_ANALYSE" class="sub-panel-backdrop" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
+<script type="module" src="./src/renderer/renderer.js"></script>
+
+<!-- <script src="./src/renderer/debug/minimalToggle.js"></script> -->
+
+
+</body>
+</html>

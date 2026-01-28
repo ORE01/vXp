@@ -188,6 +188,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(ROOT, 'index.html'));
+  //mainWindow.loadFile(path.join(ROOT, 'minimal.html'));
   mainWindow.webContents.openDevTools();
 
   // ✅ wichtig: Referenz sauber nullen, wenn geschlossen
@@ -316,11 +317,6 @@ app.whenReady().then(() => {
   // ✅ Main Window erstellen (nur einmal)
   createWindow();
 
-  // ✅ EXTRA Safety: nach did-finish-load nochmal pushen (falls Renderer Listener spät dran ist)
-  mainWindow.webContents.on('did-finish-load', () => {
-    pump.sendAllTablesToRenderer();
-  });
-
   // ✅ TableNames laden + initial send
   pump.initTableNamesAndFirstSend();
 
@@ -354,7 +350,6 @@ app.whenReady().then(() => {
       // Safety: nach dem Recreate Daten wieder pushen
       mainWindow.webContents.on('did-finish-load', () => {
         pump.initTableNamesAndFirstSend();
-        pump.sendAllTablesToRenderer();
       });
     }
   });

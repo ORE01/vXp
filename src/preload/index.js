@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 let ALLOW_SEND = new Set();
 let ALLOW_INVOKE = new Set();
 let ALLOW_LISTEN = new Set();
+let ALLOW_LISTEN_PREFIXES = [];
 let DATA_SUFFIX = 'Data';
 let allowlistLoaded = false;
 
@@ -31,10 +32,18 @@ function canInvoke(channel) {
 
 function canListen(channel) {
   if (!allowlistLoaded) return true;
+
   if (ALLOW_LISTEN.has(channel) || isAllowedDataEvent(channel)) return true;
+
+  // ✅ allow prefix-based channels (e.g. customerReports:list-success:<reqId>)
+  for (const p of ALLOW_LISTEN_PREFIXES) {
+    if (typeof p === 'string' && p.length && channel.startsWith(p)) return true;
+  }
+
   warn('listen', channel);
   return true;
 }
+
 
 // Load allowlist async from main
 (async function initAllowlist() {
@@ -44,6 +53,7 @@ function canListen(channel) {
       ALLOW_SEND = new Set(Array.isArray(allow.send) ? allow.send : []);
       ALLOW_INVOKE = new Set(Array.isArray(allow.invoke) ? allow.invoke : []);
       ALLOW_LISTEN = new Set(Array.isArray(allow.listen) ? allow.listen : []);
+      ALLOW_LISTEN_PREFIXES = Array.isArray(allow.listenPrefixes) ? allow.listenPrefixes : [];
       DATA_SUFFIX = allow.allowDataEventsEndingWith || 'Data';
       allowlistLoaded = true;
       console.log('[preload] IPC allowlist loaded:', {
@@ -89,6 +99,63 @@ contextBridge.exposeInMainWorld('api', {
     if (!canListen(ch)) return;
     ipcRenderer.on(ch, (_event, ...args) => callback(...args));
   },
+
+
+// da sind die receivers mit Logs!!! NICHT LÖSCHEN
+
+// receive: (channel, callback) => {
+//   const ch = String(channel || '');
+//   if (!canListen(ch)) return;
+
+//   window.__ipcBindCounts = window.__ipcBindCounts || {};
+//   window.__ipcBindCounts[ch] = (window.__ipcBindCounts[ch] || 0) + 1;
+//   console.log('[IPC bind]', ch, 'count=', window.__ipcBindCounts[ch]);
+
+//   ipcRenderer.on(ch, (_event, ...args) => {
+//     window.__ipcRecvCounts = window.__ipcRecvCounts || {};
+//     window.__ipcRecvCounts[ch] = (window.__ipcRecvCounts[ch] || 0) + 1;
+//     console.log('[IPC recv]', ch, 'count=', window.__ipcRecvCounts[ch]);
+
+//     callback(...args);
+//   });
+// },
+
+// once: (channel, callback) => {
+//   const ch = String(channel || '');
+//   if (!canListen(ch)) return;
+
+//   window.__ipcBindCounts = window.__ipcBindCounts || {};
+//   window.__ipcBindCounts[ch] = (window.__ipcBindCounts[ch] || 0) + 1;
+//   console.log('[IPC bind]', ch, 'count=', window.__ipcBindCounts[ch]);
+
+//   ipcRenderer.once(ch, (_event, ...args) => {
+//     window.__ipcRecvCounts = window.__ipcRecvCounts || {};
+//     window.__ipcRecvCounts[ch] = (window.__ipcRecvCounts[ch] || 0) + 1;
+//     console.log('[IPC recv]', ch, 'count=', window.__ipcRecvCounts[ch]);
+
+//     callback(...args);
+//   });
+// },
+
+
+// on: (channel, callback) => {
+//   const ch = String(channel || '');
+//   if (!canListen(ch)) return;
+
+//   window.__ipcBindCounts = window.__ipcBindCounts || {};
+//   window.__ipcBindCounts[ch] = (window.__ipcBindCounts[ch] || 0) + 1;
+//   console.log('[IPC bind]', ch, 'count=', window.__ipcBindCounts[ch]);
+
+//   ipcRenderer.on(ch, (_event, ...args) => {
+//     window.__ipcRecvCounts = window.__ipcRecvCounts || {};
+//     window.__ipcRecvCounts[ch] = (window.__ipcRecvCounts[ch] || 0) + 1;
+//     console.log('[IPC recv]', ch, 'count=', window.__ipcRecvCounts[ch]);
+
+//     callback(...args);
+//   });
+// },
+
+// da sind die receivers mit Logs!!! NICHT LÖSCHEN
 
   removeListener: (channel, callback) => {
     ipcRenderer.removeListener(channel, callback);

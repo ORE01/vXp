@@ -1,54 +1,51 @@
-/* Triggers im Header links & untereinander */
-#DataProvider_Modal .provider-triggers .chart-section{
-  display:block !important;
-  width:100%;
-  margin:8px 0;
-  text-align:left;
-}
-#DataProvider_Modal .provider-triggers .section-trigger{
-  max-width:200px;            /* wie bei Summary */
-  color:#cfcfcf;
-}
-#DataProvider_Modal .provider-triggers .section-trigger:hover{
-  color:#fff; border-color:#999;
+/* Header-Layout: Titel links, Actions rechts, Close ganz rechts */
+#DataProvider_Modal .sub-panel-header{
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Header-Layout: Titel links, Actions rechts, Close ganz rechts */
-.sub-panel-header{
-  display:flex;
-  align-items:center;
-  gap:12px;
+#DataProvider_Modal .sub-panel-title{
+  font-size: 18px;
+  font-weight: 600;
+  margin-right: auto; /* schiebt alles andere nach rechts */
 }
-.sub-panel-title{
-  font-size:18px; font-weight:600;
-  margin-right:auto;           /* schiebt alles andere nach rechts */
-}
-.sub-panel-actions{
-  display:flex; gap:8px; align-items:center;
+
+#DataProvider_Modal .sub-panel-actions{
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 /* Button-artiger Link */
-.provider-link{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:4px 10px;
-  font-size:13px;
-  color:#cfcfcf; text-decoration:none;
-  background:#444;
-  border:1px solid #666;
-  border-radius:8px;
-  transition:background .2s ease, border-color .2s ease, color .2s ease;
+#DataProvider_Modal .provider-link{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #cfcfcf;
+  text-decoration: none;
+  background: #444;
+  border: 1px solid #666;
+  border-radius: 8px;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
-.provider-link:hover{
-  background:#555; border-color:#888; color:#fff;
+
+#DataProvider_Modal .provider-link:hover{
+  background: #555;
+  border-color: #888;
+  color: #fff;
 }
 
 /* Icon fein zentrieren */
-.provider-link svg{
-  display:block;
+#DataProvider_Modal .provider-link svg{
+  display: block;
 }
 
 /* Optional: Mobile – Link kürzen bei sehr schmal */
 @media (max-width: 460px){
-  .provider-link{ padding:4px 8px; }
-  .provider-link svg{ margin-right:0; }
+  #DataProvider_Modal .provider-link{ padding: 4px 8px; }
+  #DataProvider_Modal .provider-link svg{ margin-right: 0; }
 }
+

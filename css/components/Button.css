@@ -1,0 +1,294 @@
+/* EDIT BUTTON */
+.button-wrapper {
+    margin-bottom: 10px; 
+  }
+  .close-button {
+    float: right;
+    cursor: pointer;
+  }
+  .button-container {
+    display: flex;
+    justify-content: flex-end; /* Buttons nach rechts ausrichten */
+    gap: 10px; /* Abstand zwischen den Buttons */
+    margin-top: 20px; /* Abstand zum oberen Inhalt */
+}
+
+  
+  .button-container .edit-button {
+    margin-bottom: 10px; /* Add space between buttons */
+  }
+  
+  .button-container .edit-button:last-child {
+    margin-bottom: 0; /* Remove the space for the last button */
+  }
+  .edit-button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 4px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .edit-button:hover {
+    background-color: #45a049;
+  }
+
+  .edit-button .button-label{
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.edit-button .chev{ display:none; }
+
+
+/* DELETE BUTTON */
+  .delete-button {
+    background-color: #b30000; /* Red background */
+  }
+
+  .delete-button:hover {
+    background-color: #800000; /* Darker red on hover */
+    color: #fff; /* Ensure text remains visible */
+  }
+
+
+
+
+  #scrollButton {
+    display: block;
+    }
+    
+    #issuerAddButton,
+    #dealsAddButton,
+    #prodAddButton {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    }
+    
+    #issuerAddButton:hover,
+    #dealsAddButton:hover,
+    #prodAddButton:hover {
+    background-color: #45a049;
+    }
+    
+    #issuerAddButton:active,
+    #dealsAddButton:active,
+    #prodAddButton:active{
+    background-color: #3e8e41;
+    } 
+    .chart-button {
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        padding: 4px 12px;
+        text-align: center;
+        text-decoration: none;
+        display: inline;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+/* Allgemeine Button-Stile (wie andere Buttons in deinem Design) */
+#coupon-button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#coupon-button:hover {
+  background-color: #45a049;
+}
+
+#coupon-button:active {
+  background-color: #3e8e41;
+}
+
+
+/* Allgemeine Button-Stile (wie andere Buttons in deinem Design) */
+#coupon-button {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#coupon-button:hover {
+  background-color: #45a049;
+}
+
+#coupon-button:active {
+  background-color: #3e8e41;
+}
+
+
+
+
+
+
+
+/* LINK BUTTON – unverändert lassen */
+.link-button {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #4aa3ff;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+.link-button:hover { color: #72b8ff; }
+
+/* PROD_ID als Link-Look – ALT (bestehen lassen) */
+:where(#CREATE_PORTFOLIO_Modal, #ANALYSE_Modal) td.prod-id-cell{
+  color:#4aa3ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+:where(#CREATE_PORTFOLIO_Modal, #ANALYSE_Modal) td.prod-id-cell:hover{
+  color:#72b8ff;
+}
+
+/* ➕ NEU: gleiche Optik für Deals/Offers-Tabellen */
+#dealsDataContainer td.prod-id-cell,
+#offersDataContainer td.prod-id-cell{
+  color:#4aa3ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+#dealsDataContainer td.prod-id-cell:hover,
+#offersDataContainer td.prod-id-cell:hover{
+  color:#72b8ff;
+}
+
+
+/* Bestehender Link-Look bleibt */
+/* .link-button { color:#4aa3ff; text-decoration:underline; ... } */
+
+[id^="portDataContainer"] td.prod-id-cell{
+  color:#4aa3ff;
+  text-decoration: underline;
+  cursor: pointer;
+}
+[id^="portDataContainer"] td.prod-id-cell:hover{ color:#72b8ff; }
+
+/* Falls irgendwo hart überschrieben wird */
+[id^="portDataContainer"] td .link-button,
+[id^="portDataContainer"] td .prod-id-link,
+[id^="portDataContainer"] td .trade-id-link{
+  color:#4aa3ff !important;
+  text-decoration: underline !important;
+}
+[id^="portDataContainer"] td .link-button:hover,
+[id^="portDataContainer"] td .prod-id-link:hover,
+[id^="portDataContainer"] td .trade-id-link:hover{
+  color:#72b8ff !important;
+}
+
+/* RESET-Button: einfarbiges Filter-Icon mit rotem Slash */
+.reset-FiltersButton{
+  --btn-size: 34px;
+  --icon-size: 16px;
+  --btn-bg: #161719;
+  --btn-fg: #e5e7eb;              /* Icon-Farbe (Filter) */
+  --btn-border: rgba(255,255,255,.08);
+
+  position: relative;  /* wichtig für ::after */
+  display:inline-flex; align-items:center; justify-content:center;
+  height: var(--btn-size); width: var(--btn-size);
+  border-radius:8px; background:var(--btn-bg); color:var(--btn-fg);
+  border:1px solid var(--btn-border); cursor:pointer;
+  transition: filter .18s ease, border-color .18s ease, transform .04s ease;
+  box-shadow:none; padding:0;
+}
+
+/* Filter-Symbol (weiß) */
+.reset-FiltersButton::before{
+  content:"";
+  width: var(--icon-size); height: var(--icon-size);
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+    <path d='M3 4h18l-7 8v6l-4 2v-8L3 4z'/>\
+  </svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+    <path d='M3 4h18l-7 8v6l-4 2v-8L3 4z'/>\
+  </svg>") center / contain no-repeat;
+}
+
+/* Rotes X über dem Filter, leicht nach unten versetzt */
+.reset-FiltersButton::after{
+  content:"";
+  position: absolute;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  background: #ef4444;
+
+  /* sauber zentrieren und dann etwas nach unten schieben */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(-4px);
+
+  /* Maske: zwei diagonale Linien → Kreuz */
+  -webkit-mask: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\
+    <line x1='4' y1='6' x2='20' y2='22'/>\
+    <line x1='20' y1='6' x2='4' y2='22'/>\
+  </svg>") center / contain no-repeat;
+          mask: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'>\
+    <line x1='4' y1='6' x2='20' y2='22'/>\
+    <line x1='20' y1='6' x2='4' y2='22'/>\
+  </svg>") center / contain no-repeat;
+}
+
+
+
+
+/* States */
+.reset-FiltersButton:hover{
+  filter:brightness(1.08);
+  border-color:rgba(255,255,255,.18);
+}
+.reset-FiltersButton:active{
+  transform:translateY(1px);
+}
+.reset-FiltersButton:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+
+
+
+
+    

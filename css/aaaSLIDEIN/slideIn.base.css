@@ -1,67 +1,83 @@
+/* ============================================================
+   slideIn.base.css  (MASTER für alle SlideIns)
+   Wirkt nur in .table Modals
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   BASIS / VARS
+   ------------------------------------------------------------ */
 .table {
-  --parent-gap: 8px;
-  --parent-to-sub-gap: 3px;
-  --sub-gap: 2px;
-  --sub-indent: 14px;
+  --sidebar-width: 260px;
   --trigger-max-width: 200px;
+  --sub-indent: 14px;
+
+  /* Topbar/Tabs-Höhe – fix */
+  --topbar-height: 110px;
+
+  position: relative;
 }
 
-/* Grundlayout im Modal */
+/* ------------------------------------------------------------
+   CONTENT / TRIGGER AREA
+   ------------------------------------------------------------ */
 .table .table-content {
   position: relative;
-  overflow: hidden;
   min-height: 100vh;
-  display: block !important; /* Trigger immer vertikal */
+  overflow: visible;
+  display: block;
 }
 
-/* Haupt-Trigger-Zeilen */
+/* Trigger-Zeilen (NUR in table) */
 .table .chart-section {
   display: block;
-  text-align: left;
-  align-self: flex-start;
   width: 100%;
-  margin: var(--parent-gap) 0;
-  clear: both;
+  margin: 8px 0;
+  text-align: left !important; /* killt center-align Altlasten */
 }
 
-/* Unterpunkte – initial VERSTECKT */
+/* Unterpunkte – initial versteckt */
 .table .chart-section--sub {
-  display: none; /* <– wichtig: wird per JS auf block gesetzt */
+  display: none;
   width: 100%;
-  clear: both;
-  margin: var(--sub-gap) 0;
+  margin: 2px 0;
   margin-left: var(--sub-indent);
-  border-top: 0 !important;
-  padding-top: 0 !important;
+  text-align: left !important;
 }
 
-.table .chart-section + .chart-section--sub {
-  margin-top: var(--parent-to-sub-gap);
+/* Subpunkte sichtbar, wenn Hauptpunkt geöffnet */
+.table .chart-section.is-open + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub {
+  display: block;
 }
 
-.table .chart-section--sub + .chart-section--sub {
-  margin-top: var(--sub-gap);
-}
-
-/* Einheitliche Trigger-Buttons (Basis) */
+/* ------------------------------------------------------------
+   TRIGGER BUTTONS (scoped)
+   ------------------------------------------------------------ */
 .table .section-trigger {
   display: inline-flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 6px;
 
-  font-size: 13px;
-  line-height: 1;
+  height: 28px;
   padding: 0 8px;
+  max-width: var(--trigger-max-width);
 
   background: #555;
   border: 1px solid #777;
   border-radius: 4px;
-  height: 28px;
-  max-width: var(--trigger-max-width);
-
   color: #cfcfcf;
-  box-sizing: border-box;
+
+  cursor: pointer;
+
+  /* killt “mittig” durch margin:auto */
+  margin: 0 !important;
+
+  /* Schrift wieder kleiner */
+  font-size: 12px;
+  line-height: 1;
 }
 
 .table .section-trigger:hover {
@@ -69,126 +85,193 @@
   border-color: #999;
 }
 
-.table .section-trigger:disabled {
-  color: rgba(255, 255, 255, .45);
-}
-
-/* Text + Chevron im Trigger */
-.section-trigger .section-header {
-  font-size: 13px;
-  position: relative;
-  top: 1px;
-}
-
-.section-trigger .chev {
-  font-size: 11px;
-  position: relative;
-  top: 1px;
-  transition: transform 0.2s ease;
-}
-
-/* Dreieck drehen, wenn Haupt-Trigger "offen" ist */
-.section-trigger.is-open .chev {
-  transform: rotate(90deg);
-}
-
-/* Unterpunkt-Trigger (optische Stufe) */
+/* Unterpunkt-Trigger */
 .table .section-trigger--sub {
   height: 24px;
-  font-size: 12px;
+  font-size: 11px; /* kleiner als Haupttrigger */
+  padding-left: 22px;
   background: #444;
-  border-color: #666;
-  color: #cfcfcf;
-  padding: 0 8px 0 22px;
-  position: relative;
+
   max-width: calc(var(--trigger-max-width) - var(--sub-indent));
+  position: relative;
 }
 
-.table .section-trigger--sub:hover {
-  color: #fff;
-  border-color: #888;
-}
-
-/* kleiner Pfeil/Einschub für Unterpunkte */
 .table .section-trigger--sub::before {
   content: "↳";
   position: absolute;
   left: 8px;
   top: 50%;
-  translate: 0 -50%;
+  transform: translateY(-50%);
   opacity: .7;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-/* Backdrop & Panel global */
-.sub-panel-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
+/* ------------------------------------------------------------
+   BACKDROP (blockiert NUR Content, NIE Sidebar, NIE Tabs)
+   ------------------------------------------------------------ */
+.table .sub-panel-backdrop {
+  position: fixed;
+  top: var(--topbar-height);
+  bottom: 0;
+  left: var(--sidebar-width);
+  right: 0;
+
+  background: rgba(0,0,0,.25);
   opacity: 0;
   pointer-events: none;
-  transition: opacity .25s ease;
+
+  transition: opacity .2s ease;
   z-index: 1050;
 }
 
-.sub-panel-backdrop.show {
+.table .sub-panel-backdrop.show {
   opacity: 1;
   pointer-events: auto;
 }
 
-.sub-panel {
-  position: absolute;
-  top: 0;
+/* ------------------------------------------------------------
+   PANELS (fixed, unter Tabs, genau eins sichtbar)
+   ------------------------------------------------------------ */
+.table .sub-panel {
+  position: fixed;
+  top: var(--topbar-height);
   right: -100%;
-  width: calc(100% - 260px);
-  max-width: none;
-  height: 100vh;
-  max-height: 100vh;
+  width: calc(100vw - var(--sidebar-width));
+  height: calc(100vh - var(--topbar-height));
+
   background: #333;
-  border-left: 1px solid #e6e6e6;
-  box-shadow: -12px 0 24px rgba(0, 0, 0, .15);
-  transition: right .28s ease;
+  border-left: 1px solid #ccc;
+  box-shadow: -12px 0 24px rgba(0,0,0,.2);
+
+  transition: right .25s ease;
   z-index: 1100;
+
   display: flex;
   flex-direction: column;
 }
 
-.sub-panel.open {
+.table .sub-panel.open {
   right: 0;
 }
 
-.sub-panel-header {
+/* Header / Body */
+.table .sub-panel-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
+
+  /* kompakter */
+  padding: 8px 12px;
+
+  border-bottom: 1px solid rgba(255,255,255,.12);
 }
 
-.sub-panel-title {
-  font-size: 18px;
+.table .sub-panel-title {
+  font-size: 14px;   /* kleiner */
   font-weight: 600;
+  color: #f0f0f0;
 }
 
-.sub-panel-close {
-  border: 0;
-  background: transparent;
-  font-size: 24px;
+.table .sub-panel-close {
+  font-size: 20px;   /* kleiner */
   line-height: 1;
+  background: transparent;
+  border: 0;
   cursor: pointer;
+  color: #fff;
 }
 
-.sub-panel-body {
+.table .sub-panel-body {
   flex: 1;
   overflow: auto;
-  padding: 16px;
+
+  /* kompakter */
+  padding: 12px;
+
+  /* Schrift kleiner */
+  font-size: 12px;
 }
 
-/* Falls du diese Regel weiterhin brauchst: nur für direkte Geschwister mit hr */
-.table .chart-section:has(+ hr + .chart-section--sub) + hr {
-  display: none !important;
+/* ------------------------------------------------------------
+   SAFETY: Toolbars in Panels dürfen nichts zentrieren
+   ------------------------------------------------------------ */
+.table .sub-panel-body .toolbar {
+  display: flex;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  gap: 10px;
+  flex-wrap: nowrap;
 }
+
+.table .sub-panel-body .toolbar .section-trigger {
+  align-self: flex-start !important;
+}
+
+/* ------------------------------------------------------------
+   TRIGGER CHEVRON – zentral, state-safe
+   ------------------------------------------------------------ */
+
+/* Grundzustand: Pfeil zeigt nach rechts */
+.table .section-trigger .chev{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;              /* verhindert Springen */
+  min-width: 14px;
+  height: 14px;
+  margin-left: 8px;
+}
+
+.table .section-trigger .chev::before{
+  content: "›";              /* schlanker Pfeil */
+  display: inline-block;
+
+  font-size: 14px;           /* Symbolgröße */
+  line-height: 1;
+  font-weight: 400;
+  opacity: 0.75;
+
+  transform: rotate(0deg);
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+/* OPEN-Zustand: Pfeil nach unten (Rotation) */
+.table .chart-section.is-open .section-trigger .chev::before{
+  transform: rotate(90deg);
+  opacity: 0.95;
+}
+
+
+
+
+/* ============================================================
+   FINAL TRIGGER FONT OVERRIDE – ALLES KLEIN
+   ============================================================ */
+
+/* ALLE Trigger – Sidebar, Sub, Toolbar, Panels */
+.table .section-trigger,
+.table .section-trigger *,
+.table .section-trigger--sub,
+.table .section-trigger--sub *,
+.table .toolbar .section-trigger,
+.table .toolbar .section-trigger * {
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+/* Optional: noch kompakter */
+.table .section-trigger {
+  height: 26px !important;
+}
+
+.table .section-trigger--sub {
+  height: 22px !important;
+}
+
+
+
+
 
 
 

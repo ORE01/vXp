@@ -5,7 +5,7 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 
 const dbService = require('./db.service');
-const { formatDate } = require('../../utils/main_format');
+const { formatDate } = require('../utils/main_format');
 
 /**
  * Import Excel → SQLite (uses existing sqlite connection from db.service)

@@ -144,14 +144,17 @@
 }
 
 /* Close-Icon optisch angleichen */
-#COMP_Modal .close{
+#COMP_Modal > .table-content > .close{
   position: absolute;
-  right: 12px; top: 8px;
-  font-size: 22px; line-height: 1;
+  right: 12px;
+  top: 8px;
+  font-size: 22px;
+  line-height: 1;
   color: #ddd;
   cursor: pointer;
 }
-#COMP_Modal .close:hover{ color: #fff; }
+#COMP_Modal > .table-content > .close:hover{ color: #fff; }
+
 
 /* Nur die großen Tabellen im Compare: natürliche Breite + Wrap */
 #COMP_Modal #portDataContainer1 table,

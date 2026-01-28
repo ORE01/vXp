@@ -1,48 +1,54 @@
-console.log("[BOOT] renderer.js loaded");
+﻿import { bootstrapTriggers } from './core/bootstrap/bootstrapTriggers.js';
+import { bootstrapStores } from './core/bootstrap/bootstrapStores.js';
+import { bootstrapUIBasics } from './core/bootstrap/bootstrapUIBasics.js';
+import { bootstrapHandlers } from './core/bootstrap/bootstrapHandlers.js';
+import { bootstrapBridges } from './core/bootstrap/bootstrapBridges.js';
+import { bootstrapPython } from './core/bootstrap/bootstrapPython.js';
+import { bootstrapIPC } from './core/bootstrap/bootstrapIPC.js';
+import { bootstrapBindings } from './core/bootstrap/bootstrapBindings.js';
 
-import { bootstrapTriggers } from './bootstrap/bootstrapTriggers.js';
-import { bootstrapStores } from './bootstrap/bootstrapStores.js';
-import { bootstrapUIBasics } from './bootstrap/bootstrapUIBasics.js';
-import { bootstrapHandlers } from './bootstrap/bootstrapHandlers.js';
-import { bootstrapBridges } from './bootstrap/bootstrapBridges.js';
-import { bootstrapPython } from './bootstrap/bootstrapPython.js';
-import { bootstrapIPC } from './bootstrap/bootstrapIPC.js';
-import { bootstrapBindings } from './bootstrap/bootstrapBindings.js';
+import { openPanel } from './core/ui/panels.js';
+import { showMessageBox, showConfirmationBox } from './core/ui/modals/confirm.js';
+
+import { initPortfolioPanelsLazyRender } from './core/routing/initAnalysePortfolioPanels.js';
+import { initMarketDataPanelsLazyRender } from './core/routing/initMarketDataPanels.js';
+import { initMarketDataChartsAutoRefresh } from './core/routing/initMarketDataRefresh.js';
+
+import { createTSModals, observePanelTsOpen } from './features/MARKET_DATA/HISTORIC_DATA/TS.js';
+import { handleExcelComplete } from './features/UPDATES/updatesExcel.js';
+
+import { buildCubeSurfaceGrid, populateSwaptionCubeSelectors } from './features/MARKET_DATA/VOLS/volCube.js';
+import { handlePortAggData, handlePortProdData } from './features/SELECT_PORTFOLIO/PORT.js';
+
+import { handleMVaRData, handleMvarInputData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
+import { handleIRSensData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
+import { handleCSSensData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
+
+import { handleCVaRData, handleEADData } from './features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
+import { handleFWDData } from './features/MARKET_DATA/FORWARDS/forwards.js';
+import { handleProviderData } from './features/DATA_PROVIDER/DATAProvider.js';
+import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORCASTING/ML.js';
+
+import { handleSummaryMarketRiskData, handleMvarProductTable } from './features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
+import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/NEW_PRODUCTS/offers.js';
+
+import { setupCustomerReportsPresetUI } from './features/REPORTS/CustomerReportsPresetUI.js';
+import { handleHistoricMetricsAddClick } from './features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';
+
+import { tooltips } from './utils/ToolTip.js';
+import { AppState } from './core/state/AppState.js';
+
+import { handleModalAction } from './core/ui/MODAL_HELPER/ModalActionHandler.js';
+
+const APP_ROOT = document.getElementById('app-root');
+const REPORT_ROOT = document.getElementById('report-root');
+
+if (!APP_ROOT) throw new Error('[renderer] #app-root missing');
+
+const MINIMAL_UI = document.body?.dataset?.minimalUi === '1';
+console.log('[BOOT] MINIMAL_UI =', MINIMAL_UI);
 
 
-import { openPanel} from './UI/panels.js';
-
-import { showMessageBox, showConfirmationBox } from './UI/modals/confirm.js';
-
-
-import { initPortfolioPanelsLazyRender} from './initAnalysePortfolioPanels.js';
-import { initMarketDataPanelsLazyRender} from './initMarketDataPanels.js';
-import { initMarketDataChartsAutoRefresh} from './initMarketDataRefresh.js';
-import { createTSModals, observePanelTsOpen} from './MARKET_DATA/HISTORIC_DATA/TS.js';
-import { handleExcelComplete } from './UPDATES/updatesExcel.js';
-import { buildCubeSurfaceGrid, populateSwaptionCubeSelectors} from './MARKET_DATA/VOLS/volCube.js';
-import { handlePortAggData, handlePortProdData} from './SELECT_PORTFOLIO/PORT.js';
-import { handleMVaRData, handleMvarInputData} from './ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js'; 
-import { handleIRSensData } from './ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
-import { handleCSSensData } from './ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
-
-import { handleCVaRData, handleEADData} from './ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js'; 
-import { handleFWDData } from './MARKET_DATA/FORWARDS/forwards.js';
-import { handleProviderData } from './DATA_PROVIDER/DATAProvider.js'; 
-import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels} from './MARKET_DATA/FORCASTING/ML.js'; 
-
-
-import { handleSummaryMarketRiskData, handleMvarProductTable} from './ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
-import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './NEW_PRODUCTS/offers.js';
-
-//REPORT:
-import { setupCustomerReportsPresetUI} from './REPORTS/CustomerReportsPresetUI.js';
-import { handleHistoricMetricsAddClick} from './ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';
-
-import { tooltips } from '../utils/ToolTip.js';
-import { AppState } from './STATE/AppState.js';
-
-import { handleModalAction } from './UI/MODAL_HELPER/ModalActionHandler.js';
 
 // =========================
 // Renderer Bootstrap Sections
@@ -59,7 +65,7 @@ const panelRenderState = Object.create(null);
 
 document.addEventListener('DOMContentLoaded', () => {
 
-// ✅ STABILITÄTSMODUS: App darf nicht hidden bleiben
+// âœ… STABILITÃ„TSMODUS: App darf nicht hidden bleiben
   const appRoot = document.getElementById('app-root');
   if (appRoot) {
     appRoot.classList.remove('app-hidden');
@@ -72,6 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   bootstrapUIBasics(appState);
   bootstrapTriggers(appState);
+
+    if (MINIMAL_UI) {
+    console.log('[BOOT] Minimal UI: skipping heavy renderer bootstraps');
+    return;
+  }
+
 
 
 
@@ -272,3 +284,5 @@ export function sortTenors(tenors) {
   }
 
 export { appState };
+
+

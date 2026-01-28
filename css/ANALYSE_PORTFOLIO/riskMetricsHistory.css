@@ -40,7 +40,7 @@
 }
 
 /* Add-Button soll wie section-trigger aussehen, aber grün */
-.section-trigger.edit-button{
+/* .section-trigger.edit-button{
   background:#2e7d32 !important;
   border:1px solid rgba(255,255,255,0.18) !important;
   color:#fff !important;
@@ -48,7 +48,43 @@
 
 .section-trigger.edit-button:hover{
   background:#256a2a !important;
+} */
+
+/* Analyse Sidebar: "Save to Historic Metrics" Button grün */
+/* #panel-analysis .section-trigger.save-history{
+  background: #2e7d32;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #ffffff;
 }
+
+#panel-analysis .section-trigger.save-history:hover{
+  background: #256a2a;
+} */
+
+
+/* Analyse Sidebar: "Save to Historic Metrics" Button grün (scoped via ID) */
+#historicMetricsAddButton{
+  background: #2e7d32;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #ffffff;
+}
+
+#historicMetricsAddButton:hover{
+  background: #256a2a;
+}
+
+/* Text im Button sauber weiß lassen */
+#historicMetricsAddButton .section-header{
+  color: inherit;
+}
+
+/* Plus/chev im Button (falls es nicht automatisch übernimmt) */
+#historicMetricsAddButton .chev{
+  color: inherit;
+  opacity: 0.95;
+}
+
+
 
 
 

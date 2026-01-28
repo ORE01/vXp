@@ -3,18 +3,32 @@
 
 const path = require('path');
 const { spawn } = require('child_process');
+const { app } = require('electron');
+
 
 function resolvePythonExecutableAndArgs(scriptIdentifier, args = []) {
   const env = process.env.NODE_ENV ? process.env.NODE_ENV.trim().toLowerCase() : 'production';
   let pythonExecutable;
   let pythonArgs = [scriptIdentifier, ...args];
 
-  if (env === 'development') {
-    const defaultExecutable = 'C:\\Python312\\python.exe';
-    const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
-    pythonExecutable = defaultExecutable;
-    pythonArgs.unshift(defaultScriptPath);
-  } else if (env === 'thomasdev') {
+if (env === 'development') {
+  const defaultExecutable = 'C:\\Python312\\python.exe';
+
+  // 🔁 Umschaltbarkeit für Backups
+  // Beispiel:
+  // $env:PY_MAIN="D:\run_this_version\20260126_electron_App\Risk\main.py"
+  const envMain = process.env.PY_MAIN ? process.env.PY_MAIN.trim() : '';
+
+  // Dein aktiver Arbeitsstand (funktioniert sicher)
+  const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
+
+  const scriptPath = envMain ? path.resolve(envMain) : defaultScriptPath;
+
+  pythonExecutable = defaultExecutable;
+  pythonArgs.unshift(scriptPath);
+}
+
+   else if (env === 'thomasdev') {
     pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
   } else {
     pythonExecutable = path.join(process.resourcesPath, 'bin', 'main', 'main.exe');
@@ -51,9 +65,18 @@ function startPythonScript({
 
         console.log('[py] exec:', pythonExecutable);
         console.log('[py] args:', pythonArgs);
+        console.log('[py] cwd:', process.cwd());
+        console.log('[py] mainDir:', path.dirname(pythonArgs[0]));
 
 
-      proc = spawn(pythonExecutable, pythonArgs, { windowsHide: true });
+      const mainScript = pythonArgs[0]; // das ist dein main.py im dev
+      const mainDir = path.dirname(mainScript);
+
+      proc = spawn(pythonExecutable, pythonArgs, {
+        windowsHide: true,
+        cwd: mainDir,              // extrem wichtig: Python startet im Risk-Ordner
+      });
+
     } catch (e) {
       return reject(e);
     }

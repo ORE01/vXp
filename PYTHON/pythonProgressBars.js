@@ -71,6 +71,6 @@ export function setupPythonProgressBars({
     if (txt) txt.textContent = data?.message ?? "";
   });
 
-  console.log(`[ProgressBars] Listening on "${eventName}" for #${containerId}`);
+  //console.log(`[ProgressBars] Listening on "${eventName}" for #${containerId}`);
 }
 

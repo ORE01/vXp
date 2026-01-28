@@ -13,27 +13,48 @@
   form-action 'self';
 ">
 
-  <link href="./css/LOGIN.css" rel="stylesheet">  
+<!-- 
 
-  <link href="./css/tableDark.css" rel="stylesheet">  
-  <link href="./css/modalDark.css" rel="stylesheet">
-  
-  <link href="./css/Tables.css" rel="stylesheet">
+Token:      Wenn es ein Wert ist (Farbe/Abstand)
+Base:       Wenn es überall gilt 
+Component:  Wenn es mehr als 1x vorkommt 
+Feature:    Wenn es nur in einem Panel gilt
 
-  
+ -->
+
+
+  <link href="./css/base/LOGIN.css" rel="stylesheet">  
+  <link href="./css/base/tableDark.css" rel="stylesheet">
+  <link href="./css/base/modalDark.css" rel="stylesheet">
+  <link href="./css/base/Tables.css" rel="stylesheet">
+  <link href="./css/base/CouponModal.css" rel="stylesheet">
+
+ 
+
+  <link href="./css/components/Button.css" rel="stylesheet">
+  <link href="./css/components/Dropdown.css" rel="stylesheet">
+  <link href="./css/components/ToolTip.css" rel="stylesheet">
+  <link href="./css/components/messageBox.css" rel="stylesheet">
+  <link href="./css/components/Warnings.css" rel="stylesheet">
+  <link href="./css/components/trafficLight.css" rel="stylesheet">
+  <link href="./css/components/Chart.css" rel="stylesheet">
+
+
+
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
-  <link href="./css/CouponModal.css" rel="stylesheet">
+  
 
   <link href="./css/SELECT_PORTFOLIO/selectPort.css" rel="stylesheet">
 
-  <link href="./css/aaaSLIDEIN/slideIn.base.css" rel="stylesheet">
+
 
   <link href="./css/ANALYSE_PORTFOLIO/analyse.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/breakdown.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
 
-  <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
+
   <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
 
   <link href="./css/ANALYSE_PORTFOLIO/creditRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/liquidity.css" rel="stylesheet">
@@ -43,38 +64,29 @@
 
   <link href="./css/CREATE_PORTFOLIO/CreatePortfolio.css" rel="stylesheet">
 
-  <link href="./css/NEW_PRODUCT/offers.css" rel="stylesheet">
-  <link href="./css/NEW_PRODUCT/newProducts.css" rel="stylesheet">
-  <link href="./css/NEW_PRODUCT/issuer.css" rel="stylesheet">
-  <link href="./css/NEW_PRODUCT/products.css" rel="stylesheet">
+  <!-- <link href="./css/NEW_PRODUCT/offers.css" rel="stylesheet"> -->
+  <!-- <link href="./css/NEW_PRODUCT/newProducts.css" rel="stylesheet"> -->
+  <!-- <link href="./css/NEW_PRODUCT/issuer.css" rel="stylesheet"> -->
+  <!-- <link href="./css/NEW_PRODUCT/products.css" rel="stylesheet"> -->
   
 
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/forcasting.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/MarketDataSlideIn.css" rel="stylesheet">
 
-  <link href="./css/DATA_PROVIDER/DataProvider.css" rel="stylesheet">
+  <!-- <link href="./css/DATA_PROVIDER/DataProvider.css" rel="stylesheet"> -->
 
   <link href="./css/UPDATES/updates.css" rel="stylesheet">
   <link href="./css/UPDATES/excelImport.css" rel="stylesheet">
   <link href="./css/UPDATES/historicDataImport.css" rel="stylesheet">
   <link href="./css/UPDATES/vxpImports.css" rel="stylesheet">
-  <!-- <link href="./css/UPDATES/conflictModalProducts.css" rel="stylesheet"> -->
-
-
-  <!-- <link href="./css/REPORTS/reports.css" rel="stylesheet"> -->
+  
   <link href="./css/REPORTS/riskReportsModal.css" rel="stylesheet">
   <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
 
   <link href="./css/REPORTS/offers-preview.css" rel="stylesheet">
 
-  <link href="./css/zzzUTIL/Chart.css" rel="stylesheet"> 
-  <link href="./css/zzzUTIL/Dropdown.css" rel="stylesheet">
-  <link href="./css/zzzUTIL/Button.css" rel="stylesheet">
-  <link href="./css/zzzUTIL/ToolTip.css" rel="stylesheet">
-  <link href="./css/zzzUTIL/trafficLight.css" rel="stylesheet">
-  <link href="./css/zzzUTIL/messageBox.css" rel="stylesheet">
-  <link href="./css/zzzUTIL/Warnings.css" rel="stylesheet">
+  <link href="./css/aaaSLIDEIN/slideIn.base.css" rel="stylesheet">
 
 
  
@@ -103,7 +115,7 @@
 
   <title>ValuationXpro</title>
 </head>
-<body>
+<body data-mode="app">
 
 <!-- 1) LOGIN SCREEN (Startup Screen) -->
 <div class="login-page">
@@ -142,7 +154,8 @@
 
         <div class="login-field">
           <label for="password">Password</label>
-          <input id="password" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+          <input id="password" type="password" placeholder="Enter your password" />
+
         </div>
 
         <button class="login-button" type="button">
@@ -160,8 +173,8 @@
 
 
 
-  <!-- 2) DEINE EIGENTLICHE APP â€“ am Anfang VERSTECKT -->
-  <div id="app-root">
+  <!-- 2) DEINE EIGENTLICHE APP ist am Anfang VERSTECKT -->
+  <div id="app-root" class="app-hidden">
 
     <img id="logo" src="assets/logo.png" style="display:none;" />
 
@@ -311,18 +324,18 @@
 
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
 
-<!-- ðŸ“Š Portfolio Breakdown â€“ Trigger -->
+<!-- Portfolio Breakdown Trigger -->
 <div class="chart-section">
   <button class="section-trigger"
           data-panel="panel-breakdown"
           aria-controls="panel-breakdown"
           aria-expanded="false">
     <span class="section-header">Portfolio Breakdown</span>
-    <span class="chev">â–¶</span>
+    <span class="chev"></span>
   </button>
 </div>
 
-      <!-- ðŸ”¹ Breakdown Sub-Trigger: Issuer -->
+      <!--   Breakdown Sub-Trigger: Issuer -->
       <div class="chart-section chart-section--sub">
         <button class="section-trigger section-trigger--sub"
                 data-panel="panel-breakdown"
@@ -330,11 +343,11 @@
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
           <span class="section-header">Issuer Breakdown</span>
-          <span class="chev">â–¶</span>
+          <span class="chev"></span>
         </button>
       </div>
 
-      <!-- ðŸ”¹ Breakdown Sub-Trigger: Product -->
+      <!--   Breakdown Sub-Trigger: Product -->
       <div class="chart-section chart-section--sub">
         <button class="section-trigger section-trigger--sub"
                 data-panel="panel-breakdown"
@@ -342,11 +355,11 @@
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
           <span class="section-header">Product Breakdown</span>
-          <span class="chev">â–¶</span>
+          <span class="chev"></span>
         </button>
       </div>
 
-      <!-- ðŸ”¹ Breakdown Sub-Trigger: General -->
+      <!--   Breakdown Sub-Trigger: General -->
       <div class="chart-section chart-section--sub">
         <button class="section-trigger section-trigger--sub"
                 data-panel="panel-breakdown"
@@ -354,7 +367,7 @@
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
           <span class="section-header">General Breakdown</span>
-          <span class="chev">â–¶</span>
+          <span class="chev"></span>
         </button>
       </div>
 
@@ -366,24 +379,24 @@
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
           <span class="section-header">Geography Breakdown</span>
-          <span class="chev">â–¶</span>
+          <span class="chev"></span>
         </button>
       </div>
 
 
-    <!-- ðŸ“ˆ Performance â€“ Trigger -->
+    <!--   Performance â€“ Trigger -->
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
         <span class="section-header">Performance</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-    <!-- ðŸ“‰ Market Risk â€“ Trigger (Hauptpunkt) -->
+    <!--   Market Risk â€“ Trigger (Hauptpunkt) -->
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
         <span class="section-header">Market Risk</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
@@ -394,8 +407,8 @@
                   aria-controls="panel-mvar"
                   aria-expanded="false"
                   style="max-width: 184px;">
-            <span class="section-header">Market Factor Detail</span>
-            <span class="chev">â–¶</span>
+            <span class="section-header">Market Factor</span>
+            <span class="chev"></span>
           </button>
         </div>
 
@@ -406,55 +419,55 @@
                   aria-controls="panel-mvar-products"
                   aria-expanded="false"
                   style="max-width: 184px;">
-            <span class="section-header">Market Product Detail</span>
-            <span class="chev">â–¶</span>
+            <span class="section-header">Market Product</span>
+            <span class="chev"></span>
           </button>
         </div>
 
 
-        <!-- ðŸ“‰ Market Sensitivities â€“ Unterpunkt von Market Risk -->
+        <!--   Market Sensitivities â€“ Unterpunkt von Market Risk -->
         <div class="chart-section chart-section--sub">
           <button class="section-trigger section-trigger--sub" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
             <span class="section-header">Market Sensitivities</span>
-            <span class="chev">â–¶</span>
+            <span class="chev"></span>
           </button>
         </div>
 
-    <!-- ðŸ“‰ Credit Risk â€“ Trigger -->
+    <!--   Credit Risk â€“ Trigger -->
     <div class="chart-section no-after-divider">
       <button class="section-trigger" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
         <span class="section-header">Credit Risk</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-        <!-- ðŸ“‰ EAD â€“ Sub-Trigger -->
+        <!--   EAD â€“ Sub-Trigger -->
         <div class="chart-section chart-section--sub">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-EAD"
                   aria-controls="panel-EAD"
                   aria-expanded="false">
             <span class="section-header">EAD/LGD/PD</span>
-            <span class="chev">â–¶</span>
+            <span class="chev"></span>
           </button>
         </div>
 
-        <!-- ðŸ“‰ CVaR â€“ Sub-Trigger -->
+        <!--   CVaR â€“ Sub-Trigger -->
         <div class="chart-section chart-section--sub">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-cvar"
                   aria-controls="panel-cvar"
                   aria-expanded="false">
             <span class="section-header">Credit VaR/ES</span>
-            <span class="chev">â–¶</span>
+            <span class="chev"></span>
           </button>
         </div>
 
-    <!-- ðŸ“‰ Liquidity â€“ Trigger -->
+    <!--   Liquidity â€“ Trigger -->
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-liquidity" aria-controls="panel-liquidity" aria-expanded="false">
         <span class="section-header">Liquidity</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
@@ -463,15 +476,15 @@
   <button
     id="historicMetricsAddButton"
     type="button"
-    class="section-trigger edit-button"
+    class="edit-button"
   >
-    <span class="section-header">Save to Historic Metrics</span>
-    <span class="chev">ï¼‹</span>
+    <span class="button-label">Save to Historic Metrics</span>
+    <span class="chev"></span>
   </button>
 </div>
 
 
-<!-- ðŸ“ˆ Historic Performance â€“ Trigger (Hauptpunkt) -->
+<!--   Historic Performance â€“ Trigger (Hauptpunkt) -->
 <div class="chart-section">
   <button
     class="section-trigger"
@@ -479,11 +492,11 @@
     aria-controls="PORTFOLIO_HISTORY_Modal"
     aria-expanded="false">
     <span class="section-header">Performance History</span>
-    <span class="chev">â–¶</span>
+    <span class="chev"></span>
   </button>
 </div>
 
-<!-- ðŸ’° Historic Portfolio Value â€“ Unterpunkt -->
+<!--   Historic Portfolio Value â€“ Unterpunkt -->
 <div class="chart-section chart-section--sub">
   <button
     class="section-trigger section-trigger--sub"
@@ -491,23 +504,23 @@
     aria-controls="panel-portfolio-value"
     aria-expanded="false">
     <span class="section-header">Portfolio Value</span>
-    <span class="chev">â–¶</span>
+    <span class="chev"></span>
   </button>
 </div>
 
-<!-- ðŸ“Š Historic Sensitivities â€“ Unterpunkt -->
+<!--   Historic Sensitivities â€“ Unterpunkt -->
 <div class="chart-section chart-section--sub">
   <button
     class="section-trigger section-trigger--sub"
     data-panel="panel-hist-sensitivities"
     aria-controls="panel-hist-sensitivities"
     aria-expanded="false">
-    <span class="section-header">Historical Sensitivities</span>
-    <span class="chev">â–¶</span>
+    <span class="section-header">Sensitivities</span>
+    <span class="chev"></span>
   </button>
 </div>
 
-<!-- ðŸ“‰ Historic Market Risk â€“ Unterpunkt -->
+<!--   Historic Market Risk â€“ Unterpunkt -->
 <div class="chart-section chart-section--sub">
   <button
     class="section-trigger section-trigger--sub"
@@ -515,11 +528,11 @@
     aria-controls="panel-market-risk"
     aria-expanded="false">
     <span class="section-header">Market Risk</span>
-    <span class="chev">â–¶</span>
+    <span class="chev"></span>
   </button>
 </div>
 
-<!-- ðŸ“‰ Historic Credit Risk â€“ Unterpunkt -->
+<!--   Historic Credit Risk â€“ Unterpunkt -->
 <div class="chart-section chart-section--sub">
   <button
     class="section-trigger section-trigger--sub"
@@ -527,7 +540,7 @@
     aria-controls="panel-credit-risk"
     aria-expanded="false">
     <span class="section-header">Credit Risk</span>
-    <span class="chev">â–¶</span>
+    <span class="chev"></span>
   </button>
 </div>
 
@@ -552,22 +565,22 @@
     </div>
     <button class="sub-panel-close"
             data-close="panel-breakdown"
-            aria-label="SchlieÃŸen">
+            aria-label="close">
       &times;
     </button>
   </div>
 
   <div class="sub-panel-body">
 
-    <!-- Ãœbersicht + Value-Selector -->
+    <!-- Uebersicht + Value-Selector -->
     <div class="portfolio-info">
 
-      <!-- ðŸ”¹ Ãœbersicht: Issuer / Product / General (wird von JS mit Breakdown-Text befÃ¼llt) -->
+      <!--    Uebersicht: Issuer / Product / General (wird von JS mit Breakdown-Text befÃ¼llt) -->
       <div class="data-wrapper">
         <div class="data-container" id="portAggDataContainer5"></div>
       </div>
 
-      <!-- ðŸ”¹ Value-Basis Auswahl -->
+      <!--   Value-Basis Auswahl -->
       <div class="data-wrapper" style="margin-top: 8px;">
         <label for="valueSelector" class="select-label">Value basis</label>
         <select id="valueSelector" class="deals-dropdown">
@@ -577,7 +590,7 @@
       </div>
     </div>
 
-    <!-- â¬‡ï¸ Hier rendert JS die Issuer/Product/General-Sektionen + Charts + Legenden -->
+    <!-- Hier rendert JS die Issuer/Product/General-Sektionen + Charts + Legenden -->
     <div id="pieChartGrid" class="pie-chart-grid">
       <!-- JS fÃ¼gt hier Chart- und Legend-Boxen ein -->
     </div>
@@ -590,7 +603,7 @@
     <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-performance-title" class="sub-panel-title">Performance</div>
-        <button class="sub-panel-close" data-close="panel-performance" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-performance" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -613,7 +626,7 @@
 <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
-    <button class="sub-panel-close" data-close="panel-market" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-market" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -672,7 +685,7 @@
         <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
           <div class="sub-panel-header">
             <div id="panel-mvar-title" class="sub-panel-title">MARKET VaR</div>
-            <button class="sub-panel-close" data-close="panel-mvar" aria-label="SchlieÃŸen">&times;</button>
+            <button class="sub-panel-close" data-close="panel-mvar" aria-label="close">&times;</button>
           </div>
 
 <div class="sub-panel-body">
@@ -716,7 +729,7 @@
 <div id="panel-mvar-products" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-products-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-mvar-products-title" class="sub-panel-title">MARKET Product VaR</div>
-    <button class="sub-panel-close" data-close="panel-mvar-products" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-mvar-products" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -759,7 +772,7 @@
     </div>
     <button class="sub-panel-close"
             data-close="panel-prod-details"
-            aria-label="SchlieÃŸen">
+            aria-label="close">
       &times;
     </button>
   </div>
@@ -782,7 +795,7 @@
         <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
           <div class="sub-panel-header">
             <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
-            <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="SchlieÃŸen">&times;</button>
+            <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="close">&times;</button>
           </div>
 
           <div class="sub-panel-body">
@@ -820,11 +833,11 @@
 <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-credit-title" class="sub-panel-title">Credit Loss Distribution</div>
-    <button class="sub-panel-close" data-close="panel-credit" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-credit" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
-    <!-- ðŸ”¹ BLOCK 1: Allgemeine CVaR Settings (Konfidenzniveau, Horizont, Szenarien, etc.) -->
+    <!--   BLOCK 1: Allgemeine CVaR Settings (Konfidenzniveau, Horizont, Szenarien, etc.) -->
     <div class="cvar-config-section">
       <div class="sub-panel-subtitle" style="margin-top: 12px; margin-bottom: 6px;">
         CVaR General Settings
@@ -837,9 +850,9 @@
       <!-- Hier rendert handleCvarInputConfigView() die Tabelle -->
       <div class="data-container" id="inputCreditVaRConfigContainer"></div>
     </div>
-    <!-- ðŸ”¹ ENDE BLOCK 1 -->
+    <!--   ENDE BLOCK 1 -->
 
-    <!-- ðŸ”¹ BLOCK 2: Threshold-Input fÃ¼r CVaR / TSI / MSD -->
+    <!--   BLOCK 2: Threshold-Input fÃ¼r CVaR / TSI / MSD -->
     <div class="threshold-section">
       <div class="sub-panel-subtitle" style="margin-top: 16px; margin-bottom: 6px;">
         Threshold Settings (CVaR / TSI / MSD)
@@ -852,15 +865,15 @@
       <!-- Hier rendert handleCvarInputThresholdView() die Tabelle -->
       <div class="data-container" id="inputCreditVaRThresholdContainer"></div>
     </div>
-    <!-- ðŸ”¹ ENDE BLOCK 2 -->
+    <!--   ENDE BLOCK 2 -->
 
-    <!-- ðŸ”¹ BLOCK 2.1: Calculate PL Button unter Threshold Settings -->
+    <!--   BLOCK 2.1: Calculate PL Button unter Threshold Settings -->
     <div class="button-wrapper" style="margin-top: 12px; margin-bottom: 16px;">
       <button id="CVaRButton" class="edit-button">Calculate PL</button>
     </div>
-    <!-- ðŸ”¹ ENDE BLOCK 2.1 -->
+    <!--   ENDE BLOCK 2.1 -->
 
-    <!-- ðŸ”¹ BLOCK 3: CVaR/TSI/MSD Ampeln + Output-Tabelle -->
+    <!--   BLOCK 3: CVaR/TSI/MSD Ampeln + Output-Tabelle -->
     <div class="cvar-pair" style="margin-top: 4px;">
       <!-- Linke Spalte: CVaR Kennzahlen-Tabelle -->
       <div class="cvar-col">
@@ -913,9 +926,9 @@
       </div>
 
     </div>
-    <!-- ðŸ”¹ ENDE BLOCK 3 -->
+    <!--   ENDE BLOCK 3 -->
 
-    <!-- ðŸ”¹ BLOCK 4: Charts -->
+    <!--   BLOCK 4: Charts -->
     <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 20px;">
       <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
         <p style="text-align: center;">Value at Risk:</p>
@@ -926,7 +939,7 @@
         <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
       </div>
     </div>
-    <!-- ðŸ”¹ ENDE BLOCK 4 -->
+    <!--   ENDE BLOCK 4 -->
   </div>
 </div>
 
@@ -936,7 +949,7 @@
         <div id="panel-EAD" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-EAD-title" hidden>
           <div class="sub-panel-header">
             <div id="panel-EAD-title" class="sub-panel-title">Exposure at Default (EAD) â€“ Loss Given Default (LGD) â€“ Probability of Default (PD)</div>
-            <button class="sub-panel-close" data-close="panel-EAD" aria-label="SchlieÃŸen">&times;</button>
+            <button class="sub-panel-close" data-close="panel-EAD" aria-label="close">&times;</button>
           </div>
 
           <div class="sub-panel-body">
@@ -961,7 +974,7 @@
         <div id="panel-cvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-cvar-title" hidden>
           <div class="sub-panel-header">
             <div id="panel-cvar-title" class="sub-panel-title">Credit Value at Risk (VaR) & Expected Shortfall (ES)</div>
-            <button class="sub-panel-close" data-close="panel-cvar" aria-label="SchlieÃŸen">&times;</button>
+            <button class="sub-panel-close" data-close="panel-cvar" aria-label="close">&times;</button>
           </div>
 
           <div class="sub-panel-body">
@@ -1017,7 +1030,7 @@
     <div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-liquidity-title" class="sub-panel-title">Liquidity</div>
-        <button class="sub-panel-close" data-close="panel-liquidity" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-liquidity" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -1078,7 +1091,7 @@
     <button
       class="sub-panel-close"
       data-close="PORTFOLIO_HISTORY_Modal"
-      aria-label="SchlieÃŸen"
+      aria-label="close"
     >
       &times;
     </button>
@@ -1105,7 +1118,7 @@
     <button
       class="sub-panel-close"
       data-close="panel-portfolio-value"
-      aria-label="SchlieÃŸen"
+      aria-label="close"
     >
       &times;
     </button>
@@ -1132,7 +1145,7 @@
     <button
       class="sub-panel-close"
       data-close="panel-hist-sensitivities"
-      aria-label="SchlieÃŸen"
+      aria-label="close"
     >
       &times;
     </button>
@@ -1159,7 +1172,7 @@
     <button
       class="sub-panel-close"
       data-close="panel-market-risk"
-      aria-label="SchlieÃŸen"
+      aria-label="close"
     >
       &times;
     </button>
@@ -1186,7 +1199,7 @@
     <button
       class="sub-panel-close"
       data-close="panel-credit-risk"
-      aria-label="SchlieÃŸen"
+      aria-label="close"
     >
       &times;
     </button>
@@ -1219,19 +1232,19 @@
     <!-- Triggers -->
     <!-- <div class="chart-section">
       <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
-        <span class="section-header">Issuer</span><span class="chev">â–¶</span>
+        <span class="section-header">Issuer</span><span class="chev"></span>
       </button>
     </div>-->
 
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
-        <span class="section-header">New Portfolio</span><span class="chev">â–¶</span>
+        <span class="section-header">New Portfolio</span><span class="chev"></span>
       </button>
     </div> 
 
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
-        <span class="section-header">Change Existing Portfolio</span><span class="chev">â–¶</span>
+        <span class="section-header">Change Existing Portfolio</span><span class="chev"></span>
       </button>
     </div>
 
@@ -1244,7 +1257,7 @@
     <div id="panel-newDeals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-newDeals-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-newDeals-title" class="sub-panel-title">NEW PORTFOLIO</div>
-        <button class="sub-panel-close" data-close="panel-newDeals" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-newDeals" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -1285,7 +1298,7 @@
 <div id="panel-deals" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-deals-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-deals-title" class="sub-panel-title">EDIT / CREATE PORTFOLIO</div>
-    <button class="sub-panel-close" data-close="panel-deals" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-deals" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -1384,6 +1397,10 @@
   </div>
 </div>
 
+
+
+
+
 <!-- Modal: Market Data -->
 <div id="MARKETDATA_Modal" class="table">
   <div class="table-content">
@@ -1391,12 +1408,12 @@
 
     <div class="portfolio-info">
       <h2 class="section-header">MARKET DATA</h2>
-      <p style="opacity:.8; margin: 6px 0 0;">Rates â€¢ Forward â€¢ Credit Spreads</p>
+      <p style="opacity:.8; margin: 6px 0 0;">Rates/Forward/Credit Spreads</p>
     </div>
 
     <!-- Triggers -->
 
-    <!-- ðŸ“‰ Interest Rates â€“ Trigger (Hauptpunkt) -->
+    <!--   Interest Rates â€“ Trigger (Hauptpunkt) -->
     <div class="chart-section">
       <button
         class="section-trigger"
@@ -1404,11 +1421,11 @@
         aria-controls="panel-rates"
         aria-expanded="false">
         <span class="section-header">Interest Rates</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-    <!-- ðŸ“‰ Forwards â€“ Unterpunkt von Interest Rates -->
+    <!--   Forwards â€“ Unterpunkt von Interest Rates -->
     <div class="chart-section chart-section--sub">
       <button
         class="section-trigger section-trigger--sub"
@@ -1416,11 +1433,11 @@
         aria-controls="panel-forward"
         aria-expanded="false">
         <span class="section-header">Forward</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-        <!-- ðŸ“‰ Swaption Vols â€“ Unterpunkt von Interest Rates -->
+        <!--   Swaption Vols â€“ Unterpunkt von Interest Rates -->
     <div class="chart-section chart-section--sub">
       <button
         class="section-trigger section-trigger--sub"
@@ -1428,11 +1445,11 @@
         aria-controls="panel-swaption"
         aria-expanded="false">
         <span class="section-header">Swaption Vols</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-    <!-- ðŸ“‰ Swaption Smile â€“ eigener Unterpunkt von Interest Rates -->
+    <!--   Swaption Smile â€“ eigener Unterpunkt von Interest Rates -->
     <div class="chart-section chart-section--sub">
       <button
         class="section-trigger section-trigger--sub"
@@ -1440,11 +1457,11 @@
         aria-controls="panel-swaption-smile"
         aria-expanded="false">
         <span class="section-header">Swaption Smile</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-    <!-- ðŸ“‰ Swaption Vol Cube â€“ eigener Unterpunkt von Interest Rates -->
+    <!--   Swaption Vol Cube â€“ eigener Unterpunkt von Interest Rates -->
 <div class="chart-section chart-section--sub">
   <button
     class="section-trigger section-trigger--sub"
@@ -1452,13 +1469,13 @@
     aria-controls="panel-swaption-cube"
     aria-expanded="false">
     <span class="section-header">Swaption Vol Cube</span>
-    <span class="chev">â–¶</span>
+    <span class="chev"></span>
   </button>
 </div>
 
 
 
-    <!-- ðŸ“‰ Credit Spreads â€“ Trigger -->
+    <!--   Credit Spreads â€“ Trigger -->
     <div class="chart-section">
       <button
         class="section-trigger"
@@ -1466,11 +1483,11 @@
         aria-controls="panel-creditspreads"
         aria-expanded="false">
         <span class="section-header">Credit Spreads</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-    <!-- ðŸ“‰ Historic Data â€“ Trigger -->
+    <!--   Historic Data â€“ Trigger -->
     <div class="chart-section">
       <button
         class="section-trigger"
@@ -1478,11 +1495,11 @@
         aria-controls="panel-ts"
         aria-expanded="false">
         <span class="section-header">Historic Data</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
-    <!-- ðŸ“‰ Machine Learning â€“ Trigger -->
+    <!--   Machine Learning â€“ Trigger -->
     <div class="chart-section">
       <button
         class="section-trigger"
@@ -1490,7 +1507,7 @@
         aria-controls="panel-ml"
         aria-expanded="false">
         <span class="section-header">Forcasting</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
@@ -1503,7 +1520,7 @@
     <div id="panel-rates" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-rates-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-rates-title" class="sub-panel-title">INTEREST RATES</div>
-        <button class="sub-panel-close" data-close="panel-rates" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-rates" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -1528,7 +1545,7 @@
     <div id="panel-forward" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-forward-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-forward-title" class="sub-panel-title">FORWARD RATES</div>
-        <button class="sub-panel-close" data-close="panel-forward" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-forward" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -1570,7 +1587,7 @@
 <div id="panel-swaption" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-swaption-title" class="sub-panel-title">SWAPTION VOLS</div>
-    <button class="sub-panel-close" data-close="panel-swaption" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-swaption" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -1600,7 +1617,7 @@
 <div id="panel-swaption-smile" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-smile-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-swaption-smile-title" class="sub-panel-title">SWAPTION SMILE</div>
-    <button class="sub-panel-close" data-close="panel-swaption-smile" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-swaption-smile" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -1659,7 +1676,7 @@
     </div>
     <button class="sub-panel-close"
             data-close="panel-swaption-cube"
-            aria-label="SchlieÃŸen">
+            aria-label="close">
       &times;
     </button>
   </div>
@@ -1741,7 +1758,7 @@
     <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-creditspreads-title" class="sub-panel-title">CREDIT SPREADS</div>
-        <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -1770,7 +1787,7 @@
 <div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA</div>
-    <button class="sub-panel-close" data-close="panel-ts" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-ts" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -1880,7 +1897,7 @@
     <div id="panel-ml" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ml-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-ml-title" class="sub-panel-title">Machine Learning (ML)</div>
-        <button class="sub-panel-close" data-close="panel-ml" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-ml" aria-label="close">&times;</button>
       </div>
 
 <div class="sub-panel-body">
@@ -1986,25 +2003,25 @@
       <div class="provider-triggers">
         <div class="chart-section">
           <button class="section-trigger" data-panel="panel-ecb" aria-controls="panel-ecb" aria-expanded="false">
-            <span class="section-header">ECB</span><span class="chev">â–¶</span>
+            <span class="section-header">ECB</span><span class="chev"></span>
           </button>
         </div>
 
         <div class="chart-section">
           <button class="section-trigger" data-panel="panel-fed" aria-controls="panel-fed" aria-expanded="false">
-            <span class="section-header">Fed</span><span class="chev">â–¶</span>
+            <span class="section-header">Fed</span><span class="chev"></span>
           </button>
         </div>
 
         <div class="chart-section">
           <button class="section-trigger" data-panel="panel-yahoo" aria-controls="panel-yahoo" aria-expanded="false">
-            <span class="section-header">Yahoo</span><span class="chev">â–¶</span>
+            <span class="section-header">Yahoo</span><span class="chev"></span>
           </button>
         </div>
 
         <div class="chart-section">
           <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
-            <span class="section-header">Issuer (PDF)</span><span class="chev">â–¶</span>
+            <span class="section-header">Issuer (PDF)</span><span class="chev"></span>
           </button>
         </div>
 
@@ -2032,7 +2049,7 @@
             ECB Website
           </a>
         </div>
-        <button class="sub-panel-close" data-close="panel-ecb" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-ecb" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
         <section class="table-card">
@@ -2055,7 +2072,7 @@
             FRED Website
           </a>
         </div>
-        <button class="sub-panel-close" data-close="panel-fed" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-fed" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
         <section class="table-card">
@@ -2078,7 +2095,7 @@
             Yahoo Finance
           </a>
         </div>
-        <button class="sub-panel-close" data-close="panel-yahoo" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-yahoo" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
         <section class="table-card">
@@ -2091,13 +2108,14 @@
     </div>
 
 <!-- Panel: Issuer (PDF) -->
-    <div id="panel-issuer" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+    <div id="panel-issuer" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title-provider" hidden>
       <div class="sub-panel-header">
-        <div id="panel-issuer-title" class="sub-panel-title">Issuer (PDF) â€“ Final Terms Parser</div>
+        <div id="panel-issuer-title-provider" class="sub-panel-title">Issuer (PDF) – Final Terms Parser</div>
+
         <div class="sub-panel-actions">
           <span class="provider-link">PDFs: <code>/files/finalterms/ISIN.pdf</code></span>
         </div>
-        <button class="sub-panel-close" data-close="panel-issuer" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-issuer" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2128,7 +2146,7 @@
             <!-- optional spÃ¤ter: <button id="issuerSaveButton" class="edit-button" disabled>Save to DB</button> -->
           </div>
 
-          <pre id="issuerOut" class="log" style="margin-top:10px;white-space:pre-wrap;">â€“ ready â€“</pre>
+          <pre id="issuerOut" class="log" style="margin-top:10px;white-space:pre-wrap;"> ready </pre>
           <div id="issuerTable" style="margin-top:10px;"></div>
         </section>
       </div>
@@ -2150,7 +2168,7 @@
 
     <div class="portfolio-info">
       <h2 class="section-header">NEW PRODUCTS</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Issuer â€¢ Products â€¢ Offers</p>
+      <p style="opacity:.8; margin:6px 0 0;">Issuer/Products/Offers</p>
     </div>
 
     <!-- Triggers -->
@@ -2159,7 +2177,7 @@
               data-panel="panel-issuer-np"
               aria-controls="panel-issuer-np"
               aria-expanded="false">
-        <span class="section-header">Issuer</span><span class="chev">â–¶</span>
+        <span class="section-header">Issuer</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2168,7 +2186,7 @@
               data-panel="panel-products-np"
               aria-controls="panel-products-np"
               aria-expanded="false">
-        <span class="section-header">Products</span><span class="chev">â–¶</span>
+        <span class="section-header">Products</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2178,7 +2196,7 @@
               data-panel="panel-read-offers-np"
               aria-controls="panel-read-offers-np"
               aria-expanded="false">
-        <span class="section-header">Read Offers</span><span class="chev">â–¶</span>
+        <span class="section-header">Read Offers</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2188,7 +2206,7 @@
               data-panel="panel-offers-np"
               aria-controls="panel-offers-np"
               aria-expanded="false">
-        <span class="section-header">Offers</span><span class="chev">â–¶</span>
+        <span class="section-header">Offers</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2198,10 +2216,11 @@
     <!-- ===== PANELS ===== -->
 
     <!-- Panel: ISSUER -->
-    <div id="panel-issuer-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title" hidden>
+    <div id="panel-issuer-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title-np" hidden>
       <div class="sub-panel-header">
-        <div id="panel-issuer-title" class="sub-panel-title">ISSUER</div>
-        <button class="sub-panel-close" data-close="panel-issuer-np" aria-label="SchlieÃŸen">&times;</button>
+        <div id="panel-issuer-title-np" class="sub-panel-title">ISSUER</div>
+
+        <button class="sub-panel-close" data-close="panel-issuer-np" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2240,7 +2259,7 @@
     <div id="panel-products-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-products-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-products-title" class="sub-panel-title">PRODUCTS</div>
-        <button class="sub-panel-close" data-close="panel-products-np" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-products-np" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2294,7 +2313,7 @@
     <div id="panel-read-offers-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-read-offers-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-read-offers-title" class="sub-panel-title">READ OFFERS</div>
-        <button class="sub-panel-close" data-close="panel-read-offers-np" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-read-offers-np" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2326,7 +2345,7 @@
     <div id="panel-offers-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-offers-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-offers-title" class="sub-panel-title">OFFERS</div>
-        <button class="sub-panel-close" data-close="panel-offers-np" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-offers-np" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
 
@@ -2425,24 +2444,24 @@
 
     <!-- Triggers -->
 
-    <!-- ðŸ“ˆ OFFERS â€“ Trigger -->
+    <!--   OFFERS â€“ Trigger -->
     <div class="chart-section">
       <button class="section-trigger"
               type="button"
               data-panel="panel-reports-offers"
               aria-controls="panel-reports-offers"
               aria-expanded="false">
-        <span class="section-header">Offers</span><span class="chev">â–¶</span>
+        <span class="section-header">Offers</span><span class="chev"></span>
       </button>
     </div>
-    <!-- ðŸ“ˆ RISK â€“ Trigger -->
+    <!--   RISK â€“ Trigger -->
     <div class="chart-section">
       <button class="section-trigger"
               type="button"
               data-panel="panel-reports-risk"
               aria-controls="panel-reports-risk"
               aria-expanded="false">
-        <span class="section-header">Risk</span><span class="chev">â–¶</span>
+        <span class="section-header">Risk</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2455,7 +2474,7 @@
     <div id="panel-reports-offers" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-reports-offers-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-reports-offers-title" class="sub-panel-title">OFFERS REPORT</div>
-        <button class="sub-panel-close" data-close="panel-reports-offers" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-reports-offers" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2517,7 +2536,7 @@
         <div id="panel-reports-risk-title" class="sub-panel-title">RISK REPORT</div>
         <button class="sub-panel-close"
                 data-close="panel-reports-risk"
-                aria-label="SchlieÃŸen">&times;</button>
+                aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2654,7 +2673,7 @@
     <!-- Kopfbereich konsistent zu NEW/REPORTS -->
     <div class="portfolio-info">
       <h2 class="section-header">UPDATES</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Products â€¢ Deals â€¢ Market Data</p>
+      <p style="opacity:.8; margin:6px 0 0;">Products/Deals/Market Data</p>
     </div>
 
     <!-- ===== Trigger-Leiste ===== -->
@@ -2664,7 +2683,7 @@
               data-panel="panel-upd-excel"
               aria-controls="panel-upd-excel"
               aria-expanded="false">
-        <span class="section-header">Excel Import</span><span class="chev">â–¶</span>
+        <span class="section-header">Excel Import</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2674,7 +2693,7 @@
               data-panel="panel-upd-historic"
               aria-controls="panel-upd-historic"
               aria-expanded="false">
-        <span class="section-header">Historic Data (APIs)</span><span class="chev">â–¶</span>
+        <span class="section-header">Historic Data (APIs)</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2684,7 +2703,7 @@
               data-panel="panel-upd-vxp"
               aria-controls="panel-upd-vxp"
               aria-expanded="false">
-        <span class="section-header">vXp Imports</span><span class="chev">â–¶</span>
+        <span class="section-header">vXp Imports</span><span class="chev"></span>
       </button>
     </div>
 
@@ -2697,7 +2716,7 @@
 <div id="panel-upd-excel" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-upd-excel-title" class="sub-panel-title">EXCEL IMPORT</div>
-    <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -2761,7 +2780,7 @@
 <div id="panel-upd-historic" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-historic-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-upd-historic-title" class="sub-panel-title">HISTORIC DATA (APIs)</div>
-    <button class="sub-panel-close" data-close="panel-upd-historic" aria-label="SchlieÃŸen">&times;</button>
+    <button class="sub-panel-close" data-close="panel-upd-historic" aria-label="close">&times;</button>
   </div>
 
   <div class="sub-panel-body">
@@ -2793,7 +2812,7 @@
     <div id="panel-upd-vxp" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-vxp-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-upd-vxp-title" class="sub-panel-title">VXP IMPORTS</div>
-        <button class="sub-panel-close" data-close="panel-upd-vxp" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-upd-vxp" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2830,7 +2849,7 @@
               aria-controls="panel-comp-port1"
               aria-expanded="false">
         <span class="section-header">Portfolio 1</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
@@ -2840,7 +2859,7 @@
               aria-controls="panel-comp-port2"
               aria-expanded="false">
         <span class="section-header">Portfolio 2</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
@@ -2850,7 +2869,7 @@
               aria-controls="panel-comp-charts"
               aria-expanded="false">
         <span class="section-header">Charts</span>
-        <span class="chev">â–¶</span>
+        <span class="chev"></span>
       </button>
     </div>
 
@@ -2862,7 +2881,7 @@
          aria-modal="false" aria-labelledby="panel-comp-port1-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-comp-port1-title" class="sub-panel-title">Portfolio 1</div>
-        <button class="sub-panel-close" data-close="panel-comp-port1" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-comp-port1" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2892,7 +2911,7 @@
          aria-modal="false" aria-labelledby="panel-comp-port2-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-comp-port2-title" class="sub-panel-title">Portfolio 2</div>
-        <button class="sub-panel-close" data-close="panel-comp-port2" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-comp-port2" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2922,7 +2941,7 @@
          aria-modal="false" aria-labelledby="panel-comp-charts-title" hidden>
       <div class="sub-panel-header">
         <div id="panel-comp-charts-title" class="sub-panel-title">Comparison Charts</div>
-        <button class="sub-panel-close" data-close="panel-comp-charts" aria-label="SchlieÃŸen">&times;</button>
+        <button class="sub-panel-close" data-close="panel-comp-charts" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
@@ -2996,14 +3015,11 @@
 </div>
 
 
-<!-- unsichtbarer IR chart fÃ¼r pdf -->
-<canvas id="IRLineChartExport" width="400" height="200" style="display:none;"></canvas>
-<canvas id="ProductCurveExport" width="400" height="200" style="display:none;"></canvas>
-<canvas id="euswapYieldChartExport" style="display: none"></canvas>
-
-
-
-
+<div id="report-root" hidden>
+  <canvas id="IRLineChartExport" width="400" height="200" style="display:none;"></canvas>
+  <canvas id="ProductCurveExport" width="400" height="200" style="display:none;"></canvas>
+  <canvas id="euswapYieldChartExport" style="display:none;"></canvas>
+</div>
 
 
 

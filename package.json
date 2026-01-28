@@ -6,7 +6,9 @@
   "author": "ronal",
   "main": "./src/main/index.js",
   "scripts": {
-    "start": "electron .",
+    "ipc:audit": "node src/scripts/ipc-audit.js",
+    "start:electron": "electron .",
+    "start": "npm run ipc:audit && npm run start:electron",
     "build": "electron-builder"
   },
   "build": {

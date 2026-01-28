@@ -45,10 +45,11 @@
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-#panel-market #inputMVaRContainer th{
+#panel-market #inputMvarContainer th{
   text-align: left;
   opacity: 0.8;
 }
+
 
 /* Buttons UNTER der Tabelle, LINKS bündig */
 #panel-market .mvar-input-buttons{

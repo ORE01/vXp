@@ -1,18 +1,15 @@
 /* risk-performance.css — NUR Performance-Panel */
 
-/* Panel-Scope, damit nix anderes beeinflusst wird */
-#panel-performance .sub-panel-body {
+#panel-performance .sub-panel-body{
   padding: 16px;
 }
 
-/* Wrapper mittig halten */
-#panel-performance .yield-chart-wrapper {
+#panel-performance .yield-chart-wrapper{
   display: flex;
   justify-content: center;
 }
 
-/* Grid der vier Charts */
-#panel-performance #yieldChartGrid {
+#panel-performance #yieldChartGrid{
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
@@ -21,45 +18,41 @@
   margin: 0 auto;
 }
 
-/* Chart-Karten */
-#panel-performance .chart-box {
+#panel-performance .chart-box{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
 
-  /* Breite/Höhe so wählen, dass 2x2 Raster gut passt */
   width: clamp(280px, 45vw, 540px);
   min-width: 280px;
+
+  box-shadow: 0 6px 14px rgba(0,0,0,.18);
 }
 
-/* Canvas sauber füllen (Chart.js setzt echte Pixelgröße selbst) */
-#panel-performance .chart-box canvas {
+#panel-performance .chart-box:hover{
+  box-shadow: 0 10px 22px rgba(0,0,0,.22);
+}
+
+#panel-performance .chart-box canvas{
   display: block;
   width: 100% !important;
-  height: 360px !important; /* bei Bedarf anpassen */
+  height: 360px !important;
 }
 
-#panel-performance .chart-box { box-shadow: 0 6px 14px rgba(0,0,0,.18); }
-#panel-performance .chart-box:hover { box-shadow: 0 10px 22px rgba(0,0,0,.22); }
-
-
-/* Responsive Feinschliff */
-@media (max-width: 1200px) {
-  #panel-performance .chart-box canvas {
-    height: 320px !important;
-  }
+@media (max-width: 1200px){
+  #panel-performance .chart-box canvas{ height: 320px !important; }
 }
-@media (max-width: 800px) {
-  #panel-performance #yieldChartGrid {
-    gap: 16px;
-  }
-  #panel-performance .chart-box {
+
+@media (max-width: 800px){
+  #panel-performance #yieldChartGrid{ gap: 16px; }
+
+  #panel-performance .chart-box{
     width: 100%;
     min-width: 0;
   }
-  #panel-performance .chart-box canvas {
-    height: 280px !important;
-  }
+
+  #panel-performance .chart-box canvas{ height: 280px !important; }
 }
+
