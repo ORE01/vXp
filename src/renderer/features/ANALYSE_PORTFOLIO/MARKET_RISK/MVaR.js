@@ -519,7 +519,7 @@ export function handleMVaRData(receivedData, index) {
       const RED_THRESHOLD = redRel * 100;
       const YELLOW_THRESHOLD = yellowRel * 100;
 
-      console.log('RED_THRESHOLD, YELLOW_THRESHOLD, row.id:', RED_THRESHOLD, YELLOW_THRESHOLD, row.id);
+      //console.log('RED_THRESHOLD, YELLOW_THRESHOLD, row.id:', RED_THRESHOLD, YELLOW_THRESHOLD, row.id);
 
       return { RED_THRESHOLD, YELLOW_THRESHOLD };
     }

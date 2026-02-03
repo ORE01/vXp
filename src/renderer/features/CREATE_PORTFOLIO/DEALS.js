@@ -1,5 +1,5 @@
-﻿import processData from '../UI/MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../UI/MODAL_HELPER/ModalActionHandler.js';
+﻿import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../core/ui/MODAL_HELPER/ModalActionHandler.js';
 import { appState } from '../../renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
@@ -12,180 +12,23 @@ export function dealsAddButtonHandler (event, selectedTableName) {
   handleModalAction(event, filteredDealsData, null, selectedTableName, 'add');
 }
 
-
-
-
-// export function handleDealsData(receivedData, dealsTableName, opts = {}) {
-//   console.log('Deals Data', receivedData, dealsTableName);
-
-//   const tableName = dealsTableName || '';
-//   const norm = String(tableName).trim().toUpperCase();
-
-//   // âœ… NEW: allow orchestrator to force the container
-//   const forced = opts.forceTarget; // 'offers' | 'deals' | null
-//   const isOffer = forced === 'offers' ? true : forced === 'deals' ? false : /^OFFERS?_/.test(norm);
-
-//   // kleine Helper nur fÃ¼r dieses Restore-Feature
-//   const snapSelect = (id) => {
-//     const el = document.getElementById(id);
-//     if (!el) return null;
-//     const i = el.selectedIndex;
-//     return { id, value: el.value, index: i, text: i >= 0 ? el.options[i]?.text : null };
-//   };
-
-//   const restoreSelect = (snap) => {
-//     if (!snap) return;
-//     const el = document.getElementById(snap.id);
-//     if (!el) return;
-
-//     if (snap.value && el.querySelector(`option[value="${CSS.escape(snap.value)}"]`)) {
-//       el.value = snap.value;
-//     } else if (snap.text) {
-//       const opt = Array.from(el.options).find(o => o.text === snap.text);
-//       if (opt) el.value = opt.value;
-//       else if (snap.index >= 0 && snap.index < el.options.length) el.selectedIndex = snap.index;
-//     }
-
-//     el.dispatchEvent(new Event('change', { bubbles: true }));
-//   };
-
-//   // Ziel-Container wÃ¤hlen
-//   const targetId = isOffer ? 'offersDataContainer' : 'dealsDataContainer';
-//   const otherId  = isOffer ? 'dealsDataContainer'  : 'offersDataContainer';
-//   const targetContainer = document.getElementById(targetId);
-//   if (!targetContainer || !receivedData) return;
-
-//   // âœ… NEW: optionally disable dropdown restore when called from orchestrator
-//   const doRestore = opts.restoreDropdown !== false;
-
-//   const dropdownId = isOffer ? 'reportsOffersDropdown' : 'dealsDropdown';
-//   const snap = doRestore ? snapSelect(dropdownId) : null;
-
-//   const otherContainer = document.getElementById(otherId);
-//   if (otherContainer) otherContainer.innerHTML = '';
-
-//   filteredDealsData = receivedData;
-//   targetContainer.innerHTML = processData(filteredDealsData, tableName);
-
-//   addTooltipsForTruncatedText(targetContainer);
-//   addProdIdTooltips(targetContainer);
-//   attachIdLinks(targetContainer);
-
-//   if (!isOffer) {
-//     const mirrorContainer = document.getElementById('newPortfolioDealsDataContainer');
-//     if (mirrorContainer) {
-//       mirrorContainer.innerHTML = processData(filteredDealsData, tableName);
-//       addTooltipsForTruncatedText(mirrorContainer);
-//       addProdIdTooltips(mirrorContainer);
-//       attachIdLinks(mirrorContainer);
-//     }
-//   }
-
-//   const buttonId = isOffer ? 'offersAddButton' : 'dealsAddButton';
-//   const addButton = document.getElementById(buttonId);
-//   if (addButton && addButton.dataset.bound !== '1') {
-//     addButton.dataset.bound = '1';
-//     addButton.addEventListener('click', (event) => {
-//       console.log('Start Add Deal', tableName);
-//       handleModalAction(event, filteredDealsData, null, tableName, 'add');
-//     });
-//   }
-
-//   if (doRestore) restoreSelect(snap);
-// }
-
-// export function handleDealsData(receivedData, dealsTableName, opts = {}) {
-//   console.log('Deals Data', receivedData, dealsTableName);
-
-//   const tableName = dealsTableName || '';
-
-//   // âœ… Kontext kommt vom Orchestrator (oder default = deals)
-//   const forced = opts.forceTarget; // 'offers' | 'deals' | undefined
-//   const isOffer = forced === 'offers';
-
-//   // kleine Helper nur fÃ¼r dieses Restore-Feature
-//   const snapSelect = (id) => {
-//     const el = document.getElementById(id);
-//     if (!el) return null;
-//     const i = el.selectedIndex;
-//     return { id, value: el.value, index: i, text: i >= 0 ? el.options[i]?.text : null };
-//   };
-
-//   const restoreSelect = (snap) => {
-//     if (!snap) return;
-//     const el = document.getElementById(snap.id);
-//     if (!el) return;
-
-//     // zuerst per value
-//     if (snap.value && el.querySelector(`option[value="${CSS.escape(snap.value)}"]`)) {
-//       el.value = snap.value;
-//     } else if (snap.text) {
-//       // fallback per Text
-//       const opt = Array.from(el.options).find(o => o.text === snap.text);
-//       if (opt) el.value = opt.value;
-//       else if (snap.index >= 0 && snap.index < el.options.length) el.selectedIndex = snap.index;
-//     }
-
-//     el.dispatchEvent(new Event('change', { bubbles: true }));
-//   };
-
-//   // Ziel-Container wÃ¤hlen
-//   const targetId = isOffer ? 'offersDataContainer' : 'dealsDataContainer';
-//   const otherId  = isOffer ? 'dealsDataContainer'  : 'offersDataContainer';
-//   const targetContainer = document.getElementById(targetId);
-//   if (!targetContainer || !receivedData) return;
-
-//   // optional: disable dropdown restore when called from orchestrator
-//   const doRestore = opts.restoreDropdown !== false;
-
-//   // âœ… Dropdown-Handling: nur wenn wirklich gewÃ¼nscht
-//   // (und IDs bleiben wie bisher, damit nichts bricht)
-//   const dropdownId = isOffer ? 'reportsOffersDropdown' : 'dealsDropdown';
-//   const snap = doRestore ? snapSelect(dropdownId) : null;
-
-//   // anderen Container leeren
-//   const otherContainer = document.getElementById(otherId);
-//   if (otherContainer) otherContainer.innerHTML = '';
-
-//   // Daten setzen & rendern
-//   filteredDealsData = receivedData;
-//   targetContainer.innerHTML = processData(filteredDealsData, tableName);
-
-//   // UX-Extras
-//   addTooltipsForTruncatedText(targetContainer);
-//   addProdIdTooltips(targetContainer);
-//   attachIdLinks(targetContainer);
-
-//   // Spiegel-Render nur fÃ¼r Deals (nicht Offers)
-//   if (!isOffer) {
-//     const mirrorContainer = document.getElementById('newPortfolioDealsDataContainer');
-//     if (mirrorContainer) {
-//       mirrorContainer.innerHTML = processData(filteredDealsData, tableName);
-//       addTooltipsForTruncatedText(mirrorContainer);
-//       addProdIdTooltips(mirrorContainer);
-//       attachIdLinks(mirrorContainer);
-//     }
-//   }
-
-//   // Add-Button binden (einmal pro Button)
-//   const buttonId = isOffer ? 'offersAddButton' : 'dealsAddButton';
-//   const addButton = document.getElementById(buttonId);
-//   if (addButton && addButton.dataset.bound !== '1') {
-//     addButton.dataset.bound = '1';
-//     addButton.addEventListener('click', (event) => {
-//       console.log('Start Add Deal', tableName);
-//       handleModalAction(event, filteredDealsData, null, tableName, 'add');
-//     });
-//   }
-
-//   // Auswahl nach dem Rendern wiederherstellen
-//   if (doRestore) restoreSelect(snap);
-// }
-
 export function handleDealsData(receivedData, dealsTableName, opts = {}) {
-  // âœ… Exit early if no portfolio selected (no render, no clear, no log)
-  const port_name = appState?.getSelectedPortTableName?.();
-  if (!port_name) return;
+  // console.log('[handleDealsData] CALL', {
+  //   table: dealsTableName,
+  //   rows: Array.isArray(receivedData) ? receivedData.length : 'n/a',
+  //   forceTarget: opts.forceTarget,
+  //   restoreDropdown: opts.restoreDropdown
+  // });
+  // console.trace('[handleDealsData] stack');
+
+// Deals Tab soll NICHT vom PORT-Selection-State abhängen.
+const dealsSel = appState?.getSelectedDealsTableName?.() 
+  || document.getElementById('createdDealsDropdown')?.value 
+  || 'ALL';
+
+// optional: wenn du bei "ALL" wirklich NICHT rendern willst, dann:
+// if (dealsSel === 'ALL') return;
+
 
   // (optional: keep the log only when useful)
   // console.log('Deals Data', receivedData, dealsTableName);
@@ -195,16 +38,20 @@ export function handleDealsData(receivedData, dealsTableName, opts = {}) {
   const ctx = resolveDealsContext(opts);
   const { targetId, otherId, dropdownId, buttonId, isOffer } = ctx;
 
+  if (isOffer) return;//____________________________________________________________________OFFERS AUS____________________________
+
+
   const targetContainer = document.getElementById(targetId);
   if (!targetContainer) return;
 
-  // Treat missing/empty payload as "clear UI"
-  if (!Array.isArray(receivedData) || receivedData.length === 0) {
-    targetContainer.innerHTML = '';
-    const otherContainer = document.getElementById(otherId);
-    if (otherContainer) otherContainer.innerHTML = '';
-    return;
-  }
+// Treat missing/empty payload as "no-op" (nicht löschen!)
+// Sonst gewinnt ein späterer ALL/0-Call und macht dir die Tabelle leer.
+if (!Array.isArray(receivedData) || receivedData.length === 0) {
+  // nur löschen, wenn du es explizit willst:
+  if (opts.allowClear === true) targetContainer.innerHTML = '';
+  return;
+}
+
 
   // 1) Filter/Dropdown snapshot (optional)
   const snap = preserveAndRestoreFilterDropdown({
@@ -247,7 +94,7 @@ function resolveDealsContext(opts = {}) {
     isOffer,
     targetId: isOffer ? 'offersDataContainer' : 'dealsDataContainer',
     otherId:  isOffer ? 'dealsDataContainer'  : 'offersDataContainer',
-    dropdownId: isOffer ? 'reportsOffersDropdown' : 'dealsDropdown',
+    dropdownId: isOffer ? 'createdOffersDropdown' : 'createdDealsDropdown',
     buttonId: isOffer ? 'offersAddButton' : 'dealsAddButton',
   };
 }
@@ -256,8 +103,14 @@ function resolveDealsContext(opts = {}) {
    Rendering
    ========================================================= */
 function renderDealsTableIntoContainer(container, rows, tableName) {
+  console.log('[renderDealsTableIntoContainer]', {
+    container: container?.id,
+    tableName,
+    rows: rows?.length
+  });
   container.innerHTML = processData(rows, tableName);
 }
+
 
 /* =========================================================
    UI enhancements
@@ -330,7 +183,7 @@ function preserveAndRestoreFilterDropdown({ dropdownId, enabled = true } = {}) {
       // IMPORTANT:
       // If your dropdown filters depend on change event, keep it.
       // If you get loops, weâ€™ll gate it with a "silent" flag.
-      dd.dispatchEvent(new Event('change', { bubbles: true }));
+      // dd.dispatchEvent(new Event('change', { bubbles: true }));
     }
   };
 }

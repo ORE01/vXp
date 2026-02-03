@@ -1,13 +1,13 @@
 ﻿// FRONT_END/bootstrap/bootstrapBindings.js
 
-import { bindDropdowns } from '../UI/bindDropdowns.js';
-import { bindForwardsButtons } from '../../features/MARKET_DATA/FORWARDS/forwardsUI.js';
+import { bindDropdowns } from '../ui/bindDropdowns.js';
+import { bindForwardsButtons } from '../../features/MARKET_DATA/FORWARDS/forwardsui.js';
 import { bindSwaptionDropdownListeners } from '../../features/MARKET_DATA/VOLS/swaptionDropdownListeners.js';
-import { bindAppButtons } from '../UI/bindAppButtons.js';
+import { bindAppButtons } from '../ui/bindAppButtons.js';
 
 import { installReportsUIBridge } from '../../features/REPORTS/reportsUIBridge.js';
 import { setupReportsEnterLeaveBridge } from '../../features/REPORTS/reportsEnterLeaveBridge.js';
-import { installBulkUpdateBridge } from '../UI/bulkUpdateBridge.js';
+import { installBulkUpdateBridge } from '../../features/UPDATES/bulkUpdateBridge.js';
 
 import { installDealsEnhancerBridge } from '../../features/OFFERS/dealsEnhancerBridge.js';
 

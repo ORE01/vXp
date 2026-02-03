@@ -1,5 +1,5 @@
 ﻿    import { filteredIssuerData } from '../NEW_PRODUCTS/ISSUER.js';
-    import { createDropdown } from '../UI/MODAL_HELPER/HandleInputFields.js'
+    import { createDropdown } from '../../core/ui/MODAL_HELPER/HandleInputFields.js'
     import { convertDateToISO } from '../../utils/format.js';
     
     

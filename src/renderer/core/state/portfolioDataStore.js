@@ -48,6 +48,26 @@ export function installPortfolioDataStore({ appState } = {}) {
   function setAllDealsData(data) { appState.allDealsData = Array.isArray(data) ? data : []; }
   function getAllDealsData() { return Array.isArray(appState.allDealsData) ? appState.allDealsData : []; }
 
+    // --- Derived view: slice dealsData from allDealsData by selectedDealsTableName ---
+  function refreshDealsDataFromSelectedTable() {
+    const all = getAllDealsData();
+    const sel = getSelectedDealsTableName();
+
+    const norm = s => String(s ?? '').trim().toLowerCase();
+    const selected = norm(sel);
+
+    // ALL oder leer => alles anzeigen
+    if (!selected || selected === 'all') {
+      setDealsData(all);
+      return;
+    }
+
+    // filter by portfolio/table name field in deals rows
+    const next = all.filter(r => norm(r?.port_name ?? r?.PORT_NAME ?? '') === selected);
+    setDealsData(next);
+  }
+
+
   function setOffersData(data) { appState.offersData = Array.isArray(data) ? data : []; }
   function getOffersData() { return Array.isArray(appState.offersData) ? appState.offersData : []; }
 
@@ -95,6 +115,9 @@ export function installPortfolioDataStore({ appState } = {}) {
   appState.setPortAggData = setPortAggData;
   appState.getPortAggData = getPortAggData;
 
+  appState.refreshDealsDataFromSelectedTable = refreshDealsDataFromSelectedTable;
+
+
   return {
     setPortIndex,
     getPortIndex,
@@ -107,5 +130,6 @@ export function installPortfolioDataStore({ appState } = {}) {
     getAllPortfolioData,
     setPortAggData,
     getPortAggData,
+    refreshDealsDataFromSelectedTable,
   };
 }

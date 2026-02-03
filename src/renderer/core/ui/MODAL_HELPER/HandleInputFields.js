@@ -91,7 +91,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
         }
     
         case 'CATEGORY': {
-          const categories = ['1_Kontokorrentkonten', '5_Termineinlagen', '2_lgfr_AnlagevermÃ¶gen'];
+          const categories = ['1_Kontokorrentkonten', '5_Termineinlagen', '2_lgfr_Anlagevermögen'];
           const categoryDropdown = createDropdown(fieldName, categories, rowData[fieldName]);
           formRow.appendChild(label);
           formRow.appendChild(categoryDropdown);

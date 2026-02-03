@@ -1,5 +1,13 @@
 let __lastPanelOpener = null;
 
+const __panelOpenHooks = new Map();
+
+export function registerPanelOpenHook(panelId, fn) {
+  if (!panelId || typeof fn !== 'function') return;
+  __panelOpenHooks.set(panelId, fn);
+}
+
+
 /* ============================================================
    OPEN PANEL – MASTER ENTRY POINT
    ============================================================ */
@@ -35,6 +43,11 @@ slideLayer.querySelectorAll('.sub-panel').forEach(p => {
       panelSL.focus();
 
       console.log('[PANEL] opened via SLIDE-LAYER:', panelId);
+
+      // 🔥 HIER FEHLT DER HOOK
+        try { __panelOpenHooks.get(panelId)?.(); }
+        catch (e) { console.warn('panel open hook failed', panelId, e); }
+
       return; // <<< WICHTIG: Legacy wird NICHT ausgeführt
     }
   }
@@ -75,7 +88,12 @@ slideLayer.querySelectorAll('.sub-panel').forEach(p => {
   panel.classList.add('open');
   panel.setAttribute('aria-modal', 'true');
   if (!panel.hasAttribute('tabindex')) panel.setAttribute('tabindex', '-1');
-  panel.focus();
+ 
+
+  try { __panelOpenHooks.get(panelId)?.(); } catch (e) { console.warn('panel open hook failed', panelId, e); }
+
+   panel.focus();
+
 }
 
 /* ============================================================

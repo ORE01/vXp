@@ -2,8 +2,8 @@
 // UI-Orchestrierung fÃ¼r "MarketRisk refresh" (Summary + ProductTable + MVaR UI).
 // KEIN global appState â€” alles Ã¼ber DI.
 
-import { handleMVaRData } from '../../features/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
-import { handleSummaryMarketRiskData, handleMvarProductTable } from '../../features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
+import { handleMVaRData } from './MVaR.js';
+import { handleSummaryMarketRiskData, handleMvarProductTable } from '../SummaryMarketRisk.js';
 
 export function createMarketRiskRefresh({ appState } = {}) {
   if (!appState) throw new Error('[marketRiskRefresh] appState fehlt');

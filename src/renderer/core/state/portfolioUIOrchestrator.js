@@ -1,5 +1,5 @@
-﻿// FRONT_END/STATE/portfolioUIOrchestrator.js
-// EnthÃ¤lt UI-Render-Orchestrierung fÃ¼r Portfolios + Offers.
+﻿// core/state/portfolioUIOrchestrator.js
+// Enthält UI-Render-Orchestrierung für Portfolios + Offers.
 // AppState bleibt State-only.
 
 import { handlePortAggData, handlePortProdData } from '../../features/SELECT_PORTFOLIO/PORT.js';

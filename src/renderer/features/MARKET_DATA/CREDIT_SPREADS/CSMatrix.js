@@ -2,7 +2,7 @@
 import { getCSColors } from '../../../utils/colors.js'; 
 
 export function handleCSMatrixData(receivedData) {
- console.log('handleCSMatrixData:', receivedData )
+ //console.log('handleCSMatrixData:', receivedData )
 
 
   const ratings = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB'];

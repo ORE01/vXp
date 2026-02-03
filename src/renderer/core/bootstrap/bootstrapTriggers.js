@@ -1,4 +1,36 @@
 import { openPanel } from '../ui/panels.js';
+import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
+import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/CREATE_PORTFOLIO/dealsUI.js';
+
+// ------------------------------------------------------------
+// Panel open hook registry (fix for installReceivers warning)
+// ------------------------------------------------------------
+function ensurePanelOpenHookRegistry(appState) {
+  if (!appState) return;
+
+  if (!appState.__panelOpenHooks) appState.__panelOpenHooks = [];
+
+  if (typeof appState.registerPanelOpenHook !== 'function') {
+    appState.registerPanelOpenHook = (fn) => {
+      if (typeof fn !== 'function') return;
+      appState.__panelOpenHooks.push(fn);
+    };
+  }
+
+  if (typeof appState.emitPanelOpen !== 'function') {
+    appState.emitPanelOpen = (panelId) => {
+      const hooks = Array.isArray(appState.__panelOpenHooks) ? appState.__panelOpenHooks : [];
+      for (const fn of hooks) {
+        try { fn(panelId); } catch (e) { console.warn('[panelOpenHook] error', e); }
+      }
+    };
+  }
+
+  // ✅ ADD THIS: window shim for installReceivers
+  window.registerPanelOpenHook = appState.registerPanelOpenHook;
+  window.emitPanelOpen = appState.emitPanelOpen;
+}
+
 
 function applyBreakdownFocus(groupOrNone) {
   if (typeof window?.focusBreakdownGroup !== 'function') {
@@ -18,7 +50,7 @@ function applyBreakdownFocus(groupOrNone) {
   });
 }
 
-export function bootstrapTriggers(appState) {
+export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
   document.addEventListener('click', (e) => {
     const btn = e.target.closest?.('button.section-trigger');
     if (!btn) return;
@@ -71,15 +103,18 @@ export function bootstrapTriggers(appState) {
       } else {
         // Subpunkt → Panel + Fokus
         openPanel(panelId);
+
+        // ✅ DI Hook feuern
+        emitPanelOpen?.(panelId);
+
         applyBreakdownFocus(group);
       }
 
-      // aria nur Hauptpunkt (Chevron kommt aus CSS, nicht aus JS)
+      // aria nur Hauptpunkt
       if (!isSub) {
         const isOpen = btn.getAttribute('aria-expanded') === 'true';
         btn.setAttribute('aria-expanded', String(!isOpen));
       }
-
 
       return;
     }
@@ -89,15 +124,31 @@ export function bootstrapTriggers(appState) {
     // ============================
     openPanel(panelId);
 
+    // ✅ DI Hook feuern (statt appState.emitPanelOpen)
+    emitPanelOpen?.(panelId);
+
+    // Panel specific UI init/render (minimal-invasive)
+    if (panelId === 'panel-deals') {
+      appState.dealsUI = { renderDealsTable, renderDealsPanel };
+      bindDealsUIOnce(appState);
+      renderDealsPanel(appState);
+    }
+
+    if (panelId === 'panel-offers-np') {
+      appState.offersUI = { renderOffersTable, renderOffersPanel };
+      bindOffersUIOnce(appState);
+      renderOffersPanel(appState);
+    }
+
     if (!isSub) {
       const isOpen = btn.getAttribute('aria-expanded') === 'true';
       btn.setAttribute('aria-expanded', String(!isOpen));
     }
-
   });
 
   console.log('[BOOT] bootstrapTriggers active');
 }
+
 
 
 

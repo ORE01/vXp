@@ -5,7 +5,7 @@ import { openPanel } from '../../core/ui/panels.js';
 
 
 export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date = null) {
-  console.log('port_name:', port_name, 'scenario_name:', scenario_name, 'asof_date:', asof_date);
+  //console.log('port_name:', port_name, 'scenario_name:', scenario_name, 'asof_date:', asof_date);
 
   const elementId = `portDataContainer${0}`;
   const portfolioData = appState.getPortAggData(elementId) || {};

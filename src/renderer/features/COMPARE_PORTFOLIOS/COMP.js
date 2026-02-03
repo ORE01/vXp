@@ -2,16 +2,19 @@
 
 
 export function createComparisonCharts(portDataMap, destroyPrevious = false) {
-  // console.log('portDataMap1:', portDataMap)
-      // CHARTS: COMPARE
-      // if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2){
-      //   const containerIds = [
-      //     'compChartContainer1', 'compChartContainer2', 'compChartContainer3',
-      //     'compChartContainer4', 'compChartContainer5', 'compChartContainer6',
-      //     'compChartContainer7', 'compChartContainer8'
-      //   ];
 
-      if (portDataMap.portDataContainer0 && portDataMap.portDataContainer3){
+  if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2) {
+
+    const compareNames =
+      window.appState?.getComparePortNames?.() || {};
+
+    console.log('🔍 COMPARE – comparePortNames:', compareNames);
+
+    const portNameA = compareNames[1] || 'Portfolio 1';
+    const portNameB = compareNames[2] || 'Portfolio 2';
+
+    console.log('🧾 COMPARE – resolved names:', { portNameA, portNameB });
+
         const containerIds = [
           'compChartContainer1', 'compChartContainer2', 'compChartContainer3',
           'compChartContainer4', 'compChartContainer5', 'compChartContainer6',
@@ -19,7 +22,12 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
         ];
   
         const chartNames = ['PV01', 'CPV01', 'MvarTOT', 'MvarIR', 'MvarCS', 'CvarRating', 'CvarMarket', 'CvarNorm'];
-        const chartLabels = Array(chartNames.length).fill(['Portfolio 1', 'Portfolio 2', 'Difference']);
+        const chartLabels = Array(chartNames.length).fill([
+            portNameA,
+            portNameB,
+            'Difference'
+          ]);
+
         const chartType = 'bar';
   
         const chartData = extractChartDataFromSavedValues(portDataMap);
@@ -30,7 +38,7 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
     const chartValues = chartData[chartName];
 
     if (!chartValues) {
-      console.warn(`âš ï¸ Keine Daten fÃ¼r ${chartName}`);
+      console.warn(`No data for ${chartName}`);
       return;
     }
 

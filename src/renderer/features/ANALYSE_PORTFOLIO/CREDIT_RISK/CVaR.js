@@ -151,48 +151,81 @@ export function renderLGDChart() {
   );
 }
 
-export function handleCVaRData(receivedData, index) {
-  const port_name = appState.getSelectedPortTableName();
+// export function handleCVaRData(receivedData, index) {
+//   const port_name = appState.getSelectedPortTableName();
 
-  // âœ… If no portfolio selected: do nothing (no state write, no DOM changes)
+//   // âœ… If no portfolio selected: do nothing (no state write, no DOM changes)
+//   if (!port_name) return;
+
+//   const filteredByPort = Array.isArray(receivedData)
+//     ? receivedData.filter(item => item && item.port_name === port_name)
+//     : [];
+
+//   appState.setCvarData(filteredByPort);
+
+//   const containerMapping = {
+//     rating: 'CVaR_ratingDataContainer',
+//     market: 'CVaR_marketDataContainer',
+//     norm: 'CVaR_normDataContainer',
+//   };
+
+//   const combinedRelData = {};
+
+//   Object.keys(containerMapping).forEach(pd_flag => {
+//     const filteredData = filteredByPort.filter(
+//       item => item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
+//     );
+
+//     const containerId = containerMapping[pd_flag];
+//     const container = document.getElementById(containerId);
+
+//     if (!container) return;
+
+//     if (filteredData.length > 0) {
+//       populateCVaRTable(container, filteredData, port_name);
+//       combinedRelData[pd_flag] = filteredData;
+//     } else {
+//       // âœ… keep UI quiet; just clear (no "No data available" noise during normal startup)
+//       container.innerHTML = '';
+//     }
+//   });
+
+//   // Combined overview (VaR_rel)
+//   renderCombinedCVaRRelTable(combinedRelData, index);
+// }
+export function handleCVaRData(receivedData, index, port_nameArg) {
+  const safeIndex = Number.isFinite(index) ? index : 0;
+
+  // Slot → port_name (wie bei MVaR: panel-lokal)
+  const dd = document.getElementById(`createdPortDropdown${safeIndex}`);
+  const port_name = String(port_nameArg ?? dd?.value ?? '').trim();
+
+  // Wenn Slot nichts selected hat: ruhig bleiben
   if (!port_name) return;
 
+  // Optional: stale-guard (verhindert "alte Response überschreibt neuen Slot")
+  const current = String(dd?.value ?? '').trim();
+  if (current && current !== port_name) return;
+
   const filteredByPort = Array.isArray(receivedData)
-    ? receivedData.filter(item => item && item.port_name === port_name)
+    ? receivedData.filter(item => item && String(item.port_name) === port_name)
     : [];
 
-  appState.setCvarData(filteredByPort);
+  appState.setCvarData?.(filteredByPort);
 
-  const containerMapping = {
-    rating: 'CVaR_ratingDataContainer',
-    market: 'CVaR_marketDataContainer',
-    norm: 'CVaR_normDataContainer',
+  // Nur Combined-Overview (slot-spezifisch!) – das ist stabil, weil ContainerId index-basiert ist
+  const combinedRelData = {
+    rating: filteredByPort.filter(x => String(x?.pd_flag ?? '').toLowerCase() === 'rating'),
+    market: filteredByPort.filter(x => String(x?.pd_flag ?? '').toLowerCase() === 'market'),
+    norm:   filteredByPort.filter(x => String(x?.pd_flag ?? '').toLowerCase() === 'norm'),
   };
 
-  const combinedRelData = {};
+  console.log('combinedRelData:', combinedRelData)
 
-  Object.keys(containerMapping).forEach(pd_flag => {
-    const filteredData = filteredByPort.filter(
-      item => item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
-    );
-
-    const containerId = containerMapping[pd_flag];
-    const container = document.getElementById(containerId);
-
-    if (!container) return;
-
-    if (filteredData.length > 0) {
-      populateCVaRTable(container, filteredData, port_name);
-      combinedRelData[pd_flag] = filteredData;
-    } else {
-      // âœ… keep UI quiet; just clear (no "No data available" noise during normal startup)
-      container.innerHTML = '';
-    }
-  });
-
-  // Combined overview (VaR_rel)
-  renderCombinedCVaRRelTable(combinedRelData, index);
+  renderCombinedCVaRRelTable(combinedRelData, safeIndex);
 }
+
+
 
 
 function populateCVaRTable(container, CVaRData, port_name) {
@@ -250,11 +283,10 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
   const container   = document.getElementById(containerId);
   if (!container) return;
 
-  // âœ… WICHTIG: Container als Section fÃ¼r Checkboxen markieren
-  container.classList.add('sub-panel'); // <<< DAS ist der SchlÃ¼ssel
-  container.dataset.panelTitle = 'Credit Risk â€“ Traffic Lights';
 
-  // ðŸ” Defensive: wenn kein Objekt, einfach leeren und raus
+  container.dataset.panelTitle = 'Credit Risk / Traffic Lights';
+
+  
   if (
     !allFilteredDataByPdFlag ||
     typeof allFilteredDataByPdFlag !== 'object' ||
@@ -264,7 +296,7 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
     return;
   }
 
-  // PrÃ¼fen, ob Ã¼berhaupt sinnvolle Daten vorhanden sind
+  
   const hasValidData = Object.values(allFilteredDataByPdFlag).some(
     data => Array.isArray(data) && data[0] && data[0].VaR_rel !== undefined
   );
@@ -315,9 +347,7 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
 
   container.appendChild(table);
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // ðŸ”´ðŸŸ¡ðŸŸ¢ Traffic Lights setzen (UI + PDF)
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
   // CVaR
   const stateCvar = trafficLightStateForCvar(allFilteredDataByPdFlag, 'Historic');

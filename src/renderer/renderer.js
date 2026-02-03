@@ -20,6 +20,11 @@ import { handleExcelComplete } from './features/UPDATES/updatesExcel.js';
 import { buildCubeSurfaceGrid, populateSwaptionCubeSelectors } from './features/MARKET_DATA/VOLS/volCube.js';
 import { handlePortAggData, handlePortProdData } from './features/SELECT_PORTFOLIO/PORT.js';
 
+import { handleIssuerData } from './features/NEW_PRODUCTS/ISSUER.js';
+import { handleProdData }   from './features/NEW_PRODUCTS/PROD.js';
+import { handleDealsData }  from './features/CREATE_PORTFOLIO/DEALS.js';
+
+
 import { handleMVaRData, handleMvarInputData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
 import { handleIRSensData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
 import { handleCSSensData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
@@ -30,7 +35,7 @@ import { handleProviderData } from './features/DATA_PROVIDER/DATAProvider.js';
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORCASTING/ML.js';
 
 import { handleSummaryMarketRiskData, handleMvarProductTable } from './features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
-import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/NEW_PRODUCTS/offers.js';
+import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/NEW_PRODUCTS/readOffers.js';
 
 import { setupCustomerReportsPresetUI } from './features/REPORTS/CustomerReportsPresetUI.js';
 import { handleHistoricMetricsAddClick } from './features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';
@@ -61,6 +66,30 @@ let appState;
 
 const panelRenderState = Object.create(null);
 
+// ---------------------------------------------------------
+// Panel-open hook registry (DI for installReceivers)
+// ---------------------------------------------------------
+const panelOpenHooks = Object.create(null);
+
+
+function registerPanelOpenHook(panelId, fn) {
+  if (typeof fn !== 'function') return;
+  const id = String(panelId || '');
+  if (!id) return;
+
+  (panelOpenHooks[id] ||= []).push(fn);
+}
+
+
+function emitPanelOpen(panelId) {
+  const id = String(panelId || '');
+  const hooks = panelOpenHooks[id] || [];
+  for (const fn of hooks) {
+    try { fn(); } catch (e) { console.warn('[panelOpenHook] error', e); }
+  }
+}
+
+
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -74,10 +103,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   appState = bootstrapCreateAppState();
 
+  appState.installHandlers({
+    handleIssuerData,
+    handleProdData,
+    handleDealsData,
+    handleIRSensData,
+    handleCSSensData,
+  });
+
   bootstrapStores(appState);
 
   bootstrapUIBasics(appState);
-  bootstrapTriggers(appState);
+  bootstrapTriggers(appState, { emitPanelOpen });
+
 
     if (MINIMAL_UI) {
     console.log('[BOOT] Minimal UI: skipping heavy renderer bootstraps');
@@ -149,6 +187,8 @@ const {
     panelRenderState,
     initAllPanelsLazyRender,
     initMarketDataChartsAutoRefresh,
+
+    registerPanelOpenHook: appState.registerPanelOpenHook.bind(appState),
 
     handleSwaptionATMData,
     handleSwaptionSmileData,

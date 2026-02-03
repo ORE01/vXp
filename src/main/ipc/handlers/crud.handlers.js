@@ -110,7 +110,7 @@ module.exports = function registerCrudHandlers({
           return;
         }
 
-        event.reply('update-data-success');
+        event.reply('update-data-success', { cleanTableName });
 
         const refreshList = computeRefreshList(cleanTableName, newData);
         const lock = needsBulkLock(refreshList);

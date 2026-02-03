@@ -14,19 +14,22 @@ function resolvePythonExecutableAndArgs(scriptIdentifier, args = []) {
 if (env === 'development') {
   const defaultExecutable = 'C:\\Python312\\python.exe';
 
-  // 🔁 Umschaltbarkeit für Backups
-  // Beispiel:
-  // $env:PY_MAIN="D:\run_this_version\20260126_electron_App\Risk\main.py"
-  const envMain = process.env.PY_MAIN ? process.env.PY_MAIN.trim() : '';
-
-  // Dein aktiver Arbeitsstand (funktioniert sicher)
+  // ✅ DEV-Default: immer dein DEV-main.py
   const defaultScriptPath = 'C:/Users/Ronald/riskApp/PycharmProjects/Risk/main.py';
 
-  const scriptPath = envMain ? path.resolve(envMain) : defaultScriptPath;
+  // ✅ Nur wenn du BEWUSST im run_this_version Kontext startest, darf PY_MAIN greifen
+  const cwd = (process.cwd() || '').replace(/\//g, '\\').toLowerCase();
+  const isRunThisVersion = cwd.startsWith('d:\\run_this_version\\');
+
+  const envMainRaw = process.env.PY_MAIN ? process.env.PY_MAIN.trim() : '';
+  const envMain = envMainRaw ? path.resolve(envMainRaw) : '';
+
+  const scriptPath = (isRunThisVersion && envMain) ? envMain : defaultScriptPath;
 
   pythonExecutable = defaultExecutable;
   pythonArgs.unshift(scriptPath);
 }
+
 
    else if (env === 'thomasdev') {
     pythonExecutable = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';

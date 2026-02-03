@@ -105,7 +105,7 @@ if (summaryContainer) {
       <p class="ov-title">Breakdown Structure</p>
       <ul class="ov-list">
         ${BREAKDOWN_CONFIG.map(g =>
-          `<li><strong>${g.title}</strong> â€“ ${g.overview}</li>`
+          `<li><strong>${g.title}</strong> : ${g.overview}</li>`
         ).join('')}
       </ul>
     </div>

@@ -797,9 +797,9 @@ export function rerenderHistoricCharts({ keys = null } = {}) {
     : [];
 
   // Debug (kannst du später entfernen)
-  console.log("[HIST] selectedPortName:", selectedPortNameRaw, "->", selectedPortName,
-              "all:", Array.isArray(all) ? all.length : "NOT_ARRAY",
-              "filtered:", histForPort.length);
+  // console.log("[HIST] selectedPortName:", selectedPortNameRaw, "->", selectedPortName,
+  //             "all:", Array.isArray(all) ? all.length : "NOT_ARRAY",
+  //             "filtered:", histForPort.length);
 
   if (!selectedPortName || histForPort.length === 0) {
     destroyHistoricCharts(keys);

@@ -4,9 +4,13 @@
 // Keep it as data only.
 
 module.exports = {
+  // =====================================================
+  // SEND (renderer -> main, fire-and-forget)
+  // =====================================================
   send: [
     'open-coupon-window',
 
+    // Python starters
     'start-py-fairValue',
     'start-py-MVaR',
     'start-py-CVaR',
@@ -17,16 +21,17 @@ module.exports = {
     'start-py-swaption',
     'start-py-ml',
 
+    // UI / bulk ops
     'import-matched-columns',
     'csparameter-update',
 
-    // ✅ Customer Reports
+    // Customer reports
     'customerReports:list',
     'customerReports:load',
     'customerReports:save',
     'customerReports:delete',
 
-    // ✅ Table fetch / updates / UI
+    // Tables / CRUD
     'fetch-table-data',
     'update-data',
     'erase-data',
@@ -34,42 +39,78 @@ module.exports = {
     'show-message-box',
     'update-customer-texts',
 
-    // ✅ TS modules
+    // TS modules
     'ts-selection:save',
     'ts-trendlines:load',
     'ts-trendlines:save',
+
+    // Deals selection (create portfolio from deals)
+    'save-deals-selection',
+    'delete-deals-selection',
+    'delete-portfolio-everywhere',
+
   ],
 
+  // =====================================================
+  // INVOKE (renderer -> main, request/response)
+  // =====================================================
   invoke: [
-    // ✅ Allowlist bootstrap
+    // Meta
     'ipc:get-allowlist',
 
-    // ✅ Bonds / DataCollector
-    'bonds:fetch',
-    'bonds:fetchTermsOnly',
-    'bonds:parsePdfUrl',
+    // -------------------------------------------------
+    // Bond Prospectus Finder
+    // -------------------------------------------------
+    'bondProspectusFinder:ping',
+    'bondProspectusFinder:find',
 
-    // ✅ Excel / import flows
+    // -------------------------------------------------
+    // Bonds (PDF parsing only – NEW clean API)
+    // -------------------------------------------------
+    'bonds:parsePdf',
+    'bonds:parsePdfBatch',
+
+    // -------------------------------------------------
+    // Bond Pipeline (Prospectus -> Bonds)
+    // -------------------------------------------------
+    'bondPipeline:resolveAndParse',
+
+    // -------------------------------------------------
+    // Excel / import flows
+    // -------------------------------------------------
     'import-excel-dialog',
     'select-excel-file',
     'import-excel-offer-sheet',
     'import-excel-offer-sheet-quick',
 
-    // ✅ DB helper invokes
+    // -------------------------------------------------
+    // DB helpers
+    // -------------------------------------------------
     'get-table-columns',
     'get-table-rows',
 
-    // ✅ Insert/normalize helpers
+    // -------------------------------------------------
+    // Insert / normalize helpers
+    // -------------------------------------------------
     'check-and-insert-issuers',
     'check-and-insert-products',
     'create-deals-from-import',
     'normalize-rank',
+
+    
+
+
+
   ],
 
+  // =====================================================
+  // LISTEN (main -> renderer)
+  // =====================================================
   listen: [
     'py-progress',
     'project-finished',
 
+    // Python completion events
     'py-fairValue-complete',
     'py-mvar-complete',
     'py-cvar-complete',
@@ -83,7 +124,7 @@ module.exports = {
     'py-MVaR-complete',
     'py-CVaR-complete',
 
-
+    // Import / CRUD feedback
     'import-matched-columns-complete',
     'erase-data-success',
     'erase-data-error',
@@ -94,32 +135,37 @@ module.exports = {
     'csparameter-update-success',
     'csparameter-update-error',
 
-    // ✅ update-data / customer-texts feedback
     'update-data-success',
     'update-data-error',
     'update-customer-texts-success',
     'update-customer-texts-error',
+
+    // Deals portfolio deletion feedback
+    'delete-portfolio-everywhere-success',
+    'delete-portfolio-everywhere-error',
   ],
 
+  // =====================================================
+  // LISTEN PREFIXES (dynamic response channels)
+  // =====================================================
   listenPrefixes: [
-    // list replies
     'customerReports:list-success:',
     'customerReports:list-error:',
-
-    // load replies
     'customerReports:load-success:',
     'customerReports:load-error:',
-
-    // save replies (dynamic req ids, if your code uses them)
     'customerReports:save-success:',
     'customerReports:save-error:',
-
-    // delete replies (dynamic req ids, if your code uses them)
     'customerReports:delete-success:',
     'customerReports:delete-error:',
+
+    // ✅ add-new-row dynamic reply channels
+    'add-new-row-success:',
+    'add-new-row-error:',
   ],
 
-  // pattern-based allowed listen channels
+  // =====================================================
+  // Pattern-based allowed listen channels
+  // =====================================================
   allowDataEventsEndingWith: 'Data',
 };
 

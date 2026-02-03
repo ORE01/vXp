@@ -100,71 +100,27 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on(ch, (_event, ...args) => callback(...args));
   },
 
-
-// da sind die receivers mit Logs!!! NICHT LÖSCHEN
-
-// receive: (channel, callback) => {
-//   const ch = String(channel || '');
-//   if (!canListen(ch)) return;
-
-//   window.__ipcBindCounts = window.__ipcBindCounts || {};
-//   window.__ipcBindCounts[ch] = (window.__ipcBindCounts[ch] || 0) + 1;
-//   console.log('[IPC bind]', ch, 'count=', window.__ipcBindCounts[ch]);
-
-//   ipcRenderer.on(ch, (_event, ...args) => {
-//     window.__ipcRecvCounts = window.__ipcRecvCounts || {};
-//     window.__ipcRecvCounts[ch] = (window.__ipcRecvCounts[ch] || 0) + 1;
-//     console.log('[IPC recv]', ch, 'count=', window.__ipcRecvCounts[ch]);
-
-//     callback(...args);
-//   });
-// },
-
-// once: (channel, callback) => {
-//   const ch = String(channel || '');
-//   if (!canListen(ch)) return;
-
-//   window.__ipcBindCounts = window.__ipcBindCounts || {};
-//   window.__ipcBindCounts[ch] = (window.__ipcBindCounts[ch] || 0) + 1;
-//   console.log('[IPC bind]', ch, 'count=', window.__ipcBindCounts[ch]);
-
-//   ipcRenderer.once(ch, (_event, ...args) => {
-//     window.__ipcRecvCounts = window.__ipcRecvCounts || {};
-//     window.__ipcRecvCounts[ch] = (window.__ipcRecvCounts[ch] || 0) + 1;
-//     console.log('[IPC recv]', ch, 'count=', window.__ipcRecvCounts[ch]);
-
-//     callback(...args);
-//   });
-// },
-
-
-// on: (channel, callback) => {
-//   const ch = String(channel || '');
-//   if (!canListen(ch)) return;
-
-//   window.__ipcBindCounts = window.__ipcBindCounts || {};
-//   window.__ipcBindCounts[ch] = (window.__ipcBindCounts[ch] || 0) + 1;
-//   console.log('[IPC bind]', ch, 'count=', window.__ipcBindCounts[ch]);
-
-//   ipcRenderer.on(ch, (_event, ...args) => {
-//     window.__ipcRecvCounts = window.__ipcRecvCounts || {};
-//     window.__ipcRecvCounts[ch] = (window.__ipcRecvCounts[ch] || 0) + 1;
-//     console.log('[IPC recv]', ch, 'count=', window.__ipcRecvCounts[ch]);
-
-//     callback(...args);
-//   });
-// },
-
-// da sind die receivers mit Logs!!! NICHT LÖSCHEN
-
   removeListener: (channel, callback) => {
     ipcRenderer.removeListener(channel, callback);
   },
 
-  // explicit helpers
-  fetchBonds: (isins) => ipcRenderer.invoke('bonds:fetch', isins),
-  fetchBondsTermsOnly: (isins) => ipcRenderer.invoke('bonds:fetchTermsOnly', isins),
-  parsePdfUrl: (url, isin) => ipcRenderer.invoke('bonds:parsePdfUrl', { url, isin }),
+  // =====================================================
+  // explicit helpers (NEW API)
+  // =====================================================
+
+  // 1) Prospectus finden (liefert best.url + candidates)
+  findProspectus: (payload) => ipcRenderer.invoke('bondProspectusFinder:find', payload),
+
+  // 2) Bonds: PDF parsen (eine URL -> Terms/Schedule etc.)
+  parsePdf: (url, isin) => ipcRenderer.invoke('bonds:parsePdf', { url, isin }),
+
+  // 3) Pipeline: ISIN -> Prospectus -> parse (ein Call)
+  resolveAndParseBond: (isin, opts = {}) =>
+    ipcRenderer.invoke('bondPipeline:resolveAndParse', {
+      isin,
+      ...opts, // z.B. prospectusOptions, etc.
+    }),
+
 
   onProgress: (callback) => {
     ipcRenderer.on('py-progress', (_event, data) => callback(data));

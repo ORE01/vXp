@@ -1,5 +1,5 @@
-﻿import processData, { filterColumnsInData } from '../UI/MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../UI/MODAL_HELPER/ModalActionHandler.js';
+﻿import processData, { filterColumnsInData } from '../../core/ui/MODAL_HELPER/dataProcessor.js';
+import { handleModalAction } from '../../core/ui/MODAL_HELPER/ModalActionHandler.js';
 import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';

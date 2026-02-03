@@ -1,756 +1,499 @@
-﻿import { generateInputFields } from './HandleInputFields.js';
+﻿'use strict';
+
+import { generateInputFields } from './HandleInputFields.js';
 import { formatInputFieldValue } from '../../../utils/format.js';
 import { makeModalDraggable } from './DraggableModal.js';
 
 import { issuerData } from '../../../features/NEW_PRODUCTS/ISSUER.js';
-import { handleDealsData } from '../../../features/CREATE_PORTFOLIO/DEALS.js';
 import { buildOrderedFieldsForModal } from '../../../features/NEW_PRODUCTS/PROD.js';
 
 import { appState } from '../../../renderer.js';
 
+let isAddingRow = false;
+let isErasing = false;
 
+// =====================================================
+// Public entry
+// =====================================================
 
-
-let isAddingRow;
-
-// --- helpers to normalize dates for DB (YYYY-MM-DD) ---
-function toISO(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-}
-function addYearsISO(isoYMD, years) {
-  if (!isoYMD) return '';
-  const [y, m, d] = isoYMD.split('-').map(Number);
-  const base = new Date(y, m - 1, d);
-  base.setFullYear(base.getFullYear() + Number(years || 0));
-  return toISO(base);
-}
-// --- helpers END
-
-
-
-export function handleModalAction(event, data, rowIndex, selectedTableName, actionType) {
-  console.log('selectedTableName:', selectedTableName);
+export function handleModalAction(_event, data, rowIndex, selectedTableName, actionType) {
+  console.log('[ModalAction] table:', selectedTableName, 'action:', actionType);
 
   displayModal(actionType, rowIndex);
   setupModalFields(actionType, data, rowIndex, selectedTableName);
 
-  //ADD:
   if (actionType === 'add') {
-        console.log('add_TEST:')
-    setupAddOperation(data, selectedTableName);
-
-  //EDIT:
+    setupAddOperation(selectedTableName);
   } else if (actionType === 'edit') {
-    const rowData = data[rowIndex];
-    console.log('data',data)
-        // console.log('Row Index:', rowIndex);
-        // console.log('Data Length:', data.length);
-        // console.log('Selected Row Data:', data[rowIndex]); // This should NOT be undefined
+    const rowData = (Array.isArray(data) ? data[rowIndex] : null) || {};
     setupEditOperation(rowData, rowIndex, selectedTableName);
   }
+
   removeCouponButton();
 }
-        function displayModal(actionType, rowIndex = null) {
-          const modal = document.getElementById('modal');
-          const modalContent = modal.querySelector('.modal-content');
-          const modalTitle = modal.querySelector('h2');
 
-          // Set the modal title based on the action type
-          if (actionType === 'add') {
-            modalTitle.textContent = 'Add New Row';
-          } else if (actionType === 'edit' && rowIndex !== null) {
-            modalTitle.textContent = `Edit Row ${rowIndex + 1}`;
-          }
+// =====================================================
+// Modal UI
+// =====================================================
 
-          // Clear specific sections for ProdAll and ProdCouponSchedules
-          const prodSection = document.getElementById('prodSection');
-          const couponSection = document.getElementById('couponSection');
+function displayModal(actionType, rowIndex = null) {
+  const modal = document.getElementById('modal');
+  if (!modal) return;
 
-          if (prodSection) prodSection.innerHTML = ''; // Clear only ProdAll section
-          if (couponSection) couponSection.innerHTML = ''; // Clear only CouponSchedules section
+  const modalContent = modal.querySelector('.modal-content');
+  const modalTitle = modal.querySelector('h2');
 
-          // Show the modal
-          modal.style.display = 'block';
-        
-          // Close button handler
-          const closeButton = modal.querySelector('.close');
-          closeButton.onclick = () => {
-            modal.style.display = 'none'; // Hide the modal
-          };
-
-          makeModalDraggable(modalContent);
-        }
-        function setupModalFields(actionType, data, rowIndex, selectedTableName) {
-          const modal = document.getElementById('modal');
-          const form = modal.querySelector('#editForm');
-          form.innerHTML = '';
-
-          // Issuer-Liste
-          const uniqueIssuers = [...new Set(issuerData.map((item) => item.ISSUER))];
-
-          // ADD:
-          if (actionType === 'add') {
-            console.log('addTEST2');
-
-            // ðŸ”¹ Basis: immer die LETZTE Zeile aus den vorhandenen Daten
-            const baseRow = (data && data.length > 0)
-              ? data[data.length - 1]   // letzte Zeile
-              : {};
-
-            let rowDataForForm = {};
-
-            if (selectedTableName === 'ProdAll') {
-              // FÃ¼r ProdAll: Reihenfolge Ã¼ber Helper, aber Werte der letzten Zeile behalten
-              const orderedTemplate = buildOrderedFieldsForModal(baseRow) || {};
-              rowDataForForm = { ...orderedTemplate };
-            } else {
-              // FÃ¼r alle anderen Tabellen: Werte der letzten Zeile Ã¼bernehmen
-              rowDataForForm = { ...baseRow };
-            }
-
-            // PrimÃ¤rschlÃ¼ssel-Felder beim ADD leeren (id soll neu vergeben werden)
-            if ('id' in rowDataForForm) {
-              rowDataForForm.id = '';
-            }
-            if ('ID' in rowDataForForm) {
-              rowDataForForm.ID = '';
-            }
-
-            // Optional: fÃ¼r bestimmte Tabellen Defaults setzen/anpassen
-            if (selectedTableName === 'CreditVaRInput') {
-              // Name z.B. leer lassen oder mit Prefix fÃ¼llen
-              // rowDataForForm.name = '';
-              // is_active nicht im Modal, wird in DB/Backend gesetzt
-              // updated_at wird im Handler als hidden field Ã¼berschrieben
-            }
-
-            // ISSUER-Default nur setzen, wenn Feld existiert und leer ist
-            if ('ISSUER' in rowDataForForm && !rowDataForForm['ISSUER']) {
-              rowDataForForm['ISSUER'] = uniqueIssuers.length > 0 ? uniqueIssuers[0] : '';
-            }
-
-            generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
-            return;
-          }
-
-          // EDIT:
-          if (actionType === 'edit' && data && data.length > rowIndex) {
-            const rawRowData = data[rowIndex];
-            let rowDataForForm = rawRowData;
-
-            if (selectedTableName === 'ProdAll') {
-              // FÃ¼r ProdAll: Feldreihenfolge Ã¼ber Helper
-              rowDataForForm = buildOrderedFieldsForModal(rawRowData);
-            }
-
-            generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
-          }
-        }
-        function removeCouponButton() {
-          const couponButton = document.getElementById('coupon-button');
-          if (couponButton) {
-              couponButton.remove();
-              // console.log("Coupon button removed.");
-          }
-        }
-
-
-
-// **Attach event to close button to remove coupon button**
-document.addEventListener("DOMContentLoaded", () => {
-  const closeButton = document.querySelector(".close"); 
-  if (closeButton) {
-      closeButton.addEventListener("click", removeCouponButton);
+  if (modalTitle) {
+    if (actionType === 'add') modalTitle.textContent = 'Add New Row';
+    if (actionType === 'edit' && rowIndex != null) modalTitle.textContent = `Edit Row ${rowIndex + 1}`;
   }
-});
 
+  // Clear specific sections (ProdAll/CouponSchedules)
+  const prodSection = document.getElementById('prodSection');
+  const couponSection = document.getElementById('couponSection');
+  if (prodSection) prodSection.innerHTML = '';
+  if (couponSection) couponSection.innerHTML = '';
 
-// ADD:
+  modal.style.display = 'block';
 
-    function setupAddOperation(data, selectedTableName) {
-      const modal = document.getElementById('modal');
-      const modalTitle = modal.querySelector('h2');
-      const form = document.getElementById('editForm');
+  const closeButton = modal.querySelector('.close');
+  if (closeButton) closeButton.onclick = closeModal;
 
-      // WICHTIG: Felder wurden bereits in setupFormFields erzeugt.
-      // Hier NICHT nochmal form.innerHTML leeren oder generateInputFields aufrufen.
+  if (modalContent) makeModalDraggable(modalContent);
+}
 
-      modalTitle.textContent = 'Add New Row';
+function setupModalFields(actionType, data, rowIndex, selectedTableName) {
+  const modal = document.getElementById('modal');
+  if (!modal) return;
 
-      // Save-Button neu verdrahten
-      const saveButton = document.getElementById('saveButton');
-      const saveButtonClone = saveButton.cloneNode(true);
-      saveButton.parentNode.replaceChild(saveButtonClone, saveButton);
+  const form = modal.querySelector('#editForm');
+  if (!form) return;
 
-      saveButtonClone.addEventListener('click', () =>
-        addSaveButtonHandler(form, modal, selectedTableName)
-      );
+  form.innerHTML = '';
+
+  const uniqueIssuers = [...new Set((issuerData || []).map((item) => item.ISSUER).filter(Boolean))];
+
+  // ADD: default from last row
+  if (actionType === 'add') {
+    const baseRow = (Array.isArray(data) && data.length > 0) ? data[data.length - 1] : {};
+    let rowDataForForm;
+
+    if (selectedTableName === 'ProdAll') {
+      rowDataForForm = { ...(buildOrderedFieldsForModal(baseRow) || {}) };
+    } else {
+      rowDataForForm = { ...(baseRow || {}) };
     }
-        export const addSaveButtonHandler = async (form, modal, selectedTableName, onReload) => {
-          if (isAddingRow) return;
-          isAddingRow = true;
 
-          try {
-            // 0) aktuelle Auswahl merken (Dropdown/State)
-            const dd = document.getElementById('createdDealsDropdown');
-            const prev = (window.appState?.getSelectedDealsTableName?.() || dd?.value || '').trim();
+    // clear id fields on add
+    if ('id' in rowDataForForm) rowDataForForm.id = '';
+    if ('ID' in rowDataForForm) rowDataForForm.ID = '';
 
-            const newRowData = gatherModalData(form);
-            delete newRowData.ID;
-
-            await addNewRow(newRowData, selectedTableName);
-
-            // 1) Modal schlieÃŸen
-            closeModal();
-
-            // 2) DealsMain frisch holen
-            window.api.once('DealsMainData', (rows) => {
-              // deine bestehende Update-Funktion
-              window.appState?.updateDealsDataTable?.(rows, { isFull: true });
-
-              // 3) Auswahl wiederherstellen (Dropdown + State)
-              if (prev) {
-                const d = document.getElementById('createdDealsDropdown');
-                if (d) {
-                  const opt = Array.from(d.options).find(o => o.value === prev);
-                  if (opt) d.value = prev;
-                }
-                window.appState?.setSelectedDealsTableName?.(prev);
-              }
-            });
-            window.api.send('fetch-table-data', 'DealsMain');
-
-            // (optional) zusÃ¤tzlicher Hook des Callers
-            if (typeof onReload === 'function') await onReload(selectedTableName);
-
-            console.log(`âœ… New row added to ${selectedTableName}.`);
-          } catch (error) {
-            displayErrorMessage(`Failed to add new row: ${error.message}`);
-          } finally {
-            isAddingRow = false;
-          }
-        };
-            function gatherModalData(form) {
-          if (!form) {
-            console.error('Form not found in gatherFormData.');
-            return {};
-          }
-
-          const newRowData = {};
-          const inputFields = form.querySelectorAll('input, select');
-
-          // Merker, welche Felder im Form tatsÃ¤chlich existieren
-          const presentFields = new Set();
-
-          // 1) Alle regulÃ¤ren Inputs einsammeln (nur die mit data-field)
-          inputFields.forEach((input) => {
-            const fieldName = input.getAttribute('data-field');
-            if (!fieldName) return;
-
-            presentFields.add(fieldName);
-
-            let rawVal;
-            if (input.type === 'checkbox') {
-              rawVal = input.checked ? '1' : '0';
-            } else {
-              rawVal = (input.value ?? '').toString().trim();
-            }
-
-            const value = formatInputFieldValue(fieldName, rawVal);
-            if (value != null && String(value).toLowerCase() !== 'null') {
-              newRowData[fieldName] = value;
-            } else {
-              // nur setzen, wenn das Feld wirklich existiert â€“ optional: nicht setzen = NULL/DEFAULT
-              newRowData[fieldName] = '';
-            }
-          });
-
-          // 2) START_DATE / MATURITY nur Ã¼berschreiben, wenn diese Felder im Form existieren
-          const hasStart   = presentFields.has('START_DATE');
-          const hasMat     = presentFields.has('MATURITY');
-
-          const startToken = (hasStart ? (form.querySelector('#start_dateToken')?.value || '') : '').trim();
-          const matToken   = (hasMat   ? (form.querySelector('#maturityToken')?.value   || '') : '').trim();
-
-          const startISO = (hasStart ? (form.querySelector('#start_dateDate')?.value || '') : '').trim();
-          const matISO   = (hasMat   ? (form.querySelector('#maturityDate')?.value   || '') : '').trim();
-
-          if (hasStart) {
-            if (startToken) {
-              newRowData.START_DATE = startToken; // z. B. "today"
-            } else if (startISO) {
-              newRowData.START_DATE = startISO;   // YYYY-MM-DD
-            }
-            // kein else -> nicht kÃ¼nstlich '' setzen
-          }
-
-          if (hasMat) {
-            if (matToken) {
-              newRowData.MATURITY = matToken;     // z. B. "11y"
-            } else if (matISO) {
-              newRowData.MATURITY = matISO;       // YYYY-MM-DD
-            }
-          }
-
-          return newRowData;
-        }
-            export function addNewRow(newRowData, cleanTableName, { timeoutMs = 15000 } = {}) {
-          const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-          const successCh = `add-new-row-success:${requestId}`;
-          const errorCh   = `add-new-row-error:${requestId}`;
-
-          return new Promise((resolve, reject) => {
-            let timer;
-
-            const cleanup = () => {
-              if (timer) clearTimeout(timer);
-              if (window.api?.removeAllListeners) {
-                window.api.removeAllListeners(successCh);
-                window.api.removeAllListeners(errorCh);
-              }
-            };
-
-            const onSuccess = () => {
-              console.log('âœ… Neue Zeile erfolgreich hinzugefÃ¼gt.');
-              cleanup();
-              resolve();
-            };
-
-            const onError = (error) => {
-              const msg = error?.message || String(error || 'Unknown error');
-              console.error('âŒ Fehler beim HinzufÃ¼gen:', msg);
-              cleanup();
-              reject(new Error(msg));
-            };
-
-            // 1) Listener registrieren
-            window.api.once(successCh, onSuccess);
-            window.api.once(errorCh, onError);
-
-            // 2) Senden â€“ mit requestId
-            window.api.send('add-new-row', { newRowData, cleanTableName, requestId });
-
-            // 3) Optionaler Timeout
-            if (timeoutMs > 0) {
-              timer = setTimeout(() => {
-                cleanup();
-                reject(new Error(`addNewRow timeout (${requestId})`));
-              }, timeoutMs);
-            }
-          });
-        }
-
-// EDIT:
-
-    function setupEditOperation(data, rowIndex, selectedTableName) {
-      console.log('selectedTableName', selectedTableName);
-
-      // WICHTIG:
-      // Die Input-Felder wurden bereits in setupFormFields generiert
-      // (inkl. buildOrderedFieldsForModal fÃ¼r ProdAll).
-      // Hier NICHT nochmal form.innerHTML leeren oder generateInputFields aufrufen.
-
-      // Save-Button
-      const saveButton = document.getElementById('saveButton');
-      const newSaveButton = saveButton.cloneNode(true);
-      saveButton.parentNode.replaceChild(newSaveButton, saveButton);
-      newSaveButton.addEventListener(
-        'click',
-        editSaveButtonHandler(selectedTableName, rowIndex, data)
-      );
-
-      // Erase-Button
-      const eraseButton = document.getElementById('eraseButton');
-      const newEraseButton = eraseButton.cloneNode(true);
-      newEraseButton.addEventListener(
-        'click',
-        eraseButtonHandler(selectedTableName, rowIndex, data)
-      );
-      eraseButton.parentNode.replaceChild(newEraseButton, eraseButton);
+    // issuer default
+    if ('ISSUER' in rowDataForForm && !rowDataForForm.ISSUER) {
+      rowDataForForm.ISSUER = uniqueIssuers[0] || '';
     }
-        const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () => {
-          console.log("selectedTableName", selectedTableName);
-          if (!selectedTableName) {
-            console.error("selectedTableName is undefined.");
-            displayErrorMessage("Error: No table selected.");
-            return;
-          }
 
-          const form = document.getElementById('editForm');
-          const formData = form ? gatherModalData(form) : {};
-          // ðŸ‘‰ Fallback: merge mit Ã¼bergebenem data (z.B. aus Preview)
-          let newData = { ...(data || {}), ...(formData || {}) };
-
-// Customer TABELLE: inline aus der Preview speichern
-if (String(selectedTableName).trim() === 'Customer') {
-  // Falls kein PK vorhanden, aus appState holen
-  if (newData.id == null) {
-    try {
-      const arr = window.appState?.getCustomerData?.();
-      const customer = Array.isArray(arr) ? arr[0] : arr;
-      if (customer?.id != null) newData.id = customer.id;
-    } catch {}
+    generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
+    return;
   }
 
-  // Falls kein Header im Payload, Preview-Input lesen
-  if (newData.pdf_header == null) {
-    const inputH = document.getElementById('or-headerText');
-    if (inputH) newData.pdf_header = (inputH.value || '').trim();
-  }
+  // EDIT:
+  if (actionType === 'edit') {
+    const raw = (Array.isArray(data) && data[rowIndex]) ? data[rowIndex] : data;
+    let rowDataForForm = raw || {};
 
-  // >>> NEU: Footer nur nachziehen, wenn der Aufrufer "pdf_footer" wirklich speichern will
-  // (also wenn im data-Payload der Key vorhanden ist). So fasst der Header-Save den Footer NICHT an.
-  if ((data && Object.prototype.hasOwnProperty.call(data, 'pdf_footer')) && newData.pdf_footer == null) {
-    const inputF = document.getElementById('or-footerText');
-    if (inputF) newData.pdf_footer = (inputF.value || '').trim();
+    if (selectedTableName === 'ProdAll') {
+      rowDataForForm = buildOrderedFieldsForModal(raw) || raw || {};
+    }
+
+    generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
   }
 }
 
-// console.log('newData:', newData);
+function removeCouponButton() {
+  const couponButton = document.getElementById('coupon-button');
+  if (couponButton) couponButton.remove();
+}
 
+document.addEventListener('DOMContentLoaded', () => {
+  const closeButton = document.querySelector('.close');
+  if (closeButton) closeButton.addEventListener('click', removeCouponButton);
+});
 
-          try {
-            const cleanTableName = getCleanTableName(selectedTableName);
-            const uniqueIdentifier = getUniqueIdentifier(newData, selectedTableName);
-            await saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier);
-            closeModal();
-          } catch (error) {
-            displayErrorMessage(`Failed to save changes: ${error.message}`);
-          }
-        };
+// =====================================================
+// ADD
+// =====================================================
 
+function setupAddOperation(selectedTableName) {
+  const saveButton = document.getElementById('saveButton');
+  if (!saveButton) return;
 
-//-----------------------------------SAVE, ERASE -----------------------------------------------------//    
+  // Rebind save click cleanly
+  const clone = saveButton.cloneNode(true);
+  saveButton.parentNode.replaceChild(clone, saveButton);
+
+  clone.addEventListener('click', async () => {
+    const form = document.getElementById('editForm');
+    if (!form) return;
+
+    await addSaveButtonHandler(form, selectedTableName);
+  });
+}
+
+export async function addSaveButtonHandler(form, selectedTableName, onReload) {
+  if (isAddingRow) return;
+  isAddingRow = true;
+
+  try {
+    const newRowData = gatherModalData(form);
+    delete newRowData.ID; // keep old behavior
+
+    await addNewRow(newRowData, selectedTableName);
+
+    closeModal();
+
+    // ✅ trigger central refresh (NO local once('DealsMainData'))
+    requestTableRefreshAfterMutation(selectedTableName);
+
+    if (typeof onReload === 'function') await onReload(selectedTableName);
+
+    console.log(`[ModalAction] New row added to ${selectedTableName}`);
+  } catch (error) {
+    displayErrorMessage(`Failed to add new row: ${error?.message || String(error)}`);
+  } finally {
+    isAddingRow = false;
+  }
+}
+
+// =====================================================
+// EDIT
+// =====================================================
+
+function setupEditOperation(rowData, rowIndex, selectedTableName) {
+  // Save button
+  const saveButton = document.getElementById('saveButton');
+  if (saveButton) {
+    const clone = saveButton.cloneNode(true);
+    saveButton.parentNode.replaceChild(clone, saveButton);
+    clone.addEventListener('click', editSaveButtonHandler(selectedTableName, rowIndex, rowData));
+  }
+
+  // Erase button
+  const eraseButton = document.getElementById('eraseButton');
+  if (eraseButton) {
+    const clone = eraseButton.cloneNode(true);
+    eraseButton.parentNode.replaceChild(clone, eraseButton);
+    clone.addEventListener('click', eraseButtonHandler(selectedTableName, rowIndex, rowData));
+  }
+}
+
+const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () => {
+  if (!selectedTableName) {
+    displayErrorMessage('Error: No table selected.');
+    return;
+  }
+
+  try {
+    const form = document.getElementById('editForm');
+    const formData = form ? gatherModalData(form) : {};
+    let newData = { ...(data || {}), ...(formData || {}) };
+
+    // Customer special handling (keep your behavior)
+    if (String(selectedTableName).trim() === 'Customer') {
+      if (newData.id == null) {
+        try {
+          const arr = window.appState?.getCustomerData?.();
+          const customer = Array.isArray(arr) ? arr[0] : arr;
+          if (customer?.id != null) newData.id = customer.id;
+        } catch {}
+      }
+
+      if (newData.pdf_header == null) {
+        const inputH = document.getElementById('or-headerText');
+        if (inputH) newData.pdf_header = (inputH.value || '').trim();
+      }
+
+      if ((data && Object.prototype.hasOwnProperty.call(data, 'pdf_footer')) && newData.pdf_footer == null) {
+        const inputF = document.getElementById('or-footerText');
+        if (inputF) newData.pdf_footer = (inputF.value || '').trim();
+      }
+    }
+
+    const cleanTableName = getCleanTableName(selectedTableName);
+    const uniqueIdentifier = getUniqueIdentifier(newData, selectedTableName);
+
+    await saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier);
+
+    // Close immediately; UI refresh arrives via DataPump after update success + fetch refresh
+    closeModal();
+  } catch (error) {
+    displayErrorMessage(`Failed to save changes: ${error?.message || String(error)}`);
+  }
+};
 
 // SAVE
 export function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
-  //console.log('saveChanges tableName:', newData, cleanTableName, rowIndex, uniqueIdentifier);
   window.api.send('update-data', { newData, cleanTableName, rowIndex, uniqueIdentifier });
 }
 
-// ERASE:
-let isErasing = false;
+// =====================================================
+// ERASE
+// =====================================================
 
-export const eraseButtonHandler = (selectedTableName, rowIndex, data) => async () => {
-  console.log('Erase attempt for:', data);
+export const eraseButtonHandler = (selectedTableName, _rowIndex, data) => async () => {
   if (isErasing) return;
   isErasing = true;
 
   try {
     const cleanTableName = getCleanTableName(selectedTableName);
-    let uniqueIdentifier = getUniqueIdentifier(data, selectedTableName);
-    console.log('selectedTableName, uniqueIdentifier:', selectedTableName, uniqueIdentifier);
+    const uniqueIdentifier = getUniqueIdentifier(data, selectedTableName);
 
-    // âœ… Erase from the primary table
     await eraseRow(cleanTableName, uniqueIdentifier);
 
-    // âœ… Erase from ProdCouponSchedules
+    // NOTE: extra deletions are still here; consider moving to main later
     await eraseProdIDFromProdCouponSchedules(uniqueIdentifier);
-
-    // âœ… Erase from Portfolios
     await eraseProdIDFromDeals(uniqueIdentifier);
 
-    // Close modal after all deletions
     closeModal();
+
+    // ✅ trigger central refresh (NO local once('DealsMainData'))
+    requestTableRefreshAfterMutation(selectedTableName);
   } catch (error) {
-    console.error('âŒ Error in eraseButtonHandler:', error);
-    displayErrorMessage(`Failed to erase row: ${error.message}`);
+    displayErrorMessage(`Failed to erase row: ${error?.message || String(error)}`);
   } finally {
     isErasing = false;
   }
 };
 
-    function getCleanTableName(tableName) {
-      // Additional check to ensure tableName is not undefined
-      if (typeof tableName === 'string') {
-        return tableName.endsWith('Data') ? tableName.slice(0, -4) : tableName;
-      } else {
-        console.error("tableName is not a string.");
-        return ''; // Return an empty string or handle this case as needed
-      }
-    }
+function eraseRow(cleanTableName, uniqueIdentifier) {
+  window.api.send('erase-data', { cleanTableName, uniqueIdentifier });
+}
 
-    function getUniqueIdentifier(newData, selectedTableName) {
-      console.log('newData, selectedTableName:', newData, selectedTableName);
-      // Determine the column name based on the selected table name
-      let uniqueIdentifierColumn;
-      
-      // Check if selectedTableName starts with "Deals"
-    const name = String(selectedTableName || '');
-    const upper = name.toUpperCase();
+// =====================================================
+// IPC Success Hooks (Action-only)
+// =====================================================
 
-    if (upper.startsWith('DEALS') || upper.startsWith('OFFERS_') || upper.startsWith('OFFER_')) {
-      uniqueIdentifierColumn = 'TRADE_ID';
-    } else {
-          switch (selectedTableName) {
-              case 'Issuer':
-                  uniqueIdentifierColumn = 'TICKER';
-                  break;
-              case 'ProdAll':
-                  uniqueIdentifierColumn = 'PROD_ID';
-                  break;
-              case 'CSParameter':
-                uniqueIdentifierColumn = 'CSSzenario';
-                break;    
-              case 'ecb':
-                uniqueIdentifierColumn = 'ID';
-                break;    
-              case 'fed':
-                uniqueIdentifierColumn = 'ID';
-                break;   
-              case 'yahoo':
-                uniqueIdentifierColumn = 'ID';
-                break;  
-              case 'ProdCouponSchedules': 
-                uniqueIdentifierColumn = 'ID'; 
-                break; 
-              case 'EUSW': 
-                uniqueIdentifierColumn = 'YEAR'; 
-                break; 
-              case 'MVaRInput': 
-                uniqueIdentifierColumn = 'id';  
-                break;  
-              case 'Customer': 
-                uniqueIdentifierColumn = 'id';   
-                break; 
-              case 'PortfolioHistoryMetrics': 
-                uniqueIdentifierColumn = 'DATE';   
-                break;   
-              case 'CreditVaRInputThreshold': 
-                uniqueIdentifierColumn = 'id';   
-                break; 
-              case 'CreditVaRInput': 
-                uniqueIdentifierColumn = 'id';   
-                break;    
-              // Add more cases as needed for different tables
-              default:
-                  console.error('Unknown table:', selectedTableName);
-                  return null; // Or handle this situation as appropriate
-          }
-      }
+window.api.receive('erase-data-success', ({ cleanTableName }) => {
+  console.log('[erase-data-success]', cleanTableName);
+  // Keep it minimal: modal already closed by handler, but safe:
+  // closeModal();
+  requestTableRefreshAfterMutation(cleanTableName);
+});
 
-      // Assuming uniqueIdentifierColumn is correctly determined
-      if (uniqueIdentifierColumn && newData.hasOwnProperty(uniqueIdentifierColumn)) {
-          return {
-              column: uniqueIdentifierColumn,
-              value: newData[uniqueIdentifierColumn]
-          };
-      } else {
-          console.error('Unable to determine the unique identifier for:', selectedTableName);
-          return null;
-      }
-    }
+window.api.receive('update-data-success', () => {
+  console.log('[update-data-success]');
+  requestTableRefreshAfterMutation('DealsMain'); // safe default: deals often displayed
+});
 
+// Optional: If you have error channels for erase/update, bind them too
+window.api.receive('erase-data-error', (e) => {
+  const msg = e?.message || e?.error || String(e || 'erase failed');
+  displayErrorMessage(msg);
+});
+window.api.receive('update-data-error', (e) => {
+  const msg = e?.message || e?.error || String(e || 'update failed');
+  displayErrorMessage(msg);
+});
 
-    // Function to handle erasing related rows from ProdCouponSchedules
-    const eraseProdIDFromProdCouponSchedules = async (uniqueIdentifier) => {
-      try {
-        // console.log('Checking existence in ProdCouponSchedules for:', uniqueIdentifier);
+// =====================================================
+// Refresh helper (central approach)
+// =====================================================
 
-        // Ensure uniqueIdentifier is a string
-        let uniqueValue = (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null)
-          ? uniqueIdentifier.value
-          : String(uniqueIdentifier).trim();
+function requestTableRefreshAfterMutation(selectedTableName) {
+  // Keep it simple + robust:
+  // - Always refresh DealsMain because it affects deals/offers/portfolios list in your UI.
+  // - Refresh the table itself if it exists.
+  try { window.api.send('fetch-table-data', 'DealsMain'); } catch {}
 
-        // Get all coupon data
-        const couponData = appState.getCouponData();
-        // console.log('Available rows in ProdCouponSchedules:', couponData);
-
-        // Find matching rows
-        const matchingRows = couponData.filter(row => {
-          // console.log('Checking row:', row);
-          return row.PROD_ID && String(row.PROD_ID).trim() === uniqueValue;
-        });
-
-        // If matches are found, erase them
-        if (matchingRows.length > 0) {
-          // console.log(`Found ${matchingRows.length} matching rows in ProdCouponSchedules. Deleting...`);
-          
-          for (const row of matchingRows) {
-            if (!row.ID) {
-              console.error('âŒ ERROR: Row missing ID:', row);
-              continue;
-            }
-
-            const numericID = Number(String(row.ID).replace(/,/g, ''));
-            // console.log(`Deleting row from ProdCouponSchedules where ID = ${numericID}`);
-
-            await eraseRow('ProdCouponSchedules', { column: 'ID', value: numericID });
-          }
-        } else {
-          console.log('âŒ No matching rows found in ProdCouponSchedules.');
-        }
-      } catch (error) {
-        console.error('âŒ Error while erasing from ProdCouponSchedules:', error);
-        displayErrorMessage(`Failed to erase from ProdCouponSchedules: ${error.message}`);
-      }
-    };
-
-    // Function to handle erasing PROD_ID entries from Portfolios: GEHT NOCH NICHT!!!!!
-    const eraseProdIDFromDeals = async (uniqueIdentifier) => {
-      try {
-        console.log('Checking existence in Deals for:', uniqueIdentifier);
-
-        // Ensure uniqueIdentifier is a string
-        let uniqueValue = (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null)
-          ? uniqueIdentifier.value
-          : String(uniqueIdentifier).trim();
-
-
-
-
-
-        // Get all created portfolio data
-        const dealsData = appState.getDealsData();  
-        // console.log('Available rows in Deals:', dealsData);
-
-
-
-
-        // Find matching rows by PROD_ID
-        const matchingRows = dealsData.filter(row => {
-          // console.log('Checking row in Portfolios:', row);
-          return row.PROD_ID && String(row.PROD_ID).trim() === uniqueValue;
-        });
-
-        // If matches are found, erase them
-        if (matchingRows.length > 0) {
-          // console.log(`Found ${matchingRows.length} matching rows in Portfolios. Deleting...`);
-
-          for (const row of matchingRows) {
-            if (!row.ID) {
-              console.error('âŒ ERROR: Portfolio row missing ID:', row);
-              continue;
-            }
-
-            const numericID = Number(String(row.ID).replace(/,/g, ''));
-            console.log(`Deleting row from Portfolios where ID = ${numericID}`);
-
-            await eraseRow('DealsMain', { column: 'ID', value: numericID });
-          }
-        } else {
-          console.log('âŒ No matching rows found in Portfolios.');
-        }
-      } catch (error) {
-        console.error('âŒ Error while erasing from Portfolios:', error);
-        displayErrorMessage(`Failed to erase from Portfolios: ${error.message}`);
-      }
-    };
-
-
-
-
-
-
-export function closeModal() {
-  const modal = document.getElementById('modal');
-  if (modal) {
-    modal.style.display = 'none';
+  const clean = getCleanTableName(selectedTableName);
+  if (clean && clean !== 'DealsMain') {
+    try { window.api.send('fetch-table-data', clean); } catch {}
   }
 }
 
+// =====================================================
+// Data gathering + utilities
+// =====================================================
 
+function gatherModalData(form) {
+  if (!form) return {};
 
-document.querySelectorAll('.deleteButton').forEach(button => {
-  button.addEventListener('click', async (event) => {
-    //const rowIndex = getRowIndex(event.target); // Implement getRowIndex according to your UI structure
-    const uniqueIdentifier = getUniqueIdentifier(newData, selectedTableName); // Implement this according to your data structure
-    const cleanTableName = getCleanTableName(selectedTableName);
+  const newRowData = {};
+  const inputFields = form.querySelectorAll('input, select');
+  const presentFields = new Set();
 
-    try {
-      await eraseRow(cleanTableName, uniqueIdentifier);
-      console.log(`Row erased from ${cleanTableName} successfully.`);
-      refreshUI(); // Implement a function to refresh your UI to reflect the changes
-    } catch (error) {
-      displayErrorMessage(`Failed to erase row: ${error.message}`);
-    }
-  });
-});
+  inputFields.forEach((input) => {
+    const fieldName = input.getAttribute('data-field');
+    if (!fieldName) return;
 
-    function eraseRow(cleanTableName, uniqueIdentifier) {
-      console.log('eraseRowFct:', uniqueIdentifier);
-      // Send the erase request to the main process
-      window.api.send('erase-data', { cleanTableName, uniqueIdentifier });
-    }
+    presentFields.add(fieldName);
 
-    function displayErrorMessage(message) {
-      // This example assumes you have a div or some element with the ID 'errorMessage' in your HTML
-      const errorMessageDiv = document.getElementById('errorMessage');
-      if(errorMessageDiv) {
-        errorMessageDiv.textContent = message;
-        errorMessageDiv.style.display = 'block'; // Make sure it's visible
-      } else {
-        console.error("Error message container not found");
-      }
-    }
+    let rawVal;
+    if (input.type === 'checkbox') rawVal = input.checked ? '1' : '0';
+    else rawVal = (input.value ?? '').toString().trim();
 
-window.api.receive('erase-data-success', ({ cleanTableName, uniqueIdentifier }) => {
-  console.log('[erase-data-success] for table:', cleanTableName, 'id:', uniqueIdentifier);
-
-  // 1) Kontext bestimmen: Offer vs. Deal
-  const isOfferTable = /^OFFERS?/i.test(cleanTableName); 
-  // matcht: OFFER_..., OFFERS_..., offers_xyz etc.
-
-  // IDs der Dropdowns
-  const dropdownId = isOfferTable
-    ? 'createdOffersDropdown'
-    : 'createdDealsDropdown';
-
-  // State-Getter/Setter je nach Kontext
-  const getSelectedTableName = isOfferTable
-    ? appState.getSelectedOffersTableName?.bind(appState)
-    : appState.getSelectedDealsTableName?.bind(appState);
-
-  const setSelectedTableName = isOfferTable
-    ? appState.setSelectedOffersTableName?.bind(appState)
-    : appState.setSelectedDealsTableName?.bind(appState);
-
-  // 2) aktuelle Auswahl merken
-  const dd = document.getElementById(dropdownId);
-  const prevSel = (getSelectedTableName?.() || dd?.value || '').trim();
-  console.log('[erase-data-success] prevSel =', prevSel, 'isOfferTable =', isOfferTable);
-
-  // 3) DealsMain neu laden
-  window.api.once('DealsMainData', (rows) => {
-    console.log('[DealsMainData] received after erase, rows:', Array.isArray(rows) ? rows.length : typeof rows);
-
-    // vollstÃ¤ndigen Dump in State
-    appState.updateDealsDataTable?.(rows, { isFull: true });
-
-    if (prevSel) {
-      // Dropdown-Option wieder setzen
-      if (typeof restoreDropdownSelection === 'function') {
-        restoreDropdownSelection(dropdownId, prevSel);
-      }
-
-      // State aktualisieren
-      setSelectedTableName?.(prevSel);
-
-      // gefilterte Sicht rendern (wie bisher)
-      const filtered = Array.isArray(rows)
-        ? rows.filter(r => String(r.port_name || r.PORT_NAME || '') === prevSel)
-        : rows;
-
-      handleDealsData?.(filtered, 'DealsMain');
-    } else {
-      // keine vorherige Auswahl -> alles zeigen
-      handleDealsData?.(rows, 'DealsMain');
-    }
+    const value = formatInputFieldValue(fieldName, rawVal);
+    newRowData[fieldName] = (value != null && String(value).toLowerCase() !== 'null') ? value : '';
   });
 
-  window.api.send('fetch-table-data', 'DealsMain');
-});
+  // Optional: START_DATE / MATURITY tokens only if field exists
+  const hasStart = presentFields.has('START_DATE');
+  const hasMat = presentFields.has('MATURITY');
 
+  const startToken = (hasStart ? (form.querySelector('#start_dateToken')?.value || '') : '').trim();
+  const matToken = (hasMat ? (form.querySelector('#maturityToken')?.value || '') : '').trim();
 
-function restoreDropdownSelection(id, value) {
-  const dd = document.getElementById(id);
-  if (!dd || !value) return;
-  dd.value = value;
-  // optional Change-Event feuern, falls deine Logik darauf hÃ¶rt
-  dd.dispatchEvent(new Event('change', { bubbles: true }));
+  const startISO = (hasStart ? (form.querySelector('#start_dateDate')?.value || '') : '').trim();
+  const matISO = (hasMat ? (form.querySelector('#maturityDate')?.value || '') : '').trim();
+
+  if (hasStart) {
+    if (startToken) newRowData.START_DATE = startToken;
+    else if (startISO) newRowData.START_DATE = startISO;
+  }
+
+  if (hasMat) {
+    if (matToken) newRowData.MATURITY = matToken;
+    else if (matISO) newRowData.MATURITY = matISO;
+  }
+
+  return newRowData;
+}
+
+export function addNewRow(newRowData, cleanTableName, { timeoutMs = 15000 } = {}) {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const successCh = `add-new-row-success:${requestId}`;
+  const errorCh = `add-new-row-error:${requestId}`;
+
+  return new Promise((resolve, reject) => {
+    let timer;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      if (window.api?.removeAllListeners) {
+        window.api.removeAllListeners(successCh);
+        window.api.removeAllListeners(errorCh);
+      }
+    };
+
+    const onSuccess = () => { cleanup(); resolve(); };
+    const onError = (error) => {
+      const msg = error?.message || String(error || 'Unknown error');
+      cleanup();
+      reject(new Error(msg));
+    };
+
+    window.api.once(successCh, onSuccess);
+    window.api.once(errorCh, onError);
+
+    window.api.send('add-new-row', { newRowData, cleanTableName, requestId });
+
+    if (timeoutMs > 0) {
+      timer = setTimeout(() => {
+        cleanup();
+        reject(new Error(`addNewRow timeout (${requestId})`));
+      }, timeoutMs);
+    }
+  });
+}
+
+function getCleanTableName(tableName) {
+  if (typeof tableName === 'string') return tableName.endsWith('Data') ? tableName.slice(0, -4) : tableName;
+  return '';
+}
+
+function getUniqueIdentifier(newData, selectedTableName) {
+  const name = String(selectedTableName || '');
+  const upper = name.toUpperCase();
+
+  let uniqueIdentifierColumn;
+
+  // Deals / Offers tables -> TRADE_ID
+  if (upper.startsWith('DEALS') || upper.startsWith('OFFERS_') || upper.startsWith('OFFER_')) {
+    uniqueIdentifierColumn = 'TRADE_ID';
+  } else {
+    switch (selectedTableName) {
+      case 'Issuer': uniqueIdentifierColumn = 'TICKER'; break;
+      case 'ProdAll': uniqueIdentifierColumn = 'PROD_ID'; break;
+      case 'CSParameter': uniqueIdentifierColumn = 'CSSzenario'; break;
+      case 'ecb':
+      case 'fed':
+      case 'yahoo':
+      case 'ProdCouponSchedules':
+        uniqueIdentifierColumn = 'ID'; break;
+      case 'EUSW': uniqueIdentifierColumn = 'YEAR'; break;
+      case 'MVaRInput':
+      case 'Customer':
+      case 'CreditVaRInputThreshold':
+      case 'CreditVaRInput':
+        uniqueIdentifierColumn = 'id'; break;
+      case 'PortfolioHistoryMetrics':
+        uniqueIdentifierColumn = 'DATE'; break;
+      default:
+        console.error('[ModalAction] Unknown table:', selectedTableName);
+        return null;
+    }
+  }
+
+  if (uniqueIdentifierColumn && newData && Object.prototype.hasOwnProperty.call(newData, uniqueIdentifierColumn)) {
+    return { column: uniqueIdentifierColumn, value: newData[uniqueIdentifierColumn] };
+  }
+
+  console.error('[ModalAction] Unable to determine unique identifier for:', selectedTableName);
+  return null;
+}
+
+async function eraseProdIDFromProdCouponSchedules(uniqueIdentifier) {
+  try {
+    let uniqueValue = (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null)
+      ? uniqueIdentifier.value
+      : String(uniqueIdentifier).trim();
+
+    const couponData = appState.getCouponData?.() || [];
+    const matchingRows = couponData.filter(row => row?.PROD_ID && String(row.PROD_ID).trim() === uniqueValue);
+
+    for (const row of matchingRows) {
+      if (!row?.ID) continue;
+      const numericID = Number(String(row.ID).replace(/,/g, ''));
+      await eraseRow('ProdCouponSchedules', { column: 'ID', value: numericID });
+    }
+  } catch (error) {
+    console.error('[ModalAction] eraseProdIDFromProdCouponSchedules error', error);
+  }
+}
+
+async function eraseProdIDFromDeals(uniqueIdentifier) {
+  // NOTE: this was marked as not working in your code; kept but safe-guarded
+  try {
+    let uniqueValue = (typeof uniqueIdentifier === 'object' && uniqueIdentifier !== null)
+      ? uniqueIdentifier.value
+      : String(uniqueIdentifier).trim();
+
+    const dealsData = appState.getDealsData?.() || [];
+    const matchingRows = dealsData.filter(row => row?.PROD_ID && String(row.PROD_ID).trim() === uniqueValue);
+
+    for (const row of matchingRows) {
+      if (!row?.ID) continue;
+      const numericID = Number(String(row.ID).replace(/,/g, ''));
+      await eraseRow('DealsMain', { column: 'ID', value: numericID });
+    }
+  } catch (error) {
+    console.error('[ModalAction] eraseProdIDFromDeals error', error);
+  }
+}
+
+export function closeModal() {
+  const modal = document.getElementById('modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function displayErrorMessage(message) {
+  const div = document.getElementById('errorMessage');
+  if (div) {
+    div.textContent = message;
+    div.style.display = 'block';
+  } else {
+    console.error('[ModalAction] Error message container not found:', message);
+  }
 }
 
 

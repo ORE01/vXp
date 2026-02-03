@@ -208,6 +208,14 @@ export function installDropdownFilterEngine({ appState, root = document } = {}) 
   };
 
   const applyFiltersAndUpdateDropdowns = (tableType, opts = {}) => {
+  console.log(
+    '[applyFiltersAndUpdateDropdowns]',
+    tableType,
+    'opts=', opts,
+    'caller=',
+    new Error().stack?.split('\n')[2]?.trim()
+  );
+
     const { preselect } = (typeof opts === 'string') ? { preselect: opts } : opts;
 
     let receivedData;
@@ -242,14 +250,19 @@ export function installDropdownFilterEngine({ appState, root = document } = {}) 
       tableType === 'portTables1' ||
       tableType === 'portTables2';
 
-    const filteredData = isTableNameDropdown
-      ? receivedData
-      : receivedData.filter(item => {
-          return Object.entries(dropdownConfig).every(([_, { selection, dataKey }]) => {
-            if (isAllSelected(selection)) return true;
-            return Array.isArray(selection) && selection.includes(item?.[dataKey]);
-          });
-        });
+const filteredData = isTableNameDropdown
+  ? receivedData
+  : receivedData.filter(item => {
+      return Object.entries(dropdownConfig).every(([_, { selection, dataKey }]) => {
+        if (isAllSelected(selection)) return true;
+
+        // ✅ Normalisieren: dropdown selections sind Strings,
+        // daher item-value ebenfalls als String vergleichen
+        const v = item?.[dataKey];
+        return Array.isArray(selection) && selection.includes(String(v ?? ''));
+      });
+    });
+
 
     appState.filteredData = appState.filteredData || {};
     appState.filteredData[tableType] = filteredData;
@@ -283,40 +296,58 @@ export function installDropdownFilterEngine({ appState, root = document } = {}) 
     appState.tempSelections[dropdownId] = selections;
   };
 
-  const handleDropdownChange = (event) => {
-    const dropdownId = event.target.id;
-    const tableType = getTableTypeFromDropdownId(dropdownId);
-    if (!tableType) return;
+const handleDropdownChange = (event) => {
+  const dropdownId = event.target.id;
+  const tableType = getTableTypeFromDropdownId(dropdownId);
+  if (!tableType) return;
 
-    // ✅ Hauptauswahl (Portfolio/Offers/DealsTable) sofort in State syncen
-    if (dropdownId.startsWith('createdPortDropdown') || dropdownId === 'createdOffersDropdown') {
-      appState.setSelectedPortTableName?.(event.target.value);
-    }
-    if (dropdownId === 'createdDealsDropdown') {
-      appState.setSelectedDealsTableName?.(event.target.value);
-    }
+  // 1) selectedOptions bestimmen (immer als Strings)
+  let selectedOptions;
 
+  if (event.target.value === 'ALL') {
+    selectedOptions = ['ALL'];
+  } else if (
+    appState.tempSelections?.hasOwnProperty(dropdownId) &&
+    appState.tempSelections[dropdownId]?.length
+  ) {
+    selectedOptions = appState.tempSelections[dropdownId];
+    delete appState.tempSelections[dropdownId];
+  } else {
+    selectedOptions = [...event.target.selectedOptions].map(opt => String(opt.value));
+  }
 
+  // 2) Selection im config-State speichern
+  updateDropdownSelection(tableType, dropdownId, selectedOptions);
 
+  // 3) Spezielle State-Syncs (Source-of-truth)
+  if (dropdownId.startsWith('createdPortDropdown') || dropdownId === 'createdOffersDropdown') {
+    appState.setSelectedPortTableName?.(event.target.value);
+  }
 
-    let selectedOptions;
+  if (dropdownId === 'createdDealsDropdown') {
+    // Portfolio/Deals-Table Auswahl
+    appState.setSelectedDealsTableName?.(event.target.value);
 
-    if (event.target.value === 'ALL') {
-      selectedOptions = ['ALL'];
-    } else if (appState.tempSelections?.hasOwnProperty(dropdownId) && appState.tempSelections[dropdownId]?.length) {
-      selectedOptions = appState.tempSelections[dropdownId];
-      delete appState.tempSelections[dropdownId];
-    } else {
-      selectedOptions = [...event.target.selectedOptions].map(opt => String(opt.value));
-    }
+    // dealsData aus allDealsData neu schneiden
+    appState.refreshDealsDataFromSelectedTable?.();
 
-    updateDropdownSelection(tableType, dropdownId, selectedOptions);
+    // ✅ WICHTIG: nur deals neu anwenden/rendern (nicht dealsTables nochmal)
+    applyFiltersAndUpdateDropdowns('deals');
+    return;
+  }
 
-    // Wichtig: nur anwenden wenn nicht Control gedrückt oder ALL
-    if (!appState.isControlKeyPressed || event.target.value === 'ALL') {
-      applyFiltersAndUpdateDropdowns(tableType);
-    }
-  };
+  if (dropdownId === 'tradeDropdown') {
+    // ✅ Trade selection als Source-of-truth für "Create Portfolio"
+    appState.setSelectedTradeIDs?.(selectedOptions);
+  }
+
+  // 4) Normalfall: Filter+Dropdowns+Render anwenden
+  // Wichtig: nur anwenden wenn nicht Control gedrückt oder ALL
+  if (!appState.isControlKeyPressed || event.target.value === 'ALL') {
+    applyFiltersAndUpdateDropdowns(tableType);
+  }
+};
+
 
   const initDropdownListeners = () => {
     const dropdowns = getAllDropdownElements();

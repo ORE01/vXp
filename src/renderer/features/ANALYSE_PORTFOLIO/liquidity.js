@@ -47,40 +47,46 @@ export function handleLiquidityData(filteredData, { appState } = {}) {
     issuerContainer.innerHTML = generateIssuerTable(issuers);
   }
 
-  // 4) Reset â€“ nur einmal binden
-  const resetBtn = $('#liquResetFiltersButton');
-  if (resetBtn && !resetBtn.dataset.bound) {
-    resetBtn.addEventListener('click', () => {
-      if (!appState) {
-        console.warn('[Liquidity] Reset clicked but appState missing');
-        return;
-      }
+// 4) Reset – nur einmal binden
+const resetBtn = $('#liquResetFiltersButton');
+if (resetBtn && !resetBtn.dataset.bound) {
+  resetBtn.addEventListener('click', () => {
+    if (!appState) {
+      console.warn('[Liquidity] Reset clicked but appState missing');
+      return;
+    }
 
-      // âœ… Port-Filter reset (Liquidity gehÃ¶rt zu port-Filtern)
-      const cfg = appState.dropdownConfig?.port;
-      if (cfg) {
-        Object.keys(cfg).forEach((dropdownId) => {
-          cfg[dropdownId].selection = ['ALL'];
-        });
-      }
+    // ✅ Port-Dropdown-Selections resetten (Engine liest dropdownConfig.selection)
+    const cfg = appState.dropdownConfig?.port;
+    if (cfg) {
+      Object.keys(cfg).forEach((dropdownId) => {
+        cfg[dropdownId].selection = ['ALL'];
+      });
+    }
 
-      // optional: falls filtersConfig noch aktiv verwendet wird
-      const fcfg = appState.filtersConfig?.port;
-      if (fcfg) {
-        Object.keys(fcfg).forEach((k) => {
-          fcfg[k] = new Set(['ALL']);
-        });
-      }
+    // ⚠️ optional / legacy – kann später komplett entfernt werden
+    const fcfg = appState.filtersConfig?.port;
+    if (fcfg) {
+      Object.keys(fcfg).forEach((k) => {
+        fcfg[k] = new Set(['ALL']);
+      });
+    }
 
-      appState.applyFiltersAndUpdateDropdowns?.('port');
-    });
+    // ✅ Engine NICHT direkt aufrufen
+    // ✅ Stattdessen: UI-Event feuern (Engine hängt am change-Event)
+    const firstDropdownId = cfg ? Object.keys(cfg)[0] : null;
+    document
+      .getElementById(firstDropdownId)
+      ?.dispatchEvent(new Event('change', { bubbles: true }));
+  });
 
-    resetBtn.dataset.bound = '1';
-  }
+  resetBtn.dataset.bound = '1';
+}
+
 }
 
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 // Aggregation nach MATURITY_YEAR & CATEGORY
 function aggregateByMaturityAndCategory(data) {
   const arr = Array.isArray(data) ? data : [];
@@ -99,58 +105,7 @@ function aggregateByMaturityAndCategory(data) {
   return Object.values(grouped).flatMap(catMap => Object.values(catMap));
 }
 
-// Stacked Bar Chart
-// function renderLiquidityChart(data) {
-//   const arr = Array.isArray(data) ? data : [];
-//   const categories = new Set();
-//   const byYear = {};
 
-//   arr.forEach(d => {
-//     categories.add(d.CATEGORY);
-//     byYear[d.MATURITY_YEAR] ??= {};
-//     byYear[d.MATURITY_YEAR][d.CATEGORY] =
-//       (byYear[d.MATURITY_YEAR][d.CATEGORY] || 0) + (d.TOTAL_NOTIONAL || 0);
-//   });
-
-//   const years      = Object.keys(byYear).sort();
-//   const catsSorted = [...categories].sort();
-
-//   // Empty state handlen
-//   if (years.length === 0 || catsSorted.length === 0) {
-//     if (liquChart) { liquChart.destroy(); liquChart = null; }
-//     const container = $('#liquChart')?.parentElement;
-//     if (container) container.setAttribute('data-empty', '1');
-//     return;
-//   } else {
-//     $('#liquChart')?.parentElement?.removeAttribute('data-empty');
-//   }
-
-//   // âœ… zentrale Farbpalette nutzen (alpha leicht reduziert fÃ¼r Bars)
-//   const datasets = catsSorted.map((cat, i) => ({
-//     label: cat,
-//     data: years.map(y => byYear[y][cat] || 0),
-//     backgroundColor: getColorFromPalette(i, 0.85),
-//     borderColor: getColorFromPalette(i, 1),
-//     borderWidth: 1,
-//     stack: 'total'
-//   }));
-
-//   if (liquChart) liquChart.destroy();
-//   liquChart = createBarChart(
-//     { labels: years, datasets },
-//     'liquChart',      // canvas id
-//     'bar',
-//     'x',
-//     {
-//       responsive: true,
-//       plugins: {
-//         legend: { position: 'top' },
-//         title: { display: true, text: 'Notional je Jahr & Kategorie' }
-//       },
-//       scales: { x: { stacked: true }, y: { stacked: true } }
-//     }
-//   );
-// }
 
 function renderLiquidityChart(data) {
   // ✅ DOM/Canvas-Guard (Race-Condition-Fix)

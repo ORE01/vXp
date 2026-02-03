@@ -1,6 +1,5 @@
 // FRONT_END/REPORTS/reportsUIBridge.js
 
-import { initIssuerModalUI } from '../UI/modals/issuerModalUI.js';
 import { wireOffersReportUI } from './offersReportUI.js';
 import { wireRiskReportUI } from './riskReportUI.js';
 
@@ -25,13 +24,11 @@ export function installReportsUIBridge({
   if (window.__reportsUIWiredOnce) return;
   window.__reportsUIWiredOnce = true;
 
-  // 1) Modal UI
-  initIssuerModalUI();
 
-  // 2) Offers report UI
+  // 1) Offers report UI
   wireOffersReportUI({ openPanel });
 
-  // 3) Risk report UI
+  // 2) Risk report UI
   const appRoot = document.getElementById('app-root');
 const reportRoot = document.getElementById('report-root');
 

@@ -2,22 +2,29 @@
 'use strict';
 
 require('dotenv').config();
+
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
+
+// =====================================================
+// Paths
+// =====================================================
 
 // Projektroot (wo index.html liegt)
 const ROOT = path.join(__dirname, '../..');
 
-// Core
-const registerIpc = require('./ipc/registerIpc');
-const mainFct = require('./main_fct');
+// =====================================================
+// Core modules
+// =====================================================
 
-// ===============================
-// DB Service (Phase 1)
-// ===============================
+const registerIpc = require('./ipc/registerIpc');
+const mainFct = require('./main.orchestrator.js');
 const dbService = require('./services/db.service');
 
-// Handlers (modular)
+// =====================================================
+// IPC Handlers (modular)
+// =====================================================
+
 const registerIpcMetaHandlers = require('./ipc/handlers/ipcMeta.handlers');
 const registerIssuerHandlers = require('./ipc/handlers/issuer.handlers');
 const registerProductsHandlers = require('./ipc/handlers/products.handlers');
@@ -29,14 +36,21 @@ const registerTrainingHandlers = require('./ipc/handlers/training.handlers');
 const registerColumnImportHandlers = require('./ipc/handlers/columnImport.handlers');
 const registerCSParameterHandlers = require('./ipc/handlers/csParameter.handlers');
 
-// ✅ Data Pump (ausgelagert)
-const createRendererDataPump = require('./rendererDataPump');
-
-const createCouponWindowController = require('./windows/couponWindow');
 const registerCouponWindowHandlers = require('./ipc/handlers/couponWindow.handlers');
+const registerPortfolioDeleteHandlers = require('./ipc/handlers/portfolioDelete.handlers');
 
 
-// ========================= DATA COLLECTOR =========================
+// =====================================================
+// Windows / Pump
+// =====================================================
+
+const createRendererDataPump = require('./rendererDataPump');
+const createCouponWindowController = require('./windows/couponWindow');
+
+// =====================================================
+// DATA COLLECTOR
+// =====================================================
+
 const {
   createDataCollector,
   createCrawlerResolver,
@@ -44,42 +58,137 @@ const {
   createSitemapResolver
 } = require('./main_DataCollector.js');
 
-let dc;
+let dc = null;
 
-// -------------------------------
-// Env helpers
-// -------------------------------
+// =====================================================
+// FEATURES
+// =====================================================
+
+// ✅ Bond Prospectus Finder Feature (NEW)
+const { bootstrapBondProspectusFinder } = require('./features/BOND_PROSPECTUS/bondProspectusFinder.bootstrap.js');
+
+// =====================================================
+// State
+// =====================================================
+
+let mainWindow = null;
+const sqliteDb = initDbOnce();
+
+// =====================================================
+// Helpers
+// =====================================================
+
 function isDevelopmentEnvironment() {
   const env = (process.env.NODE_ENV || '').trim().toLowerCase();
   return env === 'development' || env === 'thomasdev';
 }
 
-// -------------------------------
-// Logging path for dbService
-// -------------------------------
-const logFilePath = isDevelopmentEnvironment()
-  ? path.join(__dirname, 'logfile.txt')                 // dev: neben main/index.js
-  : path.join(app.getPath('userData'), 'logfile.txt');  // prod: userData
+function initDbOnce() {
+  // Logging path for dbService
+  const logFilePath = isDevelopmentEnvironment()
+    ? path.join(__dirname, 'logfile.txt')                 // dev: neben main/index.js
+    : path.join(app.getPath('userData'), 'logfile.txt');  // prod: userData
 
-dbService.setLogFilePath(logFilePath);
+  dbService.setLogFilePath(logFilePath);
 
-// DB beim Boot öffnen (damit main_fct.js kein eigenes sqlite3 mehr öffnen muss)
-try { dbService.initDb(); } catch (e) { console.warn('[main] initDb failed', e); }
-const sqliteDb = dbService.getDb();
+  // DB beim Boot öffnen (damit main_fct.js kein eigenes sqlite3 mehr öffnen muss)
+  try {
+    dbService.initDb();
+  } catch (e) {
+    console.warn('[main] initDb failed', e);
+  }
 
-// -------------------------------
-// Window state
-// -------------------------------
-let mainWindow;
-
+  try {
+    return dbService.getDb();
+  } catch (e) {
+    console.warn('[main] getDb failed', e);
+    return null;
+  }
+}
 
 function getMainWindow() {
   return mainWindow;
 }
 
-// -------------------------------
+function createHttpGet() {
+  // In modernen Electron/Node-Versionen gibt es global fetch.
+  // Wenn nicht: dann musst du node-fetch installieren und hier einbinden.
+  if (typeof fetch !== 'function') {
+    throw new Error('[main] global fetch not available. Install node-fetch or upgrade runtime.');
+  }
+
+  return async (url, opts = {}) => {
+    const timeoutMs = Number(opts.timeoutMs || 12000);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { method: 'GET', signal: ctrl.signal });
+      const text = await res.text();
+      return { status: res.status, text };
+    } finally {
+      clearTimeout(t);
+    }
+  };
+}
+
+// =====================================================
+// CSP
+// =====================================================
+
+function installCspHeaders() {
+  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self' ws://localhost:* http://localhost:*",
+      "worker-src 'self' blob:",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'"
+    ].join('; ');
+
+    cb({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      }
+    });
+  });
+}
+
+// =====================================================
+// Window Creation
+// =====================================================
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 800,
+    height: 700,
+    icon: path.join(__dirname, 'vXp.ico'),
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/index.js'),
+      devTools: true,
+    },
+  });
+
+  mainWindow.loadFile(path.join(ROOT, 'index.html'));
+  mainWindow.webContents.openDevTools();
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
+  return mainWindow;
+}
+
+// =====================================================
 // DataCollector boot
-// -------------------------------
+// =====================================================
+
 function buildResolver() {
   const domains = [
     // Issuer & Regulator
@@ -146,65 +255,13 @@ function registerBondFetchIpc() {
   });
 }
 
-// -------------------------------
-// CSP
-// -------------------------------
-function installCspHeaders() {
-  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
-    const csp = [
-      "default-src 'self'",
-      "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' ws://localhost:* http://localhost:*",
-      "worker-src 'self' blob:",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "frame-ancestors 'none'"
-    ].join('; ');
+// =====================================================
+// Handlers registration (existing)
+// =====================================================
 
-    cb({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [csp],
-      }
-    });
-  });
-}
-
-// -------------------------------
-// Windows
-// -------------------------------
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 700,
-    icon: path.join(__dirname, 'vXp.ico'),
-    webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
-      devTools: true,
-    },
-  });
-
-  mainWindow.loadFile(path.join(ROOT, 'index.html'));
-  //mainWindow.loadFile(path.join(ROOT, 'minimal.html'));
-  mainWindow.webContents.openDevTools();
-
-  // ✅ wichtig: Referenz sauber nullen, wenn geschlossen
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-}
-
-
-// -------------------------------
-// Handler registrations
-// -------------------------------
 function registerAllHandlers({ pump }) {
   const refreshTable = pump.refreshTable;
   const emitToRenderer = pump.emitToRenderer;
-  const fetchDataAndSendEvent = pump.fetchDataAndSendEvent;
 
   registerIssuerHandlers({
     ipcMain,
@@ -249,6 +306,16 @@ function registerAllHandlers({ pump }) {
     refreshTable,
   });
 
+  registerPortfolioDeleteHandlers({
+    ipcMain,
+    dbApi: {
+      runSQL: mainFct.runSQL,
+      selectAll: mainFct.selectAll,   // falls du existence-check machst
+    },
+    refreshTable,
+  });
+
+
   registerCustomerHandlers({
     ipcMain,
     sqliteDb,
@@ -277,6 +344,7 @@ function registerAllHandlers({ pump }) {
     refreshTable,
   });
 
+  // Existing central registerIpc
   registerIpc({
     ipcMain,
     services: {
@@ -287,43 +355,13 @@ function registerAllHandlers({ pump }) {
       refreshTable,
     }
   });
-
-
-
 }
 
-// -------------------------------
-// App lifecycle
-// -------------------------------
-app.whenReady().then(() => {
-  installCspHeaders();
+// =====================================================
+// Coupon window boot
+// =====================================================
 
-  // ✅ IPC Meta (Allowlist) – muss VOR preload-use stehen
-  // (Voraussetzung: du hast registerIpcMetaHandlers({ ipcMain }) eingebunden)
-  registerIpcMetaHandlers({ ipcMain });
-
-  // DataCollector + bond handlers
-  try {
-    initDataCollector();
-    registerBondFetchIpc();
-  } catch (e) {
-    console.warn('[main] DataCollector init failed', e);
-  }
-
-  // ✅ Data Pump zuerst (damit browser-window-created sicher erfasst wird)
-  const pump = createRendererDataPump({ app, getMainWindow, mainFct });
-  pump.installWindowDidFinishLoadSend();
-
-  // ✅ Main Window erstellen (nur einmal)
-  createWindow();
-
-  // ✅ TableNames laden + initial send
-  pump.initTableNamesAndFirstSend();
-
-  // ✅ Handler erst nachdem pump existiert
-  registerAllHandlers({ pump });
-
-  // ✅ Coupon Window Controller + IPC Handler
+function initCouponWindow() {
   const couponWindow = createCouponWindowController({
     ROOT,
     preloadPath: path.join(__dirname, '../preload/index.js'),
@@ -334,8 +372,64 @@ app.whenReady().then(() => {
     ipcMain,
     couponWindow,
   });
+}
 
-  // ✅ Sauberer activate: fokussieren statt neu erstellen (und nur neu, wenn wirklich weg)
+// =====================================================
+// Feature bootstraps
+// =====================================================
+
+function bootstrapFeatures() {
+  // ✅ Bond Prospectus Finder
+  try {
+    const httpGet = createHttpGet();
+    bootstrapBondProspectusFinder({
+      ipcMain,
+      httpGet,
+      log: (x) => console.log('[BondProspectusFinder]', x),
+    });
+  } catch (e) {
+    console.warn('[main] BondProspectusFinder init failed', e);
+  }
+}
+
+// =====================================================
+// App lifecycle
+// =====================================================
+
+app.whenReady().then(() => {
+  installCspHeaders();
+
+  // ✅ IPC Meta (Allowlist) – muss VOR preload-use stehen
+  registerIpcMetaHandlers({ ipcMain });
+
+  // ✅ DataCollector + bond handlers
+  try {
+    initDataCollector();
+    registerBondFetchIpc();
+  } catch (e) {
+    console.warn('[main] DataCollector init failed', e);
+  }
+
+  // ✅ Bootstraps für Features (NEU)
+  bootstrapFeatures();
+
+  // ✅ Data Pump zuerst (damit browser-window-created sicher erfasst wird)
+  const pump = createRendererDataPump({ app, getMainWindow, mainFct });
+  pump.installWindowDidFinishLoadSend();
+
+  // ✅ Main Window erstellen
+  createMainWindow();
+
+  // ✅ TableNames laden + initial send
+  pump.initTableNamesAndFirstSend();
+
+  // ✅ Handler erst nachdem pump existiert
+  registerAllHandlers({ pump });
+
+  // ✅ Coupon Window + Handlers
+  initCouponWindow();
+
+  // ✅ Sauberer activate: fokussieren statt neu erstellen
   app.on('activate', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -345,7 +439,7 @@ app.whenReady().then(() => {
     }
 
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createMainWindow();
 
       // Safety: nach dem Recreate Daten wieder pushen
       mainWindow.webContents.on('did-finish-load', () => {
@@ -354,7 +448,6 @@ app.whenReady().then(() => {
     }
   });
 });
-
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

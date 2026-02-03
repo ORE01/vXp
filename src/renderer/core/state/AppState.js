@@ -1,17 +1,9 @@
-﻿import { initCurveSelectorGlobal } from "../../features/MARKET_DATA/INTEREST_RATES/initCurveSelectorGlobal.js";
-import { handleIssuerData } from "../../features/NEW_PRODUCTS/ISSUER.js";
-import { handleProdData } from "../../features/NEW_PRODUCTS/PROD.js";
-import { handleDealsData } from "../../features/CREATE_PORTFOLIO/DEALS.js";
-import { handleIRSensData } from "../../features/ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js";
-import { handleCSSensData } from "../../features/ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js";
-
-
-
-
-export class AppState {
+﻿export class AppState {
     constructor() {
         
-        
+        // Panel-open hooks (for lazy rendering)
+        this.__panelOpenHooks = Object.create(null);
+
         this.customerData = null;
       
         this.currentDealsDataTable = 'DealsMain'; 
@@ -31,10 +23,15 @@ export class AppState {
         
        
         this.currentReceivedData = null;
-       
-        this.handleIRSensData = handleIRSensData;
-        this.handleCSSensData = handleCSSensData;
-             
+
+        // Handlers werden im renderer/bootstrap injiziert
+        this.handleIssuerData = null;
+        this.handleProdData   = null;
+        this.handleDealsData  = null;
+        this.handleIRSensData = null;
+        this.handleCSSensData = null;
+
+                  
         this.ratingOrder = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB', 'BB-', 'B+', 'B', 'B-', 'CCC+', 'CCC', 'CCC-'];
 
         
@@ -64,7 +61,6 @@ export class AppState {
                 'CouponType': new Set(['ALL']),
                 'CATEGORY': new Set(['ALL']),
                 'RATING': new Set(['ALL']),
-                // 'MATURITY': new Set(['ALL']),
                 'MATURITY_YEAR': new Set(['ALL']),
                 'RANK': new Set(['ALL']),
             },
@@ -112,7 +108,7 @@ export class AppState {
                 'portRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
                 'portMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
                 'portRankDropdown': { dataKey: 'RANK', selection: ['ALL'] },
-                'portDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
+                'portDepotbankDropdown': { dataKey: 'DEPOTBANK', selection: ['ALL'] },
                 'liquMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
                 'portRegionDropdown':  { dataKey: 'IssuerRegion', selection: ['ALL'] },
                 'portCountryDropdown': { dataKey: 'IssuerCountry',      selection: ['ALL'] },
@@ -128,11 +124,10 @@ export class AppState {
             },
             deals: {
                 'tradeDropdown': { dataKey: 'TRADE_ID', selection: ['ALL'] },
-    
                 'dealsProdIdDropdown': { dataKey: 'PROD_ID', selection: ['ALL'] },
                 'dealsCategoryDropdown': { dataKey: 'CATEGORY', selection: ['ALL'] },
                 'dealsNotionalDropdown': { dataKey: 'NOTIONAL', selection: ['ALL'] },
-                'dealsDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
+                'dealsDepotbankDropdown': { dataKey: 'DEPOTBANK', selection: ['ALL'] },
             },
               offers: {
                 'offersIssuerDropdown':     { dataKey: 'ISSUER',        selection: ['ALL'] },
@@ -142,7 +137,7 @@ export class AppState {
                 'offersRatingDropdown':     { dataKey: 'RATING',        selection: ['ALL'] },
                 'offersRankDropdown':       { dataKey: 'RANK',          selection: ['ALL'] },
                 'offersMaturityDropdown':   { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
-                'offersDepotbankDropdown':  { dataKey: 'Depotbank',     selection: ['ALL'] },
+                'offersDepotbankDropdown':  { dataKey: 'DEPOTBANK',     selection: ['ALL'] },
             },
             dealsTables: {
                 'createdDealsDropdown': { dataKey: 'table_name', selection: ['ALL'] },
@@ -220,7 +215,11 @@ export class AppState {
             issuer: {
               dropdownConfig: this.dropdownConfig.issuer,
               filtersConfig: this.filtersConfig.issuer,
-              dataHandler: (receivedData) => handleIssuerData(receivedData, this),
+              dataHandler: (receivedData) => {
+                if (typeof this.handleIssuerData !== 'function') return;
+                this.handleIssuerData(receivedData, this);
+                },
+
             },
             
             prod: {
@@ -234,7 +233,9 @@ export class AppState {
                     new Set(Array.isArray(selection) ? selection : ['ALL'])
                 ])
                 );
-                handleProdData(effectiveFilters);
+                    if (typeof this.handleProdData !== 'function') return;
+                    this.handleProdData(effectiveFilters);
+
             },
             },
 
@@ -244,9 +245,10 @@ export class AppState {
               filtersConfig: this.filtersConfig.deals,
               dataHandler: (receivedData) => {
                 const dealsTableName = this.currentDealsDataTable;
-                console.log(`ðŸ“¥ Deals aufgerufen`);
-                handleDealsData(receivedData, dealsTableName);
-                // handleDealsTable(receivedData, dealsTableName);
+                console.log(`Deals aufgerufen`);
+                if (typeof this.handleDealsData !== 'function') return;
+                    this.handleDealsData(receivedData, dealsTableName);
+
               },
             },
             offers: {
@@ -303,11 +305,38 @@ export class AppState {
               }
             },
         };
-          
-        document.addEventListener("DOMContentLoaded", () => {
-        initCurveSelectorGlobal();
-        });
     }
+
+    installHandlers({
+        handleIssuerData,
+        handleProdData,
+        handleDealsData,
+        handleIRSensData,
+        handleCSSensData,
+        } = {}) {
+        if (handleIssuerData) this.handleIssuerData = handleIssuerData;
+        if (handleProdData)   this.handleProdData   = handleProdData;
+        if (handleDealsData)  this.handleDealsData  = handleDealsData;
+        if (handleIRSensData) this.handleIRSensData = handleIRSensData;
+        if (handleCSSensData) this.handleCSSensData = handleCSSensData;
+        }
+
+    registerPanelOpenHook(panelId, fn) {
+    const id = String(panelId || '');
+    if (!id || typeof fn !== 'function') return;
+    (this.__panelOpenHooks[id] ||= []).push(fn);
+    }
+
+    emitPanelOpen(panelId) {
+    const id = String(panelId || '');
+    const hooks = this.__panelOpenHooks?.[id] || [];
+    for (const fn of hooks) {
+        try { fn(); } catch (e) { console.warn('[panelOpenHook] error', id, e); }
+    }
+    }
+
+
+
 
     handleDealsTable(data) {
         //console.log("Handling deals table data:", data);
@@ -371,11 +400,10 @@ export class AppState {
     setRankData(data) {      
         this.rankData = data;
     }
-getRankData() {
-  return this.rankData;
-}
 
-
+    getRankData() {
+    return this.rankData;
+    }
 
     setCouponData(data) {
         //console.log('Setting CouponData:', data);
@@ -406,6 +434,22 @@ getRankData() {
             return this.filteredPortData;
             
     }
+
+    // =====================
+    // Compare Portfolio Names
+    // =====================
+
+    // Set compare portfolio names (slot-based)
+    setComparePortNames(data) {
+        // erwartet z.B. { 1: 'DDD', 2: 'CCC' }
+        this.comparePortNames = data;
+    }
+
+    // Get compare portfolio names
+    getComparePortNames() {
+        return this.comparePortNames || {};
+    }
+
   
     setCSSzenarioData(data) {
         this.CSSzenarioData = data || 'default'; 

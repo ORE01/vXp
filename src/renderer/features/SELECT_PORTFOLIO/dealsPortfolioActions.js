@@ -1,110 +1,135 @@
 // FRONT_END/SELECT_PORTFOLIO/dealsPortfolioActions.js
 
-export function createDealsPortfolioActions({ appState, api, showMessageBox, showConfirmationBox, handleModalAction } = {}) {
+const USE_NEW_DEALS_UI = true;
+const ALL = '__ALL__';
+
+export function createDealsPortfolioActions({
+  appState,
+  api,
+  showMessageBox,
+  showConfirmationBox,
+  handleModalAction,
+} = {}) {
   if (!appState) throw new Error('[createDealsPortfolioActions] appState missing');
   if (!api) throw new Error('[createDealsPortfolioActions] api missing');
 
-  function handleDealsNameList(receivedData) {
-    try {
-      const names = (receivedData || []).map(e => e.port_name).filter(Boolean);
-      const unique = [...new Set(names)];
-      const dealsList = unique.map(name => ({ table_name: name }));
 
-      if (typeof appState.setDealsNameList === 'function') {
-        appState.setDealsNameList(dealsList, 'createdDealsDropdown');
+  // one-time IPC listeners for delete feedback (avoid duplicate bindings)
+  if (!window.__dealsDeleteEverywhereListenersBound) {
+    window.__dealsDeleteEverywhereListenersBound = true;
+
+    api.receive?.('delete-portfolio-everywhere-success', ({ port, deleted } = {}) => {
+      console.log('[UI] delete-portfolio-everywhere-success', { port, deleted });
+
+      showMessageBox?.(`Portfolio "${port}" deleted.`, () => {});
+
+      // reset deals dropdown to NONE
+      const dd = document.getElementById('createdDealsDropdown');
+      if (dd) {
+        dd.value = '__NONE__';
+        dd.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
-        appState.applyFiltersAndUpdateDropdowns('dealsTables');
-      }
-    } catch (error) {
-      console.error('❌ Error processing deals name list:', error);
-    }
+
+      // optional: clear inputs
+      const nameEl = document.getElementById('nameInput');
+      if (nameEl) nameEl.value = '';
+
+      const tagEl = document.getElementById('tagInputField');
+      if (tagEl) tagEl.value = '';
+    });
+
+    api.receive?.('delete-portfolio-everywhere-error', ({ message } = {}) => {
+      console.error('[UI] delete-portfolio-everywhere-error', message);
+      alert(message || 'Delete failed.');
+    });
+  }
+
+
+
+
+
+
+
+
+  /* ============================================================
+     NAME LISTS (LEGACY) – gated off for NEW Deals UI
+     ============================================================ */
+
+  function handleDealsNameList(_receivedData) {
+    if (USE_NEW_DEALS_UI) return; // DealsUI owns createdDealsDropdown
+    // legacy code intentionally disabled
   }
 
   function handleOffersNameList(receivedData) {
+    // Offers is separate; keep as-is if you still use legacy offers dropdown.
     try {
       const dropdownId = 'createdOffersDropdown';
       const dd = document.getElementById(dropdownId);
 
-      // 1) Preserve current selection BEFORE updating list / rebuilding dropdowns
       const prevValue = String(dd?.value ?? appState.getSelectedOffersTableName?.() ?? '').trim();
 
       const names = (receivedData || []).map(e => e?.port_name).filter(Boolean);
       const unique = [...new Set(names)];
 
-      // Your current rule:
       const isOffer = (n) => typeof n === 'string' && /^OFFERS?_/.test(n.toUpperCase());
       const filteredOffers = unique.filter(isOffer);
 
-      // 2) IMPORTANT: never wipe dropdown content if filter yields nothing
-      // If regex matches nothing, fall back to "all unique" (or keep previous list)
       let offersListRaw = filteredOffers.length ? filteredOffers : unique;
-
-      // If still empty, keep previous list instead of overwriting with []
-      if (!offersListRaw.length) {
-        console.warn('[handleOffersNameList] offersList empty -> keeping previous list');
-        return;
-      }
+      if (!offersListRaw.length) return;
 
       const offersList = offersListRaw.map(name => ({ table_name: name }));
 
       if (typeof appState.setOffersNameList === 'function') {
         appState.setOffersNameList(offersList, dropdownId);
       }
-
       if (typeof appState.applyFiltersAndUpdateDropdowns === 'function') {
         appState.applyFiltersAndUpdateDropdowns('offersTables');
       }
 
-      // 3) Restore selection AFTER rebuild (next tick so DOM/options exist)
       setTimeout(() => {
         const dropdown = document.getElementById(dropdownId);
         if (!dropdown) return;
 
-        // If previous value still exists as option -> restore it
         const hasValue = Array.from(dropdown.options || []).some(
           opt => String(opt.value) === String(prevValue)
         );
 
         if (prevValue && hasValue) {
           dropdown.value = prevValue;
-          // optional: only dispatch if your UI depends on it
           dropdown.dispatchEvent(new Event('change', { bubbles: true }));
         }
       }, 0);
-
     } catch (error) {
       console.error('❌ Error processing offers name list:', error);
     }
   }
 
-
   function handlePortNameList(receivedData) {
+    // Portfolio dropdowns belong to Portfolio panel; keep as-is.
     try {
       const names = (receivedData || []).map(e => e?.port_name).filter(Boolean);
       const uniquePortfolios = [...new Set(names)].map(name => ({ table_name: name }));
 
       ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach((dropdown, index) => {
-        appState.setPortNameList(uniquePortfolios, dropdown);
-        appState.applyFiltersAndUpdateDropdowns(`portTables${index}`);
+        appState.setPortNameList?.(uniquePortfolios, dropdown);
+        appState.applyFiltersAndUpdateDropdowns?.(`portTables${index}`);
       });
     } catch (error) {
       console.error('❌ Error processing created port data:', error);
     }
   }
 
+  /* ============================================================
+     ACTIONS
+     ============================================================ */
+
   function handleSaveNewPortfolio() {
     const inputEl = document.getElementById('PortfolioNameInput');
-    const port_name = (inputEl?.value || '').trim();
+    const port_name = String(inputEl?.value ?? '').trim();
     if (!port_name) {
       alert('Please enter a portfolio name.');
+      inputEl?.focus?.();
       return;
-    }
-
-    const dealsNameList = appState.getDealsNameList?.() || [];
-    const exists = dealsNameList.some(p => (p.table_name || p.name) === port_name);
-    if (!exists) {
-      appState.setDealsNameList?.([...dealsNameList, { table_name: port_name }]);
     }
 
     try {
@@ -116,158 +141,120 @@ export function createDealsPortfolioActions({ appState, api, showMessageBox, sho
     appState.setSelectedDealsTableName?.(port_name);
     appState.setSelectedPortTableName?.(port_name);
 
-    if (typeof showMessageBox === 'function') {
-      showMessageBox(`Portfolio "${port_name}" successfully saved!`, () => {});
-    }
+    showMessageBox?.(`Portfolio "${port_name}" successfully saved!`, () => {});
   }
 
+  /**
+   * NEW Deals UI save:
+   * - Name comes from #nameInput
+   * - Trade IDs come primarily from #tradeDropdown selection
+   * - If tradeDropdown is ALL => take IDs from appState.__filteredDealsUI
+   * - No tags
+   */
   function handleSaveSelection() {
-    const port_name = document.getElementById('nameInput')?.value;
-    const tagValues = (document.getElementById('tagInputField')?.value || '')
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(Boolean);
+    const nameEl = document.getElementById('nameInput');
+    const port_name = String(nameEl?.value ?? '').trim();
 
-    if (!port_name || tagValues.length === 0) {
-      alert('Please enter a name and select at least one trade ID.');
+    if (!port_name) {
+      alert('Please enter a portfolio name.');
+      nameEl?.focus?.();
       return;
     }
 
-    const filteredData = appState.getFilteredData?.('deals') || [];
-    const selectedFromTableName = appState.getSelectedDealsTableName?.();
-    const selectedTradeIDs = filteredData.map(entry => Number(entry.TRADE_ID));
+    // 1) Try tradeDropdown (preferred)
+    const tradeEl = document.getElementById('tradeDropdown');
+    let selectedTradeIDs = [];
 
-    api.send('save-deals-selection', {
-      selectedFromTableName,
+    if (tradeEl) {
+      const selectedVals = Array.from(tradeEl.selectedOptions).map(o => String(o.value ?? '').trim());
+      const hasAll = selectedVals.includes(ALL);
+
+      if (!hasAll) {
+        selectedTradeIDs = selectedVals
+          .filter(v => v && v !== ALL)
+          .map(v => Number(v))
+          .filter(n => Number.isFinite(n));
+      }
+    }
+
+    // 2) If tradeDropdown is ALL (or missing selection), fall back to filtered rows (from DealsUI)
+    if (!selectedTradeIDs.length) {
+      const rows = Array.isArray(appState.__filteredDealsUI) ? appState.__filteredDealsUI : [];
+      selectedTradeIDs = rows
+        .map(r => Number(r?.TRADE_ID))
+        .filter(n => Number.isFinite(n));
+    }
+
+    console.log('[UI] save-deals-selection payload', {
       port_name,
-      tagValues,
-      selectedTradeIDs,
+      selectedTradeIDsCount: selectedTradeIDs.length,
+      preview: selectedTradeIDs.slice(0, 5),
     });
 
-    if (typeof showMessageBox === 'function') {
-      showMessageBox(`Portfolio "${port_name}" successfully created!`, () => {});
+    if (!selectedTradeIDs.length) {
+      alert('Please select at least one TRADE_ID.');
+      tradeEl?.focus?.();
+      return;
     }
 
-    const newPortfolio = { table_name: port_name };
-    appState.setDealsNameList?.([...(appState.getDealsNameList?.() || []), newPortfolio]);
+    // Main handler expects exactly { port_name, selectedTradeIDs }
+    api.send('save-deals-selection', { port_name, selectedTradeIDs });
 
-    // Dropdown intern + UI refresh
-    try {
-      appState.dropdownConfig['dealsTables']['createdDealsDropdown'].selection = [port_name];
-      appState.applyFiltersAndUpdateDropdowns('dealsTables');
-
-      appState.updateDropdownOptions({
-        dropdownElementId: 'createdDealsDropdown',
-        getDataFunction: appState.getDealsNameList.bind(appState),
-        updateDataFunction: appState.updateDealsDataTable.bind(appState),
-        selectedTableName: port_name
-      });
-
-      setTimeout(() => {
-        const dropdown = document.getElementById('createdDealsDropdown');
-        if (dropdown) {
-          dropdown.value = port_name;
-          dropdown.dispatchEvent(new Event('change'));
-        }
-      }, 100);
-
-      appState.setSelectedDealsTableName?.(port_name);
-      appState.setSelectedPortTableName?.(port_name);
-
-      document.getElementById('dealsResetFiltersButton')?.click();
-    } catch (e) {
-      console.warn('[handleSaveSelection] post steps failed', e);
-    }
+    showMessageBox?.(`Portfolio "${port_name}" successfully created!`, () => {});
   }
 
   function handleDeleteSelection() {
-    const selectedTableName = appState.getSelectedDealsTableName?.();
+    const port =
+      String(appState.getSelectedDealsTableName?.() ?? '').trim() ||
+      String(document.getElementById('createdDealsDropdown')?.value ?? '').trim();
 
-    if (!selectedTableName || selectedTableName === 'Select a table') {
-      alert('Please select a table to delete.');
+    if (!port || port === '__NONE__' || port === '__ALL__' || port === 'Select a table') {
+      alert('Please select a specific portfolio to delete.');
       return;
     }
 
-    const portTableName = selectedTableName.replace(/^Deals/, 'Port');
-
     const doDelete = () => {
-      api.send('delete-selected-table', selectedTableName);
+      console.log('[UI] delete portfolio everywhere:', port);
 
-      setTimeout(() => {
-        const dealsData = (appState.getDealsNameList?.() || []).filter(deal => deal.table_name !== selectedTableName);
-        appState.setDealsNameList?.(dealsData);
-
-        appState.updateDropdownOptions?.({
-          dropdownElementId: 'createdDealsDropdown',
-          getDataFunction: appState.getDealsNameList.bind(appState),
-          updateDataFunction: appState.updateDealsDataTable.bind(appState),
-          selectedTableName
-        });
-
-        const portData = (appState.getPortNameList?.() || []).filter(port => port.table_name !== portTableName);
-        appState.setPortNameList?.(portData);
-
-        ['createdPortDropdown0', 'createdPortDropdown1', 'createdPortDropdown2'].forEach(dropdownId => {
-          appState.updateDropdownOptions?.({
-            dropdownElementId: dropdownId,
-            getDataFunction: appState.getPortNameList.bind(appState),
-            updateDataFunction: appState.updatePortDataTable.bind(appState),
-            updateMvarDataFunction: appState.updateMvarDataTable?.bind(appState),
-            updateCvarDataFunction: appState.updateCvarDataTable?.bind(appState),
-            updateLiquidityDataFunction: appState.updateLiquidityDataFunction?.bind(appState),
-            selectedTableName: null
-          });
-        });
-
-        requestAnimationFrame(() => {
-          const nameInput = document.getElementById('nameInput');
-          if (nameInput) {
-            nameInput.focus();
-            const len = nameInput.value.length;
-            nameInput.setSelectionRange(len, len);
-          }
-        });
-      }, 100);
+      api.send('delete-portfolio-everywhere', { port_name: port });
     };
 
     if (typeof showConfirmationBox === 'function') {
       showConfirmationBox(
-        `Are you sure you want to delete the tables "${selectedTableName}" and "${portTableName}"?`,
+        `Are you sure you want to delete the portfolio "${port}"?\n\nThis will remove ALL related data (Deals, Risk, History).`,
         doDelete,
         () => {}
       );
     } else {
-      // fallback
-      if (confirm(`Delete "${selectedTableName}" and "${portTableName}"?`)) doDelete();
+      if (confirm(`Delete portfolio "${port}" everywhere?`)) doDelete();
     }
   }
 
+
   function handleAddDealsToNewPortfolio(event) {
+    // Keep as a modal helper: uses current deals context as source
     const inputEl = document.getElementById('PortfolioNameInput');
-    const port_name = (inputEl?.value || '').trim();
+    const port_name = String(inputEl?.value ?? '').trim();
 
     if (!port_name) {
       alert('Please enter a portfolio name first.');
+      inputEl?.focus?.();
       return;
     }
 
     let dealsData =
+      appState.__filteredDealsUI ||
       appState.getDealsData?.() ||
-      appState.getFilteredData?.('deals') ||
       [];
 
     if (!Array.isArray(dealsData) || dealsData.length === 0) {
-      const allDeals = appState.getAllDealsData?.() || appState.getAllDeals?.() || [];
-      if (Array.isArray(allDeals) && allDeals.length > 0) dealsData = allDeals;
-      else {
-        dealsData = [{ TRADE_ID: '', PORT_NAME: '', PROD_ID: '' }];
-        console.warn('handleAddDealsToNewPortfolio: using fallback template row.');
-      }
+      alert('No deals available.');
+      return;
     }
 
-    const selectedTableName = 'DealsMain';
-    handleModalAction?.(event, dealsData, null, selectedTableName, 'add');
+    handleModalAction?.(event, dealsData, null, 'DealsMain', 'add');
 
+    // Optional: prefill PORT_NAME in modal
     setTimeout(() => {
       const form = document.getElementById('editForm') || document.querySelector('#modal form');
       if (!form) return;
@@ -283,85 +270,36 @@ export function createDealsPortfolioActions({ appState, api, showMessageBox, sho
     }, 0);
   }
 
-function handleDealsMainData(receivedData) {
-  appState.setAllDealsData?.(receivedData);
-  appState.setActiveTable?.('deals');
 
-  const btn = document.getElementById('dealsResetFiltersButton');
-  if (btn) {
-    btn.onclick = () => {
-      const cfg = appState?.dropdownConfig?.deals;   // ✅ analog zu port/offers
-      if (cfg) {
-        Object.keys(cfg).forEach((dropdownId) => {
-          cfg[dropdownId].selection = ['ALL'];
-        });
-      }
+  function handleDealsMainData(receivedData) {
+    const rows = Array.isArray(receivedData) ? receivedData : [];
 
-      const fcfg = appState?.filtersConfig?.deals;   // ✅ analog zu port/offers
-      if (fcfg) {
-        Object.keys(fcfg).forEach((k) => {
-          fcfg[k] = new Set(['ALL']);
-        });
-      }
+    const isOfferRow = (r) => String(r?.port_name ?? '').toUpperCase().startsWith('OFFERS');
 
-      appState.applyFiltersAndUpdateDropdowns?.('deals'); // ✅ analog zu port/offers
-    };
+    const offers = rows.filter(isOfferRow);
+    const deals  = rows.filter(r => !isOfferRow(r));
+
+    appState.setDealsData?.(deals);
+    appState.setOffersData?.(offers);
+    appState.setAllDealsData?.(rows);
+
+    // ✅ IMPORTANT: rebuild createdDealsDropdown options from updated data
+    // (NEW Deals UI owns createdDealsDropdown, so we must trigger dealsTables recompute)
+    const dd = document.getElementById('createdDealsDropdown');
+    if (dd) {
+      const prev = String(dd.value ?? '__NONE__').trim();
+      setTimeout(() => {
+        appState.applyFiltersAndUpdateDropdowns?.('dealsTables', { preselect: prev });
+      }, 0);
+    }
   }
-}
 
 
   function handlePortfolioData(receivedData) {
+    // Keep existing behavior (other panel).
     appState.setAllPortfolioData?.(receivedData);
     appState.setActiveTable?.('deals');
-
-    const portBtn = document.getElementById('portResetFiltersButton');
-    if (portBtn) {
-      portBtn.onclick = () => {
-        // ✅ Port-Filter-Dropdowns zurücksetzen (aber Portfolio-Name NICHT anfassen!)
-        const cfg = appState?.dropdownConfig?.port;
-        if (cfg) {
-          Object.keys(cfg).forEach((dropdownId) => {
-            cfg[dropdownId].selection = ['ALL'];
-          });
-        }
-
-        // optional: falls du filtersConfig wirklich noch verwendest
-        const fcfg = appState?.filtersConfig?.port;
-        if (fcfg) {
-          Object.keys(fcfg).forEach((k) => {
-            fcfg[k] = new Set(['ALL']);
-          });
-        }
-
-        // ✅ UI neu aufbauen
-        appState.applyFiltersAndUpdateDropdowns?.('port');
-      };
-    }
-
-    const offersBtn = document.getElementById('offersResetFiltersButton');
-    if (offersBtn) {
-      offersBtn.onclick = () => {
-        const cfg = appState?.dropdownConfig?.offers;
-        if (cfg) {
-          Object.keys(cfg).forEach((dropdownId) => {
-            cfg[dropdownId].selection = ['ALL'];
-          });
-        }
-
-        const fcfg = appState?.filtersConfig?.offers;
-        if (fcfg) {
-          Object.keys(fcfg).forEach((k) => {
-            fcfg[k] = new Set(['ALL']);
-          });
-        }
-
-        appState.applyFiltersAndUpdateDropdowns?.('offers');
-      };
-    }
   }
-
-
-
 
   return {
     handleDealsNameList,
@@ -375,3 +313,4 @@ function handleDealsMainData(receivedData) {
     handlePortfolioData,
   };
 }
+

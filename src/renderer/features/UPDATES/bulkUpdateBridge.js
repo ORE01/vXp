@@ -1,11 +1,11 @@
 // FRONT_END/UI/bulkUpdateBridge.js
 
-export function lockRender() {
+function lockRender() {
   window.__uiLocked = true;
   document.body.dataset.uiLocked = '1';
 }
 
-export function unlockRender() {
+function unlockRender() {
   window.__uiLocked = false;
   delete document.body.dataset.uiLocked;
 }

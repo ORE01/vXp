@@ -198,38 +198,55 @@ function insertSelection(port_name, selectedTradeIDs = []) {
     if (!port) return reject(new Error('port_name missing'));
 
     const ids = Array.isArray(selectedTradeIDs) ? selectedTradeIDs : [];
+    if (ids.length === 0) return resolve(); // bewusst erlaubt (dein Handler)
 
-    // 1️⃣ Alte Selection für dieses Portfolio löschen
-    db.run(
-      `DELETE FROM DealsMain WHERE port_name = ?`,
-      [port],
-      function (err) {
-        if (err) return reject(err);
+    // 1) Spalten holen
+    db.all(`PRAGMA table_info("DealsMain")`, [], (err, cols) => {
+      if (err) return reject(err);
 
-        // 2️⃣ Wenn keine IDs → fertig (bewusst erlaubt)
-        if (ids.length === 0) return resolve();
+      const colNames = (cols || []).map(c => c.name);
 
-        // 3️⃣ Neue Selection einfügen
-        const stmt = db.prepare(`
-          INSERT INTO DealsMain (TRADE_ID, port_name, INCLUDE)
-          VALUES (?, ?, 1)
-        `);
+      // TRADE_ID nicht kopieren (sonst UNIQUE fail)
+      // port_name und INCLUDE überschreiben wir gezielt
+      const copyCols = colNames.filter(c =>
+        c !== 'TRADE_ID' &&
+        c !== 'port_name' &&
+        c !== 'INCLUDE'
+      );
 
-        try {
-          for (const tradeId of ids) {
-            stmt.run([tradeId, port]);
-          }
-        } catch (e) {
-          return reject(e);
-        } finally {
-          stmt.finalize();
-        }
+      // Ziel-Spalten: port_name, INCLUDE, + alle kopierbaren Spalten
+      const insertCols = ['port_name', 'INCLUDE', ...copyCols];
 
-        resolve();
-      }
-    );
+      // SELECT-Teil: port_name als Parameter, INCLUDE=1 fix, + Spalten aus Quelle
+      const selectCols = [
+        '? as port_name',
+        '1 as INCLUDE',
+        ...copyCols.map(c => `"${c}"`)
+      ];
+
+      const placeholders = ids.map(() => '?').join(', ');
+
+      const sql = `
+        INSERT INTO "DealsMain" (${insertCols.map(c => `"${c}"`).join(', ')})
+        SELECT ${selectCols.join(', ')}
+        FROM "DealsMain"
+        WHERE "TRADE_ID" IN (${placeholders})
+      `;
+
+      // 2) Ziel zuerst löschen (overwrite)
+      db.run(`DELETE FROM "DealsMain" WHERE "port_name" = ?`, [port], function (delErr) {
+        if (delErr) return reject(delErr);
+
+        // 3) Copy-Insert
+        db.run(sql, [port, ...ids], function (insErr) {
+          if (insErr) return reject(insErr);
+          resolve();
+        });
+      });
+    });
   });
 }
+
 
 function deleteTable(tableName) {
   const db = getDb();

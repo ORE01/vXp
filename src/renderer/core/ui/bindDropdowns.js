@@ -48,7 +48,10 @@ function setupDropdown({
       index,
     });
 
-    rerenderHistoricCharts({ index, selectedTableName });
+    if (typeof index === 'number') {
+      rerenderHistoricCharts({ index, selectedTableName });
+    }
+
   }, 120);
 
   dropdown.addEventListener('change', (event) => {
@@ -72,7 +75,7 @@ export function bindDropdowns({ appState } = {}) {
     getDataFunction: appState.getDealsNameList,
     updateDataFunction: appState.updateDealsDataTable,
     setSelectedDealsTableName: appState.setSelectedDealsTableName,
-    setSelectedPortTableName: appState.setSelectedPortTableName,
+    //setSelectedPortTableName: appState.setSelectedPortTableName,
     setActiveTable: () => appState.setActiveElementId('dealsDataContainer'),
   });
 
@@ -83,22 +86,56 @@ export function bindDropdowns({ appState } = {}) {
     getDataFunction: appState.getOffersNameList,
     updateDataFunction: appState.updateOffersDataTable,
     setSelectedDealsTableName: appState.setSelectedDealsTableName,
-    setSelectedPortTableName: appState.setSelectedPortTableName,
+    //setSelectedPortTableName: appState.setSelectedPortTableName,
     setActiveTable: () => appState.setActiveElementId('offersDataContainer'),
   });
 
   // Portfolio Dropdowns (0,1,2)
-  ['0', '1', '2'].forEach((num) => {
-    setupDropdown({
-      appState,
-      dropdownId: `createdPortDropdown${num}`,
-      getDataFunction: appState.getPortNameList,
-      updateDataFunction: appState.updatePortDataTable,
-      updateMvarDataFunction: appState.updateMvarDistData,
-      setSelectedPortTableName: appState.setSelectedPortTableName,
-      setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
-      index: parseInt(num, 10),
-    });
+// ['0', '1', '2'].forEach((num) => {
+//   setupDropdown({
+//     appState,
+//     dropdownId: `createdPortDropdown${num}`,
+//     getDataFunction: appState.getPortNameList,
+//     updateDataFunction: appState.updatePortDataTable,
+
+//     updateMvarDataFunction: appState.updateMvarDistData,
+//     updateCvarDataFunction: appState.updateCvarData,        // <-- HIER
+//     updateEADDataFunction:  appState.updateEADData,         // <-- optional, wenn du EAD willst
+
+//     setSelectedPortTableName: appState.setSelectedPortTableName,
+//     setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
+//     index: parseInt(num, 10),
+//   });
+// });
+
+// Portfolio Dropdowns (0,1,2)
+['0', '1', '2'].forEach((num) => {
+  console.log('[bindDropdowns] setupDropdown INIT', {
+    slot: Number(num),
+    dropdownId: `createdPortDropdown${num}`,
+    hasGetPortNameList: typeof appState.getPortNameList === 'function',
+    hasUpdatePortDataTable: typeof appState.updatePortDataTable === 'function',
+    hasUpdateMvarDistData: typeof appState.updateMvarDistData === 'function',
+    hasUpdateCvarData: typeof appState.updateCvarData === 'function',
+    hasUpdateEADData: typeof appState.updateEADData === 'function',
   });
+
+  setupDropdown({
+    appState,
+    dropdownId: `createdPortDropdown${num}`,
+    getDataFunction: appState.getPortNameList,
+    updateDataFunction: appState.updatePortDataTable,
+
+    updateMvarDataFunction: appState.updateMvarDistData,
+    updateCvarDataFunction: appState.updateCvarDataTable,
+    updateEADDataFunction:  appState.updateEADDataTable,
+
+    setSelectedPortTableName: appState.setSelectedPortTableName,
+    setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
+    index: parseInt(num, 10),
+  });
+});
+
+
 }
 

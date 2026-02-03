@@ -162,7 +162,7 @@ export function handlePortProdData(receivedData, index, port_name) {
   if (portDataContainer && portData) {
     let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
     let filteredPortData = filterColumnsInData(receivedData, columns); //!!!!! nach Porfolioname
-      console.log("filteredPortData:", filteredPortData);
+      //console.log("filteredPortData:", filteredPortData);
 
       appState.setFilteredPortData(filteredPortData);// !!!
 
