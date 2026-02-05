@@ -208,13 +208,13 @@ export function installDropdownFilterEngine({ appState, root = document } = {}) 
   };
 
   const applyFiltersAndUpdateDropdowns = (tableType, opts = {}) => {
-  console.log(
-    '[applyFiltersAndUpdateDropdowns]',
-    tableType,
-    'opts=', opts,
-    'caller=',
-    new Error().stack?.split('\n')[2]?.trim()
-  );
+  // console.log(
+  //   '[applyFiltersAndUpdateDropdowns]',
+  //   tableType,
+  //   'opts=', opts,
+  //   'caller=',
+  //   new Error().stack?.split('\n')[2]?.trim()
+  // );
 
     const { preselect } = (typeof opts === 'string') ? { preselect: opts } : opts;
 

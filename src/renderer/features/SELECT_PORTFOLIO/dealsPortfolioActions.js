@@ -61,6 +61,7 @@ export function createDealsPortfolioActions({
   }
 
   function handleOffersNameList(receivedData) {
+    if (USE_NEW_DEALS_UI) return;
     // Offers is separate; keep as-is if you still use legacy offers dropdown.
     try {
       const dropdownId = 'createdOffersDropdown';

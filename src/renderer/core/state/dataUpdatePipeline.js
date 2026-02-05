@@ -1,4 +1,4 @@
-// FRONT_END/STATE/dataUpdatePipeline.js
+// core/state/dataUpdatePipeline.js
 // Orchestriert "received data" -> AppState speichern -> UI refresh / dropdown filter triggern
 
 function runIdle(fn, timeout = 200) {
@@ -85,10 +85,14 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
   // -----------------------------
   // OFFERS
   // -----------------------------
-  const updateOffersDataTable = (receivedData) => {
-    appState.setOffersData?.(receivedData);
+  const updateOffersDataTable = (receivedData, opts = {}) => {
+    // ✅ Master-Liste NICHT überschreiben, wenn es nur View/Subset ist
+    if (!opts.viewOnly) {
+      appState.setOffersData?.(receivedData);
+    }
 
-    const filtered = appState.applyFiltersAndUpdateDropdowns?.('offers') || receivedData;
+    const filtered =
+      appState.applyFiltersAndUpdateDropdowns?.('offers') || receivedData;
 
     const targetEl = document.getElementById('offersDataContainer');
     if (!targetEl) { console.warn('[offers] container fehlt'); return; }
@@ -116,6 +120,7 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
       document.dispatchEvent(new Event('offersData:ready'));
     });
   };
+
 
   // -----------------------------
   // PORT

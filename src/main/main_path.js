@@ -1,21 +1,43 @@
+// src/main/services/filePaths.service.js
+'use strict';
+
 const path = require('path');
 const { app } = require('electron');
 
 function getFilesBaseDir() {
-  // Packaged App: <install>\resources\files\...
-  if (app.isPackaged) return path.join(process.resourcesPath, 'files');
+  const packaged = app.isPackaged;
 
-  // Dev: <projectRoot>\files\...
-  // app.getAppPath() zeigt in Dev i.d.R. auf electron_app (wo package.json liegt)
-  return path.join(app.getAppPath(), 'files');
+  const baseDir = packaged
+    ? path.join(process.resourcesPath, 'files')
+    : path.join(process.cwd(), 'files');
+
+  // ✅ DEBUG LOGS
+  console.log('-----------------------------');
+  console.log('[paths] app.isPackaged:', packaged);
+  console.log('[paths] process.resourcesPath:', process.resourcesPath);
+  console.log('[paths] app.getAppPath():', app.getAppPath());
+  console.log('[paths] process.cwd():', process.cwd());
+  console.log('[paths] resolved files baseDir:', baseDir);
+  console.log('-----------------------------');
+
+  return baseDir;
 }
 
 function getDatabasePath() {
-  return path.join(getFilesBaseDir(), 'UNI.db');
+  const dbPath = path.join(getFilesBaseDir(), 'UNI.db');
+  console.log('[paths] Database path:', dbPath);
+  return dbPath;
 }
 
 function getExcelPath() {
-  return path.join(getFilesBaseDir(), 'UNI_DATA.xlsm');
+  const excelPath = path.join(getFilesBaseDir(), 'UNI_DATA.xlsm');
+  console.log('[paths] Excel path:', excelPath);
+  return excelPath;
 }
 
-module.exports = { getDatabasePath, getExcelPath };
+module.exports = {
+  getFilesBaseDir,
+  getDatabasePath,
+  getExcelPath,
+};
+

@@ -7,6 +7,11 @@ import { appState } from '../../renderer.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { formatNumberWithGrouping } from '../../utils/format.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
+import { applyPortfolioTableColoring } from '../../utils/tableColorize.js';
+
+
+
+
 
 
 
@@ -169,9 +174,8 @@ export function handlePortProdData(receivedData, index, port_name) {
     const portDataHTML = processData(filteredColumnsPortData, tableName);
     portDataContainer.innerHTML = portDataHTML;
 
-    colorizeSpreadDelta(portDataContainer);  // ðŸ‘ˆ hier einfÃ¤rben
-    colorizeCleanPrice(portDataContainer); 
-    attachIdLinks(portDataContainer);  // ðŸ‘ˆ NEU
+    applyPortfolioTableColoring(portDataContainer);
+    attachIdLinks(portDataContainer);  
 
     addTooltipsForTruncatedText(portDataContainer);
     addProdIdTooltips(portDataContainer);
@@ -179,53 +183,6 @@ export function handlePortProdData(receivedData, index, port_name) {
   }
 }
 
-    // Farben fÃ¼r die Spread Spalte
-    function colorizeSpreadDelta(container, headerText = 'C_SPREAD_DELTA') {
-      const table = container.querySelector('table');
-      if (!table) return;
-
-      const toNumber = (txt) => {
-        // robust gegen 1.234,56 / 1,234.56 / +12 / âˆ’12 etc.
-        const cleaned = String(txt).replace(/[^\d,\-+.]/g, '');
-        // Komma in Punkt umwandeln, falls deutsch formatiert
-        const norm = cleaned.replace(',', '.');
-        const n = parseFloat(norm);
-        return Number.isFinite(n) ? n : NaN;
-      };
-
-      const ths = Array.from(table.querySelectorAll('thead th'));
-      const colIdx = ths.findIndex(th => th.textContent.trim() === headerText);
-      if (colIdx === -1) return;
-
-      const rows = table.querySelectorAll('tbody tr');
-      rows.forEach(tr => {
-        const td = tr.children[colIdx];
-        if (!td) return;
-        const val = toNumber(td.textContent);
-        td.classList.remove('delta-pos','delta-neg','delta-zero');
-        if (!Number.isFinite(val)) return;
-        if (val > 0) td.classList.add('delta-pos');
-        else if (val < 0) td.classList.add('delta-neg');
-        else td.classList.add('delta-zero');
-      });
-    }
-    function colorizeCleanPrice(container, headerText = 'clean_price') {
-      const table = container.querySelector('table');
-      if (!table) return;
-
-      const ths = Array.from(table.querySelectorAll('thead th'));
-      const colIdx = ths.findIndex(th => th.textContent.trim() === headerText);
-      if (colIdx === -1) return;
-
-      const rows = table.querySelectorAll('tbody tr');
-      rows.forEach(tr => {
-        const td = tr.children[colIdx];
-        if (!td) return;
-
-        td.style.color = 'orange';
-        td.style.fontWeight = '700';
-      });
-    }
 
 
 
