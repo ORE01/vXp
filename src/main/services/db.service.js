@@ -9,6 +9,7 @@ const sqlite3 = require('sqlite3').verbose();
 // aber app.getPath('userData') brauchst du für logfile -> das darf NICHT in service.
 // Lösung: logfile in index.js oder wir machen fallback.
 
+
 const { getDatabasePath } = require('../main_path');
 
 let _db = null;
@@ -45,6 +46,11 @@ function initDb() {
   if (_db) return _db;
 
   const dbPath = resolveDbPath();
+
+console.log("[DB] cwd:", process.cwd());
+console.log("[DB] __dirname:", __dirname);
+console.log("[DB] dbPath:", dbPath);
+
   logToFile('db.service: dbPath: ' + dbPath);
 
   _db = new sqlite3.Database(dbPath, (err) => {
@@ -64,6 +70,7 @@ function getDb() {
   if (!_db) throw new Error('[db.service] DB not initialized. Call initDb() first.');
   return _db;
 }
+
 
 // ============= DB FUNCTIONS (dein Code, nur via getDb) =============
 
