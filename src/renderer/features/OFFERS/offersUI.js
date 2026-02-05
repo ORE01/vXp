@@ -1,86 +1,9 @@
-// // src/renderer/features/OFFERS/offersUI.js
-
-// import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
-// import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
-// import { attachIdLinks } from '../../utils/linksToTables.js';
-
-// let isBound = false;
-
-// /* =========================================================
-//    PUBLIC API
-//    ========================================================= */
-
-// export function bindOffersUIOnce(appState) {
-//   if (isBound) return;
-//   isBound = true;
-
-//   const dropdown = document.getElementById('createdOffersDropdown');
-//   if (!dropdown) {
-//     console.warn('[OFFERS] createdOffersDropdown not found');
-//     return;
-//   }
-
-//   dropdown.addEventListener('change', () => {
-//     const offers = appState.getOffersData?.() || [];
-//     const selected = getSelectedOffers(offers);
-//     renderOffersTable(selected.length ? selected : offers, 'OFFERS_DATA');
-//   });
-
-//   console.log('[OFFERS] UI bound');
-// }
-
-// export function renderOffersTable(rows, tableName = 'OFFERS_DATA') {
-//   const container = document.getElementById('offersDataContainer');
-//   if (!container) return;
-
-//   container.innerHTML = processData(rows, tableName);
-
-//   addTooltipsForTruncatedText(container);
-//   addProdIdTooltips(container);
-//   attachIdLinks(container);
-// }
-
-// export function fillOffersDropdown(offers) {
-//   const dropdown = document.getElementById('createdOffersDropdown');
-//   if (!dropdown) return;
-
-//   dropdown.innerHTML = '';
-
-//   const allOpt = document.createElement('option');
-//   allOpt.value = '__ALL__';
-//   allOpt.textContent = 'All Offers';
-//   dropdown.appendChild(allOpt);
-
-//   const names = [...new Set(
-//     offers.map(o => o.port_name).filter(Boolean)
-//   )];
-
-//   names.forEach(name => {
-//     const opt = document.createElement('option');
-//     opt.value = name;
-//     opt.textContent = name;
-//     dropdown.appendChild(opt);
-//   });
-
-//   dropdown.value = '__ALL__';
-// }
-
-// export function getSelectedOffers(offers) {
-//   const dropdown = document.getElementById('createdOffersDropdown');
-//   if (!dropdown) return [];
-
-//   const val = dropdown.value;
-//   if (!val || val === '__ALL__') return [];
-
-//   return offers.filter(o => o.port_name === val);
-// }
-
-
-
 // src/renderer/features/OFFERS/offersUI.js
 import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
+import { handlePortProdData } from '../SELECT_PORTFOLIO/PORT.js';
+
 
 let isBound = false;
 
@@ -130,25 +53,46 @@ export function bindOffersUIOnce(appState) {
 export function renderOffersPanel(appState) {
   if (!panelIsOpen()) return;
 
-  const allOffers = appState.getOffersData?.() || [];
-  fillOffersDropdown(allOffers);
+  const norm = (v) => String(v ?? '').trim();
+  const normKey = (v) => norm(v).toLowerCase();
 
-  // Basis: nach port_name selektieren (oder ALL)
-  const base = getSelectedOffers(allOffers);
-  const baseRows = base.length ? base : allOffers;
+  // RAW source (precalc deals/offers)
+  const allRaw = appState.getOffersData?.() || [];
+  fillOffersDropdown(allRaw);
 
-  // Filter-Optionen aus baseRows füllen (damit Dropdowns “kontextsensitiv” sind)
-  fillOffersFilters(baseRows);
+  // Selected offer name
+  const dd = document.getElementById('createdOffersDropdown');
+  const offerName = norm(dd?.value ?? '__ALL__');
+  const hasOffer = offerName && offerName !== '__ALL__';
 
-  // Filter anwenden
-  const filtered = applyOffersFilters(baseRows);
+  // A) LEFT: RAW deals/offers table (zeigt immer die DealsMain/RAW Sicht)
+  const rawRows = hasOffer
+    ? allRaw.filter(r => normKey(r?.port_name) === normKey(offerName))
+    : allRaw;
 
-  // Render links: Offers
-  renderOffersTable(filtered, 'OFFERS_DATA');
+  renderOffersTable(rawRows, 'OFFERS_DATA');
 
-  // Optional Preview rechts
-  renderOffersPreview(filtered, 'OFFERS_DATA');
+  // B) RIGHT: Portfolio source rows for portDataContainer4
+  // Regel: Wenn calculated/enriched vorhanden -> DIE nehmen, sonst RAW rows.
+  const allPorts = appState.getAllPortfolioData?.() || [];
+  const calcRows = hasOffer
+    ? allPorts.filter(r => normKey(r?.port_name) === normKey(offerName))
+    : [];
+
+  const portfolioBaseRows = (Array.isArray(calcRows) && calcRows.length)
+    ? calcRows
+    : rawRows;
+
+  // >>> FILTERS: IMMER auf der Source von portDataContainer4 <<<
+  fillOffersFilters(portfolioBaseRows);
+
+  // Filter anwenden (auf Portfolio-Source, nicht auf RAW)
+  const portfolioFiltered = applyOffersFilters(portfolioBaseRows);
+
+  // Render RIGHT: immer über Portfolio-Renderer -> weniger Spalten + Colorize
+  renderOffersPortfolio(portfolioFiltered, offerName);
 }
+
 
 export function renderOffersTable(rows, tableName = 'OFFERS_DATA') {
   const container = document.getElementById('offersDataContainer');
@@ -165,24 +109,27 @@ export function renderOffersTable(rows, tableName = 'OFFERS_DATA') {
   attachIdLinks(container);
 }
 
-export function renderOffersPreview(rows, tableName = 'OFFERS_DATA') {
+export function renderOffersPortfolio(rows, offerName) {
+  // Portfolioslot 4 ist deine Offers-Preview-Table
   const container = document.getElementById('portDataContainer4');
   if (!container) return;
 
-  // Preview kann leer sein, dann einfach leeren
   if (!Array.isArray(rows) || rows.length === 0) {
     container.innerHTML = '';
     return;
   }
 
-  // Für Preview evtl. nur Top N (sonst zu groß)
+  // optional: wenn du wirklich "Preview" willst:
   const previewRows = rows.slice(0, 30);
 
-  container.innerHTML = processData(previewRows, tableName);
-  addTooltipsForTruncatedText(container);
-  addProdIdTooltips(container);
-  attachIdLinks(container);
+  // ✅ Portfolio-Renderer => ColumnsToShow + Colorize + Links/Tooltips
+  // index=4 -> portDataContainer4
+  handlePortProdData(previewRows, 4, offerName || 'OFFERS');
 }
+
+
+
+// createdOffersDropdown:
 
 export function fillOffersDropdown(offers) {
   const dd = document.getElementById('createdOffersDropdown');
@@ -312,6 +259,4 @@ function uniq(rows, getter) {
   });
   return Array.from(set).sort();
 }
-
-
 

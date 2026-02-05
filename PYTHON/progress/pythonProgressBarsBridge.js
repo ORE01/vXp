@@ -1,5 +1,5 @@
-// FRONT_END/PYTHON/pythonProgressBarsBridge.js
-import { setupPythonProgressBars } from '../PYTHON/pythonProgressBars.js'; 
+
+import { setupPythonProgressBars } from './pythonProgressBars.js'; 
 // Pfad ggf. anpassen wie bei pythonBridge
 
 export function installPythonProgressBarsBridge() {

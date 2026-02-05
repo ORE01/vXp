@@ -1,5 +1,5 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-02-03 11:52:00
+Generated: 2026-02-04 12:18:25
 Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 6
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
@@ -68,10 +68,16 @@ electron_app
 ├── files
 │   └── Archiv
 ├── PYTHON
-│   ├── pythonBridge.js
-│   ├── pythonExecution.js
-│   ├── pythonProgressBars.js
-│   └── pythonProgressBarsBridge.js
+│   ├── bridge
+│   │   └── pythonBridge.js
+│   ├── execution
+│   │   ├── fetch.js
+│   │   ├── index.js
+│   │   ├── receivers.js
+│   │   └── router.js
+│   └── progress
+│       ├── pythonProgressBars.js
+│       └── pythonProgressBarsBridge.js
 ├── src
 │   ├── main
 │   │   ├── features
@@ -274,6 +280,7 @@ electron_app
 │   │   │   ├── format.js
 │   │   │   ├── linksToTables.js
 │   │   │   ├── slideIn.js
+│   │   │   ├── tableColorize.js
 │   │   │   ├── tabs.js
 │   │   │   ├── ToolTip.js
 │   │   │   ├── tooltips.js

@@ -245,7 +245,7 @@
               filtersConfig: this.filtersConfig.deals,
               dataHandler: (receivedData) => {
                 const dealsTableName = this.currentDealsDataTable;
-                console.log(`Deals aufgerufen`);
+                //console.log(`Deals aufgerufen`);
                 if (typeof this.handleDealsData !== 'function') return;
                     this.handleDealsData(receivedData, dealsTableName);
 
@@ -256,7 +256,7 @@
               filtersConfig: this.filtersConfig.offers,
                 dataHandler: (data) => {
                     const index = 4//this.getPortIndex?.() ?? 0; // Fallback auf 0, falls Methode nicht existiert
-                    //console.log(`ðŸ“¥ port aufgerufen mit data (port), Index: ${index}`, data);
+                    //console.log(`port aufgerufen mit data (port), Index: ${index}`, data);
                     this.handleOffersTable(data, index);
                 }
                 },
@@ -265,7 +265,7 @@
                 filtersConfig: this.filtersConfig.port,
                 dataHandler: (data) => {
                     const index = this.getPortIndex?.() ?? 0; // Fallback auf 0, falls Methode nicht existiert
-                    console.log(`port aufgerufen mit data (port), Index: ${index}`, data);
+                    //console.log(`port aufgerufen mit data (port), Index: ${index}`, data);
                     this.handlePortTable(data, index);
                 }
                 },

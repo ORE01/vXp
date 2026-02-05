@@ -146,12 +146,12 @@ if (isPortfolio && (safeIndex === 1 || safeIndex === 2)) {
     [safeIndex]: dropdownElement.value,
   });
 
-  console.log(
-    '[COMPARE][selection]',
-    'slot=', safeIndex,
-    'name=', dropdownElement.value,
-    'state=', appState.getComparePortNames?.()
-  );
+  // console.log(
+  //   '[COMPARE][selection]',
+  //   'slot=', safeIndex,
+  //   'name=', dropdownElement.value,
+  //   'state=', appState.getComparePortNames?.()
+  // );
 }
 
   // state sync (Portfolio only)
@@ -192,8 +192,8 @@ if (typeof updateCvarDataFunction === 'function') {
     e => String(e?.port_name) === String(dropdownElement.value)
   );
 
-  console.log('[CVaR] slot=', safeIndex, 'selected=', dropdownElement.value, 'rows=', c.length);
-  console.log('[CVaR] sample=', c[0]);
+  // console.log('[CVaR] slot=', safeIndex, 'selected=', dropdownElement.value, 'rows=', c.length);
+  // console.log('[CVaR] sample=', c[0]);
 
   //updateCvarDataFunction(c, safeIndex);
   updateCvarDataFunction(c, safeIndex, dropdownElement.value);
