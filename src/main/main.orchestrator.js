@@ -1,4 +1,4 @@
-// src/main/main_fct.js
+// src/main/main.orchestrator.js
 'use strict';
 
 const { startPythonScript } = require('./services/python.service');
@@ -8,6 +8,8 @@ const { importExcelToSQLite } = require('./services/excel.service');
 
 // ✅ DB API kommt jetzt aus db.service (nicht mehr sqlite3 hier!)
 const db = require('./services/db.service');
+
+const PY_DEBUG_LOGS = true; 
 
 // ============================================
 // Python (bleibt vorerst hier, Phase 3 später)
@@ -27,16 +29,25 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
       });
     },
 
-    // Stdout/Stderr NICHT loggen (optional: weiterhin ans UI)
     onStdout: (line) => {
-      // wenn du Output im UI nicht brauchst, kannst du die nächste Zeile auskommentieren
+      if (PY_DEBUG_LOGS) {
+        console.log(`[PY:${scriptIdentifier}] ${line}`);
+      }
+
+      // UI bekommt es trotzdem
       event.sender.send(`${eventType}-output`, line + '\n');
     },
 
     onStderr: (line) => {
-      // wenn du Errors im UI sehen willst, lass es drin – sonst auskommentieren
+      if (PY_DEBUG_LOGS) {
+        console.error(`[PYERR:${scriptIdentifier}] ${line}`);
+      }
+
+      // UI bekommt es trotzdem
       event.sender.send(`${eventType}-error`, line + '\n');
     },
+
+
 
     // wieder normal (Debug war 120s)
     timeoutMs: 5 * 60 * 1000,

@@ -38,7 +38,7 @@ export function handleCouponModal(prodId, couponSchedule, startDate, maturity, c
     try {
       await handleCouponData(
         prodId,
-        couponSchedule, // <â€” statt "schedule"
+        couponSchedule, 
         startDate,
         maturity,
         couponfreq

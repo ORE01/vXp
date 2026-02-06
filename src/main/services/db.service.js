@@ -15,8 +15,10 @@ let _db = null;
 let _logFilePath = null;
 
 function isDevelopmentEnvironment() {
-  return process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'thomasdev';
+  const env = (process.env.NODE_ENV || '').trim().toLowerCase();
+  return env === 'development' || env === 'thomasdev' || env === 'productiontest';
 }
+
 
 /**
  * Optional: Set log file path from outside (index.js), because app.getPath needs electron.app
