@@ -77,7 +77,7 @@ const BREAKDOWN_CONFIG = [
   overview: 'Region, Country, EU/EEA/OECD/Euro',
   columns: [
     { key: 'IssuerRegion',  label: 'Region' },         // falls du das so im View hast
-    { key: 'IssuerCountryName', label: 'Country' },    // oder 'Country' â€“ je nachdem was du wirklich im Data-Objekt hast
+    { key: 'IssuerCountryName', label: 'Country' },    // oder 'Country' - je nachdem was du wirklich im Data-Objekt hast
 
     // âœ… diese fehlen dir aktuell:
     { key: 'IssuerIsEU',   label: 'EU' },
@@ -192,13 +192,13 @@ BREAKDOWN_CONFIG.forEach(g => {
     legendBlock.className = 'chart-block legend-block';
 
     const legendHeading = document.createElement('h3');
-    legendHeading.textContent = `${columnDisplayNames[column] || column} â€“ Breakdown`;
+    legendHeading.textContent = `${columnDisplayNames[column] || column}`;
     legendHeading.className = 'chart-block-title';
 
     const legendTable = document.createElement('table');
     legendTable.id = legendId;
     legendTable.className = 'chart-legend-table';
-    legendTable.dataset.label = `${columnDisplayNames[column] || column} â€“ Breakdown`;
+    legendTable.dataset.label = `${columnDisplayNames[column] || column}`;
 
     legendBlock.appendChild(legendHeading);
     legendBlock.appendChild(legendTable);
@@ -397,98 +397,4 @@ function getValuesByColumn(data, columnName, valueType = 'NAV') {
     values: sorted.map(([, v]) => v),
   };
 }
-
-
-
-
-
-    function mapPortDataToTableRows(data) {
-        return [
-        { label: 'Notional', value: data.formPortNotional },
-        { label: 'NetAssetValue', value: data.formPortValue },
-        // { label: 'Portfolio Yield', value: data.formPortYield },
-        // { label: 'Portfolio Yield (act)', value: data.formPortYieldA },
-        // { label: 'Interest Rate Sensitivity (PV01)', value: data.formPortPV01 },
-        // { label: 'Credit Spread Sensitivity (CPV01)', value: data.formPortCPV01 },
-        ];
-    }
-
-    // =====================================================================
-// Section-Trigger Wiring (Analyse-Modal â†’ Breakdown-Gruppen)
-// =====================================================================
-
-// (function wireSectionTriggersOnce() {
-//   // Mehrfach-Registrierung verhindern (falls File mehrfach geladen wird)
-//   if (window.__breakdownTriggersWired) return;
-//   window.__breakdownTriggersWired = true;
-
-//   // sicherer Wrapper um openSubPanel
-//   function openSubPanelSafe(panelId) {
-//     try {
-//       if (typeof window.openSubPanel === 'function') {
-//         window.openSubPanel(panelId);
-//       } else if (typeof openSubPanel === 'function') {
-//         openSubPanel(panelId);
-//       } else {
-//         console.warn('[Breakdown] openSubPanel nicht gefunden');
-//       }
-//     } catch (e) {
-//       console.error('[Breakdown] openSubPanel Error', e);
-//     }
-//   }
-
-// document.addEventListener('click', (e) => {
-//   const btn = e.target.closest?.('.section-trigger');
-//   if (!btn) return;
-
-//   // âœ… 1) Nur Trigger im ANALYSE_Modal behandeln
-//   const analyseModal = btn.closest?.('#ANALYSE_Modal');
-//   if (!analyseModal) return;
-
-//   const panelId = btn.dataset.panel || btn.getAttribute('aria-controls');
-//   if (!panelId) return;
-
-//   // âœ… 2) Nur Breakdown-Trigger hier behandeln
-//   // Alles andere (MarketData/Compare/etc.) ignorieren,
-//   // weil die zentrale Panel-Logik das Ã¼bernimmt.
-//   if (panelId !== 'panel-breakdown') return;
-
-//   // âœ… 3) NUR Breakdown-Fokus steuern (kein globales openSubPanel!)
-//   const group = btn.dataset.breakdownGroup;
-
-//   if (!group) {
-//     // Hauptpunkt â†’ Overview zeigen, alle Sections verstecken
-//     focusBreakdownGroup('__NONE__');
-//   } else {
-//     // Unterpunkt â†’ nur diese Gruppe anzeigen
-//     focusBreakdownGroup(group);
-//   }
-// });
-
-// })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

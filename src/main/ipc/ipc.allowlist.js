@@ -49,6 +49,8 @@ module.exports = {
     'delete-deals-selection',
     'delete-portfolio-everywhere',
 
+
+
   ],
 
   // =====================================================
@@ -96,6 +98,8 @@ module.exports = {
     'check-and-insert-products',
     'create-deals-from-import',
     'normalize-rank',
+
+    'save-portfolio-name',
 
     
 

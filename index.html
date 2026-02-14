@@ -37,21 +37,31 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/components/messageBox.css" rel="stylesheet">
   <link href="./css/components/Warnings.css" rel="stylesheet">
   <link href="./css/components/trafficLight.css" rel="stylesheet">
+
   <link href="./css/components/Chart.css" rel="stylesheet">
+  <link href="./css/components/SectionTriggers.css" rel="stylesheet">
+  <link href="./css/components/Surfaces.css" rel="stylesheet">
 
+  <!-- <link href="./css/components/Chart copy.css" rel="stylesheet"> -->
 
+  <!-- =======================================SLIDEIN============================== -->
+
+  <link href="./css/aaaSLIDEIN/slideIn.base.css" rel="stylesheet">
+
+<!-- =======================================SLIDEIN============================== -->
 
   <link href="./css/CREDITSPREADS.css" rel="stylesheet">
-  
-
   <link href="./css/SELECT_PORTFOLIO/selectPort.css" rel="stylesheet">
-
-
 
   <link href="./css/ANALYSE_PORTFOLIO/analyse.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/breakdown.css" rel="stylesheet">
-  <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
 
+
+  <link href="./css/ANALYSE_PORTFOLIO/breakdownCharts.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/performanceCharts.css" rel="stylesheet">
+
+
+  <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
 
   <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
@@ -63,16 +73,18 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/COMPARE/compare.css" rel="stylesheet">
 
   <link href="./css/CREATE_PORTFOLIO/CreatePortfolio.css" rel="stylesheet">
+  <link href="./css/NEW_PRODUCT/newPortfolio.css" rel="stylesheet">
 
   <link href="./css/NEW_PRODUCT/offers.css" rel="stylesheet">
-  <!-- <link href="./css/NEW_PRODUCT/newProducts.css" rel="stylesheet"> -->
-  <!-- <link href="./css/NEW_PRODUCT/issuer.css" rel="stylesheet"> -->
-  <!-- <link href="./css/NEW_PRODUCT/products.css" rel="stylesheet"> -->
+  
+
   
 
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/forcasting.css" rel="stylesheet">
-  <link href="./css/MARKET_DATA/MarketDataSlideIn.css" rel="stylesheet">
+ 
+  <link href="./css/MARKET_DATA/rates.css" rel="stylesheet">
+  <link href="./css/MARKET_DATA/forwards.css" rel="stylesheet">
 
   <!-- <link href="./css/DATA_PROVIDER/DataProvider.css" rel="stylesheet"> -->
 
@@ -83,10 +95,9 @@ Feature:    Wenn es nur in einem Panel gilt
   
   <link href="./css/REPORTS/riskReportsModal.css" rel="stylesheet">
   <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
-
   <link href="./css/REPORTS/offers-preview.css" rel="stylesheet">
 
-  <link href="./css/aaaSLIDEIN/slideIn.base.css" rel="stylesheet">
+  
 
 
  
@@ -228,7 +239,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- Kopfbereich bleibt wie gehabt -->
     <div class="portfolio-info">
-      <h2 class="section-header">PORTFOLIO</h2>
+      <h2 class="panel-title">PORTFOLIO</h2>
 
       <div class="created-tables-dropdown portfolio-select-spacing" style="display:flex; margin-bottom:10px;">
         <select id="createdPortDropdown0" class="deals-dropdown" style="color:#f9f9f9;"></select>
@@ -322,6 +333,10 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <span class="close">&times;</span>
 
+    <div class="portfolio-info">
+      <h2 class="panel-title">ANALYSE PORTFOLIO</h2>
+    </div>
+
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
 
 <!-- Portfolio Breakdown Trigger -->
@@ -330,7 +345,7 @@ Feature:    Wenn es nur in einem Panel gilt
           data-panel="panel-breakdown"
           aria-controls="panel-breakdown"
           aria-expanded="false">
-    <span class="section-header">Portfolio Breakdown</span>
+    <span class="section-header">Breakdown</span>
     <span class="chev"></span>
   </button>
 </div>
@@ -342,7 +357,7 @@ Feature:    Wenn es nur in einem Panel gilt
                 data-breakdown-group="Issuer"
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
-          <span class="section-header">Issuer Breakdown</span>
+          <span class="section-header">Issuer</span>
           <span class="chev"></span>
         </button>
       </div>
@@ -354,7 +369,7 @@ Feature:    Wenn es nur in einem Panel gilt
                 data-breakdown-group="Product"
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
-          <span class="section-header">Product Breakdown</span>
+          <span class="section-header">Product</span>
           <span class="chev"></span>
         </button>
       </div>
@@ -366,19 +381,19 @@ Feature:    Wenn es nur in einem Panel gilt
                 data-breakdown-group="General"
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
-          <span class="section-header">General Breakdown</span>
+          <span class="section-header">General</span>
           <span class="chev"></span>
         </button>
       </div>
 
-      <!-- âœ… Breakdown Sub-Trigger: Geography -->
+      <!--    Breakdown Sub-Trigger: Geography -->
       <div class="chart-section chart-section--sub">
         <button class="section-trigger section-trigger--sub"
                 data-panel="panel-breakdown"
                 data-breakdown-group="Geography"
                 aria-controls="panel-breakdown"
                 aria-expanded="false">
-          <span class="section-header">Geography Breakdown</span>
+          <span class="section-header">Geography</span>
           <span class="chev"></span>
         </button>
       </div>
@@ -407,7 +422,7 @@ Feature:    Wenn es nur in einem Panel gilt
                   aria-controls="panel-mvar"
                   aria-expanded="false"
                   style="max-width: 184px;">
-            <span class="section-header">Market Factor</span>
+            <span class="section-header">Factors</span>
             <span class="chev"></span>
           </button>
         </div>
@@ -419,7 +434,7 @@ Feature:    Wenn es nur in einem Panel gilt
                   aria-controls="panel-mvar-products"
                   aria-expanded="false"
                   style="max-width: 184px;">
-            <span class="section-header">Market Product</span>
+            <span class="section-header">Products</span>
             <span class="chev"></span>
           </button>
         </div>
@@ -428,7 +443,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <!--   Market Sensitivities   Unterpunkt von Market Risk -->
         <div class="chart-section chart-section--sub">
           <button class="section-trigger section-trigger--sub" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
-            <span class="section-header">Market Sensitivities</span>
+            <span class="section-header">Sensitivities</span>
             <span class="chev"></span>
           </button>
         </div>
@@ -458,7 +473,7 @@ Feature:    Wenn es nur in einem Panel gilt
                   data-panel="panel-cvar"
                   aria-controls="panel-cvar"
                   aria-expanded="false">
-            <span class="section-header">Credit VaR/ES</span>
+            <span class="section-header">VaR/ES</span>
             <span class="chev"></span>
           </button>
         </div>
@@ -1225,16 +1240,8 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close" data-cp-close="1">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="section-header">CREATE PORTFOLIO</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Issuer / Products / Trades</p>
+      <h2 class="panel-title">CREATE PORTFOLIO</h2>
     </div>
-
-    <!-- Triggers -->
-    <!-- <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-issuer" aria-controls="panel-issuer" aria-expanded="false">
-        <span class="section-header">Issuer</span><span class="chev"></span>
-      </button>
-    </div>-->
 
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
@@ -1276,7 +1283,7 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
 
             <div class="cp-actions" style="grid-column: 1/-1;">
-              <button id="savePortfolioButton" class="edit-button">Save Portfolio</button>
+              <!-- <button id="savePortfolioButton" class="edit-button">Save Portfolio</button> -->
 
               <div class="button-wrapper">
                 <button id="portfolioDealsAddButton" class="edit-button">ADD</button>
@@ -1387,7 +1394,12 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
 
         <!-- Ergebnis-Tabelle -->
-        <div class="data-container cp-table" id="dealsDataContainer"></div>
+        <div
+          class="data-container cp-table"
+          id="dealsDataContainer"
+          data-enhance-include="1">
+        </div>
+
       </div>
     </div>
 
@@ -1404,8 +1416,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close" data-md-close="1">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="section-header">MARKET DATA</h2>
-      <p style="opacity:.8; margin: 6px 0 0;">Rates/Forward/Credit Spreads</p>
+      <h2 class="panel-title">MARKET DATA</h2>
     </div>
 
     <!-- Triggers -->
@@ -1994,7 +2005,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close" data-provider-close="1">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="section-header Provider">PROVIDER</h2>
+      <h2 class="panel-title">PROVIDER</h2>
 
       <!-- Triggers direkt im Header -->
       <div class="provider-triggers">
@@ -2109,8 +2120,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- <span class="close" data-off-close="1">&times;</span> -->
 
     <div class="portfolio-info">
-      <h2 class="section-header">NEW PRODUCTS</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Issuer/Products/Offers</p>
+      <h2 class="panel-title">NEW PRODUCTS</h2>
     </div>
 
     <!-- Triggers -->
@@ -2337,7 +2347,11 @@ Feature:    Wenn es nur in einem Panel gilt
 <div class="offers-two-col">
   <section class="table-card">
     <h4 class="table-title">Offers</h4>
-    <div id="offersDataContainer" class="data-container cp-table"></div>
+    <div id="offersDataContainer"
+     class="data-container cp-table"
+     data-enhance-include="1">
+</div>
+
   </section>
 
   <div class="data-wrapper">
@@ -2380,8 +2394,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- <span class="close" data-off-close="1">&times;</span> -->
 
     <div class="portfolio-info">
-      <h2 class="section-header">REPORTS</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Offers â€¢ Risk</p>
+      <h2 class="panel-title">REPORTS</h2>
     </div>
 
     <!-- Triggers -->
@@ -2614,8 +2627,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- Kopfbereich konsistent zu NEW/REPORTS -->
     <div class="portfolio-info">
-      <h2 class="section-header">UPDATES</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Products/Deals/Market Data</p>
+      <h2 class="panel-title">UPDATES</h2>
     </div>
 
     <!-- ===== Trigger-Leiste ===== -->
@@ -2777,11 +2789,10 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Modal - COMPARE PORTFOLIOS--> 
 <div id="COMP_Modal" class="table">
   <div class="table-content">
-    <span class="close">&times;</span>
+    <span class="close" data-cp-close="1">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="section-header">COMPARE PORTFOLIOS</h2>
-      <p style="opacity:.8; margin:6px 0 0;">Select 2 portfolios and compare risk & performance</p>
+      <h2 class="panel-title">COMPARE PORTFOLIOS</h2>
     </div>
 
     <!-- Trigger-Leiste -->

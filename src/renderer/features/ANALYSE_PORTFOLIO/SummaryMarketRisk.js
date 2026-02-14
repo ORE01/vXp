@@ -73,7 +73,7 @@ const mvarDistData = appState.getMvarDistData({
 
 if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
   console.warn(
-    '[DIST] No distribution for EXACT selection â€“ nothing rendered (expected in test mode)',
+    '[DIST] No distribution for EXACT selection - nothing rendered (expected in test mode)',
     { port_name, scenario_name, chosenAsof }
   );
   return;
@@ -149,7 +149,7 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   const labels = bins.map((_, i) => {
     const start = ((min + i * binWidth) * 100).toFixed(2);
     const end = ((min + (i + 1) * binWidth) * 100).toFixed(2);
-    return `${start}% â€“ ${end}%`;
+    return `${start}% - ${end}%`;
   });
 
   return { labels, bins };
@@ -168,10 +168,10 @@ function drawMvarHistogram(plValues, portValueRel, varTRel) {
   // âœ… Robust: entfernt ALLE Prozentzeichen, normalisiert Dash-Varianten, parst sauber
   const findBinIndexForValue = (value, labels) =>
     labels.findIndex(label => {
-      // Beispiel-Label: "95.12% â€“ 96.34%"
+      // Beispiel-Label: "95.12% - 96.34%"
       const cleaned = String(label)
         .replace(/%/g, '')          // <- ALLE % entfernen (dein Bug)
-        .replace(/[â€“â€”]/g, '-')      // <- En-Dash/Em-Dash auf normales '-' normalisieren
+        .replace(/[-â€”]/g, '-')      // <- En-Dash/Em-Dash auf normales '-' normalisieren
         .replace(/\s+/g, ' ')       // <- Whitespace normalisieren
         .trim();
 
@@ -187,7 +187,7 @@ function drawMvarHistogram(plValues, portValueRel, varTRel) {
       const lo = Math.min(start, end);
       const hi = Math.max(start, end);
 
-      // Wichtig: include hi, weil dein Label "start â€“ end" inkl. Endpunkt wirken soll
+      // Wichtig: include hi, weil dein Label "start - end" inkl. Endpunkt wirken soll
       return value >= lo && value <= hi;
     });
 

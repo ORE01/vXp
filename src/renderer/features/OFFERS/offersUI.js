@@ -4,24 +4,61 @@ import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tool
 import { attachIdLinks } from '../../utils/linksToTables.js';
 import { handlePortProdData } from '../SELECT_PORTFOLIO/PORT.js';
 
-
 let isBound = false;
 
-const FILTER_IDS = {
-  issuer:   'offersIssuerDropdown',
-  prodId:   'offersProdIdDropdown',
-  cpnType:  'offersCouponTypeDropdown',
-  category: 'offersCategoryDropdown',
-  rating:   'offersRatingDropdown',
-  rank:     'offersRankDropdown',
-  matYear:  'offersMaturityDropdown',
-  depot:    'offersDepotbankDropdown',
-};
+/**
+ * OFFERS Filter = Single Source of Truth:
+ * appState.dropdownConfig.offers
+ *
+ * Example:
+ * offers: {
+ *   'offersIssuerDropdown': { dataKey:'ISSUER', selection:['ALL'] },
+ *   ...
+ * }
+ */
+function getOffersFilterConfig(appState) {
+  return appState?.dropdownConfig?.offers || {};
+}
+
+function getOffersFilterDropdownIds(appState) {
+  return Object.keys(getOffersFilterConfig(appState));
+}
 
 function panelIsOpen() {
   const panel = document.getElementById('panel-offers-np');
   return panel && panel.hidden === false;
 }
+
+/**
+ * Resolve special cases where DB/UI keys differ
+ */
+function resolveValue(row, dataKey) {
+  if (!row) return '';
+
+  // MATURITY_YEAR can be derived from MATURITY
+  if (dataKey === 'MATURITY_YEAR') {
+    const direct = row.MATURITY_YEAR;
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+      return String(direct).trim();
+    }
+    const m = row.MATURITY;
+    return m ? String(m).slice(0, 4).trim() : '';
+  }
+
+  // Depotbank aliases
+  if (dataKey === 'Depotbank') {
+    return String(
+      row.Depotbank ?? row.DEPOTBANK ?? row.DEPOT ?? ''
+    ).trim();
+  }
+
+  // Default
+  return String(row?.[dataKey] ?? '').trim();
+}
+
+/* =========================================================
+   Bind UI once
+   ========================================================= */
 
 export function bindOffersUIOnce(appState) {
   if (isBound) return;
@@ -30,25 +67,29 @@ export function bindOffersUIOnce(appState) {
   const offersDD = document.getElementById('createdOffersDropdown');
   const resetBtn = document.getElementById('offersResetFiltersButton');
 
-  // 1) Offers Dropdown (port_name)
+  // Portfolio dropdown
   offersDD?.addEventListener('change', () => {
     renderOffersPanel(appState);
   });
 
-  // 2) Multi-select filters
-  Object.values(FILTER_IDS).forEach((id) => {
+  // Filter dropdown listeners (dynamic from AppState)
+  getOffersFilterDropdownIds(appState).forEach((id) => {
     const el = document.getElementById(id);
     el?.addEventListener('change', () => renderOffersPanel(appState));
   });
 
-  // 3) Reset
+  // Reset filters
   resetBtn?.addEventListener('click', () => {
-    resetOffersFilters();
+    resetOffersFilters(appState);
     renderOffersPanel(appState);
   });
 
   console.log('[OFFERS] UI bound (dropdown + filters + reset)');
 }
+
+/* =========================================================
+   Main render
+   ========================================================= */
 
 export function renderOffersPanel(appState) {
   if (!panelIsOpen()) return;
@@ -56,43 +97,56 @@ export function renderOffersPanel(appState) {
   const norm = (v) => String(v ?? '').trim();
   const normKey = (v) => norm(v).toLowerCase();
 
-  // RAW source (precalc deals/offers)
+  // RAW source (DealsMain precalc)
   const allRaw = appState.getOffersData?.() || [];
   fillOffersDropdown(allRaw);
 
   // Selected offer name
   const dd = document.getElementById('createdOffersDropdown');
-  const offerName = norm(dd?.value ?? '__ALL__');
-  const hasOffer = offerName && offerName !== '__ALL__';
+  const offerName = norm(dd?.value ?? '');
+  const hasOffer = !!offerName;
 
-  // A) LEFT: RAW deals/offers table (zeigt immer die DealsMain/RAW Sicht)
+  // -----------------------------
+  // A) LEFT TABLE: RAW DealsMain
+  // -----------------------------
   const rawRows = hasOffer
     ? allRaw.filter(r => normKey(r?.port_name) === normKey(offerName))
-    : allRaw;
+    : [];
 
   renderOffersTable(rawRows, 'OFFERS_DATA');
 
-  // B) RIGHT: Portfolio source rows for portDataContainer4
-  // Regel: Wenn calculated/enriched vorhanden -> DIE nehmen, sonst RAW rows.
+  // -----------------------------------------
+  // B) RIGHT TABLE: ONLY Portfolios calculated
+  // -----------------------------------------
   const allPorts = appState.getAllPortfolioData?.() || [];
-  const calcRows = hasOffer
+
+  const portfolioRows = hasOffer
     ? allPorts.filter(r => normKey(r?.port_name) === normKey(offerName))
     : [];
 
-  const portfolioBaseRows = (Array.isArray(calcRows) && calcRows.length)
-    ? calcRows
-    : rawRows;
+  // If portfolio not calculated yet → show nothing
+  if (!portfolioRows.length) {
+    fillOffersFilters(appState, []);
+    renderOffersPortfolio([], offerName);
+    return;
+  }
 
-  // >>> FILTERS: IMMER auf der Source von portDataContainer4 <<<
-  fillOffersFilters(portfolioBaseRows);
+  // Apply filters
+  const portfolioFiltered = applyOffersFilters(appState, portfolioRows);
 
-  // Filter anwenden (auf Portfolio-Source, nicht auf RAW)
-  const portfolioFiltered = applyOffersFilters(portfolioBaseRows);
+  // Preview slice
+  const previewRows = portfolioFiltered.slice(0, 30);
 
-  // Render RIGHT: immer über Portfolio-Renderer -> weniger Spalten + Colorize
+  // Filters reflect visible preview
+  fillOffersFilters(appState, previewRows);
+
+  // Render portfolio preview
   renderOffersPortfolio(portfolioFiltered, offerName);
 }
 
+/* =========================================================
+   Render Tables
+   ========================================================= */
 
 export function renderOffersTable(rows, tableName = 'OFFERS_DATA') {
   const container = document.getElementById('offersDataContainer');
@@ -110,7 +164,6 @@ export function renderOffersTable(rows, tableName = 'OFFERS_DATA') {
 }
 
 export function renderOffersPortfolio(rows, offerName) {
-  // Portfolioslot 4 ist deine Offers-Preview-Table
   const container = document.getElementById('portDataContainer4');
   if (!container) return;
 
@@ -119,24 +172,20 @@ export function renderOffersPortfolio(rows, offerName) {
     return;
   }
 
-  // optional: wenn du wirklich "Preview" willst:
+  // Preview slice (keep behavior)
   const previewRows = rows.slice(0, 30);
 
-  // ✅ Portfolio-Renderer => ColumnsToShow + Colorize + Links/Tooltips
-  // index=4 -> portDataContainer4
   handlePortProdData(previewRows, 4, offerName || 'OFFERS');
 }
 
-
-
-// createdOffersDropdown:
+/* =========================================================
+   Offers Dropdown (portfolio names)
+   ========================================================= */
 
 export function fillOffersDropdown(offers) {
   const dd = document.getElementById('createdOffersDropdown');
   if (!dd) return;
 
-  // wenn bereits Optionen existieren, nicht jedes Mal komplett resetten
-  // aber wir wollen sicherstellen, dass ALL existiert
   const prev = String(dd.value || '').trim();
 
   const names = Array.from(new Set(
@@ -147,11 +196,6 @@ export function fillOffersDropdown(offers) {
 
   dd.innerHTML = '';
 
-  const allOpt = document.createElement('option');
-  allOpt.value = '__ALL__';
-  allOpt.textContent = 'All Offers';
-  dd.appendChild(allOpt);
-
   names.forEach(name => {
     const opt = document.createElement('option');
     opt.value = name;
@@ -159,75 +203,77 @@ export function fillOffersDropdown(offers) {
     dd.appendChild(opt);
   });
 
-  // restore
-  if (prev && (prev === '__ALL__' || names.includes(prev))) dd.value = prev;
-  else dd.value = '__ALL__';
+  if (prev && names.includes(prev)) dd.value = prev;
+  else dd.value = '';
 }
 
-export function getSelectedOffers(offers) {
-  const dd = document.getElementById('createdOffersDropdown');
-  const val = String(dd?.value ?? '__ALL__').trim();
-  if (!val || val === '__ALL__') return [];
-  return (Array.isArray(offers) ? offers : []).filter(r => String(r?.port_name ?? '').trim() === val);
+/* =========================================================
+   Filter Helpers (dynamic)
+   ========================================================= */
+
+function fillOffersFilters(appState, rows) {
+  const cfg = getOffersFilterConfig(appState);
+  const ids = Object.keys(cfg);
+
+  // Clear dropdowns
+  if (!Array.isArray(rows) || rows.length === 0) {
+    ids.forEach(id => fillMulti(id, []));
+    return;
+  }
+
+  ids.forEach((dropdownId) => {
+    const dataKey = cfg?.[dropdownId]?.dataKey;
+    if (!dataKey) return;
+
+    const values = uniqByKey(rows, dataKey);
+    fillMulti(dropdownId, values);
+  });
 }
 
-/* =========================
-   Filter helpers
-   ========================= */
+function applyOffersFilters(appState, rows) {
+  const cfg = getOffersFilterConfig(appState);
+  const ids = Object.keys(cfg);
 
-function fillOffersFilters(rows) {
-  // wir füllen die Multi-selects mit Unique-Werten aus "rows"
-  fillMulti(FILTER_IDS.issuer,   uniq(rows, r => r.ISSUER));
-  fillMulti(FILTER_IDS.prodId,   uniq(rows, r => r.PROD_ID));
-  fillMulti(FILTER_IDS.cpnType,  uniq(rows, r => r.CouponType ?? r.COUPON_TYPE));
-  fillMulti(FILTER_IDS.category, uniq(rows, r => r.CATEGORY));
-  fillMulti(FILTER_IDS.rating,   uniq(rows, r => r.RATING ?? r.RTG_SP));
-  fillMulti(FILTER_IDS.rank,     uniq(rows, r => r.RANK ?? r.PAYMENT_RANK));
-  fillMulti(FILTER_IDS.matYear,  uniq(rows, r => r.MATURITY_YEAR ?? (String(r.MATURITY || '').slice(0, 4))));
-  fillMulti(FILTER_IDS.depot,    uniq(rows, r => r.DEPOTBANK ?? r.DEPOT));
-}
+  // Collect selections
+  const selById = {};
+  let any = false;
 
-function applyOffersFilters(rows) {
-  const sel = {
-    issuer:   selectedSet(FILTER_IDS.issuer),
-    prodId:   selectedSet(FILTER_IDS.prodId),
-    cpnType:  selectedSet(FILTER_IDS.cpnType),
-    category: selectedSet(FILTER_IDS.category),
-    rating:   selectedSet(FILTER_IDS.rating),
-    rank:     selectedSet(FILTER_IDS.rank),
-    matYear:  selectedSet(FILTER_IDS.matYear),
-    depot:    selectedSet(FILTER_IDS.depot),
-  };
+  ids.forEach((dropdownId) => {
+    const s = selectedSet(dropdownId);
+    selById[dropdownId] = s;
+    if (s.size) any = true;
+  });
 
-  // wenn überall nichts selektiert ist -> original
-  const any = Object.values(sel).some(s => s.size);
   if (!any) return rows;
 
-  return rows.filter(r => {
-    if (sel.issuer.size   && !sel.issuer.has(String(r.ISSUER ?? '').trim())) return false;
-    if (sel.prodId.size   && !sel.prodId.has(String(r.PROD_ID ?? '').trim())) return false;
-    if (sel.cpnType.size  && !sel.cpnType.has(String((r.CouponType ?? r.COUPON_TYPE) ?? '').trim())) return false;
-    if (sel.category.size && !sel.category.has(String(r.CATEGORY ?? '').trim())) return false;
-    if (sel.rating.size   && !sel.rating.has(String((r.RATING ?? r.RTG_SP) ?? '').trim())) return false;
-    if (sel.rank.size     && !sel.rank.has(String((r.RANK ?? r.PAYMENT_RANK) ?? '').trim())) return false;
+  return rows.filter((r) => {
+    for (const dropdownId of ids) {
+      const dataKey = cfg?.[dropdownId]?.dataKey;
+      if (!dataKey) continue;
 
-    const my = String(r.MATURITY_YEAR ?? (String(r.MATURITY || '').slice(0, 4)) ?? '').trim();
-    if (sel.matYear.size  && !sel.matYear.has(my)) return false;
+      const sel = selById[dropdownId];
+      if (!sel || !sel.size) continue;
 
-    const dep = String((r.DEPOTBANK ?? r.DEPOT) ?? '').trim();
-    if (sel.depot.size    && !sel.depot.has(dep)) return false;
-
+      const v = resolveValue(r, dataKey);
+      if (!sel.has(String(v))) return false;
+    }
     return true;
   });
 }
 
-export function resetOffersFilters() {
-  Object.values(FILTER_IDS).forEach(id => {
+export function resetOffersFilters(appState) {
+  const ids = getOffersFilterDropdownIds(appState);
+
+  ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     Array.from(el.options).forEach(o => (o.selected = false));
   });
 }
+
+/* =========================================================
+   DOM Utilities
+   ========================================================= */
 
 function fillMulti(id, values) {
   const el = document.getElementById(id);
@@ -236,7 +282,7 @@ function fillMulti(id, values) {
   const prev = new Set(Array.from(el.selectedOptions).map(o => o.value));
 
   el.innerHTML = '';
-  values.forEach(v => {
+  (Array.isArray(values) ? values : []).forEach(v => {
     const opt = document.createElement('option');
     opt.value = v;
     opt.textContent = v;
@@ -248,15 +294,16 @@ function fillMulti(id, values) {
 function selectedSet(id) {
   const el = document.getElementById(id);
   if (!el) return new Set();
-  return new Set(Array.from(el.selectedOptions).map(o => o.value));
+  return new Set(Array.from(el.selectedOptions).map(o => String(o.value)));
 }
 
-function uniq(rows, getter) {
+function uniqByKey(rows, dataKey) {
   const set = new Set();
   (Array.isArray(rows) ? rows : []).forEach(r => {
-    const v = String(getter(r) ?? '').trim();
+    const v = resolveValue(r, dataKey);
     if (v) set.add(v);
   });
   return Array.from(set).sort();
 }
+
 

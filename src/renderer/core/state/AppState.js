@@ -53,7 +53,7 @@
                 'PROD_ID': new Set(['ALL']),
                 'CATEGORY': new Set(['ALL']),
                 'NOTIONAL': new Set(['ALL']),
-                'DEPOTBANK': new Set(['ALL']),
+                'Depotbank': new Set(['ALL']),
             },
             port: {
                 'ISSUER': new Set(['ALL']),
@@ -72,7 +72,7 @@
                 'RATING': new Set(['ALL']),
                 'RANK': new Set(['ALL']),
                 'MATURITY_YEAR': new Set(['ALL']),
-                'DEPOTBANK': new Set(['ALL']),
+                'Depotbank': new Set(['ALL']),
             },
             //Auflistung der Deals die ein Portfolio bilden (nicht deals: TRADE_ID...)
             dealsTables: {
@@ -108,7 +108,7 @@
                 'portRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
                 'portMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
                 'portRankDropdown': { dataKey: 'RANK', selection: ['ALL'] },
-                'portDepotbankDropdown': { dataKey: 'DEPOTBANK', selection: ['ALL'] },
+                'portDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
                 'liquMaturityDropdown': { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
                 'portRegionDropdown':  { dataKey: 'IssuerRegion', selection: ['ALL'] },
                 'portCountryDropdown': { dataKey: 'IssuerCountry',      selection: ['ALL'] },
@@ -127,7 +127,7 @@
                 'dealsProdIdDropdown': { dataKey: 'PROD_ID', selection: ['ALL'] },
                 'dealsCategoryDropdown': { dataKey: 'CATEGORY', selection: ['ALL'] },
                 'dealsNotionalDropdown': { dataKey: 'NOTIONAL', selection: ['ALL'] },
-                'dealsDepotbankDropdown': { dataKey: 'DEPOTBANK', selection: ['ALL'] },
+                'dealsDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
             },
               offers: {
                 'offersIssuerDropdown':     { dataKey: 'ISSUER',        selection: ['ALL'] },
@@ -137,7 +137,7 @@
                 'offersRatingDropdown':     { dataKey: 'RATING',        selection: ['ALL'] },
                 'offersRankDropdown':       { dataKey: 'RANK',          selection: ['ALL'] },
                 'offersMaturityDropdown':   { dataKey: 'MATURITY_YEAR', selection: ['ALL'] },
-                'offersDepotbankDropdown':  { dataKey: 'DEPOTBANK',     selection: ['ALL'] },
+                'offersDepotbankDropdown':  { dataKey: 'Depotbank',     selection: ['ALL'] },
             },
             dealsTables: {
                 'createdDealsDropdown': { dataKey: 'table_name', selection: ['ALL'] },

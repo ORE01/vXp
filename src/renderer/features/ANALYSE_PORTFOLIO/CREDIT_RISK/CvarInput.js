@@ -3,7 +3,7 @@ import { appState } from '../../../renderer.js';
 import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 
-// Spalten der CreditVaRInput-Tabelle â€“ ggf. an dein Schema anpassen
+// Spalten der CreditVaRInput-Tabelle - ggf. an dein Schema anpassen
 const CVAR_CONFIG_COLUMNS = [
   'name',
   'conf_level',

@@ -203,7 +203,7 @@ function checkCSSzenarioFlag(filteredProdData) {
 
 /**
  * Bringt ein ProdAll-Row-Objekt in die gewÃ¼nschte Feld-Reihenfolge
- * â€“ genutzt im Formular (Add/Edit), damit CAP & Co. nicht vorne stehen.
+ * - genutzt im Formular (Add/Edit), damit CAP & Co. nicht vorne stehen.
  */
 export function buildOrderedFieldsForModal(row) {
   if (!row) return row;

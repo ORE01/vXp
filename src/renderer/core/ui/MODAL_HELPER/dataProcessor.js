@@ -144,7 +144,7 @@ function generateTableData(
 function generateRadioCell(item, rowIndex, selectedTableName, isChecked) {
   const checkedAttr = isChecked ? 'checked' : '';
 
-  // ðŸ”¹ MVaRInput â€“ bestehendes Verhalten beibehalten
+  // ðŸ”¹ MVaRInput - bestehendes Verhalten beibehalten
   if (selectedTableName === 'MVaRInput') {
     return `<td>
       <input 
@@ -157,7 +157,7 @@ function generateRadioCell(item, rowIndex, selectedTableName, isChecked) {
     </td>`;
   }
 
-  // ðŸ”¹ CreditVaRInput â€“ NEU: CVaR-Konfiguration nach Name auswÃ¤hlen
+  // ðŸ”¹ CreditVaRInput - NEU: CVaR-Konfiguration nach Name auswÃ¤hlen
   if (selectedTableName === 'CreditVaRInput') {
     const name = item.name || item.NAME || '';
     return `<td>

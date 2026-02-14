@@ -639,7 +639,7 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   const row = ratingArr[0];
   if (!row || typeof row !== 'object') return null;
 
-  // Feldnamen â€“ nur relative GrÃ¶ÃŸen
+  // Feldnamen - nur relative GrÃ¶ÃŸen
   const esCandidates  = ['ES_rel', 'es_rel'];
   const varCandidates = ['VaR_rel', 'var_rel'];
 

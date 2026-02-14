@@ -167,7 +167,7 @@ delBtn.textContent = 'Delete Schedule';
 delBtn.classList.add('edit-button', 'delete-button');
 
 // wenn du vorerst kein extra CSS willst, kÃ¶nntest du auch hier
-// zusÃ¤tzlich inline stylen â€“ aber schÃ¶ner ist eine Klasse.
+// zusÃ¤tzlich inline stylen - aber schÃ¶ner ist eine Klasse.
 
 
   // Handler pro Modus
@@ -517,7 +517,7 @@ function saveCouponChanges(couponData, couponForm) {
     if (notionalFormula.startsWith('=')) {
       const formulaBody = notionalFormula.slice(1); // entfernt das "="
 
-      // Kontext fÃ¼r math.js â€“ prev = vorheriger Notional_Factor
+      // Kontext fÃ¼r math.js - prev = vorheriger Notional_Factor
       const prevRow = rowIndex > 0 ? couponData[rowIndex - 1] : null;
       const context = {
         prev: prevRow ? parseFloat(prevRow.Notional_Factor) || 0 : 0

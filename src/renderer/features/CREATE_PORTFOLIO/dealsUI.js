@@ -177,7 +177,7 @@ function ensureDealsTablesDropdown(appState) {
   const prev =
     appState?.getSelectedDealsTableName?.() ||
     dd.value ||
-    ALL;
+    NONE;
 
   // ✅ FIX 2: Wenn Dropdown zwar Optionen hat, aber prev nicht vorhanden ist -> trotzdem refreshen
   const optionsArr = Array.from(dd.options || []);
@@ -204,13 +204,17 @@ function ensureDealsTablesDropdown(appState) {
     // selection restore
     const wanted = String(prev ?? '').trim();
     const finalOpts = Array.from(dd.options || []);
+    
     if (wanted && finalOpts.some(o => String(o.value) === wanted)) {
       dd.value = wanted;
+    } else if (finalOpts.some(o => String(o.value) === NONE)) {
+      dd.value = NONE;
     } else if (finalOpts.some(o => String(o.value) === ALL)) {
       dd.value = ALL;
     } else if (finalOpts.length) {
       dd.value = finalOpts[0].value;
     }
+
 
     // Change feuern, damit engine/state synced (optional – aber hilft bei Timing)
     dd.dispatchEvent(new Event('change', { bubbles: true }));

@@ -48,7 +48,7 @@ export function handlePortAggData(receivedData, index, port_name) {
   let PortCPV01 = 0;
   let PortTtM = 0;
 
-  // Aggregation â€“ wie vorher, nur mit pf()
+  // Aggregation - wie vorher, nur mit pf()
   for (let i = 0; i < portData.length; i++) {
     const r = portData[i];
     const nav      = pf(r.NAV);

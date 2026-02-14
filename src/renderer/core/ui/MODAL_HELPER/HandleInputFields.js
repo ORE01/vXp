@@ -17,7 +17,7 @@ const tableHandlers = {
   Issuer: handleIssuerFields,
 };
 
-// Felder, die im Modal NICHT angezeigt werden sollen â€“ je Tabelle
+// Felder, die im Modal NICHT angezeigt werden sollen - je Tabelle
 const hiddenFieldsByTable = {
   MVaRInput: new Set(['id']),  
   //CreditVaRInput: new Set(['is_active', 'updated_at']), bleibt als Beispiel stehen

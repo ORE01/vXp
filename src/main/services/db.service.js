@@ -343,6 +343,10 @@ function insertCSParameter(newRowData, cleanTableName, cb) {
 
 
 
+
+
+
+
 module.exports = {
   // init + logging
   initDb,
@@ -363,6 +367,8 @@ module.exports = {
   updateCustomerTexts,
   selectAll,
   insertCSParameter,
+
+
 
 
 

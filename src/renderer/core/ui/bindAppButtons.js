@@ -11,7 +11,7 @@
 export function bindAppButtons({
   dealsActions,
   py, // window.__py
-  
+
   updateTooltipsFn, // function(language) { ... }  (optional)
   handleHistoricMetricsAddClick,
 
@@ -19,7 +19,6 @@ export function bindAppButtons({
   handleExcelImport,
 
   // AI mapping / matching
-  
   handleSubmitMatchedColumns,
   startOfferImport,
   handleSubmitMatching,
@@ -37,6 +36,53 @@ export function bindAppButtons({
   // idempotent
   if (window.__appButtonsBoundOnce) return;
   window.__appButtonsBoundOnce = true;
+
+  // ============================================================
+  // GLOBAL MODAL CLOSE (delegated)
+  // - closes ANY modal via span.close
+  // - does NOT use `hidden` (tabs won't restore it)
+  // - releases our inline override on tab click
+  // ============================================================
+  if (!window.__modalCloseDelegationBoundOnce) {
+    window.__modalCloseDelegationBoundOnce = true;
+
+    // Close (soft-hide): display none + remove hidden attr
+    document.addEventListener('click', (e) => {
+      const closeEl = e.target.closest('.close');
+      if (!closeEl) return;
+
+      const modal =
+        closeEl.closest('.modal') ||
+        closeEl.closest('[id$="_Modal"]') ||
+        closeEl.closest('[id*="Modal"]');
+
+      if (!modal) {
+        console.warn('[bindAppButtons] .close clicked but no modal container found');
+        return;
+      }
+
+      // IMPORTANT: Tabs typically won't undo `hidden=true`, so we avoid it.
+      modal.style.display = 'none';
+      modal.removeAttribute('hidden');
+
+      // Close any slide-ins/backdrops inside this modal
+      modal.querySelectorAll('.sub-panel.open').forEach((p) => p.classList.remove('open'));
+      modal.querySelectorAll('.sub-panel-backdrop.show').forEach((b) => b.classList.remove('show'));
+      modal.querySelectorAll('.chart-section.is-open').forEach((s) => s.classList.remove('is-open'));
+    }, true);
+
+    // Tab click: release our inline hide so tab system can show content again
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.tablinks')) return;
+
+      setTimeout(() => {
+        document.querySelectorAll('[id$="_Modal"], [id*="Modal"]').forEach((m) => {
+          if (m.style.display === 'none') m.style.display = '';
+          m.removeAttribute('hidden');
+        });
+      }, 0);
+    }, false);
+  }
 
   // ---------- Deals / Portfolio ----------
   document.getElementById('savePortfolioButton')
@@ -63,7 +109,6 @@ export function bindAppButtons({
     ?.addEventListener('click', () => handleExcelImport?.(['EUSW']));
 
   // ---------- Matching / Offers ----------
-
   document.getElementById('submitToProductsBtn')
     ?.addEventListener('click', () => handleSubmitMatchedColumns?.('productMatchesOutput', 'ProdAll'));
 
@@ -172,7 +217,6 @@ export function bindAppButtons({
   });
 
   // ---------- Language / tooltips ----------
-  // If you pass updateTooltipsFn, we use it. Otherwise we do nothing here.
   if (typeof updateTooltipsFn === 'function') {
     updateTooltipsFn('en');
 
@@ -189,3 +233,4 @@ export function bindAppButtons({
     document.body.classList.toggle('light-theme');
   });
 }
+

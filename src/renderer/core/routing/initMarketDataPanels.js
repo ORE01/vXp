@@ -41,7 +41,7 @@ export function getMarketDataPanelRenderers() {
         // Daten sind schon da â†’ Modals bauen
         createTSModals(data);
       } else {
-        console.log("[TS] waiting for tblTSData â€“ render will happen on data receive");
+        console.log("[TS] waiting for tblTSData - render will happen on data receive");
       }
     },
 

@@ -1,397 +1,68 @@
-/* Add this CSS to align the containers side by side */
-.table-content {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-  }
-  
-  /* .data-container {
-    flex: 1;
-  } */
-  
-/* Sichtbarer, zentrierter Chart-Wrapper */
-.chart-container {
-  display: flex;               /* damit justify/align wirken */
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  min-height: 400px;           /* statt fixer Höhe -> robuster */
-  position: relative;
+/* =========================================================
+   components/Chart.css
+   Stabil für Chart.js + chartjs-plugin-annotation
+   Ziel: NIE 0x0 Canvas beim Init/Resize (chartArea undefined vermeiden)
+   ========================================================= */
+
+/* 1) Container müssen IMMER eine echte Höhe haben */
+.chart-container{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+  min-height:320px;            /* echte Mindesthöhe */
+  position:relative;
 }
 
-/* LGD/EAD-Tabellen-Charts: NICHT mehr verstecken */
-.chart-container-table {
-  display: block;              /* immer sichtbar */
-  width: 100%;
-  min-height: 500px;           /* gibt Chart.js Fläche */
-  position: relative;
+.chart-container-table{
+  display:block;
+  width:100%;
+  min-height:320px;            /* echte Mindesthöhe */
+  position:relative;
 }
 
-/* ggf. Canvas füllt Container */
-.chart-container-table canvas {
-  width: 100% !important;
-  height: 100% !important;
+.chart-container-inner{
+  display:block;
+  width:100%;
+  max-width:280px;
+  min-height:200px;            /* echte Mindesthöhe */
+  position:relative;
 }
 
-/* Innere Container auch statisch sichtbar (kein Toggle mehr) */
-.chart-container-inner {
-  display: block;              /* oder flex, falls du daneben was brauchst */
-  min-height: 200px;
-  max-width: 250px;
-  position: relative;
+/* 2) Canvas-Behavior NUR innerhalb deiner Chart-Container
+      (kein globales canvas{} mehr!)
+      -> verhindert, dass andere Layouts/hidden canvases kaputtgehen
+*/
+.chart-container canvas,
+.chart-container-table canvas,
+.chart-container-inner canvas{
+  display:block;
+  background-color:transparent !important;
+
+  /* Wichtig: keine "height:100% !important" pauschal!
+     Das verursacht 0-Höhen/Instabilität, wenn Parent (kurz) keine Höhe hat. */
+  width:100% !important;
+  height:auto !important;
+
+  max-width:100%;
 }
 
-
-
-/* Canvas in inneren Containern – volle Breite, fixes Verhältnis steuerst du per Containerhöhe */
-.chart-container-inner canvas {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100%;
+/* 3) Optional: Wenn du EINIGE Charts wirklich fix “flächenfüllend” willst,
+      gib dem Container eine echte Höhe (z.B. style="height:400px")
+      und setze dann diese Klasse am Container:
+      <div class="chart-container chart-fill">...</div>
+*/
+.chart-fill{
+  /* nur verwenden, wenn du eine echte height am Element/über CSS setzt */
+  align-items:stretch;
 }
 
-  #MVaRChart{
-     
-    width: 5px; 
-    height: 600px; 
-}
-
-  /* #LGDChart,
-  #EADChart,
-  #LossIssuerChart {
-     
-      width: 100px; 
-      height: 600px; 
-  } */
-  #issuerGraphContainer {
-    margin-left: 40px; /* Adjust the margin as needed to create space */
-  }
-  
-/* CSS for CPV01Chart container */
-.cpv01-chart-container {
-  width: 400px; /* Set the width */
-  height: 300px; /* Set the height */
-}
-
-/* CSS for PV01Chart container */
-.pv01-chart-container {
-  width: 400px; /* Set the width */
-  height: 300px; /* Set the height */
-  
-}
-
-/* CSS for Liqu container */
-.liqu-chart-container {
-  width: 600px; /* Set the width */
-  height: 380px; /* Set the height */
-  
-}
-
-/* Ensure canvas elements fill their containers */
-.cpv01-chart-container canvas, .pv01-chart-container canvas, .liqu-chart-container canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-/* CSS for the container of the chart */
-#issuerGraphContainer {
-  width: 100%; /* Make the container take up the full width */
-  height: 50vh; /* Set a fixed height for the container */
-  overflow: hidden; /* Hide overflow content */
-  position: relative;
-}
-
-.comp-chart-container {
-  width: 30%; /* Adjust the width as needed */
-  max-width: 300px; /* Set a maximum width to limit expansion */
-  height: 400px; /* Set the height */
-  display: inline-block; /* Display the containers inline */
-  margin: 10px; /* Add margin between the containers */
+.chart-fill canvas{
+  /* dann darfst du füllen – weil der Parent garantiert eine Höhe hat */
+  height:100% !important;
 }
 
 
-#compChart {
-  width: 100%; /* Ensure the chart fills its container */
-  height: auto; /* Allow the height to adjust based on the container */
-}
-
-
-
-
-
-/* Wrapper for the entire table and chart layout */
-#FWD_Modal .forward-layout-wrapper {
-  display: flex;
-  flex-direction: row;  /* Arrange table and charts side by side */
-  width: 100%;
-  gap: 20px;            /* Add space between the table and charts */
-}
-
-/* Specific styles for the data table container (left side) */
-#FWD_Modal .data-container {
-  display: block;
-  width: 40%;          /* Set width to 40% of the total modal width */
-  max-height: 100%;    /* Ensure it does not overflow the modal */
-  overflow-y: auto;    /* Allow vertical scrolling if the content is too large */
-}
-
-/* Wrapper for the charts (right side) */
-#FWD_Modal .forward-charts-wrapper {
-  display: flex;
-  flex-direction: column; /* Stack charts vertically */
-  width: 60%;             /* Charts take up 60% of the modal width */
-  gap: 20px;              /* Add space between the charts */
-}
-
-/* Specific styles for the FWDlineChart */
-#FWD_Modal .forward-line-chart {
-  width: 100%;
-  height: 400px;  /* Adjust the height as needed */
-}
-
-/* Specific styles for the FWDforwardCurveChart */
-#FWD_Modal .forward-swap-chart {
-  width: 100%;
-  height: 400px;  /* Adjust the height as needed */
-}
-
-
-/* Unique container for each TSChart */
-.TSChart-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 1000px; /* Limit the maximum width of the chart */
-  margin: 20px auto; /* Center the chart container with margin */
-}
-
-.chart-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Center align the chart and buttons */
-  margin-top: 20px; /* Add spacing */
-}
-
-.time-range-buttons {
-  display: flex;
-  gap: 10px; /* Space between buttons */
-  margin-top: 10px; /* Space between chart and buttons */
-}
-
-.time-range-buttons button {
-  padding: 6px 12px;
-  background-color: #888; /* Set the buttons to a gray color */
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.time-range-buttons button:hover {
-  background-color: #666; /* Darker gray on hover */
-}
-
-
-
-#test-data-chart-wrapper,
-#future-prediction-chart-wrapper {
-  width: 100%;                  /* Take up full width of the container */
-  max-width: 800px;             /* Set a reasonable maximum width */
-  height: auto;                 /* Adjust height automatically */
-  margin: 20px auto;            /* Center the wrapper and add spacing */
-  text-align: center;           /* Center align content */
-  overflow: visible;            /* Ensure content isn't clipped */
-}
-
-#MLTestDataChart,
-#MLFuturePredictionChart {
-  display: block !important;    /* Ensure the canvas is visible */
-  width: 100% !important;       /* Take full width of the wrapper */
-  max-width: 600px;             /* Set a maximum width for responsiveness */
-  height: 300px !important;     /* Set explicit height for better visibility */
-  margin: 0 auto;               /* Center the canvas horizontally */
-  background-color: rgba(0, 0, 0, 0.05); /* Optional: light background for debugging */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Optional: subtle border for clarity */
-}
-
-#LossIssuerCombinedChartContainer, 
-#LossIssuerCombinedESChartContainer {
-  width: 100%; /* Full width of the parent container */
-  max-width: 800px; /* Set a maximum width to prevent it from stretching too much */
-  height: 400px; /* Fixed height for the container */
-  display: flex; /* Flex to ensure content fills the space */
-  justify-content: center; /* Center the canvas horizontally */
-  align-items: center; /* Center the canvas vertically */
-  margin: 0 auto; /* Center the container itself */
-  margin-bottom: 100px; /* Adds space between the two chart containers */
-}
-
-#LossIssuerCombinedChartContainer {
-  margin-top: 40px; /* Space between the data container and the first chart */
-}
-
-#LossIssuerCombinedChart, 
-#LossIssuerCombinedESChart {
-  width: 100%; /* Take up 100% of the container's width */
-  height: 400px; /* Take up 100% of the container's height */
-  /*max-height: 600px;  Prevent it from going beyond 600px in height */
-}
-
-
-p {
-  text-align: left; 
-  font-weight: bold; 
-  margin-bottom: 10px; 
-}
-
-
-/* #liquChart {
-  max-width: 100%;
-  height: 400px;
-} */
-
-.chart-section {
-  margin-top: 40px;
-  padding-top: 20px;
-  border-top: 2px solid #ccc;
-}
-
-.section-header {
-  font-size: 20px;
-  margin-bottom: 10px;
-  text-align: center;
-}
-
-.summary-charts-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;                   /* Consistent spacing between charts */
-  justify-content: center;     /* Center charts in their section */
-}
-
-.pie-chart-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: 20px;
-  justify-content: center;
-  margin: 0 auto;
-  max-width: 1600px;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 20px;
-}
-
-
-@media (max-width: 1000px) {
-  .pie-chart-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-
-
-
-
-
-
-.chart-block {
-  width: 100%;
-  max-width: 500px; /* passt zum minmax() oben */
-  box-sizing: border-box;
-  overflow: hidden; /* Verhindert Ausdehnung */
-  min-height: 360px;
-  padding: 20px;
-  background: #2a2a2a;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: center;
-}
-
-
-
-
-
-.pieChart {
-  width: 100%;         /* fill parent .chart-block width */
-  height: 280px;       /* fixed height for consistency */
-}
-
-/* Performance Charts */
-.chart-box {
-  flex: 1 1 calc(50% - 20px);
-  min-width: 400px;
-  max-width: 550px;
-  aspect-ratio: 4 / 3;
-  background: #2a2a2a; /* statt #1e1e1e – etwas heller */
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2); /* etwas mehr Kontrast */
-  color: #fff; /* Schrift & Chartbeschriftung */
-}
-
-canvas {
-  background-color: transparent !important;
-  display: block;
-}
-
-.chart-box canvas {
-  max-width: 100%;
-  max-height: 100%;
-  width: 100%;
-  height: auto;
-}
-
-
-#plMvarDistChart {
-  width: 100%;
-  max-width: 900px;
-  height: 500px;
-  display: block;
-}
-
-
-.chart-2x1-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 30px;
-  max-width: 1200px;
-  margin: 40px auto;
-}
-
-.chart-2x1-row .chart-box {
-  background: #2a2a2a;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  color: #fff;
-  width: 100%;
-  height: 400px;
-}
-
-.chart-2x1-row canvas {
-  width: 100% !important;
-  height: 100% !important;
-  background-color: transparent !important;
-}
-
-@media (max-width: 800px) {
-  .chart-2x1-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.yield-chart-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* oder 1, 2, 3 Spalten je nach Bedarf */
-  gap: 30px;
-  max-width: 1200px;
-  margin: 40px auto;
-  justify-items: center;
-}
 
 
 

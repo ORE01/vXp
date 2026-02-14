@@ -1,8 +1,5 @@
 /* ============================================================
-   analyse.css  (NUR Analyse-spezifisch)
-   Voraussetzungen:
-   - slideIn.base.css enthält alle Regeln für:
-
+   analyse.css 
    ============================================================ */
 
 
@@ -26,13 +23,14 @@
   white-space: nowrap;
 }
 
-#panel-breakdown #valueSelector{ min-width: 160px; }
+#panel-breakdown #valueSelector{
+  min-width: 160px;
+}
 
 
 /* ============================================================
-   PANEL-MARKET: Layout-Reset (nur im Panel)
+   PANEL-MARKET: Layout-Reset (nur im Panel Content)
    ============================================================ */
-/* Analyse ▸ Market Panel – Layout Reset (NUR Analyse-Modal) */
 #ANALYSE_Modal #panel-market .sub-panel-body,
 #ANALYSE_Modal #panel-market .toolbar,
 #ANALYSE_Modal #panel-market .data-container,
@@ -40,7 +38,6 @@
   position: static;
   float: none;
 }
-
 
 /* Wrapper sauber resetten */
 #panel-market .data-wrapper{
@@ -96,7 +93,9 @@
 }
 
 @media (max-width: 1100px){
-  #ANALYSE_Modal .sens-layout{ grid-template-columns: 1fr; }
+  #ANALYSE_Modal .sens-layout{
+    grid-template-columns: 1fr;
+  }
 }
 
 #ANALYSE_Modal .sens-left{
@@ -121,59 +120,7 @@
 
 
 /* ============================================================
-   DIVIDER / SPACING FEINTUNING (Analyse Sidebar)
-   ============================================================ */
-
-/* Entfernt Linie nach "Credit Risk" (falls Klasse gesetzt wird) */
-#ANALYSE_Modal .chart-section.no-after-divider{
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-}
-
-#ANALYSE_Modal .chart-section.no-after-divider + hr{
-  display: none !important;
-}
-
-#ANALYSE_Modal .chart-section.no-after-divider + .chart-section--sub{
-  border-top: 0 !important;
-}
-
-/* Sub-Indent Feintuning (nur Analyse) */
-#ANALYSE_Modal{ --sub-indent: 16px; }
-
-#ANALYSE_Modal .chart-section--sub{
-  margin-left: var(--sub-indent);
-}
-
-/* Sub-Trigger Breite passend zur Einrückung */
-#ANALYSE_Modal .section-trigger--sub{
-  max-width: calc(var(--trigger-max-width, 200px) - var(--sub-indent));
-}
-
-/* Kein zusätzlicher margin-left am Button selbst */
-#ANALYSE_Modal .chart-section--sub .section-trigger--sub{
-  margin-left: 0 !important;
-}
-
-/* Divider zwischen Market Risk und Unterpunkten entfernen */
-#ANALYSE_Modal .chart-section[data-panel="panel-market"] + hr{
-  display: none;
-}
-
-#ANALYSE_Modal .chart-section[data-panel="panel-market"] + .chart-section--sub{
-  border-top: 0 !important;
-  padding-top: 0 !important;
-  margin-top: 6px;
-}
-
-/* Fallback: Sub-Block generell kein Top-Border */
-#ANALYSE_Modal .chart-section--sub{
-  border-top: 0 !important;
-}
-
-
-/* ============================================================
-   MARKET VAR – Grid
+   MARKET VAR – Grid (Content only)
    ============================================================ */
 #panel-mvar .mvar-grid{
   display: flex;
@@ -182,8 +129,15 @@
   align-items: flex-start;
 }
 
-#panel-mvar .mvar-left{  flex: 1 1 420px; min-width: 320px; }
-#panel-mvar .mvar-right{ flex: 2 1 520px; min-width: 380px; }
+#panel-mvar .mvar-left{
+  flex: 1 1 420px;
+  min-width: 320px;
+}
+
+#panel-mvar .mvar-right{
+  flex: 2 1 520px;
+  min-width: 380px;
+}
 
 #panel-mvar .table-card{
   background: var(--panel-surface, #0f0f10);
@@ -192,6 +146,7 @@
   padding: 12px;
 }
 
+/* Panel-scoped Canvas sizing (OK) */
 #panel-mvar canvas{
   display: block;
   width: 100% !important;

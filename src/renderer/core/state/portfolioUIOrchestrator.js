@@ -28,29 +28,61 @@ export function createPortfolioUIOrchestrator({ appState } = {}) {
         .startsWith('OFFER');
 
     return {
-      deals: allDeals,
+      deals: allDeals.filter((r) => !isOffer(r)),
       offers: allDeals.filter(isOffer),
-    };
+  };
+
   }
 
-  function renderDealsAndOffers() {
-    const allDeals = appState.getAllDealsData?.() || [];
-    if (!allDeals.length) return;
-
-    const { deals, offers } = splitDealsAndOffers(allDeals);
-
-    // A) DEALS = gesamtes pre-calculated Portfolio
-    handleDealsData(deals, 'ALL', {
-      forceTarget: 'deals',
-      restoreDropdown: true,
-    });
-
-    // B) OFFERS = Subset der Deals (OFFER*)
-    handleDealsData(offers, 'OFFERS', {
-      forceTarget: 'offers',
-      restoreDropdown: false,
-    });
+function renderDealsAndOffers() {
+  const allDeals = appState.getAllDealsData?.() || [];
+  if (!allDeals.length) {
+    // nichts da -> Deals-Container leeren
+    handleDealsData([], 'ALL', { forceTarget: 'deals', allowClear: true });
+    handleDealsData([], 'OFFERS', { forceTarget: 'offers', allowClear: true });
+    return;
   }
+
+  const { deals, offers } = splitDealsAndOffers(allDeals);
+
+  // ✅ Auswahl lesen (Dropdown hat in NEW Deals UI Ownership)
+  const ddVal = String(document.getElementById('createdDealsDropdown')?.value ?? '').trim();
+  const selected = ddVal || String(appState.getSelectedDealsTableName?.() ?? '').trim();
+
+  const isNone =
+    !selected ||
+    selected === '__NONE__' ||
+    selected === 'Select a table';
+
+  // ✅ Wenn noch nichts ausgewählt: NICHTS anzeigen
+  if (isNone) {
+    handleDealsData([], 'ALL', { forceTarget: 'deals', allowClear: true, restoreDropdown: false });
+    // Offers kannst du optional auch leeren:
+    handleDealsData([], 'OFFERS', { forceTarget: 'offers', allowClear: true, restoreDropdown: false });
+    return;
+  }
+
+  // ✅ Wenn ALL ausgewählt, dann alles anzeigen, sonst nur das ausgewählte Portfolio
+  const showAll = selected === '__ALL__' || selected === 'ALL';
+
+  const dealsToRender = showAll
+    ? deals
+    : deals.filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selected);
+
+  // A) DEALS (nur Selection oder ALL)
+  handleDealsData(dealsToRender, selected, {
+    forceTarget: 'deals',
+    restoreDropdown: true,
+    allowClear: true,
+  });
+
+  // B) OFFERS wie bisher (oder ebenfalls selection-basiert, wenn du willst)
+  handleDealsData(offers, 'OFFERS', {
+    forceTarget: 'offers',
+    restoreDropdown: false,
+    allowClear: true,
+  });
+}
 
   /* =========================================================
      OFFERS ORCHESTRATOR (ENRICHED VIEW – UNVERÄNDERT)
