@@ -2,6 +2,7 @@
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const { app } = require('electron');
 
@@ -75,6 +76,19 @@ function startPythonScript({
 
       const mainScript = pythonArgs[0]; // das ist dein main.py im dev
       const mainDir = path.dirname(mainScript);
+
+console.log("[MAIN] cwd:", process.cwd());
+
+console.log('[MAIN] exec:', pythonExecutable);
+console.log('[MAIN] exec exists:', fs.existsSync(pythonExecutable));
+
+console.log('[MAIN] mainScript:', mainScript);
+console.log('[MAIN] script exists:', fs.existsSync(mainScript));
+
+console.log('[MAIN] cwd:', process.cwd());
+console.log('[MAIN] mainDir:', mainDir);
+console.log('[MAIN] mainDir exists:', fs.existsSync(mainDir));
+
 
       proc = spawn(pythonExecutable, pythonArgs, {
         windowsHide: true,

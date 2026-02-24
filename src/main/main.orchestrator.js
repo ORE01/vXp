@@ -28,15 +28,27 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
     },
 
     // Stdout/Stderr NICHT loggen (optional: weiterhin ans UI)
-    onStdout: (line) => {
-      // wenn du Output im UI nicht brauchst, kannst du die nächste Zeile auskommentieren
+    // onStdout: (line) => {
+    //   // wenn du Output im UI nicht brauchst, kannst du die nächste Zeile auskommentieren
+    //   event.sender.send(`${eventType}-output`, line + '\n');
+    // },
+
+    // onStderr: (line) => {
+    //   // wenn du Errors im UI sehen willst, lass es drin – sonst auskommentieren
+    //   event.sender.send(`${eventType}-error`, line + '\n');
+    // },
+
+        onStdout: (line) => {
+      console.log(`[PY:${scriptIdentifier}] ${line}`);
       event.sender.send(`${eventType}-output`, line + '\n');
     },
 
     onStderr: (line) => {
-      // wenn du Errors im UI sehen willst, lass es drin – sonst auskommentieren
+      console.error(`[PYERR:${scriptIdentifier}] ${line}`);
       event.sender.send(`${eventType}-error`, line + '\n');
     },
+
+
 
     // wieder normal (Debug war 120s)
     timeoutMs: 5 * 60 * 1000,
