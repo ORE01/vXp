@@ -3,6 +3,14 @@
 
 require('dotenv').config();
 
+// ✅ DEBUG (nur kurz drin lassen)
+console.log('[BOOT] cwd      =', process.cwd());
+console.log('[BOOT] __dirname =', __dirname);
+console.log('[BOOT] NODE_ENV  =', process.env.NODE_ENV);
+
+
+
+
 const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 
