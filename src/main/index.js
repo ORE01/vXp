@@ -43,6 +43,7 @@ const registerCustomerHandlers = require('./ipc/handlers/customer.handlers');
 const registerTrainingHandlers = require('./ipc/handlers/training.handlers');
 const registerColumnImportHandlers = require('./ipc/handlers/columnImport.handlers');
 const registerCSParameterHandlers = require('./ipc/handlers/csParameter.handlers');
+const registerRatesActiveHandlers = require('./ipc/handlers/ratesActive.handlers');
 
 const registerCouponWindowHandlers = require('./ipc/handlers/couponWindow.handlers');
 const registerPortfolioDeleteHandlers = require('./ipc/handlers/portfolioDelete.handlers');
@@ -343,6 +344,15 @@ function registerAllHandlers({ pump }) {
     refreshTable,
   });
 
+registerRatesActiveHandlers({
+  ipcMain,
+  dbApi: {
+    runSQL: mainFct.runSQL,
+    selectAll: mainFct.selectAll
+  },
+  refreshTable
+});
+
   registerColumnImportHandlers({
     ipcMain,
     dbApi: {
@@ -353,16 +363,17 @@ function registerAllHandlers({ pump }) {
   });
 
   // Existing central registerIpc
-  registerIpc({
-    ipcMain,
-    services: {
-      startPythonScriptWithEvent: mainFct.startPythonScriptWithEvent,
-      dbApi: {
-        selectAll: mainFct.selectAll,
-      },
-      refreshTable,
-    }
-  });
+registerIpc({
+  ipcMain,
+  services: {
+    startPythonScriptWithEvent: mainFct.startPythonScriptWithEvent,
+    dbApi: {
+      selectAll: mainFct.selectAll,
+      runSQL: mainFct.runSQL,   // 🔥 DAS FEHLT
+    },
+    refreshTable,
+  }
+});
 }
 
 // =====================================================

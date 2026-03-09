@@ -35,17 +35,22 @@ module.exports = function registerCrudHandlers({
   // ------------------------------------------------------------
   // Refresh rules (aus index.js übernommen)
   // ------------------------------------------------------------
-  const REFRESH_DEPENDENCIES = {
-    ProdAll:             ['ProdAll'],
-    DealsMain:           ['DealsMain'],
-    ProdCouponSchedules: ['ProdCouponSchedules', 'ProdAll'],
-    Issuer:              ['Issuer'],
-    Portfolios:          ['Portfolios'],
-    MVaRInput:           ['MVaRInput'],
-    ecb:                 ['ecb'],
-    fed:                 ['fed'],
-    yahoo:               ['yahoo'],
-  };
+const REFRESH_DEPENDENCIES = {
+  ProdAll:             ['ProdAll'],
+  DealsMain:           ['DealsMain'],
+  ProdCouponSchedules: ['ProdCouponSchedules', 'ProdAll'],
+  Issuer:              ['Issuer'],
+  Portfolios:          ['Portfolios'],
+  MVaRInput:           ['MVaRInput'],
+  ecb:                 ['ecb'],
+  fed:                 ['fed'],
+  yahoo:               ['yahoo'],
+
+  // 🔥 MARKET DATA
+  RATES_SNAPSHOTS:     ['RATES'],
+  RATES:               ['RATES'],
+  RATES_ACTIVE:        ['RATES_ACTIVE']
+};
 
   const PORTFOLIO_RELEVANT_FIELDS = new Set([
     'PROD_ID','INCLUDE','NOTIONAL','PRICE','PRICE_BUY',

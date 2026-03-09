@@ -71,7 +71,11 @@ function getDb() {
 
 function getAllTableNames(callback) {
   const db = getDb();
-  const query = "SELECT name FROM sqlite_master WHERE type='table'";
+  const query = `
+  SELECT name
+  FROM sqlite_master
+  WHERE type IN ('table','view')
+`;
   db.all(query, (err, rows) => {
     if (err) {
       console.error(err.message);
@@ -96,20 +100,71 @@ function queryDB(tableName, callback) {
   });
 }
 
+// function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) {
+//   const db = getDb();
+
+//   const columnNames = Object.keys(newData);
+//   const setClause = columnNames
+//     .map(columnName => `${columnName} = '${newData[columnName]}'`)
+//     .join(', ');
+
+//   const query = `
+//     UPDATE ${tableName}
+//     SET ${setClause}
+//     WHERE ${uniqueIdentifier.column} = '${uniqueIdentifier.value}'`;
+
+//   db.run(query, (err) => {
+//     if (err) {
+//       console.error(err.message);
+//       callback(err);
+//     } else {
+//       console.log('db.service: updateRecord.');
+//       callback(null);
+//     }
+//   });
+// }
+
 function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) {
   const db = getDb();
 
   const columnNames = Object.keys(newData);
+
   const setClause = columnNames
-    .map(columnName => `${columnName} = '${newData[columnName]}'`)
+    .map(columnName => `${columnName} = ?`)
     .join(', ');
+
+  const setValues = columnNames.map(c => newData[c]);
+
+  let whereClause;
+  let whereValues;
+
+  // 🔑 Composite Key support
+  if (uniqueIdentifier && uniqueIdentifier.composite) {
+
+    const cols = uniqueIdentifier.columns;
+
+    whereClause = Object.keys(cols)
+      .map(k => `${k} = ?`)
+      .join(" AND ");
+
+    whereValues = Object.values(cols);
+
+  } else {
+
+    whereClause = `${uniqueIdentifier.column} = ?`;
+    whereValues = [uniqueIdentifier.value];
+
+  }
 
   const query = `
     UPDATE ${tableName}
     SET ${setClause}
-    WHERE ${uniqueIdentifier.column} = '${uniqueIdentifier.value}'`;
+    WHERE ${whereClause}
+  `;
 
-  db.run(query, (err) => {
+  const params = [...setValues, ...whereValues];
+
+  db.run(query, params, (err) => {
     if (err) {
       console.error(err.message);
       callback(err);
@@ -119,6 +174,8 @@ function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) 
     }
   });
 }
+
+
 
 function eraseRowFromDB(tableName, uniqueIdentifier) {
   const db = getDb();

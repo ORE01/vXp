@@ -12,43 +12,62 @@ import { renderSwaptionIfReady } from "../../features/MARKET_DATA/VOLS/swaptionV
 import { notifyRiskPreview } from '../../features/REPORTS/RiskPDFPreview.js';
 
 import { createTSModals } from "../../features/MARKET_DATA/HISTORIC_DATA/TS.js";
+import { renderScenarioPanel } from "../../features/MARKET_DATA/SCENARIOS/ScenarioPanel.js";
 
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// 1) Renderer-Registry fÃ¼r Lazy Panels
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ====================================================================================================================================================================================
+// 1) Renderer-Registry fuer Lazy Panels
+// =======================================================================================================================================================================================
 export function getMarketDataPanelRenderers() {
   return {
-    // Zinsstruktur / Curves
-    "panel-rates": () => renderIRPanel(),
 
-    // Forward-Curves
+    // ======================================================
+    // INTEREST RATES (Curve Viewer)
+    // ======================================================
+    "panel-rates": () => {
+      renderIRPanel();
+    },
+
+    // ======================================================
+    // MARKET SCENARIOS (Curve → Scenario Mapping)
+    // ======================================================
+    "panel-scenarios": () => {
+      renderScenarioPanel();
+    },
+
+    // ======================================================
+    // FORWARD CURVES
+    // ======================================================
     "panel-forward": () => {
       initForwardPanelGlobalOnce();
       handleFWDData();
       handleSwapForwardCurve();
     },
 
-    // Swaption-Panel: ATM-3D-Surface + Smile
+    // ======================================================
+    // SWAPTION VOLS (ATM Surface + Smile)
+    // ======================================================
     "panel-swaption": () => {
       renderSwaptionAndPreview();
     },
 
-        
+    // ======================================================
+    // HISTORIC DATA
+    // ======================================================
     "panel-ts": () => {
       const data = window.appState?.getTblTSData?.();
+
       if (data && data.length) {
-        // Daten sind schon da â†’ Modals bauen
         createTSModals(data);
       } else {
         console.log("[TS] waiting for tblTSData - render will happen on data receive");
       }
     },
 
-
-
+    // ======================================================
+    // FUTURE EXTENSIONS
+    // ======================================================
     // "panel-creditspreads": () => renderCreditSpreadsPanel(),
-    // "panel-ts": () => renderHistoricTsPanel(),
     // "panel-ml": () => renderMLPanel(),
   };
 }
@@ -135,9 +154,9 @@ function renderSwaptionAndPreview() {
 
 
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 // 3) Externer Refresh-Hook fÃ¼r alle Market-Data-Panels
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 export function refreshOpenMarketDataPanels() {
   refreshCore("marketdata");
 }

@@ -19,6 +19,12 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'EUSWData':
       return handlers.handleEUSWData?.(rows);
 
+    case 'RATESData':
+      return handlers.handleRATESData?.(rows);
+
+    case 'RATES_ACTIVEData':
+      return handlers.handleRatesActiveData?.(rows);  
+
     case 'FWDData':
       return handlers.handleForwardData?.(rows);
 

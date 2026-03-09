@@ -280,9 +280,9 @@ window.api.receive('erase-data-success', ({ cleanTableName }) => {
   requestTableRefreshAfterMutation(cleanTableName);
 });
 
-window.api.receive('update-data-success', () => {
-  console.log('[update-data-success]');
-  requestTableRefreshAfterMutation('DealsMain'); // safe default: deals often displayed
+window.api.receive('update-data-success', ({ cleanTableName }) => {
+  console.log('[update-data-success]', cleanTableName);
+  requestTableRefreshAfterMutation(cleanTableName);
 });
 
 // Optional: If you have error channels for erase/update, bind them too
@@ -300,14 +300,19 @@ window.api.receive('update-data-error', (e) => {
 // =====================================================
 
 function requestTableRefreshAfterMutation(selectedTableName) {
-  // Keep it simple + robust:
-  // - Always refresh DealsMain because it affects deals/offers/portfolios list in your UI.
-  // - Refresh the table itself if it exists.
-  try { window.api.send('fetch-table-data', 'DealsMain'); } catch {}
-
   const clean = getCleanTableName(selectedTableName);
-  if (clean && clean !== 'DealsMain') {
-    try { window.api.send('fetch-table-data', clean); } catch {}
+
+  if (!clean) return;
+
+  if (clean === 'RATES_SNAPSHOTS') {
+    try { window.api.send('fetch-table-data', 'RATES'); } catch {}
+    return;
+  }
+
+  try { window.api.send('fetch-table-data', clean); } catch {}
+
+  if (clean !== 'DealsMain') {
+    try { window.api.send('fetch-table-data', 'DealsMain'); } catch {}
   }
 }
 
@@ -421,6 +426,19 @@ function getUniqueIdentifier(newData, selectedTableName) {
       case 'ProdCouponSchedules':
         uniqueIdentifierColumn = 'ID'; break;
       case 'EUSW': uniqueIdentifierColumn = 'YEAR'; break;
+case 'RATES_SNAPSHOTS':
+  return {
+    composite: true,
+    columns: {
+      asof_date: newData.asof_date,
+      run_id: newData.run_id,
+      scenario_id: newData.scenario_id,
+      ccy: newData.ccy,
+      curve_id: newData.curve_id,
+      instrument: newData.instrument,
+      tenor: newData.tenor
+    }
+  };
       case 'MVaRInput':
       case 'Customer':
       case 'CreditVaRInputThreshold':
