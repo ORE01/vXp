@@ -1,5 +1,10 @@
 /* updates.css – nur Layout */
-#DATA_Modal .table-content{ display:block; }
+#DATA_Modal .table-content{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+}
+
 
 #panel-upd-excel .cp-card,
 #panel-upd-historic .cp-card,

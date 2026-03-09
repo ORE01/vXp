@@ -220,7 +220,7 @@ mvarUNI = allMvarData.find(d => d?.port_name === port_name) || null;
   // -----------------------------------------------
 
   // -----------------------------------------------
-// 3c) CVaR-Daten aus appState holen (port_name = port_name) â€“ nur LOG
+// 3c) CVaR-Daten aus appState holen (port_name = port_name) - nur LOG
 // -----------------------------------------------
 const allCvarData =
   (appState?.getAllCvarData?.() ??

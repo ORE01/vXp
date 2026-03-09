@@ -30,7 +30,7 @@ export function handleLiquidityData(filteredData, { appState } = {}) {
   const chartCanvas        = $('#liquChart');
 
   if (!liquRoot || !liquDataContainer || !chartCanvas) {
-    console.warn('[Liquidity] Panel-DOM nicht bereit â€“ Rendering Ã¼bersprungen.');
+    console.warn('[Liquidity] Panel-DOM nicht bereit - Rendering Ã¼bersprungen.');
     return;
   }
 
@@ -178,7 +178,7 @@ function aggregateByIssuer(data) {
     .sort((a, b) => b.TOTAL_NOTIONAL - a.TOTAL_NOTIONAL);
 }
 
-// HTML â€“ Emittenten
+// HTML - Emittenten
 function generateIssuerTable(data) {
   const rows = Array.isArray(data) ? data : [];
   let html = `<table class="pivot-table">
@@ -198,7 +198,7 @@ function generateIssuerTable(data) {
   return html;
 }
 
-// HTML â€“ Pivot FÃ¤lligkeiten/Kategorien
+// HTML - Pivot FÃ¤lligkeiten/Kategorien
 function generatePivotTable(data) {
   const arr = Array.isArray(data) ? data : [];
   const years      = [...new Set(arr.map(d => d.MATURITY_YEAR))].sort();

@@ -775,13 +775,13 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
 export function createCSLineChart(data, chartConfig) {
   const canvas = document.getElementById('CS_ChartCanvas');
   if (!canvas) {
-    console.warn('[Chart] CS_ChartCanvas not found â€“ skip createCSLineChart');
+    console.warn('[Chart] CS_ChartCanvas not found - skip createCSLineChart');
     return;
   }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    console.warn('[Chart] No 2D context for CS_ChartCanvas â€“ skip');
+    console.warn('[Chart] No 2D context for CS_ChartCanvas - skip');
     return;
   }
 
@@ -939,13 +939,13 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
 export function createRatesLineChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);
   if (!canvas) {
-    console.warn(`[Chart] canvas missing: #${chartName} â€“ skip createRatesLineChart`);
+    console.warn(`[Chart] canvas missing: #${chartName} - skip createRatesLineChart`);
     return null;
   }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    console.warn(`[Chart] no 2D context: #${chartName} â€“ skip createRatesLineChart`);
+    console.warn(`[Chart] no 2D context: #${chartName} - skip createRatesLineChart`);
     return null;
   }
 
@@ -972,7 +972,7 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
             ? eusw.borderColor
             : getColorFromPalette(paletteIndex++, 1),
 
-          // Optional â€“ nur falls du irgendwo fill/points nutzt
+          // Optional - nur falls du irgendwo fill/points nutzt
           backgroundColor: isOriginalCurve
             ? eusw.backgroundColor
             : undefined,

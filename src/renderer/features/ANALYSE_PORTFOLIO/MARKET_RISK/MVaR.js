@@ -32,7 +32,7 @@ export function handleMvarInputData(receivedData) {
   // reset
   while (container.firstChild) container.removeChild(container.firstChild);
 
-  // Nur gewÃ¼nschte Spalten fÃ¼r die TABELLE aufbereiten â€“ in definierter Reihenfolge
+  // Nur gewÃ¼nschte Spalten fÃ¼r die TABELLE aufbereiten - in definierter Reihenfolge
   const tableData = Array.isArray(receivedData)
     ? receivedData.map(row => {
         const newRow = {};
@@ -253,17 +253,17 @@ export function handleMVaRData(receivedData, index) {
     { label: 'VaR_IR_abs', value: typeof data.VaR_IR_abs === 'string' ? data.VaR_IR_abs : formatNumber()(data.VaR_IR_abs) },
     { label: 'VaR_CS_abs', value: typeof data.VaR_CS_abs === 'string' ? data.VaR_CS_abs : formatNumber()(data.VaR_CS_abs) },
   
-    // ðŸ”µ Absolute Werte â€“ ES
+    //   Absolute Werte - ES
     { label: 'ES_T_abs', value: typeof data.ES_T_abs === 'string' ? data.ES_T_abs : formatNumber()(data.ES_T_abs) },
     { label: 'ES_IR_abs', value: typeof data.ES_IR_abs === 'string' ? data.ES_IR_abs : formatNumber()(data.ES_IR_abs) },
     { label: 'ES_CS_abs', value: typeof data.ES_CS_abs === 'string' ? data.ES_CS_abs : formatNumber()(data.ES_CS_abs) },
   
-    // ðŸŸ¢ Relative Werte â€“ VaR
+    //   Relative Werte - VaR
     { label: 'VaR_T_rel', value: typeof data.VaR_T_rel === 'string' ? data.VaR_T_rel : formatNumberWithCommas(data.VaR_T_rel) },
     { label: 'VaR_IR_rel', value: typeof data.VaR_IR_rel === 'string' ? data.VaR_IR_rel : formatNumberWithCommas(data.VaR_IR_rel) },
     { label: 'VaR_CS_rel', value: typeof data.VaR_CS_rel === 'string' ? data.VaR_CS_rel : formatNumberWithCommas(data.VaR_CS_rel) },
   
-    // ðŸŸ¢ Relative Werte â€“ ES
+    //   Relative Werte - ES
     { label: 'ES_T_rel', value: typeof data.ES_T_rel === 'string' ? data.ES_T_rel : formatNumberWithCommas(data.ES_T_rel) },
     { label: 'ES_IR_rel', value: typeof data.ES_IR_rel === 'string' ? data.ES_IR_rel : formatNumberWithCommas(data.ES_IR_rel) },
     { label: 'ES_CS_rel', value: typeof data.ES_CS_rel === 'string' ? data.ES_CS_rel : formatNumberWithCommas(data.ES_CS_rel) }

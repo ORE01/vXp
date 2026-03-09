@@ -80,7 +80,7 @@ case 'FINLIB': {
 
 
 case 'MODEL': {
-  // FINLIB aus rowData lesen â€“ Default ist ql
+  // FINLIB aus rowData lesen - Default ist ql
   const finLib = rowData.FINLIB === 'vxp' ? 'vxp' : 'ql';
 
   const modelOptions = finLib === 'vxp'
@@ -369,7 +369,7 @@ const FLOATER_COUPON_FIELDS = [
 function applyCouponTypeVisibility(couponType) {
   console.log('ðŸ’¡ applyCouponTypeVisibility called with:', couponType);
 
-  // GLOBAL suchen â€“ egal in welchem Modal der Editor steckt
+  // GLOBAL suchen - egal in welchem Modal der Editor steckt
   const fixRows = document.querySelectorAll('[data-coupon-section="FIX"]');
   const floaterRows = document.querySelectorAll('[data-coupon-section="FLOATER"]');
 

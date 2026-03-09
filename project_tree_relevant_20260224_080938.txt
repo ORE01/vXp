@@ -1,5 +1,5 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-02-04 12:18:25
+Generated: 2026-02-24 08:09:38
 Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 6
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
@@ -12,12 +12,14 @@ electron_app
 │   ├── ANALYSE_PORTFOLIO
 │   │   ├── analyse.css
 │   │   ├── breakdown.css
+│   │   ├── breakdownCharts.css
 │   │   ├── creditRisk.css
 │   │   ├── inputMarketRisk.css
 │   │   ├── liquidity.css
 │   │   ├── marketData.css
 │   │   ├── marketRisk.css
 │   │   ├── performance.css
+│   │   ├── performanceCharts.css
 │   │   └── riskMetricsHistory.css
 │   ├── base
 │   │   ├── CouponModal.css
@@ -29,9 +31,12 @@ electron_app
 │   │   └── compare.css
 │   ├── components
 │   │   ├── Button.css
+│   │   ├── Chart copy.css
 │   │   ├── Chart.css
 │   │   ├── Dropdown.css
 │   │   ├── messageBox.css
+│   │   ├── SectionTriggers.css
+│   │   ├── Surfaces.css
 │   │   ├── ToolTip.css
 │   │   ├── trafficLight.css
 │   │   └── Warnings.css
@@ -41,12 +46,14 @@ electron_app
 │   │   └── DataProvider.css
 │   ├── MARKET_DATA
 │   │   ├── forcasting.css
+│   │   ├── forwards.css
 │   │   ├── historicData.css
-│   │   └── MarketDataSlideIn.css
+│   │   ├── MarketDataSlideIn.css
+│   │   └── rates.css
 │   ├── master
 │   ├── NEW_PRODUCT
 │   │   ├── issuer.css
-│   │   ├── newProducts.css
+│   │   ├── newPortfolio.css
 │   │   ├── offers.css
 │   │   └── products.css
 │   ├── REPORTS
@@ -169,6 +176,8 @@ electron_app
 │   │   │   │   ├── productsStore.js
 │   │   │   │   └── uiStateStore.js
 │   │   │   └── ui
+│   │   │       ├── enhancers
+│   │   │       │   └── includeToggleEnhancer.js
 │   │   │       ├── modals
 │   │   │       │   └── confirm.js
 │   │   │       ├── MODAL_HELPER
@@ -205,7 +214,6 @@ electron_app
 │   │   │   │   └── COMP.js
 │   │   │   ├── CREATE_PORTFOLIO
 │   │   │   │   ├── DEALS.js
-│   │   │   │   ├── dealsUI copy.js
 │   │   │   │   └── dealsUI.js
 │   │   │   ├── CUSTOMER
 │   │   │   │   └── customerHandlers.js
@@ -249,7 +257,6 @@ electron_app
 │   │   │   ├── OFFERS
 │   │   │   │   ├── csScenarioUI.js
 │   │   │   │   ├── dealsEnhancerBridge.js
-│   │   │   │   ├── includeToggleEnhancer.js
 │   │   │   │   └── offersUI.js
 │   │   │   ├── REPORTS
 │   │   │   │   ├── CustomerReports.js

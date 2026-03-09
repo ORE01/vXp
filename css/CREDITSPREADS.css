@@ -1,29 +1,48 @@
-.content-wrapper {
-    display: flex;
-    flex-direction: column; 
-    align-items: center;
-    gap: 20px; 
-  }
-  
-.cs-chart {
-    max-width: 800px; 
-    width: 100%;
-    height: 400px; 
-    display: flex;
-    justify-content: center; /* Zentriert horizontal */
-    align-items: flex-start; /* Verschiebt es nach oben */
-    position: relative;
-    margin-top: 20px; /* Falls nötig, Abstand nach oben anpassen */
+/* ============================================================
+   MARKET DATA ▸ CREDIT SPREADS (scoped)
+   Ziel: Chart NICHT riesig, angenehme Größe behalten
+   Struktur: #panel-creditspreads .cs-layout-wrapper > .cs-chart + aside.parameters-container
+   ============================================================ */
+
+/* Layout Wrapper: Chart + Parameter nebeneinander, sauber umbruchsicher */
+#MARKETDATA_Modal #panel-creditspreads .cs-layout-wrapper{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: center;   /* wirkt “ruhiger” */
 }
 
-  
-  #CS_ChartCanvas {
-    width: 100% !important;
-    height: 100% !important;
-  }
-  
-  
-  .parameters-container {
-    width: 100%;
-    text-align: center;
-  }
+/* Chart-Container: harte Größe erzwingen (gegen .chart-container Regeln) */
+#MARKETDATA_Modal #panel-creditspreads .cs-chart.chart-container{
+  width: min(800px, 100%) !important;  /* wie vorher max-width 800 */
+  max-width: 800px !important;
+  height: 400px !important;            /* wie vorher */
+  margin-top: 20px !important;         /* wie vorher */
+
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  position: relative !important;
+}
+
+/* Canvas: immer exakt Container füllen */
+#MARKETDATA_Modal #panel-creditspreads #CS_ChartCanvas{
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Parameter-Spalte: NICHT 100% Vollbreite, sonst wirkt alles riesig */
+#MARKETDATA_Modal #panel-creditspreads .parameters-container{
+  width: min(520px, 100%);
+  max-width: 520px;
+  text-align: center;
+}
+
+/* Optional: wenn die Tabelle im Parameterblock zu breit wird */
+#MARKETDATA_Modal #panel-creditspreads #CSParameterDataContainer{
+  max-width: 520px;
+  margin: 0 auto;
+  overflow: auto;
+}
+

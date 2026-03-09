@@ -373,7 +373,7 @@ function toIsoDateString(d) {
     { sma1: movingAverages?.period1, sma2: movingAverages?.period2, sma3: movingAverages?.period3 }
   );
 
-// ðŸ”„ Risk-Preview updaten â€“ HISTORIC DATA ist jetzt â€žwirklichâ€œ da
+// ðŸ”„ Risk-Preview updaten - HISTORIC DATA ist jetzt â€žwirklichâ€œ da
   try {
     // 1) Globaler Thumbnail-Refresh
     document.dispatchEvent(new Event('risk:refresh-thumbnails'));
@@ -382,7 +382,7 @@ function toIsoDateString(d) {
   }
 
   try {
-    // 2) Section-spezifisch â€“ exakt denselben Key verwenden,
+    // 2) Section-spezifisch - exakt denselben Key verwenden,
     //    den du in RiskPDFPreview fÃ¼r HISTORIC DATA verwendest!
     notifyRiskPreview('historicData'); // oder z.B. 'historicTS' / 'PORTFOLIO_HISTORY_TS'
   } catch (e) {
@@ -820,7 +820,7 @@ function ensureTsToolsHeader() {
   if (anyHeader) return; // nichts einfÃ¼gen, alles vorhanden
 }
 
-// State anwenden (klappen ein/aus) â€“ optionaler root fÃ¼r pro-Instanz Toggle
+// State anwenden (klappen ein/aus) - optionaler root fÃ¼r pro-Instanz Toggle
 function applyTsToolsState(collapsed, rootEl) {
   if (rootEl) {
     rootEl.classList.toggle('tools-collapsed', !!collapsed);

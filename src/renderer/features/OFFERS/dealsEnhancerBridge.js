@@ -1,6 +1,6 @@
 // FRONT_END/OFFERS/dealsEnhancerBridge.js
 
-import { enhanceDealsIncludeCheckboxes } from './includeToggleEnhancer.js';
+import { enhanceDealsIncludeCheckboxes } from '../../core/ui/enhancers/includeToggleEnhancer.js';
 
 /**
  * Deals Enhancer Bridge

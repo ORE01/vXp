@@ -4,7 +4,7 @@
 
 // Zentrale Format-Konfiguration: EINMAL pflegen    'FORWARDS', 'RATES', 'EUSWAP', 'EUSWAP_SZ1'
 const FIELD_FORMAT_CONFIG = {
-  COUPON:     { decimals: 3, isPercentage: true, multiplyBy100: true },
+  COUPON:     { decimals: 4, isPercentage: true, multiplyBy100: true },
   GEARING:    { decimals: 3, isPercentage: true, multiplyBy100: true },
   FLOOR:      { decimals: 3, isPercentage: true, multiplyBy100: true },
   CAP:        { decimals: 3, isPercentage: true, multiplyBy100: true },
@@ -59,33 +59,6 @@ export const PERCENT_DECIMAL_FIELDS = Object.entries(FIELD_FORMAT_CONFIG)
   .map(([field]) => field);
 
 
-// diese könnte die wichtigste funktion für die ANZEIGE sein (aber nur ANZEIGE)
-// export function getFormatRules() {
-//   return {
-//     'PD': formatNumber(3, true, true), 
-//     'PD_M': formatNumber(3, true, true), 
-//     'PD_M_norm': formatNumber(3, true, true), 
-//     'ytm': formatNumber(3, true, true), 
-//     'ytm_BUY': formatNumber(3, true, true), 
-//     'ytmPort': formatNumber(3, true, true), 
-//     'QUANTIL': formatNumber(2, true), 
-//     'NOTIONAL': formatNumber(0), 
-//     'EAD': formatNumber(0), 
-//     'LGD': formatNumber(0),
-//     'LOSS': formatNumber(0),
-//     'NAV': formatNumber(0),
-//     'PV01': formatNumber(0),
-//     'CPV01': formatNumber(0),
-//     'PV01rel': formatNumber(2),
-//     'CPV01rel': formatNumber(2),
-//     'CPV01_EUR': formatNumber(2),
-//     'absolute': formatNumber(0),
-//     'C_SPREAD': formatNumber(0),
-//     'C_SPREAD_BASE': formatNumber(0),
-//     'C_SPREAD_DELTA': formatNumber(0),
-//     'MATURITY_YEAR': v => (v == null || v === '') ? '' : (typeof v === 'number' ? String(Math.trunc(v)) : ((String(v).trim().match(/^(-?\d+)(?:[.,]\d+)?$/) || [,''])[1] || String(v))),
-//   };
-// }
 export function getFormatRules() {
   const rules = {};
 
@@ -182,7 +155,7 @@ export function formatDisplayValue(fieldName, value) {
 
     // hier kannst du frei entscheiden, wie viele Nachkommastellen du im Input sehen willst
     // das ist unabhängig von getFormatRules (Tabelle)
-    return (num * 100).toFixed(2) + '%';
+    return (num * 100).toFixed(3) + '%';
   }
 
   // Alle anderen Felder unverändert

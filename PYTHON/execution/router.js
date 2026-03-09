@@ -49,7 +49,15 @@ export function createPythonExecutionRouter(ctx) {
       ...extraParam,
     };
 
-    window.api?.send?.('start-py-fairValue', payload);
+    const mainScript = 'fvo';
+
+    console.log('[renderer] start-py-fairValue payload =', { 
+  ...payload, 
+  scriptIdentifier: 'fvo' 
+});
+
+    window.api?.send?.('start-py-fairValue', { ...payload, mainScript: 'fvo' });
+    // window.api?.send?.('start-py-fairValue', payload);
   }
 
   function handleMVaRProject(buttonElement, extraParam) {
@@ -146,6 +154,7 @@ export function createPythonExecutionRouter(ctx) {
   }
 
   function handleProjectResponse(buttonElement, projectName, response) {
+    console.log('handleProjectResponse: wird ausgeführt')
     const projectLabels = {
       'py-fairValue':    'Fair Value',
       'py-MVaR':         'P/L Dist',

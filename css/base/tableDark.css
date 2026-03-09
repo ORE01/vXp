@@ -86,12 +86,7 @@ body::-webkit-scrollbar-track {
 
 
 
-.section-header {
-  width: 350px; /* ISSUER, PRODUCTS... */
-}
-.section-header.Provider {
-  width: 200px; 
-}
+
 
 .loading-indicator {
   width: 12px;
@@ -438,15 +433,7 @@ width: 80%;
   text-decoration: underline; /* Add underline on hover */
 }
 
-.chart-section {
-  display: flex; /* Use flexbox for alignment */
-  flex-direction: column; /* Arrange items in a column */
-  align-items: center; /* Center items horizontally */
-  justify-content: center; /* Center items vertically */
-  gap: 20px; /* Add spacing between charts */
-  padding: 20px; /* Optional: add padding for aesthetics */
-  text-align: center; /* Center text like titles */
-}
+
 
 #test-data-chart-wrapper,
 #future-prediction-chart-wrapper {

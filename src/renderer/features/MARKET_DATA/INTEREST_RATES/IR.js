@@ -35,7 +35,7 @@ export function renderIRPanel() {
   const { IRData, curve } = getIRDataForSelectedCurve();
 
   if (!IRData || IRData.length === 0) {
-    console.log("â³ IRPanel waiting for data â€“ skipping render");
+    console.log("â³ IRPanel waiting for data - skipping render");
     return;    // NICHTS Ã¼berschreiben!
   }
 
@@ -90,7 +90,7 @@ export function renderIRLineChart(optionalIRData) {
   }
 
   if (!IRData || IRData.length === 0) {
-    console.log("â³ renderIRLineChart waiting for data â€“ skipping");
+    console.log("â³ renderIRLineChart waiting for data - skipping");
     return;
   }
 

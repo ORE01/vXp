@@ -1,3 +1,4 @@
+
 /* ============================================================
    slideIn.base.css  (MASTER für alle SlideIns)
    Wirkt nur in .table Modals
@@ -32,7 +33,7 @@
   display: block;
   width: 100%;
   margin: 8px 0;
-  text-align: left !important; /* killt center-align Altlasten */
+  text-align: left; /* kein !important nötig */
 }
 
 /* Unterpunkte – initial versteckt */
@@ -41,7 +42,7 @@
   width: 100%;
   margin: 2px 0;
   margin-left: var(--sub-indent);
-  text-align: left !important;
+  text-align: left;
 }
 
 /* Subpunkte sichtbar, wenn Hauptpunkt geöffnet */
@@ -53,7 +54,7 @@
 }
 
 /* ------------------------------------------------------------
-   TRIGGER BUTTONS (scoped)
+   TRIGGER BUTTONS (scoped) — LOOK WIE ALT, aber 2-ZEILEN SAFE
    ------------------------------------------------------------ */
 .table .section-trigger {
   display: inline-flex;
@@ -61,8 +62,10 @@
   align-items: center;
   gap: 6px;
 
-  height: 28px;
-  padding: 0 8px;
+  /* alt war height: 28px; -> macht 2 Zeilen kaputt */
+  min-height: 28px;
+  padding: 2px 8px;
+
   max-width: var(--trigger-max-width);
 
   background: #555;
@@ -71,13 +74,18 @@
   color: #cfcfcf;
 
   cursor: pointer;
+  margin: 0;
 
-  /* killt “mittig” durch margin:auto */
-  margin: 0 !important;
-
-  /* Schrift wieder kleiner */
+  /* Schrift wie alt */
   font-size: 12px;
   line-height: 1;
+
+  /* NEU: Text darf umbrechen */
+  white-space: normal;
+  word-break: break-word;
+
+  /* Button-Defaults killen (wichtig bei <button>) */
+  font-family: inherit;
 }
 
 .table .section-trigger:hover {
@@ -87,8 +95,10 @@
 
 /* Unterpunkt-Trigger */
 .table .section-trigger--sub {
-  height: 24px;
-  font-size: 11px; /* kleiner als Haupttrigger */
+  /* alt war height: 24px; -> macht 2 Zeilen kaputt */
+  min-height: 24px;
+
+  font-size: 11px;
   padding-left: 22px;
   background: #444;
 
@@ -161,20 +171,18 @@
   align-items: center;
   gap: 12px;
 
-  /* kompakter */
   padding: 8px 12px;
-
   border-bottom: 1px solid rgba(255,255,255,.12);
 }
 
 .table .sub-panel-title {
-  font-size: 14px;   /* kleiner */
+  font-size: 14px;
   font-weight: 600;
   color: #f0f0f0;
 }
 
 .table .sub-panel-close {
-  font-size: 20px;   /* kleiner */
+  font-size: 20px;
   line-height: 1;
   background: transparent;
   border: 0;
@@ -185,11 +193,7 @@
 .table .sub-panel-body {
   flex: 1;
   overflow: auto;
-
-  /* kompakter */
   padding: 12px;
-
-  /* Schrift kleiner */
   font-size: 12px;
 }
 
@@ -198,36 +202,34 @@
    ------------------------------------------------------------ */
 .table .sub-panel-body .toolbar {
   display: flex;
-  justify-content: flex-start !important;
-  align-items: flex-start !important;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 10px;
   flex-wrap: nowrap;
 }
 
 .table .sub-panel-body .toolbar .section-trigger {
-  align-self: flex-start !important;
+  align-self: flex-start;
 }
 
 /* ------------------------------------------------------------
    TRIGGER CHEVRON – zentral, state-safe
    ------------------------------------------------------------ */
-
-/* Grundzustand: Pfeil zeigt nach rechts */
 .table .section-trigger .chev{
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;              /* verhindert Springen */
+  width: 14px;
   min-width: 14px;
   height: 14px;
   margin-left: 8px;
 }
 
 .table .section-trigger .chev::before{
-  content: "›";              /* schlanker Pfeil */
+  content: "›";
   display: inline-block;
 
-  font-size: 14px;           /* Symbolgröße */
+  font-size: 14px;
   line-height: 1;
   font-weight: 400;
   opacity: 0.75;
@@ -236,38 +238,40 @@
   transition: transform .18s ease, opacity .18s ease;
 }
 
-/* OPEN-Zustand: Pfeil nach unten (Rotation) */
 .table .chart-section.is-open .section-trigger .chev::before{
   transform: rotate(90deg);
   opacity: 0.95;
 }
 
-
-
-
-/* ============================================================
-   FINAL TRIGGER FONT OVERRIDE – ALLES KLEIN
-   ============================================================ */
-
-/* ALLE Trigger – Sidebar, Sub, Toolbar, Panels */
-.table .section-trigger,
-.table .section-trigger *,
-.table .section-trigger--sub,
-.table .section-trigger--sub *,
-.table .toolbar .section-trigger,
-.table .toolbar .section-trigger * {
-  font-size: 14px !important;
-  line-height: 1 !important;
+.table .section-trigger{
+  /* ...dein Rest... */
+  font-size: 12px;
+  line-height: 1;
+  background: #555;            /* statt rot */
 }
 
-/* Optional: noch kompakter */
-.table .section-trigger {
-  height: 26px !important;
+.table .section-trigger .section-header{
+  font-size: inherit !important;
+  line-height: inherit !important;
 }
 
-.table .section-trigger--sub {
-  height: 22px !important;
+
+.table .sub-panel-close {
+  display: none !important;
 }
+
+
+
+.portfolio-info .panel-title{
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+
+
+
+
 
 
 

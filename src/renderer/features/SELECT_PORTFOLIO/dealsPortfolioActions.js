@@ -124,26 +124,6 @@ export function createDealsPortfolioActions({
      ACTIONS
      ============================================================ */
 
-  function handleSaveNewPortfolio() {
-    const inputEl = document.getElementById('PortfolioNameInput');
-    const port_name = String(inputEl?.value ?? '').trim();
-    if (!port_name) {
-      alert('Please enter a portfolio name.');
-      inputEl?.focus?.();
-      return;
-    }
-
-    try {
-      api.send('save-portfolio-name', { port_name });
-    } catch (e) {
-      console.warn('save-portfolio-name IPC failed:', e);
-    }
-
-    appState.setSelectedDealsTableName?.(port_name);
-    appState.setSelectedPortTableName?.(port_name);
-
-    showMessageBox?.(`Portfolio "${port_name}" successfully saved!`, () => {});
-  }
 
   /**
    * NEW Deals UI save:
@@ -201,6 +181,9 @@ export function createDealsPortfolioActions({
     // Main handler expects exactly { port_name, selectedTradeIDs }
     api.send('save-deals-selection', { port_name, selectedTradeIDs });
 
+    appState.__lastCreatedPortfolioName = port_name;
+
+
     showMessageBox?.(`Portfolio "${port_name}" successfully created!`, () => {});
   }
 
@@ -232,44 +215,47 @@ export function createDealsPortfolioActions({
   }
 
 
-  function handleAddDealsToNewPortfolio(event) {
-    // Keep as a modal helper: uses current deals context as source
-    const inputEl = document.getElementById('PortfolioNameInput');
-    const port_name = String(inputEl?.value ?? '').trim();
+function handleAddDealsToNewPortfolio(event) {
+  const inputEl = document.getElementById('PortfolioNameInput');
+  const port_name = String(inputEl?.value ?? '').trim();
 
-    if (!port_name) {
-      alert('Please enter a portfolio name first.');
-      inputEl?.focus?.();
-      return;
-    }
-
-    let dealsData =
-      appState.__filteredDealsUI ||
-      appState.getDealsData?.() ||
-      [];
-
-    if (!Array.isArray(dealsData) || dealsData.length === 0) {
-      alert('No deals available.');
-      return;
-    }
-
-    handleModalAction?.(event, dealsData, null, 'DealsMain', 'add');
-
-    // Optional: prefill PORT_NAME in modal
-    setTimeout(() => {
-      const form = document.getElementById('editForm') || document.querySelector('#modal form');
-      if (!form) return;
-
-      const portField =
-        form.querySelector('[data-field="PORT_NAME"]') ||
-        form.querySelector('[data-field="port_name"]');
-
-      if (portField) {
-        portField.value = port_name;
-        portField.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }, 0);
+  if (!port_name) {
+    alert('Please enter a portfolio name first.');
+    inputEl?.focus?.();
+    return;
   }
+
+  // ✅ IMPORTANT: remember which portfolio we are creating right now
+  appState.__lastCreatedPortfolioName = port_name;
+
+  let dealsData =
+    appState.__filteredDealsUI ||
+    appState.getDealsData?.() ||
+    [];
+
+  if (!Array.isArray(dealsData) || dealsData.length === 0) {
+    alert('No deals available.');
+    return;
+  }
+
+  handleModalAction?.(event, dealsData, null, 'DealsMain', 'add');
+
+  // Optional: prefill PORT_NAME in modal
+  setTimeout(() => {
+    const form = document.getElementById('editForm') || document.querySelector('#modal form');
+    if (!form) return;
+
+    const portField =
+      form.querySelector('[data-field="PORT_NAME"]') ||
+      form.querySelector('[data-field="port_name"]');
+
+    if (portField) {
+      portField.value = port_name;
+      portField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, 0);
+}
+
 
 
   function handleDealsMainData(receivedData) {
@@ -293,7 +279,26 @@ export function createDealsPortfolioActions({
         appState.applyFiltersAndUpdateDropdowns?.('dealsTables', { preselect: prev });
       }, 0);
     }
+
+    // ✅ NEW: update New Portfolio preview with ONLY the last created portfolio
+    try {
+      const last = String(appState.__lastCreatedPortfolioName ?? '').trim();
+      if (last) {
+        const onlyThis = deals.filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === last);
+
+        // render ONLY into newPortfolioDealsDataContainer
+        appState.handleDealsData?.(onlyThis, last, {
+          forceTarget: 'newPortfolio',
+          restoreDropdown: false,
+          mirrorToNewPortfolio: false,
+          allowClear: true,
+        });
+      }
+    } catch (e) {
+      console.warn('[handleDealsMainData] newPortfolio preview update failed:', e);
+    }
   }
+
 
 
   function handlePortfolioData(receivedData) {
@@ -306,7 +311,6 @@ export function createDealsPortfolioActions({
     handleDealsNameList,
     handleOffersNameList,
     handlePortNameList,
-    handleSaveNewPortfolio,
     handleSaveSelection,
     handleDeleteSelection,
     handleAddDealsToNewPortfolio,

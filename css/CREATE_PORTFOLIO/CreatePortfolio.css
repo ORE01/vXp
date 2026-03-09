@@ -1,34 +1,44 @@
+/* ============================================================
+   CREATE_PORTFOLIO.css
+   ============================================================ */
+
 /* Root-Layout wie bei den anderen Modals */
 #CREATE_PORTFOLIO_Modal .table-content{
-  display:flex; flex-direction:column; align-items:flex-start;
+  display: block;
 }
+
 
 /* Card-Look für Gruppen */
 #CREATE_PORTFOLIO_Modal .cp-card{
   background: var(--panel-surface, #0f0f10);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:12px; padding:12px; margin-bottom:12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 /* Zwei Dropdowns nebeneinander, wrap bei kleiner Breite */
 #CREATE_PORTFOLIO_Modal .dropdown-wrapper{
-  display:flex; gap:16px; flex-wrap:wrap;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
+
 #CREATE_PORTFOLIO_Modal .dropdown-wrapper > div{
-  min-width:240px; flex:1 1 280px;
+  min-width: 240px;
+  flex: 1 1 280px;
 }
 
 /* Ergebnisliste mit eigenem Scrollbereich */
 #CREATE_PORTFOLIO_Modal .cp-table{
-  max-height: 48vh; overflow:auto;
-  background: var(--panel-surface, #0f0f10);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:12px; padding:10px;
-}
+  max-height: 48vh;
+  overflow: auto;
 
-/* Einheitliche Button-Farbe wie im Rest */
-#CREATE_PORTFOLIO_Modal .section-trigger{ color:#cfcfcf; }
-#CREATE_PORTFOLIO_Modal .section-trigger:hover{ color:#fff; border-color:#999; }
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 10px;
+}
 
 /* =========================
    CREATE_PORTFOLIO ▸ DEALS
@@ -44,13 +54,14 @@
 /* Grid für Label/Fields – clean & responsive */
 #CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid{
   display: grid;
-  grid-template-columns: 220px 1fr;   /* Label | Field */
+  grid-template-columns: 220px 1fr;  /* Label | Field */
   gap: 10px 14px;
   align-items: center;
 }
+
 @media (max-width: 900px){
   #CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid{
-    grid-template-columns: 1fr;       /* Stack */
+    grid-template-columns: 1fr;      /* Stack */
   }
   #CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid > label{
     margin-top: 8px;
@@ -62,6 +73,7 @@
   font-weight: 600;
   color: rgba(255,255,255,.9);
 }
+
 #CREATE_PORTFOLIO_Modal #panel-deals .cp-field > select,
 #CREATE_PORTFOLIO_Modal #panel-deals .cp-field > input{
   width: 100%;
@@ -71,6 +83,7 @@
 #CREATE_PORTFOLIO_Modal #panel-deals .input-field{
   background: #1c1d20;
   color: #f1f1f1;
+  caret-color: #f1f1f1;
   border: 1px solid rgba(255,255,255,.15);
   border-radius: 6px;
   padding: 6px 8px;
@@ -85,19 +98,25 @@
 
 /* Dropdown-Zeile */
 #CREATE_PORTFOLIO_Modal #panel-deals .dropdown-wrapper{
-  display: flex; gap:16px; flex-wrap:wrap;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
+
 #CREATE_PORTFOLIO_Modal #panel-deals .dropdown-wrapper > div{
-  min-width: 240px; flex:1 1 260px;
+  min-width: 240px;
+  flex: 1 1 260px;
 }
 
 /* Ergebnistabelle */
 #CREATE_PORTFOLIO_Modal #panel-deals .cp-table{
   max-height: 48vh;
   overflow: auto;
+
   background: var(--panel-surface, #0f0f10);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:12px; padding:10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 10px;
 }
 
 /* Kleine Headline-Stufe */
@@ -111,6 +130,7 @@
 #CREATE_PORTFOLIO_Modal #panel-deals .delete-button{
   background: #7a1f1f;
 }
+
 #CREATE_PORTFOLIO_Modal #panel-deals .delete-button:hover{
   background: #962626;
 }
