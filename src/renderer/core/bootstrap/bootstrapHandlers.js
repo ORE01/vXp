@@ -1,4 +1,4 @@
-﻿// FRONT_END/bootstrap/bootstrapHandlers.js
+﻿// core/bootstrap/bootstrapHandlers.js
 
 import { createIssuerProductHandlers } from '../../features/DATA_PROVIDER/issuerProductHandlers.js';
 import { createCustomerHandlers } from '../../features/CUSTOMER/customerHandlers.js';
@@ -64,21 +64,22 @@ export function bootstrapHandlers(appState, deps) {
     handleCvarInputThresholdView,
   });
 
-  return {
-    issuerProdHandlers,
-    customerHandlers,
-    dealsActions,
-    ratesHandlers,
-    forwardsHandlers,
-    analyseHandlers,
+return {
+  issuerProdHandlers,
+  customerHandlers,
+  dealsActions,
+  forwardsHandlers,
+  analyseHandlers,
 
-    // direct handler functions needed elsewhere
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+  // ✅ GANZES OBJEKT zurückgeben
+  ratesHandlers,
 
-    // keep exposing the MVaR input handler (used in IPC)
-    handleMvarInputData,
-  };
+  // swaption
+  handleSwaptionATMData,
+  handleSwaptionSmileData,
+  handleSwaptionCubeSurfaceData,
+
+  handleMvarInputData,
+};
 }
 

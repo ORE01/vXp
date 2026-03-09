@@ -1519,35 +1519,57 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
+    <!--   Market Scenarios   Trigger -->
+    <div class="chart-section">
+      <button
+        class="section-trigger"
+        data-panel="panel-scenarios"
+        aria-controls="panel-scenarios"
+        aria-expanded="false">
+        <span class="section-header">Market Scenarios</span>
+        <span class="chev"></span>
+      </button>
+    </div>
+
     <!-- Backdrop nur fuer dieses Modal -->
     <div class="sub-panel-backdrop" hidden></div>
 
     <!-- ====== PANELS ====== -->
 
-    <!-- Panel: RATES (IR Data Modal adapted for Slide-In) -->
-    <div id="panel-rates" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-rates-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-rates-title" class="sub-panel-title">INTEREST RATES</div>
-        <button class="sub-panel-close" data-close="panel-rates" aria-label="close">&times;</button>
-      </div>
+<!-- Panel: RATES (Curve Viewer – no scenario control) -->
+<div id="panel-rates" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-rates-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-rates-title" class="sub-panel-title">INTEREST RATES</div>
+    <button class="sub-panel-close" data-close="panel-rates" aria-label="close">&times;</button>
+  </div>
 
-      <div class="sub-panel-body">
-        <label for="ratesSelector" style="display:block; font-weight:600; margin-bottom:6px;">Select Curve:</label>
-        <select id="ratesSelector" class="ir-select">
-          <option value="EUSWAP">EUSWAP</option>
-          <option value="EUSWAP_SZ1">EUSWAP_SZ1</option>
-        </select>
+  <div class="sub-panel-body">
 
-        <section class="table-card" style="margin-top:12px;">
-          <h4 class="table-title">Rates Table</h4>
-          <div id="IRDataContainer" class="data-container"></div>
-        </section>
+    <!-- Currency Selection -->
+    <label for="currencySelector" style="display:block; font-weight:600; margin-bottom:6px;">
+      Select Currency:
+    </label>
+    <select id="currencySelector" class="ir-select"></select>
 
-        <div class="chart-container" style="margin-top:16px;">
-          <canvas id="IRLineChart"></canvas>
-        </div>
-      </div>
+    <!-- Curve Selection -->
+    <label for="ratesSelector" style="display:block; font-weight:600; margin-top:12px; margin-bottom:6px;">
+      Select Curve:
+    </label>
+    <select id="ratesSelector" class="ir-select"></select>
+
+    <!-- Table -->
+    <section class="table-card" style="margin-top:12px;">
+      <h4 class="table-title">Rates Table</h4>
+      <div id="IRDataContainer" class="data-container"></div>
+    </section>
+
+    <!-- Chart -->
+    <div class="chart-container" style="margin-top:16px;">
+      <canvas id="IRLineChart"></canvas>
     </div>
+
+  </div>
+</div>
 
     <!-- Panel: FORWARD (Slide-In) -->
     <div id="panel-forward" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-forward-title" hidden>
@@ -1791,115 +1813,114 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
     </div>
 
-<!-- Panel: HISTORIC DATA [%] -->
-<div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
-  <div class="sub-panel-header">
-    <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA</div>
-    <button class="sub-panel-close" data-close="panel-ts" aria-label="close">&times;</button>
-  </div>
-
-  <div class="sub-panel-body">
-    <div id="TS_Modal" class="ts-panel-adapter">
-      <div id="modal-content-container"></div>
-    </div>
-
-    <!-- HIER muss der echte Template-Content rein -->
-    <template id="TS_Modal_Template">
-      <div class="table-content">
-        <div class="ts-layout">
-
-          <!-- TOOLS-LEISTE LINKS -->
-          <aside class="ts-tools" id="tsTools">
-            <div class="ts-tools-header">
-              <h4 class="ts-tools-title">Tools</h4>
-              <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Toggle tools">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
-                  <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
-                </svg>
-              </button>
-            </div>
-
-            <div class="filter-wrapper">
-              <label>Select Data:</label>
-
-              <div id="checkboxContainer" class="table-wrapper"></div>
-
-              <div class="table-wrapper">
-                <div class="moving-average-container">
-                  <label class="section-label">Apply Moving Averages:</label>
-
-                  <div class="sma-row">
-                    <label class="sma-toggle" for="applySMA1">
-                      <input type="checkbox" id="applySMA1" />
-                      <span>SMA 1</span>
-                    </label>
-                    <input type="number" id="movingAveragePeriod1" value="20" min="1" />
-                  </div>
-
-                  <div class="sma-row">
-                    <label class="sma-toggle" for="applySMA2">
-                      <input type="checkbox" id="applySMA2" />
-                      <span>SMA 2</span>
-                    </label>
-                    <input type="number" id="movingAveragePeriod2" value="50" min="1" />
-                  </div>
-
-                  <div class="sma-row">
-                    <label class="sma-toggle" for="applySMA3">
-                      <input type="checkbox" id="applySMA3" />
-                      <span>SMA 3</span>
-                    </label>
-                    <input type="number" id="movingAveragePeriod3" value="200" min="1" />
-                  </div>
-                </div>
-              </div>
-
-              <div class="table-wrapper">
-                <div class="normalization-container">
-                  <label for="normalizationTypeSelector">Normalization Type:</label>
-                  <select id="normalizationTypeSelector">
-                    <option value="none">None</option>
-                    <option value="dynamic">Dynamic</option>
-                    <option value="firstValue">First Value</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="load-and-toggle-container">
-                <button id="loadButton" class="edit-button">Load Data</button>
-              </div>
-            </div>
-          </aside>
-
-          <!-- CHART RECHTS -->
-          <section class="ts-chart">
-            <div class="ts-chart-toolbar">
-              <div class="time-range-buttons">
-                <button id="oneYearButton">1Y</button>
-                <button id="fiveYearButton">5Y</button>
-                <button id="tenYearButton">10Y</button>
-                <button id="maxButton">Max</button>
-              </div>
-            </div>
-
-            <div class="TSChart-container">
-              <div class="chart-container">
-                <canvas id="TSlineChart" width="1000" height="400"></canvas>
-              </div>
-            </div>
-
-            <div class="data-wrapper">
-              <div class="data-container" id="TSDataContainer"></div>
-            </div>
-          </section>
-
-        </div>
+    <!-- Panel: HISTORIC DATA [%] -->
+    <div id="panel-ts" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ts-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-ts-title" class="sub-panel-title">HISTORIC DATA</div>
+        <button class="sub-panel-close" data-close="panel-ts" aria-label="close">&times;</button>
       </div>
-    </template>
-  </div>
-</div>
 
+      <div class="sub-panel-body">
+        <div id="TS_Modal" class="ts-panel-adapter">
+          <div id="modal-content-container"></div>
+        </div>
+
+        <!-- HIER muss der echte Template-Content rein -->
+        <template id="TS_Modal_Template">
+          <div class="table-content">
+            <div class="ts-layout">
+
+              <!-- TOOLS-LEISTE LINKS -->
+              <aside class="ts-tools" id="tsTools">
+                <div class="ts-tools-header">
+                  <h4 class="ts-tools-title">Tools</h4>
+                  <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Toggle tools">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
+                      <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="filter-wrapper">
+                  <label>Select Data:</label>
+
+                  <div id="checkboxContainer" class="table-wrapper"></div>
+
+                  <div class="table-wrapper">
+                    <div class="moving-average-container">
+                      <label class="section-label">Apply Moving Averages:</label>
+
+                      <div class="sma-row">
+                        <label class="sma-toggle" for="applySMA1">
+                          <input type="checkbox" id="applySMA1" />
+                          <span>SMA 1</span>
+                        </label>
+                        <input type="number" id="movingAveragePeriod1" value="20" min="1" />
+                      </div>
+
+                      <div class="sma-row">
+                        <label class="sma-toggle" for="applySMA2">
+                          <input type="checkbox" id="applySMA2" />
+                          <span>SMA 2</span>
+                        </label>
+                        <input type="number" id="movingAveragePeriod2" value="50" min="1" />
+                      </div>
+
+                      <div class="sma-row">
+                        <label class="sma-toggle" for="applySMA3">
+                          <input type="checkbox" id="applySMA3" />
+                          <span>SMA 3</span>
+                        </label>
+                        <input type="number" id="movingAveragePeriod3" value="200" min="1" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="table-wrapper">
+                    <div class="normalization-container">
+                      <label for="normalizationTypeSelector">Normalization Type:</label>
+                      <select id="normalizationTypeSelector">
+                        <option value="none">None</option>
+                        <option value="dynamic">Dynamic</option>
+                        <option value="firstValue">First Value</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="load-and-toggle-container">
+                    <button id="loadButton" class="edit-button">Load Data</button>
+                  </div>
+                </div>
+              </aside>
+
+              <!-- CHART RECHTS -->
+              <section class="ts-chart">
+                <div class="ts-chart-toolbar">
+                  <div class="time-range-buttons">
+                    <button id="oneYearButton">1Y</button>
+                    <button id="fiveYearButton">5Y</button>
+                    <button id="tenYearButton">10Y</button>
+                    <button id="maxButton">Max</button>
+                  </div>
+                </div>
+
+                <div class="TSChart-container">
+                  <div class="chart-container">
+                    <canvas id="TSlineChart" width="1000" height="400"></canvas>
+                  </div>
+                </div>
+
+                <div class="data-wrapper">
+                  <div class="data-container" id="TSDataContainer"></div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
 
     <!-- Panel: MACHINE LEARNING (Slide-In) -->
     <div id="panel-ml" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ml-title" hidden>
@@ -1993,6 +2014,29 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 </div>
 
+    </div>
+
+    <!-- Panel: MARKET SCENARIOS -->
+    <div id="panel-scenarios" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-scenarios-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-scenarios-title" class="sub-panel-title">MARKET SCENARIOS</div>
+        <button class="sub-panel-close" data-close="panel-scenarios" aria-label="close">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+
+        <section class="table-card">
+          <h4 class="table-title">Curve Scenario Mapping</h4>
+          <div id="ScenarioMappingContainer" class="data-container"></div>
+        </section>
+
+        <div style="margin-top:16px;">
+          <button id="applyScenarioChanges" class="edit-button">
+            Apply Changes
+          </button>
+        </div>
+
+      </div>
     </div>
 
   </div>

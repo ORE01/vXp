@@ -18,6 +18,8 @@ export function installReceivers(deps = {}) {
     handleCustomerData,
     handleCustomerTSData,
     handleEUSWData,
+    handleRATESData,
+    handleRatesActiveData,
     handleForwardData,
 
     handleIssuerDataInit,
@@ -71,16 +73,45 @@ export function installReceivers(deps = {}) {
   }
   window.__listenersBoundOnce = true;
 
+  // const safeReceive = (channel, fn, { required = false } = {}) => {
+  //   if (typeof fn === 'function') {
+  //     api.receive(channel, fn);
+  //   } else if (required) {
+  //     console.warn(`[IPC] Missing REQUIRED handler for ${channel}`);
+  //   } else {
+  //     // keep noise low
+  //     // console.warn(`[IPC] Missing handler for ${channel}`);
+  //   }
+  // };
+
+
   const safeReceive = (channel, fn, { required = false } = {}) => {
-    if (typeof fn === 'function') {
-      api.receive(channel, fn);
-    } else if (required) {
-      console.warn(`[IPC] Missing REQUIRED handler for ${channel}`);
-    } else {
-      // keep noise low
-      // console.warn(`[IPC] Missing handler for ${channel}`);
+
+  if (typeof fn !== 'function') {
+    if (required) {
+      throw new Error(`[IPC] REQUIRED handler missing: ${channel}`);
     }
-  };
+    return;
+  }
+
+  let receivedOnce = false;
+
+  api.receive(channel, (data) => {
+    receivedOnce = true;
+    fn(data);
+  });
+
+  // ✅ watchdog only for REQUIRED channels
+  if (required) {
+    setTimeout(() => {
+      if (!receivedOnce) {
+        console.warn(
+          `[IPC WATCHDOG] ${channel} not received yet`
+        );
+      }
+    }, 8000);
+  }
+};
 
   // Panels + auto refresh
   initAllPanelsLazyRender?.({ panelRenderState });
@@ -106,6 +137,9 @@ export function installReceivers(deps = {}) {
     handleCustomerData,
     handleCustomerTSData,
     handleEUSWData,
+    handleRATESData,
+    handleRatesActiveData,
+
     handleForwardData,
 
     handleIssuerDataInit,
@@ -155,7 +189,10 @@ export function installReceivers(deps = {}) {
   route('CustomerTSSelectionData');
 
   // MARKET DATA
-  route('EUSWData', { required: true });
+
+  // route('EUSWData', { required: true });
+  route('RATESData', { required: true });
+  route('RATES_ACTIVEData');   // ← DIESE ZEILE FEHLT
   route('FWDData');
 
   // SWAPTION

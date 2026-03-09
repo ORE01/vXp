@@ -101,6 +101,10 @@ module.exports = {
 
     'save-portfolio-name',
 
+      // Rates / Scenarios
+    'rates:set-active-scenario',
+    'rates:get-active-curve',
+
     
 
 

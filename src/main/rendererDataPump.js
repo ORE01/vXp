@@ -29,6 +29,8 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
   const excluded = new Set(['sqlite_sequence', 'Instruments', 'PDMain', 'sortedLossesIndicesMain']);
 
   function safeSend(channel, payload) {
+    console.log('[DATAPUMP SEND]', channel);
+
     try {
       const win = getMainWindow();
       if (!win || win.isDestroyed() || !win.webContents) return;
@@ -36,9 +38,16 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
     } catch {}
   }
 
-  function resolveTableName(tableName) {
-    return (tableName === 'Portfolios') ? 'v_Portfolios_enriched' : tableName;
-  }
+function resolveTableName(tableName) {
+
+  if (tableName === 'Portfolios')
+    return 'v_Portfolios_enriched';
+
+  if (tableName === 'RATES')
+    return 'RATES_SNAPSHOTS';
+
+  return tableName;
+}
 
   function fetchDataAndSendEvent(queryOrTable, eventName, cb) {
     mainFct.queryDB(queryOrTable, (err, rows) => {

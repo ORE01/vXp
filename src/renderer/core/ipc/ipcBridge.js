@@ -1,6 +1,6 @@
-// FRONT_END/IPC/ipcBridge.js
+// src/renderer/core/ipc/ipcBridge.js
 /**
- * IPC Bridge (Public API)
+ * ipc Bridge (Public API)
  *
  * This module intentionally re-exports the receiver installer
  * so the renderer imports only from "ipcBridge".
