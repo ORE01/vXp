@@ -369,7 +369,10 @@ registerIpc({
     startPythonScriptWithEvent: mainFct.startPythonScriptWithEvent,
     dbApi: {
       selectAll: mainFct.selectAll,
-      runSQL: mainFct.runSQL,   // 🔥 DAS FEHLT
+      runSQL: mainFct.runSQL,
+      createTempTable: mainFct.createTempTable,
+      insertRowInTable: mainFct.insertRowInTable,
+      getAllRowsFromTable: mainFct.getAllRowsFromTable
     },
     refreshTable,
   }

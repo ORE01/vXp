@@ -26,9 +26,9 @@ export function createRatesHandlers({ appState } = {}) {
   // =====================================================
   function handleRATESData(data) {
 
-    console.log('🔥 handleRATESData CALLED');
-    console.log('rows:', data?.length);
-    console.log('sample:', data?.[0]);
+    // console.log('🔥 handleRATESData CALLED');
+    // console.log('rows:', data?.length);
+    // console.log('sample:', data?.[0]);
 
     // ⭐ DAS IST DER ENTSCHEIDENDE CALL
     appState.setRATESData?.(data);
@@ -40,8 +40,8 @@ export function createRatesHandlers({ appState } = {}) {
 
   function handleRatesActiveData(data) {
 
-  console.log('🔥 handleRatesActiveData CALLED');
-  console.log('rows:', data?.length);
+  // console.log('🔥 handleRatesActiveData CALLED');
+  // console.log('rows:', data?.length);
 
   appState.setRatesActive?.(data);
 

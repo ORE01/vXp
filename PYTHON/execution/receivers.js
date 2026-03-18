@@ -36,6 +36,7 @@ export function createPythonExecutionReceivers(ctx) {
       appState.setActiveTable?.('deals');
       appState.setActiveElementId?.('portDataContainer0');
       fetch.fetchAndUpdateFairValueData(port_name);
+      fetch.fetchAndUpdateIRSensData(); 
     }
 
     const btn = document.getElementById('fairValueButton2') || document.getElementById('fairValueButton');

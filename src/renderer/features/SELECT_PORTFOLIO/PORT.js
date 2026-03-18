@@ -104,12 +104,12 @@ export function handlePortAggData(receivedData, index, port_name) {
 
   
   requestAnimationFrame(() => {
-    // nur ausgewÃ¤hlte Keys ins Table-Objekt
+    // nur ausgewählte Keys ins Table-Objekt
     const filteredAggData = Object.fromEntries(
       Object.entries(aggData).filter(([key]) => aggKeysToShow.includes(key))
     );
 
-    // NAMENSVERGABE fÃ¼r ANZEIGE:
+    // NAMENSVERGABE für ANZEIGE:
     const tableData = mapPortDataToTableRows(filteredAggData);
 
     // ANZEIGE:  

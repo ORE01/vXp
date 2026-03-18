@@ -1,4 +1,4 @@
-// FRONT_END/bootstrap/bootstrapStores.js
+// src/renderer/core/bootstrap/bootstrapStores.js
 
 import { installUIStateStore } from '../STATE/uiStateStore.js';
 import { installDropdownFilterEngine } from '../STATE/dropdownFilterEngine.js';

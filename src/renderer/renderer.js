@@ -24,10 +24,8 @@ import { handleIssuerData } from './features/NEW_PRODUCTS/ISSUER.js';
 import { handleProdData }   from './features/NEW_PRODUCTS/PROD.js';
 import { handleDealsData }  from './features/CREATE_PORTFOLIO/DEALS.js';
 
+import { marketRiskHandlers } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/marketRiskHandlers.js';
 
-import { handleMVaRData, handleMvarInputData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
-import { handleIRSensData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
-import { handleCSSensData } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
 
 import { handleCVaRData, handleEADData } from './features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
 import { handleFWDData } from './features/MARKET_DATA/FORWARDS/forwards.js';
@@ -107,8 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     handleIssuerData,
     handleProdData,
     handleDealsData,
-    handleIRSensData,
-    handleCSSensData,
+    ...marketRiskHandlers
   });
 
   bootstrapStores(appState);
@@ -141,7 +138,6 @@ const {
   handleSwaptionSmileData,
   handleSwaptionCubeSurfaceData,
 
-  handleMvarInputData,
 } = bootstrapHandlers(appState, {
   api: window.api,
   showMessageBox,
@@ -163,7 +159,6 @@ const {
   const { py } = bootstrapPython(appState, {
     handlePortAggData,
     handlePortProdData,
-    handleMVaRData,
     handleSummaryMarketRiskData,
     handleMvarProductTable,
     handleCVaRData,
@@ -194,14 +189,13 @@ const {
     handleSwaptionSmileData,
     handleSwaptionCubeSurfaceData,
 
-    handleMvarInputData,
-
     ...issuerProdHandlers,
     ...customerHandlers,
     ...ratesHandlers,
     ...forwardsHandlers,
     ...dealsActions,
     ...analyseHandlers,
+    ...marketRiskHandlers,
 
     handleFuturePredictions,
     handleMLTestData,
@@ -219,9 +213,7 @@ const {
     py,
 
     handleFWDData,
-    handleIRSensData,
-    handleCSSensData,
-
+    ...marketRiskHandlers,
     handleHistoricMetricsAddClick,
     handleExcelImport,
 

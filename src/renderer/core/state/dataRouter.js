@@ -5,6 +5,9 @@
  * Goal: keep installReceivers thin and avoid duplicated table-specific logic.
  */
 export function routeTableData({ appState }, channel, data, handlers = {}) {
+
+  //console.log("ROUTER CHANNEL:", channel);
+
   const rows = Array.isArray(data) ? data : [];
 
   switch (channel) {
@@ -63,10 +66,16 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'DealsMainData':
       return handlers.handleDealsMainData?.(data);
 
-    // PORTFOLIOS list + portfolio data
+    // PortfoliosData ist die v_Portfolios_enriched!!!!!
     case 'PortfoliosData':
       handlers.handlePortNameList?.(data);
-      return handlers.handlePortfolioData?.(data);
+      handlers.handlePortfolioData?.(data);
+      handlers.handleIRSensData?.(data);
+      return;
+
+    // PORTFOLIO IR SENS
+    // case 'PortfolioRiskSensitivitiesData':
+    //   return handlers.handleIRSensData?.(rows);
 
     // MVaR
     case 'MVaRInputData':

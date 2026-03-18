@@ -6,7 +6,7 @@ RATES MUST PASS ADAPTER
 ✅ Flow:
 DB → DataPump → IPC → Router → Handler → State → UI
 
-SQLite → rendererDataPump → IPC (preload bridge) → installReceivers → dataRouter → ratesHandlers → AppState → IR.js → Charts/UI
+SQLite → rendererDataPump → IPC (preload bridge) → installReceivers → dataRouter → ratesHandlers → AppState → Charts/UI (IR.js)
 
 
 Runtime Data Flow

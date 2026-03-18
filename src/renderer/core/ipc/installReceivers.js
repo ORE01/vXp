@@ -33,6 +33,7 @@ export function installReceivers(deps = {}) {
     handleDealsMainData,
     handlePortNameList,
     handlePortfolioData,
+    handleIRSensData,
 
     handleMvarInputData,
     handleAllMVaRData,
@@ -73,17 +74,6 @@ export function installReceivers(deps = {}) {
   }
   window.__listenersBoundOnce = true;
 
-  // const safeReceive = (channel, fn, { required = false } = {}) => {
-  //   if (typeof fn === 'function') {
-  //     api.receive(channel, fn);
-  //   } else if (required) {
-  //     console.warn(`[IPC] Missing REQUIRED handler for ${channel}`);
-  //   } else {
-  //     // keep noise low
-  //     // console.warn(`[IPC] Missing handler for ${channel}`);
-  //   }
-  // };
-
 
   const safeReceive = (channel, fn, { required = false } = {}) => {
 
@@ -96,10 +86,29 @@ export function installReceivers(deps = {}) {
 
   let receivedOnce = false;
 
-  api.receive(channel, (data) => {
-    receivedOnce = true;
-    fn(data);
-  });
+api.receive(channel, (data) => {
+
+  // console.log("CHANNEL:", channel);
+  // console.log("RAW DATA:", data);
+  // console.log("IS ARRAY:", Array.isArray(data));
+  // console.log("DATA.ROWS:", data?.rows);
+
+  receivedOnce = true;
+
+  const normalized =
+    Array.isArray(data) ? data :
+    Array.isArray(data?.rows) ? data.rows :
+    [];
+
+  // console.log("NORMALIZED:", normalized);
+
+  fn(normalized);
+
+});
+
+
+
+
 
   // ✅ watchdog only for REQUIRED channels
   if (required) {
@@ -130,6 +139,7 @@ export function installReceivers(deps = {}) {
   // --- Central table-data routing (DataPump channels) ---
   // Important: do NOT render UI here except via handlers; keep it predictable.
   const handlers = {
+
     handleSwaptionATMData,
     handleSwaptionSmileData,
     handleSwaptionCubeSurfaceData,
@@ -153,6 +163,7 @@ export function installReceivers(deps = {}) {
     handleDealsMainData,
     handlePortNameList,
     handlePortfolioData,
+    handleIRSensData,
 
     handleMvarInputData,
     handleAllMVaRData,
@@ -175,6 +186,10 @@ export function installReceivers(deps = {}) {
     createTSModals,
     handlePortfolioHistoryData,
   };
+
+  // console.log("IRSens handler:", handlers.handleIRSensData);
+  // console.log("IRSens handler type:", typeof handlers.handleIRSensData);
+  
 
   // Single helper: one line per channel, all go through router
   const route = (channel, { required = false } = {}) =>
@@ -219,6 +234,7 @@ export function installReceivers(deps = {}) {
 
   // PORTFOLIO
   route('PortfoliosData');
+  route('PortfolioRiskSensitivitiesData');
 
   // MVaR
   route('MVaRInputData');

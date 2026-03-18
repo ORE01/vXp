@@ -1,5 +1,5 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-02-27 20:14:56
+Generated: 2026-03-09 09:23:17
 Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 6
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
@@ -86,6 +86,7 @@ electron_app
 │       ├── pythonProgressBars.js
 │       └── pythonProgressBarsBridge.js
 ├── src
+│   ├── architecture
 │   ├── main
 │   │   ├── features
 │   │   │   ├── BONDS
@@ -115,6 +116,7 @@ electron_app
 │   │   │   │   ├── portfolioDelete.handlers.js
 │   │   │   │   ├── products.handlers.js
 │   │   │   │   ├── python.handlers.js
+│   │   │   │   ├── ratesActive.handlers.js
 │   │   │   │   └── training.handlers.js
 │   │   │   ├── ipc.allowlist.js
 │   │   │   └── registerIpc.js
@@ -242,6 +244,9 @@ electron_app
 │   │   │   │   ├── PROVIDERS
 │   │   │   │   │   ├── marketProvidersBridge.js
 │   │   │   │   │   └── providerUI.js
+│   │   │   │   ├── scenarios
+│   │   │   │   │   ├── ScenarioBuilder.js
+│   │   │   │   │   └── ScenarioPanel.js
 │   │   │   │   └── VOLS
 │   │   │   │       ├── swaptionDataHandlers.js
 │   │   │   │       ├── swaptionDropdownListeners.js

@@ -42,35 +42,50 @@ export function createPythonExecutionFetch(ctx) {
 
     once('PortfoliosData', onData);
     window.api.send('fetch-table-data', 'Portfolios');
+    window.api.send('fetch-table-data', 'PortfolioRiskSensitivities');
   }
 
-function fetchAndUpdateFairValueOffersData(port_name) {
-  const onData = (receivedData) => {
-    const enhancedData = receivedData;
-    if (!Array.isArray(enhancedData) || !enhancedData.length) {
-      appState.setAllPortfolioData?.([]);
-      return;
-    }
-    if (!port_name) return;
+  function fetchAndUpdateFairValueOffersData(port_name) {
+    const onData = (receivedData) => {
+      const enhancedData = receivedData;
+      if (!Array.isArray(enhancedData) || !enhancedData.length) {
+        appState.setAllPortfolioData?.([]);
+        return;
+      }
+      if (!port_name) return;
 
-    appState.setAllPortfolioData?.(enhancedData);
-    const filteredData = enhancedData.filter(e => e.port_name === port_name);
+      appState.setAllPortfolioData?.(enhancedData);
+      const filteredData = enhancedData.filter(e => e.port_name === port_name);
 
-    // ✅ DAS ist entscheidend, weil dropdownFilterEngine 'offers' aus appState.offersData liest
-    appState.offersData = filteredData;
+      // ✅ DAS ist entscheidend, weil dropdownFilterEngine 'offers' aus appState.offersData liest
+      appState.offersData = filteredData;
 
-    // (optional aber sinnvoll) UI table render
-    appState.updateOffersDataTable?.(filteredData, { viewOnly: true });
+      // (optional aber sinnvoll) UI table render
+      appState.updateOffersDataTable?.(filteredData, { viewOnly: true });
 
-    // ✅ triggert Dropdown-Engine für Offers-Filter
-    appState.applyFiltersAndUpdateDropdowns?.('offers');
+      // ✅ triggert Dropdown-Engine für Offers-Filter
+      appState.applyFiltersAndUpdateDropdowns?.('offers');
 
-    appState.setSelectedPortTableName?.(port_name);
-  };
+      appState.setSelectedPortTableName?.(port_name);
+    };
 
-  once('PortfoliosData', onData);
-  window.api.send('fetch-table-data', 'Portfolios');
-}
+    once('PortfoliosData', onData);
+    window.api.send('fetch-table-data', 'Portfolios');
+  }
+
+  function fetchAndUpdateIRSensData() {
+
+    once('PortfolioRiskSensitivitiesData', (rows) => {
+
+      if (!rows || rows.length === 0) return;
+
+      appState.setIRSensData?.(rows);
+
+    });
+
+    window.api.send('fetch-table-data', 'PortfolioRiskSensitivities');
+
+  }
 
 
   function fetchAndUpdateMVarData(port_name) {
@@ -135,6 +150,7 @@ function fetchAndUpdateFairValueOffersData(port_name) {
   return {
     fetchAndUpdateFairValueData,
     fetchAndUpdateFairValueOffersData,
+    fetchAndUpdateIRSensData, 
     fetchAndUpdateMVarData,
     fetchAndUpdateCVarData,
     fetchAndUpdateHistData,
