@@ -5,6 +5,7 @@ import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';
 
 
+
 // ======================================================
 // ðŸŒ SPALTEN-KONFIG FÃœR ProdAll
 // ======================================================

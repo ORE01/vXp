@@ -184,13 +184,28 @@ function startPythonScript({
           let lines = stderrBuffer.split(/\r?\n/);
           stderrBuffer = lines.pop();
 
-          for (const line of lines) {
+for (const line of lines) {
 
-            const text = line.trim();
-            if (!text) continue;
+  const text = line.trim();
+  if (!text) continue;
 
-            if (typeof onStderr === 'function') onStderr(text);
-          }
+  // 👇 TRY PARSE PROGRESS JSON
+  try {
+    const parsed = JSON.parse(text);
+
+    if (parsed && typeof parsed.progress !== 'undefined') {
+      if (typeof onProgress === 'function') {
+        onProgress(parsed); // 🔥 HIER PASSIERTS
+      }
+      continue; // wichtig → nicht als stderr behandeln
+    }
+
+  } catch (e) {
+    // kein JSON → normal weiter
+  }
+
+  if (typeof onStderr === 'function') onStderr(text);
+}
         });
 
       }

@@ -1,5 +1,7 @@
 // src/renderer/features/MARKET_DATA/INTEREST_RATES/ratesHandlers.js
 
+import { updateCurveWarningUI } from '../../../core/ui/curveWarning.js';
+
 export function createRatesHandlers({ appState } = {}) {
   if (!appState) {
     throw new Error('[createRatesHandlers] appState missing');
@@ -44,6 +46,7 @@ export function createRatesHandlers({ appState } = {}) {
   // console.log('rows:', data?.length);
 
   appState.setRatesActive?.(data);
+  updateCurveWarningUI();
 
 }
 
@@ -53,3 +56,7 @@ export function createRatesHandlers({ appState } = {}) {
     handleRatesActiveData,
   };
 }
+
+
+
+

@@ -47,17 +47,32 @@ function initDb() {
   if (_db) return _db;
 
   const dbPath = resolveDbPath();
-  logToFile('db.service: dbPath: ' + dbPath);
 
-  _db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      logToFile('Database connection error: ' + err.message);
-      console.error(err.message);
-    } else {
-      logToFile('Connected to the database.');
-      console.log('Connected to database! READY to ROCK and ROLL');
+  logToFile('db.service: dbPath: ' + dbPath);
+  console.log('Expected DB Path:', dbPath);
+
+  // 🔴 HARD CHECK: DB muss existieren
+  if (!fs.existsSync(dbPath)) {
+    const msg = `DATABASE NOT FOUND at path: ${dbPath}`;
+    logToFile(msg);
+    console.error(msg);
+    throw new Error(msg);
+  }
+
+  // 🔒 OPEN ONLY – kein Auto-Create mehr
+  _db = new sqlite3.Database(
+    dbPath,
+    sqlite3.OPEN_READWRITE,
+    (err) => {
+      if (err) {
+        logToFile('Database connection error: ' + err.message);
+        console.error('DB CONNECTION ERROR:', err.message);
+      } else {
+        logToFile('Connected to the database.');
+        console.log('Connected to database! READY to ROCK and ROLL');
+      }
     }
-  });
+  );
 
   return _db;
 }

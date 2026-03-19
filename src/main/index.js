@@ -344,14 +344,14 @@ function registerAllHandlers({ pump }) {
     refreshTable,
   });
 
-registerRatesActiveHandlers({
-  ipcMain,
-  dbApi: {
-    runSQL: mainFct.runSQL,
-    selectAll: mainFct.selectAll
-  },
-  refreshTable
-});
+// registerRatesActiveHandlers({
+//   ipcMain,
+//   dbApi: {
+//     runSQL: mainFct.runSQL,
+//     selectAll: mainFct.selectAll
+//   },
+//   refreshTable
+// });
 
   registerColumnImportHandlers({
     ipcMain,

@@ -25,11 +25,11 @@ module.exports = function registerIpc({ ipcMain, services }) {
   // ======================================================
   // RATES_ACTIVE Scenario Handler (NEW)
   // ======================================================
-//   registerRatesActiveHandlers({
-//   ipcMain,
-//   dbApi: services.dbApi,
-//   refreshTable: services.refreshTable
-// });
+  registerRatesActiveHandlers({
+  ipcMain,
+  dbApi: services.dbApi,
+  refreshTable: services.refreshTable
+});
 
 registerExcelHandlers({
   ipcMain,
