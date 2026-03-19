@@ -3,6 +3,7 @@
 const registerPythonHandlers = require('./handlers/python.handlers');
 const registerDbHandlers = require('./handlers/db.handlers');
 const registerRatesActiveHandlers = require('./handlers/ratesActive.handlers');   // ← NEU
+const registerExcelHandlers = require('./handlers/excel.handlers');
 
 module.exports = function registerIpc({ ipcMain, services }) {
 
@@ -24,9 +25,15 @@ module.exports = function registerIpc({ ipcMain, services }) {
   // ======================================================
   // RATES_ACTIVE Scenario Handler (NEW)
   // ======================================================
-  registerRatesActiveHandlers({
+//   registerRatesActiveHandlers({
+//   ipcMain,
+//   dbApi: services.dbApi,
+//   refreshTable: services.refreshTable
+// });
+
+registerExcelHandlers({
   ipcMain,
-  dbApi: services.dbApi
+  services
 });
 
 };

@@ -248,7 +248,10 @@ function renderDealsAndOffers() {
     if (filteredOriginal.length)
       handlePortAggData(filteredOriginal, 3, port_name);
 
-    const IRSensTable = appState.handleIRSensData?.(filteredOriginal);
+    const irRiskRows = appState.getIRSensData?.(port_name) || [];
+    const IRSensTable = appState.handleIRSensData?.(irRiskRows);
+
+
     const irEl = document.getElementById('IRSensDataContainer');
     if (irEl && IRSensTable) {
       irEl.innerHTML = '';
