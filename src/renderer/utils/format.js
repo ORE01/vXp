@@ -15,7 +15,7 @@ const FIELD_FORMAT_CONFIG = {
   RATES:      { decimals: 3, isPercentage: true, multiplyBy100: true },
   EUSWAP:     { decimals: 3, isPercentage: true, multiplyBy100: true },
   EUSWAP_SZ1: { decimals: 3, isPercentage: true, multiplyBy100: true },
-  value:      { decimals: 3, isPercentage: true, multiplyBy100: true },
+  //value:      { decimals: 3, isPercentage: true, multiplyBy100: true },
 
   PD:         { decimals: 3, isPercentage: true, multiplyBy100: true },
   PD_M:       { decimals: 3, isPercentage: true, multiplyBy100: true },
