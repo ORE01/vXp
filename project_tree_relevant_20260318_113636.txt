@@ -1,5 +1,5 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-03-09 09:23:17
+Generated: 2026-03-18 11:36:36
 Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 6
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
@@ -205,6 +205,7 @@ electron_app
 │   │   │   │   ├── MARKET_RISK
 │   │   │   │   │   ├── CSSens.js
 │   │   │   │   │   ├── IRSens.js
+│   │   │   │   │   ├── marketRiskHandlers.js
 │   │   │   │   │   ├── marketRiskRefresh.js
 │   │   │   │   │   └── MVaR.js
 │   │   │   │   ├── analysePortfolioHandlers.js

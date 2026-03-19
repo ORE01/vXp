@@ -8,140 +8,309 @@ import {
 
 
 
-export function handleSummaryYieldData(filteredData, index, port_name) {
-  //console.log('summaryData:', filteredData);
+// export function handleSummaryYieldData(filteredData, index, port_name) {
+//   //console.log('summaryData:', filteredData);
 
-  // You intentionally use hardcoded values here
+//   // You intentionally use hardcoded values here
+//   const elementId = `portDataContainer${0}`;
+  
+//   //DATA:
+//   const portfolioData = appState.getPortAggData(elementId) || {};
+//   const EUSWData = appState.getEUSWData();
+//   const TSData = appState.getTblTSData();
+
+//   // lates Curve 
+//   const latestRow = TSData[TSData.length - 1];
+//   // past Curve
+//   const fiveYearsAgoRow = TSData[TSData.length - 1 - (252 * 5)];
+
+//   const yieldCurve = transformTSDataToEUSWFormat(latestRow);
+//   const pastYieldCurve = transformTSDataToEUSWFormat(fiveYearsAgoRow);
+
+// //   console.log('portfolioData:', portfolioData);
+// //   console.log('EUSWData:', EUSWData);
+// //   console.log('yieldCurve:', yieldCurve);
+// //   console.log('pastYieldCurve:', pastYieldCurve);
+  
+  
+// // CHART: line chart
+//     const portfolioYield = portfolioData.formPortYield; // e.g., "1.91%"
+//     const portTtM = parseFloat(portfolioData.formPortTtM); // oder wie immer dein echtes TtM-Feld heiÃŸt
+
+//     if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
+//     //   drawPortfolioVsYieldCurvesChart(portfolioYield, portTtM, yieldCurve, pastYieldCurve, EUSWData);
+//     //   drawProductYieldVsEUSWChart(filteredData, yieldCurve, pastYieldCurve) 
+
+// insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs Maturity' });
+// insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yields vs Maturity' });
+// insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs Duration' });
+// insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yields vs Duration' });
+
+
+
+// //1) PortYield vs Maturity
+// drawYieldVsTimeChart({
+//   targetId: 'euswapPortfolioYieldChart',
+//   heading: 'Portfolio Yield vs Maturity',
+//   yieldCurve,
+//   pastYieldCurve,
+//   euswDataOriginal: EUSWData, // âœ… korrekter Parametername!
+//   points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
+// });
+
+
+
+// //2) ProductYield vs Maturity
+// drawYieldVsTimeChart({
+//   targetId: 'euswapProductYieldChart',
+//   heading: 'Product Yields vs Maturity',
+//   yieldCurve,
+//   pastYieldCurve,
+//   euswDataOriginal: EUSWData,
+//   points: filteredData // mit .TtM, .ytm, .PROD_ID
+// });
+
+// // ðŸ“ˆ 1. Dauer-Kurven aus Swap-Daten ableiten
+// const durationCurve = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
+// const durationCurvePast = pastYieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
+// const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
+
+// // ðŸ“¦ 2. Chart-Container fÃ¼r Duration-Chart erzeugen
+// let chartSection = document.getElementById('yieldChartSection');
+// let durationSection = document.getElementById('durationChartSection');
+
+// if (!durationSection) {
+//   durationSection = document.createElement('div');
+//   durationSection.id = 'durationChartSection';
+//   durationSection.style.marginTop = '40px';
+//   chartSection.parentElement.appendChild(durationSection);
+// }
+
+// // ðŸ“Œ 3. Portfolio-Duration und -Yield direkt verwenden
+// const portfolioDuration = Math.abs(parseFloat(portfolioData.formPortPV01)); // direkt aus formPortPV01
+// const portfolioYieldValue = parseFloat(portfolioYield.replace('%', ''));
+
+// const durationPoints = (!isNaN(portfolioDuration) && !isNaN(portfolioYieldValue)) ? [{
+//   x: portfolioDuration,
+//   y: portfolioYieldValue
+// }] : [];
+
+// // ðŸ“Š 4. Portfolio Yield vs Duration
+// drawYieldVsTimeChart({
+//   targetId: 'durationSwapChart',
+//   heading: 'Portfolio Yield vs Duration',
+//   yieldCurve: durationCurve,
+//   pastYieldCurve: durationCurvePast,
+//   euswDataOriginal: durationEUSWData,
+//   points: durationPoints
+// });
+
+
+// // ðŸ“Œ Dauer-basierte Produktpunkte aus filteredData ableiten
+// const productDurationPoints = filteredData.map(entry => {
+//   const duration = Math.abs(parseFloat(entry.PV01rel));
+//   const ytm = typeof entry.ytm === 'number' ? entry.ytm * 100 : parseFloat(entry.ytm);
+
+//   // if (isNaN(duration) || isNaN(ytm)) {
+//   //   console.warn('âš ï¸ UngÃ¼ltiger Datenpunkt:', { duration, ytm, entry });
+//   //   return null;
+//   // }
+
+//   return {
+//     x: duration,
+//     y: ytm,
+//     PROD_ID: entry.PROD_ID
+//   };
+// }).filter(Boolean);
+
+
+// // ðŸ“¦ Neuen Container erstellen (falls noch nicht vorhanden)
+// let durationProductSection = document.getElementById('durationProductChartSection');
+// if (!durationProductSection) {
+//   durationProductSection = document.createElement('div');
+//   durationProductSection.id = 'durationProductChartSection';
+//   durationProductSection.style.marginTop = '40px';
+//   chartSection.parentElement.appendChild(durationProductSection);
+// }
+
+// //4) ProductYield vs Duration
+// drawYieldVsTimeChart({
+//   targetId: 'durationProductYieldChart',
+//   heading: 'Product Yields vs Duration',
+//   yieldCurve: durationCurve,
+//   pastYieldCurve: durationCurvePast,
+//   euswDataOriginal: durationEUSWData,
+//   points: productDurationPoints // enthÃ¤lt x, y, PROD_ID
+// });
+//   }
+// }
+
+export function handleSummaryYieldData(filteredData, index, port_name) {
+
   const elementId = `portDataContainer${0}`;
   
-  //DATA:
+  // =========================
+  // DATA
+  // =========================
   const portfolioData = appState.getPortAggData(elementId) || {};
-  const EUSWData = appState.getEUSWData();
-  const TSData = appState.getTblTSData();
+  const rawRates = appState._RATESDataCacheByCcy?.['EUR'] || [];
+  const rawTSData = appState.getTblTSData();
 
-  // lates Curve 
+  const currency = 'EUR';
+  const curveId = 'EUR:SWAP:6M';
+
+  // =========================
+  // ACTIVE SCENARIO
+  // =========================
+  const activeRow = (appState.getRatesActive?.() || [])
+    .filter(r => r.ccy === currency && r.curve_id === curveId)
+    .sort((a, b) =>
+      new Date(b.activated_at) - new Date(a.activated_at)
+    )[0];
+
+  const activeScenario = activeRow?.scenario_id || 'BASE';
+
+  // =========================
+  // RATES → FILTER + DEDUP + TRANSFORM
+  // =========================
+  const filteredRates = rawRates.filter(r =>
+    (r.scenario_id || 'BASE') === activeScenario &&
+    r.curve_id === curveId
+  );
+
+  const dedupedRates = Object.values(
+    filteredRates.reduce((acc, r) => {
+      const key = r.tenor;
+      acc[key] = r;
+      return acc;
+    }, {})
+  );
+
+  const EUSWData = dedupedRates.map(r => ({
+    YEAR: r.tenor,
+    RATES: `${r.rate}%`
+  }));
+
+  // =========================
+  // TS DATA (optional gefiltert)
+  // =========================
+  const TSData = (rawTSData || []).filter(r =>
+    !r.scenario_id || r.scenario_id === activeScenario
+  );
+
   const latestRow = TSData[TSData.length - 1];
-  // past Curve
   const fiveYearsAgoRow = TSData[TSData.length - 1 - (252 * 5)];
 
   const yieldCurve = transformTSDataToEUSWFormat(latestRow);
   const pastYieldCurve = transformTSDataToEUSWFormat(fiveYearsAgoRow);
 
-//   console.log('portfolioData:', portfolioData);
-//   console.log('EUSWData:', EUSWData);
-//   console.log('yieldCurve:', yieldCurve);
-//   console.log('pastYieldCurve:', pastYieldCurve);
-  
-  
-// CHART: line chart
-    const portfolioYield = portfolioData.formPortYield; // e.g., "1.91%"
-    const portTtM = parseFloat(portfolioData.formPortTtM); // oder wie immer dein echtes TtM-Feld heiÃŸt
+  // =========================
+  // PORTFOLIO
+  // =========================
+  const portfolioYield = portfolioData.formPortYield;
+  const portTtM = parseFloat(portfolioData.formPortTtM);
 
-    if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
-    //   drawPortfolioVsYieldCurvesChart(portfolioYield, portTtM, yieldCurve, pastYieldCurve, EUSWData);
-    //   drawProductYieldVsEUSWChart(filteredData, yieldCurve, pastYieldCurve) 
+  if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
 
-insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs Maturity' });
-insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yields vs Maturity' });
-insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs Duration' });
-insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yields vs Duration' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs Maturity' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yields vs Maturity' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs Duration' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yields vs Duration' });
 
+    // =========================
+    // 1) Portfolio vs Maturity
+    // =========================
+    drawYieldVsTimeChart({
+      targetId: 'euswapPortfolioYieldChart',
+      heading: 'Portfolio Yield vs Maturity',
+      yieldCurve,
+      pastYieldCurve,
+      euswDataOriginal: EUSWData,
+      points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
+    });
 
+    // =========================
+    // 2) Products vs Maturity
+    // =========================
+    drawYieldVsTimeChart({
+      targetId: 'euswapProductYieldChart',
+      heading: 'Product Yields vs Maturity',
+      yieldCurve,
+      pastYieldCurve,
+      euswDataOriginal: EUSWData,
+      points: filteredData
+    });
 
-//1) PortYield vs Maturity
-drawYieldVsTimeChart({
-  targetId: 'euswapPortfolioYieldChart',
-  heading: 'Portfolio Yield vs Maturity',
-  yieldCurve,
-  pastYieldCurve,
-  euswDataOriginal: EUSWData, // âœ… korrekter Parametername!
-  points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
-});
+    // =========================
+    // Duration curves
+    // =========================
+    const durationCurve = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
+    const durationCurvePast = pastYieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
+    const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
 
+    let chartSection = document.getElementById('yieldChartSection');
+    let durationSection = document.getElementById('durationChartSection');
 
+    if (!durationSection) {
+      durationSection = document.createElement('div');
+      durationSection.id = 'durationChartSection';
+      durationSection.style.marginTop = '40px';
+      chartSection.parentElement.appendChild(durationSection);
+    }
 
-//2) ProductYield vs Maturity
-drawYieldVsTimeChart({
-  targetId: 'euswapProductYieldChart',
-  heading: 'Product Yields vs Maturity',
-  yieldCurve,
-  pastYieldCurve,
-  euswDataOriginal: EUSWData,
-  points: filteredData // mit .TtM, .ytm, .PROD_ID
-});
+    const portfolioDuration = Math.abs(parseFloat(portfolioData.formPortPV01));
+    const portfolioYieldValue = parseFloat(portfolioYield.replace('%', ''));
 
-// ðŸ“ˆ 1. Dauer-Kurven aus Swap-Daten ableiten
-const durationCurve = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
-const durationCurvePast = pastYieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
-const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
+    const durationPoints = (!isNaN(portfolioDuration) && !isNaN(portfolioYieldValue)) ? [{
+      x: portfolioDuration,
+      y: portfolioYieldValue
+    }] : [];
 
-// ðŸ“¦ 2. Chart-Container fÃ¼r Duration-Chart erzeugen
-let chartSection = document.getElementById('yieldChartSection');
-let durationSection = document.getElementById('durationChartSection');
+    // =========================
+    // 3) Portfolio vs Duration
+    // =========================
+    drawYieldVsTimeChart({
+      targetId: 'durationSwapChart',
+      heading: 'Portfolio Yield vs Duration',
+      yieldCurve: durationCurve,
+      pastYieldCurve: durationCurvePast,
+      euswDataOriginal: durationEUSWData,
+      points: durationPoints
+    });
 
-if (!durationSection) {
-  durationSection = document.createElement('div');
-  durationSection.id = 'durationChartSection';
-  durationSection.style.marginTop = '40px';
-  chartSection.parentElement.appendChild(durationSection);
-}
+    // =========================
+    // Product Duration Points
+    // =========================
+    const productDurationPoints = filteredData.map(entry => {
+      const duration = Math.abs(parseFloat(entry.PV01rel));
+      const ytm = typeof entry.ytm === 'number' ? entry.ytm * 100 : parseFloat(entry.ytm);
 
-// ðŸ“Œ 3. Portfolio-Duration und -Yield direkt verwenden
-const portfolioDuration = Math.abs(parseFloat(portfolioData.formPortPV01)); // direkt aus formPortPV01
-const portfolioYieldValue = parseFloat(portfolioYield.replace('%', ''));
+      return {
+        x: duration,
+        y: ytm,
+        PROD_ID: entry.PROD_ID
+      };
+    }).filter(Boolean);
 
-const durationPoints = (!isNaN(portfolioDuration) && !isNaN(portfolioYieldValue)) ? [{
-  x: portfolioDuration,
-  y: portfolioYieldValue
-}] : [];
+    let durationProductSection = document.getElementById('durationProductChartSection');
+    if (!durationProductSection) {
+      durationProductSection = document.createElement('div');
+      durationProductSection.id = 'durationProductChartSection';
+      durationProductSection.style.marginTop = '40px';
+      chartSection.parentElement.appendChild(durationProductSection);
+    }
 
-// ðŸ“Š 4. Portfolio Yield vs Duration
-drawYieldVsTimeChart({
-  targetId: 'durationSwapChart',
-  heading: 'Portfolio Yield vs Duration',
-  yieldCurve: durationCurve,
-  pastYieldCurve: durationCurvePast,
-  euswDataOriginal: durationEUSWData,
-  points: durationPoints
-});
-
-
-// ðŸ“Œ Dauer-basierte Produktpunkte aus filteredData ableiten
-const productDurationPoints = filteredData.map(entry => {
-  const duration = Math.abs(parseFloat(entry.PV01rel));
-  const ytm = typeof entry.ytm === 'number' ? entry.ytm * 100 : parseFloat(entry.ytm);
-
-  // if (isNaN(duration) || isNaN(ytm)) {
-  //   console.warn('âš ï¸ UngÃ¼ltiger Datenpunkt:', { duration, ytm, entry });
-  //   return null;
-  // }
-
-  return {
-    x: duration,
-    y: ytm,
-    PROD_ID: entry.PROD_ID
-  };
-}).filter(Boolean);
-
-
-// ðŸ“¦ Neuen Container erstellen (falls noch nicht vorhanden)
-let durationProductSection = document.getElementById('durationProductChartSection');
-if (!durationProductSection) {
-  durationProductSection = document.createElement('div');
-  durationProductSection.id = 'durationProductChartSection';
-  durationProductSection.style.marginTop = '40px';
-  chartSection.parentElement.appendChild(durationProductSection);
-}
-
-//4) ProductYield vs Duration
-drawYieldVsTimeChart({
-  targetId: 'durationProductYieldChart',
-  heading: 'Product Yields vs Duration',
-  yieldCurve: durationCurve,
-  pastYieldCurve: durationCurvePast,
-  euswDataOriginal: durationEUSWData,
-  points: productDurationPoints // enthÃ¤lt x, y, PROD_ID
-});
+    // =========================
+    // 4) Products vs Duration
+    // =========================
+    drawYieldVsTimeChart({
+      targetId: 'durationProductYieldChart',
+      heading: 'Product Yields vs Duration',
+      yieldCurve: durationCurve,
+      pastYieldCurve: durationCurvePast,
+      euswDataOriginal: durationEUSWData,
+      points: productDurationPoints
+    });
   }
 }
 
@@ -277,9 +446,11 @@ export function drawYieldVsTimeChart({
       pointRadius: 3
     });
   }
+  
 
+  const SHOW_SWAP = false;
   // EU Swap (bleibt indexbasiert aus Palette)
-  if (originalPoints.length) {
+  if (SHOW_SWAP && originalPoints.length) {
     datasets.push({
       label: 'EU Swap',
       data: originalPoints,
@@ -291,6 +462,8 @@ export function drawYieldVsTimeChart({
       pointRadius: 3
     });
   }
+
+ 
 
   // Produkt-Scatter
   datasets.push(...productDatasets);

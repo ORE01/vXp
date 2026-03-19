@@ -19,15 +19,17 @@ export function renderScenarioPanel() {
   // helper: active scenario
   // ---------------------------------------------------
 
-  function getActiveScenario(ccy, curveId) {
+function getActiveScenario(ccy, curveId) {
 
-    const row = activeRows.find(
-      r => r.ccy === ccy && r.curve_id === curveId
-    );
+  const row = activeRows
+    .filter(r => r.ccy === ccy && r.curve_id === curveId)
+    .sort((a, b) =>
+      new Date(b.activated_at || 0) - new Date(a.activated_at || 0)
+    )[0];
 
-    return row?.scenario_id || "BASE";
+  return row?.scenario_id || "BASE";
 
-  }
+}
 
   // ---------------------------------------------------
   // helper: scenarios available
@@ -38,7 +40,7 @@ export function renderScenarioPanel() {
     const rows = ratesByCcy[ccy] || [];
 
     const set = new Set();
-
+console.log("rows sample", rows[0]);
     rows.forEach(r => {
       if (r.curve_id === curveId && r.scenario_id) {
         set.add(r.scenario_id);

@@ -1,5 +1,6 @@
 import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
 import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { updateCreditScenarioWarningUI } from '../../../core/ui/creditScenarioWarning.js';
 
 
 export function handleCSParameterData(receivedData) {
@@ -21,6 +22,8 @@ export function handleCSParameterData(receivedData) {
     const CSPDataHTML = processDataWithCheckbox(CSPData); // Process data with checkbox
     CSParameterTable.innerHTML = CSPDataHTML; // Set table content directly
   }
+
+  updateCreditScenarioWarningUI(CSPData);
 
   // Edit Buttons
   const CSPEditButtons = document.querySelectorAll('#CSParameterDataContainer .edit-button');

@@ -183,7 +183,7 @@ function generateIssuerTable(data) {
   const rows = Array.isArray(data) ? data : [];
   let html = `<table class="pivot-table">
     <thead>
-      <tr><th>Issuer</th><th>Sum Notional</th><th>Anteil [%]</th></tr>
+      <tr><th>Issuer</th><th>Sum Notional</th><th>Share [%]</th></tr>
     </thead><tbody>`;
 
   rows.forEach(d => {
@@ -210,9 +210,9 @@ function generatePivotTable(data) {
   });
 
   let html = `<table class="pivot-table">
-    <thead><tr><th>KapitalfÃ¤lligkeiten</th>`;
+    <thead><tr><th>Maturity/Category</th>`;
   years.forEach(y => html += `<th>${y}</th>`);
-  html += `<th>Summe</th></tr></thead><tbody>`;
+  html += `<th>Summ</th></tr></thead><tbody>`;
 
   categories.forEach(cat => {
     let rowSum = 0;

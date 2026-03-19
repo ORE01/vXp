@@ -1023,7 +1023,7 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
           title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
           ticks: {
             color: "rgb(161, 160, 160)",
-            callback: value => value.toFixed?.(2) ?? value
+            callback: value => value.toFixed?.(2) + '%' ?? value
           },
           grid: {
             color: "rgba(255, 255, 255, 0.2)",

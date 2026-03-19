@@ -367,13 +367,13 @@ const FLOATER_COUPON_FIELDS = [
 
 // Helper zum Ein-/Ausblenden je nach CouponType
 function applyCouponTypeVisibility(couponType) {
-  console.log('ðŸ’¡ applyCouponTypeVisibility called with:', couponType);
+  // console.log('applyCouponTypeVisibility called with:', couponType);
 
   // GLOBAL suchen - egal in welchem Modal der Editor steckt
   const fixRows = document.querySelectorAll('[data-coupon-section="FIX"]');
   const floaterRows = document.querySelectorAll('[data-coupon-section="FLOATER"]');
 
-  console.log('ðŸ’¡ GLOBAL FIX rows:', fixRows.length, 'FLOATER rows:', floaterRows.length);
+  // console.log('GLOBAL FIX rows:', fixRows.length, 'FLOATER rows:', floaterRows.length);
 
   fixRows.forEach(row => {
     row.style.display = (couponType === 'FIX') ? '' : 'none';
