@@ -90,6 +90,8 @@ module.exports = {
     // -------------------------------------------------
     'get-table-columns',
     'get-table-rows',
+    'table-layout:get',
+    'table-layout:save',
 
     // -------------------------------------------------
     // Insert / normalize helpers

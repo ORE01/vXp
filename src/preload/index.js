@@ -121,6 +121,10 @@ contextBridge.exposeInMainWorld('api', {
       ...opts, // z.B. prospectusOptions, etc.
     }),
 
+    tableLayouts: {
+      get: (tableId) => ipcRenderer.invoke('table-layout:get', tableId),
+      save: (tableId, layout) => ipcRenderer.invoke('table-layout:save', tableId, layout),
+    },
 
   onProgress: (callback) => {
     ipcRenderer.on('py-progress', (_event, data) => callback(data));

@@ -18,6 +18,13 @@ async function importExcelToSQLite(
   allowedColumns = null,
   overwriteExisting = false
 ) {
+
+   console.log('[EXCEL IMPORT]');
+  console.log('Path      :', excelPath);
+  console.log('Exists    :', fs.existsSync(excelPath));
+  console.log('Sheet     :', sheetName);
+  console.log('Table     :', tableName);
+
   const db = dbService.getDb();
 
   if (!fs.existsSync(excelPath)) {

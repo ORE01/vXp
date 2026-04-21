@@ -8,7 +8,12 @@ import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tool
 import { formatNumberWithGrouping } from '../../utils/format.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
 import { applyPortfolioTableColoring } from '../../utils/tableColorize.js';
-
+import {
+  ALL_PORT_COLUMN_KEYS,
+  DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
+  getPortColumnLabel,
+} from './portTableColumns.js';
+import { renderPortColumnSelector, bindPortColumnSelector } from './portColumnSelector.js';
 
 
 
@@ -16,8 +21,8 @@ import { applyPortfolioTableColoring } from '../../utils/tableColorize.js';
 
 
 let tableName = 'Portfolios'
-let columns = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR','TtM'];
-let columnsToShow = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'clean_price', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
+// let columns = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR','TtM'];
+// let columnsToShow = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'clean_price', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
      
 const portDataMap = {}; // Speichert Daten pro Container
 
@@ -30,6 +35,17 @@ const pf = (v) => {
 
 const safeDiv = (num, den) => (den ? num / den : 0);
 
+function mapPortDataForDisplay(rows) {
+  return rows.map((row) => {
+    const displayRow = {};
+
+    Object.entries(row).forEach(([key, value]) => {
+      displayRow[getPortColumnLabel(key)] = value;
+    });
+
+    return displayRow;
+  });
+}
 
 export function handlePortAggData(receivedData, index, port_name) {
   const elementId = `portDataContainer${index}`;
@@ -37,7 +53,8 @@ export function handlePortAggData(receivedData, index, port_name) {
 
   if (!portDataMap[elementId]) portDataMap[elementId] = {};
 
-  const portData = filterColumnsInData(receivedData, columns);
+  // const portData = filterColumnsInData(receivedData, columns);
+  const portData = filterColumnsInData(receivedData, ALL_PORT_COLUMN_KEYS);
 
   let PortValue = 0;
   let PortValueBuy = 0;     // <-- NEU
@@ -165,13 +182,27 @@ export function handlePortProdData(receivedData, index, port_name) {
   const portData = receivedData;
   
   if (portDataContainer && portData) {
-    let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
-    let filteredPortData = filterColumnsInData(receivedData, columns); //!!!!! nach Porfolioname
+    renderPortColumnSelector(appState, 'portColumnSelector');
+
+    bindPortColumnSelector(appState, () => {
+  handlePortProdData(receivedData, index, port_name);
+    }, 'portColumnSelector');
+    
+    const visibleColumns =
+    appState.getVisibleColumns('portTable0') ||
+    DEFAULT_VISIBLE_PORT_COLUMN_KEYS;
+
+    const filteredColumnsPortData = filterColumnsInData(receivedData, visibleColumns);
+    const filteredPortData = filterColumnsInData(receivedData, ALL_PORT_COLUMN_KEYS);
+    // let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
+    // let filteredPortData = filterColumnsInData(receivedData, columns); //!!!!! nach Porfolioname
       //console.log("filteredPortData:", filteredPortData);
 
-      appState.setFilteredPortData(filteredPortData);// !!!
+    appState.setFilteredPortData(filteredPortData);// !!!
+    
+    const displayPortData = mapPortDataForDisplay(filteredColumnsPortData);
 
-    const portDataHTML = processData(filteredColumnsPortData, tableName);
+    const portDataHTML = processData(displayPortData, tableName);
     portDataContainer.innerHTML = portDataHTML;
 
     applyPortfolioTableColoring(portDataContainer);

@@ -26,6 +26,7 @@ const ROOT = path.join(__dirname, '../..');
 const registerIpc = require('./ipc/registerIpc');
 const mainFct = require('./main.orchestrator.js');
 const dbService = require('./services/db.service');
+const { ensureAppSchema } = require('./services/db.schema');
 
 // =====================================================
 // IPC Handlers (modular)
@@ -42,6 +43,7 @@ const registerTrainingHandlers = require('./ipc/handlers/training.handlers');
 const registerColumnImportHandlers = require('./ipc/handlers/columnImport.handlers');
 const registerCSParameterHandlers = require('./ipc/handlers/csParameter.handlers');
 const registerRatesActiveHandlers = require('./ipc/handlers/ratesActive.handlers');
+const registerTableLayoutHandlers = require('./ipc/handlers/tableLayout.handlers');
 
 const registerCouponWindowHandlers = require('./ipc/handlers/couponWindow.handlers');
 const registerPortfolioDeleteHandlers = require('./ipc/handlers/portfolioDelete.handlers');
@@ -336,6 +338,8 @@ function registerAllHandlers({ pump }) {
 
   registerTrainingHandlers({ ipcMain });
 
+  registerTableLayoutHandlers({ ipcMain });
+
   registerCSParameterHandlers({
     ipcMain,
     dbApi: { insertCSParameter: mainFct.insertCSParameter },
@@ -416,7 +420,20 @@ function bootstrapFeatures() {
 // App lifecycle
 // =====================================================
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+    try {
+    if (!sqliteDb) {
+      throw new Error('[main] sqliteDb not available for schema initialization');
+    }
+
+    await ensureAppSchema(sqliteDb);
+    console.log('[main] App schema ready');
+  } catch (e) {
+    console.error('[main] Schema initialization failed', e);
+    app.quit();
+    return;
+  }
+
   installCspHeaders();
 
   // ✅ IPC Meta (Allowlist) – muss VOR preload-use stehen
