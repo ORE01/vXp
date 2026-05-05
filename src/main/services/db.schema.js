@@ -16,7 +16,22 @@ function ensureAppSchema(db) {
           return;
         }
 
-        resolve();
+        db.run(`
+          CREATE TABLE IF NOT EXISTS table_layouts_v2 (
+            table_id TEXT NOT NULL,
+            layout_name TEXT NOT NULL,
+            layout_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (table_id, layout_name)
+          )
+        `, (err2) => {
+          if (err2) {
+            reject(err2);
+            return;
+          }
+
+          resolve();
+        });
       });
     });
   });

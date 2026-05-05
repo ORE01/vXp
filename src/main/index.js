@@ -338,7 +338,12 @@ function registerAllHandlers({ pump }) {
 
   registerTrainingHandlers({ ipcMain });
 
-  registerTableLayoutHandlers({ ipcMain });
+  // registerTableLayoutHandlers({ ipcMain });
+
+  registerTableLayoutHandlers({
+  ipcMain,
+  db: sqliteDb
+});
 
   registerCSParameterHandlers({
     ipcMain,

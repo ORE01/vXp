@@ -4,6 +4,7 @@ import {
 } from '../../features/SELECT_PORTFOLIO/portTableColumns.js';
 
 const TABLE_ID = 'portTable0';
+const CUSTOM_LAYOUT_NAME = 'custom';
 
 function sanitizeVisibleColumns(visibleColumns) {
   if (!Array.isArray(visibleColumns)) return null;
@@ -15,20 +16,23 @@ function sanitizeVisibleColumns(visibleColumns) {
 
 async function loadStoredTableLayout(appState) {
   try {
-    const savedLayout = await window.api.tableLayouts.get(TABLE_ID);
+    const savedLayout = await window.api.tableLayouts.getOne(
+      TABLE_ID,
+      CUSTOM_LAYOUT_NAME
+    );
 
-    console.log('[TABLE LAYOUT STORE] raw saved layout from IPC:', savedLayout);
+    console.log('[TABLE LAYOUT STORE] raw saved custom layout from IPC:', savedLayout);
 
     const savedVisibleColumns = sanitizeVisibleColumns(savedLayout?.visibleColumns);
 
-    console.log('[TABLE LAYOUT STORE] sanitized visible columns:', savedVisibleColumns);
+    console.log('[TABLE LAYOUT STORE] sanitized custom visible columns:', savedVisibleColumns);
 
     if (savedVisibleColumns) {
       appState.setVisibleColumns(TABLE_ID, savedVisibleColumns);
-      console.log('[TABLE LAYOUT STORE] loaded saved layout', savedVisibleColumns);
+      console.log('[TABLE LAYOUT STORE] loaded custom layout', savedVisibleColumns);
     }
   } catch (error) {
-    console.error('[TABLE LAYOUT STORE] Failed to load layout:', error);
+    console.error('[TABLE LAYOUT STORE] Failed to load custom layout:', error);
   }
 }
 

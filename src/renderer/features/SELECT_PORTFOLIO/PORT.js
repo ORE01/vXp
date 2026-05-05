@@ -1,39 +1,64 @@
 ﻿import { filterColumnsInData } from '../../core/ui/MODAL_HELPER/dataProcessor.js';
 import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
 
-// QUICK FIX (funktioniert sofort, aber Entry-Import ist architektonisch unsauber):
 import { appState } from '../../renderer.js';
 
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { formatNumberWithGrouping } from '../../utils/format.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
 import { applyPortfolioTableColoring } from '../../utils/tableColorize.js';
+
 import {
   ALL_PORT_COLUMN_KEYS,
   DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
   getPortColumnLabel,
 } from './portTableColumns.js';
-import { renderPortColumnSelector, bindPortColumnSelector } from './portColumnSelector.js';
 
+import {
+  renderPortColumnSelector,
+  bindPortColumnSelector
+} from './portColumnSelector.js';
 
+let tableName = 'Portfolios';
 
+const portDataMap = {};
 
-
-
-let tableName = 'Portfolios'
-// let columns = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR','TtM'];
-// let columnsToShow = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'clean_price', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
-     
-const portDataMap = {}; // Speichert Daten pro Container
-
-//    (leer/undefined -> 0, Whitespaces erlaubt, Dezimalpunkt bleibt Dezimalpunkt)
 const pf = (v) => {
   if (v == null) return 0;
-  const n = parseFloat(String(v).replace(/\s/g, '')); // "2 000.5" -> "2000.5"
+  const n = parseFloat(String(v).replace(/\s/g, ''));
   return Number.isFinite(n) ? n : 0;
 };
 
 const safeDiv = (num, den) => (den ? num / den : 0);
+
+// =============================
+// 🔹 TABLE RENDER (NEU)
+// =============================
+function renderPortTableOnly(portData, index) {
+  const elementId = `portDataContainer${index}`;
+  const portDataContainer = document.getElementById(elementId);
+
+  if (!portDataContainer) return;
+
+  const visibleColumns =
+    appState.getVisibleColumns('portTable0') ||
+    DEFAULT_VISIBLE_PORT_COLUMN_KEYS;
+
+  const filteredColumnsPortData = filterColumnsInData(portData, visibleColumns);
+
+  const displayPortData = mapPortDataForDisplay(filteredColumnsPortData);
+
+  const portDataHTML = processData(displayPortData, tableName);
+  portDataContainer.innerHTML = portDataHTML;
+
+  applyPortfolioTableColoring(portDataContainer);
+  attachIdLinks(portDataContainer);
+
+  addTooltipsForTruncatedText(portDataContainer);
+  addProdIdTooltips(portDataContainer);
+}
+
+// =============================
 
 function mapPortDataForDisplay(rows) {
   return rows.map((row) => {
@@ -47,17 +72,48 @@ function mapPortDataForDisplay(rows) {
   });
 }
 
+// =============================
+// 🔹 MAIN TABLE HANDLER
+// =============================
+
+export function handlePortProdData(receivedData, index, port_name) {
+  const elementId = `portDataContainer${index}`;
+  const portDataContainer = document.getElementById(elementId);
+
+  if (!portDataContainer || !Array.isArray(receivedData)) return;
+
+  // 🔹 Column selector (einmal initialisieren)
+  renderPortColumnSelector(appState, 'portColumnSelector');
+
+  bindPortColumnSelector(appState, () => {
+    const currentFilteredPortData =
+      appState.getFilteredPortData?.() || receivedData;
+
+    renderPortTableOnly(currentFilteredPortData, index);
+  }, 'portColumnSelector');
+
+  // 🔹 WICHTIG: hier werden aktuell gefilterte Daten gespeichert
+  const filteredPortData = filterColumnsInData(receivedData, ALL_PORT_COLUMN_KEYS);
+  appState.setFilteredPortData(filteredPortData);
+
+  // 🔹 Tabelle initial rendern
+  renderPortTableOnly(filteredPortData, index);
+}
+
+// =============================
+// 🔹 AGG DATA (UNVERÄNDERT)
+// =============================
+
 export function handlePortAggData(receivedData, index, port_name) {
   const elementId = `portDataContainer${index}`;
   const aggContainerId = `portAggDataContainer${index}`;
 
   if (!portDataMap[elementId]) portDataMap[elementId] = {};
 
-  // const portData = filterColumnsInData(receivedData, columns);
   const portData = filterColumnsInData(receivedData, ALL_PORT_COLUMN_KEYS);
 
   let PortValue = 0;
-  let PortValueBuy = 0;     // <-- NEU
+  let PortValueBuy = 0;
   let PortNotional = 0;
   let PortYield = 0;
   let PortYieldA = 0;
@@ -65,46 +121,39 @@ export function handlePortAggData(receivedData, index, port_name) {
   let PortCPV01 = 0;
   let PortTtM = 0;
 
-  // Aggregation - wie vorher, nur mit pf()
   for (let i = 0; i < portData.length; i++) {
     const r = portData[i];
-    const nav      = pf(r.NAV);
+    const nav = pf(r.NAV);
     const notional = pf(r.NOTIONAL);
 
-    // NEU: PRICE_BUY in Prozentpunkten -> /100 * Notional
-    const priceBuy = pf(r.PRICE_BUY);  // erwartet z.B. 98.75
-    PortValueBuy  += (priceBuy / 100) * notional;
+    const priceBuy = pf(r.PRICE_BUY);
+    PortValueBuy += (priceBuy / 100) * notional;
 
-    PortValue     += nav;
-    PortNotional  += notional;
-    PortYield     += pf(r.ytmPort);
-    PortYieldA    += pf(r.ytmPortA);
-    PortPV01      += pf(r.PV01);
-    PortCPV01     += pf(r.CPV01);
-    PortTtM       += pf(r.TtM) * notional;
+    PortValue += nav;
+    PortNotional += notional;
+    PortYield += pf(r.ytmPort);
+    PortYieldA += pf(r.ytmPortA);
+    PortPV01 += pf(r.PV01);
+    PortCPV01 += pf(r.CPV01);
+    PortTtM += pf(r.TtM) * notional;
   }
 
   const aggData = {
-    formPortValue:     formatNumberWithGrouping(PortValue) + ' EUR',
-    formPortValueBuy:  formatNumberWithGrouping(PortValueBuy) + ' EUR', // <-- NEU
-    formPortNotional:  formatNumberWithGrouping(PortNotional) + ' EUR',
-    formPortPV01abs:  formatNumberWithGrouping(PortPV01) + ' EUR',
-    formPortCPV01abs:  formatNumberWithGrouping(PortCPV01) + ' EUR',
-    formPortYield:     (safeDiv(PortYield,  PortNotional) * 100).toFixed(2) + '%',
-    formPortYieldA:    (safeDiv(PortYieldA, PortNotional) * 100).toFixed(2) + '%',
-    formPortPV01:      (safeDiv(PortPV01,   PortNotional) * 10000).toFixed(2),
-    formPortCPV01:     (safeDiv(PortCPV01,  PortNotional) * 10000).toFixed(2),
-    formPortTtM:       (safeDiv(PortTtM,    PortNotional)).toFixed(2),
+    formPortValue: formatNumberWithGrouping(PortValue) + ' EUR',
+    formPortValueBuy: formatNumberWithGrouping(PortValueBuy) + ' EUR',
+    formPortNotional: formatNumberWithGrouping(PortNotional) + ' EUR',
+    formPortPV01abs: formatNumberWithGrouping(PortPV01) + ' EUR',
+    formPortCPV01abs: formatNumberWithGrouping(PortCPV01) + ' EUR',
+    formPortYield: (safeDiv(PortYield, PortNotional) * 100).toFixed(2) + '%',
+    formPortYieldA: (safeDiv(PortYieldA, PortNotional) * 100).toFixed(2) + '%',
+    formPortPV01: (safeDiv(PortPV01, PortNotional) * 10000).toFixed(2),
+    formPortCPV01: (safeDiv(PortCPV01, PortNotional) * 10000).toFixed(2),
+    formPortTtM: (safeDiv(PortTtM, PortNotional)).toFixed(2),
   };
 
- //Aggregierte werte ins appState setzen:
   appState.setPortAggData(elementId, aggData);
 
-
-
-// HTML: nur mit aggKeysToShow
-
-    const aggKeysToShow = [
+  const aggKeysToShow = [
     'formPortValue',
     'formPortValueBuy',
     'formPortNotional',
@@ -113,23 +162,18 @@ export function handlePortAggData(receivedData, index, port_name) {
     'formPortPV01',
     'formPortCPV01',
     'formPortTtM',
-    // 'formPortPV01abs', 'formPortCPV01abs' z.B. bewusst weglassen
   ];
 
   const portDataAggContainer = document.getElementById(aggContainerId);
   if (!portDataAggContainer) return;
 
-  
   requestAnimationFrame(() => {
-    // nur ausgewählte Keys ins Table-Objekt
     const filteredAggData = Object.fromEntries(
       Object.entries(aggData).filter(([key]) => aggKeysToShow.includes(key))
     );
 
-    // NAMENSVERGABE für ANZEIGE:
     const tableData = mapPortDataToTableRows(filteredAggData);
 
-    // ANZEIGE:  
     const portDataHTML = processData(tableData, tableName);
     portDataAggContainer.innerHTML = portDataHTML;
 
@@ -139,96 +183,16 @@ export function handlePortAggData(receivedData, index, port_name) {
       attachIdLinks?.(portDataAggContainer);
     });
   });
-
 }
 
-
-    function mapPortDataToTableRows(data) {
-      return [
-        { label: 'Notional', value: data.formPortNotional },
-        { label: 'NetAssetValue', value: data.formPortValue },
-        { label: 'NetAssetValueBuy', value: data.formPortValueBuy },
-
-        // { label: 'PV01 (abs)', value: data.formPortPV01abs },   // <-- NEU
-        // { label: 'CPV01 (abs)', value: data.formPortCPV01abs }, // <-- NEU
-
-        { label: 'Portfolio Yield', value: data.formPortYield },
-        { label: 'Portfolio Yield (act)', value: data.formPortYieldA },
-        { label: 'Interest Rate Sensitivity (PV01)', value: data.formPortPV01 },
-        { label: 'Credit Spread Sensitivity (CPV01)', value: data.formPortCPV01 },
-      ];
-    }
-
-
-export function handlePortProdData(receivedData, index, port_name) {
-  const elementId = `portDataContainer${index}`;
-  
-  //console.log('Fct: handlePortProdData:');
-  //console.log('elementId:', elementId);
-  //console.log('receivedData:', receivedData);
-
-  if (!receivedData || !Array.isArray(receivedData) || receivedData.length === 0) {
-    console.error('receivedData is not in the expected format or is empty');
-    return;
-  }
-
-  const portDataContainer = document.getElementById(elementId);
-
-  if (!portDataContainer) {
-    console.error(`Element with id ${elementId} not found`);
-    return;
-  }
-
-  const portData = receivedData;
-  
-  if (portDataContainer && portData) {
-    renderPortColumnSelector(appState, 'portColumnSelector');
-
-    bindPortColumnSelector(appState, () => {
-  handlePortProdData(receivedData, index, port_name);
-    }, 'portColumnSelector');
-    
-    const visibleColumns =
-    appState.getVisibleColumns('portTable0') ||
-    DEFAULT_VISIBLE_PORT_COLUMN_KEYS;
-
-    const filteredColumnsPortData = filterColumnsInData(receivedData, visibleColumns);
-    const filteredPortData = filterColumnsInData(receivedData, ALL_PORT_COLUMN_KEYS);
-    // let filteredColumnsPortData = filterColumnsInData(receivedData, columnsToShow); //!!!!!
-    // let filteredPortData = filterColumnsInData(receivedData, columns); //!!!!! nach Porfolioname
-      //console.log("filteredPortData:", filteredPortData);
-
-    appState.setFilteredPortData(filteredPortData);// !!!
-    
-    const displayPortData = mapPortDataForDisplay(filteredColumnsPortData);
-
-    const portDataHTML = processData(displayPortData, tableName);
-    portDataContainer.innerHTML = portDataHTML;
-
-    applyPortfolioTableColoring(portDataContainer);
-    attachIdLinks(portDataContainer);  
-
-    addTooltipsForTruncatedText(portDataContainer);
-    addProdIdTooltips(portDataContainer);
-
-  }
+function mapPortDataToTableRows(data) {
+  return [
+    { label: 'Notional', value: data.formPortNotional },
+    { label: 'NetAssetValue', value: data.formPortValue },
+    { label: 'NetAssetValueBuy', value: data.formPortValueBuy },
+    { label: 'Portfolio Yield', value: data.formPortYield },
+    { label: 'Portfolio Yield (act)', value: data.formPortYieldA },
+    { label: 'Interest Rate Sensitivity (PV01)', value: data.formPortPV01 },
+    { label: 'Credit Spread Sensitivity (CPV01)', value: data.formPortCPV01 },
+  ];
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

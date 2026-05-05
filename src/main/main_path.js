@@ -106,8 +106,8 @@ function getExcelPath() {
   const env = (process.env.NODE_ENV || '').trim().toLowerCase();
 
   if (env === 'thomasdev') {
-    const excelPath = '\\\\pers.ad.uni-graz.at\\fs\\ou\\811\\Banken_Finanzstatus\\_Veranlagungen_Riskmanagement\\vXp\\UNI_DATA.xlsm';
-    // const excelPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI_DATA.xlsm';
+    // const excelPath = '\\\\pers.ad.uni-graz.at\\fs\\ou\\811\\Banken_Finanzstatus\\_Veranlagungen_Riskmanagement\\vXp\\UNI_DATA.xlsm';
+    const excelPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI_DATA.xlsm';
     console.log('[THOMASDEV] EXCEL PATH:', excelPath);
     return excelPath;
   }

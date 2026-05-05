@@ -1,11 +1,11 @@
 // src/main/services/tableLayout.service.js
 'use strict';
 
-const dbService = require('./db.service');
+// -----------------------------------
+// V1 (bestehend)
+// -----------------------------------
 
-function getTableLayout(tableId) {
-  const db = dbService.getDb();
-
+function getTableLayout(db, tableId) {
   return new Promise((resolve, reject) => {
     db.get(
       `
@@ -20,14 +20,13 @@ function getTableLayout(tableId) {
           return;
         }
 
-        if (!row) {
+        if (!row || !row.layout_json) {
           resolve(null);
           return;
         }
 
         try {
-          const layout = JSON.parse(row.layout_json);
-          resolve(layout);
+          resolve(JSON.parse(row.layout_json));
         } catch (parseError) {
           reject(parseError);
         }
@@ -36,38 +35,120 @@ function getTableLayout(tableId) {
   });
 }
 
-function saveTableLayout(tableId, layout) {
-  const db = dbService.getDb();
-
+function saveTableLayout(db, tableId, layout) {
   return new Promise((resolve, reject) => {
-    const layoutJson = JSON.stringify(layout);
-    const updatedAt = new Date().toISOString();
-
     db.run(
       `
-        INSERT INTO table_layouts (table_id, layout_json, updated_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(table_id) DO UPDATE SET
-          layout_json = excluded.layout_json,
-          updated_at = excluded.updated_at
+        INSERT OR REPLACE INTO table_layouts
+        (table_id, layout_json, updated_at)
+        VALUES (?, ?, datetime('now'))
       `,
-      [tableId, layoutJson, updatedAt],
-      function (err) {
+      [tableId, JSON.stringify(layout)],
+      (err) => {
         if (err) {
           reject(err);
           return;
         }
 
-        resolve({
-          ok: true,
-          changes: this.changes,
-        });
+        resolve({ ok: true });
+      }
+    );
+  });
+}
+
+// -----------------------------------
+// V2 (multi-layout)
+// -----------------------------------
+
+function getTableLayoutV2(db, tableId, layoutName) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `
+        SELECT layout_json
+        FROM table_layouts_v2
+        WHERE table_id = ? AND layout_name = ?
+      `,
+      [tableId, layoutName],
+      (err, row) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        if (!row || !row.layout_json) {
+          resolve(null);
+          return;
+        }
+
+        try {
+          resolve(JSON.parse(row.layout_json));
+        } catch (parseError) {
+          reject(parseError);
+        }
+      }
+    );
+  });
+}
+
+function saveTableLayoutV2(db, tableId, layoutName, layout) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `
+        INSERT OR REPLACE INTO table_layouts_v2
+        (table_id, layout_name, layout_json, updated_at)
+        VALUES (?, ?, ?, datetime('now'))
+      `,
+      [tableId, layoutName, JSON.stringify(layout)],
+      (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve({ ok: true });
+      }
+    );
+  });
+}
+
+function getTableLayoutsV2(db, tableId) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `
+        SELECT layout_name, layout_json
+        FROM table_layouts_v2
+        WHERE table_id = ?
+        ORDER BY layout_name
+      `,
+      [tableId],
+      (err, rows) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        try {
+          const result = (rows || []).map((row) => ({
+            layoutName: row.layout_name,
+            layout: row.layout_json ? JSON.parse(row.layout_json) : null,
+          }));
+
+          resolve(result);
+        } catch (parseError) {
+          reject(parseError);
+        }
       }
     );
   });
 }
 
 module.exports = {
+  // V1
   getTableLayout,
   saveTableLayout,
+
+  // V2
+  getTableLayoutV2,
+  saveTableLayoutV2,
+  getTableLayoutsV2,
 };
