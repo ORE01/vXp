@@ -23,17 +23,11 @@ export function bindSwaptionDropdownListeners() {
     });
   }
 
-  // --- Cube Dropdowns ---
-  const cubeOptSel = document.getElementById('swaptionOptionTenorSelectCube');
-  const cubeSwpSel = document.getElementById('swaptionSwapTenorSelectCube');
+  // --- Cube Strike Dropdown ---
+  const cubeStrikeSel = document.getElementById('swaptionCubeStrikeSelect');
 
-  if (cubeOptSel && cubeSwpSel) {
-    cubeOptSel.addEventListener('change', () => {
-      renderSwaptionCubeSurface3D();
-      renderSwaptionCubeSummary();
-    });
-
-    cubeSwpSel.addEventListener('change', () => {
+  if (cubeStrikeSel) {
+    cubeStrikeSel.addEventListener('change', () => {
       renderSwaptionCubeSurface3D();
       renderSwaptionCubeSummary();
     });

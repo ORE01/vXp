@@ -1,6 +1,6 @@
 
 // utils/linksToTables.js
-import { handleModalAction } from '../../renderer/core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from '../core/ui/modal/modalActions.js';
 //import { handleModalAction } from '../../../renderer/UI/MODAL_HELPER/ModalActionHandler.js';
 import { appState } from '../../renderer/renderer.js';
 import { handleCouponModal } from '../../renderer/features/NEW_PRODUCTS/PRODCoupon.js';

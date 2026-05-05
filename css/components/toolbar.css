@@ -1,0 +1,32 @@
+#toolbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 10px;
+  min-height: 34px;
+  box-sizing: border-box;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.language-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#toolbar button {
+  height: 28px;
+  padding: 4px 10px;
+  line-height: 1;
+}
+
+#creditWarningText {
+  cursor: help;
+}

@@ -4,7 +4,7 @@
 # ============================================================
 
 $Root = "C:\Users\Ronald\riskApp\electron_app"
-$MaxDepth = 6
+$MaxDepth = 8
 
 $ExcludeDirs = @(
   "node_modules",
@@ -40,7 +40,8 @@ function Show-Tree($Path, $Depth, $Prefix = "") {
       } else {
         $IncludeExtensions -contains ("*" + $_.Extension)
       }
-    }
+    } |
+    Sort-Object @{ Expression = { -not $_.PSIsContainer } }, Name
 
   $count = $items.Count
   $i = 0

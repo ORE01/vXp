@@ -1,5 +1,4 @@
-﻿// src/renderer/core/bootstrap/bootstrapBridges.js
-'use strict';
+﻿'use strict';
 
 import { bindGlobalChangeDelegation } from '../ui/globalChangeDelegation.js';
 import { bindClearCSScenario } from '../../features/OFFERS/csScenarioUI.js';
@@ -14,16 +13,18 @@ export function bootstrapBridges(appState, deps = {}) {
     handleProviderData,
   } = deps;
 
-  // --- Hard guards (so you SEE the real wiring problem) ---
   if (!api) throw new Error('[bootstrapBridges] api missing');
   if (!appState) throw new Error('[bootstrapBridges] appState missing');
+
+  // SOFORT setzen, bevor irgendetwas anderes potenziell crasht
+  window.appState = appState;
+  console.log('[bootstrapBridges] window.appState set:', window.appState);
 
   if (!ratesHandlers || typeof ratesHandlers !== 'object') {
     console.error('[bootstrapBridges] ratesHandlers missing/invalid:', ratesHandlers);
     throw new Error('[bootstrapBridges] ratesHandlers missing. Ensure bootstrapHandlers passes ratesHandlers into bootstrapBridges().');
   }
 
-  // Prefer legacy name for compatibility (EUSW), but accept RATES handler too
   const handleEUSWData =
     (typeof ratesHandlers.handleEUSWData === 'function' && ratesHandlers.handleEUSWData) ||
     (typeof ratesHandlers.handleRATESData === 'function' && ratesHandlers.handleRATESData) ||
@@ -34,7 +35,6 @@ export function bootstrapBridges(appState, deps = {}) {
     throw new Error('[bootstrapBridges] ratesHandlers has no handleEUSWData/handleRATESData.');
   }
 
-  // --- Bind UI bridges ---
   bindGlobalChangeDelegation({
     appState,
     handleEUSWData,
@@ -50,9 +50,6 @@ export function bootstrapBridges(appState, deps = {}) {
     api,
     handleProviderData,
   });
-
-  // Debug (optional)
-  window.appState = appState;
 
   bindSwaptionReadyListeners({ appState });
 }

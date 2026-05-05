@@ -23,9 +23,11 @@ export function bootstrapPython(appState, deps) {
     // Swaption + Cube helpers
     buildCubeSurfaceGrid,
     populateSwaptionCubeSelectors,
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+    handleSwaptionAtmBaseData,
+    handleSwaptionSmileBaseData,
+    handleSwaptionAtmScenarioData,
+    handleSwaptionSmileScenarioData,
+    //handleSwaptionCubeData,
 
     // hooks
     onExcelComplete,
@@ -51,9 +53,11 @@ export function bootstrapPython(appState, deps) {
       handleCVaRData,
     },
     swaption: {
-      handleSwaptionATMData,
-      handleSwaptionSmileData,
-      handleSwaptionCubeSurfaceData,
+        handleSwaptionAtmBaseData,
+        handleSwaptionSmileBaseData,
+        handleSwaptionAtmScenarioData,
+        handleSwaptionSmileScenarioData,
+      //handleSwaptionCubeData,
     },
     cube: {
       buildCubeSurfaceGrid,

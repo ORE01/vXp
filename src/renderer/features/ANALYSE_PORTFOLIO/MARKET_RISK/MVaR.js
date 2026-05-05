@@ -1,5 +1,5 @@
-﻿import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+﻿import processData from '../../../core/ui/modal/modalData.js';
+import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../../renderer.js';
@@ -166,7 +166,7 @@ function fetchAndUpdateMVarDataInputData(tableName = TABLE_MVAR) {
 export function handleMVaRData(receivedData, index) {
   const port_name = appState.getSelectedPortTableName();
 
-  // ðŸ”’ ABSOLUTER EXIT: solange kein Portfolio existiert, NICHTS tun
+  // ABSOLUTER EXIT: solange kein Portfolio existiert, NICHTS tun
   if (!port_name) return;
 
   const scenario_name = appState.selectedMvarInterval;

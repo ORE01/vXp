@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -22,35 +22,30 @@ Feature:    Wenn es nur in einem Panel gilt
 
  -->
 
+  <link href="./css/tokens/themes.css" rel="stylesheet">
 
-  <link href="./css/base/LOGIN.css" rel="stylesheet">  
+  <link href="./css/base/login.css" rel="stylesheet">  
   <link href="./css/base/tableDark.css" rel="stylesheet">
   <link href="./css/base/modalDark.css" rel="stylesheet">
-  <link href="./css/base/Tables.css" rel="stylesheet">
-  <link href="./css/base/CouponModal.css" rel="stylesheet">
+  <link href="./css/base/tables.css" rel="stylesheet">
+  
 
  
-
-  <link href="./css/components/Button.css" rel="stylesheet">
-  <link href="./css/components/Dropdown.css" rel="stylesheet">
-  <link href="./css/components/ToolTip.css" rel="stylesheet">
+  <link href="./css/components/toolbar.css" rel="stylesheet">
+  <link href="./css/components/couponModal.css" rel="stylesheet">
+  <link href="./css/components/slideIn.base.css" rel="stylesheet">
+  <link href="./css/components/button.css" rel="stylesheet">
+  <link href="./css/components/dropdown.css" rel="stylesheet">
+  <link href="./css/components/toolTip.css" rel="stylesheet">
   <link href="./css/components/messageBox.css" rel="stylesheet">
-  <link href="./css/components/Warnings.css" rel="stylesheet">
+  <link href="./css/components/warnings.css" rel="stylesheet">
   <link href="./css/components/trafficLight.css" rel="stylesheet">
 
-  <link href="./css/components/Chart.css" rel="stylesheet">
-  <link href="./css/components/SectionTriggers.css" rel="stylesheet">
-  <link href="./css/components/Surfaces.css" rel="stylesheet">
+  <link href="./css/components/chart.css" rel="stylesheet">
+  <link href="./css/components/sectionTriggers.css" rel="stylesheet">
+  <link href="./css/components/surfaces.css" rel="stylesheet">
 
-  <!-- <link href="./css/components/Chart copy.css" rel="stylesheet"> -->
-
-  <!-- =======================================SLIDEIN============================== -->
-
-  <link href="./css/aaaSLIDEIN/slideIn.base.css" rel="stylesheet">
-
-<!-- =======================================SLIDEIN============================== -->
-
-  <link href="./css/CREDITSPREADS.css" rel="stylesheet">
+ 
   <link href="./css/SELECT_PORTFOLIO/selectPort.css" rel="stylesheet">
 
   <link href="./css/ANALYSE_PORTFOLIO/analyse.css" rel="stylesheet">
@@ -72,21 +67,17 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <link href="./css/COMPARE/compare.css" rel="stylesheet">
 
-  <link href="./css/CREATE_PORTFOLIO/CreatePortfolio.css" rel="stylesheet">
-  <link href="./css/NEW_PRODUCT/newPortfolio.css" rel="stylesheet">
+  <link href="./css/CREATE_PORTFOLIO/createPortfolio.css" rel="stylesheet">
 
+  <link href="./css/NEW_PRODUCT/newPortfolio.css" rel="stylesheet">
   <link href="./css/NEW_PRODUCT/offers.css" rel="stylesheet">
   
-
-  
-
+  <link href="./css/MARKET_DATA/creditSpreads.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
-  <link href="./css/MARKET_DATA/forcasting.css" rel="stylesheet">
+  <link href="./css/MARKET_DATA/forecasting.css" rel="stylesheet">
  
   <link href="./css/MARKET_DATA/rates.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/forwards.css" rel="stylesheet">
-
-  <!-- <link href="./css/DATA_PROVIDER/DataProvider.css" rel="stylesheet"> -->
 
   <link href="./css/UPDATES/updates.css" rel="stylesheet">
   <link href="./css/UPDATES/excelImport.css" rel="stylesheet">
@@ -95,7 +86,11 @@ Feature:    Wenn es nur in einem Panel gilt
   
   <link href="./css/REPORTS/riskReportsModal.css" rel="stylesheet">
   <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
-  <link href="./css/REPORTS/offers-preview.css" rel="stylesheet">
+  <link href="./css/REPORTS/offersPreview.css" rel="stylesheet">
+
+  <!-- Data Provider styling kommt später wieder -->
+
+  <!-- <link href="./css/DATA_PROVIDER/dataProvider.css" rel="stylesheet"> -->
 
   
 
@@ -119,7 +114,7 @@ Feature:    Wenn es nur in einem Panel gilt
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Plotly Ã¼ber jsDelivr (CSP-kompatibel) -->
+  <!-- Plotly von jsDelivr (CSP-kompatibel) -->
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.35.2/plotly.min.js"></script>
 
 
@@ -189,33 +184,38 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <img id="logo" src="assets/logo.png" style="display:none;" />
 
-    <!-- Toolbar for Language Toggle -->
-    <div id="toolbar" class="toolbar">
-      <div class="language-toggle">
-        <button id="lang-en" class="language-button">EN</button>
-        <button id="lang-de" class="language-button">DE</button>
-        <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
-
-        <!-- Curve Szenario Warning -->
-        <div id="curveWarningContainer" class="warning-container">
-          <span class="warning-text">Curve Szenario Set</span>
-          <div id="curveWarning" class="warning-light"></div>
-        </div>
-
-        <!-- Credit Spread Szenario Warning -->
-        <div id="creditWarningContainer" class="warning-container">
-          <span class="warning-text">Credit Spread Szenario Set</span>
-          <div id="creditWarning" class="warning-light"></div>
-        </div>
-
-        <!-- CS Szenario Warning -->
-        <div id="csWarningContainer" class="warning-container">
-          <span class="warning-text">CS Szenario for ID Set:</span>
-          <div id="csWarning" class="warning-light"></div> 
-          <span id="csWarningText" class="warning-text"></span>
-        </div>
-      </div>
+<!-- Toolbar for Language Toggle -->
+<div id="toolbar" class="toolbar">
+  <div class="toolbar-left">
+    <div class="language-toggle">
+      <button id="lang-en" class="language-button">EN</button>
+      <button id="lang-de" class="language-button">DE</button>
+      <button id="themeToggle" class="theme-toggle-button">Switch Theme</button>
     </div>
+  </div>
+
+  <div class="toolbar-right">
+    <!-- Curve Szenario Warning -->
+    <div id="curveWarningContainer" class="warning-container">
+      <span class="warning-text">Curve Scenario Set</span>
+      <div id="curveWarning" class="warning-light"></div>
+    </div>
+
+    <!-- Credit Spread Szenario Warning -->
+<div id="creditWarningContainer" class="warning-container">
+  <span class="warning-text">Credit Spread Scenario Set:</span>
+  <div id="creditWarning" class="warning-light"></div>
+  <span id="creditWarningText" class="warning-text"></span>
+</div>
+
+    <!-- CS Szenario Warning -->
+    <div id="csWarningContainer" class="warning-container">
+      <span class="warning-text">CS Scenario for ID Set:</span>
+      <div id="csWarning" class="warning-light"></div>
+      <span id="csWarningText" class="warning-text"></span>
+    </div>
+  </div>
+</div>
 
     <div class="tab">
       <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
@@ -329,7 +329,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
 <!-- Modal: ANALYSE_Modal -->
 <div id="ANALYSE_Modal" class="table">
-  <div class="table-content" style="display: block;"> <!-- ðŸ‘ˆ Force vertical stacking -->
+  <div class="table-content" style="display: block;"> <!-- Force vertical stacking -->
 
     <span class="close">&times;</span>
 
@@ -1433,53 +1433,65 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
-    <!--   Forwards   Unterpunkt von Interest Rates -->
-    <div class="chart-section chart-section--sub">
+        <!--   Forwards   Unterpunkt von Interest Rates -->
+        <div class="chart-section chart-section--sub">
+          <button
+            class="section-trigger section-trigger--sub"
+            data-panel="panel-forward"
+            aria-controls="panel-forward"
+            aria-expanded="false">
+            <span class="section-header">Forward</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
+    <!--   Volatilities   Trigger (Hauptpunkt) -->
+    <div class="chart-section">
       <button
-        class="section-trigger section-trigger--sub"
-        data-panel="panel-forward"
-        aria-controls="panel-forward"
+        class="section-trigger"
+        data-panel="panel-volatilities-root"
+        aria-controls="panel-volatilities-root"
         aria-expanded="false">
-        <span class="section-header">Forward</span>
+        <span class="section-header">Volatilities</span>
         <span class="chev"></span>
       </button>
     </div>
 
-        <!--   Swaption Vols   Unterpunkt von Interest Rates -->
-    <div class="chart-section chart-section--sub">
-      <button
-        class="section-trigger section-trigger--sub"
-        data-panel="panel-swaption"
-        aria-controls="panel-swaption"
-        aria-expanded="false">
-        <span class="section-header">Swaption Vols</span>
-        <span class="chev"></span>
-      </button>
-    </div>
+          <!--   Swaption Vols   Unterpunkt von Volatilities -->
+          <div class="chart-section chart-section--sub">
+            <button
+              class="section-trigger section-trigger--sub"
+              data-panel="panel-swaption"
+              aria-controls="panel-swaption"
+              aria-expanded="false">
+              <span class="section-header">Swaption Vols</span>
+              <span class="chev"></span>
+            </button>
+          </div>
 
-    <!--   Swaption Smile   eigener Unterpunkt von Interest Rates -->
-    <div class="chart-section chart-section--sub">
-      <button
-        class="section-trigger section-trigger--sub"
-        data-panel="panel-swaption-smile"
-        aria-controls="panel-swaption-smile"
-        aria-expanded="false">
-        <span class="section-header">Swaption Smile</span>
-        <span class="chev"></span>
-      </button>
-    </div>
+          <!--   Swaption Smile   Unterpunkt von Volatilities -->
+          <div class="chart-section chart-section--sub">
+            <button
+              class="section-trigger section-trigger--sub"
+              data-panel="panel-swaption-smile"
+              aria-controls="panel-swaption-smile"
+              aria-expanded="false">
+              <span class="section-header">Swaption Smile</span>
+              <span class="chev"></span>
+            </button>
+          </div>
 
-    <!--   Swaption Vol Cube   eigener Unterpunkt von Interest Rates -->
-<div class="chart-section chart-section--sub">
-  <button
-    class="section-trigger section-trigger--sub"
-    data-panel="panel-swaption-cube"
-    aria-controls="panel-swaption-cube"
-    aria-expanded="false">
-    <span class="section-header">Swaption Vol Cube</span>
-    <span class="chev"></span>
-  </button>
-</div>
+          <!--   Swaption Vol Cube   Unterpunkt von Volatilities -->
+          <div class="chart-section chart-section--sub">
+            <button
+              class="section-trigger section-trigger--sub"
+              data-panel="panel-swaption-cube"
+              aria-controls="panel-swaption-cube"
+              aria-expanded="false">
+              <span class="section-header">Swaption Vol Cube</span>
+              <span class="chev"></span>
+            </button>
+          </div>
 
 
 
@@ -1519,24 +1531,74 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
-    <!--   Market Scenarios   Trigger -->
-    <div class="chart-section">
+<!--   Scenarios   Trigger (Hauptpunkt) -->
+<div class="chart-section">
+  <button
+    class="section-trigger"
+    data-panel="panel-scenarios-root"
+    aria-controls="panel-scenarios-root"
+    aria-expanded="false">
+    <span class="section-header">Scenarios</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
+    <!--   Set Scenarios   Unterpunkt -->
+    <div class="chart-section chart-section--sub">
       <button
-        class="section-trigger"
+        class="section-trigger section-trigger--sub"
         data-panel="panel-scenarios"
         aria-controls="panel-scenarios"
         aria-expanded="false">
-        <span class="section-header">Market Scenarios</span>
+        <span class="section-header">Set Scenarios</span>
         <span class="chev"></span>
       </button>
     </div>
 
+    <!--   Create IR Scenario   Unterpunkt -->
+    <div class="chart-section chart-section--sub">
+      <button
+        class="section-trigger section-trigger--sub"
+        data-panel="panel-create-scenario"
+        aria-controls="panel-create-scenario"
+        aria-expanded="false">
+        <span class="section-header">Create IR Scenario</span>
+        <span class="chev"></span>
+      </button>
+    </div>
+
+    <!--   Create CS Scenario   Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-create-cs-scenario"
+    aria-controls="panel-create-cs-scenario"
+    aria-expanded="false">
+    <span class="section-header">Create CS Scenarios</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
+<!--   Create VOL Scenario   Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-create-vol-scenario"
+    aria-controls="panel-create-vol-scenario"
+    aria-expanded="false">
+    <span class="section-header">Create Vol Scenario</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
     <!-- Backdrop nur fuer dieses Modal -->
     <div class="sub-panel-backdrop" hidden></div>
 
-    <!-- ====== PANELS ====== -->
+<!-- ====== PANELS ====== -->
 
-<!-- Panel: RATES (Curve Viewer – no scenario control) -->
+<!-- ================= INTEREST RATES ================= -->
+
+<!-- Panel: RATES -->
 <div id="panel-rates" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-rates-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-rates-title" class="sub-panel-title">INTEREST RATES</div>
@@ -1544,245 +1606,208 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 
   <div class="sub-panel-body">
-
-    <!-- Currency Selection -->
     <label for="currencySelector" style="display:block; font-weight:600; margin-bottom:6px;">
       Select Currency:
     </label>
     <select id="currencySelector" class="ir-select"></select>
 
-    <!-- Curve Selection -->
     <label for="ratesSelector" style="display:block; font-weight:600; margin-top:12px; margin-bottom:6px;">
       Select Curve:
     </label>
     <select id="ratesSelector" class="ir-select"></select>
 
-    <!-- Table -->
     <section class="table-card" style="margin-top:12px;">
       <h4 class="table-title">Rates Table</h4>
       <div id="IRDataContainer" class="data-container"></div>
     </section>
 
-    <!-- Chart -->
     <div class="chart-container" style="margin-top:16px;">
       <canvas id="IRLineChart"></canvas>
     </div>
-
   </div>
 </div>
 
-    <!-- Panel: FORWARD (Slide-In) -->
-    <div id="panel-forward" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-forward-title" hidden>
+<!-- Panel: FORWARD -->
+<div id="panel-forward" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-forward-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-forward-title" class="sub-panel-title">FORWARD RATES</div>
+    <button class="sub-panel-close" data-close="panel-forward" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="forward-layout-wrapper">
+      <div class="data-container" id="FWDDataContainer"></div>
+
+      <div class="forward-charts-wrapper">
+        <div id="cmsInputContainer1">
+          <label for="cmsForwardInput1">CMS Forward Length 1:</label>
+          <input type="number" id="cmsForwardInput1" value="1" min="1" />
+          <button id="CMSButton1">Apply CMS Rate 1</button>
+        </div>
+
+        <div id="cmsInputContainer2">
+          <label for="cmsForwardInput2">CMS Forward Length 2:</label>
+          <input type="number" id="cmsForwardInput2" value="5" min="1" />
+          <button id="CMSButton2">Apply CMS Rate 2</button>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="FWDlineChart" class="forward-line-chart"></canvas>
+        </div>
+
+        <div id="inputContainer">
+          <label for="yearsForwardInput">Years Forward:</label>
+          <input type="number" id="yearsForwardInput" value="1" min="1" />
+          <button id="applyYearsForwardButton">Apply</button>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+    <!-- ================= VOLATILITIES ================= -->
+
+    <!-- Optional Root Panel: VOLATILITIES -->
+    <div id="panel-volatilities-root" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-volatilities-root-title" hidden>
       <div class="sub-panel-header">
-        <div id="panel-forward-title" class="sub-panel-title">FORWARD RATES</div>
-        <button class="sub-panel-close" data-close="panel-forward" aria-label="close">&times;</button>
+        <div id="panel-volatilities-root-title" class="sub-panel-title">VOLATILITIES</div>
+        <button class="sub-panel-close" data-close="panel-volatilities-root" aria-label="close">&times;</button>
       </div>
 
       <div class="sub-panel-body">
-        <div class="forward-layout-wrapper">
-          <div class="data-container" id="FWDDataContainer"></div>
-
-          <div class="forward-charts-wrapper">
-            <div id="cmsInputContainer1">
-              <label for="cmsForwardInput1">CMS Forward Length 1:</label>
-              <input type="number" id="cmsForwardInput1" value="1" min="1" />
-              <button id="CMSButton1">Apply CMS Rate 1</button>
-            </div>
-
-            <div id="cmsInputContainer2">
-              <label for="cmsForwardInput2">CMS Forward Length 2:</label>
-              <input type="number" id="cmsForwardInput2" value="5" min="1" />
-              <button id="CMSButton2">Apply CMS Rate 2</button>
-            </div>
-
-            <div class="chart-container">
-              <canvas id="FWDlineChart" class="forward-line-chart"></canvas>
-            </div>
-
-            <div id="inputContainer">
-              <label for="yearsForwardInput">Years Forward:</label>
-              <input type="number" id="yearsForwardInput" value="1" min="1" />
-              <button id="applyYearsForwardButton">Apply</button>
-            </div>
-
-            <div class="chart-container">
-              <canvas id="FWDforwardCurveChart" class="forward-swap-chart"></canvas>
-            </div>
-          </div>
-        </div>
+        <section class="table-card">
+          <h4 class="table-title">Volatility Data</h4>
+          <div id="SwaptionActiveScenarioContainer"></div>
+          <p>Select Swaption Vols, Swaption Smile or Swaption Vol Cube from the menu.</p>
+        </section>
       </div>
     </div>
 
-<!-- Panel: SWAPTION VOLS (Slide-In) -->
-<div id="panel-swaption" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-title" hidden>
-  <div class="sub-panel-header">
-    <div id="panel-swaption-title" class="sub-panel-title">SWAPTION VOLS</div>
-    <button class="sub-panel-close" data-close="panel-swaption" aria-label="close">&times;</button>
-  </div>
-
-  <div class="sub-panel-body">
-
-    <div class="swaption-layout-wrapper">
-      
-
-
-      <!-- Rechte Seite: ATM Surface (3D) -->
-      <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
-
-        <div class="table-card chart-card" style="flex:1; min-height:320px;">
-          <h4 class="table-title">ATM Surface (3D)</h4>
-          <div class="chart-container" style="height:100%;">
-            <div id="swaption-atm-surface-3d" style="width:100%; height:100%;"></div>
-          </div>
-        </div>
-
-      </section>
-
-    </div>
-
-  </div>
-</div>
-
-<!-- Panel: SWAPTION SMILE (Slide-In) -->
-<div id="panel-swaption-smile" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-smile-title" hidden>
-  <div class="sub-panel-header">
-    <div id="panel-swaption-smile-title" class="sub-panel-title">SWAPTION SMILE</div>
-    <button class="sub-panel-close" data-close="panel-swaption-smile" aria-label="close">&times;</button>
-  </div>
-
-  <div class="sub-panel-body">
-
-    <div class="swaption-layout-wrapper" style="display:flex; gap:16px; align-items:stretch;">
-
-      <!-- Linke Seite: Auswahl + Summary-Tabelle -->
-      <section class="table-card" style="flex: 0 0 30%; margin-right:16px;">
-        <h4 class="table-title">ATM Vols</h4>
-
-        <div class="swaption-select-row" style="display:flex; gap:8px; margin-bottom:8px;">
-          <div class="input-container" style="flex:1;">
-            <label for="swaptionOptionTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
-              Option Tenor
-            </label>
-            <select id="swaptionOptionTenorSelect" class="ir-select"></select>
+        <!-- Panel: SWAPTION VOLS -->
+        <div id="panel-swaption" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-swaption-title" class="sub-panel-title">SWAPTION VOLS</div>
+            <button class="sub-panel-close" data-close="panel-swaption" aria-label="close">&times;</button>
           </div>
 
-          <div class="input-container" style="flex:1;">
-            <label for="swaptionSwapTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
-              Swap Tenor
-            </label>
-            <select id="swaptionSwapTenorSelect" class="ir-select"></select>
-          </div>
-        </div>
-
-        <!-- Hier kommt die ATM + Resulting Vol Tabelle rein -->
-        <div id="SwaptionATMDataContainer" class="data-container"></div>
-      </section>
-
-      <!-- Rechte Seite: Smile-Chart -->
-      <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
-        <div class="table-card chart-card" style="flex:1;">
-          <h4 class="table-title">Smile / Skew</h4>
-          <div class="chart-container" style="height:260px; max-height:260px;">
-            <canvas id="swaption-smile-chart" style="width:100%; height:100%;"></canvas>
-          </div>
-        </div>
-      </section>
-
-    </div>
-
-  </div>
-</div>
-
-<!-- Panel: SWAPTION VOL CUBE (Slide-In) -->
-<div id="panel-swaption-cube"
-     class="sub-panel"
-     role="dialog"
-     aria-modal="false"
-     aria-labelledby="panel-swaption-cube-title"
-     hidden>
-  <div class="sub-panel-header">
-    <div id="panel-swaption-cube-title" class="sub-panel-title">
-      SWAPTION VOL CUBE
-    </div>
-    <button class="sub-panel-close"
-            data-close="panel-swaption-cube"
-            aria-label="close">
-      &times;
-    </button>
-  </div>
-
-  <div class="sub-panel-body">
-    <div class="swaption-layout-wrapper"
-         style="display:flex; gap:16px; align-items:stretch;">
-
-      <!-- LINKE SPALTE: Run-Button + Filter + Summary -->
-      <section style="flex:0 0 32%; display:flex; flex-direction:column; gap:12px;">
-
-        <!-- Run-Button (vollbreit) -->
-        <button
-          id="swaptionCubeRunButton"
-          class="exec-button"
-          type="button"
-          style="width:100%; padding:10px 12px; font-weight:600;">
-          Run Vol Cube
-        </button>
-
-        <!-- Karte: Filter + Summary -->
-        <div class="table-card" style="flex:1;">
-          <h4 class="table-title">Node Filter &amp; Summary</h4>
-
-          <!-- Filter-Row -->
-          <div class="swaption-select-row"
-               style="display:flex; gap:8px; margin-bottom:8px; margin-top:4px;">
-            <div class="input-container" style="flex:1;">
-              <label for="swaptionOptionTenorSelectCube"
-                     style="display:block; font-weight:600; margin-bottom:2px;">
-                Option Tenor
-              </label>
-              <select id="swaptionOptionTenorSelectCube" class="ir-select"></select>
-            </div>
-
-            <div class="input-container" style="flex:1;">
-              <label for="swaptionSwapTenorSelectCube"
-                     style="display:block; font-weight:600; margin-bottom:2px;">
-                Swap Tenor
-              </label>
-              <select id="swaptionSwapTenorSelectCube" class="ir-select"></select>
+          <div class="sub-panel-body">
+            <div class="swaption-layout-wrapper">
+              <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+                <div class="table-card chart-card" style="flex:1; min-height:320px;">
+                  <h4 class="table-title">ATM Surface (3D)</h4>
+                  <div class="chart-container" style="height:100%;">
+                    <div id="swaption-atm-surface-3d" style="width:100%; height:100%;"></div>
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
-
-          <!-- Summary / Node-Info fÃ¼r gewÃ¤hlten Ausschnitt -->
-          <div id="SwaptionCubeSummaryContainer" class="data-container"></div>
         </div>
-      </section>
 
-      <!-- RECHTE SPALTE: 3D Vol Cube Surface -->
-      <section class="swaption-charts-wrapper"
-               style="flex:1; display:flex; flex-direction:column;">
-        <div class="table-card chart-card" style="flex:1;">
-          <h4 class="table-title">
-            SABR Vol Cube Surface
-          </h4>
-          <div class="chart-container"
-               style="height:260px; max-height:260px;">
-            <!-- Plotly-Target fÃ¼r 3D Surface -->
-            <div id="swaption-cube-surface-3d"
-                 style="width:100%; height:100%;"></div>
+        <!-- Panel: SWAPTION SMILE -->
+        <div id="panel-swaption-smile" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-smile-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-swaption-smile-title" class="sub-panel-title">SWAPTION SMILE</div>
+            <button class="sub-panel-close" data-close="panel-swaption-smile" aria-label="close">&times;</button>
+          </div>
+
+          <div class="sub-panel-body">
+            <div class="swaption-layout-wrapper" style="display:flex; gap:16px; align-items:stretch;">
+
+              <section class="table-card" style="flex: 0 0 30%; margin-right:16px;">
+                <h4 class="table-title">ATM Vols</h4>
+
+                <div class="swaption-select-row" style="display:flex; gap:8px; margin-bottom:8px;">
+                  <div class="input-container" style="flex:1;">
+                    <label for="swaptionOptionTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+                      Option Tenor
+                    </label>
+                    <select id="swaptionOptionTenorSelect" class="ir-select"></select>
+                  </div>
+
+                  <div class="input-container" style="flex:1;">
+                    <label for="swaptionSwapTenorSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+                      Swap Tenor
+                    </label>
+                    <select id="swaptionSwapTenorSelect" class="ir-select"></select>
+                  </div>
+                </div>
+
+                <div id="SwaptionATMDataContainer" class="data-container"></div>
+              </section>
+
+              <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+                <div class="table-card chart-card" style="flex:1;">
+                  <h4 class="table-title">Smile / Skew</h4>
+                  <div class="chart-container" style="height:260px; max-height:260px;">
+                    <canvas id="swaption-smile-chart" style="width:100%; height:100%;"></canvas>
+                  </div>
+                </div>
+              </section>
+
+            </div>
           </div>
         </div>
-      </section>
 
-    </div>
-  </div>
-</div>
+        <!-- Panel: SWAPTION VOL CUBE -->
+        <div id="panel-swaption-cube" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-swaption-cube-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-swaption-cube-title" class="sub-panel-title">SWAPTION VOL CUBE</div>
+            <button class="sub-panel-close" data-close="panel-swaption-cube" aria-label="close">&times;</button>
+          </div>
+
+          <div class="sub-panel-body">
+            <div class="swaption-layout-wrapper" style="display:flex; gap:16px; align-items:stretch;">
+
+              <section style="flex:0 0 32%; display:flex; flex-direction:column; gap:12px;">
 
 
+                <div class="table-card" style="flex:1;">
+                  <h4 class="table-title">Strike Filter &amp; Summary</h4>
 
+                  <div class="swaption-select-row" style="display:flex; gap:8px; margin-bottom:8px; margin-top:4px;">
+                    <div class="input-container" style="flex:1;">
+                      <label for="swaptionCubeStrikeSelect" style="display:block; font-weight:600; margin-bottom:2px;">
+                        Strike
+                      </label>
 
+                      <select id="swaptionCubeStrikeSelect" class="ir-select">
+                        <option value="">ATM</option>
+                      </select>
+                    </div>
 
+                    <div class="input-container" style="flex:1;">
+                      <label style="display:block; font-weight:600; margin-bottom:2px;">
+                        View
+                      </label>
 
+                      <div class="ir-select" style="display:flex; align-items:center; padding-left:10px;">
+                        Surface
+                      </div>
+                    </div>
+                  </div>
 
+                  <div id="SwaptionCubeSummaryContainer" class="data-container"></div>
+                </div>
+              </section>
 
+              <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
+                <div class="table-card chart-card" style="flex:1;">
+                  <h4 class="table-title">SABR Vol Cube Surface</h4>
+                  <div class="chart-container" style="height:260px; max-height:260px;">
+                    <div id="swaption-cube-surface-3d" style="width:100%; height:100%;"></div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+        </div>
 
     <!-- Panel: CREDIT SPREADS (Slide-In) -->
     <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
@@ -2016,28 +2041,243 @@ Feature:    Wenn es nur in einem Panel gilt
 
     </div>
 
-    <!-- Panel: MARKET SCENARIOS -->
-    <div id="panel-scenarios" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-scenarios-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-scenarios-title" class="sub-panel-title">MARKET SCENARIOS</div>
-        <button class="sub-panel-close" data-close="panel-scenarios" aria-label="close">&times;</button>
-      </div>
+<!-- Panel: SET SCENARIOS -->
+<div id="panel-scenarios" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-scenarios-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-scenarios-title" class="sub-panel-title">SET SCENARIOS</div>
+    <button class="sub-panel-close" data-close="panel-scenarios" aria-label="close">&times;</button>
+  </div>
 
-      <div class="sub-panel-body">
+  <div class="sub-panel-body">
 
-        <section class="table-card">
-          <h4 class="table-title">Curve Scenario Mapping</h4>
-          <div id="ScenarioMappingContainer" class="data-container"></div>
-        </section>
+    <!-- ================= IR ================= -->
+    <section class="table-card">
+      <h4 class="table-title">Curve Scenario Mapping</h4>
+      <div id="ScenarioMappingContainer" class="data-container"></div>
+    </section>
 
-        <div style="margin-top:16px;">
-          <button id="applyScenarioChanges" class="edit-button">
-            Apply Changes
-          </button>
-        </div>
-
-      </div>
+    <div style="margin-top:16px;">
+      <button id="applyScenarioChanges" class="edit-button">
+        Apply Changes
+      </button>
     </div>
+
+    <!-- ================= CS ================= -->
+    <section class="table-card" style="margin-top:24px;">
+      <h4 class="table-title">Credit Scenario (Global)</h4>
+
+<div id="csScenarioContainer" style="margin-bottom:12px;">
+  
+</div>
+
+      <button id="applyCSScenarioChanges" class="edit-button">
+        Apply CS Scenario
+      </button>
+    </section>
+
+    <!-- ================= VOLS ================= -->
+    <section class="table-card" style="margin-top:24px;">
+      <h4 class="table-title">Swaption Vol Scenario</h4>
+
+      <div id="volScenarioContainer" style="margin-bottom:12px;"></div>
+
+      <button id="applyVolScenarioChanges" class="edit-button">
+        Apply Vol Scenario
+      </button>
+    </section>
+
+
+  </div>
+</div>
+
+
+<!-- Panel: BUILD IR SCENARIO -->
+<div id="panel-create-scenario" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-create-scenario-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-create-scenario-title" class="sub-panel-title">CREATE SCENARIO</div>
+    <button class="sub-panel-close" data-close="panel-create-scenario" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <section class="table-card">
+      <h4 class="table-title">Select Curve</h4>
+
+      <div style="margin-bottom:12px;">
+        <label>Currency</label><br>
+        <select id="createScenarioCcy"></select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Curve</label><br>
+        <select id="createScenarioCurve"></select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Edit Existing Scenario</label><br>
+        <select id="existingScenarioSelect">
+          <option value="">-- New Scenario --</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Scenario Name</label><br>
+        <input id="createScenarioName" placeholder="new name" />
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Parallel Shift</label><br>
+        <input id="parallelShiftInput" placeholder="+0.01 oder -0.005" />
+        <button id="applyShiftBtn">Apply Shift</button>
+      </div>
+
+    </section>
+
+    <section class="table-card">
+      <h4 class="table-title">Curve Points</h4>
+      <div id="createScenarioTable" class="data-container"></div>
+    </section>
+
+    <div style="margin-top:16px;">
+      <button id="saveScenarioBtn" class="edit-button">
+        Save Scenario
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+
+<!-- Panel: BUILD CS SCENARIO -->
+<div id="panel-create-cs-scenario" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-create-cs-scenario-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-create-cs-scenario-title" class="sub-panel-title">CREATE CS SCENARIO</div>
+    <button class="sub-panel-close" data-close="panel-create-cs-scenario" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <!-- SETTINGS -->
+    <section class="table-card">
+      <h4 class="table-title">Scenario Setup</h4>
+
+      <div style="margin-bottom:12px;">
+        <label>Edit Existing Scenario</label><br>
+        <select id="csScenarioSelect">
+          <option value="">-- New Scenario --</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Scenario Name</label><br>
+        <input id="csScenarioName" placeholder="new CS scenario name" />
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Parallel Shift</label><br>
+        <input id="csShiftInput" placeholder="+10bps oder -5bps" />
+        <button id="csApplyShiftBtn">Apply Shift</button>
+      </div>
+
+    </section>
+
+    <!-- TABLE -->
+    <section class="table-card">
+      <h4 class="table-title">Credit Spread Parameters</h4>
+      <div id="csScenarioTableData" class="data-container"></div>
+    </section>
+
+    <!-- SAVE -->
+    <div style="margin-top:16px;">
+      <button id="csSaveScenarioBtn" class="edit-button">
+        Save CS Scenario
+      </button>
+
+      <button id="csDeleteScenarioBtn" class="edit-button">
+        Delete CS Scenario
+      </button>
+
+    </div>
+
+  </div>
+</div>
+
+
+
+<!-- Panel: BUILD VOL SCENARIO -->
+<!-- Panel: BUILD VOL SCENARIO -->
+<div id="panel-create-vol-scenario"
+     class="sub-panel"
+     role="dialog"
+     aria-modal="false"
+     aria-labelledby="panel-create-vol-scenario-title"
+     hidden>
+
+  <div class="sub-panel-header">
+    <div id="panel-create-vol-scenario-title" class="sub-panel-title">
+      CREATE VOL SCENARIO
+    </div>
+
+    <button class="sub-panel-close"
+            data-close="panel-create-vol-scenario"
+            aria-label="close">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <!-- SETTINGS -->
+    <section class="table-card">
+      <h4 class="table-title">Swaption Vol Scenario Setup</h4>
+
+      <div style="margin-bottom:12px;">
+        <label>Edit Existing Scenario</label><br>
+        <select id="volBuilderScenarioSelect">
+          <option value="">-- New Scenario --</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Scenario Name</label><br>
+        <input id="volScenarioName"
+               placeholder="new vol scenario name" />
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Parallel Vol Shift</label><br>
+        <input id="volShiftInput"
+               placeholder="+1.00 oder -0.50" />
+        <button id="volApplyShiftBtn">Apply Shift</button>
+      </div>
+    </section>
+
+    <!-- ATM TABLE -->
+    <section class="table-card">
+      <h4 class="table-title">Swaption ATM Vol Matrix</h4>
+      <div id="volScenarioTableData" class="data-container"></div>
+    </section>
+
+    <!-- SMILE TABLE -->
+    <section class="table-card">
+      <h4 class="table-title">Swaption Smile / Skew Matrix</h4>
+      <div id="volSmileScenarioTableData" class="data-container"></div>
+    </section>
+
+    <!-- SAVE -->
+    <div style="margin-top:16px;">
+      <button id="volSaveScenarioBtn" class="edit-button">
+        Save Vol Scenario
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+
+
 
   </div>
 </div>
@@ -2749,7 +2989,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <section class="cp-card" style="margin-top:12px;">
       <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <span class="button-label">Zinskurven & Swaptions</span>
-        <button id="updateExcelEuswButton" class="edit-button" type="button">
+        <button id="updateExcelMarketButton" class="edit-button" type="button">
           EUSW + ATM + Smile
         </button>
       </div>

@@ -1,6 +1,6 @@
 ﻿import { getColorFromPalette, getPortfolioColor } from '../../utils/colors.js';
 import { appState } from '../../renderer.js';
-import { openPanel } from '../../core/ui/panels.js';
+
 
 
 
@@ -336,7 +336,7 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
 
   const lastPoint = syntheticData[syntheticData.length - 1];
 
-  // âœ… Current Portfolio Value Marker = Garmin-Pink
+  // Current Portfolio Value Marker = Garmin-Pink
   const endMarker = {
     label: `Current Portfolio Value (${targetEndValue.toFixed(2)}%)`,
     data: [{ x: lastPoint.x, y: targetEndValue }],
@@ -349,7 +349,7 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
     backgroundColor: pCol.backgroundColor,
   };
 
-  // ðŸ”„ Chart generieren
+  // Chart generieren
   window.tsEU1YChartInstance = createSimpleLineChart(
     [cmbValueDataset, portfolioValueDataset, endMarker],
     'tsEU1YChart',

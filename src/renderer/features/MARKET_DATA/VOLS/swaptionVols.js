@@ -10,54 +10,104 @@ const colorScale = [
 ];
 
 //HELPER:
-      function buildSwaptionATMGridFromRows(atmRows) {
-        const rows = Array.isArray(atmRows) ? atmRows : [];
-        if (rows.length === 0) return null;
+function buildSwaptionATMGridFromRows(atmRows) {
+  const rows = Array.isArray(atmRows) ? atmRows : [];
+  if (rows.length === 0) return null;
 
-        const optionSet = new Set();
-        const swapSet = new Set();
+  const optionSet = new Set();
+  const swapSet = new Set();
 
-        for (const r of rows) {
-          const opt = String(r?.option_tenor ?? "").trim();
-          const swp = String(r?.swap_tenor ?? "").trim();
-          if (opt) optionSet.add(opt);
-          if (swp) swapSet.add(swp);
-        }
+  for (const r of rows) {
+    const opt = String(r?.option_tenor ?? "").trim();
+    const swp = String(r?.swap_tenor ?? "").trim();
+    if (opt) optionSet.add(opt);
+    if (swp) swapSet.add(swp);
+  }
 
-        const optionTenors = sortTenors([...optionSet]); // X
-        const swapTenors   = sortTenors([...swapSet]);   // Y
+  const optionTenors = sortTenors([...optionSet]); // X
+  const swapTenors   = sortTenors([...swapSet]);   // Y
 
-        const volMatrix = swapTenors.map(() => optionTenors.map(() => null)); // [y][x]
+  const volMatrix = swapTenors.map(() => optionTenors.map(() => null)); // [y][x]
 
-        for (const r of rows) {
-          const opt = String(r?.option_tenor ?? "").trim();
-          const swp = String(r?.swap_tenor ?? "").trim();
-          const rowIdx = swapTenors.indexOf(swp);
-          const colIdx = optionTenors.indexOf(opt);
-          if (rowIdx < 0 || colIdx < 0) continue;
+  for (const r of rows) {
+    const opt = String(r?.option_tenor ?? "").trim();
+    const swp = String(r?.swap_tenor ?? "").trim();
+    const rowIdx = swapTenors.indexOf(swp);
+    const colIdx = optionTenors.indexOf(opt);
+    if (rowIdx < 0 || colIdx < 0) continue;
 
-          const vol = Number(r?.atm_vol);
-          volMatrix[rowIdx][colIdx] = Number.isFinite(vol) ? vol : null;
-        }
+    const vol = Number(r?.atm_vol ?? r?.vol);
+    volMatrix[rowIdx][colIdx] = Number.isFinite(vol) ? vol : null;
+  }
 
-        return { optionTenors, swapTenors, volMatrix };
-      }
-      // ATM Vol für aktuell gewählte Node aus ATM rows[]
-      function getAtmVolForSelectedNodeFromRows() {
-        const opt = document.getElementById("swaptionOptionTenorSelect")?.value || '';
-        const swp = document.getElementById("swaptionSwapTenorSelect")?.value || '';
-        if (!opt || !swp) return null;
+  return { optionTenors, swapTenors, volMatrix };
+}
+// ATM Vol für aktuell gewählte Node aus ATM rows[]
+function getAtmVolForSelectedNodeFromRows() {
+  const opt = document.getElementById("swaptionOptionTenorSelect")?.value || '';
+  const swp = document.getElementById("swaptionSwapTenorSelect")?.value || '';
+  if (!opt || !swp) return null;
 
-        const rows = Array.isArray(appState?.swaptionATM) ? appState.swaptionATM : [];
-        const hit = rows.find(r =>
-          String(r?.option_tenor ?? "").trim() === opt &&
-          String(r?.swap_tenor ?? "").trim() === swp
-        );
-        if (!hit) return null;
+  const rows = appState.getSwaptionAtmBase?.() || appState._SWAPTION_ATM_BASE || [];
+  const hit = rows.find(r =>
+    String(r?.option_tenor ?? "").trim() === opt &&
+    String(r?.swap_tenor ?? "").trim() === swp
+  );
+  if (!hit) return null;
 
-        const v = Number(hit?.atm_vol);
-        return Number.isFinite(v) ? v : null;
-      }
+  const v = Number(hit?.atm_vol ?? hit?.vol);
+  return Number.isFinite(v) ? v : null;
+}
+
+export function renderActiveSwaptionScenarioPanel() {
+
+  const ccy =
+    document.getElementById("swaptionCurrencySelect")?.value ||
+    "EUR";
+
+  const activeRows = appState.getSwaptionActive?.() || [];
+
+  const active = activeRows
+    .sort((a, b) =>
+      new Date(b.activated_at || 0) - new Date(a.activated_at || 0)
+    )[0];
+
+  const scenario = active?.scenario_id || 'BASE';
+  const runId = active?.active_run_id || active?.run_id || '-';
+  const cubeId = active?.cube_id || active?.surface_id || '-';
+
+  const isBase = scenario === 'BASE';
+
+  return `
+    <div style="
+      margin: 0 0 14px 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      background: #1e1e1e;
+    ">
+      <div style="font-size:0.78rem; opacity:0.72; margin-bottom:6px;">
+        Active Swaption Scenario
+      </div>
+
+      <div style="
+        display:grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap:10px;
+        font-size:0.84rem;
+      ">
+        <div><strong>CCY:</strong> ${ccy}</div>
+        <div>
+          <strong>Scenario:</strong>
+          <span style="color:${isBase ? 'inherit' : '#ff4d4d'}; font-weight:700;">
+            ${scenario}
+          </span>
+        </div>
+        <div><strong>Run:</strong> ${runId}</div>
+      </div>
+    </div>
+  `;
+}
 
 export function renderVolSurfacePanel() {
   const targetId = 'swaption-atm-surface-3d';
@@ -68,115 +118,164 @@ export function renderVolSurfacePanel() {
     return;
   }
 
-  if (typeof Plotly === 'undefined') {
-    console.error('[renderVolSurfacePanel] Plotly ist undefined.');
-    return;
-  }
-
   if (!appState) {
     console.warn('[renderVolSurfacePanel] appState fehlt.');
     return;
   }
 
-  // ✅ ATM ist rows[]
-  const atmRows = appState?.swaptionATM;
+  const atmRows = appState.getSwaptionAtmBase?.() || appState._SWAPTION_ATM_BASE || [];
+
   if (!Array.isArray(atmRows) || atmRows.length === 0) {
-    console.warn('[renderVolSurfacePanel] Keine swaptionATM-Daten (rows[]) im appState.');
+    el.innerHTML = `<div style="opacity:0.7; padding:12px;">Keine ATM-Vols geladen.</div>`;
     return;
   }
 
   const grid = buildSwaptionATMGridFromRows(atmRows);
+
   if (!grid) {
-    console.warn('[renderVolSurfacePanel] Konnte ATM-Grid nicht bauen.');
+    el.innerHTML = `<div style="opacity:0.7; padding:12px;">ATM-Grid konnte nicht gebaut werden.</div>`;
     return;
   }
 
   const { optionTenors, swapTenors, volMatrix } = grid;
 
-  const data = [{
-    type: 'surface',
-    x: optionTenors,
-    y: swapTenors,
-    z: volMatrix,
-    colorscale: colorScale,
-    colorbar: {
-      title: 'Vol',
-      tickcolor: 'rgb(161,160,160)',
-      tickfont: { color: 'rgb(161,160,160)' },
-      titlefont: { color: 'rgb(161,160,160)' },
-      bgcolor: 'rgb(20,20,20)',
-      outlinecolor: 'rgb(90,90,90)',
-    },
-  }];
+  const flatVols = volMatrix
+    .flat()
+    .filter(v => typeof v === 'number' && Number.isFinite(v));
 
-  const layout = {
-    title: { text: 'EUR Swaption ATM Vol Surface', font: { color: 'rgb(161,160,160)', size: 14 } },
-    paper_bgcolor: 'rgb(20, 20, 20)',
-    plot_bgcolor: 'rgb(20, 20, 20)',
-    scene: {
-      bgcolor: 'rgb(20,20,20)',
-      xaxis: {
-        title: { text: 'Option Tenor', font: { color: 'rgb(161,160,160)' } },
-        tickfont: { color: 'rgb(161,160,160)' },
-        gridcolor: 'rgb(90, 90, 90)',
-        zerolinecolor: 'rgb(120, 120, 120)',
-      },
-      yaxis: {
-        title: { text: 'Swap Tenor', font: { color: 'rgb(161,160,160)' } },
-        tickfont: { color: 'rgb(161,160,160)' },
-        gridcolor: 'rgb(90, 90, 90)',
-        zerolinecolor: 'rgb(120, 120, 120)',
-      },
-      zaxis: {
-        title: { text: 'Vol', font: { color: 'rgb(161,160,160)' } },
-        tickfont: { color: 'rgb(161,160,160)' },
-        gridcolor: 'rgb(90, 90, 90)',
-        zerolinecolor: 'rgb(120, 120, 120)',
-      },
-    },
-    margin: { l: 0, r: 0, t: 30, b: 0 },
+  if (!flatVols.length) {
+    el.innerHTML = `<div style="opacity:0.7; padding:12px;">Keine gültigen ATM-Vols verfügbar.</div>`;
+    return;
+  }
+
+  const minVol = Math.min(...flatVols);
+  const maxVol = Math.max(...flatVols);
+  const range = maxVol - minVol || 1;
+
+  const cellStyle = (value) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return 'background:#222; color:#777;';
+    }
+
+    const intensity = (value - minVol) / range;
+    const lightness = 18 + intensity * 42;
+
+    return `
+      background:hsl(198, 85%, ${lightness}%);
+      color:${lightness > 42 ? '#061018' : '#f2f7fa'};
+      font-weight:600;
+    `;
   };
 
-  const config = {
-    responsive: true,
-    displaylogo: false,
-    scrollZoom: false,
-  };
+  const rowsHtml = swapTenors.map((swapTenor, rowIdx) => {
+    const cells = optionTenors.map((optionTenor, colIdx) => {
+      const value = volMatrix[rowIdx]?.[colIdx];
 
-  // ✅ Plotly.react braucht das DOM-Element (nicht "div", nicht die String-ID)
-  Plotly.react(el, data, layout, config)
-    .then(async () => {
-      // Optional: PNG Export für Preview
-      try {
-        const png = await Plotly.toImage(el, {
-          format: 'png',
-          width: 900,
-          height: 520,
-          scale: 2,
-        });
+      const label = typeof value === 'number' && Number.isFinite(value)
+        ? `${(value * 100).toFixed(2)}%`
+        : '–';
 
-        appState.swaptionATMSurfacePng = png;
+      return `
+        <td
+          title="${optionTenor} x ${swapTenor}"
+          style="
+            ${cellStyle(value)}
+            padding:10px 12px;
+            text-align:center;
+            border:1px solid rgba(255,255,255,0.08);
+            min-width:72px;
+          ">
+          ${label}
+        </td>
+      `;
+    }).join('');
 
-        // Risk-Preview informieren (Interest-Rate-Sektion)
-        notifyRiskPreview('interestRates');
-      } catch (e) {
-        console.warn('[renderVolSurfacePanel] Plotly.toImage failed', e);
-        appState.swaptionATMSurfacePng = null;
-      }
-    })
-    .catch(err => {
-      console.error('[renderVolSurfacePanel] Fehler beim Rendern:', err);
-    });
+    return `
+      <tr>
+        <th style="
+          position:sticky;
+          left:0;
+          background:#151515;
+          color:rgb(190,190,190);
+          padding:10px 12px;
+          text-align:left;
+          border:1px solid rgba(255,255,255,0.08);
+          z-index:1;
+        ">
+          ${swapTenor}
+        </th>
+        ${cells}
+      </tr>
+    `;
+  }).join('');
+
+  const headerHtml = optionTenors.map(t => `
+    <th style="
+      background:#151515;
+      color:rgb(190,190,190);
+      padding:10px 12px;
+      text-align:center;
+      border:1px solid rgba(255,255,255,0.08);
+      position:sticky;
+      top:0;
+      z-index:2;
+    ">
+      ${t}
+    </th>
+  `).join('');
+
+  el.innerHTML = `
+    <div style="height:100%; overflow:auto; padding:10px;">
+      <div style="margin-bottom:10px; color:rgb(190,190,190); font-weight:600;">
+        EUR Swaption ATM Vol Heatmap
+      </div>
+
+      <table style="
+        border-collapse:collapse;
+        width:max-content;
+        min-width:100%;
+        font-size:0.82rem;
+      ">
+        <thead>
+          <tr>
+            <th style="
+              background:#151515;
+              color:rgb(190,190,190);
+              padding:10px 12px;
+              text-align:left;
+              border:1px solid rgba(255,255,255,0.08);
+              position:sticky;
+              top:0;
+              left:0;
+              z-index:3;
+            ">
+              Swap \\ Option
+            </th>
+            ${headerHtml}
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  appState.swaptionATMSurfacePng = null;
+
+  try {
+    notifyRiskPreview('interestRates');
+  } catch (e) {
+    console.warn("[renderVolSurfacePanel] notifyRiskPreview failed", e);
+  }
 }
-
-
 export function renderSwaptionSmile() {
   if (!appState) {
     console.warn('[renderSwaptionSmile] appState fehlt.');
     return;
   }
 
-  const rows = appState?.swaptionSmile;
+  const rows = appState.getSwaptionSmileBase?.() || appState._SWAPTION_SMILE_BASE || [];
 
   // ✅ Smile bleibt: nur StrikeSpreadBP + VolSpread
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -189,16 +288,26 @@ export function renderSwaptionSmile() {
   const label = (opt && swp) ? `Smile ${opt} x ${swp}` : 'Smile';
 
   // 1) sortieren
-  const sorted = [...rows].sort((a, b) =>
-    Number(a?.StrikeSpreadBP ?? 0) - Number(b?.StrikeSpreadBP ?? 0)
+  const normalizedSmileRows = rows
+    .map(r => ({
+      strikeSpreadBP: Number(r?.strike_spread_bp ?? r?.StrikeSpreadBP ?? r?.smile_key),
+      volSpread: Number(r?.vol_spread ?? r?.VolSpread ?? r?.adjustment),
+    }))
+    .filter(r =>
+      Number.isFinite(r.strikeSpreadBP) &&
+      Number.isFinite(r.volSpread)
+    );
+
+  const sorted = [...normalizedSmileRows].sort(
+    (a, b) => a.strikeSpreadBP - b.strikeSpreadBP
   );
 
   // 2) ATM-Vol aus ATM rows[] (nicht mehr aus volMatrix)
   const atmVol = getAtmVolForSelectedNodeFromRows();
 
   // 3) absolute Vol = ATM + Spread
-  const strikesBp = sorted.map(r => Number(r?.StrikeSpreadBP ?? 0));
-  const volsAbs   = sorted.map(r => (atmVol ?? 0) + Number(r?.VolSpread ?? 0));
+  const strikesBp = sorted.map(r => r.strikeSpreadBP);
+  const volsAbs = sorted.map(r => (atmVol ?? 0) + r.volSpread);
 
   // console.log('[Smile] Plot data (abs Vol):', { strikesBp, volsAbs, atmVol, label });
 
@@ -214,10 +323,12 @@ export function renderSwaptionSmile() {
   }
 }
 
+export function renderSwaptionActiveScenarioInfo() {
+  const container = document.getElementById('SwaptionActiveScenarioContainer');
+  if (!container) return;
 
-
-
-
+  container.innerHTML = renderActiveSwaptionScenarioPanel();
+}
 
 let swaptionSmileChartInstance = null;
 
@@ -252,7 +363,9 @@ swaptionSmileChartInstance = new Chart(ctx, {
   },
   options: {
     responsive: true,
-    maintainAspectRatio: false,   // 🔸 WICHTIG: passt Chart an die Container-Höhe an
+    maintainAspectRatio: false,
+    animation: false,
+    animations: false,
     scales: {
       x: {
         title: {
@@ -293,8 +406,6 @@ y: {
 
   return swaptionSmileChartInstance;
 }
-
-
 function renderSmileSummaryTable(sortedSmileRows, atmVol) {
   const container = document.getElementById("SwaptionATMDataContainer");
   if (!container) {
@@ -307,22 +418,25 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
     return;
   }
 
-  // Absolute Vols je Strike-Punkt
   const absVolRows = sortedSmileRows.map(r => {
-    const spread = Number(r.VolSpread || 0);
-    const absVol = atmVol + spread;     // Vol in Dezimal
-    return { ...r, absVol };
+    const spread = Number(r.volSpread);
+    const absVol = atmVol + spread;
+
+    return {
+      strikeSpreadBP: r.strikeSpreadBP,
+      volSpread: spread,
+      absVol
+    };
   });
 
   const absVolValues = absVolRows.map(r => r.absVol);
   const minAbs = Math.min(...absVolValues);
   const maxAbs = Math.max(...absVolValues);
 
-  // Tabellenzeilen
   const rowsHtml = absVolRows.map(r => `
     <tr>
-      <td style="text-align:right;">${r.StrikeSpreadBP}</td>
-      <td style="text-align:right;">${(Number(r.VolSpread) * 100).toFixed(2)} bp</td>
+      <td style="text-align:right;">${r.strikeSpreadBP}</td>
+      <td style="text-align:right;">${(r.volSpread * 100).toFixed(2)} bp</td>
       <td style="text-align:right;">${(r.absVol * 100).toFixed(3)} %</td>
     </tr>
   `).join("");
@@ -332,7 +446,6 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
       Node Summary
     </div>
 
-    <!-- 🔹 Info-Box: gesamte (absolute) Vols -->
     <div style="margin-bottom:6px; font-size:0.85rem; opacity:0.8; line-height:1.4;">
       ATM Vol: <strong>${(atmVol * 100).toFixed(3)} %</strong><br>
       Vol-Range (inkl. Smile): 
@@ -343,7 +456,7 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
       <thead>
         <tr>
           <th style="text-align:right; padding-bottom:4px;">Strike Spread (bp)</th>
-          <th style="text-align:right; padding-bottom:4px;">Vol Spread (bp)</th>
+          <th style="text-align:right; padding-bottom:4px;">Vol Spread</th>
           <th style="text-align:right; padding-bottom:4px;">Vol (abs. %)</th>
         </tr>
       </thead>
@@ -353,28 +466,40 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
     </table>
   `;
 }
-
-
-
 export function swaptionReady() {
-  const atmOk   = Array.isArray(appState?.swaptionATM)   && appState.swaptionATM.length > 0;
-  const smileOk = Array.isArray(appState?.swaptionSmile) && appState.swaptionSmile.length > 0;
+  const atmRows = appState.getSwaptionAtmBase?.() || appState._SWAPTION_ATM_BASE || [];
+  const smileRows = appState.getSwaptionSmileBase?.() || appState._SWAPTION_SMILE_BASE || [];
+
+  const atmOk = Array.isArray(atmRows) && atmRows.length > 0;
+  const smileOk = Array.isArray(smileRows) && smileRows.length > 0;
   return atmOk && smileOk;
 }
-
-
 export function renderSwaptionIfReady() {
-  const panel = document.getElementById("panel-swaption");
-  if (!panel || panel.hidden) return;
-
   if (!swaptionReady()) return;
 
-  renderVolSurfacePanel();
-  renderSwaptionSmile?.();
+  const volsPanel = document.getElementById("panel-swaption");
+  const smilePanel = document.getElementById("panel-swaption-smile");
+
+  const volsOpen =
+    volsPanel &&
+    !volsPanel.hidden &&
+    volsPanel.classList.contains("open");
+
+  const smileOpen =
+    smilePanel &&
+    !smilePanel.hidden &&
+    smilePanel.classList.contains("open");
+
+  if (!volsOpen && !smileOpen) return;
+
+  if (volsOpen) {
+    renderVolSurfacePanel();
+  }
+
+  if (smileOpen) {
+    renderSwaptionSmile();
+  }
 }
-
-
-
 export async function plotlyDivToPngDataUrl(plotlyDiv, { width = 900, height = 520 } = {}) {
   if (!plotlyDiv) return null;
   if (typeof Plotly === "undefined") return null;
@@ -396,11 +521,4 @@ export async function plotlyDivToPngDataUrl(plotlyDiv, { width = 900, height = 5
     return null;
   }
 }
-
-
-
-
-
-
-
 

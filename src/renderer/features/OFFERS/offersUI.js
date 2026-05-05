@@ -1,5 +1,5 @@
 // src/renderer/features/OFFERS/offersUI.js
-import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
+import processData from '../../core/ui/modal/modalData.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
 import { handlePortProdData } from '../SELECT_PORTFOLIO/PORT.js';

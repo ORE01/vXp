@@ -1,6 +1,6 @@
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
-
+// Legacy-compatible helper, falls noch irgendwo alte Node-Struktur kommt
 export function buildCubeSurfaceGrid(cubeSurfaceFixedK) {
   if (!cubeSurfaceFixedK || !Array.isArray(cubeSurfaceFixedK.nodes)) {
     console.warn('[buildCubeSurfaceGrid] Keine nodes in cubeSurfaceFixedK.');
@@ -9,43 +9,19 @@ export function buildCubeSurfaceGrid(cubeSurfaceFixedK) {
 
   const nodes = cubeSurfaceFixedK.nodes;
 
-  // Sortierfunktion für Tenor-Labels ("6M", "1Y", "10Y", ...)
-  const sortTenorLabels = (labels) => {
-    const key = (lbl) => {
-      const m = /^(\d+)([YMDW])$/.exec(String(lbl).trim().toUpperCase());
-      if (!m) return Number.MAX_SAFE_INTEGER;
+  const optionTenors = [...new Set(nodes.map(n => String(n.optionTenor).trim()))];
+  const swapTenors = [...new Set(nodes.map(n => String(n.swapTenor).trim()))];
 
-      const n = parseInt(m[1], 10);
-      const unit = m[2];
-      const unitRank = { D: 0, W: 1, M: 2, Y: 3 }[unit] ?? 9;
-
-      return unitRank * 1000 + n;
-    };
-
-    return [...labels].sort((a, b) => key(a) - key(b));
-  };
-
-  // 1) Labels direkt aus den Nodes holen
-  const optionLabelsRaw = [...new Set(nodes.map(n => String(n.optionTenor).trim()))];
-  const swapLabelsRaw   = [...new Set(nodes.map(n => String(n.swapTenor).trim()))];
-
-  // 2) Sauber sortieren
-  const optionTenors = sortTenorLabels(optionLabelsRaw);
-  const swapTenors   = sortTenorLabels(swapLabelsRaw);
-
-  // 3) Vol-Matrix bauen (Y = Swap, X = Option)
   const volMatrix = swapTenors.map(() => optionTenors.map(() => null));
 
-  nodes.forEach(n => {
-    const optLabel = String(n.optionTenor).trim();
-    const swpLabel = String(n.swapTenor).trim();
+  for (const n of nodes) {
+    const rowIdx = swapTenors.indexOf(String(n.swapTenor).trim());
+    const colIdx = optionTenors.indexOf(String(n.optionTenor).trim());
 
-    const i = swapTenors.indexOf(swpLabel);   // Y
-    const j = optionTenors.indexOf(optLabel); // X
-    if (i >= 0 && j >= 0) {
-      volMatrix[i][j] = Number(n.vol);
+    if (rowIdx >= 0 && colIdx >= 0) {
+      volMatrix[rowIdx][colIdx] = Number(n.vol);
     }
-  });
+  }
 
   return {
     strike: Number(cubeSurfaceFixedK.strike),
@@ -55,230 +31,363 @@ export function buildCubeSurfaceGrid(cubeSurfaceFixedK) {
   };
 }
 
+function getCubeState() {
+  const state = window.appState || globalThis.appState;
 
+  if (!state) return null;
 
+  return state.getSwaptionCubeSurface
+    ? state.getSwaptionCubeSurface()
+    : state.swaptionCubeSurface;
+}
 
-// Dropdowns befüllen + Default setzen (Option 2Y, Swap 5Y wenn vorhanden)
+function getAvailableSurfaces(cube) {
+  if (!cube) return [];
+
+  // Neuer möglicher Aufbau: mehrere Surfaces
+  if (Array.isArray(cube.surfaces)) return cube.surfaces;
+
+  // Alternativer Aufbau: byStrike Map
+  if (cube.byStrike && typeof cube.byStrike === 'object') {
+    return Object.values(cube.byStrike);
+  }
+
+  // Legacy: nur eine Surface vorhanden
+  if (
+    Array.isArray(cube.optionTenors) &&
+    Array.isArray(cube.swapTenors) &&
+    Array.isArray(cube.volMatrix)
+  ) {
+    return [cube];
+  }
+
+  return [];
+}
+
+function getSurfaceStrike(surface) {
+  return Number(
+    surface?.strike ??
+    surface?.strike_spread_bp ??
+    surface?.strikeSpreadBp ??
+    surface?.smile_key
+  );
+}
+
+function getSelectedCubeSurface(cube) {
+  const strikeValue = document.getElementById('swaptionCubeStrikeSelect')?.value || '';
+  const surfaces = getAvailableSurfaces(cube);
+
+  if (!surfaces.length) return null;
+
+  // Wenn nichts gewählt ist: ATM anzeigen
+  if (!strikeValue) {
+    const atmSurface =
+      cube.atmSurface ||
+      cube.ATM ||
+      surfaces.find(s => s.isATM === true) ||
+      surfaces.find(s => String(s.strikeLabel || '').toUpperCase() === 'ATM');
+
+    return atmSurface || surfaces[0];
+  }
+
+  const selectedStrike = Number(strikeValue);
+
+  return (
+    surfaces.find(s => getSurfaceStrike(s) === selectedStrike) ||
+    surfaces.find(s => Math.abs(getSurfaceStrike(s) - selectedStrike) < 1e-10) ||
+    surfaces[0]
+  );
+}
+
+function getCubeView(surface) {
+  return {
+    xLabels: [...surface.optionTenors],
+    yLabels: [...surface.swapTenors],
+    z: surface.volMatrix.map(row => [...row]),
+  };
+}
+
 export function populateSwaptionCubeSelectors() {
-  const cube = appState.getSwaptionCubeSurface
-    ? appState.getSwaptionCubeSurface()
-    : appState.swaptionCubeSurface;
+  const panel = document.getElementById('panel-swaption-cube');
+
+    if (!panel) {
+      return;
+    }
+
+  console.log('--- populateSwaptionCubeSelectors ---');
+  console.log(
+    'panel exists:',
+    !!document.getElementById('panel-swaption-cube')
+  );
+  console.log(
+    'select exists:',
+    !!document.getElementById('swaptionCubeStrikeSelect')
+  );
+
+  const cube = getCubeState();
 
   if (!cube) {
     console.warn('[populateSwaptionCubeSelectors] Kein Cube im State.');
     return;
   }
 
-  const { optionTenors, swapTenors } = cube;
+  const strikeSel = document.getElementById('swaptionCubeStrikeSelect');
 
-  const optSel = document.getElementById('swaptionOptionTenorSelectCube');
-  const swpSel = document.getElementById('swaptionSwapTenorSelectCube');
-
-  if (!optSel || !swpSel) {
-    console.warn('[populateSwaptionCubeSelectors] Select-Elemente nicht gefunden.');
+  if (!strikeSel) {
+    console.warn('[populateSwaptionCubeSelectors] Strike-Select nicht gefunden.');
     return;
   }
 
-  optSel.innerHTML = optionTenors
-    .map(t => `<option value="${t}">${t}</option>`)
-    .join('');
-  swpSel.innerHTML = swapTenors
-    .map(t => `<option value="${t}">${t}</option>`)
-    .join('');
+  const surfaces = getAvailableSurfaces(cube);
 
-  // Defaults: 2Y / 5Y falls vorhanden, sonst erstes Element
-  const defaultOpt = optionTenors.find(t => t === '2Y' || t === '2') || optionTenors[0];
-  const defaultSwp = swapTenors.find(t => t === '5Y' || t === '5') || swapTenors[0];
+  console.log('[CUBE SELECTOR DEBUG]', {
+    cube,
+    surfaces,
+    strikes: surfaces.map(s => ({
+      strike: s.strike,
+      strike_spread_bp: s.strike_spread_bp,
+      strikeLabel: s.strikeLabel
+    }))
+  });
 
-  optSel.value = defaultOpt;
-  swpSel.value = defaultSwp;
+  const strikes = [...new Set(
+    surfaces
+      .map(s => getSurfaceStrike(s))
+      .filter(v => Number.isFinite(v))
+  )].sort((a, b) => a - b);
 
-  // Bei Änderung neu rendern
-  optSel.onchange = () => renderSwaptionCubeSurface3D();
-  swpSel.onchange = () => renderSwaptionCubeSurface3D();
+  strikeSel.innerHTML = `
+    <option value="">ATM</option>
+    ${strikes.map(k => `
+      <option value="${k}">${k} bp</option>
+    `).join('')}
+  `;
+
+  strikeSel.value = '';
+
+  strikeSel.onchange = () => {
+    renderSwaptionCubeHeatmap();
+    renderSwaptionCubeSummary();
+  };
 }
 
-
-export function renderSwaptionCubeSurface3D() {
+export function renderSwaptionCubeHeatmap() {
   const targetId = 'swaption-cube-surface-3d';
   const el = document.getElementById(targetId);
 
   if (!el) {
-    console.warn(`[renderSwaptionCubeSurface3D] Element mit id="${targetId}" nicht gefunden.`);
+    console.warn(`[renderSwaptionCubeHeatmap] Element mit id="${targetId}" nicht gefunden.`);
     return;
   }
 
-  if (typeof Plotly === 'undefined') {
-    console.error('[renderSwaptionCubeSurface3D] Plotly ist undefined.');
-    return;
-  }
-
-  const state = window.appState;
-  if (!state) {
-    console.warn('[renderSwaptionCubeSurface3D] window.appState fehlt.');
-    return;
-  }
-
-  const cube = state.getSwaptionCubeSurface
-    ? state.getSwaptionCubeSurface()
-    : state.swaptionCubeSurface;
+  const cube = getCubeState();
 
   if (!cube) {
-    console.warn('[renderSwaptionCubeSurface3D] Keine swaptionCubeSurface im state.');
+    el.innerHTML = `<div style="opacity:0.7; padding:12px;">Kein Vol-Cube geladen.</div>`;
     return;
   }
 
-  let { optionTenors, swapTenors, volMatrix, strike } = cube;
+  const surface = getSelectedCubeSurface(cube);
 
-  const optSelValue = document.getElementById('swaptionOptionTenorSelectCube')?.value || '';
-  const swpSelValue = document.getElementById('swaptionSwapTenorSelectCube')?.value || '';
-
-  let xLabels = [...optionTenors];
-  let yLabels = [...swapTenors];
-  let z       = volMatrix.map(row => [...row]);
-
-  if (optSelValue) {
-    const colIdx = xLabels.indexOf(optSelValue);
-    if (colIdx >= 0) {
-      xLabels = xLabels.slice(colIdx);
-      z = z.map(row => row.slice(colIdx));
-    }
+  if (!surface) {
+    el.innerHTML = `<div style="opacity:0.7; padding:12px;">Keine Surface verfügbar.</div>`;
+    return;
   }
 
-  if (swpSelValue) {
-    const rowIdx = yLabels.indexOf(swpSelValue);
-    if (rowIdx >= 0) {
-      yLabels = yLabels.slice(rowIdx);
-      z = z.slice(rowIdx);
-    }
+  const { xLabels, yLabels, z } = getCubeView(surface);
+  const flatVols = z.flat().filter(v => typeof v === 'number' && Number.isFinite(v));
+
+  if (!flatVols.length) {
+    el.innerHTML = `<div style="opacity:0.7; padding:12px;">Keine Vols für diese Auswahl.</div>`;
+    return;
   }
 
-  const data = [{
-    type: 'surface',
-    x: xLabels,
-    y: yLabels,
-    z,
-    colorscale: (typeof colorScale !== 'undefined') ? colorScale : 'Viridis',
-    colorbar: {
-      title: 'Vol',
-      tickcolor: 'rgb(161,160,160)',
-      tickfont: { color: 'rgb(161,160,160)' },
-      titlefont: { color: 'rgb(161,160,160)' },
-      bgcolor: 'rgb(20,20,20)',
-      outlinecolor: 'rgb(90,90,90)'
-    }
-  }];
+  const minVol = Math.min(...flatVols);
+  const maxVol = Math.max(...flatVols);
+  const range = maxVol - minVol || 1;
 
-  const layout = {
-    title: {
-      text: `SABR Vol Cube Surface (K = ${(strike * 100).toFixed(2)}%)`,
-      font: { color: 'rgb(161,160,160)', size: 14 }
-    },
-    paper_bgcolor: 'rgb(20, 20, 20)',
-    plot_bgcolor:  'rgb(20, 20, 20)',
-    scene: { /* ... wie bisher ... */ },
-    margin: { l: 0, r: 0, t: 30, b: 0 }
+  const strikeValue = document.getElementById('swaptionCubeStrikeSelect')?.value || '';
+  const title = strikeValue
+    ? `SABR Vol Cube Heatmap · Strike Spread = ${Number(strikeValue)} bp`
+    : 'SABR Vol Cube Heatmap · ATM';
+
+  const cellStyle = (value) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return 'background:#222; color:#777;';
+    }
+
+    const intensity = (value - minVol) / range;
+    const lightness = 18 + intensity * 42;
+
+    return `
+      background:hsl(198, 85%, ${lightness}%);
+      color:${lightness > 42 ? '#061018' : '#f2f7fa'};
+      font-weight:600;
+    `;
   };
 
-  const config = { responsive: true, displaylogo: false };
+  const rowsHtml = yLabels.map((swapTenor, rowIdx) => {
+    const cells = xLabels.map((optionTenor, colIdx) => {
+      const value = z[rowIdx]?.[colIdx];
+      const label = typeof value === 'number' && Number.isFinite(value)
+        ? `${(value * 100).toFixed(2)}%`
+        : '–';
 
-  Plotly.newPlot(el, data, layout, config)
-    .then(async () => {
-      console.log('[renderSwaptionCubeSurface3D] Plot erfolgreich gerendert.');
+      return `
+        <td
+          title="${optionTenor} x ${swapTenor}"
+          style="
+            ${cellStyle(value)}
+            padding:10px 12px;
+            text-align:center;
+            border:1px solid rgba(255,255,255,0.08);
+            min-width:72px;
+          ">
+          ${label}
+        </td>
+      `;
+    }).join('');
 
-try {
-  const png = await Plotly.toImage(el, {
-    format: "png",
-    width: 900,
-    height: 520,
-    scale: 2
-  });
+    return `
+      <tr>
+        <th style="
+          position:sticky;
+          left:0;
+          background:#151515;
+          color:rgb(190,190,190);
+          padding:10px 12px;
+          text-align:left;
+          border:1px solid rgba(255,255,255,0.08);
+          z-index:1;
+        ">
+          ${swapTenor}
+        </th>
+        ${cells}
+      </tr>
+    `;
+  }).join('');
 
-  state.swaptionCubeSurfacePng = png;
-  console.log('[renderSwaptionCubeSurface3D] PNG erzeugt');
+  const headerHtml = xLabels.map(t => `
+    <th style="
+      background:#151515;
+      color:rgb(190,190,190);
+      padding:10px 12px;
+      text-align:center;
+      border:1px solid rgba(255,255,255,0.08);
+      position:sticky;
+      top:0;
+      z-index:2;
+    ">
+      ${t}
+    </th>
+  `).join('');
 
-  notifyRiskPreview("interestRates");
-} catch (e) {
-  console.warn("[renderSwaptionCubeSurface3D] toImage failed", e);
-  state.swaptionCubeSurfacePng = null;
+  el.innerHTML = `
+    <div style="height:100%; overflow:auto; padding:10px;">
+      <div style="margin-bottom:10px; color:rgb(190,190,190); font-weight:600;">
+        ${title}
+      </div>
+
+      <table style="
+        border-collapse:collapse;
+        width:max-content;
+        min-width:100%;
+        font-size:0.82rem;
+      ">
+        <thead>
+          <tr>
+            <th style="
+              background:#151515;
+              color:rgb(190,190,190);
+              padding:10px 12px;
+              text-align:left;
+              border:1px solid rgba(255,255,255,0.08);
+              position:sticky;
+              top:0;
+              left:0;
+              z-index:3;
+            ">
+              Swap \\ Option
+            </th>
+            ${headerHtml}
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const state = window.appState || globalThis.appState;
+  if (state) state.swaptionCubeSurfacePng = null;
+
+  notifyRiskPreview('interestRates');
 }
 
-    })
-    .catch(err => {
-      console.error('[renderSwaptionCubeSurface3D] Fehler beim Rendern:', err);
-    });
+// Backward-compatible name, damit bestehende Listener nicht brechen
+export function renderSwaptionCubeSurface3D() {
+  return renderSwaptionCubeHeatmap();
 }
-
-
-
 
 export function renderSwaptionCubeSummary() {
   const summaryEl = document.getElementById('SwaptionCubeSummaryContainer');
+
   if (!summaryEl) {
     console.warn('[renderSwaptionCubeSummary] Summary-Container nicht gefunden.');
     return;
   }
 
-  const cube = appState.getSwaptionCubeSurface
-    ? appState.getSwaptionCubeSurface()
-    : appState.swaptionCubeSurface;
+  const cube = getCubeState();
 
   if (!cube) {
     summaryEl.innerHTML = "<div style='opacity:0.7;'>Kein Vol-Cube geladen.</div>";
-    notifyRiskPreview("interestRates");
+    notifyRiskPreview('interestRates');
     return;
   }
 
-  let { optionTenors, swapTenors, volMatrix, strike } = cube;
+  const surface = getSelectedCubeSurface(cube);
 
-  const optSelValue = document.getElementById('swaptionOptionTenorSelectCube')?.value || '';
-  const swpSelValue = document.getElementById('swaptionSwapTenorSelectCube')?.value || '';
-
-  let xLabels = [...optionTenors];
-  let yLabels = [...swapTenors];
-  let z       = volMatrix.map(row => [...row]);
-
-  if (optSelValue) {
-    const colIdx = xLabels.indexOf(optSelValue);
-    if (colIdx >= 0) {
-      xLabels = xLabels.slice(colIdx);
-      z = z.map(row => row.slice(colIdx));
-    }
+  if (!surface) {
+    summaryEl.innerHTML = "<div style='opacity:0.7;'>Keine Surface verfügbar.</div>";
+    notifyRiskPreview('interestRates');
+    return;
   }
 
-  if (swpSelValue) {
-    const rowIdx = yLabels.indexOf(swpSelValue);
-    if (rowIdx >= 0) {
-      yLabels = yLabels.slice(rowIdx);
-      z = z.slice(rowIdx);
-    }
-  }
+  const { xLabels, yLabels, z } = getCubeView(surface);
+  const flatVols = z.flat().filter(v => typeof v === 'number' && Number.isFinite(v));
 
-  const flatVols = z.flat().filter(v => typeof v === 'number' && !isNaN(v));
   if (!flatVols.length) {
     summaryEl.innerHTML = "<div style='opacity:0.7;'>Keine Vols für diese Auswahl.</div>";
-    notifyRiskPreview("interestRates");
+    notifyRiskPreview('interestRates');
     return;
   }
 
   const minVol = Math.min(...flatVols);
   const maxVol = Math.max(...flatVols);
 
+  const strikeValue = document.getElementById('swaptionCubeStrikeSelect')?.value || '';
+  const strikeLabel = strikeValue
+    ? `Strike Spread: <strong>${Number(strikeValue)} bp</strong>`
+    : `Surface: <strong>ATM</strong>`;
+
   summaryEl.innerHTML = `
     <div style="margin-bottom:6px; font-weight:600; opacity:0.85;">
-      Cube Node Summary
+      Cube Surface Summary
     </div>
 
     <div style="margin-bottom:6px; font-size:0.85rem; opacity:0.8; line-height:1.4;">
-      Strike K: <strong>${(strike * 100).toFixed(3)} %</strong><br>
+      ${strikeLabel}<br>
       Vol-Range: <strong>${(minVol * 100).toFixed(3)} % – ${(maxVol * 100).toFixed(3)} %</strong><br>
-      Nodes im Ausschnitt: <strong>${flatVols.length}</strong>
+      Nodes im Ausschnitt: <strong>${flatVols.length}</strong><br>
+      Option Tenors: <strong>${xLabels.length}</strong><br>
+      Swap Tenors: <strong>${yLabels.length}</strong>
     </div>
   `;
 
-  // 🔔 wichtig für Preview-Tabellen-Refresh
-  notifyRiskPreview("interestRates");
+  notifyRiskPreview('interestRates');
 }
+
 
 
 

@@ -1,5 +1,5 @@
 ﻿//initAnalysePortfolioPanels.js
-import { initLazyPanels, refreshOpenPanels as refreshCore } from "./lazyPanelsCore.js";
+import { initLazyPanels, refreshOpenPanels as refreshCore } from "./panelOrchestrator.js";
 import { rerenderHistoricCharts } from "../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js";
 
 

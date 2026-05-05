@@ -1,5 +1,5 @@
 import { REPORT_DEFAULTS_OFFERS } from './OffersPDF.js';
-import { handleModalAction } from '../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from '../../core/ui/modal/modalActions.js';
 import { appState } from '../../../renderer/renderer.js';
 import { drawYieldVsTimeChart, transformTSDataToEUSWFormat, swapPointToDurationAsYearRate } from '../../../renderer/features/ANALYSE_PORTFOLIO/SummaryYield.js';
 

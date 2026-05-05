@@ -20,6 +20,8 @@
         this.mlModel = null; 
 
         this.CSSzenarioData = 'default';
+        this.CSActive = [];
+        this.CSData = [];
         
        
         this.currentReceivedData = null;
@@ -450,14 +452,12 @@
         return this.comparePortNames || {};
     }
 
-  
-    setCSSzenarioData(data) {
-        this.CSSzenarioData = data || 'default'; 
-        // this.notifyObservers(); 
+    setCSData(data) {
+        this.CSData = Array.isArray(data) ? data : [];
     }
-    getCSSzenarioData() {
-        return this.CSSzenarioData;
-        
+
+    getCSData() {
+        return Array.isArray(this.CSData) ? this.CSData : [];
     }
 
     // Set the forward data and notify observers

@@ -11,21 +11,28 @@ export function installReceivers(deps = {}) {
     initMarketDataChartsAutoRefresh,
 
     // handlers
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData, // (optional)
+    handleSwaptionAtmBaseData,
+    handleSwaptionSmileBaseData,
+    handleSwaptionAtmScenarioData,
+    handleSwaptionSmileScenarioData,
+    handleSwaptionActiveData,
+    //handleSwaptionCubeData,
 
     handleCustomerData,
     handleCustomerTSData,
-    handleEUSWData,
     handleRATESData,
+    handleRatesScenarioData,
     handleRatesActiveData,
     handleForwardData,
 
     handleIssuerDataInit,
     handleCountryLookupDataInit,
-    handleCSMatrixData,
+
+    handleCS_ACTIVEData,
+    handleCSBaseData,
     handleCSParameterData,
+    handleCSScenarioData,
+
     handleRankData,
 
     handleProdDataInit,
@@ -62,8 +69,12 @@ export function installReceivers(deps = {}) {
     registerPanelOpenHook,
     bindDealsUIOnce,
     renderDealsPanel,
-
   } = deps;
+
+  console.log('[BOOT RECEIVERS] installReceivers called');
+  console.log('[BOOT RECEIVERS] handleSwaptionAtmScenarioData:', typeof handleSwaptionAtmScenarioData);
+  console.log('[BOOT RECEIVERS] handleSwaptionSmileScenarioData:', typeof handleSwaptionSmileScenarioData);
+  console.log('[BOOT RECEIVERS] handleSwaptionActiveData:', typeof handleSwaptionActiveData);
 
   if (!api) throw new Error('[installReceivers] api missing');
 
@@ -140,22 +151,27 @@ api.receive(channel, (data) => {
   // Important: do NOT render UI here except via handlers; keep it predictable.
   const handlers = {
 
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+    handleSwaptionAtmBaseData,
+    handleSwaptionSmileBaseData,
+    handleSwaptionAtmScenarioData,
+    handleSwaptionSmileScenarioData,
+    handleSwaptionActiveData,
+    //handleSwaptionCubeData,
 
     handleCustomerData,
     handleCustomerTSData,
-    handleEUSWData,
     handleRATESData,
+    handleRatesScenarioData,
     handleRatesActiveData,
-
     handleForwardData,
 
     handleIssuerDataInit,
     handleCountryLookupDataInit,
-    handleCSMatrixData,
+
+    handleCS_ACTIVEData,
+    handleCSBaseData,
     handleCSParameterData,
+    handleCSScenarioData,
     handleRankData,
 
     handleProdDataInit,
@@ -205,22 +221,30 @@ api.receive(channel, (data) => {
 
   // MARKET DATA
 
-  // route('EUSWData', { required: true });
   route('RATESData', { required: true });
-  route('RATES_ACTIVEData');   // ← DIESE ZEILE FEHLT
+  route('RATES_SCENARIO_DATAData');
+  route('RATES_ACTIVEData');  
   route('FWDData');
 
   // SWAPTION
-  route('EUSWAPTION_ATMData');
-  route('EUSWAPTION_SMILEData');
-  // optional cube:
-  route('EUSWAPTION_CUBEData'); // falls du so einen channel hast – sonst entfernen
+  route('SWAPTION_ATM_BASEData');
+  route('SWAPTION_SMILE_BASEData');
+  route('SWAPTION_ATM_SCENARIO_DATAData');
+  route('SWAPTION_SMILE_SCENARIO_DATAData');
+  route('SWAPTION_ACTIVEData');
+  //route('SWAPTION_CUBEData');
 
   // ISSUER
   route('IssuerData');
   route('CountryLookupData');
-  route('CSMatrixData');
+
+  // CS
+  route('CS_BASEData');
+  route('CS_SCENARIO_DATAData');
+  route('CS_ACTIVEData');
+  
   route('CSParameterData');
+
   route('RankData');
 
   // PRODUCTS

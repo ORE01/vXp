@@ -1,5 +1,5 @@
-﻿import { filterColumnsInData } from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
-import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import { filterColumnsInData } from '../../../core/ui/modal/modalData.js';
+import processData from '../../../core/ui/modal/modalData.js';
 
 import createBarChart from '../../../charts/BarChart.js';
 
@@ -306,7 +306,7 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
 
   if (!hasValidData) return;
 
-  // ðŸ”¹ Tabelle neu anlegen
+  // Tabelle neu anlegen
   const table = document.createElement('table');
   table.classList.add('CVaRTable');
 

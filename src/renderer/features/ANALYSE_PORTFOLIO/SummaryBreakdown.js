@@ -217,7 +217,7 @@ container.appendChild(row);
     drawPieChartByColumn(filteredData, column);
   });
 
-  // ðŸ”” Nach dem ersten Render: Risk-Preview/Thumbs aktualisieren
+  // Nach dem ersten Render: Risk-Preview/Thumbs aktualisieren
   try {
     notifyRiskPreview('breakdown:init');
   } catch {}

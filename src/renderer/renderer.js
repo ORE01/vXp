@@ -1,4 +1,16 @@
-﻿import { bootstrapTriggers } from './core/bootstrap/bootstrapTriggers.js';
+﻿
+// DEBUG HELPER:
+
+// import { installRafDebug } from './core/debug/rafDebug.js';
+// import { installChartTrace } from './core/debug/chartTrace.js';
+
+// installRafDebug();
+// installChartTrace();
+
+
+
+
+import { bootstrapTriggers } from './core/bootstrap/bootstrapTriggers.js';
 import { bootstrapStores } from './core/bootstrap/bootstrapStores.js';
 import { bootstrapUIBasics } from './core/bootstrap/bootstrapUIBasics.js';
 import { bootstrapHandlers } from './core/bootstrap/bootstrapHandlers.js';
@@ -7,12 +19,13 @@ import { bootstrapPython } from './core/bootstrap/bootstrapPython.js';
 import { bootstrapIPC } from './core/bootstrap/bootstrapIPC.js';
 import { bootstrapBindings } from './core/bootstrap/bootstrapBindings.js';
 
-import { openPanel } from './core/ui/panels.js';
-import { showMessageBox, showConfirmationBox } from './core/ui/modals/confirm.js';
+import { openPanel } from './core/ui/panels/index.js';
+import { showMessageBox, showConfirmationBox } from './core/ui/dialogs/confirm.js';
 
 import { initPortfolioPanelsLazyRender } from './core/routing/initAnalysePortfolioPanels.js';
 import { initMarketDataPanelsLazyRender } from './core/routing/initMarketDataPanels.js';
 import { initMarketDataChartsAutoRefresh } from './core/routing/initMarketDataRefresh.js';
+import { initCreditSpreadCurveChartListener } from './features/MARKET_DATA/CREDIT_SPREADS/renderCreditSpreadCurveChart.js';
 
 import { createTSModals, observePanelTsOpen } from './features/MARKET_DATA/HISTORIC_DATA/TS.js';
 import { handleExcelComplete } from './features/UPDATES/updatesExcel.js';
@@ -30,7 +43,7 @@ import { marketRiskHandlers } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/mar
 import { handleCVaRData, handleEADData } from './features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
 import { handleFWDData } from './features/MARKET_DATA/FORWARDS/forwards.js';
 import { handleProviderData } from './features/DATA_PROVIDER/DATAProvider.js';
-import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORCASTING/ML.js';
+import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORECASTING/ML.js';
 
 import { handleSummaryMarketRiskData, handleMvarProductTable } from './features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/NEW_PRODUCTS/readOffers.js';
@@ -41,7 +54,7 @@ import { handleHistoricMetricsAddClick } from './features/ANALYSE_PORTFOLIO/HIST
 import { tooltips } from './utils/ToolTip.js';
 import { AppState } from './core/state/AppState.js';
 
-import { handleModalAction } from './core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from './core/ui/modal/modalActions.js';
 
 const APP_ROOT = document.getElementById('app-root');
 const REPORT_ROOT = document.getElementById('report-root');
@@ -112,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   bootstrapUIBasics(appState);
   bootstrapTriggers(appState, { emitPanelOpen });
+  initCreditSpreadCurveChartListener();
 
 
     if (MINIMAL_UI) {
@@ -134,9 +148,17 @@ const {
   forwardsHandlers,
   analyseHandlers,
 
-  handleSwaptionATMData,
-  handleSwaptionSmileData,
-  handleSwaptionCubeSurfaceData,
+  handleCSParameterData,
+  handleCS_ACTIVEData,
+  handleCSBaseData,
+  handleCSScenarioData,
+
+  handleSwaptionAtmBaseData,
+  handleSwaptionSmileBaseData,
+  handleSwaptionAtmScenarioData,
+  handleSwaptionSmileScenarioData,
+  handleSwaptionActiveData,
+  //handleSwaptionCubeData,
 
 } = bootstrapHandlers(appState, {
   api: window.api,
@@ -166,9 +188,12 @@ const {
     buildCubeSurfaceGrid,
     populateSwaptionCubeSelectors,
 
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+    handleSwaptionAtmBaseData,
+    handleSwaptionSmileBaseData,
+    handleSwaptionAtmScenarioData,
+    handleSwaptionSmileScenarioData,
+    handleSwaptionActiveData,
+    //handleSwaptionCubeData,
 
     onExcelComplete: handleExcelComplete,
   });
@@ -185,9 +210,17 @@ const {
 
     registerPanelOpenHook: appState.registerPanelOpenHook.bind(appState),
 
-    handleSwaptionATMData,
-    handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+    handleSwaptionAtmBaseData,
+    handleSwaptionSmileBaseData,
+    handleSwaptionAtmScenarioData,
+    handleSwaptionSmileScenarioData,
+    handleSwaptionActiveData,
+    //handleSwaptionCubeData,
+
+    handleCSParameterData,
+    handleCS_ACTIVEData,
+    handleCSBaseData,
+    handleCSScenarioData,
 
     ...issuerProdHandlers,
     ...customerHandlers,

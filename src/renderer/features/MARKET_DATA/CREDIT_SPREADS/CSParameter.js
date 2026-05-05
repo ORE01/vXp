@@ -1,78 +1,138 @@
-import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
-import { updateCreditScenarioWarningUI } from '../../../core/ui/creditScenarioWarning.js';
+//import { handleModalAction } from '../../../core/ui/modal/modalActionHandler.js';
 
 
-export function handleCSParameterData(receivedData) {
-  const CSPData = receivedData;
-  const CSPDataContainer = document.getElementById('CSParameterDataContainer');
+function buildTable(rows, activeScenario) {
 
-  // Create CSParameterTable element
-  const CSParameterTable = document.createElement('table');
-  CSParameterTable.classList.add('cs-parameter-table'); // Add class for styling
+  if (!rows.length) return '<p>No data</p>';
 
-  // Update CSPDataContainer
-  if (CSPDataContainer) {
-    CSPDataContainer.innerHTML = ''; // Clear existing contents
-    CSPDataContainer.appendChild(CSParameterTable); // Append the new table
-  }
+  const headers = Object.keys(rows[0]);
 
-  // Update table body if data is available
-  if (CSPDataContainer && CSPData) {
-    const CSPDataHTML = processDataWithCheckbox(CSPData); // Process data with checkbox
-    CSParameterTable.innerHTML = CSPDataHTML; // Set table content directly
-  }
+  let html = '<table class="cs-parameter-table">';
+  html += '<thead><tr>';
 
-  updateCreditScenarioWarningUI(CSPData);
+  html += '<th>Active</th>';
 
-  // Edit Buttons
-  const CSPEditButtons = document.querySelectorAll('#CSParameterDataContainer .edit-button');
-  CSPEditButtons.forEach((button) => {
-    button.addEventListener('click', (event) => {
-      event.stopPropagation(); // Stop event propagation
-
-      const tableName = 'CSParameter';
-      const actionType = 'edit';
-      const rowIndex = parseInt(button.getAttribute('data-row'), 10);
-
-      // Use handleFormAction to handle add/edit logic
-      handleModalAction(event, CSPData, rowIndex, tableName, actionType);
-    });
+  headers.forEach(h => {
+    html += `<th>${h}</th>`;
   });
 
-  // Add Button
-  const csParameterAddButton = document.getElementById('CSParameterAddButton'); // Query add button
-  csParameterAddButton.addEventListener('click', (event) => {
-    const tableName = 'CSParameter';
-    const actionType = 'add';
-    handleModalAction(event, CSPData, null, tableName, actionType); // Call handleFormAction for add
+  html += '<th>Actions</th>';
+  html += '</tr></thead><tbody>';
+
+  rows.forEach((row, index) => {
+
+    const scenario = row.scenario_name;
+
+    html += '<tr>';
+
+    // 🔥 STATE DRIVEN CHECKBOX
+    html += `
+      <td>
+        <input 
+          type="radio"
+          name="cs-active"
+          class="select-scenario"
+          data-scenario="${scenario}"
+          ${scenario === activeScenario ? 'checked' : ''}
+        >
+      </td>
+    `;
+
+    Object.values(row).forEach(val => {
+      html += `<td>${val ?? ''}</td>`;
+    });
+
+    html += `
+      <td>
+        <button class="edit-button" data-row="${index}">Edit</button>
+      </td>
+    `;
+
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+
+  return html;
+}
+
+
+// ============================================================
+// SCENARIO SELECTION → IPC
+// ============================================================
+function bindScenarioSelection(container) {
+
+  container.querySelectorAll('.select-scenario').forEach(el => {
+
+    el.addEventListener('change', async (e) => {
+
+      const scenario = e.target.dataset.scenario;
+      if (!scenario) return;
+
+      console.log('[CS][UI] set active scenario:', scenario);
+
+      try {
+        await window.electronAPI.invoke('cs:set-active-scenario', {
+          scenario_name: scenario
+        });
+      } catch (err) {
+        console.error('[CS][UI] failed to set scenario:', err);
+      }
+
+    });
+
   });
 }
 
-function processDataWithCheckbox(CSPData) {
-  // console.log('CSPData', CSPData)
-  let tableHTML = '<thead><tr>';
-  tableHTML += '<th>Select Scenario</th>'; // Add checkbox column header
-  Object.keys(CSPData[0]).forEach((key) => {
-    tableHTML += `<th>${key}</th>`;
-  });
-  tableHTML += '<th>Actions</th>'; // Add "Actions" column header for Edit-Button
-  tableHTML += '</tr></thead><tbody>';
 
-  CSPData.forEach((row, index) => {
-    tableHTML += '<tr>';
-    // Add checkbox and ensure the first one is checked
-    tableHTML += `<td><input type="checkbox" class="select-scenario" data-row="${index}" ${index === 0 ? 'checked' : ''}></td>`;
-    Object.values(row).forEach((value) => {
-      tableHTML += `<td>${value}</td>`;
+// ============================================================
+// EDIT BUTTONS
+// ============================================================
+function bindEditButtons(container, rows) {
+
+  container.querySelectorAll('.edit-button').forEach(btn => {
+
+    btn.addEventListener('click', (event) => {
+
+      event.stopPropagation();
+
+      const rowIndex = parseInt(btn.dataset.row, 10);
+
+      handleModalAction(
+        event,
+        rows,
+        rowIndex,
+        'CSParameter',
+        'edit'
+      );
+
     });
-    // Add the Edit button
-    tableHTML += `<td><button class="edit-button" data-row="${index}">Edit</button></td>`;
-    tableHTML += '</tr>';
+
   });
 
-  tableHTML += '</tbody>';
-  return tableHTML;
+}
+
+
+// ============================================================
+// ADD BUTTON
+// ============================================================
+function bindAddButton(rows) {
+
+  const btn = document.getElementById('CSParameterAddButton');
+  if (!btn) return;
+
+  btn.onclick = (event) => {
+
+    handleModalAction(
+      event,
+      rows,
+      null,
+      'CSParameter',
+      'add'
+    );
+
+  };
+
 }
 
 

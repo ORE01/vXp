@@ -1,5 +1,5 @@
-﻿import { filterColumnsInData } from '../../core/ui/MODAL_HELPER/dataProcessor.js';
-import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import { filterColumnsInData } from '../../core/ui/modal/modalData.js';
+import processData from '../../core/ui/modal/modalData.js';
 
 // QUICK FIX (funktioniert sofort, aber Entry-Import ist architektonisch unsauber):
 import { appState } from '../../renderer.js';
@@ -16,8 +16,8 @@ import { applyPortfolioTableColoring } from '../../utils/tableColorize.js';
 
 
 let tableName = 'Portfolios'
-let columns = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR','TtM'];
-let columnsToShow = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'clean_price', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
+let columns = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY','COUPON', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'clean_price', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'ytmPort', 'ytmPortA','PV01', 'CPV01', 'MATURITY_YEAR','TtM'];
+let columnsToShow = ['TRADE_ID','PROD_ID', 'DESCRIPTION', 'CATEGORY', 'COUPON', 'Depotbank','CouponType', 'MATURITY', 'ISSUER', 'RANK', 'RATING', 'RATINGres', 'clean_price', 'C_SPREAD', 'C_SPREAD_BASE','C_SPREAD_DELTA','NOTIONAL', 'PRICE_BUY', 'NAV', 'PV01rel', 'CPV01rel', 'ytm_BUY', 'ytm', 'MATURITY_YEAR'];
      
 const portDataMap = {}; // Speichert Daten pro Container
 

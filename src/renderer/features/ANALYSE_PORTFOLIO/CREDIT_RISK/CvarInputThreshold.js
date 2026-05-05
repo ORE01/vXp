@@ -1,6 +1,6 @@
-﻿import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import processData from '../../../core/ui/modal/modalData.js';
 import { appState } from '../../../renderer.js';
-import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 
 

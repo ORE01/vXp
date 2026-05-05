@@ -142,15 +142,14 @@ export function bindAppButtons({
     { buttonId: 'updateExcelIssuerButton', projectName: 'py-excel' },
     { buttonId: 'updateExcelProductsButton', projectName: 'py-excel' },
     { buttonId: 'updateExcelDealsButton', projectName: 'py-excel' },
-    { buttonId: 'updateExcelEuswButton', projectName: 'py-excel' },
+    { buttonId: 'updateExcelMarketButton', projectName: 'py-excel' },
 
     // Hist
     { buttonId: 'histEcbButton', projectName: 'py-hist' },
     { buttonId: 'histFedButton', projectName: 'py-hist' },
     { buttonId: 'histYahooButton', projectName: 'py-hist' },
 
-    // Swaption cube runner
-    { buttonId: 'swaptionCubeRunButton', projectName: 'py-swaption' },
+
   ];
 
   projectButtons.forEach(({ buttonId, projectName, extraParam }) => {

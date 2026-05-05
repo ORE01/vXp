@@ -5,11 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
-// NICHT electron importieren!
-// aber app.getPath('userData') brauchst du für logfile -> das darf NICHT in service.
-// Lösung: logfile in index.js oder wir machen fallback.
-
-const { getDatabasePath } = require('../main_path');
+const { getDatabasePath } = require('../main.path');
+const { logger } = require('../utils/logger');
 
 let _db = null;
 let _logFilePath = null;
@@ -19,27 +16,23 @@ function isDevelopmentEnvironment() {
   return env === 'development' || env === 'thomasdev' || env === 'productiontest';
 }
 
-
-/**
- * Optional: Set log file path from outside (index.js), because app.getPath needs electron.app
- */
 function setLogFilePath(p) {
   _logFilePath = p;
 }
 
 function logToFile(message) {
-  if (!_logFilePath) return; // wenn nicht gesetzt, einfach nicht loggen
+  if (!_logFilePath) return;
+
   try {
-    fs.appendFileSync(_logFilePath, new Date().toISOString() + ': ' + message + '\n');
+    fs.appendFileSync(_logFilePath, `${new Date().toISOString()}: ${message}\n`);
   } catch {}
 }
 
 function resolveDbPath() {
   if (isDevelopmentEnvironment()) {
-    const p = getDatabasePath(); // ✅ dein dev path
-    return p;
+    return getDatabasePath();
   }
-  // PROD: genau dein packaged path
+
   return path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
 }
 
@@ -48,28 +41,26 @@ function initDb() {
 
   const dbPath = resolveDbPath();
 
-  logToFile('db.service: dbPath: ' + dbPath);
-  console.log('Expected DB Path:', dbPath);
+  logToFile(`db.service: dbPath: ${dbPath}`);
+  logger.info('DB', `expected path: ${dbPath}`);
 
-  // 🔴 HARD CHECK: DB muss existieren
   if (!fs.existsSync(dbPath)) {
     const msg = `DATABASE NOT FOUND at path: ${dbPath}`;
     logToFile(msg);
-    console.error(msg);
+    logger.error('DB', msg);
     throw new Error(msg);
   }
 
-  // 🔒 OPEN ONLY – kein Auto-Create mehr
   _db = new sqlite3.Database(
     dbPath,
     sqlite3.OPEN_READWRITE,
     (err) => {
       if (err) {
-        logToFile('Database connection error: ' + err.message);
-        console.error('DB CONNECTION ERROR:', err.message);
+        logToFile(`Database connection error: ${err.message}`);
+        logger.error('DB', 'connection error', err);
       } else {
         logToFile('Connected to the database.');
-        console.log('Connected to database! READY to ROCK and ROLL');
+        logger.info('DB', 'connected');
       }
     }
   );
@@ -82,62 +73,41 @@ function getDb() {
   return _db;
 }
 
-// ============= DB FUNCTIONS (dein Code, nur via getDb) =============
-
 function getAllTableNames(callback) {
   const db = getDb();
+
   const query = `
-  SELECT name
-  FROM sqlite_master
-  WHERE type IN ('table','view')
-`;
+    SELECT name
+    FROM sqlite_master
+    WHERE type IN ('table','view')
+  `;
+
   db.all(query, (err, rows) => {
     if (err) {
-      console.error(err.message);
+      logger.error('DB', 'getAllTableNames failed', err);
       callback(err, null);
-    } else {
-      const tableNames = rows.map(row => row.name);
-      callback(null, tableNames);
+      return;
     }
+
+    const tableNames = rows.map(row => row.name);
+    callback(null, tableNames);
   });
 }
 
 function queryDB(tableName, callback) {
   const db = getDb();
   const query = `SELECT * FROM ${tableName}`;
+
   db.all(query, (err, rows) => {
     if (err) {
-      console.error(err.message);
+      logger.error('DB', `queryDB failed for ${tableName}`, err);
       callback(err, null);
-    } else {
-      setTimeout(() => callback(null, rows), 10);
+      return;
     }
+
+    setTimeout(() => callback(null, rows), 10);
   });
 }
-
-// function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) {
-//   const db = getDb();
-
-//   const columnNames = Object.keys(newData);
-//   const setClause = columnNames
-//     .map(columnName => `${columnName} = '${newData[columnName]}'`)
-//     .join(', ');
-
-//   const query = `
-//     UPDATE ${tableName}
-//     SET ${setClause}
-//     WHERE ${uniqueIdentifier.column} = '${uniqueIdentifier.value}'`;
-
-//   db.run(query, (err) => {
-//     if (err) {
-//       console.error(err.message);
-//       callback(err);
-//     } else {
-//       console.log('db.service: updateRecord.');
-//       callback(null);
-//     }
-//   });
-// }
 
 function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) {
   const db = getDb();
@@ -153,22 +123,17 @@ function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) 
   let whereClause;
   let whereValues;
 
-  // 🔑 Composite Key support
   if (uniqueIdentifier && uniqueIdentifier.composite) {
-
     const cols = uniqueIdentifier.columns;
 
     whereClause = Object.keys(cols)
       .map(k => `${k} = ?`)
-      .join(" AND ");
+      .join(' AND ');
 
     whereValues = Object.values(cols);
-
   } else {
-
     whereClause = `${uniqueIdentifier.column} = ?`;
     whereValues = [uniqueIdentifier.value];
-
   }
 
   const query = `
@@ -181,23 +146,24 @@ function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) 
 
   db.run(query, params, (err) => {
     if (err) {
-      console.error(err.message);
+      logger.error('DB', `updateRecord failed for ${tableName}`, err);
       callback(err);
-    } else {
-      console.log('db.service: updateRecord.');
-      callback(null);
+      return;
     }
+
+    logger.debug('DB', `updateRecord ok for ${tableName}`);
+    callback(null);
   });
 }
 
-
-
 function eraseRowFromDB(tableName, uniqueIdentifier) {
   const db = getDb();
-  console.log('row erased from:', tableName);
+
+  logger.debug('DB', `erase row from ${tableName}`);
 
   return new Promise((resolve, reject) => {
     const query = `DELETE FROM ${tableName} WHERE ${uniqueIdentifier.column} = ?`;
+
     db.run(query, [uniqueIdentifier.value], function (error) {
       if (error) reject(error);
       else resolve();
@@ -207,15 +173,18 @@ function eraseRowFromDB(tableName, uniqueIdentifier) {
 
 function closeDatabase() {
   if (!_db) return;
+
   _db.close((err) => {
-    if (err) console.error(err.message);
-    else console.log('Database connection closed.');
+    if (err) logger.error('DB', 'close failed', err);
+    else logger.info('DB', 'connection closed');
   });
+
   _db = null;
 }
 
 function runSQL(sql, params = []) {
   const db = getDb();
+
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) reject(err);
@@ -226,6 +195,7 @@ function runSQL(sql, params = []) {
 
 async function getAllRowsFromTable(tableName) {
   const db = getDb();
+
   return new Promise((resolve, reject) => {
     db.all(`SELECT * FROM ${tableName}`, [], (err, rows) => {
       if (err) reject(err);
@@ -236,7 +206,7 @@ async function getAllRowsFromTable(tableName) {
 
 function insertRowInTable(rowObj, tableName, cb) {
   try {
-    const db = getDb(); // oder wie du intern an dein sqlite handle kommst
+    const db = getDb();
     if (!db) return cb?.(new Error('DB not initialized'));
 
     const cleanTable = String(tableName || '').trim();
@@ -272,30 +242,25 @@ function insertSelection(port_name, selectedTradeIDs = []) {
     if (!port) return reject(new Error('port_name missing'));
 
     const ids = Array.isArray(selectedTradeIDs) ? selectedTradeIDs : [];
-    if (ids.length === 0) return resolve(); // bewusst erlaubt (dein Handler)
+    if (ids.length === 0) return resolve();
 
-    // 1) Spalten holen
     db.all(`PRAGMA table_info("DealsMain")`, [], (err, cols) => {
       if (err) return reject(err);
 
       const colNames = (cols || []).map(c => c.name);
 
-      // TRADE_ID nicht kopieren (sonst UNIQUE fail)
-      // port_name und INCLUDE überschreiben wir gezielt
       const copyCols = colNames.filter(c =>
         c !== 'TRADE_ID' &&
         c !== 'port_name' &&
         c !== 'INCLUDE'
       );
 
-      // Ziel-Spalten: port_name, INCLUDE, + alle kopierbaren Spalten
       const insertCols = ['port_name', 'INCLUDE', ...copyCols];
 
-      // SELECT-Teil: port_name als Parameter, INCLUDE=1 fix, + Spalten aus Quelle
       const selectCols = [
         '? as port_name',
         '1 as INCLUDE',
-        ...copyCols.map(c => `"${c}"`)
+        ...copyCols.map(c => `"${c}"`),
       ];
 
       const placeholders = ids.map(() => '?').join(', ');
@@ -307,11 +272,9 @@ function insertSelection(port_name, selectedTradeIDs = []) {
         WHERE "TRADE_ID" IN (${placeholders})
       `;
 
-      // 2) Ziel zuerst löschen (overwrite)
       db.run(`DELETE FROM "DealsMain" WHERE "port_name" = ?`, [port], function (delErr) {
         if (delErr) return reject(delErr);
 
-        // 3) Copy-Insert
         db.run(sql, [port, ...ids], function (insErr) {
           if (insErr) return reject(insErr);
           resolve();
@@ -321,13 +284,12 @@ function insertSelection(port_name, selectedTradeIDs = []) {
   });
 }
 
-
 function deleteTable(tableName) {
   const db = getDb();
   const t = String(tableName || '').trim();
+
   if (!t) return Promise.reject(new Error('tableName missing'));
 
-  // defensiv: nur simple table names erlauben
   if (!/^[A-Za-z0-9_]+$/.test(t)) {
     return Promise.reject(new Error('invalid tableName'));
   }
@@ -341,21 +303,25 @@ function deleteTable(tableName) {
 }
 
 function updateCustomerTexts(sqliteDb, customer_id, pdf_header, pdf_footer) {
-  // sqliteDb Parameter ignorieren wir bewusst – Service benutzt getDb().
-  // Wir behalten ihn aber in der Signatur, damit dein bestehender Call kompatibel bleibt.
   const db = getDb();
 
   const id = customer_id;
   if (id == null) return Promise.reject(new Error('customer_id missing'));
 
-  // Dynamisch nur die Felder updaten, die gesetzt wurden (wie dein Payload-Pattern)
   const sets = [];
   const params = [];
 
-  if (pdf_header !== undefined) { sets.push('pdf_header = ?'); params.push(pdf_header); }
-  if (pdf_footer !== undefined) { sets.push('pdf_footer = ?'); params.push(pdf_footer); }
+  if (pdf_header !== undefined) {
+    sets.push('pdf_header = ?');
+    params.push(pdf_header);
+  }
 
-  if (sets.length === 0) return Promise.resolve(); // nichts zu tun
+  if (pdf_footer !== undefined) {
+    sets.push('pdf_footer = ?');
+    params.push(pdf_footer);
+  }
+
+  if (sets.length === 0) return Promise.resolve();
 
   params.push(id);
 
@@ -371,6 +337,7 @@ function updateCustomerTexts(sqliteDb, customer_id, pdf_header, pdf_footer) {
 
 function selectAll(sql, params = []) {
   const db = getDb();
+
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
       if (err) reject(err);
@@ -384,11 +351,12 @@ function insertCSParameter(newRowData, cleanTableName, cb) {
     if (!cleanTableName || typeof cleanTableName !== 'string') {
       return cb?.(new Error('cleanTableName missing/invalid'));
     }
+
     if (!newRowData || typeof newRowData !== 'object') {
       return cb?.(new Error('newRowData missing/invalid'));
     }
 
-    const db = getDb(); // so wie du es im service bereits machst
+    const db = getDb();
     if (!db) return cb?.(new Error('DB not initialized'));
 
     const keys = Object.keys(newRowData);
@@ -409,23 +377,11 @@ function insertCSParameter(newRowData, cleanTableName, cb) {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
 module.exports = {
-  // init + logging
   initDb,
   getDb,
   setLogFilePath,
 
-  // db functions
   getAllTableNames,
   queryDB,
   updateRecord,
@@ -439,10 +395,4 @@ module.exports = {
   updateCustomerTexts,
   selectAll,
   insertCSParameter,
-
-
-
-
-
-
 };

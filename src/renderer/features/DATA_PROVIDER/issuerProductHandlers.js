@@ -39,14 +39,6 @@ export function createIssuerProductHandlers({ appState } = {}) {
     }
   }
 
-  function handleCSMatrixData(receivedData) {
-    appState.handleCSMatrixData?.(receivedData);
-  }
-
-  function handleCSParameterData(receivedData) {
-    appState.handleCSParameterData?.(receivedData);
-  }
-
   function handleRankData(receivedData) {
     appState.setRankData?.(receivedData);
   }
@@ -60,8 +52,13 @@ export function createIssuerProductHandlers({ appState } = {}) {
     });
 
     const updatedData = (Array.isArray(receivedData) ? receivedData : []).map((prod) => {
-      const matchedIssuer = tickerToIssuerMap[prod?.TICKER] || null;
+      // const matchedIssuer = tickerToIssuerMap[prod?.TICKER] || null;
+      // return { ...prod, ISSUER: matchedIssuer };
+
+      const matchedIssuer = tickerToIssuerMap[prod?.TICKER] || prod?.ISSUER || null;
       return { ...prod, ISSUER: matchedIssuer };
+
+
     });
 
     appState.setActiveTable?.('prod');
@@ -94,8 +91,6 @@ export function createIssuerProductHandlers({ appState } = {}) {
   return {
     handleIssuerDataInit,
     handleCountryLookupDataInit,
-    handleCSMatrixData,
-    handleCSParameterData,
     handleRankData,
     handleProdDataInit,
   };

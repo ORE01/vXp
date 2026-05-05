@@ -1,6 +1,6 @@
 ﻿// Minor change to test git push 1-3-2024 1011
 
-import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
+import processData from '../../../core/ui/modal/modalData.js';
 
 import createBarChart from '../../../charts/BarChart.js';
 
@@ -11,11 +11,11 @@ import { getCreditSensitivityColor } from '../../../utils/colors.js';
 let CPV01Chart; // This will hold the chart instance
 
 export function handleCSSensData(portMainData) {
-  // âœ… Immer ein Node zurÃ¼ckgeben
+  // Immer ein Node zurÃ¼ckgeben
   const wrapper = document.createElement('div');
   wrapper.className = 'csens-wrapper';
 
-  // ðŸ”¹ Eingabedaten prÃ¼fen
+  // Eingabedaten prÃ¼fen
   if (!Array.isArray(portMainData) || portMainData.length === 0) {
     wrapper.textContent = 'No credit spread sensitivities available.';
     return wrapper;
@@ -29,7 +29,7 @@ export function handleCSSensData(portMainData) {
     return wrapper;
   }
 
-  // ðŸ”¹ Gruppen nach Rating aufbauen
+  // Gruppen nach Rating aufbauen
   const groupedCPV01 = portMainData.reduce((acc, { CPV01, RATING }) => {
     if (!RATING) return acc;
     if (!acc[RATING]) acc[RATING] = 0;
@@ -53,7 +53,7 @@ export function handleCSSensData(portMainData) {
     return wrapper;
   }
 
-  // ðŸ”¹ Tabelle vorbereiten
+  // Tabelle vorbereiten
   const tableData = sortedCPV01.map(([RATING, CPV01]) => {
     const cpv01Bp        = (CPV01 / portValue)  * 10000; // bp
     const weightedRating = (CPV01 / portCPV01) * 100;    // %
@@ -69,7 +69,7 @@ export function handleCSSensData(portMainData) {
   // processData liefert HTML â†’ in wrapper setzen
   wrapper.innerHTML = processData(tableData, 'Portfolios');
 
-  // ðŸ”¹ Chart-Daten vorbereiten
+  // Chart-Daten vorbereiten
   const chartData = sortedCPV01.map(([RATING, CPV01]) => ({
     RATING,
     PV01: (CPV01 / portCPV01) * 100,

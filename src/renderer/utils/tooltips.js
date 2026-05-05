@@ -1,13 +1,25 @@
-export function addTooltipsForTruncatedText(container) {
-    const cells = container.querySelectorAll('td');
-    cells.forEach((cell) => {
-      //console.log(`Cell content: "${cell.textContent}", scrollWidth: ${cell.scrollWidth}, clientWidth: ${cell.clientWidth}`);
-      if (cell.scrollWidth > cell.clientWidth) {
-        cell.setAttribute('title', cell.textContent);
-        //console.log(`Tooltip added: "${cell.textContent}"`);
-      }
-    });
-  }
+// export function addTooltipsForTruncatedText(container) {
+//     const cells = container.querySelectorAll('td');
+//     cells.forEach((cell) => {
+//       //console.log(`Cell content: "${cell.textContent}", scrollWidth: ${cell.scrollWidth}, clientWidth: ${cell.clientWidth}`);
+//       if (cell.scrollWidth > cell.clientWidth) {
+//         cell.setAttribute('title', cell.textContent);
+//         //console.log(`Tooltip added: "${cell.textContent}"`);
+//       }
+//     });
+//   }
+
+  export function addTooltipsForTruncatedText(container) {
+  const elements = container.querySelectorAll('td, .warning-text');
+
+  elements.forEach((el) => {
+    const fullText = el.dataset.fullText || el.textContent;
+
+    if (el.scrollWidth > el.clientWidth || el.dataset.fullText) {
+      el.setAttribute('title', fullText);
+    }
+  });
+}
 
 
 // Optional: einmalige Warn-Rate-Limit pro Session (als statische Eigenschaft der Funktion)

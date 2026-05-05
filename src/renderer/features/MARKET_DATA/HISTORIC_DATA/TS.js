@@ -264,7 +264,7 @@ newLoadButton.onclick = async () => {
   // Chart + Tabelle aktualisieren
   refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey);
 
-  // ðŸ”” Risk-Preview nach dem Render anstoÃŸen
+  // Risk-Preview nach dem Render anstoÃŸen
   // ein Frame warten, damit Chart.js Zeit hat, den Canvas zu zeichnen
   requestAnimationFrame(() => {
     try {

@@ -1,10 +1,10 @@
 ﻿// initMarketDataPanels.js
 
 import { initForwardPanelGlobalOnce } from "../../features/MARKET_DATA/FORWARDS/initForwardPanelGlobal.js";
-import { initLazyPanels, refreshOpenPanels as refreshCore } from "./lazyPanelsCore.js";
-import { initCurveSelectorGlobal } from "../../features/MARKET_DATA/INTEREST_RATES/initCurveSelectorGlobal.js";
+import { initLazyPanels, refreshOpenPanels as refreshCore } from "./panelOrchestrator.js";
 
-import { renderIRPanel } from "../../features/MARKET_DATA/INTEREST_RATES/IR.js";
+
+import { renderInterestRateCurvePanel} from "../../features/MARKET_DATA/INTEREST_RATES/interestRateCurvePanel.js";
 import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/FORWARDS/forwards.js";
 
 // Swaption Vols: 3D-ATM-Surface (Plotly) + Smile (Chart.js)
@@ -12,7 +12,16 @@ import { renderSwaptionIfReady } from "../../features/MARKET_DATA/VOLS/swaptionV
 import { notifyRiskPreview } from '../../features/REPORTS/RiskPDFPreview.js';
 
 import { createTSModals } from "../../features/MARKET_DATA/HISTORIC_DATA/TS.js";
-import { renderScenarioPanel } from "../../features/MARKET_DATA/SCENARIOS/ScenarioPanel.js";
+
+import { renderIRScenarioPanel } from "../../features/MARKET_DATA/scenarios/IR/IRScenarioPanel.js";
+import { renderIRScenarioBuilder } from "../../features/MARKET_DATA/scenarios/IR/IRScenarioBuilder.js";
+
+import { renderCSScenarioPanel } from "../../features/MARKET_DATA/scenarios/CS/CSScenarioPanel.js";
+import { renderCSScenarioBuilder } from "../../features/MARKET_DATA/scenarios/CS/CSScenarioBuilder.js";
+import { renderCreditSpreadCurveChart } from "../../features/MARKET_DATA/CREDIT_SPREADS/renderCreditSpreadCurveChart.js";
+
+import { renderVolScenarioPanel } from "../../features/MARKET_DATA/scenarios/VOLS/VolScenarioPanel.js";
+import { renderVolScenarioBuilder } from "../../features/MARKET_DATA/scenarios/VOLS/VolScenarioBuilder.js";
 
 
 // ====================================================================================================================================================================================
@@ -25,14 +34,28 @@ export function getMarketDataPanelRenderers() {
     // INTEREST RATES (Curve Viewer)
     // ======================================================
     "panel-rates": () => {
-      renderIRPanel();
+      renderInterestRateCurvePanel();
     },
 
     // ======================================================
     // MARKET SCENARIOS (Curve → Scenario Mapping)
     // ======================================================
     "panel-scenarios": () => {
-      renderScenarioPanel();
+        renderIRScenarioPanel();
+        renderCSScenarioPanel();
+        renderVolScenarioPanel();
+    },
+
+    "panel-create-scenario": () => {
+        renderIRScenarioBuilder();
+    },
+
+    "panel-create-cs-scenario": () => {
+        renderCSScenarioBuilder();
+    },
+
+    "panel-create-vol-scenario": () => {
+        renderVolScenarioBuilder();
     },
 
     // ======================================================
@@ -67,7 +90,9 @@ export function getMarketDataPanelRenderers() {
     // ======================================================
     // FUTURE EXTENSIONS
     // ======================================================
-    // "panel-creditspreads": () => renderCreditSpreadsPanel(),
+    "panel-creditspreads": () => {
+      renderCreditSpreadCurveChart();
+    },
     // "panel-ml": () => renderMLPanel(),
   };
 }
@@ -82,8 +107,7 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
     triggerSelector: "#MARKETDATA_Modal .section-trigger"
   });
 
-  // 2) Curve-Selector initialisieren (erst NACH Modal-DOM)
-  initCurveSelectorGlobal();
+  
 
   // 3) Swaption-IPC: ATM/Smile â†’ wenn ready, Surface + Preview neu rendern
   document.addEventListener("swaption:atm:ready",   renderSwaptionAndPreview);
@@ -95,9 +119,9 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
     const pForward  = document.getElementById("panel-forward");
     const pSwaption = document.getElementById("panel-swaption");
 
-    // â¬…ï¸ IR IMMER aktualisieren, sobald es das Panel gibt
+    // IR IMMER aktualisieren, sobald es das Panel gibt
     if (pRates) {
-      renderIRPanel();
+      renderInterestRateCurvePanel();
     }
 
     // Forward nur, wenn Panel tatsÃ¤chlich offen ist (Inputs etc.)
@@ -118,9 +142,9 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
     const pForward  = document.getElementById("panel-forward");
     const pSwaption = document.getElementById("panel-swaption");
 
-    // â¬…ï¸ IR IMMER aktualisieren, damit IRDataContainer eine Tabelle hat
+    // IR IMMER aktualisieren, damit IRDataContainer eine Tabelle hat
     if (pRates) {
-      renderIRPanel();
+      renderInterestRateCurvePanel();
     }
 
     // Forward weiterhin nur, wenn Panel offen
@@ -130,8 +154,8 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
     }
 
     // Swaption nur bei offenem Panel
-    if (pSwaption && !pSwaption.hidden) {
-      renderSwaptionIfReady();
+    if (pSwaption && !pSwaption.hidden && pSwaption.classList.contains('open')) {
+      renderSwaptionAndPreview();
     }
   });
 }
@@ -141,13 +165,59 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
 
 
 
-function renderSwaptionAndPreview() {
-  renderSwaptionIfReady();
+let swaptionRenderQueued = false;
+let swaptionPreviewQueued = false;
 
-  // Plotly/WebGL braucht oft einen Tick lÃ¤nger â†’ 2 Frames warten
+function isSwaptionPanelOpen() {
+  const panel = document.getElementById('panel-swaption');
+
+  return Boolean(
+    panel &&
+    !panel.hidden &&
+    panel.classList.contains('open')
+  );
+}
+
+function isRiskPreviewVisible() {
+  const reportsModal = document.getElementById('REPORTS_Modal');
+  const previewPanel = document.getElementById('risk-preview');
+
+  const reportsOpen =
+    reportsModal &&
+    !reportsModal.hidden &&
+    reportsModal.classList.contains('open');
+
+  const previewVisible =
+    previewPanel &&
+    previewPanel.offsetParent !== null;
+
+  return Boolean(reportsOpen && previewVisible);
+}
+
+function renderSwaptionAndPreview() {
+  if (!isSwaptionPanelOpen()) return;
+  if (swaptionRenderQueued) return;
+
+  swaptionRenderQueued = true;
+
   requestAnimationFrame(() => {
+    swaptionRenderQueued = false;
+
+    renderSwaptionIfReady();
+
+    if (!isRiskPreviewVisible()) {
+      swaptionPreviewQueued = false;
+      return;
+    }
+
+    if (swaptionPreviewQueued) return;
+    swaptionPreviewQueued = true;
+
     requestAnimationFrame(() => {
-      notifyRiskPreview('swaption');   // <â€” HIER
+      requestAnimationFrame(() => {
+        swaptionPreviewQueued = false;
+        notifyRiskPreview('swaption');
+      });
     });
   });
 }

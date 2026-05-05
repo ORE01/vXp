@@ -3,13 +3,18 @@
 import { createIssuerProductHandlers } from '../../features/DATA_PROVIDER/issuerProductHandlers.js';
 import { createCustomerHandlers } from '../../features/CUSTOMER/customerHandlers.js';
 import { createDealsPortfolioActions } from '../../features/SELECT_PORTFOLIO/dealsPortfolioActions.js';
-import { createRatesHandlers } from '../../features/MARKET_DATA/INTEREST_RATES/ratesHandlers.js';
+import { createRatesHandlers } from '../../features/MARKET_DATA/INTEREST_RATES/interestRateCurveHandlers.js';
 import { createSwaptionDataHandlers } from '../../features/MARKET_DATA/VOLS/swaptionDataHandlers.js';
 import { createForwardsHandlers } from '../../features/MARKET_DATA/FORWARDS/forwardsHandlers.js';
 import { createAnalysePortfolioHandlers } from '../../features/ANALYSE_PORTFOLIO/analysePortfolioHandlers.js';
 
-import { handleCSMatrixData } from '../../features/MARKET_DATA/CREDIT_SPREADS/CSMatrix.js';
-import { handleCSParameterData } from '../../features/MARKET_DATA/CREDIT_SPREADS/CSParameter.js';
+import {handleCSParameterData} from '../../features/MARKET_DATA/CREDIT_SPREADS/csParameterHandlers.js';
+
+import {
+  handleCSBaseData,
+  handleCS_ACTIVEData,
+  handleCSScenarioData,
+} from '../../features/MARKET_DATA/CREDIT_SPREADS/csHandlers.js';
 
 import { handleMVaRData, handleMvarInputData } from '../../features/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
 import { handleCVaRData, handleEADData } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
@@ -38,48 +43,54 @@ export function bootstrapHandlers(appState, deps) {
 
   const ratesHandlers = createRatesHandlers({ appState });
 
-  // Backwards compatibility on appState
-  appState.handleCSMatrixData = handleCSMatrixData;
-  appState.handleCSParameterData = handleCSParameterData;
-
-  // Swaption handlers (must exist before IPC/refresh)
   const {
     handleSwaptionATMData,
     handleSwaptionSmileData,
-    handleSwaptionCubeSurfaceData,
+    handleSwaptionCubeData,
+    handleSwaptionSnapshotsData,
+    handleSwaptionSmileSnapshotsData,
+    handleSwaptionActiveData,
   } = createSwaptionDataHandlers({ appState });
 
   const forwardsHandlers = createForwardsHandlers({ appState });
 
   const analyseHandlers = createAnalysePortfolioHandlers({
     appState,
-
-    // imported handler functions
     handleMVaRData,
     handleCVaRData,
     handleEADData,
     handleLossIssuerMainData,
-
     handleCvarInput,
     handleCvarInputThresholdView,
   });
 
-return {
-  issuerProdHandlers,
-  customerHandlers,
-  dealsActions,
-  forwardsHandlers,
-  analyseHandlers,
+  return {
+    issuerProdHandlers,
+    customerHandlers,
+    dealsActions,
+    forwardsHandlers,
+    analyseHandlers,
+    ratesHandlers,
 
-  // ✅ GANZES OBJEKT zurückgeben
-  ratesHandlers,
+    handleCSParameterData,
+    handleCS_ACTIVEData,
+    handleCSBaseData,
+    handleCSScenarioData,
 
-  // swaption
-  handleSwaptionATMData,
-  handleSwaptionSmileData,
-  handleSwaptionCubeSurfaceData,
+    // canonical Swaption names for installReceivers/dataRouter
+    handleSwaptionAtmBaseData: handleSwaptionATMData,
+    handleSwaptionSmileBaseData: handleSwaptionSmileData,
+    handleSwaptionAtmScenarioData: handleSwaptionSnapshotsData,
+    handleSwaptionSmileScenarioData: handleSwaptionSmileSnapshotsData,
+    handleSwaptionActiveData,
+    handleSwaptionCubeData,
 
-  handleMvarInputData,
-};
+    // legacy aliases, falls anderswo noch verwendet
+    handleSwaptionATMData,
+    handleSwaptionSmileData,
+    handleSwaptionSnapshotsData,
+    handleSwaptionSmileSnapshotsData,
+
+    handleMvarInputData,
+  };
 }
-

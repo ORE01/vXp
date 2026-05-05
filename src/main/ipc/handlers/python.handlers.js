@@ -150,17 +150,43 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     const scriptArgs = [];
     if (mode) scriptArgs.push('--table', mode);
 
-    let tablesToRefresh = [];
-    switch (mode) {
-      case 'ISSUER':   tablesToRefresh = ['Issuer', 'Rank']; break;
-      case 'PRODUCTS': tablesToRefresh = ['ProdAll']; break;
-      case 'DEALS':    tablesToRefresh = ['DealsMain', 'Portfolios']; break;
-      case 'EUSW':     tablesToRefresh = ['EUSW', 'EUSWAPTION_ATM', 'EUSWAPTION_SMILE']; break;
-      case 'ALL':
-      default:
-        tablesToRefresh = ['Portfolios','DealsMain','ProdAll','Issuer','Rank','EUSW','EUSWAPTION_ATM','EUSWAPTION_SMILE'];
-        break;
-    }
+  let tablesToRefresh = [];
+
+  switch (mode) {
+    case 'ISSUER':
+      tablesToRefresh = ['Issuer', 'Rank'];
+      break;
+
+    case 'PRODUCTS':
+      tablesToRefresh = ['ProdAll'];
+      break;
+
+    case 'DEALS':
+      tablesToRefresh = ['DealsMain', 'Portfolios'];
+      break;
+
+    case 'RANK':
+      tablesToRefresh = ['Rank'];
+      break;
+
+    case 'MARKET':
+      tablesToRefresh = ['RATES_BASE', 'SWAPTION_ATM_BASE', 'SWAPTION_SMILE_BASE'];
+      break;
+
+    case 'ALL':
+    default:
+      tablesToRefresh = [
+        'Portfolios',
+        'DealsMain',
+        'ProdAll',
+        'Issuer',
+        'Rank',
+        'RATES_BASE',
+        'SWAPTION_ATM_BASE',
+        'SWAPTION_SMILE_BASE',
+      ];
+      break;
+  }
 
     try {
       event.sender.send('py-excel-progress', { provider: mode, progress: 5, message: `Starting Excel import (${mode}) ...` });
@@ -276,6 +302,54 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     } catch (error) {
       event.reply('py-swaption-complete', { success: false, projectName: 'py-swaption', error: error?.message || String(error) });
       event.reply('project-finished', { success: false, projectName: 'py-swaption' });
+    }
+  });
+
+  // ===================== VOL CUBE =====================
+  ipcMain.on('start-py-volcube', async (event, args) => {
+    const { selectedCurve = 'EUSWAP' } = args || {};
+
+    try {
+      const pythonArgs = [];
+      if (selectedCurve) pythonArgs.push('--selectedCurve', selectedCurve);
+
+      const result = await startPythonScriptWithEvent(
+        event,
+        'volcube',
+        'py-volcube',
+        pythonArgs
+      );
+
+      try { refreshTable('SWAPTION_CUBE'); } catch {}
+
+      event.reply('py-volcube-complete', {
+        success: true,
+        projectName: 'py-volcube',
+        result
+      });
+
+      event.reply('py-volcube-complete', {
+        success: true,
+        projectName: 'py-volcube',
+        result
+      });
+
+      event.reply('project-finished', {
+        success: true,
+        projectName: 'py-volcube'
+      });
+
+    } catch (error) {
+      event.reply('py-volcube-complete', {
+        success: false,
+        projectName: 'py-volcube',
+        error: error?.message || String(error)
+      });
+
+      event.reply('project-finished', {
+        success: false,
+        projectName: 'py-volcube'
+      });
     }
   });
 

@@ -10,6 +10,7 @@ export function createPythonExecutionRouter(ctx) {
 
   function handleFairValueProject(buttonElement, extraParam = {}) {
     const id = buttonElement?.id || '';
+
     const preferredSource =
       id === 'fairValueButton2' ? 'offers' :
       id === 'fairValueButton'  ? 'port' :
@@ -21,33 +22,53 @@ export function createPythonExecutionRouter(ctx) {
 
     const pickBySource = (src) => {
       switch (src) {
-        case 'offers': return offersName || dealsName || portName || '';
-        case 'port':   return portName   || dealsName || offersName || '';
-        default:       return dealsName  || portName  || offersName || '';
+        case 'offers':
+          return offersName || dealsName || portName || '';
+        case 'port':
+          return portName || dealsName || offersName || '';
+        default:
+          return dealsName || portName || offersName || '';
       }
     };
 
     const tableName = String(pickBySource(preferredSource)).trim();
-    if (!tableName) return console.warn('⚠️ Kein Name ausgewählt (deals/port/offers).');
+    if (!tableName) {
+      console.warn('⚠️ Kein Name ausgewählt (deals/port/offers).');
+      return;
+    }
 
     if (!dealsName && appState.setSelectedDealsTableName) {
       appState.setSelectedDealsTableName(tableName);
     }
 
-    const CSSzenario    = appState.getCSSzenarioData?.();
+    const activeRows = appState.getCSActive?.() || [];
+
+    const latestCSActive = [...activeRows]
+      .sort((a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0))[0];
+
+    const CSSzenarioFromActive = String(latestCSActive?.scenario_name || '').trim();
+    const CSSzenarioFromState  = String(appState.getCSSzenarioData?.() || '').trim();
+
+    const CSSzenario = CSSzenarioFromActive || CSSzenarioFromState || 'default';
     const selectedCurve = appState.getSelectedCurve?.();
-    if (!CSSzenario) return console.warn('⚠️ Kein CSSzenario gesetzt. Bitte zuerst Szenario wählen.');
 
     const payload = {
       tableName,
       source: preferredSource,
       CSSzenario,
       selectedCurve,
-      selectedDealsTableName:  dealsName  || '',
-      selectedPortTableName:   portName   || '',
+      selectedDealsTableName: dealsName || '',
+      selectedPortTableName: portName || '',
       selectedOffersTableName: offersName || '',
       ...extraParam,
     };
+
+    console.log('[FV] CS_ACTIVE rows =', activeRows);
+    console.log('[FV] CSSzenarioFromActive =', CSSzenarioFromActive);
+    console.log('[FV] CSSzenarioFromState =', CSSzenarioFromState);
+    console.log('[FV] CSSzenario final =', CSSzenario);
+    console.log('[FV] selectedCurve =', selectedCurve);
+    console.log('[FV] payload =', payload);
 
     window.api?.send?.('start-py-fairValue', payload);
   }
@@ -72,8 +93,12 @@ export function createPythonExecutionRouter(ctx) {
 
   function handleCVaRProject(buttonElement, extraParam = {}) {
     const port_name = appState.getSelectedPortTableName?.();
-    const CSSzenario = appState.getCSSzenarioData?.();
-    if (!CSSzenario) throw new Error('No scenario data available. Please set a scenario first.');
+
+    const CSSzenario = String(appState.getCSSzenarioData?.() || 'default').trim();
+
+    // const CSSzenario = appState.getCSSzenarioData?.();
+    // if (!CSSzenario) throw new Error('No scenario data available. Please set a scenario first.');
+
     if (!extraParam.cvarName) throw new Error('No CVaR configuration name (cvarName) provided.');
 
     const payload = { tableName: port_name, CSSzenario, cvarName: extraParam.cvarName };
@@ -106,28 +131,27 @@ export function createPythonExecutionRouter(ctx) {
     window.api.send(`start-py-ml`, payload);
   }
 
+
+
   function handleCSParProject(buttonElement, extraParam) {
-    const selectedTableName = 'CSParameter';
-    const selectedRows = [];
-    const checkboxes = document.querySelectorAll('#CSParameterDataContainer .select-scenario:checked');
-    if (checkboxes.length === 0) throw new Error('Please select at least one scenario.');
+  const selectedTableName = 'CSParameter';
 
-    checkboxes.forEach((checkbox) => {
-      const row = checkbox.closest('tr');
-      if (!row) return;
-      const cells = row.querySelectorAll('td');
-      const nameColumn = cells.length > 1 ? cells[cells.length - 2] : null;
-      const CSSzenario = nameColumn ? nameColumn.textContent.trim() : null;
-      if (CSSzenario) selectedRows.push(CSSzenario);
-    });
+  const latestCSActive = (appState.getCSActive?.() || [])
+    .sort((a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0))[0];
 
-    if (selectedRows.length === 0) throw new Error('Please select at least one scenario.');
-    const CSSzenario = selectedRows[0];
-    appState.setCSSzenarioData?.(CSSzenario);
+  const CSSzenario = String(latestCSActive?.scenario_name || '').trim();
 
-    const payload = { tableName: selectedTableName, ...extraParam, CSSzenario, selectedRows };
-    window.api.send(`start-py-cspar`, payload);
+  if (!CSSzenario) {
+    throw new Error('Please select at least one scenario.');
   }
+
+  
+
+  const selectedRows = [CSSzenario];
+  const payload = { tableName: selectedTableName, ...extraParam, CSSzenario, selectedRows };
+
+  window.api.send('start-py-cspar', payload);
+}
 
   function handleAIColumnProject(extraParam = {}) {
     const port_name = appState.getSelectedDealsTableName?.();
@@ -225,9 +249,16 @@ export function createPythonExecutionRouter(ctx) {
             updateExcelIssuerButton:    'ISSUER',
             updateExcelProductsButton:  'PRODUCTS',
             updateExcelDealsButton:     'DEALS',
-            updateExcelEuswButton:      'EUSW',
+            updateExcelRankButton:      'RANK',
+            updateExcelMarketButton:    'MARKET',
+
           };
+
           const mode = modeMap[buttonElement.id] || 'ALL';
+
+          console.log('[PY EXCEL] button id =', buttonElement.id);
+          console.log('[PY EXCEL] mode =', mode);
+
           sendPayloadToAPI(projectName, mode, extraParam);
           break;
         }

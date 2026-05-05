@@ -19,6 +19,7 @@ module.exports = {
     'start-py-cspar',
     'start-py-matchColumns',
     'start-py-swaption',
+    'start-py-volcube',
     'start-py-ml',
 
     // UI / bulk ops
@@ -101,9 +102,30 @@ module.exports = {
 
     'save-portfolio-name',
 
-      // Rates / Scenarios
+    // Rates / Scenarios
     'rates:set-active-scenario',
     'rates:get-active-curve',
+    'rates:create-scenario',
+    'rates:get-base-curve',
+    'rates:get-available-curves',
+    'rates:get-scenarios',
+    'rates:get-scenario',
+    'rates:update-scenario-row',
+
+    // cs / Scenarios
+    'cs:set-active-scenario',
+    'cs:create-scenario',
+    'cs:delete-scenario',
+    'cs:get-base-matrix',
+    'cs:get-scenarios',
+    'cs:get-scenario',
+
+    // swaption / Scenarios
+    'swaption:set-active-scenario',
+    'swaption:create-scenario',
+
+    // generic table helpers
+    'fetch-table-data',
 
     
 
@@ -126,6 +148,7 @@ module.exports = {
     'py-excel-complete',
     'py-historicData-complete',
     'py-swaption-complete',
+    'py-volcube-complete',
     'py-matchColumns-complete',
     'py-cspar-complete',
     'py-ml-complete',
