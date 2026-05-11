@@ -1,0 +1,290 @@
+
+/* ============================================================
+   slideIn.base.css  (MASTER für alle SlideIns)
+   Wirkt nur in .table Modals
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   BASIS / VARS
+   ------------------------------------------------------------ */
+.table {
+  --sidebar-width: 260px;
+  --trigger-max-width: 200px;
+  --sub-indent: 14px;
+
+  /* Topbar/Tabs-Höhe – fix */
+  --topbar-height: 110px;
+
+  position: relative;
+}
+
+/* ------------------------------------------------------------
+   CONTENT / TRIGGER AREA
+   ------------------------------------------------------------ */
+.table .table-content {
+  position: relative;
+  min-height: 100vh;
+  overflow: visible;
+  display: block;
+}
+
+/* Trigger-Zeilen (NUR in table) */
+.table .chart-section {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  text-align: left; /* kein !important nötig */
+}
+
+/* Unterpunkte – initial versteckt */
+.table .chart-section--sub {
+  display: none;
+  width: 100%;
+  margin: 2px 0;
+  margin-left: var(--sub-indent);
+  text-align: left;
+}
+
+/* Subpunkte sichtbar, wenn Hauptpunkt geöffnet */
+.table .chart-section.is-open + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub {
+  display: block;
+}
+
+/* ------------------------------------------------------------
+   TRIGGER BUTTONS (scoped) — LOOK WIE ALT, aber 2-ZEILEN SAFE
+   ------------------------------------------------------------ */
+.table .section-trigger {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+
+  /* alt war height: 28px; -> macht 2 Zeilen kaputt */
+  min-height: 28px;
+  padding: 2px 8px;
+
+  max-width: var(--trigger-max-width);
+
+  background: #555;
+  border: 1px solid #777;
+  border-radius: 4px;
+  color: #cfcfcf;
+
+  cursor: pointer;
+  margin: 0;
+
+  /* Schrift wie alt */
+  font-size: 12px;
+  line-height: 1;
+
+  /* NEU: Text darf umbrechen */
+  white-space: normal;
+  word-break: break-word;
+
+  /* Button-Defaults killen (wichtig bei <button>) */
+  font-family: inherit;
+}
+
+.table .section-trigger:hover {
+  color: #fff;
+  border-color: #999;
+}
+
+/* Unterpunkt-Trigger */
+.table .section-trigger--sub {
+  /* alt war height: 24px; -> macht 2 Zeilen kaputt */
+  min-height: 24px;
+
+  font-size: 11px;
+  padding-left: 22px;
+  background: #444;
+
+  max-width: calc(var(--trigger-max-width) - var(--sub-indent));
+  position: relative;
+}
+
+.table .section-trigger--sub::before {
+  content: "↳";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: .7;
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------
+   BACKDROP (blockiert NUR Content, NIE Sidebar, NIE Tabs)
+   ------------------------------------------------------------ */
+.table .sub-panel-backdrop {
+  position: fixed;
+  top: var(--topbar-height);
+  bottom: 0;
+  left: var(--sidebar-width);
+  right: 0;
+
+  background: rgba(0,0,0,.25);
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity .2s ease;
+  z-index: 1050;
+}
+
+.table .sub-panel-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ------------------------------------------------------------
+   PANELS (fixed, unter Tabs, genau eins sichtbar)
+   ------------------------------------------------------------ */
+.table .sub-panel {
+  position: fixed;
+  top: var(--topbar-height);
+  right: -100%;
+  width: calc(100vw - var(--sidebar-width));
+  height: calc(100vh - var(--topbar-height));
+
+  background: #333;
+  border-left: 1px solid #ccc;
+  box-shadow: -12px 0 24px rgba(0,0,0,.2);
+
+  transition: right .25s ease;
+  z-index: 1100;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.table .sub-panel.open {
+  right: 0;
+}
+
+/* Header / Body */
+.table .sub-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.table .sub-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f0;
+}
+
+.table .sub-panel-close {
+  font-size: 20px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: #fff;
+}
+
+.table .sub-panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------
+   SAFETY: Toolbars in Panels dürfen nichts zentrieren
+   ------------------------------------------------------------ */
+.table .sub-panel-body .toolbar {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.table .sub-panel-body .toolbar .section-trigger {
+  align-self: flex-start;
+}
+
+/* ------------------------------------------------------------
+   TRIGGER CHEVRON – zentral, state-safe
+   ------------------------------------------------------------ */
+.table .section-trigger .chev{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  margin-left: 8px;
+}
+
+.table .section-trigger .chev::before{
+  content: "›";
+  display: inline-block;
+
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 400;
+  opacity: 0.75;
+
+  transform: rotate(0deg);
+  transition: transform .18s ease, opacity .18s ease;
+}
+
+.table .chart-section.is-open .section-trigger .chev::before{
+  transform: rotate(90deg);
+  opacity: 0.95;
+}
+
+.table .section-trigger{
+  /* ...dein Rest... */
+  font-size: 12px;
+  line-height: 1;
+  background: #555;            /* statt rot */
+}
+
+.table .section-trigger .section-header{
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+
+.table .sub-panel-close {
+  display: none !important;
+}
+
+
+
+.portfolio-info .panel-title{
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -122,24 +122,10 @@ contextBridge.exposeInMainWorld('api', {
     }),
 
    tableLayouts: {
-      // V1
-      get: (tableId) => ipcRenderer.invoke('table-layout:get', tableId),
-      save: (tableId, layout) => ipcRenderer.invoke('table-layout:save', tableId, layout),
-
-      // V2
-      getOne: (tableId, layoutName) =>
-        ipcRenderer.invoke('table-layout:get-one', tableId, layoutName),
-
-      saveOne: (tableId, layoutName, layout) =>
-        ipcRenderer.invoke('table-layout:save-one', tableId, layoutName, layout),
-
-      getAll: (tableId) =>
-        ipcRenderer.invoke('table-layout:get-all', tableId),
+  saveOne: (tableId, layoutName, layout) =>
+    ipcRenderer.invoke('table-layout:save-one', tableId, layoutName, layout),
     },
 
-  onProgress: (callback) => {
-    ipcRenderer.on('py-progress', (_event, data) => callback(data));
-  },
 });
 
 window.addEventListener('DOMContentLoaded', () => {

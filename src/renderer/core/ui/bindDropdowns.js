@@ -90,35 +90,19 @@ export function bindDropdowns({ appState } = {}) {
     setActiveTable: () => appState.setActiveElementId('offersDataContainer'),
   });
 
-  // Portfolio Dropdowns (0,1,2)
-// ['0', '1', '2'].forEach((num) => {
-//   setupDropdown({
-//     appState,
-//     dropdownId: `createdPortDropdown${num}`,
-//     getDataFunction: appState.getPortNameList,
-//     updateDataFunction: appState.updatePortDataTable,
 
-//     updateMvarDataFunction: appState.updateMvarDistData,
-//     updateCvarDataFunction: appState.updateCvarData,        // <-- HIER
-//     updateEADDataFunction:  appState.updateEADData,         // <-- optional, wenn du EAD willst
-
-//     setSelectedPortTableName: appState.setSelectedPortTableName,
-//     setActiveTable: () => appState.setActiveElementId(`portDataContainer${num}`),
-//     index: parseInt(num, 10),
-//   });
-// });
 
 // Portfolio Dropdowns (0,1,2)
 ['0', '1', '2'].forEach((num) => {
-  console.log('[bindDropdowns] setupDropdown INIT', {
-    slot: Number(num),
-    dropdownId: `createdPortDropdown${num}`,
-    hasGetPortNameList: typeof appState.getPortNameList === 'function',
-    hasUpdatePortDataTable: typeof appState.updatePortDataTable === 'function',
-    hasUpdateMvarDistData: typeof appState.updateMvarDistData === 'function',
-    hasUpdateCvarData: typeof appState.updateCvarData === 'function',
-    hasUpdateEADData: typeof appState.updateEADData === 'function',
-  });
+  // console.log('[bindDropdowns] setupDropdown INIT', {
+  //   slot: Number(num),
+  //   dropdownId: `createdPortDropdown${num}`,
+  //   hasGetPortNameList: typeof appState.getPortNameList === 'function',
+  //   hasUpdatePortDataTable: typeof appState.updatePortDataTable === 'function',
+  //   hasUpdateMvarDistData: typeof appState.updateMvarDistData === 'function',
+  //   hasUpdateCvarData: typeof appState.updateCvarData === 'function',
+  //   hasUpdateEADData: typeof appState.updateEADData === 'function',
+  // });
 
   setupDropdown({
     appState,

@@ -1,4 +1,4 @@
-﻿import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import processData from '../../../core/ui/modal/modalData.js';
 import { createFWDLineChart, createForwardSwapChart } from '../../../charts/LineChart.js';
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
@@ -129,78 +129,6 @@ function enrichSwapCurve(swapRates, swapYears, applyCubicSpline) {
   };
 }
 
-// function computeCmsForwards(swapRates, cmsLength1, cmsLength2) {
-
-//   const maxYear = swapRates.length;
-
-//   const discountFactors = [];
-
-
-
-//   // Bootstrapping Discount Factors
-//   swapRates.forEach((swapRate, n) => {
-
-//     const S = swapRate / 100;
-//     let sum = 0;
-
-//     for (let i = 0; i < n; i++) {
-//       sum += discountFactors[i];
-//     }
-
-//     const D = (1 - S * sum) / (1 + S);
-//     discountFactors.push(D);
-
-//       // HIER LOGGEN
-//   console.log(`DF ${n + 1}Y =`, D, 'from swapRate =', swapRate);
-//   });
-
-//   const forwardRatesCMS1 = [];
-//   const forwardRatesCMS2 = [];
-
-//   for (let year = 0; year < maxYear; year++) {
-
-//     // CMS1
-//     if (year + cmsLength1 < maxYear) {
-
-//       const numerator =
-//         discountFactors[year] - discountFactors[year + cmsLength1];
-
-//       const denom =
-//         discountFactors
-//           .slice(year + 1, year + cmsLength1 + 1)
-//           .reduce((a, b) => a + b, 0);
-
-//       forwardRatesCMS1.push((numerator / denom) * 100);
-
-//     } else {
-//       forwardRatesCMS1.push(null);
-//     }
-
-//     // CMS2
-//     if (year + cmsLength2 < maxYear) {
-
-//       const numerator =
-//         discountFactors[year] - discountFactors[year + cmsLength2];
-
-//       const denom =
-//         discountFactors
-//           .slice(year + 1, year + cmsLength2 + 1)
-//           .reduce((a, b) => a + b, 0);
-
-//       forwardRatesCMS2.push((numerator / denom) * 100);
-
-//     } else {
-//       forwardRatesCMS2.push(null);
-//     }
-
-//   }
-
-//   return {
-//     forwardRatesCMS1,
-//     forwardRatesCMS2
-//   };
-// }
-
 function computeCmsForwards(swapRates, cmsLength1, cmsLength2) {
 
   const maxYear = swapRates.length;
@@ -224,7 +152,7 @@ function computeCmsForwards(swapRates, cmsLength1, cmsLength2) {
 
     discountFactors.push(D);
 
-    console.log(`DF ${n + 1}Y =`, D, 'swapRate =', swapRate);
+    //console.log(`DF ${n + 1}Y =`, D, 'swapRate =', swapRate);
   });
 
   // -----------------------------
@@ -562,79 +490,6 @@ function piecewiseLinearInterpolate(swapRates, startYear, endYear, startIndex, e
   return interpolatedRates;
 }
 
-// Function for cubic spline interpolation 
-// function monotonicCubicInterpolate(swapRates, startYear, endYear) {
-//   const x = [];
-//   const y = [];
-
-//   for (let year = startYear; year <= endYear; year++) {
-//     x.push(year);
-//     y.push(swapRates[year - 1]);
-//   }
-
-//   const n = x.length;
-//   if (n < 2) return [];
-
-//   const h = new Array(n - 1);
-//   const delta = new Array(n - 1);
-
-//   for (let i = 0; i < n - 1; i++) {
-//     h[i] = x[i + 1] - x[i];
-//     delta[i] = (y[i + 1] - y[i]) / h[i];
-//   }
-
-//   const m = new Array(n);
-
-//   // End slopes
-//   m[0] = delta[0];
-//   m[n - 1] = delta[n - 2];
-
-//   // Interior slopes (Fritsch-Carlson monotone cubic)
-//   for (let i = 1; i < n - 1; i++) {
-//     if (delta[i - 1] * delta[i] <= 0) {
-//       m[i] = 0;
-//     } else {
-//       const w1 = 2 * h[i] + h[i - 1];
-//       const w2 = h[i] + 2 * h[i - 1];
-//       m[i] = (w1 + w2) / (w1 / delta[i - 1] + w2 / delta[i]);
-//     }
-//   }
-
-//   const interpolatedRates = [];
-
-//   for (let i = 0; i < n - 1; i++) {
-//     const x0 = x[i];
-//     const x1 = x[i + 1];
-//     const y0 = y[i];
-//     const y1 = y[i + 1];
-//     const m0 = m[i];
-//     const m1 = m[i + 1];
-//     const dx = x1 - x0;
-
-//     // wir brauchen nur den linken ganzzahligen Punkt pro Jahr
-//     const t = 0.5;
-
-//     const h00 = 2 * t ** 3 - 3 * t ** 2 + 1;
-//     const h10 = t ** 3 - 2 * t ** 2 + t;
-//     const h01 = -2 * t ** 3 + 3 * t ** 2;
-//     const h11 = t ** 3 - t ** 2;
-
-//     const value = h00 * y0 + h10 * dx * m0 + h01 * y1 + h11 * dx * m1;
-
-//     interpolatedRates.push({
-//       year: x0,
-//       rate: parseFloat(value.toFixed(3))
-//     });
-//   }
-
-//   // letzten Punkt ergänzen
-//   interpolatedRates.push({
-//     year: x[n - 1],
-//     rate: parseFloat(y[n - 1].toFixed(3))
-//   });
-
-//   return interpolatedRates;
-// }
 
 function monotonicCubicInterpolate(swapYears, swapRates, startYear, endYear) {
 
@@ -718,7 +573,7 @@ function calculateForwardRates(swapRates) {
     discountFactors.push(D_n);
 
 
-    console.log("DF year", n + 1, "=", D_n);
+    //console.log("DF year", n + 1, "=", D_n);
 
     if (n > 0) {
       const fwdRate = discountFactors[n - 1] / D_n - 1;
@@ -765,7 +620,7 @@ function calculateDynamicCMSForwardRates(swapRates, forward_length) {
     }
     discountFactors.push(D_n);
 
-    console.log("DF year", n + 1, "=", D_n);
+    //console.log("DF year", n + 1, "=", D_n);
   });
 
   // Second pass: Calculate forward swap rates using the precomputed discount factors
@@ -912,8 +767,8 @@ function calculateSwapForwardCurve(swapRates, years_forward) {
     }
   });
 
-  console.log('swapRates input =', swapRates);
-console.log('discountFactors bootstrapped =', discountFactors);
+  //console.log('swapRates input =', swapRates);
+  //console.log('discountFactors bootstrapped =', discountFactors);
 
   return forwardSwapRates;
 }
@@ -951,30 +806,6 @@ function smoothDiscountCurve(years, discountFactors) {
 
   return smoothed;
 }
-
-// function cubicSpline(x, y) {
-
-//   const n = x.length;
-
-//   return function(t) {
-
-//     let i = 0;
-
-//     while (i < n - 2 && t > x[i + 1]) {
-//       i++;
-//     }
-
-//     const x0 = x[i];
-//     const x1 = x[i + 1];
-
-//     const y0 = y[i];
-//     const y1 = y[i + 1];
-
-//     const w = (t - x0) / (x1 - x0);
-
-//     return y0 + w * (y1 - y0);
-//   };
-// }
 
 function forwardRate(df, start, length) {
 

@@ -1,13 +1,14 @@
-﻿import processData, { filterColumnsInData } from '../../core/ui/MODAL_HELPER/dataProcessor.js';
-import { handleModalAction } from '../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+﻿import processData, { filterColumnsInData } from '../../core/ui/modal/modalData.js';
+import { handleModalAction } from '../../core/ui/modal/modalActions.js';
 import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';
+import { updateProductCSWarningUI } from '../../core/ui/warnings.js';
 
 
 
 // ======================================================
-// ðŸŒ SPALTEN-KONFIG FÃœR ProdAll
+// SPALTEN-KONFIG FÃœR ProdAll
 // ======================================================
 
 // 1) Spalten, die in der Tabelle angezeigt werden sollen
@@ -81,7 +82,7 @@ export function handleProdData(filtersConfig) {
   );
 
   appState.setFilteredProdData(filteredProdData);
-  checkCSSzenarioFlag?.(filteredProdData);
+  updateProductCSWarningUI?.(filteredProdData);
 
   // Render Tabelle
   prodDataContainer.innerHTML = processData(filteredProdData, 'ProdAll');
@@ -171,36 +172,75 @@ function makeProdIdButtons(container) {
   });
 }
 
-function checkCSSzenarioFlag(filteredProdData) {
-  const csWarningContainer = document.getElementById('csWarningContainer');
-  const csWarningLight = document.getElementById('csWarning');
+// function checkCSSzenarioFlag(filteredProdData) {
+//   const csWarningContainer = document.getElementById('csWarningContainer');
+//   const csWarningLight = document.getElementById('csWarning');
 
-  if (!csWarningContainer || !csWarningLight) {
-    console.error("âš ï¸ 'csWarningContainer' oder 'csWarning' nicht gefunden!");
-    return;
-  }
+//   if (!csWarningContainer || !csWarningLight) {
+//     console.error("âš ï¸ 'csWarningContainer' oder 'csWarning' nicht gefunden!");
+//     return;
+//   }
 
-  const affectedRows = filteredProdData.filter(
-    (row) =>
-      row.CS_Szenario !== null &&
-      row.CS_Szenario !== undefined &&
-      (typeof row.CS_Szenario === 'number' ||
-        (typeof row.CS_Szenario === 'string' &&
-          row.CS_Szenario.trim() !== ''))
-  );
+//   const affectedRows = filteredProdData.filter(
+//     (row) =>
+//       row.CS_Szenario !== null &&
+//       row.CS_Szenario !== undefined &&
+//       (typeof row.CS_Szenario === 'number' ||
+//         (typeof row.CS_Szenario === 'string' &&
+//           row.CS_Szenario.trim() !== ''))
+//   );
 
-  const affectedProdIds = affectedRows.map((row) => row.PROD_ID);
+//   const affectedProdIds = affectedRows.map((row) => row.PROD_ID);
 
-  if (affectedProdIds.length > 0) {
-    csWarningContainer.style.visibility = 'visible';
-    csWarningLight.style.backgroundColor = 'red';
-    const idsText = affectedProdIds.join(', ');
-    document.getElementById('csWarningText').textContent = idsText;
-  } else {
-    csWarningContainer.style.visibility = 'hidden';
-    csWarningLight.style.backgroundColor = 'gray';
-  }
-}
+//   if (affectedProdIds.length > 0) {
+//     csWarningContainer.style.visibility = 'visible';
+//     csWarningLight.style.backgroundColor = 'red';
+//     const idsText = affectedProdIds.join(', ');
+//     document.getElementById('csWarningText').textContent = idsText;
+//   } else {
+//     csWarningContainer.style.visibility = 'hidden';
+//     csWarningLight.style.backgroundColor = 'gray';
+//   }
+// }
+
+// function checkCSSzenarioFlag(filteredProdData) {
+//   const warningContainer = document.getElementById('creditWarningContainer');
+//   const warningLight = document.getElementById('creditWarning');
+//   const warningText = document.getElementById('creditWarningText');
+
+//   if (!warningContainer || !warningLight || !warningText) {
+//     console.error('credit warning elements not found');
+//     return;
+//   }
+
+//   const affectedRows = filteredProdData.filter(
+//     (row) =>
+//       row.CS_Szenario !== null &&
+//       row.CS_Szenario !== undefined &&
+//       String(row.CS_Szenario).trim() !== ''
+//   );
+
+//   const affectedProdIds = affectedRows
+//     .map((row) => row.PROD_ID)
+//     .filter(Boolean);
+
+//   if (affectedProdIds.length > 0) {
+//     const count = affectedProdIds.length;
+
+//     warningContainer.style.display = 'flex';
+//     warningLight.style.backgroundColor = 'red';
+
+//     warningText.textContent = `${count} Product${count === 1 ? '' : 's'} affected`;
+//     warningText.title = affectedProdIds.join(', ');
+//   } else {
+//     warningContainer.style.display = 'none';
+//     warningLight.style.backgroundColor = 'transparent';
+//     warningText.textContent = '';
+//     warningText.title = '';
+//   }
+// }
+
+
 
 /**
  * Bringt ein ProdAll-Row-Objekt in die gewÃ¼nschte Feld-Reihenfolge

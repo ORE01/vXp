@@ -2,10 +2,11 @@
 
 const { dialog } = require('electron');
 const XLSX = require('xlsx');
+const { logger } = require('../../utils/logger');
 
 module.exports = function registerExcelHandlers({ ipcMain, services }) {
 
-  console.log("EXCEL HANDLERS REGISTERED");
+  logger.info('IPC', 'Excel handlers registered');
 
   const dbApi = services?.dbApi || {};
 

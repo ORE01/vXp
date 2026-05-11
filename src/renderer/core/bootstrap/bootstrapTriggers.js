@@ -1,4 +1,4 @@
-import { openPanel } from '../ui/panels.js';
+import { openPanel } from '../ui/panels/index.js';
 import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
 import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/CREATE_PORTFOLIO/dealsUI.js';
 
@@ -126,6 +126,19 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
 
     // ✅ DI Hook feuern (statt appState.emitPanelOpen)
     emitPanelOpen?.(panelId);
+
+
+    if (panelId === 'panel-issuer-np') {
+      setTimeout(() => {
+        appState.applyFiltersAndUpdateDropdowns?.('issuer');
+      }, 0);
+    }
+
+    if (panelId === 'panel-products-np') {
+      setTimeout(() => {
+        appState.applyFiltersAndUpdateDropdowns?.('prod');
+      }, 0);
+    }
 
     // Panel specific UI init/render (minimal-invasive)
     if (panelId === 'panel-deals') {

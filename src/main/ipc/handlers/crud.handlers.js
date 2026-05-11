@@ -46,8 +46,8 @@ const REFRESH_DEPENDENCIES = {
   fed:                 ['fed'],
   yahoo:               ['yahoo'],
 
-  // 🔥 MARKET DATA
-  RATES_SNAPSHOTS:     ['RATES'],
+  // MARKET DATA
+  RATES_SCENARIO_DATA: ['RATES'],
   RATES:               ['RATES'],
   RATES_ACTIVE:        ['RATES_ACTIVE']
 };

@@ -1,7 +1,8 @@
 ﻿import { appState } from '../../renderer.js';
-import { handleModalAction, saveChanges, addSaveButtonHandler, addNewRow} from '../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction, saveChanges } from '../../core/ui/modal/modalActions.js';
+import { addNewRow } from '../../core/ui/modal/modalAddAction.js';
 import { convertDateToISO, toISODate} from '../../utils/format.js';
-import { makeModalDraggable} from '../../core/ui/MODAL_HELPER/DraggableModal.js';
+import { makeModalDraggable} from '../../core/ui/modal/draggableModal.js';
 
 
 export function handleCouponModal(prodId, couponSchedule, startDate, maturity, couponfreq) {
@@ -50,14 +51,10 @@ export function handleCouponModal(prodId, couponSchedule, startDate, maturity, c
   
 }
 
-
-
-
-
 function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfreq) {
   const receivedData = appState.getCouponData();
   if (!Array.isArray(receivedData)) {
-    console.error("âŒ Error: receivedData is not an array", receivedData);
+    console.error("Error: receivedData is not an array", receivedData);
     return;
   }
 
@@ -88,13 +85,13 @@ function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfre
   closeButton.onclick = () => document.body.removeChild(modal);
   modalContent.appendChild(closeButton);
 
-  // ðŸ”¹ NEU: Maximize-Toggle
+  // NEU: Maximize-Toggle
   let isFullscreen = false;
 
   const maxBtn = document.createElement('button');
   maxBtn.type = 'button';
   maxBtn.classList.add('modal-maximize-btn');
-  maxBtn.textContent = 'â›¶'; // Symbol fÃ¼r Vollbild
+  maxBtn.textContent = '⛶'; // Symbol für Vollbild
 
   maxBtn.onclick = () => {
     isFullscreen = !isFullscreen;
@@ -106,7 +103,7 @@ function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfre
       // Close-Button AUSBLENDEN
       closeButton.style.display = 'none';
 
-      // Inline-Styles zurÃ¼cksetzen, damit CSS-Fullscreen sauber greift
+      // Inline-Styles zurücksetzen, damit CSS-Fullscreen sauber greift
       modalContent.style.left = '';
       modalContent.style.top = '';
       modalContent.style.width = '';
@@ -119,7 +116,7 @@ function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfre
       // Close-Button wieder EINBLENDEN
       closeButton.style.display = '';
 
-      // Position wird beim nÃ¤chsten Drag neu gesetzt
+      // Position wird beim nächsten Drag neu gesetzt
       modalContent.style.left = '';
       modalContent.style.top = '';
       modalContent.style.width = '';
@@ -128,14 +125,12 @@ function handleCouponData(prodId, couponSchedule, startDate, maturity, couponfre
     }
   };
 
-
   modalContent.appendChild(maxBtn);
 
   // Titel
   const title = document.createElement('h2');
   title.textContent = `${prodId}`;
   modalContent.appendChild(title);
-
 
   // Formular aufbauen (leer vs. bestehend)
   const isEmptySchedule = Number(couponSchedule) === 1 && filteredData.length === 0;
@@ -166,13 +161,12 @@ delBtn.textContent = 'Delete Schedule';
 // Basis-Style von edit-button + extra Danger-Style
 delBtn.classList.add('edit-button', 'delete-button');
 
-// wenn du vorerst kein extra CSS willst, kÃ¶nntest du auch hier
-// zusÃ¤tzlich inline stylen - aber schÃ¶ner ist eine Klasse.
-
+// wenn du vorerst kein extra CSS willst, könntest du auch hier
+// zusätzlich inline stylen - aber schöner ist eine Klasse.
 
   // Handler pro Modus
   if (isEmptySchedule) {
-    // Save: neu einfÃ¼gen (sequenziell)
+    // Save: neu einfügen (sequenziell)
     saveBtn.onclick = async () => {
       const rows = Array.from(couponForm.querySelectorAll('.coupon-row'));
       if (!rows.length) return;
@@ -193,9 +187,9 @@ delBtn.classList.add('edit-button', 'delete-button');
 
         const rawNotional = (notionEl?.value ?? '').trim();
 
-        // â¬‡ï¸ NUR HIER MINIMALER FIX:
+        // NUR HIER MINIMALER FIX:
         // Berechneten Factor weiterhin via resolveNotional,
-        // und WENN es eine Formel ist, zusÃ¤tzlich den Formel-String mitspeichern.
+        // und WENN es eine Formel ist, zusätzlich den Formel-String mitspeichern.
         let Notional_Factor = resolveNotional(rawNotional, prevNotional);
         let Notional_Formula = rawNotional.startsWith('=') ? rawNotional : null;
 
@@ -220,7 +214,7 @@ delBtn.classList.add('edit-button', 'delete-button');
       window.api?.send?.('fetch-table-data', 'ProdCouponSchedules');
     };
 
-    // Delete: bei leerem Schedule â€” sichtbar aber disabled
+    // Delete: bei leerem Schedule — sichtbar aber disabled
     delBtn.disabled = true;
 
   } else {
@@ -230,7 +224,7 @@ delBtn.classList.add('edit-button', 'delete-button');
       document.body.removeChild(modal);
     };
 
-    // Delete-All: alle persistierten Zeilen (dieser PROD_ID) lÃ¶schen
+    // Delete-All: alle persistierten Zeilen (dieser PROD_ID) löschen
     delBtn.onclick = async () => {
       const idInputs = couponForm.querySelectorAll("input[data-field='ID']");
       const ids = Array.from(idInputs)
@@ -256,7 +250,7 @@ delBtn.classList.add('edit-button', 'delete-button');
         const err = document.createElement('div');
         err.style.color = '#b00020';
         err.style.marginTop = '8px';
-        err.textContent = 'LÃ¶schen fehlgeschlagen: ' + (e?.message || e);
+        err.textContent = 'Löschen fehlgeschlagen: ' + (e?.message || e);
         modalContent.appendChild(err);
       }
     };
@@ -269,7 +263,6 @@ delBtn.classList.add('edit-button', 'delete-button');
   modalContent.appendChild(btnWrap);
   modalContent.appendChild(couponForm);
 
-
   makeModalDraggable(modalContent);
 
   modal.appendChild(modalContent);
@@ -277,206 +270,206 @@ delBtn.classList.add('edit-button', 'delete-button');
   modal.style.display = 'block';
 }
 
-    function generateEmptyCouponFormData(prodId, startDate, maturity, couponfreq) {
-      const schedule = [];
-      const start = new Date(convertDateToISO(startDate));
-      const end   = new Date(convertDateToISO(maturity));
-      if (isNaN(start) || isNaN(end) || couponfreq <= 0) return schedule;
+function generateEmptyCouponFormData(prodId, startDate, maturity, couponfreq) {
+  const schedule = [];
+  const start = new Date(convertDateToISO(startDate));
+  const end   = new Date(convertDateToISO(maturity));
+  if (isNaN(start) || isNaN(end) || couponfreq <= 0) return schedule;
 
-      const intervalInMonths = Math.round((1 / couponfreq) * 12);
-      let currentDate = new Date(start);
-      let rowCounter = 1;
+  const intervalInMonths = Math.round((1 / couponfreq) * 12);
+  let currentDate = new Date(start);
+  let rowCounter = 1;
 
-      while (currentDate <= end) {
-        // Temp-ID nur fÃ¼r die UI (NICHT in DB schreiben)
-        const tmpId = `tmp_${prodId}_${rowCounter}_${Date.now()}`;
+  while (currentDate <= end) {
+    // Temp-ID nur für die UI (NICHT in DB schreiben)
+    const tmpId = `tmp_${prodId}_${rowCounter}_${Date.now()}`;
 
-        schedule.push({
-          // ID:  âŒ NICHT setzen (DB vergibt sie)
-          TMP_ID: tmpId,                       // âœ… nur fÃ¼r UI
-          PROD_ID: String(prodId),
-          DATE: convertDateToISO(currentDate.toISOString().split("T")[0]),
-          FIX_CF: "",
-          CALL: 0,
-          ZERO: 0,
-          Notional_Factor: ""
-        });
+    schedule.push({
+      // ID: NICHT setzen (DB vergibt sie)
+      TMP_ID: tmpId,                       // nur für UI
+      PROD_ID: String(prodId),
+      DATE: convertDateToISO(currentDate.toISOString().split("T")[0]),
+      FIX_CF: "",
+      CALL: 0,
+      ZERO: 0,
+      Notional_Factor: ""
+    });
 
-        currentDate.setMonth(currentDate.getMonth() + intervalInMonths);
-        rowCounter++;
-      }
-      return schedule;
+    currentDate.setMonth(currentDate.getMonth() + intervalInMonths);
+    rowCounter++;
+  }
+  return schedule;
+}
+
+function generateCouponForm(data) {
+  const form = document.createElement('form');
+  form.id = 'coupon-form';
+  form.appendChild(createHeaderRow());
+
+  data.forEach((item, index) => {
+    form.appendChild(createCouponRow(item, index, data));
+  });
+
+  return form;
+}
+
+function createHeaderRow() {
+  const headerRow = document.createElement('div');
+  headerRow.classList.add('coupon-header');
+  headerRow.style.display = 'flex';
+  headerRow.style.gap = '5px';
+  headerRow.style.alignItems = 'center';
+
+  headerRow.innerHTML = `
+    <div style="width: 120px; font-weight: bold;">DATE</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; width: 110px;">
+      <span style="font-weight: bold;">FIX_CF</span>
+      <span style="font-size: 12px;">↓ Fill</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; width: 90px;">
+      <span style="font-weight: bold;">CALL</span>
+      <span style="font-size: 12px;">↓ Fill</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; width: 90px;">
+      <span style="font-weight: bold;">ZERO</span>
+      <span style="font-size: 12px;">↓ Fill</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; width: 140px;">
+      <span style="font-weight: bold;">Notional_Factor</span>
+      <span style="font-size: 12px;">↓ Fill</span>
+    </div>
+
+    <div style="width: 50px; font-weight: bold; text-align:center;">DEL</div>
+  `;
+  return headerRow;
+}
+
+function createCouponRow(item, index, receivedData) {
+  const formattedFixCF = item.FIX_CF
+    ? `${(parseFloat(item.FIX_CF) * 100).toFixed(4)}%`
+    : '0.0000%';
+
+  // Notional-Anzeige: Formel (="...") zeigen, sonst Wert
+  let notionalDisplayValue = '';
+  let evaluatedValue = item.Notional_Factor;
+
+  if (item.Notional_Formula) {
+    if (String(item.Notional_Formula).startsWith('=')) {
+      const formula  = item.Notional_Formula.slice(1);
+      const prevItem = index > 0 ? receivedData[index - 1] : {};
+      const context  = { prev: parseFloat(prevItem.Notional_Factor) || 0 };
+      const result   = evaluateFormula(formula, context);
+      evaluatedValue = result;
+      notionalDisplayValue = item.Notional_Formula; // Formel anzeigen
+    } else {
+      notionalDisplayValue = item.Notional_Formula;
+      evaluatedValue = parseFloat(item.Notional_Formula);
     }
-    function generateCouponForm(data) {
-      const form = document.createElement('form');
-      form.id = 'coupon-form';
-      form.appendChild(createHeaderRow());
-  
-      data.forEach((item, index) => {
-          form.appendChild(createCouponRow(item, index, data));
-      });
-  
-      return form;
+  } else {
+    notionalDisplayValue = item.Notional_Factor ?? '';
+  }
+
+  const row = document.createElement('div');
+  row.classList.add('coupon-row');
+  row.style.display = 'flex';
+  row.style.gap = '5px';
+  row.style.alignItems = 'center';
+
+  row.innerHTML = `
+    <input type="hidden" value="${item.ID ?? ''}" data-field="ID" data-row-index="${index}">
+    <input type="hidden" value="${item.PROD_ID}" data-field="PROD_ID" data-row-index="${index}">
+
+    <input type="date" class="col-date"
+          value="${convertDateToISO(item.DATE)}"
+          data-field="DATE" data-row-index="${index}" style="width:120px">
+
+    <input type="text" class="col-fixcf"
+          value="${formattedFixCF}"
+          data-field="FIX_CF" data-row-index="${index}" style="width:110px">
+    <button type="button" class="fill-down-btn fill-down-fixcf">↓</button>
+
+    <input type="checkbox" class="col-call"
+          ${item.CALL == 1 ? 'checked' : ''} data-field="CALL"
+          data-row-index="${index}" style="width:20px">
+    <button type="button" class="fill-down-btn fill-down-call">↓</button>
+
+    <input type="checkbox" class="col-zero"
+          ${item.ZERO == 1 ? 'checked' : ''} data-field="ZERO"
+          data-row-index="${index}" style="width:20px">
+    <button type="button" class="fill-down-btn fill-down-zero">↓</button>
+
+    <input type="text" class="col-fixcf"
+          value="${notionalDisplayValue}"
+          data-field="Notional_Factor" data-row-index="${index}" style="width:140px">
+    <button type="button" class="fill-down-btn fill-down-Notional_Factor">↓</button>
+  `;
+
+  // %-Formatierung für FIX_CF (Eingabe)
+  const fixCFInput = row.querySelector('[data-field="FIX_CF"]');
+  fixCFInput.addEventListener('input', (event) => {
+    let rawValue = event.target.value.replace('%', '');
+    if (!isNaN(rawValue) && rawValue !== '') {
+      const cursorPosition = event.target.selectionStart;
+      event.target.value = `${parseFloat(rawValue).toFixed(4)}%`;
+      event.target.setSelectionRange(cursorPosition, cursorPosition);
+    } else {
+      event.target.value = '';
     }
-        function createHeaderRow() {
-          const headerRow = document.createElement('div');
-          headerRow.classList.add('coupon-header');
-          headerRow.style.display = 'flex';
-          headerRow.style.gap = '5px';
-          headerRow.style.alignItems = 'center';
+  });
 
-          headerRow.innerHTML = `
-            <div style="width: 120px; font-weight: bold;">DATE</div>
+  // Fill-Down FIX_CF
+  const fillDownFixCF = row.querySelector('.fill-down-fixcf');
+  fillDownFixCF.addEventListener('click', () => {
+    const currentValue = fixCFInput.value;
+    const allRows = document.querySelectorAll('.coupon-row');
+    for (let i = index + 1; i < allRows.length; i++) {
+      const targetInput = allRows[i].querySelector('[data-field="FIX_CF"]');
+      if (targetInput) targetInput.value = currentValue;
+    }
+  });
 
-            <div style="display: flex; flex-direction: column; align-items: center; width: 110px;">
-              <span style="font-weight: bold;">FIX_CF</span>
-              <span style="font-size: 12px;">ðŸ¡‡ Fill</span>
-            </div>
+  // Fill-Down CALL
+  const callInput = row.querySelector('[data-field="CALL"]');
+  const fillDownCall = row.querySelector('.fill-down-call');
+  fillDownCall.addEventListener('click', () => {
+    const isChecked = callInput.checked;
+    const allRows = document.querySelectorAll('.coupon-row');
+    for (let i = index + 1; i < allRows.length; i++) {
+      const targetCheckbox = allRows[i].querySelector('[data-field="CALL"]');
+      if (targetCheckbox) targetCheckbox.checked = isChecked;
+    }
+  });
 
-            <div style="display: flex; flex-direction: column; align-items: center; width: 90px;">
-              <span style="font-weight: bold;">CALL</span>
-              <span style="font-size: 12px;">ðŸ¡‡ Fill</span>
-            </div>
+  // Fill-Down ZERO
+  const zeroInput = row.querySelector('[data-field="ZERO"]');
+  const fillDownZero = row.querySelector('.fill-down-zero');
+  fillDownZero.addEventListener('click', () => {
+    const isChecked = zeroInput.checked;
+    const allRows = document.querySelectorAll('.coupon-row');
+    for (let i = index + 1; i < allRows.length; i++) {
+      const targetCheckbox = allRows[i].querySelector('[data-field="ZERO"]');
+      if (targetCheckbox) targetCheckbox.checked = isChecked;
+    }
+  });
 
-            <div style="display: flex; flex-direction: column; align-items: center; width: 90px;">
-              <span style="font-weight: bold;">ZERO</span>
-              <span style="font-size: 12px;">ðŸ¡‡ Fill</span>
-            </div>
+  // Fill-Down Notional_Factor
+  const notionalInput = row.querySelector('[data-field="Notional_Factor"]');
+  const fillDownBtn = row.querySelector('.fill-down-Notional_Factor');
+  fillDownBtn.addEventListener('click', () => {
+    const valueToFill = notionalInput.value;
+    const allRows = document.querySelectorAll('.coupon-row');
+    for (let i = index + 1; i < allRows.length; i++) {
+      const targetInput = allRows[i].querySelector('[data-field="Notional_Factor"]');
+      if (targetInput) targetInput.value = valueToFill;
+    }
+  });
 
-            <div style="display: flex; flex-direction: column; align-items: center; width: 140px;">
-              <span style="font-weight: bold;">Notional_Factor</span>
-              <span style="font-size: 12px;">ðŸ¡‡ Fill</span>
-            </div>
-
-            <div style="width: 50px; font-weight: bold; text-align:center;">DEL</div>
-          `;
-          return headerRow;
-        }
-        function createCouponRow(item, index, receivedData) {
-          const formattedFixCF = item.FIX_CF
-            ? `${(parseFloat(item.FIX_CF) * 100).toFixed(4)}%`
-            : '0.0000%';
-
-          // Notional-Anzeige: Formel (="...") zeigen, sonst Wert
-          let notionalDisplayValue = '';
-          let evaluatedValue = item.Notional_Factor;
-
-          if (item.Notional_Formula) {
-            if (String(item.Notional_Formula).startsWith('=')) {
-              const formula  = item.Notional_Formula.slice(1);
-              const prevItem = index > 0 ? receivedData[index - 1] : {};
-              const context  = { prev: parseFloat(prevItem.Notional_Factor) || 0 };
-              const result   = evaluateFormula(formula, context);
-              evaluatedValue = result;
-              notionalDisplayValue = item.Notional_Formula; // Formel anzeigen
-            } else {
-              notionalDisplayValue = item.Notional_Formula;
-              evaluatedValue = parseFloat(item.Notional_Formula);
-            }
-          } else {
-            notionalDisplayValue = item.Notional_Factor ?? '';
-          }
-
-          const row = document.createElement('div');
-          row.classList.add('coupon-row');
-          row.style.display = 'flex';
-          row.style.gap = '5px';
-          row.style.alignItems = 'center';
-
-          row.innerHTML = `
-            <input type="hidden" value="${item.ID ?? ''}" data-field="ID" data-row-index="${index}">
-            <input type="hidden" value="${item.PROD_ID}" data-field="PROD_ID" data-row-index="${index}">
-
-            <input type="date" class="col-date"
-                  value="${convertDateToISO(item.DATE)}"
-                  data-field="DATE" data-row-index="${index}" style="width:120px">
-
-            <input type="text" class="col-fixcf"
-                  value="${formattedFixCF}"
-                  data-field="FIX_CF" data-row-index="${index}" style="width:110px">
-            <button type="button" class="fill-down-btn fill-down-fixcf">ðŸ¡‡</button>
-
-            <input type="checkbox" class="col-call"
-                  ${item.CALL == 1 ? 'checked' : ''} data-field="CALL"
-                  data-row-index="${index}" style="width:20px">
-            <button type="button" class="fill-down-btn fill-down-call">ðŸ¡‡</button>
-
-            <input type="checkbox" class="col-zero"
-                  ${item.ZERO == 1 ? 'checked' : ''} data-field="ZERO"
-                  data-row-index="${index}" style="width:20px">
-            <button type="button" class="fill-down-btn fill-down-zero">ðŸ¡‡</button>
-
-            <input type="text" class="col-fixcf"
-                  value="${notionalDisplayValue}"
-                  data-field="Notional_Factor" data-row-index="${index}" style="width:140px">
-            <button type="button" class="fill-down-btn fill-down-Notional_Factor">ðŸ¡‡</button>
-          `;
-
-          // %-Formatierung fÃ¼r FIX_CF (Eingabe)
-          const fixCFInput = row.querySelector('[data-field="FIX_CF"]');
-          fixCFInput.addEventListener('input', (event) => {
-            let rawValue = event.target.value.replace('%', '');
-            if (!isNaN(rawValue) && rawValue !== '') {
-              const cursorPosition = event.target.selectionStart;
-              event.target.value = `${parseFloat(rawValue).toFixed(4)}%`;
-              event.target.setSelectionRange(cursorPosition, cursorPosition);
-            } else {
-              event.target.value = '';
-            }
-          });
-
-          // Fill-Down FIX_CF
-          const fillDownFixCF = row.querySelector('.fill-down-fixcf');
-          fillDownFixCF.addEventListener('click', () => {
-            const currentValue = fixCFInput.value;
-            const allRows = document.querySelectorAll('.coupon-row');
-            for (let i = index + 1; i < allRows.length; i++) {
-              const targetInput = allRows[i].querySelector('[data-field="FIX_CF"]');
-              if (targetInput) targetInput.value = currentValue;
-            }
-          });
-
-          // Fill-Down CALL
-          const callInput = row.querySelector('[data-field="CALL"]');
-          const fillDownCall = row.querySelector('.fill-down-call');
-          fillDownCall.addEventListener('click', () => {
-            const isChecked = callInput.checked;
-            const allRows = document.querySelectorAll('.coupon-row');
-            for (let i = index + 1; i < allRows.length; i++) {
-              const targetCheckbox = allRows[i].querySelector('[data-field="CALL"]');
-              if (targetCheckbox) targetCheckbox.checked = isChecked;
-            }
-          });
-
-          // Fill-Down ZERO
-          const zeroInput = row.querySelector('[data-field="ZERO"]');
-          const fillDownZero = row.querySelector('.fill-down-zero');
-          fillDownZero.addEventListener('click', () => {
-            const isChecked = zeroInput.checked;
-            const allRows = document.querySelectorAll('.coupon-row');
-            for (let i = index + 1; i < allRows.length; i++) {
-              const targetCheckbox = allRows[i].querySelector('[data-field="ZERO"]');
-              if (targetCheckbox) targetCheckbox.checked = isChecked;
-            }
-          });
-
-          // Fill-Down Notional_Factor
-          const notionalInput = row.querySelector('[data-field="Notional_Factor"]');
-          const fillDownBtn = row.querySelector('.fill-down-Notional_Factor');
-          fillDownBtn.addEventListener('click', () => {
-            const valueToFill = notionalInput.value;
-            const allRows = document.querySelectorAll('.coupon-row');
-            for (let i = index + 1; i < allRows.length; i++) {
-              const targetInput = allRows[i].querySelector('[data-field="Notional_Factor"]');
-              if (targetInput) targetInput.value = valueToFill;
-            }
-          });
-
-          return row;
-        }
-
-
-
+  return row;
+}
 
 function saveCouponChanges(couponData, couponForm) {
   const updatedData = [];
@@ -517,7 +510,7 @@ function saveCouponChanges(couponData, couponForm) {
     if (notionalFormula.startsWith('=')) {
       const formulaBody = notionalFormula.slice(1); // entfernt das "="
 
-      // Kontext fÃ¼r math.js - prev = vorheriger Notional_Factor
+      // Kontext für math.js - prev = vorheriger Notional_Factor
       const prevRow = rowIndex > 0 ? couponData[rowIndex - 1] : null;
       const context = {
         prev: prevRow ? parseFloat(prevRow.Notional_Factor) || 0 : 0
@@ -526,26 +519,26 @@ function saveCouponChanges(couponData, couponForm) {
       try {
         notionalValue = math.evaluate(formulaBody, context);
 
-        // âœ… NEU: Berechneten Wert in couponData[rowIndex] eintragen
+        // NEU: Berechneten Wert in couponData[rowIndex] eintragen
         if (!isNaN(notionalValue)) {
           couponData[rowIndex].Notional_Factor = notionalValue;
         }
 
       } catch (e) {
-        console.error(`âŒ Fehler bei Formel in Row ${rowIndex}: ${notionalFormula}`, e);
+        console.error(`Fehler bei Formel in Row ${rowIndex}: ${notionalFormula}`, e);
         notionalValue = null;
       }
 
     } else {
-      // Kein "=" â†’ direkter Wert
+      // Kein "=" → direkter Wert
       notionalValue = parseFloat(notionalFormula);
       if (isNaN(notionalValue)) {
-        console.error(`Row ${rowIndex}: UngÃ¼ltiger Notional_Factor '${notionalFormula}'`);
+        console.error(`Row ${rowIndex}: Ungültiger Notional_Factor '${notionalFormula}'`);
         notionalValue = null;
       }
     }
 
-    // UrsprÃ¼ngliche Zeile aus den Originaldaten holen
+    // Ursprüngliche Zeile aus den Originaldaten holen
     const rowData = couponData[datasetRowIndex];
     if (!rowData) {
       console.warn(`Row ${datasetRowIndex}: No matching data in couponData. Skipping.`);
@@ -568,12 +561,13 @@ function saveCouponChanges(couponData, couponForm) {
     updatedData.push(updatedRow);
   });
 
-  // Ã„nderungen speichern
+  // Änderungen speichern
   updatedData.forEach((row) => {
     const uniqueIdentifier = { column: "ID", value: row.ID };
     saveChanges(row, "ProdCouponSchedules", null, uniqueIdentifier);
   });
 }
+
 function eraseCouponRow(id, rowEl) {
   return new Promise((resolve, reject) => {
     if (!window.api?.send || !window.api?.once) {
@@ -600,8 +594,6 @@ function eraseCouponRow(id, rowEl) {
     });
   });
 }
-
-
 
 function evaluateFormula(expression, context = {}) {
   const src = String(expression || '').trim();
@@ -690,7 +682,7 @@ function evaluateFormula(expression, context = {}) {
       stack.push(prevVal);
     } else { // operator
       const b = stack.pop(); const a = stack.pop();
-      if (!Number.isFinite(a) || !Number.isFinite(b)) throw new Error('UngÃ¼ltiger Operandenwert');
+      if (!Number.isFinite(a) || !Number.isFinite(b)) throw new Error('Ungültiger Operandenwert');
       let r;
       switch (t.value) {
         case '+': r = a + b; break;
@@ -706,8 +698,6 @@ function evaluateFormula(expression, context = {}) {
   if (stack.length !== 1) throw new Error('Formel konnte nicht ausgewertet werden');
   return stack[0];
 }
-
-
 
 function parsePercentToDecimal(str) {
   if (str == null) return null;
@@ -734,15 +724,3 @@ function resolveNotional(inputVal, prevNotional) {
   }
   return parseNumeric(s);
 }
-
-
-
-
-
-          
-
-
-
-  
-
-

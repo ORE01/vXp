@@ -287,9 +287,9 @@ chartInstance.destroy = () => {
 }
 
 
-/** FÃ¼gt pro Chart (modalIndex) eine kleine Zeichen-Toolbar ein */
+/** pro Chart (modalIndex) eine kleine Zeichen-Toolbar ein */
 function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
-  // wir hÃ¤ngen an den gleichen Container wie dein Chart
+  
   const holder = canvasEl.closest('.TSChart-container') || canvasEl.parentElement;
   if (!holder) return;
 
@@ -938,9 +938,18 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
 
 export function createRatesLineChart(datasets, chartName, chartTitle, pointRadius) {
   const canvas = document.getElementById(chartName);
-  if (!canvas) {
-    console.warn(`[Chart] canvas missing: #${chartName} - skip createRatesLineChart`);
+  if (!canvas || !canvas.isConnected) {
+    console.warn(`[Chart] canvas missing/detached: #${chartName} - skip createRatesLineChart`);
     return null;
+  }
+
+  const existingChart = Chart.getChart(canvas);
+  if (existingChart) {
+    try {
+      existingChart.destroy();
+    } catch (err) {
+      console.warn(`[Chart] destroy existing failed: #${chartName}`, err);
+    }
   }
 
   const ctx = canvas.getContext('2d');
@@ -954,7 +963,10 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
   // Palette-Index nur fÃ¼r Nicht-Original-Serien hochzÃ¤hlen (damit nach der blauen Kurve sauber weitergezÃ¤hlt wird)
   let paletteIndex = 0;
 
-  const chart = new Chart(ctx, {
+let chart = null;
+
+try {
+  chart = new Chart(ctx, {
     type: "line",
     data: {
       labels: xValues,
@@ -966,17 +978,12 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
           label: dataset.label,
           data: dataset.data,
           fill: false,
-
-          // âœ… RATES = fix blau, Rest = Palette-Getter
           borderColor: isOriginalCurve
             ? eusw.borderColor
             : getColorFromPalette(paletteIndex++, 1),
-
-          // Optional - nur falls du irgendwo fill/points nutzt
           backgroundColor: isOriginalCurve
             ? eusw.backgroundColor
             : undefined,
-
           tension: 0.1,
           pointRadius: pointRadius,
           borderWidth: 1,
@@ -990,8 +997,8 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
       normalized: true,
 
       plugins: {
+        annotation: false,
         decimation: { enabled: true, algorithm: "min-max" },
-
         zoom: {
           pan: { enabled: true, mode: "x", threshold: 10 },
           zoom: {
@@ -1036,8 +1043,12 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
       },
     },
   });
+} catch (err) {
+  console.warn(`[Chart] createRatesLineChart failed: #${chartName}`, err);
+  return null;
+}
 
-  return chart;
+return chart;
 }
 
 

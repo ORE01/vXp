@@ -10,7 +10,7 @@ import { installProductsStore } from '../STATE/productsStore.js';
 import { installNameListsStore } from '../STATE/nameListsStore.js';
 import { installCustomerReportsStore } from '../STATE/customerReportsStore.js';
 import { installDataUpdatePipeline } from '../STATE/dataUpdatePipeline.js';
-import { installTableLayoutStore } from '../state/tableLayoutStore.js';
+// import { installTableLayoutStore } from '../state/tableLayoutStore.js';
 
 export function bootstrapStores(appState) {
   installUIStateStore({ appState });
@@ -23,6 +23,6 @@ export function bootstrapStores(appState) {
   installNameListsStore({ appState });
   installCustomerReportsStore({ appState });
   installDataUpdatePipeline({ appState });
-  installTableLayoutStore({ appState });
+  // installTableLayoutStore({ appState });
 }
 

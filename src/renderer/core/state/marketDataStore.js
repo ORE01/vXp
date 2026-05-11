@@ -2,18 +2,35 @@
 // Verantwortlich für MarketData State (EUSW, Curve Selection, Swaption, TS).
 // Minimal-invasiv: hängt Methoden an appState (Backwards compatible).
 
+// =====================================================
+// DEBUG SWITCH
+// =====================================================
+const MARKET_DATA_STORE_DEBUG = false; // true = Logs EIN / false = Logs AUS
+
+function log(...args) {
+  if (MARKET_DATA_STORE_DEBUG) console.log(...args);
+}
+
+function warn(...args) {
+  console.warn(...args); // Warnungen bleiben sichtbar
+}
+
+function error(...args) {
+  console.error(...args); // Errors bleiben sichtbar
+}
+
 export function installMarketDataStore({ appState } = {}) {
   if (!appState) throw new Error('[marketDataStore] appState fehlt');
 
   if (!appState._RATESDataCacheByCcy) {
-  appState._RATESDataCacheByCcy = {};
-}
+    appState._RATESDataCacheByCcy = {};
+  }
 
-// =====================================================
-// SCENARIO DEFINITIONS (Central Truth)
-// =====================================================
-
-
+  if (!appState._scenarioDefinitions) {
+    appState._scenarioDefinitions = {
+      BASE: { type: 'BASE' },
+    };
+  }
 
   // =====================================================
   // STORAGE
@@ -21,34 +38,30 @@ export function installMarketDataStore({ appState } = {}) {
 
   function setEUSWData(data) {
     if (Array.isArray(data) && data.length > 0) {
-      console.warn('[MarketDataStore] LEGACY EUSW received');
+      warn('[MarketDataStore] LEGACY EUSW received');
       appState._EUSWDataCache = data;
       appState._EUSWLastGoodCache = data;
     }
   }
 
   function setRATESData(data) {
-    console.log('✅ setRATESData called');
-    console.log('rows:', Array.isArray(data) ? data.length : 'NOT ARRAY');
-    console.log('sample:', data?.[0]);
+    log('✅ setRATESData called');
+    log('rows:', Array.isArray(data) ? data.length : 'NOT ARRAY');
+    log('sample:', data?.[0]);
 
     if (!Array.isArray(data) || data.length === 0) {
-      console.warn('[MarketDataStore] empty RATES dataset');
+      warn('[MarketDataStore] empty RATES dataset');
       return;
     }
 
-    // 🔄 Reset currency buckets
     appState._RATESDataCacheByCcy = {};
-
-    // ✅ DATA ENTERS LEGACY STATE (backwards compatible)
     appState._RATESDataCache = data;
 
-    // 🔎 Segment by currency
     for (const row of data) {
       const ccy = row.ccy;
 
       if (!ccy) {
-        console.warn('[MarketDataStore] Missing ccy in RATES row', row);
+        warn('[MarketDataStore] Missing ccy in RATES row', row);
         continue;
       }
 
@@ -56,21 +69,12 @@ export function installMarketDataStore({ appState } = {}) {
         appState._RATESDataCacheByCcy[ccy] = [];
       }
 
-      if (!appState._scenarioDefinitions) {
-        appState._scenarioDefinitions = {
-          BASE: { type: "BASE" }
-        };
-      }
-
       appState._RATESDataCacheByCcy[ccy].push(row);
     }
 
-    // ✅ SYSTEM EVENT — DATA IS NOW READY (unchanged)
-    document.dispatchEvent(
-      new CustomEvent('interestRates:updated')
-    );
+    document.dispatchEvent(new CustomEvent('interestRates:updated'));
 
-    console.log('Buckets:', appState._RATESDataCacheByCcy);
+    log('Buckets:', appState._RATESDataCacheByCcy);
   }
 
   // =====================================================
@@ -79,27 +83,21 @@ export function installMarketDataStore({ appState } = {}) {
   // =====================================================
 
   function adaptRatesToEUSW(rates) {
-
     const sample = rates?.[0];
 
     if (!sample) {
-      console.warn('[MarketDataStore] RATES empty');
+      warn('[MarketDataStore] RATES empty');
       return [];
     }
 
     if (!('tenor' in sample) && !('YEAR' in sample)) {
-      console.error('[MarketDataStore] Invalid RATES structure', sample);
+      error('[MarketDataStore] Invalid RATES structure', sample);
       return [];
     }
 
-    return rates.map(r => ({
+    return rates.map((r) => ({
       YEAR: r.tenor ?? r.YEAR,
-      EUSWAP: Number(
-        r.rate ??
-        r.RATES ??
-        r.value ??
-        0
-      )
+      EUSWAP: Number(r.rate ?? r.RATES ?? r.value ?? 0),
     }));
   }
 
@@ -107,77 +105,79 @@ export function installMarketDataStore({ appState } = {}) {
   // SINGLE PUBLIC ACCESS POINT
   // =====================================================
 
-function getEUSWData(ccy) {
+  function getEUSWData(ccy) {
+    const currency = ccy || 'EUR';
 
-  const currency = ccy || 'EUR';
+    if (
+      appState._RATESDataCacheByCcy &&
+      Array.isArray(appState._RATESDataCacheByCcy[currency]) &&
+      appState._RATESDataCacheByCcy[currency].length > 0
+    ) {
+      log(`[MarketDataStore] Using RATES adapter for ${currency}`);
 
-  // ✅ NEW WORLD (currency segmented)
-  if (
-    appState._RATESDataCacheByCcy &&
-    Array.isArray(appState._RATESDataCacheByCcy[currency]) &&
-    appState._RATESDataCacheByCcy[currency].length > 0
-  ) {
-    console.warn(`[MarketDataStore] Using RATES adapter for ${currency}`);
+      const activeScenario =
+        appState._RATES_ACTIVE?.find((r) => r.ccy === currency)?.scenario_id ||
+        'BASE';
 
+      const filtered = appState._RATESDataCacheByCcy[currency].filter(
+        (r) => (r.scenario_id || 'BASE') === activeScenario
+      );
 
+      return adaptRatesToEUSW(filtered);
+    }
 
-const activeScenario =
-  appState._RATES_ACTIVE?.find(r => r.ccy === currency)?.scenario_id
-  || 'BASE';
+    if (
+      Array.isArray(appState._RATESDataCache) &&
+      appState._RATESDataCache.length > 0
+    ) {
+      log('[MarketDataStore] Using global fallback');
+      return adaptRatesToEUSW(appState._RATESDataCache);
+    }
 
-const filtered =
-  appState._RATESDataCacheByCcy[currency]
-    .filter(r => (r.scenario_id || 'BASE') === activeScenario);
+    if (
+      Array.isArray(appState._EUSWDataCache) &&
+      appState._EUSWDataCache.length > 0
+    ) {
+      return appState._EUSWDataCache;
+    }
 
-
-
-
-    return adaptRatesToEUSW(filtered);
+    log('[MarketDataStore] IR data not ready');
+    return [];
   }
 
-  // ✅ LEGACY FALLBACK
-  if (
-    Array.isArray(appState._RATESDataCache) &&
-    appState._RATESDataCache.length > 0
-  ) {
-    console.warn('[MarketDataStore] Using global fallback');
-    return adaptRatesToEUSW(appState._RATESDataCache);
+  function setRatesScenarioData(data) {
+    appState._RATES_SCENARIO_DATA = Array.isArray(data) ? data : [];
   }
 
-  if (
-    Array.isArray(appState._EUSWDataCache) &&
-    appState._EUSWDataCache.length > 0
-  ) {
-    return appState._EUSWDataCache;
+  function getRatesScenarioData() {
+    return appState._RATES_SCENARIO_DATA || [];
   }
 
-  console.warn('[MarketDataStore] IR data not ready');
-  return [];
-}
+  function setRatesActive(data) {
+    appState._RATES_ACTIVE = Array.isArray(data) ? data : [];
+  }
 
-function setRatesActive(data) {
-  appState._RATES_ACTIVE = Array.isArray(data) ? data : [];
-}
-
-function getRatesActive() {
-  return appState._RATES_ACTIVE || [];
-}
-
-// -----------------------------
-// Scenario Definitions (Central Truth)
-// -----------------------------
-function addScenarioDefinition(name, config) {
-  if (!name || !config) return;
-  appState._scenarioDefinitions[name] = config;
-}
-
-function getScenarioDefinitions() {
-  return appState._scenarioDefinitions || {};
-}
+  function getRatesActive() {
+    return appState._RATES_ACTIVE || [];
+  }
 
   // -----------------------------
-  // Selected Curve (nur EIN Mechanismus!)
+  // Scenario Definitions
   // -----------------------------
+
+  function addScenarioDefinition(name, config) {
+    if (!name || !config) return;
+    appState._scenarioDefinitions[name] = config;
+  }
+
+  function getScenarioDefinitions() {
+    return appState._scenarioDefinitions || {};
+  }
+
+  // -----------------------------
+  // Selected Curve
+  // -----------------------------
+
   function setSelectedCurve(curve) {
     appState._selectedCurveCache = String(curve || 'EUSWAP');
   }
@@ -188,7 +188,8 @@ function getScenarioDefinitions() {
 
   function getEUSWDataWithSelectedCurve() {
     const curve = getSelectedCurve();
-    return getEUSWData().map(row => {
+
+    return getEUSWData().map((row) => {
       const r = { ...row };
       r.RATES = r[curve];
       return r;
@@ -196,8 +197,71 @@ function getScenarioDefinitions() {
   }
 
   // -----------------------------
+  // CS_PARAMETER
+  // -----------------------------
+
+  function setCSData(data) {
+    const rows = Array.isArray(data) ? data : [];
+
+    log('[CSParameter][STORE] setCSData called');
+    log('[CSParameter][STORE] rows:', rows.length);
+
+    if (rows.length > 0) {
+      log('[CSParameter][STORE] sample:', rows[0]);
+    } else {
+      warn('[CSParameter][STORE] ⚠️ EMPTY DATA RECEIVED');
+    }
+
+    appState._CSData = rows;
+  }
+
+  function getCSData() {
+    return appState._CSData || [];
+  }
+
+  function setCSActive(data) {
+    const rows = Array.isArray(data) ? data : [];
+
+    log('[CS][STORE] setCSActive rows:', rows.length);
+    log('[CS][STORE] ACTIVE raw:', rows);
+
+    appState._CS_ACTIVE = rows;
+
+    const latest = [...rows].sort(
+      (a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0)
+    )[0];
+
+    log('[CS][STORE] ACTIVE scenario:', latest?.scenario_name);
+  }
+
+  function getCSActive() {
+    return appState._CS_ACTIVE || [];
+  }
+
+  // -----------------------------
+  // CS_DATA
+  // -----------------------------
+
+  function setCSBaseData(data) {
+  appState._CS_BASE = Array.isArray(data) ? data : [];
+  }
+
+  function getCSBaseData() {
+    return appState._CS_BASE || [];
+  }
+
+  function setCSScenarioData(data) {
+    appState._CS_SCENARIO_DATA = Array.isArray(data) ? data : [];
+  }
+
+  function getCSScenarioData() {
+    return appState._CS_SCENARIO_DATA || [];
+  }
+
+  // -----------------------------
   // TS Data
   // -----------------------------
+
   function setTblTSData(data) {
     appState.tblTSData = Array.isArray(data) ? data : [];
   }
@@ -209,86 +273,211 @@ function getScenarioDefinitions() {
   // -----------------------------
   // Swaption
   // -----------------------------
-  function setSwaptionATM(rows) {
-    appState.swaptionATM = Array.isArray(rows) ? rows : [];
+
+  function setSwaptionAtmBase(rows) {
+    appState._SWAPTION_ATM_BASE = Array.isArray(rows) ? rows : [];
   }
 
-  function setSwaptionSmile(rows) {
-    appState.swaptionSmile = Array.isArray(rows) ? rows : [];
+  function getSwaptionAtmBase() {
+    return appState._SWAPTION_ATM_BASE || [];
+  }
+
+  function setSwaptionSmileBase(rows) {
+    appState._SWAPTION_SMILE_BASE = Array.isArray(rows) ? rows : [];
+  }
+
+  function getSwaptionSmileBase() {
+    return appState._SWAPTION_SMILE_BASE || [];
+  }
+
+  function setSwaptionAtmScenarioData(rows) {
+    appState._SWAPTION_ATM_SCENARIO_DATA = Array.isArray(rows) ? rows : [];
+  }
+
+  function getSwaptionAtmScenarioData() {
+    return appState._SWAPTION_ATM_SCENARIO_DATA || [];
+  }
+
+  function setSwaptionSmileScenarioData(rows) {
+    appState._SWAPTION_SMILE_SCENARIO_DATA = Array.isArray(rows) ? rows : [];
+  }
+
+  function getSwaptionSmileScenarioData() {
+    return appState._SWAPTION_SMILE_SCENARIO_DATA || [];
+  }
+
+  function setSwaptionActive(rows) {
+    appState._SWAPTION_ACTIVE = Array.isArray(rows) ? rows : [];
+  }
+
+  function getSwaptionActive() {
+    return appState._SWAPTION_ACTIVE || [];
   }
 
   function getSwaptionATMByTenor(optionTenor, swapTenor) {
-    const arr = Array.isArray(appState.swaptionATM) ? appState.swaptionATM : [];
-    return arr.filter(r => r.option_tenor === optionTenor && r.swap_tenor === swapTenor);
+    const arr = Array.isArray(appState.swaptionATM)
+      ? appState.swaptionATM
+      : [];
+
+    return arr.filter(
+      (r) => r.option_tenor === optionTenor && r.swap_tenor === swapTenor
+    );
   }
 
   function getSwaptionSmileByNode(optionTenor, swapTenor) {
-    const arr = Array.isArray(appState.swaptionSmile) ? appState.swaptionSmile : [];
-    return arr.filter(r => r.option_tenor === optionTenor && r.swap_tenor === swapTenor);
+    const arr = Array.isArray(appState.swaptionSmile)
+      ? appState.swaptionSmile
+      : [];
+
+    return arr.filter(
+      (r) => r.option_tenor === optionTenor && r.swap_tenor === swapTenor
+    );
   }
 
-  function setSwaptionCubeSurface(cubeGrid) {
-    if (
-      !cubeGrid ||
-      !Array.isArray(cubeGrid.optionTenors) ||
-      !Array.isArray(cubeGrid.swapTenors) ||
-      !Array.isArray(cubeGrid.volMatrix)
-    ) {
-      console.warn('[marketDataStore.setSwaptionCubeSurface] Ungültiges cubeGrid:', cubeGrid);
-      appState.swaptionCubeSurface = null;
-      return;
-    }
-    appState.swaptionCubeSurface = cubeGrid;
+function setSwaptionCubeSurface(cubeGrid) {
+  const isLegacy =
+    cubeGrid &&
+    Array.isArray(cubeGrid.optionTenors) &&
+    Array.isArray(cubeGrid.swapTenors) &&
+    Array.isArray(cubeGrid.volMatrix);
+
+  const isMulti =
+    cubeGrid &&
+    Array.isArray(cubeGrid.surfaces) &&
+    cubeGrid.surfaces.length > 0;
+
+  if (!isLegacy && !isMulti) {
+    warn('[marketDataStore.setSwaptionCubeSurface] Ungültiges cubeGrid:', cubeGrid);
+    appState.swaptionCubeSurface = null;
+    return;
   }
 
-  function getSwaptionCubeSurface() {
-    return appState.swaptionCubeSurface || null;
-  }
+  appState.swaptionCubeSurface = cubeGrid;
+}
+
+function getSwaptionCubeSurface() {
+  return appState.swaptionCubeSurface || null;
+}
 
   // -----------------------------
   // Expose on appState
   // -----------------------------
-  appState.setEUSWData = setEUSWData;
+
   appState.setRATESData = setRATESData;
+  appState.setRatesScenarioData = setRatesScenarioData;
+  appState.getRatesScenarioData = getRatesScenarioData;
   appState.getEUSWData = getEUSWData;
+
+  appState.setRatesActive = setRatesActive;
+  appState.getRatesActive = getRatesActive;
+
   appState.setSelectedCurve = setSelectedCurve;
   appState.getSelectedCurve = getSelectedCurve;
   appState.getEUSWDataWithSelectedCurve = getEUSWDataWithSelectedCurve;
 
+  appState.setCSData = setCSData;
+  appState.getCSData = getCSData;
+
+  
+  appState.setCSActive = setCSActive;
+  appState.getCSActive = getCSActive;
+
+  appState.setCSBaseData = setCSBaseData;
+  appState.getCSBaseData = getCSBaseData;
+
+  appState.setCSScenarioData = setCSScenarioData;
+  appState.getCSScenarioData = getCSScenarioData;
+
+
+
+
+
   appState.setTblTSData = setTblTSData;
   appState.getTblTSData = getTblTSData;
 
-  appState.setSwaptionATM = setSwaptionATM;
-  appState.setSwaptionSmile = setSwaptionSmile;
+  appState.setSwaptionAtmBase = setSwaptionAtmBase;
+  appState.getSwaptionAtmBase = getSwaptionAtmBase;
+  appState.setSwaptionSmileBase = setSwaptionSmileBase;
+  appState.getSwaptionSmileBase = getSwaptionSmileBase;
+
+  appState.setSwaptionAtmScenarioData = setSwaptionAtmScenarioData;
+  appState.getSwaptionAtmScenarioData = getSwaptionAtmScenarioData;
+  appState.setSwaptionSmileScenarioData = setSwaptionSmileScenarioData;
+  appState.getSwaptionSmileScenarioData = getSwaptionSmileScenarioData;
+
+  appState.setSwaptionActive = setSwaptionActive;
+  appState.getSwaptionActive = getSwaptionActive;
   appState.getSwaptionATMByTenor = getSwaptionATMByTenor;
   appState.getSwaptionSmileByNode = getSwaptionSmileByNode;
   appState.setSwaptionCubeSurface = setSwaptionCubeSurface;
   appState.getSwaptionCubeSurface = getSwaptionCubeSurface;
+
   appState.addScenarioDefinition = addScenarioDefinition;
   appState.getScenarioDefinitions = getScenarioDefinitions;
-  appState.setRatesActive = setRatesActive;
-  appState.getRatesActive = getRatesActive;
 
-  // Default setzen, falls noch nicht vorhanden
-  if (!appState._selectedCurveCache) appState._selectedCurveCache = 'EUSWAP';
 
-  return {
+
+  if (!appState._selectedCurveCache) {
+    appState._selectedCurveCache = 'EUSWAP';
+  }
+
+
+
+    return {
     setEUSWData,
+
+    setRATESData,
+    setRatesScenarioData,
+    getRatesScenarioData,
     getEUSWData,
+
     setSelectedCurve,
     getSelectedCurve,
     getEUSWDataWithSelectedCurve,
+
+    setCSData,
+    getCSData,
+
+    setCSActive,
+    getCSActive,
+    setCSBaseData,
+    getCSBaseData,
+    setCSScenarioData,
+    getCSScenarioData,
+
     setTblTSData,
     getTblTSData,
-    setSwaptionATM,
-    setSwaptionSmile,
+
+    setSwaptionAtmBase,
+    getSwaptionAtmBase,
+    setSwaptionSmileBase,
+    getSwaptionSmileBase,
+
+    setSwaptionAtmScenarioData,
+    getSwaptionAtmScenarioData,
+    setSwaptionSmileScenarioData,
+    getSwaptionSmileScenarioData,
+
+    setSwaptionActive,
+    getSwaptionActive,
+
     getSwaptionATMByTenor,
     getSwaptionSmileByNode,
+
     setSwaptionCubeSurface,
     getSwaptionCubeSurface,
+
     addScenarioDefinition,
     getScenarioDefinitions,
+
     setRatesActive,
     getRatesActive,
   };
 }
+
+
+
+
+
+
+

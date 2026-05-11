@@ -1,6 +1,6 @@
-﻿import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import processData from '../../../core/ui/modal/modalData.js';
 import { appState } from '../../../renderer.js';
-import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 
 // Spalten der CreditVaRInput-Tabelle - ggf. an dein Schema anpassen
@@ -62,7 +62,7 @@ export function handleCvarInput() {
       handleCvarInputConfigView();
     };
 
-    // ðŸ”¹ ADD-Button
+    // ADD-Button
     const addButton = document.getElementById('cvarConfigAddButton');
     if (addButton) {
       addButton.addEventListener('click', (event) => {
@@ -77,7 +77,7 @@ export function handleCvarInput() {
       });
     }
 
-    // ðŸ”¹ EDIT-Buttons in der Tabelle
+    // EDIT-Buttons in der Tabelle
     const editButtons = container.querySelectorAll('.edit-button');
     editButtons.forEach((button) => {
       button.addEventListener('click', (event) => {

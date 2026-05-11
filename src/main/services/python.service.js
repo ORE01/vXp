@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 const { app } = require('electron');
 
 // ✅ Source of truth für DB-Pfad kommt aus Electron (dev + productiontest = DEV-DB)
-const { getDatabasePath } = require('../main_path');
+const { getDatabasePath } = require('../main.path');
 
 let proc = null;
 let activeResolve = null;

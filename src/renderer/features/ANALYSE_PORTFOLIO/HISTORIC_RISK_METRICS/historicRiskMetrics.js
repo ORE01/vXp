@@ -306,6 +306,163 @@ function renderHistoricMarketRiskChart(historyData) {
 
   historicMarketRiskRafId = requestAnimationFrame(tryRender);
 }
+
+// function renderHistoricMarketRiskChart(historyData) {
+//   historyData = Array.isArray(historyData) ? historyData : [];
+
+//   if (historyData.length === 0) {
+//     destroyChartByCanvasId("historicMarketRiskChart");
+//     historicMarketRiskChart = null;
+//     return;
+//   }
+
+//   const sortedData = [...historyData].sort(
+//     (a, b) => new Date(a.DATE) - new Date(b.DATE)
+//   );
+
+//   function readPctSeries(row, keys) {
+//     for (const k of keys) {
+//       if (k in row && row[k] != null && row[k] !== "") {
+//         const v = parseFloat(row[k]);
+//         if (!isNaN(v)) return v;
+//       }
+//     }
+//     return null;
+//   }
+
+//   const mvarAllPct = sortedData.map(row =>
+//     readPctSeries(row, ["M_VaR_All_PCT", "M_VaR_ALL_PCT", "MVaR_All_PCT"])
+//   );
+//   const mvarIrPct = sortedData.map(row =>
+//     readPctSeries(row, ["M_VaR_IR_PCT", "M_VaR_IR_pct", "MVaR_IR_PCT"])
+//   );
+//   const mvarCsPct = sortedData.map(row =>
+//     readPctSeries(row, ["M_VaR_CS_PCT", "M_VaR_CS_pct", "MVaR_CS_PCT"])
+//   );
+
+//   const mesAllPct = sortedData.map(row =>
+//     readPctSeries(row, ["M_ES_ALL_PCT", "M_ES_All_PCT", "M_ES_All_pct"])
+//   );
+//   const mesIrPct = sortedData.map(row =>
+//     readPctSeries(row, ["M_ES_IR_PCT", "M_ES_IR_pct", "MES_IR_PCT"])
+//   );
+//   const mesCsPct = sortedData.map(row =>
+//     readPctSeries(row, ["M_ES_CS_PCT", "M_ES_CS_pct", "MES_CS_PCT"])
+//   );
+
+//   const data = {
+//     labels: sortedData.map(row => row.DATE),
+//     datasets: [
+//       {
+//         label: "MVaR All (%)",
+//         data: mvarAllPct,
+//         borderColor: "rgba(54, 162, 235, 1)",
+//         backgroundColor: "rgba(54, 162, 235, 0.15)",
+//         borderWidth: 2,
+//         pointRadius: 2,
+//         tension: 0.2
+//       },
+//       {
+//         label: "MVaR IR (%)",
+//         data: mvarIrPct,
+//         borderColor: "rgba(0, 200, 83, 1)",
+//         backgroundColor: "rgba(0, 200, 83, 0.15)",
+//         borderWidth: 2,
+//         pointRadius: 2,
+//         tension: 0.2
+//       },
+//       {
+//         label: "MVaR CS (%)",
+//         data: mvarCsPct,
+//         borderColor: "rgba(255, 159, 64, 1)",
+//         backgroundColor: "rgba(255, 159, 64, 0.15)",
+//         borderWidth: 2,
+//         pointRadius: 2,
+//         tension: 0.2
+//       },
+//       {
+//         label: "M ES All (%)",
+//         data: mesAllPct,
+//         borderColor: "rgba(54, 162, 235, 1)",
+//         backgroundColor: "rgba(54, 162, 235, 0.0)",
+//         borderWidth: 2,
+//         pointRadius: 2,
+//         tension: 0.2,
+//         borderDash: [6, 4]
+//       },
+//       {
+//         label: "M ES IR (%)",
+//         data: mesIrPct,
+//         borderColor: "rgba(0, 200, 83, 1)",
+//         backgroundColor: "rgba(0, 200, 83, 0.0)",
+//         borderWidth: 2,
+//         pointRadius: 2,
+//         tension: 0.2,
+//         borderDash: [6, 4]
+//       },
+//       {
+//         label: "M ES CS (%)",
+//         data: mesCsPct,
+//         borderColor: "rgba(255, 159, 64, 1)",
+//         backgroundColor: "rgba(255, 159, 64, 0.0)",
+//         borderWidth: 2,
+//         pointRadius: 2,
+//         tension: 0.2,
+//         borderDash: [6, 4]
+//       }
+//     ]
+//   };
+
+//   const options = createPercentChartOptions("MVaR / ES Metrics (%)");
+
+//   _riskLastData = data;
+//   _riskLastOptions = options;
+
+//   if (historicMarketRiskRafId != null) {
+//     cancelAnimationFrame(historicMarketRiskRafId);
+//     historicMarketRiskRafId = null;
+//   }
+
+//   historicMarketRiskRafId = requestAnimationFrame(() => {
+//     const canvas = document.getElementById("historicMarketRiskChart");
+
+//     if (!canvas) {
+//       console.warn("historicMarketRiskChart canvas not found");
+//       historicMarketRiskRafId = null;
+//       return;
+//     }
+
+//     const w = canvas.clientWidth;
+//     const h = canvas.clientHeight;
+
+//     if (w === 0 || h === 0) {
+//       console.warn("historicMarketRiskChart canvas has 0 size", { w, h });
+//       historicMarketRiskRafId = null;
+//       return;
+//     }
+
+//     try {
+//       if (historicMarketRiskChart) {
+//         historicMarketRiskChart.data = data;
+//         historicMarketRiskChart.options = options;
+//         historicMarketRiskChart.update("none");
+//       } else {
+//         historicMarketRiskChart = createTimeSeriesChart(
+//           "historicMarketRiskChart",
+//           data,
+//           options,
+//           "line"
+//         );
+//       }
+//     } catch (err) {
+//       console.error("Fehler beim Rendern von historicMarketRiskChart:", err);
+//     } finally {
+//       historicMarketRiskRafId = null;
+//     }
+//   });
+// }
+
+
 function renderHistoricCreditRiskChart(historyData) {
   historyData = Array.isArray(historyData) ? historyData : [];
 

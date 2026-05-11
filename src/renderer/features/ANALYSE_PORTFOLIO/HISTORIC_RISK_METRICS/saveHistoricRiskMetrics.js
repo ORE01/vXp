@@ -1,4 +1,4 @@
-﻿import { handleModalAction } from '../../../core/ui/MODAL_HELPER/ModalActionHandler.js';
+﻿import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 import { appState } from '../../../renderer.js';
 
 function parseEuroString(str) {

@@ -1,5 +1,5 @@
-﻿import { filterColumnsInData } from '../../core/ui/MODAL_HELPER/dataProcessor.js';
-import processData from '../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import { filterColumnsInData } from '../../core/ui/modal/modalData.js';
+import processData from '../../core/ui/modal/modalData.js';
 
 import { appState } from '../../renderer.js';
 
@@ -16,10 +16,17 @@ import {
 
 import {
   renderPortColumnSelector,
-  bindPortColumnSelector
+  bindPortColumnSelector,
 } from './portColumnSelector.js';
 
+import {
+  ensureTableLayout,
+  getVisibleColumns,
+} from '../CUSTOMER/tableLayouts/tableLayoutStore.js';
+
 let tableName = 'Portfolios';
+
+const TABLE_ID = 'portTable0';
 
 const portDataMap = {};
 
@@ -32,7 +39,7 @@ const pf = (v) => {
 const safeDiv = (num, den) => (den ? num / den : 0);
 
 // =============================
-// 🔹 TABLE RENDER (NEU)
+// 🔹 TABLE RENDER
 // =============================
 function renderPortTableOnly(portData, index) {
   const elementId = `portDataContainer${index}`;
@@ -41,7 +48,7 @@ function renderPortTableOnly(portData, index) {
   if (!portDataContainer) return;
 
   const visibleColumns =
-    appState.getVisibleColumns('portTable0') ||
+    getVisibleColumns(TABLE_ID) ||
     DEFAULT_VISIBLE_PORT_COLUMN_KEYS;
 
   const filteredColumnsPortData = filterColumnsInData(portData, visibleColumns);
@@ -82,26 +89,27 @@ export function handlePortProdData(receivedData, index, port_name) {
 
   if (!portDataContainer || !Array.isArray(receivedData)) return;
 
-  // 🔹 Column selector (einmal initialisieren)
-  renderPortColumnSelector(appState, 'portColumnSelector');
+  ensureTableLayout(TABLE_ID, {
+    visibleColumns: DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
+  });
 
-  bindPortColumnSelector(appState, () => {
+  renderPortColumnSelector('portColumnSelector');
+
+  bindPortColumnSelector(() => {
     const currentFilteredPortData =
       appState.getFilteredPortData?.() || receivedData;
 
     renderPortTableOnly(currentFilteredPortData, index);
   }, 'portColumnSelector');
 
-  // 🔹 WICHTIG: hier werden aktuell gefilterte Daten gespeichert
   const filteredPortData = filterColumnsInData(receivedData, ALL_PORT_COLUMN_KEYS);
   appState.setFilteredPortData(filteredPortData);
 
-  // 🔹 Tabelle initial rendern
   renderPortTableOnly(filteredPortData, index);
 }
 
 // =============================
-// 🔹 AGG DATA (UNVERÄNDERT)
+// 🔹 AGG DATA
 // =============================
 
 export function handlePortAggData(receivedData, index, port_name) {

@@ -1,5 +1,5 @@
-﻿import { filterColumnsInData } from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
-import processData from '../../../core/ui/MODAL_HELPER/dataProcessor.js';
+﻿import { filterColumnsInData } from '../../../core/ui/modal/modalData.js';
+import processData from '../../../core/ui/modal/modalData.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../../renderer.js';
 // import {handleTrafficLight} from './trafficLight.js';
@@ -36,7 +36,7 @@ export function handleLossIssuerMainData(receivedData) {
     }
   };
 
-  // ðŸ” Schleife Ã¼ber alle Typen
+  // Schleife Ã¼ber alle Typen
   Object.entries(typeMap).forEach(([pdFlag, config]) => {
     const { dataContainerId, chartId, tableName } = config;
 
@@ -55,7 +55,7 @@ export function handleLossIssuerMainData(receivedData) {
         allRows[10].classList.add('highlight');
       }
 
-      // Speichern fÃ¼r spÃ¤ter
+      // Speichern 
       if (pdFlag === 'RATING') {
         ratingData = sortedData;
         createLossIssuerChart(ratingData, chartId, 'rating');
@@ -69,7 +69,7 @@ export function handleLossIssuerMainData(receivedData) {
     }
   });
 
-  // ðŸŸ¡ Kombinierte Charts nur erstellen, wenn alle drei da sind
+  // Kombinierte Charts nur erstellen, wenn alle drei da sind
   if (ratingData.length > 0 && marketData.length > 0 && marketNormData.length > 0) {
     createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
     createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart');
@@ -99,7 +99,7 @@ export function setupLossIssuerUI() {
   const show = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    // Falls irgendwo display:none gesetzt wurde â†’ zurÃ¼ck zum Standard
+    
     el.style.removeProperty('display');
     // Falls im HTML das hidden-Attribut gesetzt ist
     if (el.hasAttribute('hidden')) el.removeAttribute('hidden');
@@ -144,17 +144,17 @@ export function setupLossIssuerUI() {
       return filteredData;
     }
     function createLossIssuerChart(data, chartId, type) {
-      // ðŸ”¥ Destroy the old chart if it exists
+      // Destroy the old chart if it exists
       if (window[chartId] && typeof window[chartId].destroy === 'function') {
         window[chartId].destroy();
       }
 
-      // ðŸ”¥ Limit the data to the first 15 rows
+      // Limit the data to the first 15 rows
       const limitedData = data.slice(0, 15);
       const labels = limitedData.map(d => d.DEFAULTS);
       const values = limitedData.map(d => d.LOSS);
 
-      // ðŸ”¥ Set the color based on the type ('rating' = blue, 'market' = orange, 'norm' = green)
+      // Set the color based on the type ('rating' = blue, 'market' = orange, 'norm' = green)
       let barColor;
       if (type === 'market') {
         barColor = 'rgba(255, 165, 0, 0.7)'; // Orange
@@ -164,12 +164,12 @@ export function setupLossIssuerUI() {
         barColor = 'rgba(70, 192, 230, 0.7)'; // Blue for Rating
       }
 
-      // ðŸ”¥ Create color array and highlight the 10th bar in red
+      // Create color array and highlight the 10th bar in red
       const barColors = limitedData.map((_, index) => 
         index === 9 ? '#ff6666' : barColor
       );
 
-      // ðŸ”¥ Create the new chart and store it in `window`
+      // Create the new chart and store it in `window`
       window[chartId] = createBarChart({ 
         labels: labels, 
         datasets: [{ 
@@ -193,14 +193,14 @@ export function setupLossIssuerUI() {
         return; 
       }
 
-      // ðŸ”¥ Combine the QUANTIL labels from all datasets (remove duplicates)
+      // Combine the QUANTIL labels from all datasets (remove duplicates)
       const allConvIValues = Array.from(new Set([
         ...ratingData.map(d => d.QUANTIL), 
         ...marketData.map(d => d.QUANTIL),
         ...marketNormData.map(d => d.QUANTIL)
       ])).sort((a, b) => a - b);
 
-      // ðŸ”¥ Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
+      // Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
       const ratingValues = allConvIValues.map(convI => {
         const found = ratingData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
@@ -231,7 +231,7 @@ export function setupLossIssuerUI() {
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
-      // ðŸ”¥ Colors for the chart bars
+      // Colors for the chart bars
       const highlightColor = 'rgba(255, 0, 0, 0.9)'; // Red for highlight
       const defaultRatingColor = 'rgba(0, 191, 255, 1)'; // Bright Blue for Rating 
       const defaultMarketColor = 'rgba(255, 165, 0, 0.7)'; // Light Orange (semi-transparent)
@@ -241,7 +241,7 @@ export function setupLossIssuerUI() {
       const marketBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor : defaultMarketColor);
       const marketNormBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor : defaultMarketNormColor);
 
-      // ðŸ”¥ Create the new chart with 3 datasets
+      // Create the new chart with 3 datasets
       window.charts[chartId] = new Chart(chartElement.getContext('2d'), {
         type: 'bar',
         data: { 
@@ -374,14 +374,14 @@ export function setupLossIssuerUI() {
         return; 
       }
 
-      // ðŸ”¥ Filter QUANTIL values to only include those from 99.9 to 99.89
+      // Filter QUANTIL values to only include those from 99.9 to 99.89
       const allConvIValues = Array.from(new Set([
         ...ratingData.map(d => d.QUANTIL), 
         ...marketData.map(d => d.QUANTIL),
         ...marketNormData.map(d => d.QUANTIL)
       ])).filter(convI => convI <= 99.99 && convI >= 99.90).sort((a, b) => a - b);
 
-      // ðŸ”¥ Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
+      // Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
       const ratingValues = allConvIValues.map(convI => {
         const found = ratingData.find(d => d.QUANTIL === convI);
         return found ? found.LOSS : 0; 
@@ -412,7 +412,7 @@ export function setupLossIssuerUI() {
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
-      // ðŸ”¥ Calculate averages for the first 10 entries in each dataset
+      // Calculate averages for the first 10 entries in each dataset
       const calculateAverage = (values) => {
         const firstTenValues = values.slice(0, 10);
         // console.log('Values used to calculate average:', firstTenValues);
@@ -424,7 +424,7 @@ export function setupLossIssuerUI() {
       const averageMarket = calculateAverage(marketValues);
       const averageMarketNorm = calculateAverage(marketNormValues);
 
-      // ðŸ”¥ Colors for the chart bars
+      // Colors for the chart bars
       const highlightColor1 = 'rgba(255, 0, 0, 0.9)'; // Red for highlight 1
       const highlightColor2 = 'rgba(200, 0, 0, 0.9)'; // Darker Red for highlight 2
       const highlightColor3 = 'rgba(150, 0, 0, 0.9)'; // Even Darker Red for highlight 3
@@ -436,7 +436,7 @@ export function setupLossIssuerUI() {
       const marketBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor2 : defaultMarketColor);
       const marketNormBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor3 : defaultMarketNormColor);
 
-      // ðŸ”¥ Create the new chart with 3 datasets
+      // Create the new chart with 3 datasets
       window.charts[chartId] = new Chart(chartElement.getContext('2d'), {
         type: 'bar',
         data: { 

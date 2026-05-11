@@ -1,37 +1,61 @@
 // src/main/ipc/handlers/tableLayout.handlers.js
 'use strict';
 
-const tableLayoutService = require('../../services/tableLayout.service');
+const TBL_CUSTOMER_TABLE_LAYOUTS = 'CustomerTableLayouts';
 
-function registerTableLayoutHandlers({ ipcMain, db }) {
+module.exports = function registerTableLayoutHandlers({ ipcMain, dbApi, refreshTable }) {
+  if (!ipcMain) throw new Error('[tableLayout.handlers] ipcMain missing');
 
-  // ---------------------------
-  // V1 (bestehend)
-  // ---------------------------
+  if (!dbApi || typeof dbApi.runSQL !== 'function') {
+    throw new Error('[tableLayout.handlers] dbApi invalid');
+  }
 
-  ipcMain.handle('table-layout:get', async (_event, tableId) => {
-    return tableLayoutService.getTableLayout(db, tableId);
-  });
+  if (typeof refreshTable !== 'function') {
+    throw new Error('[tableLayout.handlers] refreshTable missing');
+  }
 
-  ipcMain.handle('table-layout:save', async (_event, tableId, layout) => {
-    return tableLayoutService.saveTableLayout(db, tableId, layout);
-  });
-
-  // ---------------------------
-  // V2 (neu)
-  // ---------------------------
-
-  ipcMain.handle('table-layout:get-one', async (_event, tableId, layoutName) => {
-    return tableLayoutService.getTableLayoutV2(db, tableId, layoutName);
-  });
+  try {
+    ipcMain.removeHandler('table-layout:save-one');
+  } catch {}
 
   ipcMain.handle('table-layout:save-one', async (_event, tableId, layoutName, layout) => {
-    return tableLayoutService.saveTableLayoutV2(db, tableId, layoutName, layout);
-  });
 
-  ipcMain.handle('table-layout:get-all', async (_event, tableId) => {
-    return tableLayoutService.getTableLayoutsV2(db, tableId);
-  });
-}
+    console.log('[tableLayout] save-one received', {
+      tableId,
+      layoutName,
+      layout,
+    });
 
-module.exports = registerTableLayoutHandlers;
+    try {
+      if (!tableId) throw new Error('tableId missing');
+      if (!layoutName) throw new Error('layoutName missing');
+      if (!layout || typeof layout !== 'object') throw new Error('layout missing/invalid');
+
+      const sql = `
+        INSERT INTO ${TBL_CUSTOMER_TABLE_LAYOUTS}
+          (table_id, layout_name, layout_json, updated_at)
+        VALUES
+          (?, ?, ?, datetime('now'))
+        ON CONFLICT(table_id, layout_name)
+        DO UPDATE SET
+          layout_json = excluded.layout_json,
+          updated_at = datetime('now')
+      `;
+
+      await dbApi.runSQL(sql, [
+        tableId,
+        layoutName,
+        JSON.stringify(layout),
+      ]);
+
+      console.log('[tableLayout] save-one DB write ok');
+
+      refreshTable(TBL_CUSTOMER_TABLE_LAYOUTS);
+
+      return { success: true };
+    } catch (err) {
+      console.error('[tableLayout] save-one error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+};

@@ -18,12 +18,15 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CustomerTSSelectionData':
       return handlers.handleCustomerTSData?.(rows);
 
-    // MARKET DATA
-    case 'EUSWData':
-      return handlers.handleEUSWData?.(rows);
+    case 'CustomerTableLayoutsData':
+      return handlers.handleCustomerTableLayoutsData?.(rows);
 
+    // MARKET DATA
     case 'RATESData':
       return handlers.handleRATESData?.(rows);
+
+    case 'RATES_SCENARIO_DATAData':
+      return handlers.handleRatesScenarioData?.(rows);  
 
     case 'RATES_ACTIVEData':
       return handlers.handleRatesActiveData?.(rows);  
@@ -32,11 +35,23 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
       return handlers.handleForwardData?.(rows);
 
     // SWAPTION
-    case 'EUSWAPTION_ATMData':
-      return handlers.handleSwaptionATMData?.(rows);
+    case 'SWAPTION_ATM_BASEData':
+      return handlers.handleSwaptionAtmBaseData?.(rows);
 
-    case 'EUSWAPTION_SMILEData':
-      return handlers.handleSwaptionSmileData?.(rows);
+    case 'SWAPTION_SMILE_BASEData':
+      return handlers.handleSwaptionSmileBaseData?.(rows);
+
+    case 'SWAPTION_ATM_SCENARIO_DATAData':
+      return handlers.handleSwaptionAtmScenarioData?.(rows);
+
+    case 'SWAPTION_SMILE_SCENARIO_DATAData':
+      return handlers.handleSwaptionSmileScenarioData?.(rows);
+
+    case 'SWAPTION_ACTIVEData':
+      return handlers.handleSwaptionActiveData?.(rows);
+
+    // case 'SWAPTION_CUBEData':
+    //   return handlers.handleSwaptionCubeData?.(rows);
 
     // ISSUER
     case 'IssuerData':
@@ -45,8 +60,16 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CountryLookupData':
       return handlers.handleCountryLookupDataInit?.(rows);
 
-    case 'CSMatrixData':
-      return handlers.handleCSMatrixData?.(rows);
+    // CREDIT SPREAD  
+
+    case 'CS_ACTIVEData':
+      return handlers.handleCS_ACTIVEData?.(rows);
+
+    case 'CS_BASEData':
+      return handlers.handleCSBaseData?.(rows);
+
+    case 'CS_SCENARIO_DATAData':
+      return handlers.handleCSScenarioData?.(rows);
 
     case 'CSParameterData':
       return handlers.handleCSParameterData?.(rows);

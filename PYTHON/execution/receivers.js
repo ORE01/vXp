@@ -159,7 +159,7 @@ export function createPythonExecutionReceivers(ctx) {
         'updateExcelIssuerButton',
         'updateExcelProductsButton',
         'updateExcelDealsButton',
-        'updateExcelEuswButton',
+        'updateExcelMarketButton',
       ];
       const buttonId = excelIds.find(id => document.getElementById(id)?.disabled);
       const btn = buttonId ? document.getElementById(buttonId) : null;
