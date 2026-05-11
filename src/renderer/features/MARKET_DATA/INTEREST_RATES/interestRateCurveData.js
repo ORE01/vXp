@@ -2,9 +2,28 @@
 
 import { sortInterestRateRowsByTenor } from './interestRateTransforms.js';
 
-export function getInterestRateCurveData(appState, selectedCurrency, selectedCurveId, domSelectedCurve) {
+// =====================================================
+// RATE ROW NORMALIZATION
+// DB rows can come from RATES_BASE or RATES_SCENARIO_DATA.
+// This function creates one stable UI shape.
+// =====================================================
 
+function normalizeRateRow(r) {
+  return {
+    tenor: r.tenor || r.maturity || '',
+    value: Number(r.value ?? 0),
+    asof_date: r.asof_date || r.updated_at || '',
+    run_id: r.run_id || 'BASE',
+    scenario_id: r.scenario_id || 'BASE',
+    ccy: r.ccy || '',
+    curve_id: r.curve_id || '',
+    instrument: r.instrument || ''
+  };
+}
+
+export function getInterestRateCurveData(appState, selectedCurrency, selectedCurveId, domSelectedCurve) {
   const raw = appState._RATESDataCacheByCcy?.[selectedCurrency] || [];
+
   if (!Array.isArray(raw) || raw.length === 0) {
     return { IRData: [], curve: null };
   }
@@ -61,39 +80,27 @@ export function getInterestRateCurveData(appState, selectedCurrency, selectedCur
       : snapshotUniverse;
   }
 
-  const instrumentRows = sourceRows.filter(
-    r => (r.instrument || '').toLowerCase() === 'swap'
-  );
-
-  const scenarioRows = instrumentRows.length ? instrumentRows : sourceRows;
+  const scenarioRows = sourceRows;
 
   if (scenarioRows.length === 0) {
     return { IRData: [], curve: selectedCurve };
   }
 
   const latestDate = scenarioRows.reduce((max, r) => {
-    if (!r.asof_date) return max;
-    return (!max || new Date(r.asof_date) > new Date(max))
-      ? r.asof_date
+    const rowDate = r.asof_date || r.updated_at;
+    if (!rowDate) return max;
+
+    return (!max || new Date(rowDate) > new Date(max))
+      ? rowDate
       : max;
   }, null);
 
   const finalRows = latestDate
-    ? scenarioRows.filter(r => r.asof_date === latestDate)
+    ? scenarioRows.filter(r => (r.asof_date || r.updated_at) === latestDate)
     : scenarioRows;
 
-  const sortedRows = sortInterestRateRowsByTenor(finalRows);
-
-  const IRData = sortedRows.map(r => ({
-    tenor: r.tenor,
-    value: Number(r.value ?? 0),
-    asof_date: r.asof_date,
-    run_id: r.run_id,
-    scenario_id: r.scenario_id,
-    ccy: r.ccy,
-    curve_id: r.curve_id,
-    instrument: r.instrument
-  }));
+  const normalizedRows = finalRows.map(normalizeRateRow);
+  const IRData = sortInterestRateRowsByTenor(normalizedRows);
 
   return { IRData, curve: selectedCurve };
 }

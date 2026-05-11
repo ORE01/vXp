@@ -101,7 +101,7 @@ src/renderer/features/MARKET_DATA/INTEREST_RATES/interestRateCurveHandler.js
 
 Funktionen
 
-* handleRATESData()
+* handleRATES_BASEData()
 * handleRATES_ACTIVEData()
 
 Aufgabe

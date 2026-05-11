@@ -791,6 +791,8 @@ export function createCSLineChart(data, chartConfig) {
     options: {
       ...chartConfig,
       plugins: {
+        ...(chartConfig.plugins || {}),
+
         zoom: {
           pan: {
             enabled: true,
@@ -798,8 +800,8 @@ export function createCSLineChart(data, chartConfig) {
             threshold: 10,
           },
           zoom: {
-            drag:{
-              enabled: true
+            drag: {
+              enabled: true,
             },
             wheel: {
               enabled: true,
@@ -816,6 +818,8 @@ export function createCSLineChart(data, chartConfig) {
       },
     },
   });
+
+  return lineChart;
 }
 
 

@@ -36,7 +36,12 @@ export function handleCS_ACTIVEData(data) {
 
   const rows = Array.isArray(data) ? data : [];
 
-  if (rows.length && !('scenario_name' in rows[0])) {
+  // ✅ neues erwartetes Format
+  if (
+    rows.length &&
+    !('scenario_id' in rows[0]) &&
+    !('ccy' in rows[0])
+  ) {
     warn('[CS] Unexpected CS_ACTIVE format', rows[0]);
   }
 
@@ -50,7 +55,8 @@ export function handleCS_ACTIVEData(data) {
     (a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0)
   )[0];
 
-  log('[CS][STORE] active scenario:', latest?.scenario_name || 'default');
+  log('[CS][STORE] active scenario:', latest?.scenario_id || 'BASE');
+  log('[CS][STORE] active ccy:', latest?.ccy || 'default');
 
   document.dispatchEvent(new Event('cs:active:ready'));
 }

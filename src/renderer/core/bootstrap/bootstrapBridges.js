@@ -27,12 +27,12 @@ export function bootstrapBridges(appState, deps = {}) {
 
   const handleEUSWData =
     (typeof ratesHandlers.handleEUSWData === 'function' && ratesHandlers.handleEUSWData) ||
-    (typeof ratesHandlers.handleRATESData === 'function' && ratesHandlers.handleRATESData) ||
+    (typeof ratesHandlers.handleRATES_BASEData === 'function' && ratesHandlers.handleRATES_BASEData) ||
     null;
 
   if (!handleEUSWData) {
     console.error('[bootstrapBridges] No EUSW/RATES handler on ratesHandlers:', Object.keys(ratesHandlers || {}));
-    throw new Error('[bootstrapBridges] ratesHandlers has no handleEUSWData/handleRATESData.');
+    throw new Error('[bootstrapBridges] ratesHandlers has no handleEUSWData/handleRATES_BASEData.');
   }
 
   bindGlobalChangeDelegation({

@@ -4,11 +4,12 @@ import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';
 import { updateProductCSWarningUI } from '../../core/ui/warnings.js';
+import { PRODUCT_TEMPLATES } from './productTemplates.js';
 
 
 
 // ======================================================
-// SPALTEN-KONFIG FÃœR ProdAll
+// SPALTEN-KONFIG für ProdAll
 // ======================================================
 
 // 1) Spalten, die in der Tabelle angezeigt werden sollen
@@ -27,7 +28,7 @@ const PROD_TABLE_COLUMNS = [
   'METHODE',
 ];
 
-// 2) Wunsch-Reihenfolge fÃ¼r Felder im Add/Edit-Modal
+// 2) Wunsch-Reihenfolge für Felder im Add/Edit-Modal
 const PROD_FIELD_ORDER = [
   'INCLUDE',
   'PROD_ID',
@@ -54,14 +55,23 @@ const PROD_FIELD_ORDER = [
    
   
   
-  // alles Weitere (CAP, FLOOR, GEARING, SPREADS â€¦) hinten dran
+  // alles Weitere (CAP, FLOOR, GEARING, SPREADS ) hinten dran
 ];
+
 
 
 
 // ======================================================
 
 let prodData;
+
+
+const LEGACY_PRODUCT_FIELDS_TO_HIDE = new Set([
+  'TENOR',
+  'CouponType',
+  'COUPON',
+  'SPREADS',
+]);
 
 export function handleProdData(filtersConfig) {
   const prodDataContainer = document.getElementById('prodDataContainer');
@@ -172,95 +182,33 @@ function makeProdIdButtons(container) {
   });
 }
 
-// function checkCSSzenarioFlag(filteredProdData) {
-//   const csWarningContainer = document.getElementById('csWarningContainer');
-//   const csWarningLight = document.getElementById('csWarning');
-
-//   if (!csWarningContainer || !csWarningLight) {
-//     console.error("âš ï¸ 'csWarningContainer' oder 'csWarning' nicht gefunden!");
-//     return;
-//   }
-
-//   const affectedRows = filteredProdData.filter(
-//     (row) =>
-//       row.CS_Szenario !== null &&
-//       row.CS_Szenario !== undefined &&
-//       (typeof row.CS_Szenario === 'number' ||
-//         (typeof row.CS_Szenario === 'string' &&
-//           row.CS_Szenario.trim() !== ''))
-//   );
-
-//   const affectedProdIds = affectedRows.map((row) => row.PROD_ID);
-
-//   if (affectedProdIds.length > 0) {
-//     csWarningContainer.style.visibility = 'visible';
-//     csWarningLight.style.backgroundColor = 'red';
-//     const idsText = affectedProdIds.join(', ');
-//     document.getElementById('csWarningText').textContent = idsText;
-//   } else {
-//     csWarningContainer.style.visibility = 'hidden';
-//     csWarningLight.style.backgroundColor = 'gray';
-//   }
-// }
-
-// function checkCSSzenarioFlag(filteredProdData) {
-//   const warningContainer = document.getElementById('creditWarningContainer');
-//   const warningLight = document.getElementById('creditWarning');
-//   const warningText = document.getElementById('creditWarningText');
-
-//   if (!warningContainer || !warningLight || !warningText) {
-//     console.error('credit warning elements not found');
-//     return;
-//   }
-
-//   const affectedRows = filteredProdData.filter(
-//     (row) =>
-//       row.CS_Szenario !== null &&
-//       row.CS_Szenario !== undefined &&
-//       String(row.CS_Szenario).trim() !== ''
-//   );
-
-//   const affectedProdIds = affectedRows
-//     .map((row) => row.PROD_ID)
-//     .filter(Boolean);
-
-//   if (affectedProdIds.length > 0) {
-//     const count = affectedProdIds.length;
-
-//     warningContainer.style.display = 'flex';
-//     warningLight.style.backgroundColor = 'red';
-
-//     warningText.textContent = `${count} Product${count === 1 ? '' : 's'} affected`;
-//     warningText.title = affectedProdIds.join(', ');
-//   } else {
-//     warningContainer.style.display = 'none';
-//     warningLight.style.backgroundColor = 'transparent';
-//     warningText.textContent = '';
-//     warningText.title = '';
-//   }
-// }
-
-
-
-/**
- * Bringt ein ProdAll-Row-Objekt in die gewÃ¼nschte Feld-Reihenfolge
- * - genutzt im Formular (Add/Edit), damit CAP & Co. nicht vorne stehen.
- */
-export function buildOrderedFieldsForModal(row) {
+export function buildOrderedFieldsForModal(row, templateName = 'FIXED_BOND') {
   if (!row) return row;
 
   const ordered = {};
 
-  // 1) Zuerst unsere Wunsch-Felder in definierter Reihenfolge
-  PROD_FIELD_ORDER.forEach((key) => {
-    if (Object.prototype.hasOwnProperty.call(row, key)) {
-      ordered[key] = row[key];
-    }
+  const template =
+    PRODUCT_TEMPLATES[templateName] ||
+    PRODUCT_TEMPLATES.FIXED_BOND;
+
+  template.fields.forEach((field) => {
+    ordered[field] = row?.[field] ?? '';
   });
 
-  // 2) Alle Ã¼brigen Felder hinten anhÃ¤ngen
+  if (template.couponType) {
+    ordered.CouponType = template.couponType;
+  }
+
+  ordered.__PRODUCT_TEMPLATE__ = templateName;
+  ordered.__UI_MODE__ = template.uiMode || 'FIX';
+
   Object.keys(row).forEach((key) => {
-    if (!Object.prototype.hasOwnProperty.call(ordered, key)) {
+    if (LEGACY_PRODUCT_FIELDS_TO_HIDE.has(key)) return;
+
+    if (
+      !Object.prototype.hasOwnProperty.call(ordered, key) &&
+      row[key] !== undefined
+    ) {
       ordered[key] = row[key];
     }
   });

@@ -28,11 +28,16 @@ module.exports = function registerCSScenarioHandlers({
 
   ipcMain.handle('cs:create-scenario', async (_event, payload) => {
     try {
-      const scenario_name = String(payload?.scenario_name || '').trim();
+      const scenario_id = String(payload?.scenario_id || payload?.scenario_name || '').trim();
+      const ccy = String(payload?.ccy || 'EUR').trim().toUpperCase();
       const data = Array.isArray(payload?.data) ? payload.data : [];
 
-      if (!scenario_name) {
-        throw new Error('scenario_name missing');
+      if (!scenario_id) {
+        throw new Error('scenario_id missing');
+      }
+
+      if (!ccy) {
+        throw new Error('ccy missing');
       }
 
       if (!data.length) {
@@ -41,7 +46,6 @@ module.exports = function registerCSScenarioHandlers({
 
       const asof_date = new Date().toISOString().slice(0, 10);
       const run_id = `CS_${Date.now()}`;
-      const ccy = 'EUR';
 
       await new Promise((resolve, reject) => {
         db.serialize(() => {
@@ -49,15 +53,15 @@ module.exports = function registerCSScenarioHandlers({
 
           db.run(
             `
-            DELETE FROM CS_SNAPSHOTS
+            DELETE FROM CS_SCENARIO_DATA
             WHERE scenario_id = ?
               AND ccy = ?
             `,
-            [scenario_name, ccy]
+            [scenario_id, ccy]
           );
 
           const stmt = db.prepare(`
-            INSERT INTO CS_SNAPSHOTS
+            INSERT INTO CS_SCENARIO_DATA
             (
               asof_date,
               run_id,
@@ -65,9 +69,10 @@ module.exports = function registerCSScenarioHandlers({
               ccy,
               rating,
               tenor,
-              value
+              value,
+              created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
           `);
 
           for (const row of data) {
@@ -82,7 +87,7 @@ module.exports = function registerCSScenarioHandlers({
               stmt.run([
                 asof_date,
                 run_id,
-                scenario_name,
+                scenario_id,
                 ccy,
                 rating,
                 key,
@@ -106,16 +111,17 @@ module.exports = function registerCSScenarioHandlers({
       });
 
       await new Promise((resolve, reject) => {
-        refreshTable('CS_SNAPSHOTS', (err, rows) => {
+        refreshTable('CS_SCENARIO_DATA', (err, rows) => {
           if (err) return reject(err);
-          console.log('[CS_SNAPSHOTS REFRESHED]', rows?.length || 0);
+          console.log('[CS_SCENARIO_DATA REFRESHED]', rows?.length || 0);
           resolve(rows || []);
         });
       });
 
       return {
         success: true,
-        scenario_name
+        scenario_id,
+        ccy
       };
 
     } catch (err) {
@@ -132,54 +138,59 @@ module.exports = function registerCSScenarioHandlers({
   ipcMain.removeHandler('cs:delete-scenario');
 } catch {}
 
-ipcMain.handle('cs:delete-scenario', async (_event, payload) => {
-  try {
-    const scenario_name = String(payload?.scenario_name || '').trim();
-    const ccy = 'EUR';
+  ipcMain.handle('cs:delete-scenario', async (_event, payload) => {
+    try {
+      const scenario_id = String(payload?.scenario_id || payload?.scenario_name || '').trim();
+      const ccy = String(payload?.ccy || 'EUR').trim().toUpperCase();
 
-    if (!scenario_name) {
-      throw new Error('scenario_name missing');
-    }
+      if (!scenario_id) {
+        throw new Error('scenario_id missing');
+      }
 
-    if (scenario_name === 'BASE') {
-      throw new Error('BASE cannot be deleted');
-    }
+      if (!ccy) {
+        throw new Error('ccy missing');
+      }
 
-    await new Promise((resolve, reject) => {
-      db.run(
-        `
-        DELETE FROM CS_SNAPSHOTS
-        WHERE scenario_id = ?
-          AND ccy = ?
-        `,
-        [scenario_name, ccy],
-        function (err) {
-          if (err) return reject(err);
-          resolve(this.changes || 0);
-        }
-      );
-    });
+      if (scenario_id === 'BASE') {
+        throw new Error('BASE cannot be deleted');
+      }
 
-    await new Promise((resolve, reject) => {
-      refreshTable('CS_SNAPSHOTS', (err, rows) => {
-        if (err) return reject(err);
-        console.log('[CS_SNAPSHOTS REFRESHED AFTER DELETE]', rows?.length || 0);
-        resolve(rows || []);
+      await new Promise((resolve, reject) => {
+        db.run(
+          `
+          DELETE FROM CS_SCENARIO_DATA
+          WHERE scenario_id = ?
+            AND ccy = ?
+          `,
+          [scenario_id, ccy],
+          function (err) {
+            if (err) return reject(err);
+            resolve(this.changes || 0);
+          }
+        );
       });
-    });
 
-    return {
-      success: true,
-      scenario_name
-    };
+      await new Promise((resolve, reject) => {
+        refreshTable('CS_SCENARIO_DATA', (err, rows) => {
+          if (err) return reject(err);
+          console.log('[CS_SCENARIO_DATA REFRESHED AFTER DELETE]', rows?.length || 0);
+          resolve(rows || []);
+        });
+      });
 
-  } catch (err) {
-    console.error('[cs:delete-scenario]', err);
+      return {
+        success: true,
+        scenario_id,
+        ccy
+      };
 
-    return {
-      success: false,
-      error: err.message
-    };
-  }
-});
+    } catch (err) {
+      console.error('[cs:delete-scenario]', err);
+
+      return {
+        success: false,
+        error: err.message
+      };
+    }
+  });
 };

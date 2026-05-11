@@ -1,18 +1,27 @@
 'use strict';
 
-let csScenarioBuilderListenersInstalled = false;
+import {
+  showSuccess,
+  showError,
+  showInfo
+} from '../../../../core/ui/notifications/notifications.js';
 
+let csScenarioBuilderListenersInstalled = false;
 let fillRightBound = false;
 
 export function renderCSScenarioBuilder() {
   console.log('🔥 CS BUILDER RENDER');
 
-    if (!csScenarioBuilderListenersInstalled) {
+  if (!csScenarioBuilderListenersInstalled) {
     document.addEventListener('cs:scenario:ready', () => {
       renderCSScenarioBuilder();
     });
 
     document.addEventListener('cs:base:ready', () => {
+      renderCSScenarioBuilder();
+    });
+
+    document.addEventListener('ccy:changed', () => {
       renderCSScenarioBuilder();
     });
 
@@ -31,11 +40,27 @@ export function renderCSScenarioBuilder() {
     return;
   }
 
+  const selectedCcy =
+    appState.getSelectedCcy?.() ||
+    appState.selectedCcy ||
+    'EUR';
+
+  const ccy = String(selectedCcy).trim().toUpperCase();
+
+  bindCcySelect(ccy);
+
   const baseLongRows = appState.getCSBaseData?.() || [];
-  const baseRows = pivotCreditSpreadRowsByRating(baseLongRows);
+
+  const baseFiltered = baseLongRows.filter(r =>
+    String(r?.ccy || '').trim().toUpperCase() === ccy &&
+    String(r?.scenario_id || 'BASE').trim() === 'BASE' &&
+    String(r?.run_id || 'BASE').trim() === 'BASE'
+  );
+
+  const baseRows = pivotCreditSpreadRowsByRating(baseFiltered);
 
   if (!baseRows.length) {
-    container.innerHTML = '<p>No CS_BASE data loaded</p>';
+    container.innerHTML = `<p>No CS_BASE data loaded for ${ccy}</p>`;
   } else {
     renderTable(baseRows);
   }
@@ -47,57 +72,10 @@ export function renderCSScenarioBuilder() {
   bindShift();
   bindFillRight();
 
-  // =====================================================
-  // MESSAGE BOX
-  // =====================================================
-  function showMessage(text, type = 'info') {
-    let box = document.getElementById('csMessageBox');
-
-    if (!box) {
-      box = document.createElement('div');
-      box.id = 'csMessageBox';
-      box.style.position = 'fixed';
-      box.style.top = '20px';
-      box.style.right = '20px';
-      box.style.zIndex = '9999';
-      box.style.padding = '10px 14px';
-      box.style.borderRadius = '8px';
-      box.style.fontSize = '14px';
-      box.style.fontWeight = '600';
-      box.style.boxShadow = '0 6px 18px rgba(0,0,0,0.2)';
-      box.style.transition = 'opacity 0.25s ease';
-      box.style.opacity = '0';
-      box.style.pointerEvents = 'none';
-      document.body.appendChild(box);
-    }
-
-    box.textContent = text;
-
-    if (type === 'error') {
-      box.style.background = '#c62828';
-      box.style.color = '#fff';
-    } else if (type === 'success') {
-      box.style.background = '#2e7d32';
-      box.style.color = '#fff';
-    } else {
-      box.style.background = '#1565c0';
-      box.style.color = '#fff';
-    }
-
-    box.style.opacity = '1';
-
-    clearTimeout(box._timer);
-    box._timer = setTimeout(() => {
-      box.style.opacity = '0';
-    }, 2500);
-  }
-
-  // =====================================================
-  // TABLE
-  // =====================================================
+  
   function renderTable(data) {
     if (!Array.isArray(data) || !data.length) {
-      container.innerHTML = '<p>No CS scenario data available</p>';
+      container.innerHTML = `<p>No CS scenario data available for ${ccy}</p>`;
       return;
     }
 
@@ -105,7 +83,7 @@ export function renderCSScenarioBuilder() {
 
     let html = `
       <div class="table-card">
-        <h4>CS Matrix Builder</h4>
+        <h4>CS Matrix Builder (${getCurvePackage(ccy)})</h4>
 
         <div style="overflow:auto; max-width:100%;">
           <table class="ml-table">
@@ -135,7 +113,6 @@ export function renderCSScenarioBuilder() {
         html += `
           <td>
             <div style="display:flex; gap:4px; align-items:center;">
-
               <input
                 type="number"
                 step="0.01"
@@ -156,7 +133,6 @@ export function renderCSScenarioBuilder() {
                   color:#fff;
                 "
               >→</button>
-
             </div>
           </td>
         `;
@@ -176,30 +152,32 @@ export function renderCSScenarioBuilder() {
   }
 
   function buildHeaders(data) {
+    const metaKeys = new Set(['curve_id', 'ccy', 'RATING', 'rating', 'rank']);
+
     const tenorSet = new Set();
 
     data.forEach(row => {
       Object.keys(row || {}).forEach(key => {
-        if (key !== 'RATING') tenorSet.add(key);
+        if (!metaKeys.has(key)) tenorSet.add(key);
       });
     });
 
     const tenors = Array.from(tenorSet).sort((a, b) => Number(a) - Number(b));
-
     return ['RATING', ...tenors];
   }
 
-  // =====================================================
-  // DROPDOWN
-  // =====================================================
   function bindScenarioDropdown() {
     const select = document.getElementById('csScenarioSelect');
     if (!select) return;
 
+    // 👉 DAS ist der Fix
+    const previousValue = String(select.value || '').trim();
+
     const snapshots = appState.getCSScenarioData?.() || [];
 
     const names = snapshots
-      .map(r => r?.scenario_id)
+      .filter(r => String(r?.ccy || '').trim().toUpperCase() === ccy)
+      .map(r => String(r?.scenario_id || '').trim())
       .filter(Boolean);
 
     const scenarioNames = [...new Set(['BASE', ...names])].sort((a, b) => {
@@ -213,12 +191,14 @@ export function renderCSScenarioBuilder() {
       ${scenarioNames.map(n => `<option value="${n}">${n}</option>`).join('')}
     `;
 
+    // 👉 UND DAS ist der zweite Teil vom Fix
+    if (previousValue && scenarioNames.includes(previousValue)) {
+      select.value = previousValue;
+    }
+
     updateDeleteButtonState();
   }
 
-  // =====================================================
-  // SELECT SCENARIO
-  // =====================================================
   function bindScenarioSelection() {
     const select = document.getElementById('csScenarioSelect');
     const nameInput = document.getElementById('csScenarioName');
@@ -243,11 +223,15 @@ export function renderCSScenarioBuilder() {
         return;
       }
 
-      const filtered = snapshots.filter(r => r?.scenario_id === selected);
+      const filtered = snapshots.filter(r =>
+        String(r?.ccy || '').trim().toUpperCase() === ccy &&
+        String(r?.scenario_id || '').trim() === selected
+      );
+
       const pivoted = pivotCreditSpreadRowsByRating(filtered);
 
       if (!pivoted.length) {
-        showMessage('Keine Daten gefunden', 'error');
+        showError(`No data found for ${ccy}`);
         return;
       }
 
@@ -258,18 +242,36 @@ export function renderCSScenarioBuilder() {
     };
   }
 
+  function getCurvePackage(ccy, rank = 'senior_unsecured') {
+    return `${ccy}:RATING:${rank}`;
+  }
+
+  function buildCurveId(ccy, rating, rank = 'senior_unsecured') {
+    return `${ccy}:RATING:${rating}:${rank}`;
+  }
+
   function pivotCreditSpreadRowsByRating(rows) {
     const rowMap = new Map();
 
     rows.forEach(row => {
-      const rating = String(row?.rating || '').trim();
+      const rating = String(row?.rating || row?.RATING || '').trim();
       const tenor = String(row?.tenor || '').trim();
       const value = parseFloat(String(row?.value ?? '').replace(',', '.'));
+      const rank = String(row?.rank || 'senior_unsecured').trim();
 
       if (!rating || !tenor || Number.isNaN(value)) return;
 
+      const curve_id =
+        String(row?.curve_id || '').trim() ||
+        buildCurveId(ccy, rating, rank);
+
       if (!rowMap.has(rating)) {
-        rowMap.set(rating, { RATING: rating });
+        rowMap.set(rating, {
+          curve_id,
+          ccy,
+          RATING: rating,
+          rank,
+        });
       }
 
       rowMap.get(rating)[tenor] = value;
@@ -278,9 +280,6 @@ export function renderCSScenarioBuilder() {
     return Array.from(rowMap.values());
   }
 
-  // =====================================================
-  // SAVE
-  // =====================================================
   function bindSave() {
     const saveBtn = document.getElementById('csSaveScenarioBtn');
     const nameInput = document.getElementById('csScenarioName');
@@ -288,33 +287,42 @@ export function renderCSScenarioBuilder() {
     if (!saveBtn || !nameInput) return;
 
     saveBtn.onclick = async () => {
-      const scenario_name = String(nameInput.value || '').trim();
+      const scenario_id = String(nameInput.value || '').trim();
 
-      if (!scenario_name) {
-        showMessage('Name fehlt', 'error');
+      if (!scenario_id) {
+        showError('Name missing');
         return;
       }
 
-      if (scenario_name === 'BASE') {
-        showMessage('BASE kann nicht gespeichert werden', 'error');
+      if (scenario_id === 'BASE') {
+        showError('BASE scenario cannot be saved');
         return;
       }
 
+      const rank = 'senior_unsecured';
       const inputs = container.querySelectorAll('input[data-rating][data-tenor]');
       const rowMap = new Map();
 
       for (const input of inputs) {
-        const rating = input.dataset.rating;
-        const tenor = input.dataset.tenor;
+        const rating = String(input.dataset.rating || '').trim();
+        const tenor = String(input.dataset.tenor || '').trim();
         const value = parseFloat(String(input.value || '').replace(',', '.'));
 
+        if (!rating || !tenor) continue;
+
         if (Number.isNaN(value)) {
-          showMessage('Ungültiger Wert', 'error');
+          showError('Invalid value');
           return;
         }
 
         if (!rowMap.has(rating)) {
-          rowMap.set(rating, { RATING: rating });
+          rowMap.set(rating, {
+            curve_id: buildCurveId(ccy, rating, rank),
+            ccy,
+            RATING: rating,
+            rating,
+            rank,
+          });
         }
 
         rowMap.get(rating)[tenor] = value;
@@ -323,27 +331,27 @@ export function renderCSScenarioBuilder() {
       const data = Array.from(rowMap.values());
 
       const result = await window.api.invoke('cs:create-scenario', {
-        scenario_name,
+        scenario_id,
+        ccy,
+        rank,
+        curve_package: getCurvePackage(ccy, rank), // nur Info, falls Handler es ignoriert auch ok
         data
       });
 
       if (result?.success) {
-        showMessage('CS Scenario gespeichert', 'success');
+        showSuccess(`CS scenario saved (${ccy})`);
         bindScenarioDropdown();
 
         const select = document.getElementById('csScenarioSelect');
-        if (select) select.value = scenario_name;
+        if (select) select.value = scenario_id;
 
         updateDeleteButtonState();
       } else {
-        showMessage(result?.error || 'Fehler beim Speichern', 'error');
+        showError(result?.error || 'Failed to save scenario');
       }
     };
   }
 
-  // =====================================================
-  // DELETE
-  // =====================================================
   function bindDelete() {
     const deleteBtn = document.getElementById('csDeleteScenarioBtn');
     const select = document.getElementById('csScenarioSelect');
@@ -353,24 +361,25 @@ export function renderCSScenarioBuilder() {
 
     deleteBtn.onclick = async () => {
       const selected = String(select?.value || '').trim();
-      const scenario_name = selected || String(nameInput?.value || '').trim();
+      const scenario_id = selected || String(nameInput?.value || '').trim();
 
-      if (!scenario_name) {
-        showMessage('Kein Szenario gewählt', 'error');
+      if (!scenario_id) {
+        showError('No scenario selected');
         return;
       }
 
-      if (scenario_name === 'BASE') {
-        showMessage('BASE kann nicht gelöscht werden', 'error');
+      if (scenario_id === 'BASE') {
+        showError('BASE scenario cannot be deleted');
         return;
       }
 
       const result = await window.api.invoke('cs:delete-scenario', {
-        scenario_name
+        scenario_id,
+        ccy
       });
 
       if (result?.success) {
-        showMessage('Szenario gelöscht', 'success');
+        showSuccess(`Scenario deleted (${ccy})`);
 
         bindScenarioDropdown();
 
@@ -380,7 +389,7 @@ export function renderCSScenarioBuilder() {
         renderTable(baseRows);
         updateDeleteButtonState();
       } else {
-        showMessage(result?.error || 'Fehler beim Löschen', 'error');
+        showError(result?.error || 'Failed to delete scenario');
       }
     };
 
@@ -397,9 +406,6 @@ export function renderCSScenarioBuilder() {
     btn.disabled = !selected || selected === 'BASE';
   }
 
-  // =====================================================
-  // SHIFT
-  // =====================================================
   function bindShift() {
     const shiftBtn = document.getElementById('csApplyShiftBtn');
     const shiftInput = document.getElementById('csShiftInput');
@@ -410,7 +416,7 @@ export function renderCSScenarioBuilder() {
       const shift = parseFloat(String(shiftInput.value || '').replace(',', '.'));
 
       if (Number.isNaN(shift)) {
-        showMessage('Ungültiger Shift', 'error');
+        showError('Invalid shift');
         return;
       }
 
@@ -423,13 +429,10 @@ export function renderCSScenarioBuilder() {
         input.value = (current + shift).toFixed(2);
       });
 
-      showMessage('Shift angewendet', 'success');
+      showSuccess('Shift applied');
     };
   }
 
-  // =====================================================
-  // FILL RIGHT
-  // =====================================================
   function bindFillRight() {
     if (fillRightBound) return;
 
@@ -440,7 +443,7 @@ export function renderCSScenarioBuilder() {
 
       const btn = e.target;
       const cell = btn.closest('td');
-      
+
       if (!cell) return;
 
       const input = cell.querySelector('input[data-tenor]');
@@ -458,7 +461,33 @@ export function renderCSScenarioBuilder() {
         nextCell = nextCell.nextElementSibling;
       }
 
-      showMessage('Nach rechts gefüllt', 'success');
+      showInfo('Values filled to the right');
     });
+  }
+
+  function bindCcySelect(currentCcy) {
+    const select = document.getElementById('csScenarioCcySelect');
+    if (!select) return;
+
+    select.value = currentCcy;
+
+    if (select.dataset.bound === '1') return;
+    select.dataset.bound = '1';
+
+    select.onchange = () => {
+      const nextCcy = String(select.value || 'EUR').trim().toUpperCase();
+
+      if (appState.setSelectedCcy) {
+        appState.setSelectedCcy(nextCcy);
+      } else {
+        appState.selectedCcy = nextCcy;
+      }
+
+      document.dispatchEvent(
+        new CustomEvent('ccy:changed', { detail: { ccy: nextCcy } })
+      );
+
+      renderCSScenarioBuilder();
+    };
   }
 }
