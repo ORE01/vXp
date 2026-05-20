@@ -2,6 +2,7 @@
 // utils/linksToTables.js
 import { handleModalAction } from '../core/ui/modal/modalActions.js';
 import { appState } from '../../renderer/renderer.js';
+import { handleStructureTimelineModal } from '../features/products/StructureTimelineModal.js';
 
 
 
@@ -129,24 +130,22 @@ export function openProdEditorByProdId(prodId) {
   const prodDataArr = appState.getProdData?.() || [];
   const needle = String(prodId ?? '').trim();
 
-  const rowIndex = prodDataArr.findIndex(
+  const row = prodDataArr.find(
     r => String(r?.PROD_ID ?? '').trim() === needle
   );
 
-  if (rowIndex < 0) {
+  if (!row) {
     console.warn('[openProdEditorByProdId] PROD_ID nicht gefunden:', needle);
     return false;
   }
 
-  const row = prodDataArr[rowIndex];
-
   // Legacy-Kompatibilität:
   // Alte DB-Produkte haben oft nur CouponType.
-  // Das neue Modal braucht __PRODUCT_TEMPLATE__ und __UI_MODE__.
-  if (row && !row.__PRODUCT_TEMPLATE__) {
+  // Das neue Product Editor Modal braucht Template-/Mode-Info.
+  if (!row.__PRODUCT_TEMPLATE__) {
     const couponType = String(row.CouponType || '').trim().toUpperCase();
 
-    if (couponType === 'FLOATER') {
+    if (couponType === 'FLOATER' || couponType === 'FRN') {
       row.__PRODUCT_TEMPLATE__ = 'FRN';
       row.__UI_MODE__ = 'simple_frn';
     } else if (couponType === 'FIX') {
@@ -158,33 +157,19 @@ export function openProdEditorByProdId(prodId) {
     }
   }
 
-  const fakeBtn = document.createElement('button');
-  fakeBtn.type = 'button';
-  fakeBtn.className = 'edit-button';
-  fakeBtn.dataset.row = String(rowIndex);
-  fakeBtn.dataset.table = 'ProdAll';
-  fakeBtn.dataset.action = 'edit';
-  fakeBtn.dataset.prodId = needle;
+  console.log('[PRODUCT EDITOR ROUTE] opening new product editor', {
+    prodId: needle,
+    couponType: row.CouponType,
+    template: row.__PRODUCT_TEMPLATE__,
+    uiMode: row.__UI_MODE__,
+  });
 
-  const fakeEvt = {
-    preventDefault() {},
-    stopPropagation() {},
-    target: fakeBtn,
-    currentTarget: fakeBtn
-  };
-
-  try {
-    handleModalAction(
-      fakeEvt,
-      prodDataArr,
-      rowIndex,
-      'ProdAll',
-      'edit'
-    );
-  } catch (e) {
-    console.error('[openProdEditorByProdId] handleModalAction Fehler:', e);
-    return false;
-  }
+  handleStructureTimelineModal(needle, {
+    mode: 'edit',
+    source: 'prod-id-link',
+    templateName: row.__PRODUCT_TEMPLATE__,
+    uiMode: row.__UI_MODE__,
+  });
 
   return true;
 }

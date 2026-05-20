@@ -101,7 +101,11 @@ export function enhanceIncludeCheckboxes(container, opts = {}) {
     return;
   }
 
-  const norm = (v) => String(v ?? '').trim().toLowerCase();
+  const norm = (v) =>
+    String(v ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
 
   // ---------- Helpers (robust, no :has)
   const getHeaderCells = (host) => {

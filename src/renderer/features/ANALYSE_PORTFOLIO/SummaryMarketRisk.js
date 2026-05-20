@@ -925,7 +925,7 @@ export function showProdDetailsSidepanel(prod_id) {
   const row = appState.getProdById?.(id);
 
   if (!row) {
-    container.innerHTML = `<div class="muted">No details found in ProdAll for PROD_ID: ${id}</div>`;
+    container.innerHTML = `<div class="muted">No product details found for PROD_ID: ${id}</div>`;
   } else {
     const entries = Object.entries(row);
     container.innerHTML = `

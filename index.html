@@ -70,8 +70,9 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <link href="./css/CREATE_PORTFOLIO/createPortfolio.css" rel="stylesheet">
 
-  <link href="./css/NEW_PRODUCT/newPortfolio.css" rel="stylesheet">
-  <link href="./css/NEW_PRODUCT/offers.css" rel="stylesheet">
+  <link href="./css/products/newPortfolio.css" rel="stylesheet">
+  <link href="./css/products/offers.css" rel="stylesheet">
+  <link href="./css/products/structureTimeline.css" rel="stylesheet">
   
   <link href="./css/MARKET_DATA/creditSpreads.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
@@ -225,7 +226,7 @@ Feature:    Wenn es nur in einem Panel gilt
       <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button> 
       <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
       <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button> 
-      <button class="tablinks" id="NEW_PRODUCTS_Tab">NEW PRODUCTS</button> 
+      <button class="tablinks" id="products_Tab">PRODUCTS</button> 
       <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
       <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
       <button class="tablinks" id="DATA_Tab">UPDATES</button> 
@@ -801,7 +802,7 @@ Feature:    Wenn es nur in einem Panel gilt
          class="muted"
          style="margin-bottom:10px;"></div>
 
-    <!-- Produkt-Stammdaten aus ProdAll -->
+    <!-- Produkt-Stammdaten aus -->
     <div id="prodDetailsContainer"></div>
   </div>
 </div>
@@ -2421,7 +2422,7 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
 <!-- Modal: New Products -->
-<div id="NEW_PRODUCTS_Modal" class="table">
+<div id="products_Modal" class="table">
   <div class="table-content">
     <!-- <span class="close" data-off-close="1">&times;</span> -->
 

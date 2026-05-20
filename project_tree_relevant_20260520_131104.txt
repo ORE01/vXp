@@ -1,5 +1,5 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-05-08 10:00:20
+Generated: 2026-05-20 13:11:04
 Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 8
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
@@ -51,11 +51,12 @@ electron_app
 │   │   ├── historicData.css
 │   │   ├── MarketDataSlideIn.css
 │   │   └── rates.css
-│   ├── NEW_PRODUCT
+│   ├── products
 │   │   ├── issuer.css
 │   │   ├── newPortfolio.css
 │   │   ├── offers.css
-│   │   └── products.css
+│   │   ├── products.css
+│   │   └── structureTimeline.css
 │   ├── REPORTS
 │   │   ├── offersPreview.css
 │   │   ├── reports.css
@@ -136,6 +137,7 @@ electron_app
 │   │   ├── services
 │   │   │   ├── db.service.js
 │   │   │   ├── excel.service.js
+│   │   │   ├── productCanonical.service.js
 │   │   │   └── python.service.js
 │   │   ├── utils
 │   │   │   ├── logger.js
@@ -304,16 +306,42 @@ electron_app
 │   │   │   │       ├── swaptionReadyListeners.js
 │   │   │   │       ├── swaptionVols.js
 │   │   │   │       └── volCube.js
-│   │   │   ├── NEW_PRODUCTS
-│   │   │   │   ├── ISSUER.js
-│   │   │   │   ├── PROD.js
-│   │   │   │   ├── PRODCoupon.js
-│   │   │   │   ├── prodSimpleCoupon.js
-│   │   │   │   └── readOffers.js
 │   │   │   ├── OFFERS
 │   │   │   │   ├── csScenarioUI.js
 │   │   │   │   ├── dealsEnhancerBridge.js
 │   │   │   │   └── offersUI.js
+│   │   │   ├── products
+│   │   │   │   ├── legacy
+│   │   │   │   │   └── PRODCoupon.legacy.js
+│   │   │   │   ├── structureTimeline
+│   │   │   │   │   ├── schedules
+│   │   │   │   │   │   ├── bulkCallScheduleDrawer.js
+│   │   │   │   │   │   ├── floatingCouponScheduleDrawer.js
+│   │   │   │   │   │   ├── scheduleHelpers.js
+│   │   │   │   │   │   └── structureRowApi.js
+│   │   │   │   │   ├── structureModelSetupDrawer.js
+│   │   │   │   │   ├── structureProductSetupDrawer.js
+│   │   │   │   │   ├── structureProductValuationDrawer.js
+│   │   │   │   │   ├── structureSimpleFixedDrawer.js
+│   │   │   │   │   ├── structureSimpleFrnDrawer.js
+│   │   │   │   │   ├── structureTimelineData.js
+│   │   │   │   │   ├── structureTimelineDrawer.js
+│   │   │   │   │   ├── structureTimelineGrid.js
+│   │   │   │   │   ├── structureTimelineSchedules.js
+│   │   │   │   │   └── structureTimelineUtils.js
+│   │   │   │   ├── templates
+│   │   │   │   │   ├── complexBondTemplate.js
+│   │   │   │   │   ├── simpleFixedBondTemplate.js
+│   │   │   │   │   └── simpleFRNTemplate.js
+│   │   │   │   ├── ISSUER.js
+│   │   │   │   ├── prodSimpleCoupon.js
+│   │   │   │   ├── productFieldConfig.js
+│   │   │   │   ├── productTableController.js
+│   │   │   │   ├── productTemplateResolver.js
+│   │   │   │   ├── productTemplates.js
+│   │   │   │   ├── productValidation.js
+│   │   │   │   ├── readOffers.js
+│   │   │   │   └── StructureTimelineModal.js
 │   │   │   ├── REPORTS
 │   │   │   │   ├── CustomerReports.js
 │   │   │   │   ├── CustomerReportsPresetUI.js

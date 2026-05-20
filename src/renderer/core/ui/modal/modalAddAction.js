@@ -4,8 +4,49 @@ import { closeModal } from './modalUI.js';
 import { gatherModalData } from './modalData.js';
 import { requestTableRefreshAfterMutation } from './modalRefresh.js';
 import { displayErrorMessage } from './modalFeedback.js';
+import { applyProductTemplateDefaults } from '../../../features/products/productTemplateResolver.js';
 
 let isAddingRow = false;
+
+// =====================================================
+// PRODUCT TABLE DETECTION
+// =====================================================
+
+function isProductTableName(tableName) {
+  return (
+    tableName === 'v_PRODUCTS_APP' ||
+    tableName === 'v_PRODUCTS_CANONICAL' ||
+    tableName === 'PRODUCTS_MASTER'
+  );
+}
+
+function sanitizeProductData(row = {}) {
+  const clean = { ...(row || {}) };
+
+  // UI-only template fields:
+  // Keep __PRODUCT_TEMPLATE_SELECTOR__ / __PRODUCT_TEMPLATE__ for backend routing.
+  // The backend service uses them to map Product Type -> CouponType/FINLIB/MODEL.
+  // They are not written to DB directly.
+  delete clean.__UI_MODE__;
+
+  // technical/generated fields from canonical views — never write back from modal
+  delete clean.product_id;
+  delete clean.created_at;
+  delete clean.updated_at;
+
+  delete clean.PRODUCT_TYPE;
+  delete clean.COUPON_FREQ;
+  delete clean.PAYMENT_FREQ;
+  delete clean.SCHEDULE_RULE;
+  delete clean.USES_EVENTS;
+
+  delete clean.fixed_coupon_frequency;
+  delete clean.fixed_payment_frequency;
+  delete clean.fixed_schedule_generation_rule;
+  delete clean.fixed_uses_explicit_events;
+
+  return clean;
+}
 
 // =====================================================
 // ADD
@@ -31,10 +72,47 @@ export async function addSaveButtonHandler(form, selectedTableName, onReload) {
   isAddingRow = true;
 
   try {
-    const newRowData = gatherModalData(form);
-    delete newRowData.ID;
+    let newRowData = gatherModalData(form);
 
-    await addNewRow(newRowData, selectedTableName);
+    const selectedTemplate =
+      form.querySelector('[data-field="__PRODUCT_TEMPLATE_SELECTOR__"]')?.value ||
+      form.querySelector('[name="__PRODUCT_TEMPLATE_SELECTOR__"]')?.value ||
+      newRowData.__PRODUCT_TEMPLATE_SELECTOR__ ||
+      newRowData.__PRODUCT_TEMPLATE__ ||
+      null;
+
+    if (selectedTemplate) {
+      newRowData.__PRODUCT_TEMPLATE_SELECTOR__ = selectedTemplate;
+    }
+
+    delete newRowData.ID;
+    delete newRowData.id;
+
+    if (isProductTableName(selectedTableName)) {
+      newRowData = applyProductTemplateDefaults(newRowData, selectedTableName);
+      newRowData = sanitizeProductData(newRowData);
+
+      if (!newRowData.PROD_ID) {
+        throw new Error('Missing PROD_ID for new product');
+      }
+
+      console.log('[ADD PRODUCT DATA]', {
+        table: selectedTableName,
+        prodId: newRowData.PROD_ID,
+        productName: newRowData.product_name,
+        description: newRowData.DESCRIPTION,
+        couponType: newRowData.CouponType,
+        schedule: newRowData.SCHEDULE,
+        finlib: newRowData.FINLIB,
+        model: newRowData.MODEL,
+        methode: newRowData.METHODE,
+        newRowData,
+      });
+
+      await addProductViaCanonicalUpdate(newRowData, selectedTableName);
+    } else {
+      await addNewRow(newRowData, selectedTableName);
+    }
 
     closeModal();
     requestTableRefreshAfterMutation(selectedTableName);
@@ -51,31 +129,79 @@ export async function addSaveButtonHandler(form, selectedTableName, onReload) {
   }
 }
 
+// =====================================================
+// PRODUCT ADD: canonical route via update-data
+// Important: do NOT insert directly into product views
+// =====================================================
+
+function addProductViaCanonicalUpdate(newRowData, selectedTableName, { timeoutMs = 15000 } = {}) {
+  return new Promise((resolve, reject) => {
+    let done = false;
+
+    const finishOk = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+
+    const finishErr = (error) => {
+      if (done) return;
+      done = true;
+
+      const msg =
+        error?.message ||
+        error?.error ||
+        String(error || 'Unknown product add error');
+
+      reject(new Error(msg));
+    };
+
+    window.api.once('update-data-success', finishOk);
+    window.api.once('update-data-error', finishErr);
+
+    window.api.send('update-data', {
+      cleanTableName: selectedTableName || 'v_PRODUCTS_APP',
+      rowIndex: null,
+      newData: newRowData,
+      uniqueIdentifier: {
+        column: 'PROD_ID',
+        value: newRowData.PROD_ID,
+      },
+    });
+
+    if (timeoutMs > 0) {
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        reject(new Error(`addProductViaCanonicalUpdate timeout for ${newRowData.PROD_ID}`));
+      }, timeoutMs);
+    }
+  });
+}
+
+// =====================================================
+// GENERIC ADD: legacy tables
+// =====================================================
+
 export function addNewRow(newRowData, cleanTableName, { timeoutMs = 15000 } = {}) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const successCh = `add-new-row-success:${requestId}`;
   const errorCh = `add-new-row-error:${requestId}`;
 
   return new Promise((resolve, reject) => {
-    let timer;
-
-    const cleanup = () => {
-      if (timer) clearTimeout(timer);
-
-      if (window.api?.removeAllListeners) {
-        window.api.removeAllListeners(successCh);
-        window.api.removeAllListeners(errorCh);
-      }
-    };
+    let done = false;
 
     const onSuccess = () => {
-      cleanup();
+      if (done) return;
+      done = true;
       resolve();
     };
 
     const onError = (error) => {
+      if (done) return;
+      done = true;
+
       const msg = error?.message || String(error || 'Unknown error');
-      cleanup();
       reject(new Error(msg));
     };
 
@@ -85,12 +211,13 @@ export function addNewRow(newRowData, cleanTableName, { timeoutMs = 15000 } = {}
     window.api.send('add-new-row', {
       newRowData,
       cleanTableName,
-      requestId
+      requestId,
     });
 
     if (timeoutMs > 0) {
-      timer = setTimeout(() => {
-        cleanup();
+      setTimeout(() => {
+        if (done) return;
+        done = true;
         reject(new Error(`addNewRow timeout (${requestId})`));
       }, timeoutMs);
     }

@@ -52,7 +52,20 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
 
     // ISSUER
     case 'IssuerData':
-      return handlers.handleIssuerDataInit?.(rows);
+      if (typeof handlers.handleIssuerDataInit !== 'function') {
+        throw new Error('[dataRouter] Missing handler: handleIssuerDataInit for IssuerData');
+      }
+
+      return handlers.handleIssuerDataInit(rows);
+
+    case 'IssuerRankRatingData':
+      if (typeof handlers.handleIssuerRankRatingData !== 'function') {
+        throw new Error('[dataRouter] Missing handler: handleIssuerRankRatingData for IssuerRankRatingData');
+      }
+
+      return handlers.handleIssuerRankRatingData(rows);
+
+    // COUNTRY
 
     case 'CountryLookupData':
       return handlers.handleCountryLookupDataInit?.(rows);
@@ -75,16 +88,36 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
       return handlers.handleRankData?.(rows);
 
     // PRODUCTS
-    case 'ProdAllData':
-      return handlers.handleProdDataInit?.(rows);
+    case 'v_PRODUCTS_CANONICALData':
+    case 'v_PRODUCTS_APPData':
+      window.__canonicalProductsLoaded = true;
+      return handlers.renderProductTableInit(rows);
 
-    case 'ProdCouponSchedulesData':
-      if (appState?.setCouponData) return appState.setCouponData(data);
-      return console.warn('[dataRouter] appState.setCouponData missing');
+    case 'PRODUCT_STRUCTUREData':
+      if (appState) {
+        appState.productStructureData = rows;
 
-    // DEALS (DealsMain contains deals + offers; handling is in handleDealsMainData)
+        if (typeof appState.getProductStructureData !== 'function') {
+          appState.getProductStructureData = function () {
+            return this.productStructureData || [];
+          };
+        }
+
+        console.log('[dataRouter] PRODUCT_STRUCTURE loaded', rows.length);
+        return;
+      }
+
+      return console.warn('[dataRouter] appState missing for PRODUCT_STRUCTURE');
+
+    // DEALS
+    // Frontend event stays DealsMainData.
+    // DataPump may read from v_PORTFOLIO_TRADES_ENRICHED internally.
     case 'DealsMainData':
-      return handlers.handleDealsMainData?.(data);
+      if (typeof handlers.handleDealsMainData !== 'function') {
+        throw new Error('[dataRouter] Missing handler: handleDealsMainData for DealsMainData');
+      }
+
+      return handlers.handleDealsMainData(rows);
 
     // PortfoliosData ist die v_Portfolios_enriched!!!!!
     case 'PortfoliosData':

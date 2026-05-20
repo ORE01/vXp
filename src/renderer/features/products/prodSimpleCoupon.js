@@ -1,11 +1,11 @@
-﻿    import { filteredIssuerData } from '../NEW_PRODUCTS/ISSUER.js';
+﻿    import { filteredIssuerData } from '../products/ISSUER.js';
     import { createDropdown } from '../../core/ui/modal/modalFields.js'
     import { convertDateToISO } from '../../utils/format.js';
     import { PRODUCT_FIELD_CONFIG } from './productFieldConfig.js';
     
     
    
-export function handleProdAllFields(fieldName, rowData, formRow, label) {
+export function handleProductFields(fieldName, rowData, formRow, label) {
   const uiMode = rowData.__UI_MODE__ || 'FIX';
   let couponSection = 'OTHER';
   if (HEADER_FIELDS.includes(fieldName)) {
@@ -171,6 +171,7 @@ export function handleProdAllFields(fieldName, rowData, formRow, label) {
     }
 
     case 'MATURITY':
+      
     case 'START_DATE': {
       const toISO = (d) => {
         const y = d.getFullYear();
@@ -388,7 +389,7 @@ export function handleProdAllFields(fieldName, rowData, formRow, label) {
 
 
 
-// ðŸ§± Abschnitts-Definitionen
+// Abschnitts-Definitionen
 const HEADER_FIELDS = [
   'INCLUDE',
   'PROD_ID',

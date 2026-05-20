@@ -22,12 +22,22 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
   let tableNamesReady = false;
   let tableNamesLoading = false;
 
-  const excluded = new Set([
-    'sqlite_sequence',
-    'Instruments',
-    'PDMain',
-    'sortedLossesIndicesMain',
-  ]);
+const excluded = new Set([
+  'sqlite_sequence',
+  'Instruments',
+  'PDMain',
+  'sortedLossesIndicesMain',
+
+  // Legacy product tables removed from active architecture
+  'ProdAll',
+  'ProdCouponSchedules',
+  'LEGACY_ProdAll',
+  'LEGACY_ProdCouponSchedules',
+]);
+
+function isExcludedTable(tableName) {
+  return excluded.has(String(tableName || '').trim());
+}
 
   function safeSend(channel, payload) {
     try {
@@ -44,7 +54,8 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
         channel.includes('SWAPTION') ||
         channel.includes('EUSWAPTION') ||
         channel.includes('RATES') ||
-        channel.includes('CS_')
+        channel.includes('CS_') ||
+        channel.includes('PRODUCT_STRUCTURE')
       ) {
         log('[DATAPUMP] SEND:', channel, 'rows:', count);
         if (Array.isArray(payload) && payload.length) {
@@ -58,13 +69,25 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
     }
   }
 
-  function resolveTableName(tableName) {
-    if (tableName === 'Portfolios') {
-      return 'v_Portfolios_enriched';
-    }
-    return tableName;
+function resolveTableName(tableName) {
+  if (tableName === 'Portfolios') {
+    return 'v_Portfolios_enriched';
   }
 
+  if (tableName === 'DealsMain') {
+    return 'v_PORTFOLIO_TRADES_ENRICHED';
+  }
+
+  if (tableName === 'Issuer') {
+    return 'v_ISSUER_APP';
+  }
+
+  if (tableName === 'IssuerRankRating') {
+    return 'v_ISSUER_RANK_RATING';
+  }
+
+  return tableName;
+}
   function fetchDataAndSendEvent(queryOrTable, eventName, cb) {
     if (
       String(queryOrTable).includes('SWAPTION') ||
@@ -111,7 +134,18 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
     log('[DATAPUMP] SWAPTION TABLES FOUND:', swaptionTables);
 
     for (const tableName of tableNames) {
+      if (isExcludedTable(tableName)) {
+        log('[DATAPUMP] skipped excluded table:', tableName);
+        continue;
+      }
+
       const resolved = resolveTableName(tableName);
+
+      if (isExcludedTable(resolved)) {
+        log('[DATAPUMP] skipped excluded resolved table:', resolved);
+        continue;
+      }
+
       const eventName = `${tableName}Data`;
 
       if (String(tableName).toUpperCase().includes('SWAPTION')) {
@@ -127,8 +161,28 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
   }
 
   function refreshTable(tableName, callback) {
+    if (isExcludedTable(tableName)) {
+      log('[DATAPUMP] refreshTable skipped excluded table:', tableName);
+
+      if (typeof callback === 'function') {
+        callback(null, []);
+      }
+
+      return;
+    }
+
     const eventIdentifier = `${tableName}Data`;
     const resolved = resolveTableName(tableName);
+
+    if (isExcludedTable(resolved)) {
+      log('[DATAPUMP] refreshTable skipped excluded resolved table:', resolved);
+
+      if (typeof callback === 'function') {
+        callback(null, []);
+      }
+
+      return;
+    }
 
     log('[DATAPUMP] refreshTable:', {
       tableName,
@@ -171,7 +225,7 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
 
       log('[DATAPUMP] RAW TABLE NAMES:', received);
 
-      tableNames = (received || []).filter(t => !excluded.has(t));
+      tableNames = (received || []).filter(t => !isExcludedTable(t));
       tableNamesReady = true;
 
       log('[DATAPUMP] FILTERED TABLE NAMES:', tableNames);

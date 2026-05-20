@@ -13,7 +13,6 @@
         this.issuerData = null;
         this.prodData = null;
         this.filteredProdData = null,
-        this.couponData = null;
 
         this.rankData = null;
 
@@ -28,7 +27,7 @@
 
         // Handlers werden im renderer/bootstrap injiziert
         this.handleIssuerData = null;
-        this.handleProdData   = null;
+        this.renderProductTable   = null;
         this.handleDealsData  = null;
         this.handleIRSensData = null;
         this.handleCSSensData = null;
@@ -235,8 +234,8 @@
                     new Set(Array.isArray(selection) ? selection : ['ALL'])
                 ])
                 );
-                    if (typeof this.handleProdData !== 'function') return;
-                    this.handleProdData(effectiveFilters);
+                    if (typeof this.renderProductTable !== 'function') return;
+                    this.renderProductTable(effectiveFilters);
 
             },
             },
@@ -311,13 +310,13 @@
 
     installHandlers({
         handleIssuerData,
-        handleProdData,
+        renderProductTable,
         handleDealsData,
         handleIRSensData,
         handleCSSensData,
         } = {}) {
         if (handleIssuerData) this.handleIssuerData = handleIssuerData;
-        if (handleProdData)   this.handleProdData   = handleProdData;
+        if (renderProductTable)   this.renderProductTable   = renderProductTable;
         if (handleDealsData)  this.handleDealsData  = handleDealsData;
         if (handleIRSensData) this.handleIRSensData = handleIRSensData;
         if (handleCSSensData) this.handleCSSensData = handleCSSensData;
@@ -406,15 +405,6 @@
     getRankData() {
     return this.rankData;
     }
-
-    setCouponData(data) {
-        //console.log('Setting CouponData:', data);
-        this.couponData = data;
-    }
-
-    getCouponData() {
-        return Array.isArray(this.couponData) ? this.couponData : []; 
-        }
 
     setFilteredProdData(data) {
         this.filteredProdData = data;

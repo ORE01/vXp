@@ -20,6 +20,12 @@ const registerAllIpcHandlers = require('./ipc/registerAllIpcHandlers');
 const mainFct = require('./main.gateway.js');
 const dbService = require('./services/db.service');
 
+mainFct.syncProductScheduleToProductEvents =
+  dbService.syncProductScheduleToProductEvents;
+
+mainFct.eraseCouponScheduleAndSync =
+  dbService.eraseCouponScheduleAndSync;
+
 const { logger } = require('./utils/logger');
 const { installCspHeaders } = require('./security/cspHeaders');
 const { createAppWindows } = require('./bootstrap/windows.bootstrap');

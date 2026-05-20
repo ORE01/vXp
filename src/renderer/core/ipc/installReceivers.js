@@ -26,6 +26,7 @@ export function installReceivers(deps = {}) {
     handleForwardData,
 
     handleIssuerDataInit,
+    handleIssuerRankRatingData,
     handleCountryLookupDataInit,
 
     handleCS_ACTIVEData,
@@ -35,7 +36,7 @@ export function installReceivers(deps = {}) {
 
     handleRankData,
 
-    handleProdDataInit,
+    renderProductTableInit,
 
     handleDealsMainData,
     handlePortNameList,
@@ -166,6 +167,7 @@ api.receive(channel, (data) => {
     handleForwardData,
 
     handleIssuerDataInit,
+    handleIssuerRankRatingData,
     handleCountryLookupDataInit,
 
     handleCS_ACTIVEData,
@@ -174,7 +176,7 @@ api.receive(channel, (data) => {
     handleCSScenarioData,
     handleRankData,
 
-    handleProdDataInit,
+    renderProductTableInit,
 
     handleDealsMainData,
     handlePortNameList,
@@ -246,11 +248,14 @@ api.receive(channel, (data) => {
 
   // ISSUER
   route('IssuerData');
+  route('IssuerRankRatingData');
   route('CountryLookupData');
 
   // PRODUCTS
-  route('ProdAllData');
-  route('ProdCouponSchedulesData');
+  route('v_PRODUCTS_CANONICALData');
+  route('v_PRODUCTS_APPData');
+  route('PRODUCT_STRUCTUREData');
+ 
 
   // DEALS
   // ✅ Do not directly call renderDealsPanel here.

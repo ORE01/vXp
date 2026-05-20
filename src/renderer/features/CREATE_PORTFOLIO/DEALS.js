@@ -4,8 +4,84 @@ import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tool
 import { attachIdLinks } from '../../utils/linksToTables.js';
 import { enhanceIncludeCheckboxes } from '../../core/ui/enhancers/includeToggleEnhancer.js';
 
-
 let filteredDealsData;
+
+/**
+ * Deals table display columns only.
+ *
+ * Important:
+ * - State keeps the full enriched view rows.
+ * - The table renders only these selected columns.
+ * - Internal keys remain unchanged; labels are only UI names.
+ */
+const DEALS_VISIBLE_COLUMNS = [
+  'TRADE_ID',
+  'INCLUDE',
+  'PORT_NAME',
+  'DEPOT_BANK',
+  'PROD_ID',
+  'TRADE_DATE',
+  'CATEGORY',
+  'NOTIONAL',
+  'PRICE_BUY',
+  'product_name',
+  'product_type',
+  'coupon_type',
+  'currency_code',
+  'maturity_date',
+  'PRODUCT_EXISTS',
+  'VALIDATION_STATUS',
+];
+
+const DEALS_COLUMN_LABELS = {
+  TRADE_ID: 'Trade ID',
+  INCLUDE: 'Include',
+  PORT_NAME: 'Portfolio',
+  DEPOT_BANK: 'Depot Bank',
+  PROD_ID: 'Product ID',
+  TRADE_DATE: 'Trade Date',
+  CATEGORY: 'Category',
+  NOTIONAL: 'Notional',
+  PRICE_BUY: 'Buy Price',
+  product_name: 'Product Name',
+  product_type: 'Product Type',
+  coupon_type: 'Coupon Type',
+  currency_code: 'CCY',
+  maturity_date: 'Maturity',
+  PRODUCT_EXISTS: 'Product Exists',
+  VALIDATION_STATUS: 'Status',
+};
+
+function filterDealsColumnsForDisplay(rows) {
+  if (!Array.isArray(rows)) return [];
+
+  return rows.map((row) => {
+    return DEALS_VISIBLE_COLUMNS.reduce((obj, key) => {
+      obj[key] = row?.[key] ?? '';
+      return obj;
+    }, {});
+  });
+}
+
+function mapDealViewRowToDealsMainRow(row = {}) {
+  return {
+    TRADE_ID: row.TRADE_ID ?? '',
+    INCLUDE: row.INCLUDE ?? 1,
+
+    port_name: row.port_name ?? row.PORT_NAME ?? '',
+    Depotbank: row.Depotbank ?? row.DEPOT_BANK ?? '',
+
+    PROD_ID: row.PROD_ID ?? row.product_id ?? '',
+    TRADE_DATE: row.TRADE_DATE ?? '',
+    CATEGORY: row.CATEGORY ?? '',
+    NOTIONAL: row.NOTIONAL ?? '',
+    PRICE_BUY: row.PRICE_BUY ?? '',
+  };
+}
+
+function buildDealsMainModalRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map(mapDealViewRowToDealsMainRow);
+}
 
 export function handleDealsData(receivedData, dealsTableName, opts = {}) {
   const tableName = dealsTableName || '';
@@ -16,7 +92,7 @@ export function handleDealsData(receivedData, dealsTableName, opts = {}) {
   const targetContainer = document.getElementById(targetId);
   if (!targetContainer) return;
 
-  // ✅ Gate: If we're rendering the main deals container and no portfolio is selected, render nothing.
+  // Gate: If we're rendering the main deals container and no portfolio is selected, render nothing.
   // This prevents showing ALL portfolios on reload / initial state.
   if (!isOffer && targetId === 'dealsDataContainer') {
     const dd = dropdownId ? document.getElementById(dropdownId) : null;
@@ -33,13 +109,13 @@ export function handleDealsData(receivedData, dealsTableName, opts = {}) {
     }
   }
 
-  // leere Payload = no-op (außer explizit erlaubt)
+  // Empty payload = no-op, unless explicitly allowed.
   if (!Array.isArray(receivedData) || receivedData.length === 0) {
     if (opts.allowClear === true) targetContainer.innerHTML = '';
     return;
   }
 
-  // 1) Dropdown-Snapshot nur für Deals
+  // 1) Dropdown snapshot only for Deals
   const snap =
     !isOffer &&
     preserveAndRestoreFilterDropdown({
@@ -48,28 +124,28 @@ export function handleDealsData(receivedData, dealsTableName, opts = {}) {
     });
 
   // 2) Render
+  // Keep full rows for Add/Edit logic.
   filteredDealsData = receivedData;
+
   renderDealsTableIntoContainer(targetContainer, filteredDealsData, tableName);
 
   // 3) UI Enhancements
   applyDealsUIEnhancements(targetContainer);
   enhanceIncludeCheckboxes(targetContainer);
 
-
-  // 4) Mirror NUR wenn explizit gewünscht (New Portfolio Flow)
+  // 4) Mirror only when explicitly requested.
   if (!isOffer && opts.mirrorToNewPortfolio === true) {
     mirrorDealsToNewPortfolioPanel(filteredDealsData, tableName);
   }
 
-  // 5) Add-Button NUR für Deals
+  // 5) Add button only for Deals
   if (!isOffer) {
     bindDealsAddButtonOnce(buttonId, tableName);
   }
 
-  // 6) Restore Dropdown (nur Deals)
+  // 6) Restore dropdown only for Deals
   if (snap) snap.restore();
 }
-
 
 /* =========================================================
    Context (offers vs deals)
@@ -81,7 +157,7 @@ function resolveDealsContext(opts = {}) {
   const isNewPortfolio = forced === 'newPortfolio';
 
   return {
-    isOffer, // bleibt nur für offers true
+    isOffer,
     targetId: isOffer
       ? 'offersDataContainer'
       : isNewPortfolio
@@ -93,18 +169,17 @@ function resolveDealsContext(opts = {}) {
   };
 }
 
-
 /* =========================================================
    Rendering
    ========================================================= */
 function renderDealsTableIntoContainer(container, rows, tableName) {
-  // console.log('[renderDealsTableIntoContainer]', {
-  //   container: container?.id,
-  //   tableName,
-  //   rows: rows?.length,
-  // });
+  const displayRows = filterDealsColumnsForDisplay(rows);
 
-  container.innerHTML = processData(rows, tableName);
+  container.innerHTML = processData(
+    displayRows,
+    tableName,
+    DEALS_COLUMN_LABELS
+  );
 }
 
 /* =========================================================
@@ -123,7 +198,14 @@ function mirrorDealsToNewPortfolioPanel(rows, tableName) {
   const mirrorContainer = document.getElementById('newPortfolioDealsDataContainer');
   if (!mirrorContainer) return;
 
-  mirrorContainer.innerHTML = processData(rows, tableName);
+  const displayRows = filterDealsColumnsForDisplay(rows);
+
+  mirrorContainer.innerHTML = processData(
+    displayRows,
+    tableName,
+    DEALS_COLUMN_LABELS
+  );
+
   addTooltipsForTruncatedText(mirrorContainer);
   addProdIdTooltips(mirrorContainer);
   attachIdLinks(mirrorContainer);
@@ -139,7 +221,15 @@ function bindDealsAddButtonOnce(buttonId, tableName) {
   addButton.dataset.bound = '1';
   addButton.addEventListener('click', (event) => {
     console.log('Start Add Deal', tableName);
-    handleModalAction(event, filteredDealsData, null, tableName, 'add');
+
+    // Important: use full rows, not display-filtered rows.
+    handleModalAction(
+      event,
+      buildDealsMainModalRows(filteredDealsData),
+      null,
+      tableName,
+      'add'
+    );
   });
 }
 

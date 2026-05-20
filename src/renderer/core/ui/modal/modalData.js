@@ -9,11 +9,25 @@ function processData(data, selectedTableName, columnLabelMap = {}, options = {})
   // ================================
   // Konfiguration: Edit-Column
   // ================================
-  const excludeEditColumnTables = [
-    'tblTS', 'ProdAll', 'MVaRMain', 'CVaRMain', 'EADMain', 'Portfolios',
-    'PortMain', 'MarketVaR', 'CreditVaR', 'PortMain', 'sortedLossesIssuerMain',
-    'EAD', 'Portfolio', 'ProdALL', 'DealsMain', 'OFFERS_DATA', 'OFFERS_Anleihen_Karl_Franzens_UniversitÃ¤t_150925',
-  ];
+const excludeEditColumnTables = [
+  'tblTS',
+  'v_PRODUCTS_APP',
+  'v_PRODUCTS_CANONICAL',
+  'PRODUCTS_MASTER',
+  'MVaRMain',
+  'CVaRMain',
+  'EADMain',
+  'Portfolios',
+  'PortMain',
+  'MarketVaR',
+  'CreditVaR',
+  'sortedLossesIssuerMain',
+  'EAD',
+  'Portfolio',
+  'DealsMain',
+  'OFFERS_DATA',
+  'OFFERS_Anleihen_Karl_Franzens_UniversitÃ¤t_150925',
+];
 
   const excludePortTables = /^Port/;
 

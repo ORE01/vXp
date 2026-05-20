@@ -1,10 +1,10 @@
 /* ============================
-   NEW_PRODUCTS – ISSUER Panel
+   products – ISSUER Panel
    Layout & Look wie PORT_Modal
    ============================ */
 
 /* ISSUER-Panel: Filter-Card oben, Tabelle darunter */
-#NEW_PRODUCTS_Modal #panel-issuer-np .sub-panel-body{
+#products_Modal #panel-issuer-np .sub-panel-body{
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -14,7 +14,7 @@
 
 
 /* Filter-Card links: wie PORT-Filter-Card */
-#NEW_PRODUCTS_Modal #panel-issuer-np .cp-card{
+#products_Modal #panel-issuer-np .cp-card{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 12px;
@@ -29,7 +29,7 @@
 }
 
 /* Dropdowns in der Filter-Card – flex, wrap wie bei PORT */
-#NEW_PRODUCTS_Modal #panel-issuer-np .cp-card .dropdown-wrapper{
+#products_Modal #panel-issuer-np .cp-card .dropdown-wrapper{
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
@@ -37,7 +37,7 @@
 }
 
 /* Reset-Button: linke untere Ecke der Filter-Card */
-#NEW_PRODUCTS_Modal #issuerResetFiltersButton{
+#products_Modal #issuerResetFiltersButton{
   position: absolute;
   left: 16px;
   bottom: 10px;
@@ -47,7 +47,7 @@
 }
 
 /* Tabelle rechts: Card-Container wie PORT */
-#NEW_PRODUCTS_Modal #issuerDataContainer{
+#products_Modal #issuerDataContainer{
   overflow: auto;
   width: 100%;
   max-width: 100%;
@@ -60,24 +60,24 @@
 }
 
 /* Feines Raster im ISSUER-Table (analog PORT) */
-#NEW_PRODUCTS_Modal #issuerDataContainer table{
+#products_Modal #issuerDataContainer table{
   border-collapse: separate;
   border-spacing: 0;
 }
 
 /* Erst alle Standard-Borders killen */
-#NEW_PRODUCTS_Modal #issuerDataContainer th,
-#NEW_PRODUCTS_Modal #issuerDataContainer td{
+#products_Modal #issuerDataContainer th,
+#products_Modal #issuerDataContainer td{
   border: none !important;
 }
 
 /* Dünnes Raster in Schwarz */
-#NEW_PRODUCTS_Modal #issuerDataContainer tr > *{
+#products_Modal #issuerDataContainer tr > *{
   border-top: 1px solid #000 !important;
 }
-#NEW_PRODUCTS_Modal #issuerDataContainer tr:first-child > *{
+#products_Modal #issuerDataContainer tr:first-child > *{
   border-top: 0 !important;
 }
-#NEW_PRODUCTS_Modal #issuerDataContainer tr > *:not(:first-child){
+#products_Modal #issuerDataContainer tr > *:not(:first-child){
   border-left: 1px solid #000 !important;
 }

@@ -174,6 +174,129 @@ function eraseRowFromDB(tableName, uniqueIdentifier) {
     });
   });
 }
+//------------------------
+//----PRDUCT_EVENTS delete
+//-------------------------
+async function syncProductScheduleToProductEvents(productId) {
+  if (!productId) return;
+
+  await runSQL(
+    `
+      DELETE FROM "PRODUCT_STRUCTURE"
+      WHERE "product_id" = ?
+        AND (
+          "source_table" = 'ProdCouponSchedules'
+          OR "source_id" LIKE 'COUPON_%'
+          OR "source_id" LIKE 'CALL_%'
+          OR "source_id" LIKE 'ZERO_%'
+        )
+    `,
+    [productId]
+  );
+
+  await runSQL(
+    `
+      INSERT INTO "PRODUCT_STRUCTURE" (
+        "product_id", "leg_id", "structure_type", "structure_date",
+        "structure_payload", "notional_factor", "sort_order",
+        "is_active", "source_table", "source_id"
+      )
+      SELECT
+        s."PROD_ID",
+        1,
+        'FIXED_COUPON',
+        s."DATE",
+        json_object(
+          'rate', COALESCE(s."FIX_CF", 0),
+          'notional_factor', COALESCE(s."Notional_Factor", 1)
+        ),
+        COALESCE(s."Notional_Factor", 1),
+        ROW_NUMBER() OVER (ORDER BY s."DATE"),
+        1,
+        'ProdCouponSchedules',
+        'COUPON_' || s.rowid
+      FROM "ProdCouponSchedules" s
+      WHERE s."PROD_ID" = ?
+        AND s."FIX_CF" IS NOT NULL
+    `,
+    [productId]
+  );
+
+  await runSQL(
+    `
+      INSERT INTO "PRODUCT_STRUCTURE" (
+        "product_id", "leg_id", "structure_type", "structure_date",
+        "structure_payload", "notional_factor", "sort_order",
+        "is_active", "source_table", "source_id"
+      )
+      SELECT
+        s."PROD_ID",
+        1,
+        'CALL',
+        s."DATE",
+        json_object(
+          'call_price', 100,
+          'notional_factor', COALESCE(s."Notional_Factor", 1)
+        ),
+        COALESCE(s."Notional_Factor", 1),
+        10000 + ROW_NUMBER() OVER (ORDER BY s."DATE"),
+        1,
+        'ProdCouponSchedules',
+        'CALL_' || s.rowid
+      FROM "ProdCouponSchedules" s
+      WHERE s."PROD_ID" = ?
+        AND COALESCE(s."CALL", 0) = 1
+    `,
+    [productId]
+  );
+
+  await runSQL(
+    `
+      INSERT INTO "PRODUCT_STRUCTURE" (
+        "product_id", "leg_id", "structure_type", "structure_date",
+        "structure_payload", "notional_factor", "sort_order",
+        "is_active", "source_table", "source_id"
+      )
+      SELECT
+        s."PROD_ID",
+        1,
+        'ZERO',
+        s."DATE",
+        json_object(
+          'notional_factor', COALESCE(s."Notional_Factor", 1)
+        ),
+        COALESCE(s."Notional_Factor", 1),
+        20000 + ROW_NUMBER() OVER (ORDER BY s."DATE"),
+        1,
+        'ProdCouponSchedules',
+        'ZERO_' || s.rowid
+      FROM "ProdCouponSchedules" s
+      WHERE s."PROD_ID" = ?
+        AND COALESCE(s."ZERO", 0) = 1
+    `,
+    [productId]
+  );
+}
+
+async function eraseCouponScheduleAndSync(uniqueIdentifier) {
+  const rows = await selectAll(
+    `
+      SELECT "PROD_ID"
+      FROM "ProdCouponSchedules"
+      WHERE "${uniqueIdentifier.column}" = ?
+      LIMIT 1
+    `,
+    [uniqueIdentifier.value]
+  );
+
+  const productId = rows?.[0]?.PROD_ID;
+
+  await eraseRowFromDB('ProdCouponSchedules', uniqueIdentifier);
+
+  if (productId) {
+    await syncProductScheduleToProductEvents(productId);
+  }
+}
 
 function closeDatabase() {
   if (!_db) return;
@@ -381,6 +504,7 @@ function insertCSParameter(newRowData, cleanTableName, cb) {
   }
 }
 
+
 module.exports = {
   initDb,
   getDb,
@@ -399,4 +523,6 @@ module.exports = {
   updateCustomerTexts,
   selectAll,
   insertCSParameter,
+  eraseCouponScheduleAndSync,
+  syncProductScheduleToProductEvents,
 };

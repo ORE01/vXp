@@ -1,0 +1,654 @@
+/* electron_app/css/products/structureTimeline.css */
+
+/* =====================================================
+   STRUCTURE TIMELINE MODAL
+   Matches existing modalDark.css style
+===================================================== */
+
+#structureTimelineModal {
+  background-color: rgb(70, 69, 69) !important;
+  color: rgb(190, 190, 190) !important;
+  border: 1px solid #555 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  font-family: "Your Font Name", sans-serif;
+}
+
+#structureTimelineModal h2,
+#structureTimelineModal h3 {
+  color: #fff;
+  font-weight: 700;
+}
+
+#structureTimelineModal p,
+#structureTimelineModal div {
+  color: rgb(190, 190, 190);
+}
+
+/* =====================================================
+   Header / Close
+===================================================== */
+
+#structureTimelineModal button {
+  background-color: #4CAF50;
+  border: none;
+  color: #fff;
+  padding: 7px 11px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+#structureTimelineModal button:hover {
+  background-color: #015f06;
+}
+
+#structureTimelineModal button:active {
+  transform: scale(0.96);
+}
+
+/* Close Button im Structure Modal */
+#structureTimelineModal #closeStructureTimelineModal.structure-timeline-close {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  z-index: 10;
+
+  width: 42px;
+  height: 42px;
+  padding: 0 !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent !important;
+  border: none !important;
+  color: #fff !important;
+
+  font-size: 42px !important;
+  line-height: 1 !important;
+  font-weight: 300;
+
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+#structureTimelineModal #closeStructureTimelineModal.structure-timeline-close:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+/* =====================================================
+   Action Buttons
+===================================================== */
+
+#addCallStructureRow,
+#addCallScheduleRows,
+#saveNewCallRow,
+#saveBulkCallRows,
+#saveStructureEventRow {
+  background-color: #4CAF50 !important;
+  color: #fff !important;
+}
+
+#addCallStructureRow:hover,
+#addCallScheduleRows:hover,
+#saveNewCallRow:hover,
+#saveBulkCallRows:hover,
+#saveStructureEventRow:hover {
+  background-color: #015f06 !important;
+}
+
+#deleteStructureEventRow {
+  background-color: #800000 !important;
+  color: #fff !important;
+}
+
+#deleteStructureEventRow:hover {
+  background-color: #a00000 !important;
+}
+
+/* =====================================================
+   Table
+===================================================== */
+
+#structureTimelineModal table {
+  border-collapse: collapse;
+  width: 100%;
+  background-color: rgb(70, 69, 69) !important;
+  color: rgb(190, 190, 190);
+}
+
+#structureTimelineModal table th,
+#structureTimelineModal table td {
+  border: 1px solid #555;
+  padding: 8px;
+  text-align: left;
+  font-size: 13px;
+}
+
+#structureTimelineModal table th {
+  background-color: #333;
+  color: #fff;
+  font-weight: bold;
+}
+
+#structureTimelineModal table tr:hover {
+  background-color: #444;
+}
+
+/* =====================================================
+   Drawer
+===================================================== */
+
+#structureDetailDrawer {
+  background-color: #3f3e3e !important;
+  color: rgb(190, 190, 190) !important;
+  border: 1px solid #555 !important;
+  border-radius: 8px !important;
+}
+
+#structureDetailDrawer label {
+  color: #ccc;
+}
+
+#structureDetailDrawer strong {
+  color: #fff;
+}
+
+#structureDetailDrawer input,
+#structureDetailDrawer textarea {
+  background-color: #fff;
+  border: 1px solid #555;
+  color: #222;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+#structureDetailDrawer input:focus,
+#structureDetailDrawer textarea:focus {
+  background-color: #fff;
+  border: 1px solid #4CAF50;
+  color: #222;
+  outline: none;
+}
+
+#structureDetailDrawer pre {
+  background-color: #333 !important;
+  color: #ccc;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+/* =====================================================
+   Bulk Call Preview
+===================================================== */
+
+#bulkCallPreview {
+  background-color: #333 !important;
+  color: #ccc;
+  border: 1px solid #555 !important;
+  border-radius: 6px;
+}
+
+#bulkCallPreview strong {
+  color: #fff;
+}
+
+#bulkCallPreview table {
+  background-color: #333 !important;
+}
+
+#bulkCallPreview td {
+  border-bottom: 1px solid #555 !important;
+}
+
+/* =====================================================
+   Inline Toast Message
+===================================================== */
+
+#structureInlineMessage {
+  font-weight: 600;
+  font-size: 12px;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Success */
+#structureInlineMessage {
+  max-width: 520px;
+}
+
+
+.structure-drawer-card {
+  border: 1px solid var(--border-1, #374151);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--surface-2, #2f2f2f);
+  color: var(--text-1, #f9fafb);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.structure-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.structure-drawer-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1, #f9fafb);
+}
+
+.structure-drawer-prod-id {
+  font-size: 12px;
+  color: var(--text-2, #c7c7c7);
+  opacity: 0.8;
+}
+
+.structure-drawer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.structure-drawer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.structure-drawer-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2, #c7c7c7);
+}
+
+.structure-drawer-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-1, #555);
+  border-radius: 8px;
+  background: var(--surface-1, #3b3b3b);
+  color: var(--text-1, #ffffff);
+  font-size: 13px;
+}
+
+.structure-drawer-input:focus {
+  outline: none;
+  border-color: var(--accent, #4caf50);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.structure-drawer-note {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-2, #c7c7c7);
+  opacity: 0.7;
+}
+
+.structure-drawer-error {
+  background: rgba(120, 20, 20, 0.25);
+  border-color: rgba(255, 120, 120, 0.5);
+}
+
+.structure-timeline-modal {
+  position: relative;
+}
+
+
+.structure-drawer-danger-zone {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 120, 120, 0.35);
+}
+
+.structure-drawer-danger-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffb4b4;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#structureTimelineModal .structure-action-button-danger {
+  background-color: #800000 !important;
+  color: #fff !important;
+}
+
+#structureTimelineModal .structure-action-button-danger:hover {
+  background-color: #a00000 !important;
+}
+
+/* =====================================================
+   Structure Drawer Inputs - force dark input text
+===================================================== */
+
+#structureTimelineModal .structure-drawer-input,
+#structureTimelineModal .structure-drawer-input:focus,
+#structureTimelineModal .structure-drawer-input:focus-visible,
+#structureTimelineModal .structure-drawer-input:active {
+  color: #fff !important;
+  background-color: var(--surface-1, #3b3b3b) !important;
+
+  caret-color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+
+  border-color: var(--border-1, #555) !important;
+  outline: none !important;
+}
+
+#structureTimelineModal .structure-drawer-input::placeholder {
+  color: rgba(255, 255, 255, 0.45) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
+}
+
+#structureTimelineModal select.structure-drawer-input,
+#structureTimelineModal select.structure-drawer-input option {
+  color: #fff !important;
+  background-color: var(--surface-1, #3b3b3b) !important;
+}
+
+/* =====================================================
+   Drawer Close Button
+===================================================== */
+
+#structureTimelineModal .structure-drawer-header {
+  position: relative;
+}
+
+#structureTimelineModal .structure-drawer-close {
+  position: absolute;
+  top: -4px;
+  right: 0;
+
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #333 !important;
+  color: #ccc !important;
+  border: 1px solid #555 !important;
+  border-radius: 50% !important;
+
+  font-size: 20px !important;
+  line-height: 1 !important;
+  cursor: pointer;
+}
+
+#structureTimelineModal .structure-drawer-close:hover {
+  background: #444 !important;
+  color: #fff !important;
+}
+
+/* =====================================================
+   Product Valuation Drawer
+===================================================== */
+
+#structureTimelineModal .structure-valuation-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0 18px 0;
+  padding: 12px;
+  background: rgba(20, 20, 20, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+#structureTimelineModal .structure-valuation-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#structureTimelineModal .structure-valuation-summary span {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#structureTimelineModal .structure-valuation-summary strong {
+  font-size: 14px;
+  color: #fff !important;
+}
+
+
+/* Result Container */
+
+#structureTimelineModal .structure-valuation-result {
+  margin-top: 20px;
+}
+
+#structureTimelineModal .structure-valuation-result-card {
+  margin-top: 18px;
+  padding: 18px;
+  max-width: 920px;
+
+  background: linear-gradient(180deg, rgba(42, 42, 42, 0.98), rgba(32, 32, 32, 0.98));
+  border: 1px solid rgba(76, 175, 80, 0.45);
+  border-radius: 14px;
+
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#structureTimelineModal .structure-valuation-result-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin: 0 0 8px 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff !important;
+}
+
+#structureTimelineModal .structure-valuation-result-card .structure-drawer-note {
+  margin: 0 0 16px 0 !important;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.62) !important;
+}
+
+
+/* KPI Grid */
+
+#structureTimelineModal .structure-valuation-result-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(145px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#structureTimelineModal .structure-valuation-result-grid > div {
+  min-height: 74px;
+  padding: 12px 13px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+#structureTimelineModal .structure-valuation-result-grid > div:hover {
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+#structureTimelineModal .structure-valuation-result-grid span {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.55) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+#structureTimelineModal .structure-valuation-result-grid strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff !important;
+  line-height: 1.1;
+}
+
+
+/* Highlight Clean Price + PV */
+
+#structureTimelineModal .structure-valuation-result-grid > div:nth-child(1),
+#structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) {
+  background: rgba(76, 175, 80, 0.13);
+  border-color: rgba(76, 175, 80, 0.45);
+}
+
+#structureTimelineModal .structure-valuation-result-grid > div:nth-child(1) strong,
+#structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) strong {
+  font-size: 22px;
+  color: #ffffff !important;
+}
+
+
+/* Raw Technical Result */
+
+#structureTimelineModal .structure-valuation-raw {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#structureTimelineModal .structure-valuation-raw summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65) !important;
+  user-select: none;
+}
+
+#structureTimelineModal .structure-valuation-raw summary:hover {
+  color: #fff !important;
+}
+
+#structureTimelineModal .structure-valuation-raw pre {
+  margin-top: 10px;
+  max-height: 260px;
+  overflow: auto;
+
+  padding: 12px;
+  background: #202020 !important;
+  color: #cfcfcf !important;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+
+/* Loading + Error */
+
+#structureTimelineModal .structure-valuation-status {
+  margin-top: 14px;
+  padding: 12px 14px;
+
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff !important;
+}
+
+#structureTimelineModal .structure-valuation-error {
+  margin-top: 14px;
+  padding: 14px;
+
+  background: rgba(120, 20, 20, 0.32);
+  border: 1px solid rgba(255, 120, 120, 0.45);
+  border-radius: 10px;
+
+  color: #fff !important;
+}
+
+#structureTimelineModal .structure-valuation-error strong {
+  color: #fff !important;
+}
+
+#structureTimelineModal .structure-valuation-error pre {
+  margin-top: 10px;
+  white-space: pre-wrap;
+  color: #ffdddd !important;
+}
+
+
+/* Responsive fallback */
+
+@media (max-width: 1100px) {
+  #structureTimelineModal .structure-valuation-result-grid {
+    grid-template-columns: repeat(2, minmax(145px, 1fr));
+  }
+
+  #structureTimelineModal .structure-valuation-summary {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+
+#structureTimelineModal .structure-drawer-note-error {
+  color: #ffb4b4 !important;
+  opacity: 1 !important;
+  font-weight: 700;
+  background: rgba(120, 20, 20, 0.22);
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+/* =====================================================
+   Structure Timeline Grid - horizontal scroll only table
+===================================================== */
+
+#structureTimelineModal .structure-timeline-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+#structureTimelineModal .structure-timeline-table-scroll table {
+  width: max-content;
+  min-width: 1150px;
+}
+
+#structureTimelineModal .structure-timeline-table-scroll th,
+#structureTimelineModal .structure-timeline-table-scroll td {
+  white-space: nowrap;
+}
+
+#structureTimelineModal .structure-timeline-table-scroll td {
+  overflow: visible;
+  text-overflow: initial;
+}
+
+#structureTimelineModal .structure-timeline-table-scroll td:nth-child(3),
+#structureTimelineModal .structure-timeline-table-scroll td:nth-child(5) {
+  min-width: 260px;
+}
+

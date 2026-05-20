@@ -1,16 +1,13 @@
 ﻿import processData, { filterColumnsInData } from '../../core/ui/modal/modalData.js';
-import { handleModalAction } from '../../core/ui/modal/modalActions.js';
 import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';
 import { updateProductCSWarningUI } from '../../core/ui/warnings.js';
-import { PRODUCT_TEMPLATES } from './productTemplates.js';
+import { handleStructureTimelineModal } from './StructureTimelineModal.js';
 
 
 
-// ======================================================
-// SPALTEN-KONFIG für ProdAll
-// ======================================================
+
 
 // 1) Spalten, die in der Tabelle angezeigt werden sollen
 const PROD_TABLE_COLUMNS = [
@@ -28,59 +25,18 @@ const PROD_TABLE_COLUMNS = [
   'METHODE',
 ];
 
-// 2) Wunsch-Reihenfolge für Felder im Add/Edit-Modal
-const PROD_FIELD_ORDER = [
-  'INCLUDE',
-  'PROD_ID',
-  'DESCRIPTION',
-  'ISSUER',
-  'TICKER',
-  'RANK',
-  'RATING_PROD',
-  'CouponType',
-  'START_DATE',
-  'MATURITY',
-  'COUPON',
-  'TENOR',
-  'GEARING',
-  'SPREADS',
-  'CAP',
-  'FLOOR',
-  'SCHEDULE',
-  'FINLIB',
-  'MODEL',
-  'METHODE',
-  'CS_Szenario',
-  
-   
-  
-  
-  // alles Weitere (CAP, FLOOR, GEARING, SPREADS ) hinten dran
-];
-
-
-
-
 // ======================================================
 
 let prodData;
 
-
-const LEGACY_PRODUCT_FIELDS_TO_HIDE = new Set([
-  'TENOR',
-  'CouponType',
-  'COUPON',
-  'SPREADS',
-]);
-
-export function handleProdData(filtersConfig) {
+export function renderProductTable(filtersConfig) {
   const prodDataContainer = document.getElementById('prodDataContainer');
   if (!prodDataContainer) return;
 
   // Daten holen
   prodData = appState.getProdData();
   if (!Array.isArray(prodData) || prodData.length === 0) {
-    console.warn('handleProdData: prodData leer/ungÃ¼ltig');
+    console.warn('renderProductTable: prodData leer/ungÃ¼ltig');
     prodDataContainer.innerHTML = '';
     return;
   }
@@ -95,7 +51,7 @@ export function handleProdData(filtersConfig) {
   updateProductCSWarningUI?.(filteredProdData);
 
   // Render Tabelle
-  prodDataContainer.innerHTML = processData(filteredProdData, 'ProdAll');
+  prodDataContainer.innerHTML = processData(filteredProdData, 'v_PRODUCTS_APP');
 
   // Tooltips
   try {
@@ -122,14 +78,22 @@ export function handleProdData(filtersConfig) {
     });
   }
 
-  // Add-Button (optional)
+  // Add-Button: products now use the new Product Editor / Structure Timeline flow
   const prodAddButton = document.getElementById('prodAddButton');
   if (prodAddButton && !prodAddButton.dataset.bound) {
     prodAddButton.dataset.bound = '1';
+
     prodAddButton.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      handleModalAction(event, prodData, null, 'ProdAll', 'add');
+
+      console.log('[PRODUCT ADD ROUTE] opening new product editor create mode');
+
+      handleStructureTimelineModal(null, {
+        mode: 'create',
+        source: 'prod-add-button',
+        templateName: null,
+      });
     });
   }
 }
@@ -182,39 +146,7 @@ function makeProdIdButtons(container) {
   });
 }
 
-export function buildOrderedFieldsForModal(row, templateName = 'FIXED_BOND') {
-  if (!row) return row;
 
-  const ordered = {};
-
-  const template =
-    PRODUCT_TEMPLATES[templateName] ||
-    PRODUCT_TEMPLATES.FIXED_BOND;
-
-  template.fields.forEach((field) => {
-    ordered[field] = row?.[field] ?? '';
-  });
-
-  if (template.couponType) {
-    ordered.CouponType = template.couponType;
-  }
-
-  ordered.__PRODUCT_TEMPLATE__ = templateName;
-  ordered.__UI_MODE__ = template.uiMode || 'FIX';
-
-  Object.keys(row).forEach((key) => {
-    if (LEGACY_PRODUCT_FIELDS_TO_HIDE.has(key)) return;
-
-    if (
-      !Object.prototype.hasOwnProperty.call(ordered, key) &&
-      row[key] !== undefined
-    ) {
-      ordered[key] = row[key];
-    }
-  });
-
-  return ordered;
-}
 
 export { prodData };
 

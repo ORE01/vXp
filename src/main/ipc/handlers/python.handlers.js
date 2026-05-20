@@ -63,6 +63,66 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
   });
 
+    // ===================== PRODUCT VALUATION =====================
+  ipcMain.on('price-product', async (event, args = {}) => {
+    const {
+      prodId,
+      notional = 100,
+      asofDate = null,
+      selectedCurve = 'EUSWAP',
+    } = args || {};
+
+    if (!prodId) {
+      event.reply('price-product-error', {
+        success: false,
+        message: 'Argument "prodId" is required.',
+      });
+      return;
+    }
+
+    try {
+      const pythonArgs = [
+        '--prod-id', String(prodId),
+        '--notional', String(notional),
+        '--selectedCurve', String(selectedCurve),
+      ];
+
+      if (asofDate) {
+        pythonArgs.push('--asof-date', String(asofDate));
+      }
+
+      console.log('[PRODUCT VALUATION IPC]', {
+        prodId,
+        notional,
+        asofDate,
+        selectedCurve,
+        pythonArgs,
+      });
+
+      const result = await startPythonScriptWithEvent(
+        event,
+        'product_valuation',
+        'py-product-valuation',
+        pythonArgs
+      );
+
+      event.reply('price-product-success', {
+        success: true,
+        prodId,
+        result,
+      });
+
+    } catch (error) {
+      console.error('[PRODUCT VALUATION IPC ERROR]', error);
+
+      event.reply('price-product-error', {
+        success: false,
+        prodId,
+        error: error?.message || String(error),
+      });
+    }
+  });
+
   // ===================== MVaR =====================
   ipcMain.on('start-py-MVaR', async (event, args) => {
     const { tableName, selectedInterval } = args || {};
@@ -157,7 +217,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       break;
 
     case 'PRODUCTS':
-      tablesToRefresh = ['ProdAll'];
+      tablesToRefresh = ['v_PRODUCTS_CANONICAL'];
       break;
 
     case 'DEALS':
@@ -177,7 +237,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       tablesToRefresh = [
         'Portfolios',
         'DealsMain',
-        'ProdAll',
+        'v_PRODUCTS_CANONICAL',
         'Issuer',
         'Rank',
         'RATES_BASE',

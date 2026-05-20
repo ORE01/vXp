@@ -1,8 +1,8 @@
-﻿import { prodData } from '../../../features/NEW_PRODUCTS/PROD.js';
+﻿import { prodData } from '../../../features/products/productTableController.js';
 import { convertDateToISO, formatDisplayValue } from '../../../utils/format.js';
-import { handleProdAllFields } from '../../../features/NEW_PRODUCTS/prodSimpleCoupon.js';
-import { getFieldConfig } from '../../../features/NEW_PRODUCTS/productFieldConfig.js';
-import { getTemplateFieldSection } from '../../../features/NEW_PRODUCTS/productTemplates.js';
+import { handleProductFields } from '../../../features/products/prodSimpleCoupon.js';
+import { getFieldConfig } from '../../../features/products/productFieldConfig.js';
+import { getTemplateFieldSection } from '../../../features/products/productTemplates.js';
 
 
 
@@ -11,7 +11,10 @@ import { getTemplateFieldSection } from '../../../features/NEW_PRODUCTS/productT
 
 // mapping of tables to HANDLER:
 const tableHandlers = {
-  ProdAll: handleProdAllFields,
+  v_PRODUCTS_APP: handleProductFields,
+  v_PRODUCTS_CANONICAL: handleProductFields,
+  PRODUCTS_MASTER: handleProductFields,
+
   Deals: handleDealsFields,
   CSParameter: handleCSParameterFields,
   CreditVaRInput: handleCreditVaRInputFields,

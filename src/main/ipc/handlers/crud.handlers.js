@@ -1,6 +1,10 @@
 // src/main/ipc/handlers/crud.handlers.js
 'use strict';
 
+const {
+  createProductCanonicalService,
+} = require('../../services/productCanonical.service');
+
 /**
  * CRUD IPC handlers:
  * - update-data
@@ -14,49 +18,74 @@
  */
 module.exports = function registerCrudHandlers({
   ipcMain,
-  dbApi,               // { updateRecord, insertRowInTable, eraseRowFromDB }
-  refreshTable,         // function(tableName, cb?)
-  bulkUpdateStart,      // optional
-  bulkUpdateEnd,        // optional
+  dbApi,
+  refreshTable,
+  bulkUpdateStart,
+  bulkUpdateEnd,
 }) {
   if (!ipcMain) throw new Error('[crud.handlers] ipcMain missing');
   if (!dbApi) throw new Error('[crud.handlers] dbApi missing');
   if (typeof refreshTable !== 'function') throw new Error('[crud.handlers] refreshTable missing');
 
-  const { updateRecord, insertRowInTable, eraseRowFromDB } = dbApi;
+  const {
+    updateRecord,
+    insertRowInTable,
+    eraseRowFromDB,
+  } = dbApi;
 
   if (typeof updateRecord !== 'function') throw new Error('[crud.handlers] dbApi.updateRecord missing');
   if (typeof insertRowInTable !== 'function') throw new Error('[crud.handlers] dbApi.insertRowInTable missing');
   if (typeof eraseRowFromDB !== 'function') throw new Error('[crud.handlers] dbApi.eraseRowFromDB missing');
 
+  const productCanonicalService = createProductCanonicalService(dbApi);
+
   const _bulkStart = typeof bulkUpdateStart === 'function' ? bulkUpdateStart : () => {};
-  const _bulkEnd   = typeof bulkUpdateEnd === 'function' ? bulkUpdateEnd : () => {};
+  const _bulkEnd = typeof bulkUpdateEnd === 'function' ? bulkUpdateEnd : () => {};
 
   // ------------------------------------------------------------
-  // Refresh rules (aus index.js übernommen)
+  // Refresh rules
   // ------------------------------------------------------------
-const REFRESH_DEPENDENCIES = {
-  ProdAll:             ['ProdAll'],
-  DealsMain:           ['DealsMain'],
-  ProdCouponSchedules: ['ProdCouponSchedules', 'ProdAll'],
-  Issuer:              ['Issuer'],
-  Portfolios:          ['Portfolios'],
-  MVaRInput:           ['MVaRInput'],
-  ecb:                 ['ecb'],
-  fed:                 ['fed'],
-  yahoo:               ['yahoo'],
+  const REFRESH_DEPENDENCIES = {
+    DealsMain:           ['DealsMain'],
+    PRODUCT_STRUCTURE:   ['PRODUCT_STRUCTURE', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
+    PRODUCTS_MASTER:     ['PRODUCTS_MASTER', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
+    PRODUCTS_CONVENTIONS:['PRODUCTS_CONVENTIONS', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
+    PRODUCTS_FIXED_TERMS:['PRODUCTS_FIXED_TERMS', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
+    PRODUCTS_FRN_TERMS:  ['PRODUCTS_FRN_TERMS', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
+    PRODUCTS_PRICING_CONFIG: ['PRODUCTS_PRICING_CONFIG', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
+    Issuer:              ['Issuer', 'IssuerRankRating'],
+    Portfolios:          ['Portfolios'],
+    MVaRInput:           ['MVaRInput'],
+    ecb:                 ['ecb'],
+    fed:                 ['fed'],
+    yahoo:               ['yahoo'],
 
-  // MARKET DATA
-  RATES_SCENARIO_DATA: ['RATES'],
-  RATES:               ['RATES'],
-  RATES_ACTIVE:        ['RATES_ACTIVE']
-};
+    // MARKET DATA
+    RATES_SCENARIO_DATA: ['RATES'],
+    RATES:               ['RATES'],
+    RATES_ACTIVE:        ['RATES_ACTIVE'],
+  };
 
   const PORTFOLIO_RELEVANT_FIELDS = new Set([
-    'PROD_ID','INCLUDE','NOTIONAL','PRICE','PRICE_BUY',
-    'COUPON','START_DATE','MATURITY','TENOR',
-    'CouponType','GEARING','CAP','FLOOR','SPREADS',
-    'C_SPREAD','RANK','RATING','CATEGORY'
+    'PROD_ID',
+    'INCLUDE',
+    'NOTIONAL',
+    'PRICE',
+    'PRICE_BUY',
+    'COUPON',
+    'START_DATE',
+    'MATURITY',
+    'TENOR',
+    'COUPON_FREQUENCY',
+    'CouponType',
+    'GEARING',
+    'CAP',
+    'FLOOR',
+    'SPREADS',
+    'C_SPREAD',
+    'RANK',
+    'RATING',
+    'CATEGORY',
   ]);
 
   function affectsPortfolio(newData = {}) {
@@ -73,58 +102,128 @@ const REFRESH_DEPENDENCIES = {
     }
   }
 
-  function computeRefreshList(cleanTableName, deltaObj) {
+  function computeRefreshList(cleanTableName, deltaObj = {}) {
     const base = REFRESH_DEPENDENCIES[cleanTableName] || [cleanTableName];
     const toRefresh = new Set(base);
 
-    // Prod/Deals/Schedules + portfolios-relevant change -> refresh Portfolios
     if (
-      (cleanTableName === 'ProdAll' ||
-       cleanTableName === 'DealsMain' ||
-       cleanTableName === 'ProdCouponSchedules') &&
+      (
+        cleanTableName === 'v_PRODUCTS_APP' ||
+        cleanTableName === 'v_PRODUCTS_CANONICAL' ||
+        cleanTableName === 'PRODUCTS_MASTER' ||
+        cleanTableName === 'PRODUCTS_CONVENTIONS' ||
+        cleanTableName === 'PRODUCTS_FIXED_TERMS' ||
+        cleanTableName === 'PRODUCTS_FRN_TERMS' ||
+        cleanTableName === 'PRODUCTS_PRICING_CONFIG' ||
+        cleanTableName === 'PRODUCT_STRUCTURE' ||
+        cleanTableName === 'DealsMain'
+      ) &&
       affectsPortfolio(deltaObj)
     ) {
-      toRefresh.add('Portfolios');
-    }
-
-    // Issuer changes can affect Portfolios (ratings/rank logic)
-    if (cleanTableName === 'Issuer' && affectsPortfolio({ RATING: 1, RANK: 1 })) {
       toRefresh.add('Portfolios');
     }
 
     return [...toRefresh];
   }
 
-  function needsBulkLock(refreshList) {
+  function needsBulkLock(refreshList = []) {
     return (
       refreshList.length > 1 ||
       refreshList.includes('Portfolios') ||
-      refreshList.includes('ProdAll') ||
+      refreshList.includes('v_PRODUCTS_APP') ||
+      refreshList.includes('v_PRODUCTS_CANONICAL') ||
+      refreshList.includes('PRODUCTS_MASTER') ||
+      refreshList.includes('PRODUCT_STRUCTURE') ||
       refreshList.includes('DealsMain')
     );
+  }
+
+  async function refreshWithOptionalLock(refreshList = []) {
+    const lock = needsBulkLock(refreshList);
+
+    if (lock) _bulkStart();
+
+    try {
+      await refreshTablesSequential(refreshList);
+    } finally {
+      if (lock) _bulkEnd();
+    }
+  }
+
+  function isProductTableName(tableName) {
+    return (
+      tableName === 'v_PRODUCTS_APP' ||
+      tableName === 'v_PRODUCTS_CANONICAL' ||
+      tableName === 'PRODUCTS_MASTER'
+    );
+  }
+
+  function productRefreshList() {
+    return [
+      'PRODUCTS_MASTER',
+      'PRODUCTS_CONVENTIONS',
+      'PRODUCTS_FIXED_TERMS',
+      'PRODUCTS_FRN_TERMS',
+      'PRODUCTS_PRICING_CONFIG',
+      'PRODUCT_STRUCTURE',
+      'v_PRODUCTS_CANONICAL',
+      'v_PRODUCTS_APP',
+      'Portfolios',
+    ];
   }
 
   // ------------------------------------------------------------
   // UPDATE
   // ------------------------------------------------------------
-  ipcMain.on('update-data', async (event, { cleanTableName, rowIndex, newData, uniqueIdentifier } = {}) => {
+
+  ipcMain.on('update-data', async (event, {
+    cleanTableName,
+    rowIndex,
+    newData,
+    uniqueIdentifier,
+  } = {}) => {
     try {
+      const tableName = String(cleanTableName || '');
+      const isProductTable = isProductTableName(tableName);
+
+      // --------------------------------------------------------
+      // PRODUCT UPDATE: Canonical path
+      // --------------------------------------------------------
+      if (isProductTable) {
+        await productCanonicalService.saveCanonicalProduct(newData, uniqueIdentifier);
+
+        const refreshList = productRefreshList();
+
+        await refreshWithOptionalLock(refreshList);
+
+        event.reply('update-data-success', {
+          cleanTableName: 'v_PRODUCTS_APP',
+          refreshList,
+        });
+
+        return;
+      }
+
+      // --------------------------------------------------------
+      // NORMAL UPDATE
+      // --------------------------------------------------------
       updateRecord(cleanTableName, rowIndex, newData, uniqueIdentifier, async (err) => {
         if (err) {
           event.reply('update-data-error', err?.message || String(err));
           return;
         }
 
-        event.reply('update-data-success', { cleanTableName });
-
-        const refreshList = computeRefreshList(cleanTableName, newData);
-        const lock = needsBulkLock(refreshList);
-
-        if (lock) _bulkStart();
         try {
-          await refreshTablesSequential(refreshList);
-        } finally {
-          if (lock) _bulkEnd();
+          const refreshList = computeRefreshList(cleanTableName, newData);
+
+          await refreshWithOptionalLock(refreshList);
+
+          event.reply('update-data-success', {
+            cleanTableName,
+            refreshList,
+          });
+        } catch (e) {
+          event.reply('update-data-error', e?.message || String(e));
         }
       });
     } catch (error) {
@@ -135,46 +234,145 @@ const REFRESH_DEPENDENCIES = {
   // ------------------------------------------------------------
   // ADD NEW ROW
   // ------------------------------------------------------------
-  ipcMain.on('add-new-row', (event, { newRowData, cleanTableName, requestId } = {}) => {
-    // Defensive copy + DealsMain auto-ID protection
-    const row = { ...(newRowData || {}) };
 
-    // ✅ Critical fix: Never accept TRADE_ID from UI for DealsMain
-    // Otherwise you hit: SQLITE_CONSTRAINT UNIQUE constraint failed: DealsMain.TRADE_ID
-    if (cleanTableName === 'DealsMain' && Object.prototype.hasOwnProperty.call(row, 'TRADE_ID')) {
-      delete row.TRADE_ID;
-    }
+  ipcMain.on('add-new-row', async (event, {
+    newRowData,
+    newData,
+    cleanTableName,
+    requestId,
+  } = {}) => {
+    try {
+      const tableName = String(cleanTableName || '');
+      const isProductTable = isProductTableName(tableName);
 
-    insertRowInTable(row, cleanTableName, async (err, insertedId) => {
-      if (err) {
-        event.reply(`add-new-row-error:${requestId}`, { message: err?.message || String(err) });
+      const row = { ...(newRowData || newData || {}) };
+
+      console.log('[CRUD add-new-row RECEIVED]', {
+        cleanTableName,
+        requestId,
+        row,
+      });
+
+      // --------------------------------------------------------
+      // PRODUCT ADD: Canonical path
+      // --------------------------------------------------------
+      if (isProductTable) {
+        await productCanonicalService.saveCanonicalProduct(row, {
+          column: 'PROD_ID',
+          value: row.PROD_ID || row.product_id,
+        });
+
+        const refreshList = productRefreshList();
+
+        await refreshWithOptionalLock(refreshList);
+
+        event.reply(`add-new-row-success:${requestId}`, {
+          insertedId: row.PROD_ID || row.product_id,
+          refreshList,
+        });
+
         return;
       }
 
-      event.reply(`add-new-row-success:${requestId}`, { insertedId });
+      // --------------------------------------------------------
+      // NORMAL ADD: Generic table insert
+      // --------------------------------------------------------
 
-      try {
-        const refreshList = computeRefreshList(cleanTableName, row);
-        await refreshTablesSequential(refreshList);
-      } catch (e) {
-        console.warn('[crud.handlers] add-new-row refresh warning:', e?.message || e);
+      if (
+        cleanTableName === 'DealsMain' &&
+        Object.prototype.hasOwnProperty.call(row, 'TRADE_ID')
+      ) {
+        delete row.TRADE_ID;
       }
-    });
+
+      insertRowInTable(row, cleanTableName, async (err, insertedId) => {
+        if (err) {
+          event.reply(`add-new-row-error:${requestId}`, {
+            message: err?.message || String(err),
+          });
+          return;
+        }
+
+        try {
+          const refreshList = computeRefreshList(cleanTableName, row);
+
+          await refreshWithOptionalLock(refreshList);
+
+          event.reply(`add-new-row-success:${requestId}`, {
+            insertedId,
+            refreshList,
+          });
+        } catch (e) {
+          console.warn(
+            '[crud.handlers] add-new-row refresh warning:',
+            e?.message || e
+          );
+
+          event.reply(`add-new-row-error:${requestId}`, {
+            message: e?.message || String(e),
+          });
+        }
+      });
+    } catch (error) {
+      event.reply(`add-new-row-error:${requestId}`, {
+        message: error?.message || String(error),
+      });
+    }
   });
 
   // ------------------------------------------------------------
   // ERASE
   // ------------------------------------------------------------
-  ipcMain.on('erase-data', async (event, { cleanTableName, uniqueIdentifier } = {}) => {
-    try {
-      await eraseRowFromDB(cleanTableName, uniqueIdentifier);
-      event.reply('erase-data-success', { cleanTableName, uniqueIdentifier });
 
-      const base = REFRESH_DEPENDENCIES?.[cleanTableName] || [cleanTableName];
-      await refreshTablesSequential(base);
+  ipcMain.on('erase-data', async (event, {
+    cleanTableName,
+    uniqueIdentifier,
+  } = {}) => {
+    try {
+      const tableName = String(cleanTableName || '');
+      const isProductTable = isProductTableName(tableName);
+
+      if (isProductTable) {
+        const productId =
+          uniqueIdentifier?.value ||
+          uniqueIdentifier?.PROD_ID ||
+          uniqueIdentifier?.product_id;
+
+        if (!productId) {
+          throw new Error('[canonical product delete] Missing product id');
+        }
+
+        await productCanonicalService.deleteCanonicalProduct(productId);
+
+        const refreshList = productRefreshList();
+
+        await refreshWithOptionalLock(refreshList);
+
+        event.reply('erase-data-success', {
+          cleanTableName,
+          uniqueIdentifier,
+          refreshList,
+        });
+
+        return;
+      }
+
+      await eraseRowFromDB(cleanTableName, uniqueIdentifier);
+
+      const refreshList = computeRefreshList(cleanTableName, uniqueIdentifier || {});
+
+      await refreshWithOptionalLock(refreshList);
+
+      event.reply('erase-data-success', {
+        cleanTableName,
+        uniqueIdentifier,
+        refreshList,
+      });
     } catch (error) {
-      event.reply('erase-data-error', error?.message || String(error));
+      event.reply(
+        'erase-data-error',
+        error?.message || String(error)
+      );
     }
   });
 };
-

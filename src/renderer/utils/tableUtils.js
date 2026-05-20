@@ -9,6 +9,14 @@ export function getCleanTableName(tableName) {
     : tableName;
 }
 
+function isProductTableName(tableName) {
+  return (
+    tableName === 'v_PRODUCTS_APP' ||
+    tableName === 'v_PRODUCTS_CANONICAL' ||
+    tableName === 'PRODUCTS_MASTER'
+  );
+}
+
 export function getUniqueIdentifier(newData, selectedTableName) {
   console.log('newData, selectedTableName:', newData, selectedTableName);
 
@@ -16,36 +24,47 @@ export function getUniqueIdentifier(newData, selectedTableName) {
 
   if (selectedTableName.startsWith('Deals')) {
     uniqueIdentifierColumn = 'TRADE_ID';
+  } else if (isProductTableName(selectedTableName)) {
+    uniqueIdentifierColumn = 'PROD_ID';
   } else {
     switch (selectedTableName) {
       case 'Issuer':
         uniqueIdentifierColumn = 'TICKER';
         break;
-      case 'ProdAll':
-        uniqueIdentifierColumn = 'PROD_ID';
-        break;
+
       case 'CSParameter':
         uniqueIdentifierColumn = 'CSSzenario';
         break;
+
       case 'ecb':
       case 'fed':
       case 'yahoo':
-      case 'ProdCouponSchedules':
         uniqueIdentifierColumn = 'ID';
         break;
+
       default:
         console.error('Unknown table:', selectedTableName);
         return null;
     }
   }
 
-  if (uniqueIdentifierColumn && newData.hasOwnProperty(uniqueIdentifierColumn)) {
+  if (uniqueIdentifierColumn && Object.prototype.hasOwnProperty.call(newData, uniqueIdentifierColumn)) {
     return {
       column: uniqueIdentifierColumn,
-      value: newData[uniqueIdentifierColumn]
+      value: newData[uniqueIdentifierColumn],
     };
-  } else {
-    console.error('Unable to determine the unique identifier for:', selectedTableName);
-    return null;
   }
+
+  if (
+    isProductTableName(selectedTableName) &&
+    Object.prototype.hasOwnProperty.call(newData, 'product_id')
+  ) {
+    return {
+      column: 'PROD_ID',
+      value: newData.product_id,
+    };
+  }
+
+  console.error('Unable to determine the unique identifier for:', selectedTableName);
+  return null;
 }

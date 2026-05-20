@@ -21,6 +21,7 @@ module.exports = {
     'start-py-swaption',
     'start-py-volcube',
     'start-py-ml',
+    'price-product',
 
     // UI / bulk ops
     'import-matched-columns',
@@ -154,6 +155,9 @@ module.exports = {
     'py-ml-complete',
     'py-MVaR-complete',
     'py-CVaR-complete',
+
+    'price-product-success',
+    'price-product-error',
 
     // Import / CRUD feedback
     'import-matched-columns-complete',

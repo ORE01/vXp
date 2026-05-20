@@ -110,7 +110,7 @@ export function bindAppButtons({
 
   // ---------- Matching / Offers ----------
   document.getElementById('submitToProductsBtn')
-    ?.addEventListener('click', () => handleSubmitMatchedColumns?.('productMatchesOutput', 'ProdAll'));
+    ?.addEventListener('click', () => handleSubmitMatchedColumns?.('productMatchesOutput', 'v_PRODUCTS_APP'));
 
   document.getElementById('submitToOffersBtn')
     ?.addEventListener('click', () => handleSubmitMatchedColumns?.('offerMatchesOutput', 'DealsMain', { port_name: 'LGT' }));

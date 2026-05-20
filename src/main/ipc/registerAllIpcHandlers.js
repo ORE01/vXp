@@ -21,6 +21,9 @@ module.exports = function registerAllIpcHandlers({
     deleteTable: mainFct.deleteTable,
     updateCustomerTexts: mainFct.updateCustomerTexts,
     insertCSParameter: mainFct.insertCSParameter,
+
+    syncProductScheduleToProductEvents: mainFct.syncProductScheduleToProductEvents,
+    eraseCouponScheduleAndSync: mainFct.eraseCouponScheduleAndSync,
   };
 
   const baseCtx = {

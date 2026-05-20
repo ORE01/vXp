@@ -115,19 +115,26 @@ module.exports = [
     }),
   },
 
-  {
-    name: 'crud',
-    register: require('./handlers/crud.handlers'),
-    getCtx: ({ ipcMain, mainFct, refreshTable }) => ({
-      ipcMain,
-      dbApi: {
-        updateRecord: mainFct.updateRecord,
-        insertRowInTable: mainFct.insertRowInTable,
-        eraseRowFromDB: mainFct.eraseRowFromDB,
-      },
-      refreshTable,
-    }),
-  },
+{
+  name: 'crud',
+  register: require('./handlers/crud.handlers'),
+  getCtx: ({ ipcMain, mainFct, refreshTable }) => ({
+    ipcMain,
+    dbApi: {
+      updateRecord: mainFct.updateRecord,
+      insertRowInTable: mainFct.insertRowInTable,
+      eraseRowFromDB: mainFct.eraseRowFromDB,
+      runSQL: mainFct.runSQL,
+
+      syncProductScheduleToProductEvents:
+        mainFct.syncProductScheduleToProductEvents,
+
+      eraseCouponScheduleAndSync:
+        mainFct.eraseCouponScheduleAndSync,
+    },
+    refreshTable,
+  }),
+},
 
   {
     name: 'dealsSelection',

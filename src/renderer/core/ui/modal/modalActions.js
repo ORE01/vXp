@@ -1,30 +1,108 @@
 ﻿'use strict';
 
-import { PRODUCT_TEMPLATES } from '../../../features/NEW_PRODUCTS/productTemplates.js';
 
+
+import { handleStructureTimelineModal } from '../../../features/products/StructureTimelineModal.js';
 import { setupAddOperation } from './modalAddAction.js';
 import { setupEditOperation } from './modalEditAction.js';
-
 import { requestTableRefreshAfterMutation } from './modalRefresh.js';
-
 import { generateInputFields } from './modalFields.js';
-
 import { makeModalDraggable } from './draggableModal.js';
 import { closeModal } from './modalUI.js';
-
-
-import { issuerData } from '../../../features/NEW_PRODUCTS/ISSUER.js';
-import { buildOrderedFieldsForModal } from '../../../features/NEW_PRODUCTS/PROD.js';
-
+import { issuerData } from '../../../features/products/ISSUER.js';
 import { displayErrorMessage } from './modalFeedback.js';
+import { applyProductTemplateDefaults } from '../../../features/products/productTemplateResolver.js';
 
 
 // =====================================================
 // Public entry
 // =====================================================
 
+
+function isProductTableName(tableName) {
+  return (
+    tableName === 'v_PRODUCTS_APP' ||
+    tableName === 'v_PRODUCTS_CANONICAL' ||
+    tableName === 'PRODUCTS_MASTER'
+  );
+}
+
+function resolveProductTemplateName(rowData = {}) {
+  const explicit =
+    rowData.__PRODUCT_TEMPLATE__ ||
+    rowData.__PRODUCT_TEMPLATE_SELECTOR__ ||
+    '';
+
+  if (explicit) return explicit;
+
+  const couponType = String(rowData.CouponType || '').trim().toUpperCase();
+
+  if (couponType === 'FIX') return 'FIXED_BOND';
+  if (couponType === 'FLOATER' || couponType === 'FRN') return 'FRN';
+  if (couponType === 'CUSTOM') return 'COMPLEX_BOND';
+
+  return 'COMPLEX_BOND';
+}
+
+function resolveProductUiMode(templateName) {
+  if (templateName === 'FIXED_BOND') return 'simple_fixed';
+  if (templateName === 'FRN') return 'simple_frn';
+  if (templateName === 'COMPLEX_BOND') return 'complex';
+
+  return 'complex';
+}
+
 export function handleModalAction(_event, data, rowIndex, selectedTableName, actionType) {
   console.log('[ModalAction] table:', selectedTableName, 'action:', actionType);
+
+  if (isProductTableName(selectedTableName)) {
+    if (actionType === 'add') {
+      console.log('[PRODUCT MODAL ROUTE BLOCK] Product add uses new Product Editor');
+
+      handleStructureTimelineModal(null, {
+        mode: 'create',
+        source: 'modalActions-product-add-redirect',
+        templateName: null,
+      });
+
+      return;
+    }
+
+    if (actionType === 'edit') {
+      const rowData = (Array.isArray(data) ? data[rowIndex] : data) || {};
+      const prodId =
+        rowData.PROD_ID ||
+        rowData.product_id ||
+        rowData.prod_id ||
+        '';
+
+      if (!prodId) {
+        console.warn('[PRODUCT MODAL ROUTE BLOCK] Missing PROD_ID for product edit', {
+          rowIndex,
+          rowData,
+        });
+        return;
+      }
+
+      const templateName = resolveProductTemplateName(rowData);
+      const uiMode = resolveProductUiMode(templateName);
+
+      console.log('[PRODUCT MODAL ROUTE BLOCK] Product edit uses new Product Editor', {
+        prodId,
+        templateName,
+        uiMode,
+      });
+
+      handleStructureTimelineModal(String(prodId).trim(), {
+        mode: 'edit',
+        source: 'modalActions-product-edit-redirect',
+        templateName,
+        uiMode,
+      });
+
+      return;
+    }
+  }
 
   displayModal(actionType, rowIndex);
   setupModalFields(actionType, data, rowIndex, selectedTableName);
@@ -36,8 +114,10 @@ export function handleModalAction(_event, data, rowIndex, selectedTableName, act
     setupEditOperation(rowData, rowIndex, selectedTableName);
   }
 
-  removeCouponButton();
+  //removeCouponButton();
 }
+
+
 
 // =====================================================
 // Modal UI
@@ -86,31 +166,9 @@ function setupModalFields(actionType, data, rowIndex, selectedTableName) {
 
     let rowDataForForm;
 
-    if (selectedTableName === 'ProdAll') {
-      const initialTemplateName = 'FIXED_BOND';
 
-      rowDataForForm = {
-        ...(buildOrderedFieldsForModal(baseRow, initialTemplateName) || {}),
-      };
 
-      if ('id' in rowDataForForm) rowDataForForm.id = '';
-      if ('ID' in rowDataForForm) rowDataForForm.ID = '';
 
-      if ('ISSUER' in rowDataForForm && !rowDataForForm.ISSUER) {
-        rowDataForForm.ISSUER = uniqueIssuers[0] || '';
-      }
-
-      renderProductTemplateSelector(
-        form,
-        baseRow,
-        uniqueIssuers,
-        selectedTableName,
-        initialTemplateName
-      );
-
-      generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
-      return;
-    }
 
     rowDataForForm = { ...(baseRow || {}) };
 
@@ -129,94 +187,11 @@ function setupModalFields(actionType, data, rowIndex, selectedTableName) {
     const raw = (Array.isArray(data) && data[rowIndex]) ? data[rowIndex] : data;
     let rowDataForForm = raw || {};
 
-    if (selectedTableName === 'ProdAll') {
-      const couponType = String(raw?.CouponType || '').trim().toUpperCase();
 
-      const initialTemplateName =
-        raw?.__PRODUCT_TEMPLATE__
-        || (
-          couponType === 'FLOATER'
-            ? 'FRN'
-            : couponType === 'FIX'
-              ? 'FIXED_BOND'
-              : 'COMPLEX_BOND'
-        );
-
-      rowDataForForm = {
-        ...(buildOrderedFieldsForModal(raw, initialTemplateName) || raw || {}),
-      };
-
-      renderProductTemplateSelector(
-        form,
-        raw,
-        uniqueIssuers,
-        selectedTableName,
-        initialTemplateName
-      );
-
-      generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
-      return;
-    }
 
     generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
   }
 }
-
-function renderProductTemplateSelector(
-  form,
-  baseRow,
-  uniqueIssuers,
-  selectedTableName,
-  initialTemplateName
-) {
-  if (selectedTableName !== 'ProdAll') return;
-
-  const selectorRow = document.createElement('div');
-  selectorRow.classList.add('form-row', 'product-template-selector-row');
-
-  const label = document.createElement('label');
-  label.textContent = 'Product Type';
-  label.classList.add('label');
-
-  const select = document.createElement('select');
-  select.classList.add('input-field');
-  select.setAttribute('data-field', '__PRODUCT_TEMPLATE_SELECTOR__');
-
-  Object.entries(PRODUCT_TEMPLATES).forEach(([templateName, template]) => {
-    const option = document.createElement('option');
-    option.value = templateName;
-    option.textContent = template.label || templateName;
-    select.appendChild(option);
-  });
-
-  select.value = initialTemplateName;
-
-  select.addEventListener('change', () => {
-    const templateName = select.value;
-
-    const rowDataForForm = {
-      ...(buildOrderedFieldsForModal(baseRow, templateName) || {}),
-    };
-
-    form.innerHTML = '';
-
-    renderProductTemplateSelector(
-      form,
-      baseRow,
-      uniqueIssuers,
-      selectedTableName,
-      templateName
-    );
-
-    generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
-  });
-
-  selectorRow.appendChild(label);
-  selectorRow.appendChild(select);
-  form.appendChild(selectorRow);
-}
-
-
 
 function removeCouponButton() {
   const couponButton = document.getElementById('coupon-button');
@@ -229,12 +204,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
-
-
 // SAVE
 export function saveChanges(newData, cleanTableName, rowIndex, uniqueIdentifier) {
-  window.api.send('update-data', { newData, cleanTableName, rowIndex, uniqueIdentifier });
+  const finalData = applyProductTemplateDefaults(newData, cleanTableName);
+
+  console.log('[SAVE MODAL DATA]', {
+    cleanTableName,
+    template: finalData.__PRODUCT_TEMPLATE__,
+    couponType: finalData.CouponType,
+    schedule: finalData.SCHEDULE,
+    finlib: finalData.FINLIB,
+    model: finalData.MODEL,
+    methode: finalData.METHODE,
+    finalData,
+  });
+
+  window.api.send('update-data', {
+    newData: finalData,
+    cleanTableName,
+    rowIndex,
+    uniqueIdentifier,
+  });
 }
 
 // =====================================================
