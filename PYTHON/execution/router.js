@@ -120,25 +120,24 @@ export function createPythonExecutionRouter(ctx) {
 
 
 
-  function handleCSParProject(buttonElement, extraParam) {
-  const selectedTableName = 'CSParameter';
+  function handleCSParProject(buttonElement, extraParam = {}) {
+    const selectedTableName = 'CSParameter';
 
-  const latestCSActive = (appState.getCSActive?.() || [])
-    .sort((a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0))[0];
+    const CSSzenario = 'BASE';
+    const selectedRows = ['BASE'];
 
-  const CSSzenario = String(latestCSActive?.scenario_name || '').trim();
+    const payload = {
+      tableName: selectedTableName,
+      ...extraParam,
+      CSSzenario,
+      selectedRows,
+      mode: 'BASE',
+    };
 
-  if (!CSSzenario) {
-    throw new Error('Please select at least one scenario.');
+    console.log('[py-cspar] BASE rebuild payload =', payload);
+
+    window.api.send('start-py-cspar', payload);
   }
-
-  
-
-  const selectedRows = [CSSzenario];
-  const payload = { tableName: selectedTableName, ...extraParam, CSSzenario, selectedRows };
-
-  window.api.send('start-py-cspar', payload);
-}
 
   function handleAIColumnProject(extraParam = {}) {
     const port_name = appState.getSelectedDealsTableName?.();

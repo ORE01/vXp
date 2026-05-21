@@ -290,22 +290,44 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
   });
 
   // ===================== CSPAR =====================
-  ipcMain.on('start-py-cspar', async (event, args) => {
-    const { CSSzenario } = args || {};
-    if (!CSSzenario) {
-      event.reply('project-finished', { success: false, projectName: 'py-cspar', message: 'The "CSSzenario" argument is required.' });
-      return;
-    }
-
+  ipcMain.on('start-py-cspar', async (event, args = {}) => {
     try {
+      // CSPAR is BASE-only.
+      // It rebuilds CS_BASE from CSParameter and must not depend on UI scenario state.
+      const CSSzenario = 'BASE';
+
       const pythonArgs = ['--CSSzenario', CSSzenario];
-      const result = await startPythonScriptWithEvent(event, 'cspar', 'py-csparData', pythonArgs);
 
-      try { refreshTable('CSMatrix'); } catch {}
+      console.log('[py-cspar] BASE-only run. args from renderer =', args);
+      console.log('[py-cspar] pythonArgs =', pythonArgs);
 
-      event.reply('project-finished', { success: true, projectName: 'py-cspar', data: result });
+      const result = await startPythonScriptWithEvent(
+        event,
+        'cspar',
+        'py-csparData',
+        pythonArgs
+      );
+
+      try { refreshTable('CS_BASE'); } catch (err) {
+        console.warn('[py-cspar] refreshTable CS_BASE failed:', err?.message || err);
+      }
+
+      try { refreshTable('CSParameter'); } catch (err) {
+        console.warn('[py-cspar] refreshTable CSParameter failed:', err?.message || err);
+      }
+
+      event.reply('project-finished', {
+        success: true,
+        projectName: 'py-cspar',
+        data: result,
+      });
     } catch (error) {
-      event.reply('project-finished', { success: false, projectName: 'py-cspar', message: 'Python script execution failed.', error: error?.message || String(error) });
+      event.reply('project-finished', {
+        success: false,
+        projectName: 'py-cspar',
+        message: 'Python script execution failed.',
+        error: error?.message || String(error),
+      });
     }
   });
 

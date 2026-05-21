@@ -42,8 +42,8 @@ Patch-File "src\renderer\features\ANALYSE_PORTFOLIO\MARKET_RISK\MVaR.js" @{
   "../../charts/"        = "../../../../charts/"
 }
 
-# --- CVaR.js (features/ANALYSE_PORTFOLIO/CREDIT_RISK) ---
-Patch-File "src\renderer\features\ANALYSE_PORTFOLIO\CREDIT_RISK\CVaR.js" @{
+# --- CVaR.js (features/ANALYSE_PORTFOLIO/credit_risk) ---
+Patch-File "src\renderer\features\ANALYSE_PORTFOLIO\credit_risk\CVaR.js" @{
   "../utils/"      = "../../../../utils/"
   "../../utils/"   = "../../../../utils/"
   "../charts/"     = "../../../../charts/"
