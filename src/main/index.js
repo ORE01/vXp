@@ -19,6 +19,7 @@ const ROOT = path.join(__dirname, '../..');
 const registerAllIpcHandlers = require('./ipc/registerAllIpcHandlers');
 const mainFct = require('./main.gateway.js');
 const dbService = require('./services/db.service');
+const { ensureAppSchema } = require('./services/db.schema');
 
 mainFct.syncProductScheduleToProductEvents =
   dbService.syncProductScheduleToProductEvents;
@@ -38,6 +39,7 @@ const { createDataCollectorBootstrap } = require('./bootstrap/dataCollector.boot
 const registerIpcMetaHandlers = require('./ipc/handlers/ipcMeta.handlers');
 const registerCouponWindowHandlers = require('./ipc/handlers/couponWindow.handlers');
 const registerBondFetchHandlers = require('./ipc/handlers/bondFetch.handlers');
+const registerTableLayoutHandlers = require('./ipc/handlers/tableLayout.handlers');
 
 // =====================================================
 // Windows / Pump
@@ -185,6 +187,21 @@ function bootstrapFeatures() {
 // App Lifecycle
 // =====================================================
 
+// app.whenReady().then(async () => {
+//     try {
+//     if (!sqliteDb) {
+//       throw new Error('[main] sqliteDb not available for schema initialization');
+//     }
+
+//     await ensureAppSchema(sqliteDb);
+//     console.log('[main] App schema ready');
+//   } catch (e) {
+//     console.error('[main] Schema initialization failed', e);
+//     app.quit();
+//     return;
+//   }
+
+//   installCspHeaders();
 app.whenReady().then(() => {
   installCspHeaders({ session });
 
@@ -215,6 +232,12 @@ app.whenReady().then(() => {
     getMainWindow,
     mainFct,
   });
+
+registerTableLayoutHandlers({
+  ipcMain,
+  dbApi: dbService,
+  refreshTable: pump.refreshTable,
+});
 
   pump.installWindowDidFinishLoadSend();
 

@@ -40,6 +40,9 @@ function isExcludedTable(tableName) {
 }
 
   function safeSend(channel, payload) {
+    if (channel === 'CustomerTableLayoutsData') {
+  console.log('[DATAPUMP] SEND CustomerTableLayoutsData', payload);
+}
     try {
       const win = getMainWindow();
 
@@ -225,7 +228,15 @@ function resolveTableName(tableName) {
 
       log('[DATAPUMP] RAW TABLE NAMES:', received);
 
-      tableNames = (received || []).filter(t => !isExcludedTable(t));
+      tableNames = (received || []).filter(t => !excluded.has(t));
+
+      // console.log('[DATAPUMP] RAW TABLE NAMES:', received);
+      // console.log('[DATAPUMP] FILTERED TABLE NAMES:', tableNames);
+      // console.log(
+      //   '[DATAPUMP] HAS CustomerTableLayouts:',
+      //   tableNames.includes('CustomerTableLayouts')
+      // );
+
       tableNamesReady = true;
 
       log('[DATAPUMP] FILTERED TABLE NAMES:', tableNames);

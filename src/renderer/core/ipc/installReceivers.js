@@ -20,7 +20,8 @@ export function installReceivers(deps = {}) {
 
     handleCustomerData,
     handleCustomerTSData,
-    handleRATES_BASEData,
+    handleCustomerTableLayoutsData,
+    handleRATESData,
     handleRatesScenarioData,
     handleRatesActiveData,
     handleForwardData,
@@ -76,6 +77,10 @@ export function installReceivers(deps = {}) {
   console.log('[BOOT RECEIVERS] handleSwaptionAtmScenarioData:', typeof handleSwaptionAtmScenarioData);
   console.log('[BOOT RECEIVERS] handleSwaptionSmileScenarioData:', typeof handleSwaptionSmileScenarioData);
   console.log('[BOOT RECEIVERS] handleSwaptionActiveData:', typeof handleSwaptionActiveData);
+  console.log(
+    '[BOOT RECEIVERS] handleCustomerTableLayoutsData:',
+    typeof handleCustomerTableLayoutsData
+  );
 
   if (!api) throw new Error('[installReceivers] api missing');
 
@@ -98,12 +103,34 @@ export function installReceivers(deps = {}) {
 
   let receivedOnce = false;
 
+// api.receive(channel, (data) => {
+
+//   // console.log("CHANNEL:", channel);
+//   // console.log("RAW DATA:", data);
+//   // console.log("IS ARRAY:", Array.isArray(data));
+//   // console.log("DATA.ROWS:", data?.rows);
+
+//   receivedOnce = true;
+
+//   const normalized =
+//     Array.isArray(data) ? data :
+//     Array.isArray(data?.rows) ? data.rows :
+//     [];
+
+//   // console.log("NORMALIZED:", normalized);
+
+//   fn(normalized);
+
+// });
+
 api.receive(channel, (data) => {
 
-  // console.log("CHANNEL:", channel);
-  // console.log("RAW DATA:", data);
-  // console.log("IS ARRAY:", Array.isArray(data));
-  // console.log("DATA.ROWS:", data?.rows);
+  if (channel === 'CustomerTableLayoutsData') {
+    console.log(
+      '[RECEIVER] CustomerTableLayoutsData received raw:',
+      data
+    );
+  }
 
   receivedOnce = true;
 
@@ -112,12 +139,9 @@ api.receive(channel, (data) => {
     Array.isArray(data?.rows) ? data.rows :
     [];
 
-  // console.log("NORMALIZED:", normalized);
-
   fn(normalized);
 
 });
-
 
 
 
@@ -161,7 +185,8 @@ api.receive(channel, (data) => {
 
     handleCustomerData,
     handleCustomerTSData,
-    handleRATES_BASEData,
+    handleCustomerTableLayoutsData,
+    handleRATESData,
     handleRatesScenarioData,
     handleRatesActiveData,
     handleForwardData,
@@ -220,6 +245,7 @@ api.receive(channel, (data) => {
   // CUSTOMER
   route('CustomerData', { required: true });
   route('CustomerTSSelectionData');
+  route('CustomerTableLayoutsData');
 
   // MARKET DATA
   route('RATES_ACTIVEData');

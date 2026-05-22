@@ -92,6 +92,7 @@ module.exports = {
     // -------------------------------------------------
     'get-table-columns',
     'get-table-rows',
+    'table-layout:save-one',
 
     // -------------------------------------------------
     // Insert / normalize helpers

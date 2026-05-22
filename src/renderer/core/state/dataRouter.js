@@ -18,6 +18,9 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CustomerTSSelectionData':
       return handlers.handleCustomerTSData?.(rows);
 
+    case 'CustomerTableLayoutsData':
+      return handlers.handleCustomerTableLayoutsData?.(rows);
+
     // MARKET DATA
     case 'RATES_BASEData':
       return handlers.handleRATES_BASEData?.(rows);

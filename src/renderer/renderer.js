@@ -18,6 +18,7 @@ import { bootstrapBridges } from './core/bootstrap/bootstrapBridges.js';
 import { bootstrapPython } from './core/bootstrap/bootstrapPython.js';
 import { bootstrapIPC } from './core/bootstrap/bootstrapIPC.js';
 import { bootstrapBindings } from './core/bootstrap/bootstrapBindings.js';
+import { handleCustomerTableLayoutsData } from './features/CUSTOMER/tableLayouts/handleCustomerTableLayoutsData.js';
 
 import { openPanel } from './core/ui/panels/index.js';
 import { showMessageBox, showConfirmationBox } from './core/ui/dialogs/confirm.js';
@@ -221,6 +222,8 @@ const {
     handleCS_ACTIVEData,
     handleCSBaseData,
     handleCSScenarioData,
+    handleCustomerTableLayoutsData,
+
 
     ...issuerProdHandlers,
     ...customerHandlers,
