@@ -112,13 +112,17 @@ function queryDB(tableName, callback) {
 function updateRecord(tableName, rowIndex, newData, uniqueIdentifier, callback) {
   const db = getDb();
 
-  const columnNames = Object.keys(newData);
+  const cleanData = Object.fromEntries(
+    Object.entries(newData).filter(([key]) => !key.startsWith('__'))
+  );
+
+  const columnNames = Object.keys(cleanData);
 
   const setClause = columnNames
     .map(columnName => `${columnName} = ?`)
     .join(', ');
 
-  const setValues = columnNames.map(c => newData[c]);
+  const setValues = columnNames.map(c => cleanData[c]);
 
   let whereClause;
   let whereValues;

@@ -36,20 +36,21 @@ export function updateCSScenarioWarningUI() {
 
   const activeRows = appState.getCSActive?.() || [];
 
-  let activeScenario = "BASE";
+  const affected = activeRows
+    .filter(r => String(r?.scenario_id || "BASE").trim() !== "BASE")
+    .map(r => {
+      const ccy = String(r?.ccy || "").trim().toUpperCase();
+      const scenario = String(r?.scenario_id || "").trim();
+      return ccy ? `${ccy}: ${scenario}` : scenario;
+    })
+    .filter(Boolean);
 
-  if (activeRows.length) {
-    const latest = [...activeRows]
-      .sort((a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0))[0];
-
-    activeScenario = String(latest?.scenario_name || "BASE").trim() || "BASE";
-  }
-
-  const showWarning = activeScenario !== "BASE";
+  const showWarning = affected.length > 0;
 
   warningContainer.style.display = showWarning ? "flex" : "none";
   warningLight.style.backgroundColor = showWarning ? "red" : "transparent";
-  warningText.textContent = showWarning ? activeScenario : "";
+  warningText.textContent = showWarning ? affected.join(" | ") : "";
+  warningText.title = showWarning ? affected.join("\n") : "";
 }
 
 export function updateProductCSWarningUI(filteredProdData) {

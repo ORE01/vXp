@@ -1,6 +1,8 @@
 ﻿import { prodData } from '../../../features/NEW_PRODUCTS/PROD.js';
 import { convertDateToISO, formatDisplayValue } from '../../../utils/format.js';
 import { handleProdAllFields } from '../../../features/NEW_PRODUCTS/prodSimpleCoupon.js';
+import { getFieldConfig } from '../../../features/NEW_PRODUCTS/productFieldConfig.js';
+import { getTemplateFieldSection } from '../../../features/NEW_PRODUCTS/productTemplates.js';
 
 
 
@@ -43,6 +45,8 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
 
   const hiddenFields = hiddenFieldsByTable[selectedTableName];
 
+  let lastSectionName = null;
+
   Object.keys(rowData).forEach((fieldName) => {
     if (hiddenFields && hiddenFields.has(fieldName)) return;        // generisches Hiding
 
@@ -54,6 +58,39 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
     const label = document.createElement('label');
     label.textContent = fieldName;
     label.classList.add('label');
+
+    const templateName = rowData.__PRODUCT_TEMPLATE__;
+    const sectionName = getTemplateFieldSection(templateName, fieldName);
+
+    if (sectionName && sectionName !== lastSectionName) {
+      const sectionHeader = document.createElement('div');
+      sectionHeader.classList.add('form-section-header');
+      sectionHeader.textContent = formatSectionLabel(sectionName);
+
+      form.appendChild(sectionHeader);
+      lastSectionName = sectionName;
+    }
+
+    if (sectionName) {
+      formRow.setAttribute('data-product-section', sectionName);
+    }
+
+    const fieldConfig = getFieldConfig(selectedTableName, fieldName, rowData);
+
+    if (fieldConfig) {
+      const handled = renderConfiguredField(
+        fieldName,
+        rowData,
+        formRow,
+        label,
+        fieldConfig
+      );
+
+      if (handled) {
+        form.appendChild(formRow);
+        return;
+      }
+    }
 
     for (const [prefix, handler] of Object.entries(tableHandlers)) {
       if (selectedTableName.startsWith(prefix)) {
@@ -79,6 +116,46 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
 
   });
 }
+
+    function formatSectionLabel(sectionName) {
+      return String(sectionName || '')
+        .replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    function renderConfiguredField(fieldName, rowData, formRow, label, config) {
+      if (config.type === 'select') {
+        const options = Array.isArray(config.options) ? config.options : [];
+
+        const selected =
+          rowData[fieldName] ||
+          rowData[config.defaultValueFrom] ||
+          config.defaultValue ||
+          '';
+
+        const dropdown = createDropdown(fieldName, options, selected);
+
+        formRow.appendChild(label);
+        formRow.appendChild(dropdown);
+        return true;
+      }
+
+      if (config.type === 'text' || config.type === 'number') {
+        const input = document.createElement('input');
+        input.type = config.type;
+        input.value = rowData[fieldName] ?? config.defaultValue ?? '';
+        input.setAttribute('data-field', fieldName);
+        input.classList.add('input-field');
+
+        formRow.appendChild(label);
+        formRow.appendChild(input);
+        return true;
+      }
+
+      return false;
+    }
+
  
     function handleDealsFields(fieldName, rowData, formRow, label) {
       switch (fieldName) {

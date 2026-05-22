@@ -17,24 +17,23 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
   ipcMain.on('start-py-fairValue', async (event, args) => {
     const {
       tableName,
-      CSSzenario,
       selectedCurve,
       calibrate = false,
       cal_iters = 2,
     } = args || {};
 
-    if (!tableName || !CSSzenario || !selectedCurve) {
+    if (!tableName || !selectedCurve) {
       event.reply('py-fairValue-complete', {
         success: false,
         projectName: 'py-fairValue',
-        message: 'Arguments "tableName", "CSSzenario" and "selectedCurve" are all required.'
+        message: 'Arguments "tableName" and "selectedCurve" are required.'
       });
       event.reply('project-finished', { success: false, projectName: 'py-fairValue' });
       return;
     }
 
     try {
-      const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario, '--selectedCurve', selectedCurve];
+      const pythonArgs = ['--table', tableName, '--selectedCurve', selectedCurve];
       if (calibrate) pythonArgs.push('--calibrate');
       if (Number.isFinite(cal_iters)) pythonArgs.push('--cal-iters', String(cal_iters));
 

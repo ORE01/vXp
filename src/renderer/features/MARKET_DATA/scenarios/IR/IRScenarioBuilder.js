@@ -1,6 +1,13 @@
-export async function renderIRScenarioBuilder() {
+'use strict';
 
-  let baseCurveData = []; // 🔥 SOURCE OF TRUTH
+import {
+  showSuccess,
+  showError,
+  showInfo
+} from '../../../../core/ui/notifications/notifications.js';
+
+export async function renderIRScenarioBuilder() {
+  let baseCurveData = [];
 
   const ccySelect = document.getElementById('createScenarioCcy');
   const curveSelect = document.getElementById('createScenarioCurve');
@@ -9,10 +16,6 @@ export async function renderIRScenarioBuilder() {
   const saveBtn = document.getElementById('saveScenarioBtn');
 
   if (!ccySelect || !curveSelect || !scenarioSelect || !tableContainer || !saveBtn) return;
-
-  // =====================================================
-  // LOAD ALL CURVES
-  // =====================================================
 
   const curves = await window.api.invoke('rates:get-available-curves');
 
@@ -26,14 +29,8 @@ export async function renderIRScenarioBuilder() {
     ccySelect.appendChild(opt);
   });
 
-  // =====================================================
-  // UPDATE CURVES
-  // =====================================================
-
   async function updateCurves() {
-
     const selectedCcy = ccySelect.value;
-
     const filtered = curves.filter(c => c.ccy === selectedCcy);
 
     curveSelect.innerHTML = '';
@@ -45,9 +42,8 @@ export async function renderIRScenarioBuilder() {
       curveSelect.appendChild(opt);
     });
 
-    // RESET UI
-    scenarioSelect.value = "";
-    document.getElementById('createScenarioName').value = "";
+    scenarioSelect.value = '';
+    document.getElementById('createScenarioName').value = '';
 
     await loadScenarios();
     await loadBaseCurve();
@@ -56,20 +52,14 @@ export async function renderIRScenarioBuilder() {
   ccySelect.onchange = updateCurves;
 
   curveSelect.onchange = async () => {
-
-    scenarioSelect.value = "";
-    document.getElementById('createScenarioName').value = "";
+    scenarioSelect.value = '';
+    document.getElementById('createScenarioName').value = '';
 
     await loadScenarios();
     await loadBaseCurve();
   };
 
-  // =====================================================
-  // LOAD SCENARIOS
-  // =====================================================
-
   async function loadScenarios() {
-
     const ccy = ccySelect.value;
     const curve_id = curveSelect.value;
 
@@ -80,7 +70,7 @@ export async function renderIRScenarioBuilder() {
       curve_id
     });
 
-    scenarioSelect.innerHTML = '<option value="">-- Neues Szenario --</option>';
+    scenarioSelect.innerHTML = '<option value="">-- Create New Scenario --</option>';
 
     scenarios.forEach(s => {
       const opt = document.createElement('option');
@@ -92,12 +82,7 @@ export async function renderIRScenarioBuilder() {
 
   scenarioSelect.onchange = loadSelectedScenario;
 
-  // =====================================================
-  // LOAD BASE CURVE
-  // =====================================================
-
   async function loadBaseCurve() {
-
     const ccy = ccySelect.value;
     const curve_id = curveSelect.value;
 
@@ -109,20 +94,16 @@ export async function renderIRScenarioBuilder() {
     });
 
     if (!res.success) {
-      tableContainer.innerHTML = "<p>No BASE data</p>";
+      tableContainer.innerHTML = '<p>No BASE data</p>';
+      showError('No BASE curve data found');
       return;
     }
 
-    baseCurveData = JSON.parse(JSON.stringify(res.rows)); // 🔥 speichern
+    baseCurveData = JSON.parse(JSON.stringify(res.rows));
     renderTable(res.rows);
   }
 
-  // =====================================================
-  // LOAD SCENARIO
-  // =====================================================
-
   async function loadSelectedScenario() {
-
     const selectedScenario = scenarioSelect.value;
 
     if (!selectedScenario) {
@@ -139,20 +120,18 @@ export async function renderIRScenarioBuilder() {
       scenario_id: selectedScenario
     });
 
-    if (!res.success) return;
+    if (!res.success) {
+      showError(res?.error || 'Failed to load scenario');
+      return;
+    }
 
     document.getElementById('createScenarioName').value = selectedScenario;
 
-    baseCurveData = JSON.parse(JSON.stringify(res.rows)); // 🔥 auch hier!
+    baseCurveData = JSON.parse(JSON.stringify(res.rows));
     renderTable(res.rows);
   }
 
-  // =====================================================
-  // TABLE
-  // =====================================================
-
   function renderTable(rows) {
-
     let html = `
       <table class="ml-table">
         <thead>
@@ -168,10 +147,8 @@ export async function renderIRScenarioBuilder() {
       html += `
         <tr>
           <td style="width:120px;">${r.tenor}</td>
-
           <td>
             <div style="display:flex; gap:6px; align-items:center;">
-
               <input type="number"
                      value="${r.value}"
                      data-tenor="${r.tenor}"
@@ -181,24 +158,18 @@ export async function renderIRScenarioBuilder() {
                       style="padding:2px 6px; cursor:pointer; border:1px solid #888; border-radius:4px; background:#222; color:#fff;">
                 ⇩
               </button>
-
             </div>
           </td>
         </tr>
       `;
     });
 
-    html += `</tbody></table>`;
+    html += '</tbody></table>';
 
     tableContainer.innerHTML = html;
   }
 
-  // =====================================================
-  // FILL DOWN
-  // =====================================================
-
   tableContainer.addEventListener('click', (e) => {
-
     if (!e.target.classList.contains('fill-down-btn')) return;
 
     const row = e.target.closest('tr');
@@ -212,67 +183,63 @@ export async function renderIRScenarioBuilder() {
       if (nextInput) nextInput.value = value;
       next = next.nextElementSibling;
     }
+
+    showInfo('Values filled down');
   });
 
-  // =====================================================
-  // BASE SHIFT (🔥 FIXED VERSION)
-  // =====================================================
-
   document.getElementById('applyShiftBtn').onclick = () => {
-
     const shiftValue = parseFloat(
       document.getElementById('parallelShiftInput').value
     );
 
-    if (isNaN(shiftValue)) {
-      alert("Ungültiger Shift");
+    if (Number.isNaN(shiftValue)) {
+      showError('Invalid shift');
       return;
     }
 
     const inputs = tableContainer.querySelectorAll('input[data-tenor]');
 
     inputs.forEach(input => {
-
       const tenor = input.dataset.tenor;
-
       const basePoint = baseCurveData.find(p => p.tenor === tenor);
 
       if (!basePoint) return;
 
       const newValue = parseFloat(basePoint.value) + shiftValue;
-
       input.value = newValue.toFixed(6);
     });
 
+    showSuccess('Shift applied');
   };
 
-  // =====================================================
-  // SAVE
-  // =====================================================
-
   saveBtn.onclick = async () => {
-
     const ccy = ccySelect.value;
     const curve_id = curveSelect.value;
     const scenarioName = document.getElementById('createScenarioName').value.trim();
 
     if (!scenarioName) {
-      alert("Name fehlt");
+      showError('Name missing');
       return;
     }
 
     const inputs = tableContainer.querySelectorAll('input[data-tenor]');
-
     const data = [];
 
-    inputs.forEach(input => {
+    for (const input of inputs) {
+      const value = parseFloat(input.value);
+
+      if (Number.isNaN(value)) {
+        showError('Invalid value');
+        return;
+      }
+
       data.push({
         tenor: input.dataset.tenor,
-        value: parseFloat(input.value)
+        value
       });
-    });
+    }
 
-    await window.api.invoke("rates:create-scenario", {
+    const result = await window.api.invoke('rates:create-scenario', {
       ccy,
       curve_id,
       scenario_id: scenarioName,
@@ -280,13 +247,17 @@ export async function renderIRScenarioBuilder() {
       data
     });
 
+    if (result?.success === false) {
+      showError(result?.error || 'Failed to save scenario');
+      return;
+    }
+
     await window.api.send('fetch-table-data', {
       table: 'RATES_SCENARIO_DATA'
     });
 
-    alert("Gespeichert");
+    showSuccess(`IR scenario saved (${ccy} · ${curve_id})`);
   };
 
-  // INIT
   updateCurves();
 }

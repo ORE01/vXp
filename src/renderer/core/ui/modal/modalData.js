@@ -2,7 +2,7 @@
 
 // EDIT Column is in processData!!!
 
-function processData(data, selectedTableName, columnLabelMap = {}) {
+function processData(data, selectedTableName, columnLabelMap = {}, options = {}) {
   let html = '';
   const formatRules = getFormatRules();
 
@@ -18,6 +18,7 @@ function processData(data, selectedTableName, columnLabelMap = {}) {
   const excludePortTables = /^Port/;
 
   const includeEditColumn =
+    options.includeEditColumn !== false &&
     !excludeEditColumnTables.includes(selectedTableName) &&
     !excludePortTables.test(selectedTableName);
 

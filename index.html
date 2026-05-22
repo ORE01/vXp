@@ -38,6 +38,7 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/components/dropdown.css" rel="stylesheet">
   <link href="./css/components/toolTip.css" rel="stylesheet">
   <link href="./css/components/messageBox.css" rel="stylesheet">
+  <link href="./css/components/notifications.css" rel="stylesheet">
   <link href="./css/components/warnings.css" rel="stylesheet">
   <link href="./css/components/trafficLight.css" rel="stylesheet">
 
@@ -195,25 +196,27 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 
   <div class="toolbar-right">
+    
     <!-- Curve Szenario Warning -->
     <div id="curveWarningContainer" class="warning-container">
       <span class="warning-text">Curve Scenario Set</span>
       <div id="curveWarning" class="warning-light"></div>
     </div>
 
-    <!-- Credit Spread Szenario Warning -->
-<div id="creditWarningContainer" class="warning-container">
-  <span class="warning-text">Credit Spread Scenario Set:</span>
-  <div id="creditWarning" class="warning-light"></div>
-  <span id="creditWarningText" class="warning-text"></span>
-</div>
-
-    <!-- CS Szenario Warning -->
-    <div id="csWarningContainer" class="warning-container">
+    <!-- Product-specific CS Scenario Warning -->
+    <div id="creditWarningContainer" class="warning-container">
       <span class="warning-text">CS Scenario for ID Set:</span>
+      <div id="creditWarning" class="warning-light"></div>
+      <span id="creditWarningText" class="warning-text"></span>
+    </div>
+
+    <!-- Global Credit Spread Scenario Warning -->
+    <div id="csWarningContainer" class="warning-container">
+      <span class="warning-text">Credit Spread Scenario Set:</span>
       <div id="csWarning" class="warning-light"></div>
       <span id="csWarningText" class="warning-text"></span>
     </div>
+
   </div>
 </div>
 
@@ -1814,11 +1817,25 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </div>
 
-    <!-- Panel: CREDIT SPREADS (Slide-In) -->
+    <!-- Panel: CREDIT SPREADS  -->
     <div id="panel-creditspreads" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-creditspreads-title" hidden>
+
       <div class="sub-panel-header">
-        <div id="panel-creditspreads-title" class="sub-panel-title">CREDIT SPREADS</div>
-        <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="close">&times;</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div id="panel-creditspreads-title" class="sub-panel-title">
+            CREDIT SPREADS
+          </div>
+
+          <label for="csCcySelector" style="font-size:12px;">CCY</label>
+          <select id="csCcySelector">
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+
+        <button class="sub-panel-close" data-close="panel-creditspreads" aria-label="close">
+          &times;
+        </button>
       </div>
 
       <div class="sub-panel-body">
@@ -2069,17 +2086,15 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- ================= CS ================= -->
     <section class="table-card" style="margin-top:24px;">
-      <h4 class="table-title">Credit Scenario (Global)</h4>
-
-<div id="csScenarioContainer" style="margin-bottom:12px;">
-  
-</div>
-
-      <button id="applyCSScenarioChanges" class="edit-button">
-        Apply CS Scenario
-      </button>
+      <h4 class="table-title">Credit Spread Scenario Mapping</h4>
+      <div id="csScenarioContainer" class="data-container"></div>
     </section>
 
+    <div style="margin-top:16px;">
+      <button id="applyCSScenarioChanges" class="edit-button">
+        Apply Changes
+      </button>
+    </div>
     <!-- ================= VOLS ================= -->
     <section class="table-card" style="margin-top:24px;">
       <h4 class="table-title">Swaption Vol Scenario</h4>
@@ -2168,6 +2183,14 @@ Feature:    Wenn es nur in einem Panel gilt
       <h4 class="table-title">Scenario Setup</h4>
 
       <div style="margin-bottom:12px;">
+        <label>Currency</label><br>
+        <select id="csScenarioCcySelect">
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
         <label>Edit Existing Scenario</label><br>
         <select id="csScenarioSelect">
           <option value="">-- New Scenario --</option>
@@ -2210,7 +2233,6 @@ Feature:    Wenn es nur in einem Panel gilt
 
 
 
-<!-- Panel: BUILD VOL SCENARIO -->
 <!-- Panel: BUILD VOL SCENARIO -->
 <div id="panel-create-vol-scenario"
      class="sub-panel"

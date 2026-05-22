@@ -1,0 +1,356 @@
+﻿PROJECT TREE (relevant files only)
+Generated: 2026-05-08 10:00:20
+Root: C:\Users\Ronald\riskApp\electron_app
+MaxDepth: 8
+Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
+Included: *.js, *.html, *.css, *.json, *.py
+
+electron_app
+├── css
+│   ├── ANALYSE_PORTFOLIO
+│   │   ├── analyse.css
+│   │   ├── breakdown.css
+│   │   ├── breakdownCharts.css
+│   │   ├── creditRisk.css
+│   │   ├── inputMarketRisk.css
+│   │   ├── liquidity.css
+│   │   ├── marketData.css
+│   │   ├── marketRisk.css
+│   │   ├── performance.css
+│   │   ├── performanceCharts.css
+│   │   └── riskMetricsHistory.css
+│   ├── base
+│   │   ├── login.css
+│   │   ├── modalDark.css
+│   │   ├── tableDark.css
+│   │   └── tables.css
+│   ├── COMPARE
+│   │   └── compare.css
+│   ├── components
+│   │   ├── button.css
+│   │   ├── chart.css
+│   │   ├── couponModal.css
+│   │   ├── dropdown.css
+│   │   ├── messageBox.css
+│   │   ├── notifications.css
+│   │   ├── sectionTriggers.css
+│   │   ├── slideIn.base.css
+│   │   ├── surfaces.css
+│   │   ├── toolbar.css
+│   │   ├── toolTip.css
+│   │   ├── trafficLight.css
+│   │   └── warnings.css
+│   ├── CREATE_PORTFOLIO
+│   │   └── createPortfolio.css
+│   ├── DATA_PROVIDER
+│   │   └── dataProvider.css
+│   ├── MARKET_DATA
+│   │   ├── creditSpreads.css
+│   │   ├── forecasting.css
+│   │   ├── forwards.css
+│   │   ├── historicData.css
+│   │   ├── MarketDataSlideIn.css
+│   │   └── rates.css
+│   ├── NEW_PRODUCT
+│   │   ├── issuer.css
+│   │   ├── newPortfolio.css
+│   │   ├── offers.css
+│   │   └── products.css
+│   ├── REPORTS
+│   │   ├── offersPreview.css
+│   │   ├── reports.css
+│   │   ├── riskPreview.css
+│   │   └── riskReportsModal.css
+│   ├── SELECT_PORTFOLIO
+│   │   └── selectPort.css
+│   ├── tokens
+│   │   └── themes.css
+│   └── UPDATES
+│       ├── conflictModalProducts.css
+│       ├── excelImport.css
+│       ├── historicDataImport.css
+│       ├── updates.css
+│       └── vxpImports.css
+├── docs
+├── files
+│   └── Archiv
+├── PYTHON
+│   ├── bridge
+│   │   └── pythonBridge.js
+│   ├── execution
+│   │   ├── fetch.js
+│   │   ├── index.js
+│   │   ├── receivers.js
+│   │   └── router.js
+│   └── progress
+│       ├── pythonProgressBars.js
+│       └── pythonProgressBarsBridge.js
+├── src
+│   ├── architecture
+│   ├── legacy
+│   │   └── legacyProspectusCollector.js
+│   ├── main
+│   │   ├── bootstrap
+│   │   │   ├── dataCollector.bootstrap.js
+│   │   │   └── windows.bootstrap.js
+│   │   ├── features
+│   │   │   ├── BOND_PROSPECTUS
+│   │   │   │   ├── bondProspectusFinder.bootstrap.js
+│   │   │   │   ├── bondProspectusFinder.domains.js
+│   │   │   │   ├── bondProspectusFinder.ipc.js
+│   │   │   │   ├── bondProspectusFinder.resolver.js
+│   │   │   │   └── bondProspectusFinder.service.js
+│   │   │   └── BONDS
+│   │   │       ├── bonds.bootstrap.js
+│   │   │       ├── bonds.domains.js
+│   │   │       ├── bonds.ipc.js
+│   │   │       └── bonds.service.js
+│   │   ├── ipc
+│   │   │   ├── handlers
+│   │   │   │   ├── bondFetch.handlers.js
+│   │   │   │   ├── columnImport.handlers.js
+│   │   │   │   ├── couponWindow.handlers.js
+│   │   │   │   ├── crud.handlers.js
+│   │   │   │   ├── csActive.handlers.js
+│   │   │   │   ├── csParameter.handlers.js
+│   │   │   │   ├── csScenario.handlers.js
+│   │   │   │   ├── customer.handlers.js
+│   │   │   │   ├── db.handlers.js
+│   │   │   │   ├── dealsImport.handlers.js
+│   │   │   │   ├── dealsSelection.handlers.js
+│   │   │   │   ├── excel.handlers.js
+│   │   │   │   ├── ipcMeta.handlers.js
+│   │   │   │   ├── issuer.handlers.js
+│   │   │   │   ├── portfolioDelete.handlers.js
+│   │   │   │   ├── products.handlers.js
+│   │   │   │   ├── python.handlers.js
+│   │   │   │   ├── ratesActive.handlers.js
+│   │   │   │   ├── swaptionActive.handlers.js
+│   │   │   │   ├── swaptionScenario.handlers.js
+│   │   │   │   └── training.handlers.js
+│   │   │   ├── ipc.allowlist.js
+│   │   │   ├── ipc.registry.js
+│   │   │   └── registerAllIpcHandlers.js
+│   │   ├── security
+│   │   │   └── cspHeaders.js
+│   │   ├── services
+│   │   │   ├── db.service.js
+│   │   │   ├── excel.service.js
+│   │   │   └── python.service.js
+│   │   ├── utils
+│   │   │   ├── logger.js
+│   │   │   └── main_format.js
+│   │   ├── windows
+│   │   │   ├── couponWindow.js
+│   │   │   └── mainWindow.js
+│   │   ├── index.js
+│   │   ├── main.gateway.js
+│   │   ├── main.path.js
+│   │   └── rendererDataPump.js
+│   ├── preload
+│   │   └── index.js
+│   ├── renderer
+│   │   ├── app
+│   │   │   ├── bootstrap.js
+│   │   │   └── initApp.js
+│   │   ├── charts
+│   │   │   ├── BarChart.js
+│   │   │   ├── Lightweight.js
+│   │   │   └── LineChart.js
+│   │   ├── core
+│   │   │   ├── bootstrap
+│   │   │   │   ├── bootstrapBindings.js
+│   │   │   │   ├── bootstrapBridges.js
+│   │   │   │   ├── bootstrapHandlers.js
+│   │   │   │   ├── bootstrapIPC.js
+│   │   │   │   ├── bootstrapPython.js
+│   │   │   │   ├── bootstrapStores.js
+│   │   │   │   ├── bootstrapTriggers.js
+│   │   │   │   └── bootstrapUIBasics.js
+│   │   │   ├── debug
+│   │   │   │   ├── chartDebug.js
+│   │   │   │   ├── chartTrace.js
+│   │   │   │   ├── minimalToggle.js
+│   │   │   │   └── rafDebug.js
+│   │   │   ├── ipc
+│   │   │   │   ├── installReceivers.js
+│   │   │   │   └── ipcBridge.js
+│   │   │   ├── routing
+│   │   │   │   ├── initAnalysePortfolioPanels.js
+│   │   │   │   ├── initMarketDataPanels.js
+│   │   │   │   ├── initMarketDataRefresh.js
+│   │   │   │   └── panelOrchestrator.js
+│   │   │   ├── state
+│   │   │   │   ├── AppState.js
+│   │   │   │   ├── creditRiskStore.js
+│   │   │   │   ├── customerReportsStore.js
+│   │   │   │   ├── dataRouter.js
+│   │   │   │   ├── dataUpdatePipeline.js
+│   │   │   │   ├── dropdownFilterEngine.js
+│   │   │   │   ├── marketDataStore.js
+│   │   │   │   ├── marketRiskStore.js
+│   │   │   │   ├── nameListsStore.js
+│   │   │   │   ├── portfolioDataStore.js
+│   │   │   │   ├── portfolioUIOrchestrator.js
+│   │   │   │   ├── productsStore.js
+│   │   │   │   └── uiStateStore.js
+│   │   │   └── ui
+│   │   │       ├── changeHandlers
+│   │   │       │   ├── offersDropdownChange.js
+│   │   │       │   ├── ratesSelectorChange.js
+│   │   │       │   └── scenarioCheckboxChange.js
+│   │   │       ├── dialogs
+│   │   │       │   └── confirm.js
+│   │   │       ├── enhancers
+│   │   │       │   └── includeToggleEnhancer.js
+│   │   │       ├── modal
+│   │   │       │   ├── draggableModal.js
+│   │   │       │   ├── modalActions.js
+│   │   │       │   ├── modalAddAction.js
+│   │   │       │   ├── modalData.js
+│   │   │       │   ├── modalEditAction.js
+│   │   │       │   ├── modalEraseAction.js
+│   │   │       │   ├── modalFeedback.js
+│   │   │       │   ├── modalFields.js
+│   │   │       │   ├── modalRefresh.js
+│   │   │       │   └── modalUI.js
+│   │   │       ├── notifications
+│   │   │       │   └── notifications.js
+│   │   │       ├── panels
+│   │   │       │   ├── index.js
+│   │   │       │   ├── panelBackdrop.js
+│   │   │       │   ├── panelContext.js
+│   │   │       │   ├── panelFocus.js
+│   │   │       │   ├── panelHooks.js
+│   │   │       │   └── panelVisibility.js
+│   │   │       ├── bindAppButtons.js
+│   │   │       ├── bindDropdowns.js
+│   │   │       ├── globalChangeDelegation.js
+│   │   │       └── warnings.js
+│   │   ├── features
+│   │   │   ├── ANALYSE_PORTFOLIO
+│   │   │   │   ├── CREDIT_RISK
+│   │   │   │   │   ├── CVaR.js
+│   │   │   │   │   ├── CvarInput.js
+│   │   │   │   │   ├── CvarInputThreshold.js
+│   │   │   │   │   └── LossIssuer.js
+│   │   │   │   ├── HISTORIC_RISK_METRICS
+│   │   │   │   │   ├── historicRiskMetrics.js
+│   │   │   │   │   └── saveHistoricRiskMetrics.js
+│   │   │   │   ├── MARKET_RISK
+│   │   │   │   │   ├── CSSens.js
+│   │   │   │   │   ├── IRSens.js
+│   │   │   │   │   ├── marketRiskHandlers.js
+│   │   │   │   │   ├── marketRiskRefresh.js
+│   │   │   │   │   └── MVaR.js
+│   │   │   │   ├── analysePortfolioHandlers.js
+│   │   │   │   ├── liquidity.js
+│   │   │   │   ├── SummaryBreakdown.js
+│   │   │   │   ├── SummaryMarketRisk.js
+│   │   │   │   └── SummaryYield.js
+│   │   │   ├── COMPARE_PORTFOLIOS
+│   │   │   │   └── COMP.js
+│   │   │   ├── CREATE_PORTFOLIO
+│   │   │   │   ├── DEALS.js
+│   │   │   │   └── dealsUI.js
+│   │   │   ├── CUSTOMER
+│   │   │   │   └── customerHandlers.js
+│   │   │   ├── DATA_PROVIDER
+│   │   │   │   ├── DATAProvider.js
+│   │   │   │   ├── issuerProductHandlers.js
+│   │   │   │   └── providerHandlers.js
+│   │   │   ├── MARKET_DATA
+│   │   │   │   ├── CREDIT_SPREADS
+│   │   │   │   │   ├── creditSpreadCurveData.js
+│   │   │   │   │   ├── creditSpreadTransforms.js
+│   │   │   │   │   ├── csHandlers.js
+│   │   │   │   │   ├── CSParameter.js
+│   │   │   │   │   ├── csParameterHandlers.js
+│   │   │   │   │   └── renderCreditSpreadCurveChart.js
+│   │   │   │   ├── FORECASTING
+│   │   │   │   │   └── ML.js
+│   │   │   │   ├── FORWARDS
+│   │   │   │   │   ├── forwards.js
+│   │   │   │   │   ├── forwardsHandlers.js
+│   │   │   │   │   ├── forwardsUI.js
+│   │   │   │   │   └── initForwardPanelGlobal.js
+│   │   │   │   ├── HISTORIC_DATA
+│   │   │   │   │   ├── ChartAnalyses.js
+│   │   │   │   │   └── TS.js
+│   │   │   │   ├── INTEREST_RATES
+│   │   │   │   │   ├── interestRateCurveData.js
+│   │   │   │   │   ├── interestRateCurveHandlers.js
+│   │   │   │   │   ├── interestRateCurvePanel.js
+│   │   │   │   │   ├── interestRateTransforms.js
+│   │   │   │   │   └── renderInterestRateCurveChart.js
+│   │   │   │   ├── PROVIDERS
+│   │   │   │   │   ├── marketProvidersBridge.js
+│   │   │   │   │   └── providerUI.js
+│   │   │   │   ├── scenarios
+│   │   │   │   │   ├── CS
+│   │   │   │   │   │   ├── CSScenarioBuilder.js
+│   │   │   │   │   │   └── CSScenarioPanel.js
+│   │   │   │   │   ├── IR
+│   │   │   │   │   │   ├── IRScenarioBuilder.js
+│   │   │   │   │   │   └── IRScenarioPanel.js
+│   │   │   │   │   └── VOLS
+│   │   │   │   │       ├── VolATMScenarioBuilder.js
+│   │   │   │   │       ├── VolScenarioBuilder.js
+│   │   │   │   │       ├── VolScenarioPanel.js
+│   │   │   │   │       └── VolSmileScenarioBuilder.js
+│   │   │   │   └── VOLS
+│   │   │   │       ├── swaptionDataHandlers.js
+│   │   │   │       ├── swaptionDropdownListeners.js
+│   │   │   │       ├── swaptionReadyListeners.js
+│   │   │   │       ├── swaptionVols.js
+│   │   │   │       └── volCube.js
+│   │   │   ├── NEW_PRODUCTS
+│   │   │   │   ├── ISSUER.js
+│   │   │   │   ├── PROD.js
+│   │   │   │   ├── PRODCoupon.js
+│   │   │   │   ├── prodSimpleCoupon.js
+│   │   │   │   └── readOffers.js
+│   │   │   ├── OFFERS
+│   │   │   │   ├── csScenarioUI.js
+│   │   │   │   ├── dealsEnhancerBridge.js
+│   │   │   │   └── offersUI.js
+│   │   │   ├── REPORTS
+│   │   │   │   ├── CustomerReports.js
+│   │   │   │   ├── CustomerReportsPresetUI.js
+│   │   │   │   ├── OffersPDF.js
+│   │   │   │   ├── OffersPDFPreview.js
+│   │   │   │   ├── offersReportUI.js
+│   │   │   │   ├── reportsEnterLeaveBridge.js
+│   │   │   │   ├── reportsUIBridge.js
+│   │   │   │   ├── RiskPDF.js
+│   │   │   │   ├── RiskPDFPreview.js
+│   │   │   │   └── riskReportUI.js
+│   │   │   ├── SELECT_PORTFOLIO
+│   │   │   │   ├── dealsPortfolioActions.js
+│   │   │   │   ├── PORT.js
+│   │   │   │   ├── portfolioDropdownUI.js
+│   │   │   │   └── YIELD.js
+│   │   │   └── UPDATES
+│   │   │       ├── bulkUpdateBridge.js
+│   │   │       └── updatesExcel.js
+│   │   ├── utils
+│   │   │   ├── colors.js
+│   │   │   ├── domHelpers.js
+│   │   │   ├── format.js
+│   │   │   ├── linksToTables.js
+│   │   │   ├── slideIn.js
+│   │   │   ├── tableColorize.js
+│   │   │   ├── tableUtils.js
+│   │   │   ├── tabs.js
+│   │   │   ├── ToolTip.js
+│   │   │   ├── tooltips.js
+│   │   │   └── trafficLight.js
+│   │   └── renderer.js
+│   └── scripts
+│       └── ipc-audit.js
+├── electron-builder.json
+├── index.html
+├── login.js
+├── minimal.html
+├── package.json
+└── package-lock.json

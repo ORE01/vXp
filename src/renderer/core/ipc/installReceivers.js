@@ -246,23 +246,11 @@ api.receive(channel, (data) => {
   route('CustomerTableLayoutsData');
 
   // MARKET DATA
-
-  route('RATESData', { required: true });
+  route('RATES_ACTIVEData');
+  route('RATES_BASEData', { required: true });
   route('RATES_SCENARIO_DATAData');
-  route('RATES_ACTIVEData');  
+    
   route('FWDData');
-
-  // SWAPTION
-  route('SWAPTION_ATM_BASEData');
-  route('SWAPTION_SMILE_BASEData');
-  route('SWAPTION_ATM_SCENARIO_DATAData');
-  route('SWAPTION_SMILE_SCENARIO_DATAData');
-  route('SWAPTION_ACTIVEData');
-  //route('SWAPTION_CUBEData');
-
-  // ISSUER
-  route('IssuerData');
-  route('CountryLookupData');
 
   // CS
   route('CS_BASEData');
@@ -272,6 +260,19 @@ api.receive(channel, (data) => {
   route('CSParameterData');
 
   route('RankData');
+
+  // SWAPTION
+  route('SWAPTION_ACTIVEData');
+  route('SWAPTION_ATM_BASEData');
+  route('SWAPTION_SMILE_BASEData');
+  route('SWAPTION_ATM_SCENARIO_DATAData');
+  route('SWAPTION_SMILE_SCENARIO_DATAData');
+  
+  //route('SWAPTION_CUBEData');
+
+  // ISSUER
+  route('IssuerData');
+  route('CountryLookupData');
 
   // PRODUCTS
   route('ProdAllData');

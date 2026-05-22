@@ -210,6 +210,20 @@ p {
 }
 
 
+#modal .form-section-header {
+  margin-top: 22px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+
 
 
 

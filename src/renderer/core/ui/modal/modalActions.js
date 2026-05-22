@@ -1,5 +1,7 @@
 ﻿'use strict';
 
+import { PRODUCT_TEMPLATES } from '../../../features/NEW_PRODUCTS/productTemplates.js';
+
 import { setupAddOperation } from './modalAddAction.js';
 import { setupEditOperation } from './modalEditAction.js';
 
@@ -15,6 +17,7 @@ import { issuerData } from '../../../features/NEW_PRODUCTS/ISSUER.js';
 import { buildOrderedFieldsForModal } from '../../../features/NEW_PRODUCTS/PROD.js';
 
 import { displayErrorMessage } from './modalFeedback.js';
+
 
 // =====================================================
 // Public entry
@@ -77,14 +80,39 @@ function setupModalFields(actionType, data, rowIndex, selectedTableName) {
   const uniqueIssuers = [...new Set((issuerData || []).map((item) => item.ISSUER).filter(Boolean))];
 
   if (actionType === 'add') {
-    const baseRow = (Array.isArray(data) && data.length > 0) ? data[data.length - 1] : {};
+    const baseRow = (Array.isArray(data) && data.length > 0)
+      ? data[data.length - 1]
+      : {};
+
     let rowDataForForm;
 
     if (selectedTableName === 'ProdAll') {
-      rowDataForForm = { ...(buildOrderedFieldsForModal(baseRow) || {}) };
-    } else {
-      rowDataForForm = { ...(baseRow || {}) };
+      const initialTemplateName = 'FIXED_BOND';
+
+      rowDataForForm = {
+        ...(buildOrderedFieldsForModal(baseRow, initialTemplateName) || {}),
+      };
+
+      if ('id' in rowDataForForm) rowDataForForm.id = '';
+      if ('ID' in rowDataForForm) rowDataForForm.ID = '';
+
+      if ('ISSUER' in rowDataForForm && !rowDataForForm.ISSUER) {
+        rowDataForForm.ISSUER = uniqueIssuers[0] || '';
+      }
+
+      renderProductTemplateSelector(
+        form,
+        baseRow,
+        uniqueIssuers,
+        selectedTableName,
+        initialTemplateName
+      );
+
+      generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
+      return;
     }
+
+    rowDataForForm = { ...(baseRow || {}) };
 
     if ('id' in rowDataForForm) rowDataForForm.id = '';
     if ('ID' in rowDataForForm) rowDataForForm.ID = '';
@@ -102,12 +130,93 @@ function setupModalFields(actionType, data, rowIndex, selectedTableName) {
     let rowDataForForm = raw || {};
 
     if (selectedTableName === 'ProdAll') {
-      rowDataForForm = buildOrderedFieldsForModal(raw) || raw || {};
+      const couponType = String(raw?.CouponType || '').trim().toUpperCase();
+
+      const initialTemplateName =
+        raw?.__PRODUCT_TEMPLATE__
+        || (
+          couponType === 'FLOATER'
+            ? 'FRN'
+            : couponType === 'FIX'
+              ? 'FIXED_BOND'
+              : 'COMPLEX_BOND'
+        );
+
+      rowDataForForm = {
+        ...(buildOrderedFieldsForModal(raw, initialTemplateName) || raw || {}),
+      };
+
+      renderProductTemplateSelector(
+        form,
+        raw,
+        uniqueIssuers,
+        selectedTableName,
+        initialTemplateName
+      );
+
+      generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
+      return;
     }
 
     generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
   }
 }
+
+function renderProductTemplateSelector(
+  form,
+  baseRow,
+  uniqueIssuers,
+  selectedTableName,
+  initialTemplateName
+) {
+  if (selectedTableName !== 'ProdAll') return;
+
+  const selectorRow = document.createElement('div');
+  selectorRow.classList.add('form-row', 'product-template-selector-row');
+
+  const label = document.createElement('label');
+  label.textContent = 'Product Type';
+  label.classList.add('label');
+
+  const select = document.createElement('select');
+  select.classList.add('input-field');
+  select.setAttribute('data-field', '__PRODUCT_TEMPLATE_SELECTOR__');
+
+  Object.entries(PRODUCT_TEMPLATES).forEach(([templateName, template]) => {
+    const option = document.createElement('option');
+    option.value = templateName;
+    option.textContent = template.label || templateName;
+    select.appendChild(option);
+  });
+
+  select.value = initialTemplateName;
+
+  select.addEventListener('change', () => {
+    const templateName = select.value;
+
+    const rowDataForForm = {
+      ...(buildOrderedFieldsForModal(baseRow, templateName) || {}),
+    };
+
+    form.innerHTML = '';
+
+    renderProductTemplateSelector(
+      form,
+      baseRow,
+      uniqueIssuers,
+      selectedTableName,
+      templateName
+    );
+
+    generateInputFields(rowDataForForm, form, uniqueIssuers, selectedTableName);
+  });
+
+  selectorRow.appendChild(label);
+  selectorRow.appendChild(select);
+  form.appendChild(selectorRow);
+}
+
+
 
 function removeCouponButton() {
   const couponButton = document.getElementById('coupon-button');

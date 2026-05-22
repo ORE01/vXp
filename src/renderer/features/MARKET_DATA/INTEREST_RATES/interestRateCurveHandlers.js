@@ -10,7 +10,7 @@ export function createRatesHandlers({ appState } = {}) {
 
 
 
-  function handleRATESData(data) {
+  function handleRATES_BASEData(data) {
     const rows = Array.isArray(data) ? data : [];
 
     console.log('🔥 RATES HANDLER CALLED');
@@ -18,6 +18,10 @@ export function createRatesHandlers({ appState } = {}) {
     console.log('scenarios:', [...new Set(rows.map(r => r.scenario_id))]);
 
     appState.setRATESData(rows);
+
+    document.dispatchEvent(new CustomEvent('rates:data:ready', {
+      detail: { rows }
+    }));
 
     refreshPanel('panel-rates', 'marketdata');
   }
@@ -42,7 +46,7 @@ export function createRatesHandlers({ appState } = {}) {
   }
 
   return {
-    handleRATESData,
+    handleRATES_BASEData,
     handleRatesScenarioData,
     handleRatesActiveData,
   };

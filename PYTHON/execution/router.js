@@ -41,21 +41,12 @@ export function createPythonExecutionRouter(ctx) {
       appState.setSelectedDealsTableName(tableName);
     }
 
-    const activeRows = appState.getCSActive?.() || [];
 
-    const latestCSActive = [...activeRows]
-      .sort((a, b) => new Date(b.activated_at || 0) - new Date(a.activated_at || 0))[0];
-
-    const CSSzenarioFromActive = String(latestCSActive?.scenario_name || '').trim();
-    const CSSzenarioFromState  = String(appState.getCSSzenarioData?.() || '').trim();
-
-    const CSSzenario = CSSzenarioFromActive || CSSzenarioFromState || 'default';
     const selectedCurve = appState.getSelectedCurve?.();
 
     const payload = {
       tableName,
       source: preferredSource,
-      CSSzenario,
       selectedCurve,
       selectedDealsTableName: dealsName || '',
       selectedPortTableName: portName || '',
@@ -63,10 +54,7 @@ export function createPythonExecutionRouter(ctx) {
       ...extraParam,
     };
 
-    console.log('[FV] CS_ACTIVE rows =', activeRows);
-    console.log('[FV] CSSzenarioFromActive =', CSSzenarioFromActive);
-    console.log('[FV] CSSzenarioFromState =', CSSzenarioFromState);
-    console.log('[FV] CSSzenario final =', CSSzenario);
+   
     console.log('[FV] selectedCurve =', selectedCurve);
     console.log('[FV] payload =', payload);
 
@@ -96,8 +84,7 @@ export function createPythonExecutionRouter(ctx) {
 
     const CSSzenario = String(appState.getCSSzenarioData?.() || 'default').trim();
 
-    // const CSSzenario = appState.getCSSzenarioData?.();
-    // if (!CSSzenario) throw new Error('No scenario data available. Please set a scenario first.');
+
 
     if (!extraParam.cvarName) throw new Error('No CVaR configuration name (cvarName) provided.');
 

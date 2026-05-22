@@ -2,6 +2,7 @@
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 import { getInterestRateCurveData } from './interestRateCurveData.js';
 import { renderInterestRateCurveChart } from './renderInterestRateCurveChart.js';
+import { formatDisplayValue } from '../../../utils/format.js';
 
 // =====================================================
 // INTERNAL STATE
@@ -184,12 +185,17 @@ export function renderInterestRateCurvePanel() {
     appState._IRLineChart = null;
   }
 
+    const IRDisplayData = IRData.map(r => ({
+    ...r,
+    value: formatDisplayValue('RATES', r.value)
+  }));
+
   IRDataContainer.innerHTML = `
     ${renderActiveRatesScenarioPanel({
       selectedCurrency,
       selectedCurveId
     })}
-    ${processData(IRData)}
+    ${processData(IRDisplayData, 'RATES_BASE', {}, { includeEditColumn: false })}
   `;
 
   // EDIT

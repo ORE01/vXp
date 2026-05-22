@@ -157,6 +157,30 @@ export function initMarketDataPanelsLazyRender({ panelRenderState } = {}) {
     if (pSwaption && !pSwaption.hidden && pSwaption.classList.contains('open')) {
       renderSwaptionAndPreview();
     }
+
+    document.addEventListener("ccy:changed", () => {
+      const pRates = document.getElementById("panel-rates");
+      const pForward = document.getElementById("panel-forward");
+      const pSwaption = document.getElementById("panel-swaption");
+      const pCS = document.getElementById("panel-creditspreads");
+
+      if (pRates) {
+        renderInterestRateCurvePanel();
+      }
+
+      if (pForward && !pForward.hidden) {
+        handleFWDData();
+      }
+
+      if (pSwaption && !pSwaption.hidden && pSwaption.classList.contains("open")) {
+        renderSwaptionAndPreview();
+      }
+
+      if (pCS && !pCS.hidden) {
+        renderCreditSpreadCurveChart();
+      }
+    });
+
   });
 }
 

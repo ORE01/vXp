@@ -4,8 +4,7 @@ import { renderSwaptionIfReady } from "../../features/MARKET_DATA/VOLS/swaptionV
 export function initMarketDataChartsAutoRefresh() {
 
   const renderAllMarketDataCharts = () => {
-    // IR-Chart NICHT hier rendern.
-    // IR wird vollständig über renderIRPanel() gerendert.
+
 
     // Forward-Chart(s)
     handleFWDData(undefined, /* applyCubicSpline */ false);
