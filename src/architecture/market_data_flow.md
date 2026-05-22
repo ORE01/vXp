@@ -107,7 +107,7 @@ Funktionen
 Aufgabe
 Raw DB Data → AppState
 
-⑤ STATE LAYER
+⑤ state LAYER
 
 Dateien
 src/renderer/core/state/AppState.js
@@ -266,6 +266,6 @@ ipc.allowlist.js: erweitern
 🔹 8. renderer.js ⚠️
   • destructuring
   • Übergabe an bootstrapIPC
-🔹 9. csHandlers.js (Renderer – DATA → STATE)
-🔹 10. marketDataStore.js (STATE LAYER)
+🔹 9. csHandlers.js (Renderer – DATA → state)
+🔹 10. marketDataStore.js (state LAYER)
 

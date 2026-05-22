@@ -1,5 +1,4 @@
-// FRONT_END/STATE/portfolioDataStore.js
-// State-only: Portfolio/Deals/Offers core state + PortAgg Map (portDataMap) + index/selections
+
 
 export function installPortfolioDataStore({ appState } = {}) {
   if (!appState) throw new Error('[portfolioDataStore] appState fehlt');

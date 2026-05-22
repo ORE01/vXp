@@ -1,6 +1,4 @@
-// FRONT_END/STATE/productstore.js
-// State-only: ProdData + Map lookup by PROD_ID
-// Minimal-invasiv: hängt Methoden an appState.
+
 
 export function installProductsStore({ appState } = {}) {
   if (!appState) throw new Error('[productstore] appState fehlt');

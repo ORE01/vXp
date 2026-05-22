@@ -1,6 +1,6 @@
 // src/renderer/core/bootstrap/bootstrapUIBasics.js
 
-import { createPortfolioUIOrchestrator } from '../STATE/portfolioUIOrchestrator.js';
+import { createPortfolioUIOrchestrator } from '../state/portfolioUIOrchestrator.js';
 import { createPortfolioDropdownUI } from '../../features/SELECT_PORTFOLIO/portfolioDropdownUI.js';
 import { createMarketRiskRefresh } from '../../features/ANALYSE_PORTFOLIO/MARKET_RISK/marketRiskRefresh.js';
 

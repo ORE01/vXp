@@ -125,7 +125,7 @@ export function handleMvarInputData(receivedData) {
         appState.selectedMvarInterval = interval;
       }
 
-      // console.log('[MVAR STATE AFTER]', {
+      
       //   selectedMvarId: appState.selectedMvarId,
       //   selectedMvarInterval: appState.selectedMvarInterval
       // });

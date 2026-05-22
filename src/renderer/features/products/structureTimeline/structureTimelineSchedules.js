@@ -33,7 +33,7 @@ export {
 
 
 // ------------------------------------------------------------
-// EMPTY STATE: Create initial coupon schedule
+// EMPTY: Create initial coupon schedule
 // ------------------------------------------------------------
 
 export function renderCreateCouponScheduleEmptyState(container, prodId, options = {}) {

@@ -1,7 +1,7 @@
 ﻿// FRONT_END/bootstrap/bootstrapBindings.js
 
 import { bindDropdowns } from '../ui/bindDropdowns.js';
-import { bindForwardsButtons } from '../../features/MARKET_DATA/FORWARDS/forwardsui.js';
+import { bindForwardsButtons } from '../../features/MARKET_DATA/FORWARDS/forwardsUI.js';
 import { bindSwaptionDropdownListeners } from '../../features/MARKET_DATA/VOLS/swaptionDropdownListeners.js';
 import { bindAppButtons } from '../ui/bindAppButtons.js';
 

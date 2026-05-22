@@ -25,7 +25,7 @@ function buildTable(rows, activeScenario) {
 
     html += '<tr>';
 
-    // 🔥 STATE DRIVEN CHECKBOX
+    // DRIVEN CHECKBOX
     html += `
       <td>
         <input 

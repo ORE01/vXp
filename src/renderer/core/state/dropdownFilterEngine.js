@@ -1,7 +1,3 @@
-// FRONT_END/STATE/dropdownFilterEngine.js
-// Installiert Dropdown-Listener + Filter/Dropdown-Repopulate-Logik.
-// Wichtig: Das Modul schreibt bewusst Funktionen auf appState,
-// damit dein bestehender Code weiterläuft (minimal-invasive Migration).
 
 export function installDropdownFilterEngine({ appState, root = document } = {}) {
   if (!appState) throw new Error('[dropdownFilterEngine] appState fehlt');

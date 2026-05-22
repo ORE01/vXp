@@ -29,11 +29,7 @@ function logToFile(message) {
 }
 
 function resolveDbPath() {
-  if (isDevelopmentEnvironment()) {
-    return getDatabasePath();
-  }
-
-  return path.join(process.resourcesPath, 'app.asar.unpacked', 'files', 'UNI.db');
+  return getDatabasePath();
 }
 
 function initDb() {

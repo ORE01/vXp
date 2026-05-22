@@ -5,7 +5,7 @@ import { renderInterestRateCurveChart } from './renderInterestRateCurveChart.js'
 import { formatDisplayValue } from '../../../utils/format.js';
 
 // =====================================================
-// INTERNAL STATE
+// INTERNAL
 // =====================================================
 
 

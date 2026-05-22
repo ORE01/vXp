@@ -1,6 +1,3 @@
-// FRONT_END/STATE/customerReportsStore.js
-// State-only Store für Customer Reports Presets + Active Report Name + Observer-Bus.
-// Minimal-invasiv: hängt Methoden an appState (Backwards compatible).
 
 export function installCustomerReportsStore({ appState } = {}) {
   if (!appState) throw new Error('[customerReportsStore] appState fehlt');

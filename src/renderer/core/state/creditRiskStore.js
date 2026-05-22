@@ -1,4 +1,4 @@
-// FRONT_END/STATE/creditRiskStore.js
+
 // State-only: CVaR inputs + thresholds + agg data + EAD + Loss
 
 export function installCreditRiskStore({ appState } = {}) {

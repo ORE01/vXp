@@ -1,5 +1,4 @@
-// FRONT_END/STATE/nameListsStore.js
-// State-only: Tabellen-Listen für Deals/Offers/Port (created*Dropdown sources)
+
 
 export function installNameListsStore({ appState } = {}) {
   if (!appState) throw new Error('[nameListsStore] appState fehlt');
