@@ -198,25 +198,25 @@ export async function handleHistoricMetricsAddClick(event) {
      appState?.getAllMVaRData?.() ??
      null);
 
-  let mvarUNI = null;
+  let selectedMvarData = null;
 
   if (Array.isArray(allMvarData)) {
-mvarUNI = allMvarData.find(d => d?.port_name === port_name) || null;
+selectedMvarData = allMvarData.find(d => d?.port_name === port_name) || null;
 
   } else if (allMvarData && typeof allMvarData === "object") {
     if (port_name in allMvarData) {
-      mvarUNI = allMvarData[port_name];
+      selectedMvarData = allMvarData[port_name];
     } else {
       const hitKey = Object.keys(allMvarData).find(k => {
         const v = allMvarData[k];
         const pn = v?.port_name || v?.PORT_NAME || v?.PORT || v?.port;
         return pn === port_name;
       });
-      mvarUNI = hitKey ? allMvarData[hitKey] : null;
+      selectedMvarData = hitKey ? allMvarData[hitKey] : null;
     }
   }
 
-  console.log("[MVaR] UNI only:", mvarUNI);
+  console.log("[MVaR] selected Porfolio only:", selectedMvarData);
   // -----------------------------------------------
 
   // -----------------------------------------------
@@ -227,16 +227,16 @@ const allCvarData =
    appState?.getAllCVaRData?.() ??
    null);
 
-let cvarUNI = null;
+let selectedCvarData = null;
 
 if (Array.isArray(allCvarData)) {
   // Fall 1: Array von Rows/Objekten
-cvarUNI = allCvarData.find(d => d?.port_name === port_name) || null;
+selectedCvarData = allCvarData.find(d => d?.port_name === port_name) || null;
 
 } else if (allCvarData && typeof allCvarData === "object") {
   // Fall 2: Map/Object mit Portnamen als Keys
   if (port_name in allCvarData) {
-    cvarUNI = allCvarData[port_name];
+    selectedCvarData = allCvarData[port_name];
   } else {
     // Fall 3: Map/Object mit anderen Keys, innen steht port_name
     const hitKey = Object.keys(allCvarData).find(k => {
@@ -244,14 +244,14 @@ cvarUNI = allCvarData.find(d => d?.port_name === port_name) || null;
       const pn = v?.port_name || v?.PORT_NAME || v?.PORT || v?.port;
       return pn === port_name;
     });
-    cvarUNI = hitKey ? allCvarData[hitKey] : null;
+    selectedCvarData = hitKey ? allCvarData[hitKey] : null;
   }
 }
 
-console.log("[CVaR] UNI only:", cvarUNI);
+console.log("[CVaR] selected Porfolio only:", selectedCvarData);
 
-if (cvarUNI && typeof cvarUNI === "object") {
-  console.log("[CVaR] UNI keys:", Object.keys(cvarUNI));
+if (selectedCvarData && typeof selectedCvarData === "object") {
+  console.log("[CVaR] selected Porfolio keys:", Object.keys(selectedCvarData));
 }
 // -----------------------------------------------
 
@@ -271,29 +271,29 @@ const payload = {
   CPV01bp: cpv01,
   RETURN: yieldBuy,
 
-  // --- MVaR ABSOLUT (UNI -> DB) ---
-  M_VaR_ALL: mvarUNI?.VaR_T_abs  ?? null,
-  M_VaR_IR:  mvarUNI?.VaR_IR_abs ?? null,
-  M_VaR_CS:  mvarUNI?.VaR_CS_abs ?? null,
+  // --- MVaR ABSOLUT (selected Porfolio -> DB) ---
+  M_VaR_ALL: selectedMvarData?.VaR_T_abs  ?? null,
+  M_VaR_IR:  selectedMvarData?.VaR_IR_abs ?? null,
+  M_VaR_CS:  selectedMvarData?.VaR_CS_abs ?? null,
 
-  M_ES_ALL:  mvarUNI?.ES_T_abs  ?? null,
-  M_ES_IR:   mvarUNI?.ES_IR_abs ?? null,
-  M_ES_CS:   mvarUNI?.ES_CS_abs ?? null,
+  M_ES_ALL:  selectedMvarData?.ES_T_abs  ?? null,
+  M_ES_IR:   selectedMvarData?.ES_IR_abs ?? null,
+  M_ES_CS:   selectedMvarData?.ES_CS_abs ?? null,
 
-  // --- MVaR RELATIV / PCT (UNI -> DB) ---
-  M_VaR_ALL_PCT: mvarUNI?.VaR_T_rel  ?? null,
-  M_VaR_IR_PCT:  mvarUNI?.VaR_IR_rel ?? null,
-  M_VaR_CS_PCT:  mvarUNI?.VaR_CS_rel ?? null,
+  // --- MVaR RELATIV / PCT (selected Porfolio -> DB) ---
+  M_VaR_ALL_PCT: selectedMvarData?.VaR_T_rel  ?? null,
+  M_VaR_IR_PCT:  selectedMvarData?.VaR_IR_rel ?? null,
+  M_VaR_CS_PCT:  selectedMvarData?.VaR_CS_rel ?? null,
 
-  M_ES_ALL_PCT:  mvarUNI?.ES_T_rel  ?? null,
-  M_ES_IR_PCT:   mvarUNI?.ES_IR_rel ?? null,
-  M_ES_CS_PCT:   mvarUNI?.ES_CS_rel ?? null,
+  M_ES_ALL_PCT:  selectedMvarData?.ES_T_rel  ?? null,
+  M_ES_IR_PCT:   selectedMvarData?.ES_IR_rel ?? null,
+  M_ES_CS_PCT:   selectedMvarData?.ES_CS_rel ?? null,
 
-  // --- CVaR / Credit Risk (UNI -> DB) ---
-  C_VaR:      cvarUNI?.VaR_abs ?? null,
-  C_VaR_PCT:  cvarUNI?.VaR_rel ?? null,
-  C_ES:       cvarUNI?.ES_abs  ?? null,
-  C_ES_PCT:   cvarUNI?.ES_rel  ?? null,
+  // --- CVaR / Credit Risk (selected Porfolio -> DB) ---
+  C_VaR:      selectedCvarData?.VaR_abs ?? null,
+  C_VaR_PCT:  selectedCvarData?.VaR_rel ?? null,
+  C_ES:       selectedCvarData?.ES_abs  ?? null,
+  C_ES_PCT:   selectedCvarData?.ES_rel  ?? null,
 };
 
 

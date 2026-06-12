@@ -2,11 +2,11 @@
 
 import {
   getCouponRows,
-} from '../structureTimelineData.js';
+} from '../complexTimelineData.js';
 
 import {
   showStructureMessage,
-} from '../structureTimelineDrawer.js';
+} from '../complexTimelineDrawer.js';
 
 import {
   asFiniteNumber,

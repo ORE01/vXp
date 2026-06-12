@@ -1,4 +1,4 @@
-﻿import { getFormatRules, formatInputFieldValue } from '../../../utils/format.js';
+﻿import { getFormatRules, formatInputFieldValue } from '../../../utils/tableCellFormats.js';
 
 // EDIT Column is in processData!!!
 

@@ -132,45 +132,12 @@ function setIRSensData(rows) {
 
   // Product cache (upsert)
   function setMvarProductData(rows) {
-    const arr = Array.isArray(rows) ? rows : [];
-    if (!Array.isArray(appState.mvarProductDataAll)) appState.mvarProductDataAll = [];
+    appState.mvarProductDataAll = Array.isArray(rows) ? rows : [];
 
-    const makeKey = (r) => {
-      const port = String(r?.port_name ?? '').trim();
-      const scen = String(r?.scenario_name ?? '').trim();
-      const asof = String(r?.asof_date ?? '').slice(0, 10);
-      const pid =
-        r?.prod_id ??
-        r?.product_id ??
-        r?.instrument_id ??
-        r?.isin ??
-        r?.ric ??
-        r?.ticker ??
-        r?.name ??
-        '';
-      return `${port}||${scen}||${asof}||${String(pid).trim()}`;
-    };
-
-    const existing = appState.mvarProductDataAll;
-    const idxByKey = new Map();
-    for (let i = 0; i < existing.length; i++) {
-      const k = makeKey(existing[i]);
-      if (!idxByKey.has(k)) idxByKey.set(k, i);
-    }
-
-    for (const r of arr) {
-      if (!r) continue;
-      const k = makeKey(r);
-      const idx = idxByKey.get(k);
-      if (idx === undefined) {
-        existing.push(r);
-        idxByKey.set(k, existing.length - 1);
-      } else {
-        existing[idx] = r;
-      }
-    }
-
-    appState.mvarProductDataAll = existing;
+    console.log('[marketRiskStore] setMvarProductData REPLACED', {
+      rows: appState.mvarProductDataAll.length,
+      sample: appState.mvarProductDataAll[0],
+    });
   }
 
   function getMvarProductData({ port_name, scenario_name, asof_date } = {}) {
@@ -202,6 +169,219 @@ function setIRSensData(rows) {
     return matches.filter(r => String(r.asof_date).slice(0, 10) === latestAsof);
   }
 
+  // Factor P/L cache (upsert)
+  function setMvarFactorPLData(rows) {
+    const arr = Array.isArray(rows) ? rows : [];
+
+    if (!Array.isArray(appState.mvarFactorPLDataAll)) {
+      appState.mvarFactorPLDataAll = [];
+    }
+
+    const getRowDate = (r) => {
+      return String(
+        r?.dt ??
+        r?.DT ??
+        r?.DATE ??
+        r?.date ??
+        r?.scenario_date ??
+        r?.SCENARIO_DATE ??
+        ''
+      ).slice(0, 10);
+    };
+
+    const makeKey = (r) => {
+      const port = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
+      const scen = String(r?.scenario_name ?? r?.SCENARIO_NAME ?? '').trim();
+      const asof = String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10);
+
+      const date = getRowDate(r);
+
+      const factor = String(
+        r?.factor_id ??
+        r?.FACTOR_ID ??
+        r?.risk_factor_id ??
+        r?.RISK_FACTOR_ID ??
+        ''
+      ).trim();
+
+      return `${port}||${scen}||${asof}||${date}||${factor}`;
+    };
+
+    const existing = appState.mvarFactorPLDataAll;
+    const idxByKey = new Map();
+
+    for (let i = 0; i < existing.length; i++) {
+      const k = makeKey(existing[i]);
+
+      if (!idxByKey.has(k)) {
+        idxByKey.set(k, i);
+      }
+    }
+
+    let inserted = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const r of arr) {
+      if (!r) {
+        skipped += 1;
+        continue;
+      }
+
+      const k = makeKey(r);
+
+      const hasValidKey =
+        k &&
+        !k.includes('||||') &&
+        getRowDate(r);
+
+      if (!hasValidKey) {
+        skipped += 1;
+
+        console.warn('[marketRiskStore] setMvarFactorPLData skipped row with invalid key', {
+          row: r,
+          key: k,
+          rowDate: getRowDate(r),
+        });
+
+        continue;
+      }
+
+      const idx = idxByKey.get(k);
+
+      if (idx === undefined) {
+        existing.push(r);
+        idxByKey.set(k, existing.length - 1);
+        inserted += 1;
+      } else {
+        existing[idx] = r;
+        updated += 1;
+      }
+    }
+
+    appState.mvarFactorPLDataAll = existing;
+
+    const allDates = new Set(
+      existing.map(r => getRowDate(r)).filter(Boolean)
+    );
+
+    const allAsofDates = new Set(
+      existing.map(r => String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10)).filter(Boolean)
+    );
+
+    const allFactors = new Set(
+      existing.map(r =>
+        String(
+          r?.factor_id ??
+          r?.FACTOR_ID ??
+          r?.risk_factor_id ??
+          r?.RISK_FACTOR_ID ??
+          ''
+        ).trim()
+      ).filter(Boolean)
+    );
+
+    const allPorts = new Set(
+      existing.map(r =>
+        String(r?.port_name ?? r?.PORT_NAME ?? '').trim()
+      ).filter(Boolean)
+    );
+
+    const allScenarios = new Set(
+      existing.map(r =>
+        String(r?.scenario_name ?? r?.SCENARIO_NAME ?? '').trim()
+      ).filter(Boolean)
+    );
+
+    console.log('[marketRiskStore] setMvarFactorPLData UPSERTED', {
+      receivedRows: arr.length,
+      inserted,
+      updated,
+      skipped,
+
+      storeRows: appState.mvarFactorPLDataAll.length,
+
+      uniquePorts: allPorts.size,
+      uniqueScenarios: allScenarios.size,
+      uniqueAsofDates: allAsofDates.size,
+      uniqueDates: allDates.size,
+      uniqueFactors: allFactors.size,
+
+      sampleReceived: arr[0],
+      sampleStored: appState.mvarFactorPLDataAll[0],
+    });
+  }
+
+  function getMvarFactorPLData({ port_name, scenario_name, asof_date } = {}) {
+    const all = Array.isArray(appState.mvarFactorPLDataAll)
+      ? appState.mvarFactorPLDataAll
+      : [];
+
+    if (!port_name && !scenario_name && !asof_date) return all;
+
+    const port = String(port_name ?? '').trim();
+    const scen = String(scenario_name ?? '').trim();
+    const asof = asof_date ? String(asof_date).slice(0, 10) : null;
+
+    let matches = all.filter(r => {
+      const rowPort = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
+      const rowScen = String(r?.scenario_name ?? r?.SCENARIO_NAME ?? '').trim();
+
+      return (
+        r &&
+        (!port || rowPort === port) &&
+        (!scen || rowScen === scen)
+      );
+    });
+
+    if (!matches.length) return [];
+
+    if (asof) {
+      return matches.filter(r =>
+        String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10) === asof
+      );
+    }
+
+    let latestAsof = null;
+
+    for (const r of matches) {
+      const d = String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10);
+      if (!d) continue;
+      if (latestAsof === null || d > latestAsof) latestAsof = d;
+    }
+
+    if (!latestAsof) return [];
+
+    return matches.filter(r =>
+      String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10) === latestAsof
+    );
+  }
+
+    // Factor Series Map cache
+  function setMarketVarFactorSeriesMap(rows) {
+    appState.marketVarFactorSeriesMap = Array.isArray(rows) ? rows : [];
+
+    console.log('[marketRiskStore] setMarketVarFactorSeriesMap', {
+      rows: appState.marketVarFactorSeriesMap.length,
+      sample: appState.marketVarFactorSeriesMap[0],
+    });
+  }
+
+  function getMarketVarFactorSeriesMap() {
+    return Array.isArray(appState.marketVarFactorSeriesMap)
+      ? appState.marketVarFactorSeriesMap
+      : [];
+  }
+
+
+
+
+
+
+
+
+
+
   // expose
 
   appState.setIRSensData = setIRSensData;
@@ -222,6 +402,12 @@ function setIRSensData(rows) {
   appState.setMvarProductData = setMvarProductData;
   appState.getMvarProductData = getMvarProductData;
 
+  appState.setMvarFactorPLData = setMvarFactorPLData;
+  appState.getMvarFactorPLData = getMvarFactorPLData;
+
+  appState.setMarketVarFactorSeriesMap = setMarketVarFactorSeriesMap;
+  appState.getMarketVarFactorSeriesMap = getMarketVarFactorSeriesMap;
+
   return {
     setIRSensData,
     getIRSensData,
@@ -231,5 +417,9 @@ function setIRSensData(rows) {
     getMvarDistData,
     setMvarProductData,
     getMvarProductData,
+    setMvarFactorPLData,
+    getMvarFactorPLData,
+    setMarketVarFactorSeriesMap,
+    getMarketVarFactorSeriesMap,
   };
 }

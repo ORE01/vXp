@@ -89,8 +89,13 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
 
     // PRODUCTS
     case 'v_PRODUCTS_CANONICALData':
-    case 'v_PRODUCTS_APPData':
       window.__canonicalProductsLoaded = true;
+      console.log('[dataRouter] v_PRODUCTS_CANONICAL loaded', rows.length);
+      return;
+
+    case 'v_PRODUCTS_APPData':
+      window.__productsAppLoaded = true;
+      console.log('[dataRouter] v_PRODUCTS_APP loaded', rows.length);
       return handlers.renderProductTableInit(rows);
 
     case 'PRODUCT_STRUCTUREData':
@@ -121,16 +126,45 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
 
     // PortfoliosData ist die v_Portfolios_enriched!!!!!
     case 'PortfoliosData':
-      handlers.handlePortNameList?.(data);
-      handlers.handlePortfolioData?.(data);
-      handlers.handleIRSensData?.(data);
+      handlers.handlePortNameList?.(rows);
+      handlers.handlePortfolioData?.(rows);
       return;
 
-    // PORTFOLIO IR SENS
-    // case 'PortfolioRiskSensitivitiesData':
-    //   return handlers.handleIRSensData?.(rows);
+    case 'PortfolioRiskSensitivitiesData': {
+      const rows = Array.isArray(data) ? data : [];
+
+      console.log('[DATA ROUTER] PortfolioRiskSensitivitiesData received', {
+        rows: rows.length,
+        hasHandler: typeof handlers.handlePortfolioRiskSensitivitiesData === 'function',
+        sample: rows[0],
+        ports: [...new Set(rows.map(r => r.PORT_NAME ?? r.port_name))],
+        riskTypes: [...new Set(rows.map(r => r.RISK_TYPE ?? r.risk_type))],
+      });
+
+      if (typeof handlers.handlePortfolioRiskSensitivitiesData === 'function') {
+        handlers.handlePortfolioRiskSensitivitiesData(rows);
+      } else {
+        console.warn('[DATA ROUTER] handlePortfolioRiskSensitivitiesData missing');
+      }
+
+      return;
+    }
+
 
     // MVaR
+
+    case 'MarketVaR_FactorSeriesMapData':
+      console.log('[dataRouter] MarketVaR_FactorSeriesMapData received', {
+        rows: rows.length,
+        hasStore: typeof appState?.setMarketVarFactorSeriesMap === 'function',
+        hasHandler: typeof handlers.handleMarketVarFactorSeriesMapData === 'function',
+        sample: rows[0],
+      });
+
+      appState?.setMarketVarFactorSeriesMap?.(rows);
+      return handlers.handleMarketVarFactorSeriesMapData?.(rows, appState);
+
+
     case 'MVaRInputData':
       return handlers.handleMvarInputData?.(data);
 
@@ -140,8 +174,19 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'MarketVaR_DistData':
       return handlers.handleMvarDistData?.(data);
 
+    case 'MarketVaR_FactorPLData':
+      console.log('[dataRouter] MarketVaR_FactorPLData received', {
+        rows: rows.length,
+        hasStore: typeof appState?.setMvarFactorPLData === 'function',
+        hasHandler: typeof handlers.handleMVaRFactorPLData === 'function',
+        sample: rows[0],
+      });
+
+      appState?.setMvarFactorPLData?.(rows);
+      return handlers.handleMVaRFactorPLData?.(rows);
+
     case 'MarketVaR_ProductData':
-      return handlers.handleMvarProductData?.(data);
+      return handlers.handleMVaRProductPLData(rows);
 
     // EAD
     case 'EADData':

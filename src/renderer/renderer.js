@@ -31,22 +31,22 @@ import { createTSModals, observePanelTsOpen } from './features/MARKET_DATA/HISTO
 import { handleExcelComplete } from './features/UPDATES/updatesExcel.js';
 
 import { buildCubeSurfaceGrid, populateSwaptionCubeSelectors } from './features/MARKET_DATA/VOLS/volCube.js';
-import { handlePortAggData, handlePortProdData } from './features/SELECT_PORTFOLIO/PORT.js';
+import { handlePortAggData, handlePortProdData } from './features/portfolio/index.js';
 
-import { handleIssuerData } from './features/products/ISSUER.js';
+import { handleIssuerData } from './features/issuer/issuerPanel.js';
 import { renderProductTable }   from './features/products/productTableController.js';
-import { handleDealsData }  from './features/CREATE_PORTFOLIO/DEALS.js';
+import { handleDealsData }  from './features/portfolio/tradeTableRenderer.js';
 
-import { marketRiskHandlers } from './features/ANALYSE_PORTFOLIO/MARKET_RISK/marketRiskHandlers.js';
+import { marketRiskHandlers } from './features/ANALYSE_PORTFOLIO/marketRisk/marketRiskHandlers.js';
 
 
 import { handleCVaRData, handleEADData } from './features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
-import { handleFWDData } from './features/MARKET_DATA/FORWARDS/forwards.js';
+import { handleFWDData } from './features/MARKET_DATA/forwards/forwardCurvePanel.js';
 import { handleProviderData } from './features/DATA_PROVIDER/DATAProvider.js';
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORECASTING/ML.js';
 
 import { handleSummaryMarketRiskData, handleMvarProductTable } from './features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
-import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/products/readOffers.js';
+import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/OFFERS/readOffers.js';
 
 import { setupCustomerReportsPresetUI } from './features/REPORTS/CustomerReportsPresetUI.js';
 import { handleHistoricMetricsAddClick } from './features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/saveHistoricRiskMetrics.js';

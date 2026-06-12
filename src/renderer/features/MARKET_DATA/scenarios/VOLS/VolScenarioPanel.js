@@ -181,12 +181,12 @@ async function applyVolScenario({ appState, scenario_id, persist = true }) {
 
   const { snapshots, smileSnapshots } = getAppStateRows(appState);
 
-const selectedRows = snapshots
-    .filter(row => String(row.scenario_id || '').trim() === scenario_id)
-    .map(row => ({
-      ...row,
-      atm_vol: Number(row.atm_vol ?? row.vol)
-    }));
+  const selectedRows = snapshots
+      .filter(row => String(row.scenario_id || '').trim() === scenario_id)
+      .map(row => ({
+        ...row,
+        atm_vol: Number(row.atm_vol ?? row.vol)
+      }));
 
   const selectedSmileRows = smileSnapshots
     .filter(row => String(row.scenario_id || '').trim() === scenario_id)
@@ -274,7 +274,6 @@ export function renderVolScenarioPanel() {
     table(snapshots.map(row => ({
       scenario_id: row.scenario_id,
       ccy: row.ccy,
-      cube_id: row.cube_id,
       option_tenor: row.option_tenor,
       swap_tenor: row.swap_tenor,
       vol: row.vol

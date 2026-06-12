@@ -652,3 +652,121 @@
   min-width: 260px;
 }
 
+.structure-cashflow-section {
+  margin-top: 18px;
+  padding-bottom: 24px;
+}
+
+.structure-cashflow-table-wrap {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.structure-cashflow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.structure-cashflow-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.structure-cashflow-header span {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.structure-cashflow-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+}
+
+.structure-cashflow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.structure-cashflow-table th,
+.structure-cashflow-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.structure-cashflow-table th {
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.valuation-curve-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.valuation-curve-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.valuation-curve-label {
+  font-size: 11px;
+  opacity: 0.65;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.valuation-curve-value {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.valuation-curve-scenario {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+.valuation-curve-selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.valuation-curve-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.valuation-curve-selector span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+}
+
+.valuation-curve-selector select {
+  height: 34px;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #333;
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+

@@ -1,58 +1,120 @@
+
 /* ===========================
    MVaR-Panels & Layout
+   Risk Type + Factor P/L links untereinander | Chart rechts
    =========================== */
 
-/* Grid für linke Kennzahlen + rechten Chart */
-.mvar-grid{
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-  flex-wrap: wrap;  /* auf schmalen Screens untereinander */
+/* Äußeres Layout: linke Tabellen breit, rechter Chart kompakt */
+#ANALYSE_Modal #panel-market .mvar-grid,
+#ANALYSE_Modal #panel-mvar .mvar-grid,
+#panel-market .mvar-grid,
+#panel-mvar .mvar-grid{
+  display: grid !important;
+  grid-template-columns: minmax(760px, 1.7fr) minmax(300px, 0.65fr) !important;
+  gap: 20px !important;
+  align-items: flex-start !important;
+  width: 100% !important;
 }
 
-/* Linker Bereich (Total + IR/CS) */
-.mvar-left{
-  flex: 1 1 320px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 gleich breite Spalten */
-  grid-auto-rows: auto;
-  gap: 12px;
+/* Linker Bereich: enthält beide Tabellen */
+#ANALYSE_Modal #panel-market .mvar-left,
+#ANALYSE_Modal #panel-mvar .mvar-left,
+#panel-market .mvar-left,
+#panel-mvar .mvar-left{
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Risk Type und Factor P/L untereinander */
+#ANALYSE_Modal #panel-market .mvar-pair,
+#ANALYSE_Modal #panel-mvar .mvar-pair,
+#panel-market .mvar-pair,
+#panel-mvar .mvar-pair{
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+  align-items: start !important;
+  width: 100% !important;
 }
 
 /* Rechter Bereich: Chart */
-.mvar-right{
-  flex: 1 1 420px;
+#ANALYSE_Modal #panel-market .mvar-right,
+#ANALYSE_Modal #panel-mvar .mvar-right,
+#panel-market .mvar-right,
+#panel-mvar .mvar-right{
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
 }
 
-/* Gemeinsamer Stil für Kennzahlen-Container */
-.MVaR-block{
+/* Gemeinsamer Stil für MVaR-Boxen */
+#ANALYSE_Modal #panel-market .MVaR-block,
+#ANALYSE_Modal #panel-mvar .MVaR-block,
+#panel-market .MVaR-block,
+#panel-mvar .MVaR-block{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
 }
 
-/* Total: gleiche Breite wie IR/CS, erste Zelle oben links */
-.MVaR-block--total{
-  grid-column: 1 / 2;  /* nur erste Spalte */
-  border-color: rgba(255,255,255,0.18); /* optional: visuell hervorheben */
+/* Falls irgendwo noch Total-Blöcke verwendet werden */
+#ANALYSE_Modal #panel-market .MVaR-block--total,
+#ANALYSE_Modal #panel-mvar .MVaR-block--total,
+#panel-market .MVaR-block--total,
+#panel-mvar .MVaR-block--total{
+  border-color: rgba(255,255,255,0.18);
 }
 
-/* IR & CS: kommen in die nächsten Grid-Zellen.
-   mvar-pair dient nur noch als logische Gruppierung im HTML */
-.mvar-pair{
-  display: contents; /* Kinder verhalten sich, als wären sie direkt in .mvar-left */
+/* Tabellencontainer: innerhalb der Box horizontal scrollen */
+#ANALYSE_Modal #panel-market .data-container,
+#ANALYSE_Modal #panel-mvar .data-container,
+#panel-market .data-container,
+#panel-mvar .data-container{
+  overflow: auto;
+  max-width: 100%;
 }
 
-/* Responsive: auf schmalen Viewports alles untereinander */
-@media (max-width: 900px){
-  .mvar-grid{
-    flex-direction: column;
+/* MVaR-Tabellen: volle Boxbreite */
+#ANALYSE_Modal #panel-market .MVaRTable,
+#ANALYSE_Modal #panel-mvar .MVaRTable,
+#panel-market .MVaRTable,
+#panel-mvar .MVaRTable{
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Chart kleiner */
+#ANALYSE_Modal #panel-market #MVaRChart,
+#ANALYSE_Modal #panel-mvar #MVaRChart,
+#panel-market #MVaRChart,
+#panel-mvar #MVaRChart{
+  display: block;
+  width: 100% !important;
+  height: 280px !important;
+  max-height: 280px !important;
+}
+
+/* Responsive: auf schmalen Screens alles untereinander */
+@media (max-width: 1200px){
+  #ANALYSE_Modal #panel-market .mvar-grid,
+  #ANALYSE_Modal #panel-mvar .mvar-grid,
+  #panel-market .mvar-grid,
+  #panel-mvar .mvar-grid{
+    grid-template-columns: 1fr !important;
   }
 
-  .mvar-left{
-    grid-template-columns: 1fr; /* Total, IR, CS untereinander, gleiche Breite */
+  #ANALYSE_Modal #panel-market #MVaRChart,
+  #ANALYSE_Modal #panel-mvar #MVaRChart,
+  #panel-market #MVaRChart,
+  #panel-mvar #MVaRChart{
+    height: 240px !important;
+    max-height: 240px !important;
   }
 }
 
@@ -158,5 +220,36 @@
   text-decoration: underline;
 }
 
+/* FACTOR MAPPING */
+.mvar-map-row--exact {
+  background: rgba(40, 167, 69, 0.10);
+}
 
+.mvar-map-row--manual {
+  background: rgba(255, 193, 7, 0.14);
+}
+
+.mvar-map-row--invalid {
+  background: rgba(220, 53, 69, 0.14);
+}
+
+.mvar-map-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mvar-map-status--exact {
+  color: #1f7a3a;
+}
+
+.mvar-map-status--manual {
+  color: #8a6500;
+}
+
+.mvar-map-status--invalid {
+  color: #b02a37;
+}
 

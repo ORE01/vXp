@@ -1,6 +1,6 @@
 import { openPanel } from '../ui/panels/index.js';
 import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
-import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/CREATE_PORTFOLIO/dealsUI.js';
+import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/tradeUI.js';
 
 // ------------------------------------------------------------
 // Panel open hook registry (fix for installReceivers warning)
@@ -127,6 +127,21 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     // ✅ DI Hook feuern (statt appState.emitPanelOpen)
     emitPanelOpen?.(panelId);
 
+    // ✅ MVaR Panel: beim Öffnen bestehende Daten aus Store/AppState rendern.
+    // Wichtig: erst nach openPanel(), damit Chart.js auf sichtbarem Canvas rendert.
+    if (panelId === 'panel-mvar') {
+      console.log('[TRIGGER] panel-mvar opened → refreshMarketRiskUI');
+
+      requestAnimationFrame(() => {
+        if (typeof window.appState?.refreshMarketRiskUI === 'function') {
+          window.appState.refreshMarketRiskUI(0);
+        } else if (typeof appState?.refreshMarketRiskUI === 'function') {
+          appState.refreshMarketRiskUI(0);
+        } else {
+          console.warn('[TRIGGER] refreshMarketRiskUI not available');
+        }
+      });
+    }
 
     if (panelId === 'panel-issuer-np') {
       setTimeout(() => {

@@ -154,24 +154,28 @@ function startPythonScript({
             const text = line.trim();
             if (!text) continue;
 
-            if (typeof onStdout === 'function') onStdout(text);
-
-            //scriptOutput += text + '\n';
-
             const match = text.match(/___RESULT___({[\s\S]*})/);
 
             if (match) {
               try {
                 const parsed = JSON.parse(match[1]);
 
-                clearTimeout(timeout);   // 🔴 WICHTIG
+                clearTimeout(timeout);
 
                 if (activeResolve) activeResolve(parsed);
 
               } catch (err) {
                 if (activeReject) activeReject(err);
               }
+
+              // IMPORTANT:
+              // ___RESULT___ is transport JSON, not a log line.
+              // Do not forward it to onStdout, otherwise large payloads like cashflows
+              // flood the Electron log/console.
+              continue;
             }
+
+            if (typeof onStdout === 'function') onStdout(text);
           }
         });
 

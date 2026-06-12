@@ -2,7 +2,7 @@
 // utils/linksToTables.js
 import { handleModalAction } from '../core/ui/modal/modalActions.js';
 import { appState } from '../../renderer/renderer.js';
-import { handleStructureTimelineModal } from '../features/products/StructureTimelineModal.js';
+import { handleStructureTimelineModal } from '../features/products/productSetupModal.js';
 
 
 
@@ -72,11 +72,22 @@ export function attachIdLinks(container, opts = {}) {
   // Spaltenindizes suchen (robust gegen Schreibweise)
   const ths = table.querySelectorAll('thead th');
   let prodIdx = -1, tradeIdx = -1;
+
   ths.forEach((th, i) => {
     const label = norm(th.textContent);
-    if (label === norm(prodHeader))  prodIdx = i;
-    if (label === norm(tradeHeader)) tradeIdx = i;
+
+    const isProdHeader =
+      label === norm(prodHeader) ||
+      label === 'PRODUCT_ID';
+
+    const isTradeHeader =
+      label === norm(tradeHeader) ||
+      label === 'TRADE_ID';
+
+    if (isProdHeader) prodIdx = i;
+    if (isTradeHeader) tradeIdx = i;
   });
+
   if (prodIdx === -1 && tradeIdx === -1) return;
 
   // Pro Renderlauf Buttons setzen (wenn in Zelle noch keiner drin)
@@ -130,32 +141,76 @@ export function openProdEditorByProdId(prodId) {
   const prodDataArr = appState.getProdData?.() || [];
   const needle = String(prodId ?? '').trim();
 
-  const row = prodDataArr.find(
-    r => String(r?.PROD_ID ?? '').trim() === needle
-  );
+  const row = prodDataArr.find((r) => {
+    const id = String(
+      r?.PROD_ID ??
+      r?.product_id ??
+      r?.PRODUCT_ID ??
+      ''
+    ).trim();
+
+    return id === needle;
+  });
 
   if (!row) {
     console.warn('[openProdEditorByProdId] PROD_ID nicht gefunden:', needle);
     return false;
   }
 
-  // Legacy-Kompatibilität:
-  // Alte DB-Produkte haben oft nur CouponType.
-  // Das neue Product Editor Modal braucht Template-/Mode-Info.
-  if (!row.__PRODUCT_TEMPLATE__) {
-    const couponType = String(row.CouponType || '').trim().toUpperCase();
+// Resolve editor template from canonical product semantics.
+// IMPORTANT:
+// Existing __PRODUCT_TEMPLATE__ / __UI_MODE__ can be stale or wrong.
+// Therefore we intentionally recompute them every time before opening.
+const productType = String(
+  row.product_type ??
+  row.PRODUCT_TYPE ??
+  row.ProductType ??
+  ''
+).trim().toUpperCase();
 
-    if (couponType === 'FLOATER' || couponType === 'FRN') {
-      row.__PRODUCT_TEMPLATE__ = 'FRN';
-      row.__UI_MODE__ = 'simple_frn';
-    } else if (couponType === 'FIX') {
-      row.__PRODUCT_TEMPLATE__ = 'FIXED_BOND';
-      row.__UI_MODE__ = 'simple_fixed';
-    } else {
-      row.__PRODUCT_TEMPLATE__ = 'COMPLEX_BOND';
-      row.__UI_MODE__ = 'complex';
-    }
-  }
+const couponType = String(
+  row.coupon_type ??
+  row.COUPON_TYPE ??
+  row.CouponType ??
+  ''
+).trim().toUpperCase();
+
+const model = String(
+  row.MODEL ??
+  row.model ??
+  row.pricing_model ??
+  ''
+).trim().toUpperCase();
+
+const prodIdUpper = String(
+  row.PROD_ID ??
+  row.product_id ??
+  row.PRODUCT_ID ??
+  needle ??
+  ''
+).trim().toUpperCase();
+
+const isCmsOrStructured =
+  productType === 'STRUCTURED' ||
+  productType === 'COMPLEX' ||
+  productType === 'COMPLEX_BOND' ||
+  couponType === 'CMS' ||
+  model.includes('LMM') ||
+  prodIdUpper.startsWith('CMS');
+
+if (isCmsOrStructured) {
+  row.__PRODUCT_TEMPLATE__ = 'COMPLEX_BOND';
+  row.__UI_MODE__ = 'complex';
+} else if (couponType === 'FLOATER' || couponType === 'FRN') {
+  row.__PRODUCT_TEMPLATE__ = 'FRN';
+  row.__UI_MODE__ = 'simple_frn';
+} else if (couponType === 'FIX' || couponType === 'FIXED') {
+  row.__PRODUCT_TEMPLATE__ = 'FIXED_BOND';
+  row.__UI_MODE__ = 'simple_fixed';
+} else {
+  row.__PRODUCT_TEMPLATE__ = 'COMPLEX_BOND';
+  row.__UI_MODE__ = 'complex';
+}
 
   console.log('[PRODUCT EDITOR ROUTE] opening new product editor', {
     prodId: needle,

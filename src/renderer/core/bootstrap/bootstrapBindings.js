@@ -1,7 +1,8 @@
 ﻿// FRONT_END/bootstrap/bootstrapBindings.js
 
 import { bindDropdowns } from '../ui/bindDropdowns.js';
-import { bindForwardsButtons } from '../../features/MARKET_DATA/FORWARDS/forwardsUI.js';
+import { installPageSearch } from '../ui/pageSearch.js';
+
 import { bindSwaptionDropdownListeners } from '../../features/MARKET_DATA/VOLS/swaptionDropdownListeners.js';
 import { bindAppButtons } from '../ui/bindAppButtons.js';
 
@@ -14,6 +15,8 @@ import { installDealsEnhancerBridge } from '../../features/OFFERS/dealsEnhancerB
 import { initializeTabs } from '../../utils/tabs.js';
 
 export function bootstrapBindings(appState, deps) {
+  installPageSearch();
+  
   const {
     dealsActions,
     py,
@@ -21,6 +24,7 @@ export function bootstrapBindings(appState, deps) {
     handleFWDData,
     handleIRSensData,
     handleCSSensData,
+    handleVegaSensData,
 
     handleHistoricMetricsAddClick,
     handleExcelImport,
@@ -37,15 +41,6 @@ export function bootstrapBindings(appState, deps) {
   } = deps;
 
   bindDropdowns({ appState });
-
-  bindForwardsButtons({
-    appState,
-    handleFWDData,
-    bindings: [
-      { buttonId: 'applyCMSButton', applyCubicSpline: false },
-      { buttonId: 'applyCMSCubicButton', applyCubicSpline: true },
-    ],
-  });
 
   bindSwaptionDropdownListeners();
 

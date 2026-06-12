@@ -221,8 +221,14 @@ function createProductCanonicalService(dbApi) {
 
     if (selectedTemplate === 'FIXED_BOND') {
       newData.CouponType = 'FIX';
-      newData.FINLIB = 'ql';
-      newData.MODEL = 'DCF_ql';
+
+      if (!newData.FINLIB) {
+        newData.FINLIB = 'ql';
+      }
+
+      if (!newData.MODEL) {
+        newData.MODEL = 'DCF_ql';
+      }
 
       if (!newData.METHODE) {
         newData.METHODE = '';
@@ -231,8 +237,14 @@ function createProductCanonicalService(dbApi) {
 
     if (selectedTemplate === 'FRN') {
       newData.CouponType = 'FLOATER';
-      newData.FINLIB = 'ql';
-      newData.MODEL = 'DCF_ql';
+
+      if (!newData.FINLIB) {
+        newData.FINLIB = 'ql';
+      }
+
+      if (!newData.MODEL) {
+        newData.MODEL = 'DCF_ql';
+      }
 
       if (!newData.METHODE) {
         newData.METHODE = '';
@@ -467,6 +479,18 @@ function createProductCanonicalService(dbApi) {
 
     if ('METHODE' in newData) {
       pricingConfig.pricing_method = newData.METHODE;
+    }
+
+    if ('CS_SPREAD_OVERRIDE_BP' in newData) {
+      const raw = newData.CS_SPREAD_OVERRIDE_BP;
+
+      pricingConfig.cs_spread_override_bp =
+        raw === null ||
+        raw === undefined ||
+        String(raw).trim() === '' ||
+        String(raw).trim().toLowerCase() === 'default'
+          ? null
+          : Number(String(raw).replace(',', '.'));
     }
 
     if ('calibration_enabled' in newData) {

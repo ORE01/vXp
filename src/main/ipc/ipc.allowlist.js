@@ -46,11 +46,11 @@ module.exports = {
     'ts-trendlines:load',
     'ts-trendlines:save',
 
-    // Deals selection (create portfolio from deals)
+    // Deals selection / portfolio creation
     'save-deals-selection',
+    'create-empty-portfolio',
     'delete-deals-selection',
     'delete-portfolio-everywhere',
-
 
 
   ],
@@ -128,6 +128,8 @@ module.exports = {
     // generic table helpers
     'fetch-table-data',
 
+    'update-product-cs-spread-override',
+
     
 
 
@@ -174,6 +176,10 @@ module.exports = {
     'update-data-error',
     'update-customer-texts-success',
     'update-customer-texts-error',
+
+    // Deals portfolio creation feedback
+    'create-empty-portfolio-success',
+    'create-empty-portfolio-error',
 
     // Deals portfolio deletion feedback
     'delete-portfolio-everywhere-success',

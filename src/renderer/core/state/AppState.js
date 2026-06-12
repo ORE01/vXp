@@ -31,6 +31,7 @@
         this.handleDealsData  = null;
         this.handleIRSensData = null;
         this.handleCSSensData = null;
+        this.handleVegaSensData = null;
 
                   
         this.ratingOrder = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB', 'BB-', 'B+', 'B', 'B-', 'CCC+', 'CCC', 'CCC-'];
@@ -314,14 +315,16 @@
         handleDealsData,
         handleIRSensData,
         handleCSSensData,
+        handleVegaSensData,
         } = {}) {
         if (handleIssuerData) this.handleIssuerData = handleIssuerData;
-        if (renderProductTable)   this.renderProductTable   = renderProductTable;
-        if (handleDealsData)  this.handleDealsData  = handleDealsData;
+        if (renderProductTable) this.renderProductTable = renderProductTable;
+        if (handleDealsData) this.handleDealsData = handleDealsData;
         if (handleIRSensData) this.handleIRSensData = handleIRSensData;
         if (handleCSSensData) this.handleCSSensData = handleCSSensData;
+        if (handleVegaSensData) this.handleVegaSensData = handleVegaSensData;
         }
-
+        
     registerPanelOpenHook(panelId, fn) {
     const id = String(panelId || '');
     if (!id || typeof fn !== 'function') return;

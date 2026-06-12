@@ -95,7 +95,7 @@ export function bindAppButtons({
     ?.addEventListener('click', dealsActions.handleDeleteSelection);
 
   document.getElementById('portfolioDealsAddButton')
-    ?.addEventListener('click', dealsActions.handleAddDealsToNewPortfolio);
+    ?.addEventListener('click', dealsActions.handleAddTradeToNewPortfolio);
 
   // ---------- Historic Metrics ----------
   document.getElementById('historicMetricsAddButton')

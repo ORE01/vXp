@@ -17,7 +17,7 @@ export function bindClearCSScenario({ appState, api, handlePortProdData } = {}) 
         rowIndex: 0, // ignored by canonical product path
         newData: {
           PROD_ID: prodId,
-          CS_Szenario: '',
+          CS_SPREAD_OVERRIDE_BP: '',
         },
         uniqueIdentifier: {
           column: 'PROD_ID',

@@ -90,7 +90,35 @@ export const PRODUCT_FIELD_CONFIG = {
     type: 'number',
     defaultValue: 2,
   },
+
+    RANK: {
+    type: 'select',
+    defaultValue: 'senior_unsecured',
+    options: [
+      'senior_secured',
+      'senior_preferred',
+      'senior_unsecured',
+      'senior_subordinated',
+      'junior_subordinated',
+    ],
+  },
+
+  seniority: {
+    type: 'select',
+    defaultValue: 'senior_unsecured',
+    options: [
+      'senior_secured',
+      'senior_preferred',
+      'senior_unsecured',
+      'senior_subordinated',
+      'junior_subordinated',
+    ],
+  },
+
+
 };
+
+
 
 
 function isProductTableName(tableName) {

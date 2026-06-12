@@ -88,8 +88,23 @@ export async function addSaveButtonHandler(form, selectedTableName, onReload) {
     delete newRowData.ID;
     delete newRowData.id;
 
+    if (selectedTableName === 'DealsMain') {
+      if (Object.prototype.hasOwnProperty.call(newRowData, 'DEPOT_BANK')) {
+        newRowData.Depotbank = newRowData.DEPOT_BANK;
+        delete newRowData.DEPOT_BANK;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(newRowData, 'product_id')) {
+        newRowData.PROD_ID = newRowData.product_id;
+        delete newRowData.product_id;
+      }
+
+      delete newRowData.product_name;
+    }
+
     if (isProductTableName(selectedTableName)) {
       newRowData = applyProductTemplateDefaults(newRowData, selectedTableName);
+
       newRowData = sanitizeProductData(newRowData);
 
       if (!newRowData.PROD_ID) {

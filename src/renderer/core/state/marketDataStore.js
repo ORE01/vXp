@@ -1,4 +1,5 @@
 // src/renderer/core/state/marketDataStore.js
+
 // Verantwortlich für MarketData State (EUSW, Curve Selection, Swaption, TS).
 // Minimal-invasiv: hängt Methoden an appState (Backwards compatible).
 

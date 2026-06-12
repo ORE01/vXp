@@ -1,8 +1,8 @@
 // src/renderer/core/bootstrap/bootstrapUIBasics.js
 
 import { createPortfolioUIOrchestrator } from '../state/portfolioUIOrchestrator.js';
-import { createPortfolioDropdownUI } from '../../features/SELECT_PORTFOLIO/portfolioDropdownUI.js';
-import { createMarketRiskRefresh } from '../../features/ANALYSE_PORTFOLIO/MARKET_RISK/marketRiskRefresh.js';
+import { createPortfolioDropdownUI } from '../../features/portfolio/portfolioDropdownUI.js';
+import { createMarketRiskRefresh } from '../../features/ANALYSE_PORTFOLIO/marketRisk/marketRiskRefresh.js';
 
 // ✅ central UI enhancer (INCLUDE checkbox)
 import { enhanceIncludeCheckboxes } from '../ui/enhancers/includeToggleEnhancer.js';
@@ -15,14 +15,22 @@ export function bootstrapUIBasics(appState) {
   appState.handleOffersTable = portfolioUI.renderOffersTable;
 
   const portfolioDropdownUI = createPortfolioDropdownUI({ appState });
-  const marketRiskRefresh   = createMarketRiskRefresh({ appState }); // das portfolio bleibt gleich aber es ändert sich market, norm, hist
+  portfolioDropdownUI.bindPortResetFiltersButtonOnce();
+
+  const marketRiskRefresh = createMarketRiskRefresh({ appState }); // das portfolio bleibt gleich aber es ändert sich market, norm, hist
+
+  marketRiskRefresh.installMarketRiskSensitivityRefreshListener?.();
 
   // Backwards compatible: wenn du irgendwo noch appState.* aufrufst
   appState.updateDropdownOptions      = portfolioDropdownUI.updateDropdownOptions;
   appState.fetchAndHandlePortData     = portfolioDropdownUI.fetchAndHandlePortData;
   appState.getFormElementsForContainer = portfolioDropdownUI.getFormElementsForContainer;
 
-  appState.refreshMarketRiskUI = marketRiskRefresh.refreshMarketRiskUI;
+  appState.refreshMarketRiskUI =
+    marketRiskRefresh.refreshMarketRiskUI;
+
+  appState.refreshMarketRiskSensitivitiesUI =
+    marketRiskRefresh.refreshMarketRiskSensitivitiesUI;
 
   // ✅ Run once after DOM is ready: auto-discovers all containers with data-enhance-include="1"
   document.addEventListener(

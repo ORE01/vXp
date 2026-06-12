@@ -364,8 +364,37 @@ function insertSelection(port_name, selectedTradeIDs = []) {
     const port = String(port_name || '').trim();
     if (!port) return reject(new Error('port_name missing'));
 
-    const ids = Array.isArray(selectedTradeIDs) ? selectedTradeIDs : [];
-    if (ids.length === 0) return resolve();
+    const ids = Array.isArray(selectedTradeIDs)
+      ? selectedTradeIDs
+          .map(x => Number(String(x).trim()))
+          .filter(n => Number.isFinite(n))
+      : [];
+
+    // Empty portfolio case:
+    // No selected trades means: create technical placeholder row.
+    if (ids.length === 0) {
+      db.run(`DELETE FROM "DealsMain" WHERE TRIM("port_name") = ?`, [port], function (delErr) {
+        if (delErr) return reject(delErr);
+
+        db.run(
+          `INSERT INTO "DealsMain" ("INCLUDE", "port_name") VALUES (0, ?)`,
+          [port],
+          function (insErr) {
+            if (insErr) return reject(insErr);
+
+            resolve({
+              ok: true,
+              mode: 'empty-portfolio',
+              changes: this.changes,
+              lastID: this.lastID,
+              port_name: port,
+            });
+          }
+        );
+      });
+
+      return;
+    }
 
     db.all(`PRAGMA table_info("DealsMain")`, [], (err, cols) => {
       if (err) return reject(err);
@@ -395,12 +424,20 @@ function insertSelection(port_name, selectedTradeIDs = []) {
         WHERE "TRADE_ID" IN (${placeholders})
       `;
 
-      db.run(`DELETE FROM "DealsMain" WHERE "port_name" = ?`, [port], function (delErr) {
+      db.run(`DELETE FROM "DealsMain" WHERE TRIM("port_name") = ?`, [port], function (delErr) {
         if (delErr) return reject(delErr);
 
         db.run(sql, [port, ...ids], function (insErr) {
           if (insErr) return reject(insErr);
-          resolve();
+
+          resolve({
+            ok: true,
+            mode: 'selection-copy',
+            changes: this.changes,
+            lastID: this.lastID,
+            port_name: port,
+            count: ids.length,
+          });
         });
       });
     });

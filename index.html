@@ -41,6 +41,7 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/components/notifications.css" rel="stylesheet">
   <link href="./css/components/warnings.css" rel="stylesheet">
   <link href="./css/components/trafficLight.css" rel="stylesheet">
+  <link href="./css/components/pageSearch.css" rel="stylesheet">
 
   <link href="./css/components/chart.css" rel="stylesheet">
   <link href="./css/components/sectionTriggers.css" rel="stylesheet">
@@ -61,6 +62,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/marketRiskSensitivities.css" rel="stylesheet">
 
   <link href="./css/ANALYSE_PORTFOLIO/creditRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/liquidity.css" rel="stylesheet">
@@ -198,24 +200,28 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <div class="toolbar-right">
     
-    <!-- Curve Szenario Warning -->
+    <!-- Curve Scenario Warning -->
     <div id="curveWarningContainer" class="warning-container">
-      <span class="warning-text">Curve Scenario Set</span>
+      <span id="curveWarningText" class="warning-text">Curve Scenario Set</span>
       <div id="curveWarning" class="warning-light"></div>
     </div>
 
-    <!-- Product-specific CS Scenario Warning -->
+    <!-- Product-specific CS Override Warning -->
     <div id="creditWarningContainer" class="warning-container">
-      <span class="warning-text">CS Scenario for ID Set:</span>
+      <span id="creditWarningText" class="warning-text">CS Override for ID Set</span>
       <div id="creditWarning" class="warning-light"></div>
-      <span id="creditWarningText" class="warning-text"></span>
     </div>
 
     <!-- Global Credit Spread Scenario Warning -->
     <div id="csWarningContainer" class="warning-container">
-      <span class="warning-text">Credit Spread Scenario Set:</span>
+      <span id="csWarningText" class="warning-text">Credit Spread Scenario Set</span>
       <div id="csWarning" class="warning-light"></div>
-      <span id="csWarningText" class="warning-text"></span>
+    </div>
+
+    <!-- Global Volatility Scenario Warning -->
+    <div id="volWarningContainer" class="warning-container">
+      <span id="volWarningText" class="warning-text">Vol Scenario Set</span>
+      <div id="volWarning" class="warning-light"></div>
     </div>
 
   </div>
@@ -418,6 +424,19 @@ Feature:    Wenn es nur in einem Panel gilt
         <span class="chev"></span>
       </button>
     </div>
+
+
+        <!-- MVaR Factor Mapping   Unterpunkt -->
+        <div class="chart-section chart-section--sub">
+          <button class="section-trigger section-trigger--sub"
+                  data-panel="panel-mvar-factor-series-map"
+                  aria-controls="panel-mvar-factor-series-map"
+                  aria-expanded="false"
+                  style="max-width: 184px;">
+            <span class="section-header">Factor Mapping</span>
+            <span class="chev"></span>
+          </button>
+        </div>
 
         <!-- Market Factor VaR   Unterpunkt -->
         <div class="chart-section chart-section--sub">
@@ -700,6 +719,74 @@ Feature:    Wenn es nur in einem Panel gilt
 
   </div>
 </div>
+
+
+<!-- Panel: MVaR FACTOR SERIES MAPPING -->
+<div
+  id="panel-mvar-factor-series-map"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-mvar-factor-series-map-title"
+  hidden>
+
+  <div class="sub-panel-header">
+    <div id="panel-mvar-factor-series-map-title" class="sub-panel-title">
+      MVAR FACTOR SERIES MAPPING
+    </div>
+
+    <button
+      class="sub-panel-close"
+      data-close="panel-mvar-factor-series-map"
+      aria-label="close">
+      &times;
+    </button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="table-content">
+
+      <div class="table-toolbar">
+        <div>
+          <strong>Factor → Historical Time Series</strong>
+          <div class="muted">
+            Controls which historical tblTS column is used for each MVaR factor.
+          </div>
+        </div>
+
+        <button id="saveMvarFactorSeriesMapButton" class="edit-button">
+          Save Mapping
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table" id="mvarFactorSeriesMapTable">
+          <thead>
+            <tr>
+              <th>Factor</th>
+              <th>Status</th>
+              <th>Linked Time Series</th>
+              <th>Active</th>
+              <th>Allow Proxy</th>
+              <th>Scale</th>
+              <th>Comment</th>
+            </tr>
+          </thead>
+
+          <tbody id="mvarFactorSeriesMapTableBody">
+            <tr>
+              <td colspan="7">No mapping loaded.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
         <!-- Panel: Market Factor VaR (Detail) -->
         <div id="panel-mvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-title" hidden>
           <div class="sub-panel-header">
@@ -712,22 +799,18 @@ Feature:    Wenn es nur in einem Panel gilt
     
     <!-- LINKER BEREICH: Total oben, IR & CS darunter -->
     <section class="mvar-left">
-      <!-- Total immer oben, volle Breite -->
-      <div class="MVaR-block MVaR-block--total">
-        <h3>Total (T)</h3>
-        <div class="data-container" id="MVaRTotalContainer"></div>
-      </div>
 
-      <!-- Darunter: IR & CS nebeneinander (bzw. untereinander auf Mobile) -->
+
+      <!-- Risk Type und Factor P/L -->
       <div class="mvar-pair">
         <div class="MVaR-block">
-          <h3>Interest Rate (IR)</h3>
-          <div class="data-container" id="MVaRIRContainer"></div>
+          <h3>MVaR Risk Type P/L</h3>
+          <div class="data-container" id="MVaRRiskTypePLContainer"></div>
         </div>
 
         <div class="MVaR-block">
-          <h3>Credit Spread (CS)</h3>
-          <div class="data-container" id="MVaRCSContainer"></div>
+          <h3>MVaR Factor P/L</h3>
+          <div class="data-container" id="MVaRFactorPLContainer"></div>
         </div>
       </div>
     </section>
@@ -810,43 +893,190 @@ Feature:    Wenn es nur in einem Panel gilt
 
 
 
-        <!-- Panel: Market Sensitivities (Detail) -->
-        <div id="panel-sensitivities" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-sensitivities-title" hidden>
-          <div class="sub-panel-header">
-            <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
-            <button class="sub-panel-close" data-close="panel-sensitivities" aria-label="close">&times;</button>
-          </div>
+<!-- Panel: Market Sensitivities (Detail) -->
+<div
+  id="panel-sensitivities"
+  class="sub-panel"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="panel-sensitivities-title"
+  hidden
+>
+  <div class="sub-panel-header">
+    <div id="panel-sensitivities-title" class="sub-panel-title">SENSITIVITIES</div>
+    <button
+      class="sub-panel-close"
+      data-close="panel-sensitivities"
+      aria-label="close"
+    >
+      &times;
+    </button>
+  </div>
 
-          <div class="sub-panel-body">
-            <div class="sens-layout">
-              <!-- Left Part (Tables) -->
-              <section class="sens-left table-card">
-                <div class="data-wrapper">
-                  <p class="block-title">PV01:</p>
-                  <div class="data-container" id="IRSensDataContainer"></div>
+  <div class="sub-panel-body">
+    <section class="sens-dashboard">
 
-                  <div class="spacer-xxl"></div>
+      <!-- KPI Summary -->
+      <div class="sens-kpi-row">
+        <div class="sens-kpi-card">
+          <div class="sens-kpi-label">Total PV01</div>
+          <div class="sens-kpi-value" id="SensTotalPV01">—</div>
+        </div>
 
-                  <p class="block-title">CPV01:</p>
-                  <div class="data-container" id="CSSensDataContainer"></div>
-                </div>
-              </section>
+        <div class="sens-kpi-card">
+          <div class="sens-kpi-label">Total CPV01</div>
+          <div class="sens-kpi-value" id="SensTotalCPV01">—</div>
+        </div>
 
-              <!-- Right Part (Charts) -->
-              <section class="sens-right">
-                <div class="pv01-chart-container chart-container">
-                  <canvas id="PV01Chart"></canvas>
-                </div>
+        <div class="sens-kpi-card">
+          <div class="sens-kpi-label">Top IR Tenor</div>
+          <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
+        </div>
 
-                <div class="spacer-xxl"></div>
+        <div class="sens-kpi-card">
+          <div class="sens-kpi-label">Top Credit Bucket</div>
+          <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
+        </div>
 
-                <div class="cpv01-chart-container chart-container">
-                  <canvas id="CPV01Chart" width="400" height="400"></canvas>
-                </div>
-              </section>
+        <div class="sens-kpi-card">
+          <div class="sens-kpi-label">Total Vega</div>
+          <div class="sens-kpi-value" id="SensTotalVega">—</div>
+        </div>
+      </div>
+
+
+
+      <!-- Sensitivity Type Tabs -->
+      <div class="sens-tabs" role="tablist" aria-label="Sensitivity type">
+        <button
+          class="sens-tab is-active"
+          type="button"
+          data-sens-tab="pv01"
+          role="tab"
+          aria-selected="true"
+        >
+          PV01
+        </button>
+
+        <button
+          class="sens-tab"
+          type="button"
+          data-sens-tab="cpv01"
+          role="tab"
+          aria-selected="false"
+        >
+          CPV01
+        </button>
+
+        <button
+          class="sens-tab"
+          type="button"
+          data-sens-tab="vega"
+          role="tab"
+          aria-selected="false"
+        >
+          Vega
+        </button>
+      </div>
+
+      <!-- PV01 View -->
+      <section
+        class="sens-view is-active"
+        id="sens-view-pv01"
+        data-sens-view="pv01"
+      >
+        <div class="sens-chart-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">PV01 by Tenor</div>
+              <div class="sens-card-subtitle">Interest rate sensitivity by maturity bucket</div>
             </div>
           </div>
+
+          <div class="pv01-chart-container chart-container">
+            <canvas id="PV01Chart"></canvas>
+          </div>
         </div>
+
+        <div class="sens-table-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">PV01 Details</div>
+              <div class="sens-card-subtitle">Tenor-level contribution and weighted share</div>
+            </div>
+          </div>
+
+          <div class="data-container" id="IRSensDataContainer"></div>
+        </div>
+      </section>
+
+      <!-- CPV01 View -->
+      <section
+        class="sens-view"
+        id="sens-view-cpv01"
+        data-sens-view="cpv01"
+        hidden
+      >
+        <div class="sens-chart-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">CPV01 by Rating Bucket</div>
+              <div class="sens-card-subtitle">Credit spread sensitivity by rating bucket</div>
+            </div>
+          </div>
+
+          <div class="cpv01-chart-container chart-container">
+            <canvas id="CPV01Chart"></canvas>
+          </div>
+        </div>
+
+        <div class="sens-table-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">CPV01 Details</div>
+              <div class="sens-card-subtitle">Rating bucket contribution and weighted share</div>
+            </div>
+          </div>
+
+          <div class="data-container" id="CSSensDataContainer"></div>
+        </div>
+      </section>
+
+      <!-- Vega View -->
+      <section
+        class="sens-view"
+        id="sens-view-vega"
+        data-sens-view="vega"
+        hidden
+      >
+        <div class="sens-chart-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">Vega Parallel</div>
+              <div class="sens-card-subtitle">Parallel swaption volatility sensitivity</div>
+            </div>
+          </div>
+
+          <div class="vega-chart-container chart-container">
+            <canvas id="VegaChart"></canvas>
+          </div>
+        </div>
+
+        <div class="sens-table-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">Vega Details</div>
+              <div class="sens-card-subtitle">Parallel volatility sensitivity by currency / surface bucket</div>
+            </div>
+          </div>
+
+          <div class="data-container" id="VegaSensDataContainer"></div>
+        </div>
+      </section>
+
+    </section>
+  </div>
+</div>
 
 <!-- Panel: Credit Risk  -->
 <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
@@ -1598,7 +1828,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- Backdrop nur fuer dieses Modal -->
     <div class="sub-panel-backdrop" hidden></div>
 
-<!-- ====== PANELS ====== -->
+<!-- ====== PANELS ====== ===========================================================PANELS=============================================================-->
 
 <!-- ================= INTEREST RATES ================= -->
 
