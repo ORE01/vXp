@@ -63,7 +63,7 @@ export const COMPLEX_BOND_TEMPLATE = {
     SCENARIO_SETUP: {
       label: 'Scenario & Market Data',
       fields: [
-        'CS_Szenario',
+        'CS_SPREAD_OVERRIDE_BP',
       ],
     },
 

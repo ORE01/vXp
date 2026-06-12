@@ -1,6 +1,6 @@
 
-import { handleIRSensData } from '../ANALYSE_PORTFOLIO/MARKET_RISK/IRSens.js';
-import { handleCSSensData } from '../ANALYSE_PORTFOLIO/MARKET_RISK/CSSens.js';
+import { handleIRSensData } from '../ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioPV01Handler.js';
+import { handleCSSensData } from '../ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioCPV01Handler.js';
 
 
 

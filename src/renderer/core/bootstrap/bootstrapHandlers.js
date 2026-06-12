@@ -2,11 +2,12 @@
 
 import { createIssuerProductHandlers } from '../../features/DATA_PROVIDER/issuerProductHandlers.js';
 import { createCustomerHandlers } from '../../features/CUSTOMER/customerHandlers.js';
-import { createDealsPortfolioActions } from '../../features/SELECT_PORTFOLIO/dealsPortfolioActions.js';
-import { createRatesHandlers } from '../../features/MARKET_DATA/INTEREST_RATES/interestRateCurveHandlers.js';
+import { createDealsPortfolioActions } from '../../features/portfolio/portfolioCreationActions.js';
+import { createRatesHandlers } from '../../features/MARKET_DATA/interestRates/interestRateCurveHandlers.js';
 import { createSwaptionDataHandlers } from '../../features/MARKET_DATA/VOLS/swaptionDataHandlers.js';
-import { createForwardsHandlers } from '../../features/MARKET_DATA/FORWARDS/forwardsHandlers.js';
+import { createForwardsHandlers } from '../../features/MARKET_DATA/forwards/forwardCurveHandlers.js';
 import { createAnalysePortfolioHandlers } from '../../features/ANALYSE_PORTFOLIO/analysePortfolioHandlers.js';
+import { handlePortfolioRiskSensitivitiesData } from '../../features/ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioRiskSensitivitiesHandler.js';
 
 import {handleCSParameterData} from '../../features/MARKET_DATA/CREDIT_SPREADS/csParameterHandlers.js';
 
@@ -18,7 +19,11 @@ import {
   handleCSScenarioData,
 } from '../../features/MARKET_DATA/CREDIT_SPREADS/csHandlers.js';
 
-import { handleMVaRData, handleMvarInputData } from '../../features/ANALYSE_PORTFOLIO/MARKET_RISK/MVaR.js';
+import {
+  handleMVaRData,
+  handleMvarInputData,
+} from '../../features/ANALYSE_PORTFOLIO/marketRisk/mvar/index.js';
+
 import { handleCVaRData, handleEADData } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
 import { handleCvarInput } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInput.js';
 import { handleCvarInputThresholdView } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/CvarInputThreshold.js';
@@ -93,6 +98,8 @@ export function bootstrapHandlers(appState, deps) {
     handleSwaptionSmileData,
     handleSwaptionSnapshotsData,
     handleSwaptionSmileSnapshotsData,
+
+    handlePortfolioRiskSensitivitiesData,
 
     handleMvarInputData,
   };

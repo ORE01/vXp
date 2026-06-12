@@ -1,11 +1,11 @@
 ﻿// initMarketDataPanels.js
 
-import { initForwardPanelGlobalOnce } from "../../features/MARKET_DATA/FORWARDS/initForwardPanelGlobal.js";
+import { initForwardPanelGlobalOnce } from "../../features/MARKET_DATA/forwards/initForwardPanelGlobal.js";
 import { initLazyPanels, refreshOpenPanels as refreshCore } from "./panelOrchestrator.js";
 
 
-import { renderInterestRateCurvePanel} from "../../features/MARKET_DATA/INTEREST_RATES/interestRateCurvePanel.js";
-import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/FORWARDS/forwards.js";
+import { renderInterestRateCurvePanel} from "../../features/MARKET_DATA/interestRates/interestRateCurvePanel.js";
+import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/forwards/forwardCurvePanel.js";
 
 // Swaption Vols: 3D-ATM-Surface (Plotly) + Smile (Chart.js)
 import { renderSwaptionIfReady } from "../../features/MARKET_DATA/VOLS/swaptionVols.js";

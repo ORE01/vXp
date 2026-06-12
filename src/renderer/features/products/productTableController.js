@@ -3,7 +3,7 @@ import { addTooltipsForTruncatedText } from '../../utils/tooltips.js';
 import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';
 import { updateProductCSWarningUI } from '../../core/ui/warnings.js';
-import { handleStructureTimelineModal } from './StructureTimelineModal.js';
+import { handleStructureTimelineModal } from './productSetupModal.js';
 
 
 
@@ -19,7 +19,7 @@ const PROD_TABLE_COLUMNS = [
   'ISSUER',
   'RANK',
   'RATING_PROD',
-  'CS_Szenario',
+  'CS_SPREAD_OVERRIDE_BP',
   'FINLIB',
   'MODEL',
   'METHODE',

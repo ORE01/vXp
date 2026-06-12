@@ -13,10 +13,13 @@ module.exports = [
   },
 
   {
-    name: 'db',
-    register: require('./handlers/db.handlers'),
-    getCtx: ({ ipcMain }) => ({ ipcMain }),
-  },
+  name: 'db',
+  register: require('./handlers/db.handlers'),
+  getCtx: ({ ipcMain, refreshTable }) => ({
+    ipcMain,
+    refreshTable,
+  }),
+},
 
   {
     name: 'ratesActive',

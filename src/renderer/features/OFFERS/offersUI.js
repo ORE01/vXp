@@ -2,7 +2,7 @@
 import processData from '../../core/ui/modal/modalData.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
-import { handlePortProdData } from '../SELECT_PORTFOLIO/PORT.js';
+import { handlePortProdData } from '../portfolio/index.js';
 
 let isBound = false;
 

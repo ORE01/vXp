@@ -1,13 +1,3 @@
-// export function addTooltipsForTruncatedText(container) {
-//     const cells = container.querySelectorAll('td');
-//     cells.forEach((cell) => {
-//       //console.log(`Cell content: "${cell.textContent}", scrollWidth: ${cell.scrollWidth}, clientWidth: ${cell.clientWidth}`);
-//       if (cell.scrollWidth > cell.clientWidth) {
-//         cell.setAttribute('title', cell.textContent);
-//         //console.log(`Tooltip added: "${cell.textContent}"`);
-//       }
-//     });
-//   }
 
   export function addTooltipsForTruncatedText(container) {
   const elements = container.querySelectorAll('td, .warning-text');
@@ -20,7 +10,6 @@
     }
   });
 }
-
 
 // Optional: einmalige Warn-Rate-Limit pro Session (als statische Eigenschaft der Funktion)
 export function addProdIdTooltips(container) {
@@ -82,7 +71,6 @@ export function addProdIdTooltips(container) {
 // statische Property für einmaliges Warnen
 addProdIdTooltips._warnedEmpty = false;
 
-
 function showToastMessage(message, type = 'info') {
   const toast = document.createElement('div');
   toast.textContent = message;
@@ -117,9 +105,3 @@ function showToastMessage(message, type = 'info') {
     setTimeout(() => appContainer.removeChild(toast), 300);
   }, 3000);
 }
-
-  
-  
-  
-  
-  

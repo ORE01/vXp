@@ -56,6 +56,8 @@ module.exports = function registerCrudHandlers({
     Issuer:              ['Issuer', 'IssuerRankRating'],
     Portfolios:          ['Portfolios'],
     MVaRInput:           ['MVaRInput'],
+    MarketVaR_FactorSeriesMap: ['MarketVaR_FactorSeriesMap'],
+    
     ecb:                 ['ecb'],
     fed:                 ['fed'],
     yahoo:               ['yahoo'],

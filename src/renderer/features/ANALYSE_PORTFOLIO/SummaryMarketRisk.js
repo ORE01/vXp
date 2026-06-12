@@ -604,8 +604,8 @@ export function handleMvarProductTable(port_name, scenario_name, asof_date = nul
   container.innerHTML = '';
   container.appendChild(renderHtmlTable(sorted, columns));
 
-  renderMvarProdIdVarContribChart(rows);
-  //renderMvarProdIdEsContribChart(rows);
+  // renderMvarProdIdVarContribChart(rows);
+  // renderMvarProdIdEsContribChart(rows);
 
 
 
@@ -708,75 +708,23 @@ function buildProdIdVarContribSeries(rows, {
 
 let __mvarProdIdChart = null;
 
-export function renderMvarProdIdVarContribChart(rows) {
-  const canvas = document.getElementById('mvarProdIdVarContribChart');
-  if (!canvas) {
-    console.warn('[MVAR-PROD-CHART] canvas #mvarProdIdVarContribChart not found');
-    return;
-  }
+// export function renderMvarProdIdVarContribChart(rows) {
+//   console.warn('[SummaryMarketRisk] renderMvarProdIdVarContribChart is deprecated. Product VaR chart is owned by mvarProductPLPanel.js.');
 
+//   const series = buildProdIdVarContribSeries(rows, {
+//     valueKey: 'var_contrib_total',
+//     idKey: 'prod_id',
+//     topN: 20,
+//     sortByAbs: true,
+//   });
 
+//   renderProdContribMiniTable(series, {
+//     containerId: 'mvarProdIdVarContribTable',
+//     valueLabel: 'var_contrib_total',
+//   });
 
-  // nur var_contrib_total verwenden (wie gewÃ¼nscht)
-  const series = buildProdIdVarContribSeries(rows, {
-    valueKey: 'var_contrib_total',
-    idKey: 'prod_id',
-    topN: 20,
-    sortByAbs: true,
-  });
-
-    // ... series ist schon sortiert (Top-N)
-  renderProdContribMiniTable(series, {
-    containerId: 'mvarProdIdVarContribTable',
-    valueLabel: 'var_contrib_total',
-  });
-
-  bindProdIdClicksForDetailsTable();
-
-
-  const labels = series.map(x => x.id);
-  const values = series.map(x => x.value);
-
-  // optional: Farben nach Vorzeichen
-  const bg = values.map(v => v >= 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)');
-  const br = values.map(v => v >= 0 ? 'rgba(34,197,94,1)' : 'rgba(239,68,68,1)');
-
-  if (__mvarProdIdChart) { __mvarProdIdChart.destroy(); __mvarProdIdChart = null; }
-
-  __mvarProdIdChart = new Chart(canvas.getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Top Product VaR Contribution (var_contrib_total)',
-        data: values,
-        backgroundColor: bg,
-        borderColor: br,
-        borderWidth: 1,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: 'y',
-      plugins: {
-        legend: { display: true },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` ${Number(ctx.raw).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: {
-            callback: (v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })
-          }
-        }
-      }
-    }
-  });
-}
+//   bindProdIdClicksForDetailsTable();
+// }
 
 function buildProdIdEsContribSeries(rows, {
   valueKey = 'es_contrib_total',

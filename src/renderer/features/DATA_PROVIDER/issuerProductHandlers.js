@@ -121,8 +121,28 @@ export function createIssuerProductHandlers({ appState } = {}) {
     });
 
     appState.setActiveTable?.('prod');
+
+console.log('[PRODUCT HANDLER SET PROD DATA]', {
+  rows: updatedData.length,
+  fix007: updatedData.find(
+    r => String(r.PROD_ID ?? '').trim() === 'FIX007'
+  ),
+  fixIds: updatedData
+    .map(r => String(r.PROD_ID ?? '').trim())
+    .filter(id => id.includes('FIX'))
+    .slice(0, 20),
+});
+
+
     appState.setProdData?.(updatedData);
     appState.applyFiltersAndUpdateDropdowns?.('prod');
+
+    window.dispatchEvent(new CustomEvent('products-app-data-refreshed', {
+      detail: {
+        source: 'renderProductTableInit',
+        rows: updatedData,
+      },
+    }));
 
     const prodResetButton = document.getElementById('prodResetFiltersButton');
     prodResetButton?.addEventListener('click', () => {

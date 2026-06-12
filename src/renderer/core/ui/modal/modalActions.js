@@ -2,14 +2,14 @@
 
 
 
-import { handleStructureTimelineModal } from '../../../features/products/StructureTimelineModal.js';
+import { handleStructureTimelineModal } from '../../../features/products/productSetupModal.js';
 import { setupAddOperation } from './modalAddAction.js';
 import { setupEditOperation } from './modalEditAction.js';
 import { requestTableRefreshAfterMutation } from './modalRefresh.js';
 import { generateInputFields } from './modalFields.js';
 import { makeModalDraggable } from './draggableModal.js';
 import { closeModal } from './modalUI.js';
-import { issuerData } from '../../../features/products/ISSUER.js';
+import { issuerData } from '../../../features/issuer/issuerPanel.js';
 import { displayErrorMessage } from './modalFeedback.js';
 import { applyProductTemplateDefaults } from '../../../features/products/productTemplateResolver.js';
 

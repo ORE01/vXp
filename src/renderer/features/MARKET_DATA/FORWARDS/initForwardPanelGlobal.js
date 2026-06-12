@@ -1,30 +1,76 @@
-// initForwardPanelGlobal.js
-import { handleFWDData } from "./forwards.js";
-import { handleSwapForwardCurve } from "./forwards.js";
+// FRONT_END/MARKET_DATA/FORWARDS/initForwardPanelGlobal.js
+
+import { handleFWDData } from "./forwardCurvePanel.js";
+import { handleSwapForwardCurve } from "./forwardCurvePanel.js";
+
+function renderForwardPanelNow(reason = "manual") {
+  console.log(`[FORWARDS] renderForwardPanelNow reason=${reason}`);
+
+  try {
+    handleFWDData();
+  } catch (err) {
+    console.error("[FORWARDS] handleFWDData failed:", err);
+  }
+
+  try {
+    handleSwapForwardCurve();
+  } catch (err) {
+    console.error("[FORWARDS] handleSwapForwardCurve failed:", err);
+  }
+}
 
 export function initForwardPanelGlobalOnce() {
   const root = document.getElementById("panel-forward");
-  if (!root) return;
+  if (!root) {
+    console.warn("[FORWARDS INIT] panel-forward not found");
+    return;
+  }
 
   // nur 1x binden
-  if (root.dataset.bound === "1") return;
+  if (root.dataset.bound === "1") {
+    console.log("[FORWARDS INIT] already bound");
+
+    // Wichtig bei Lazy Render:
+    // Wenn das Panel erneut geöffnet wird, trotzdem aktuellen State rendern.
+    renderForwardPanelNow("already-bound-panel-opened");
+    return;
+  }
+
   root.dataset.bound = "1";
+
+  console.log("[FORWARDS INIT] binding forward panel");
 
   const btnCMS1 = root.querySelector("#CMSButton1");
   const btnCMS2 = root.querySelector("#CMSButton2");
   const btnYears = root.querySelector("#applyYearsForwardButton");
 
   btnCMS1?.addEventListener("click", () => {
-    // nutzt EUSW + selectedCurve, weil handleFWDData das jetzt so macht
+    console.log("[FORWARDS] CMSButton1 clicked");
     handleFWDData();
   });
 
   btnCMS2?.addEventListener("click", () => {
+    console.log("[FORWARDS] CMSButton2 clicked");
     handleFWDData();
   });
 
   btnYears?.addEventListener("click", () => {
-    // zweiter Chart
+    console.log("[FORWARDS] applyYearsForwardButton clicked");
     handleSwapForwardCurve();
   });
+
+  // Wenn Interest Rates die Kurve ändert und Forward offen ist:
+  document.addEventListener("interest-rates:curve-changed", (event) => {
+    console.log("[FORWARDS] heard interest-rates:curve-changed", event.detail);
+    renderForwardPanelNow("interest-rates:curve-changed");
+  });
+
+  document.addEventListener("interest-rates:currency-changed", (event) => {
+    console.log("[FORWARDS] heard interest-rates:currency-changed", event.detail);
+    renderForwardPanelNow("interest-rates:currency-changed");
+  });
+
+  // Wichtigster Fix:
+  // Beim Öffnen des lazy Panels sofort mit aktueller Kurve neu rendern.
+  renderForwardPanelNow("initial-panel-open");
 }

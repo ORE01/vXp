@@ -4,6 +4,8 @@ import { createPythonExecutionRouter } from './router.js';
 import { createPythonExecutionFetch } from './fetch.js';
 import { createPythonExecutionReceivers } from './receivers.js';
 
+import { handlePortfolioRiskSensitivitiesData } from '../../src/renderer/features/ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioRiskSensitivitiesHandler.js';
+
 export function bindPythonExecution(ctx) {
   const { appState } = ctx;
 
@@ -14,13 +16,21 @@ export function bindPythonExecution(ctx) {
   const clearLastHistButton = () => { lastHistButton = null; };
 
   // once/on fallback
-  const once = (channel, cb) => (window.api?.once ? window.api.once(channel, cb) : window.api.receive(channel, cb));
-  const on   = (channel, cb) => (window.api?.on   ? window.api.on(channel, cb)   : window.api.receive(channel, cb));
+  const once = (channel, cb) =>
+    window.api?.once
+      ? window.api.once(channel, cb)
+      : window.api.receive(channel, cb);
+
+  const on = (channel, cb) =>
+    window.api?.on
+      ? window.api.on(channel, cb)
+      : window.api.receive(channel, cb);
 
   const fetch = createPythonExecutionFetch({
     ...ctx,
     appState,
     once,
+    handlePortfolioRiskSensitivitiesData,
   });
 
   const router = createPythonExecutionRouter({

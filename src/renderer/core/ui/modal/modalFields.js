@@ -1,6 +1,6 @@
 ﻿import { prodData } from '../../../features/products/productTableController.js';
-import { convertDateToISO, formatDisplayValue } from '../../../utils/format.js';
-import { handleProductFields } from '../../../features/products/prodSimpleCoupon.js';
+import { convertDateToISO, formatDisplayValue } from '../../../utils/tableCellFormats.js';
+import { handleProductFields } from '../../../features/products/productFieldRenderer.js';
 import { getFieldConfig } from '../../../features/products/productFieldConfig.js';
 import { getTemplateFieldSection } from '../../../features/products/productTemplates.js';
 

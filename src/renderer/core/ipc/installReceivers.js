@@ -2,6 +2,7 @@
 
 import { routeTableData } from '../state/dataRouter.js';
 
+
 export function installReceivers(deps = {}) {
   const {
     api,
@@ -42,13 +43,18 @@ export function installReceivers(deps = {}) {
     handleDealsMainData,
     handlePortNameList,
     handlePortfolioData,
+    handlePortfolioRiskSensitivitiesData,
     handleIRSensData,
+    handleCSSensData,
+    handleVegaSensData,
 
     handleMvarInputData,
     handleAllMVaRData,
     handleMvarDistData,
     handleMvarProductData,
-
+    handleMarketVarFactorSeriesMapData,
+    handleMVaRFactorPLData,
+    handleMVaRProductPLData,
     handleAllEADData,
 
     initHandleCvarInput,
@@ -81,6 +87,11 @@ export function installReceivers(deps = {}) {
     '[BOOT RECEIVERS] handleCustomerTableLayoutsData:',
     typeof handleCustomerTableLayoutsData
   );
+
+  console.log(
+  '[BOOT RECEIVERS] handlePortfolioRiskSensitivitiesData:',
+  typeof handlePortfolioRiskSensitivitiesData
+);
 
   if (!api) throw new Error('[installReceivers] api missing');
 
@@ -206,12 +217,18 @@ api.receive(channel, (data) => {
     handleDealsMainData,
     handlePortNameList,
     handlePortfolioData,
+    handlePortfolioRiskSensitivitiesData,
     handleIRSensData,
+    handleCSSensData,
+    handleVegaSensData,
 
     handleMvarInputData,
     handleAllMVaRData,
     handleMvarDistData,
     handleMvarProductData,
+    handleMarketVarFactorSeriesMapData,
+    handleMVaRFactorPLData,
+    handleMVaRProductPLData,
 
     handleAllEADData,
 
@@ -297,6 +314,9 @@ api.receive(channel, (data) => {
   route('MarketVaRData');
   route('MarketVaR_DistData');
   route('MarketVaR_ProductData');
+  route('MarketVaR_FactorSeriesMapData');
+  route('MarketVaR_FactorPLData');
+  route('MarketVaR_ProductPLData');
 
   // EAD
   route('EADData');

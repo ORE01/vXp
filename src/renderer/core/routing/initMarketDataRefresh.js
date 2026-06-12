@@ -1,4 +1,4 @@
-﻿import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/FORWARDS/forwards.js";
+﻿import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/forwards/forwardCurvePanel.js";
 import { renderSwaptionIfReady } from "../../features/MARKET_DATA/VOLS/swaptionVols.js";
 
 export function initMarketDataChartsAutoRefresh() {

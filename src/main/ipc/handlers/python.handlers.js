@@ -63,13 +63,19 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
   });
 
-    // ===================== PRODUCT VALUATION =====================
+  // ===================== PRODUCT VALUATION =====================
   ipcMain.on('price-product', async (event, args = {}) => {
     const {
       prodId,
       notional = 100,
       asofDate = null,
       selectedCurve = 'EUSWAP',
+      discount_curve_id = null,
+      discountCurveId = null,
+      // product-specific credit spread scenario override
+      cs_spread_override_bp = null,
+      csSpreadOverrideBp = null,
+      CS_SPREAD_OVERRIDE_BP = null,
     } = args || {};
 
     if (!prodId) {
@@ -91,11 +97,35 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
         pythonArgs.push('--asof-date', String(asofDate));
       }
 
+      const resolvedDiscountCurveId =
+        discount_curve_id ||
+        discountCurveId ||
+        null;
+
+      if (resolvedDiscountCurveId) {
+        pythonArgs.push('--discount_curve_id', String(resolvedDiscountCurveId));
+      }
+
+      const resolvedCsSpreadOverrideBp =
+        cs_spread_override_bp ||
+        csSpreadOverrideBp ||
+        CS_SPREAD_OVERRIDE_BP ||
+        null;
+
+      if (resolvedCsSpreadOverrideBp) {
+        pythonArgs.push(
+          '--cs_spread_override_bp',
+          String(resolvedCsSpreadOverrideBp)
+        );
+      }
+
       console.log('[PRODUCT VALUATION IPC]', {
         prodId,
         notional,
         asofDate,
         selectedCurve,
+        discount_curve_id: resolvedDiscountCurveId,
+        cs_spread_override_bp: resolvedCsSpreadOverrideBp,
         pythonArgs,
       });
 
@@ -105,6 +135,16 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
         'py-product-valuation',
         pythonArgs
       );
+
+      console.log('[PRODUCT VALUATION PYTHON RESULT]', {
+        prodId,
+        result,
+        resultKeys: result && typeof result === 'object' ? Object.keys(result) : null,
+        nestedResultKeys:
+          result?.result && typeof result.result === 'object'
+            ? Object.keys(result.result)
+            : null,
+      });
 
       event.reply('price-product-success', {
         success: true,

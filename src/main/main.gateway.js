@@ -53,13 +53,26 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
     timeoutMs: 5 * 60 * 1000,
   }).then((res) => {
     // ✅ NUR ein kompaktes "OK" (oder kurze Info) in die Konsole
+
+
     if (res && res.status === 'ok') {
       console.log(res.message || `OK (${scriptIdentifier})`);
     } else {
-      // minimaler Fehlerhinweis (ohne riesige Dumps)
       console.warn(`Python result not ok (${scriptIdentifier})`, res?.status || res);
+
+      if (res?.error) {
+        console.error(`[PYTHON ERROR TRACEBACK:${scriptIdentifier}]`);
+        console.error(res.error);
+      }
+
+      if (res?.message) {
+        console.error(`[PYTHON ERROR MESSAGE:${scriptIdentifier}]`, res.message);
+      }
     }
+
     return res;
+
+
   }).catch((err) => {
     // kompakter Fehler
     console.error(`Python failed (${scriptIdentifier}):`, err?.message || err);
@@ -100,9 +113,22 @@ function startPythonScriptWithCallbacks({
 
     timeoutMs: 5 * 60 * 1000,
   }).then((res) => {
-    if (res && res.status === 'ok') console.log(res.message || `OK (${scriptIdentifier})`);
-    else console.warn(`Python result not ok (${scriptIdentifier})`, res?.status || res);
-    return res;
+      if (res && res.status === 'ok') {
+        console.log(res.message || `OK (${scriptIdentifier})`);
+      } else {
+        console.warn(`Python result not ok (${scriptIdentifier})`, res?.status || res);
+
+        if (res?.error) {
+          console.error(`[PYTHON ERROR TRACEBACK:${scriptIdentifier}]`);
+          console.error(res.error);
+        }
+
+        if (res?.message) {
+          console.error(`[PYTHON ERROR MESSAGE:${scriptIdentifier}]`, res.message);
+        }
+      }
+
+      return res;
   }).catch((err) => {
     console.error(`Python failed (${scriptIdentifier}):`, err?.message || err);
     throw err;

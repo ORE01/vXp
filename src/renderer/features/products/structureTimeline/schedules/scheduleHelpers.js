@@ -2,14 +2,14 @@
 
 import {
   buildBaseTimelineDates,
-} from '../structureTimelineUtils.js';
+} from '../complexTimelineUtils.js';
 
 import {
   getProductRow,
   getProductStartDate,
   getProductMaturityDate,
   getProductFrequency,
-} from '../structureTimelineData.js';
+} from '../complexTimelineData.js';
 
 export function asFiniteNumber(value, fallback = null) {
   const n = Number(value);

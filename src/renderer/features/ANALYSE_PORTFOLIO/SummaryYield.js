@@ -7,19 +7,59 @@ import {
 } from '../../utils/colors.js';
 
 
+let lastSummaryYieldArgs = null;
+let summaryYieldRatesListenerBound = false;
+let summaryYieldRefreshTimer = null;
+
+function bindSummaryYieldRatesRefresh() {
+  if (summaryYieldRatesListenerBound) return;
+  summaryYieldRatesListenerBound = true;
+
+  const refresh = () => {
+    if (!lastSummaryYieldArgs) return;
+
+    clearTimeout(summaryYieldRefreshTimer);
+
+    summaryYieldRefreshTimer = setTimeout(() => {
+      handleSummaryYieldData(
+        lastSummaryYieldArgs.filteredData,
+        lastSummaryYieldArgs.index,
+        lastSummaryYieldArgs.port_name
+      );
+    }, 50);
+  };
+
+  document.addEventListener('rates:active-data:ready', refresh);
+  document.addEventListener('rates:scenario-data:ready', refresh);
+  document.addEventListener('interestRates:updated', refresh);
+}
+
+
 export function handleSummaryYieldData(filteredData, index, port_name) {
+  lastSummaryYieldArgs = { filteredData, index, port_name };
+  bindSummaryYieldRatesRefresh();
+
+  console.log('[SUMMARY YIELD CALLED]', {
+    index,
+    port_name,
+    filteredRows: Array.isArray(filteredData) ? filteredData.length : null,
+  });
 
   const elementId = `portDataContainer${0}`;
+
+
   
   // =========================
   // DATA
   // =========================
-  const portfolioData = appState.getPortAggData(elementId) || {};
-  const rawRates = appState._RATESDataCacheByCcy?.['EUR'] || [];
-  const rawTSData = appState.getTblTSData();
+const portfolioData = appState.getPortAggData(elementId) || {};
 
-  const currency = 'EUR';
-  const curveId = 'EUR:SWAP:6M';
+const currency = 'EUR';
+const curveId = 'EUR:SWAP:6M';
+
+const rawBaseRates = appState._RATESDataCacheByCcy?.[currency] || [];
+const rawScenarioRates = appState.getRatesScenarioData?.() || [];
+const rawTSData = appState.getTblTSData();
 
   // =========================
   // ACTIVE SCENARIO
@@ -32,13 +72,53 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
 
   const activeScenario = activeRow?.scenario_id || 'BASE';
 
+console.log('[YIELD CHART RATE SOURCES CHECK]', {
+  activeScenario,
+  curveId,
+  baseRows: rawBaseRates.length,
+  scenarioRows: rawScenarioRates.length,
+  baseScenarios: Array.from(new Set(rawBaseRates.map(r => r.scenario_id || 'BASE'))),
+  scenarioScenarios: Array.from(new Set(rawScenarioRates.map(r => r.scenario_id || r.scenario_name || 'BASE'))),
+  scenarioCurveIds: Array.from(new Set(rawScenarioRates.map(r => r.curve_id))),
+  sampleScenario6M: rawScenarioRates
+    .filter(r => String(r.curve_id || '').trim() === curveId)
+    .slice(0, 5),
+});
+
   // =========================
   // RATES → FILTER + DEDUP + TRANSFORM
   // =========================
-  const filteredRates = rawRates.filter(r =>
-    (r.scenario_id || 'BASE') === activeScenario &&
-    r.curve_id === curveId
-  );
+
+
+// BASE lives in rawBaseRates.
+// Scenario curves like FLAT_3% live in rawScenarioRates.
+const sourceRates =
+  activeScenario === 'BASE'
+    ? rawBaseRates
+    : rawScenarioRates;
+
+let filteredRates = sourceRates.filter(r =>
+  String(r.ccy || '').trim() === String(currency).trim() &&
+  String(r.curve_id || '').trim() === String(curveId).trim() &&
+  String(r.scenario_id || r.scenario_name || 'BASE').trim() === String(activeScenario).trim()
+);
+
+if (!filteredRates.length) {
+  console.warn('[YIELD CHART] No rates for active scenario/curve. Chart skipped.', {
+    activeScenario,
+    curveId,
+    sourceRatesRows: sourceRates.length,
+    baseRows: rawBaseRates.length,
+    scenarioRows: rawScenarioRates.length,
+    availableCurveIds: Array.from(new Set(sourceRates.map(r => r.curve_id))),
+    availableScenarios: Array.from(new Set(sourceRates.map(r => r.scenario_id || r.scenario_name || 'BASE'))),
+    sampleForCurve: sourceRates
+      .filter(r => String(r.curve_id || '').trim() === String(curveId).trim())
+      .slice(0, 10),
+  });
+
+  return;
+}
 
   const dedupedRates = Object.values(
     filteredRates.reduce((acc, r) => {
@@ -48,10 +128,37 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
     }, {})
   );
 
-  const EUSWData = dedupedRates.map(r => ({
-    YEAR: r.tenor,
-    RATES: `${r.rate}%`
-  }));
+const EUSWData = dedupedRates.map(r => {
+  const rawRate = r.rate ?? r.value ?? r.RATES ?? r.VALUE;
+
+  let n = parseFloat(
+    String(rawRate ?? '')
+      .replace('%', '')
+      .replace(',', '.')
+      .trim()
+  );
+
+  if (!Number.isFinite(n)) return null;
+
+  // If rate is stored as decimal, e.g. 0.03, convert to percent 3.00
+  if (Math.abs(n) <= 1) {
+    n = n * 100;
+  }
+
+  return {
+    YEAR: r.tenor ?? r.YEAR,
+    RATES: `${n}%`
+  };
+}).filter(Boolean);
+
+console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
+  currency,
+  curveId,
+  activeScenario,
+  filteredRatesRows: filteredRates.length,
+  EUSWDataRows: EUSWData.length,
+  EUSWDataFirst10: EUSWData.slice(0, 10),
+});
 
   // =========================
   // TS DATA (optional gefiltert)
@@ -72,6 +179,23 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
   const portfolioYield = portfolioData.formPortYield;
   const portTtM = parseFloat(portfolioData.formPortTtM);
 
+  console.log('[YIELD CHART GATE]', {
+  portfolioYield,
+  portTtM,
+  baseRatesRows: rawBaseRates?.length,
+  scenarioRatesRows: rawScenarioRates?.length,
+  sourceRatesRows: sourceRates?.length,
+  activeScenario,
+  filteredRatesRows: filteredRates?.length,
+  EUSWDataRows: EUSWData?.length,
+  rawTSRows: rawTSData?.length,
+  TSDataRows: TSData?.length,
+  latestRowExists: !!latestRow,
+  yieldCurveRows: yieldCurve?.length,
+  filteredDataRows: filteredData?.length,
+});
+
+
   if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
 
     insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs Maturity' });
@@ -82,33 +206,33 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
     // =========================
     // 1) Portfolio vs Maturity
     // =========================
-    drawYieldVsTimeChart({
-      targetId: 'euswapPortfolioYieldChart',
-      heading: 'Portfolio Yield vs Maturity',
-      yieldCurve,
-      pastYieldCurve,
-      euswDataOriginal: EUSWData,
-      points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
-    });
+drawYieldVsTimeChart({
+  targetId: 'euswapPortfolioYieldChart',
+  heading: 'Portfolio Yield vs Maturity',
+  yieldCurve: EUSWData,
+  pastYieldCurve,
+  euswDataOriginal: [],
+  points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
+});
 
     // =========================
     // 2) Products vs Maturity
     // =========================
-    drawYieldVsTimeChart({
-      targetId: 'euswapProductYieldChart',
-      heading: 'Product Yields vs Maturity',
-      yieldCurve,
-      pastYieldCurve,
-      euswDataOriginal: EUSWData,
-      points: filteredData
-    });
+drawYieldVsTimeChart({
+  targetId: 'euswapProductYieldChart',
+  heading: 'Product Yields vs Maturity',
+  yieldCurve: EUSWData,
+  pastYieldCurve,
+  euswDataOriginal: [],
+  points: filteredData
+});
 
     // =========================
     // Duration curves
     // =========================
-    const durationCurve = yieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
-    const durationCurvePast = pastYieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
-    const durationEUSWData = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
+const durationCurve = EUSWData.map(swapPointToDurationAsYearRate).filter(Boolean);
+const durationCurvePast = pastYieldCurve.map(swapPointToDurationAsYearRate).filter(Boolean);
+const durationEUSWData = [];
 
     let chartSection = document.getElementById('yieldChartSection');
     let durationSection = document.getElementById('durationChartSection');
@@ -143,16 +267,74 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
     // =========================
     // Product Duration Points
     // =========================
-    const productDurationPoints = filteredData.map(entry => {
-      const duration = Math.abs(parseFloat(entry.PV01rel));
-      const ytm = typeof entry.ytm === 'number' ? entry.ytm * 100 : parseFloat(entry.ytm);
+function parseNumberLike(value) {
+  if (typeof value === 'number') return value;
 
-      return {
-        x: duration,
-        y: ytm,
-        PROD_ID: entry.PROD_ID
-      };
-    }).filter(Boolean);
+  return parseFloat(
+    String(value ?? '')
+      .replace(/€/g, '')
+      .replace(/,/g, '')
+      .replace(/%/g, '')
+      .trim()
+  );
+}
+
+const productDurationPoints = filteredData.map(entry => {
+  const rawYtm = entry.ytm ?? entry.YTM;
+
+  let ytm = parseNumberLike(rawYtm);
+
+  // Falls ytm als Dezimal kommt, z. B. 0.021 statt 2.1
+  if (Number.isFinite(ytm) && Math.abs(ytm) <= 1) {
+    ytm = ytm * 100;
+  }
+
+let duration = parseNumberLike(entry.IR_DURATION);
+
+console.log('[SUMMARY YIELD PRODUCT IR_DURATION]', {
+  TRADE_ID: entry.TRADE_ID,
+  PROD_ID: entry.PROD_ID,
+  IR_DURATION_raw: entry.IR_DURATION,
+  PV01_TOTAL_BASE: entry.PV01_TOTAL_BASE,
+  NAV: entry.NAV,
+  parsed_duration: duration,
+  ytm,
+});
+
+if (!Number.isFinite(duration) || !Number.isFinite(ytm)) {
+  console.log('[SUMMARY YIELD PRODUCT SKIPPED]', {
+    TRADE_ID: entry.TRADE_ID,
+    PROD_ID: entry.PROD_ID,
+    IR_DURATION: entry.IR_DURATION,
+    PV01_TOTAL_BASE: entry.PV01_TOTAL_BASE,
+    NAV: entry.NAV,
+    ytm,
+    keys: Object.keys(entry),
+  });
+
+  return null;
+}
+
+return {
+  x: Math.abs(duration),
+  y: ytm,
+  PROD_ID: entry.PROD_ID
+};
+
+
+
+
+
+
+
+}).filter(Boolean);
+
+console.log('[PRODUCT DURATION POINTS CHECK]', {
+  filteredRows: filteredData.length,
+  productDurationPointsRows: productDurationPoints.length,
+  samplePoints: productDurationPoints.slice(0, 10),
+});
+
 
     let durationProductSection = document.getElementById('durationProductChartSection');
     if (!durationProductSection) {
@@ -188,9 +370,9 @@ export function drawYieldVsTimeChart({
 
   // passender Container
   const targetContainerId =
-    targetId === 'durationSwapChart'
+    targetId === 'durationSwapChart' || targetId === 'durationProductYieldChart'
       ? 'durationChartSection'
-      : (targetId === 'durationOffersProductYieldChart' ? 'durationChartSection' : 'yieldChartSection');
+      : 'yieldChartSection';
 
   let container = document.getElementById(targetContainerId);
 

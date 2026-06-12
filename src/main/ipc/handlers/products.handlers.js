@@ -325,4 +325,72 @@ module.exports = function registerProductsHandlers({
       };
     }
   });
+
+  // Airbag gegen doppelte Registrierung
+  try { ipcMain.removeHandler('update-product-cs-spread-override'); } catch {}
+
+  ipcMain.handle('update-product-cs-spread-override', async (event, { prodId, csSpreadOverrideBp } = {}) => {
+    try {
+      const productId = String(prodId || '').trim();
+
+      if (!productId) {
+        throw new Error('[update-product-cs-spread-override] Missing prodId');
+      }
+
+      const raw = csSpreadOverrideBp;
+
+      const normalizedOverride =
+        raw === null ||
+        raw === undefined ||
+        String(raw).trim() === '' ||
+        String(raw).trim().toLowerCase() === 'default'
+          ? null
+          : Number(String(raw).replace(',', '.'));
+
+      if (
+        normalizedOverride !== null &&
+        !Number.isFinite(normalizedOverride)
+      ) {
+        throw new Error(
+          `[update-product-cs-spread-override] Invalid csSpreadOverrideBp: ${raw}`
+        );
+      }
+
+      await new Promise((resolve, reject) => {
+        sqliteDb.run(
+          `
+          INSERT INTO PRODUCTS_PRICING_CONFIG (
+            product_id,
+            cs_spread_override_bp,
+            updated_at
+          )
+          VALUES (?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(product_id) DO UPDATE SET
+            cs_spread_override_bp = excluded.cs_spread_override_bp,
+            updated_at = CURRENT_TIMESTAMP
+          `,
+          [productId, normalizedOverride],
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+
+      await refreshProductTables();
+
+      return {
+        success: true,
+        prodId: productId,
+        csSpreadOverrideBp: normalizedOverride,
+      };
+    } catch (err) {
+      console.error('[update-product-cs-spread-override] failed:', err);
+
+      return {
+        success: false,
+        error: err?.message || String(err),
+      };
+    }
+  });
 };

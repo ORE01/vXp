@@ -1,6 +1,7 @@
 // ./MARKET_DATA/VOLS/swaptionDataHandlers.js
 
 import { populateSwaptionCubeSelectors } from './volCube.js';
+import { updateVolScenarioWarningUI } from "../../../core/ui/warnings.js";
 
 let swaptionCubeSelectorPopulateScheduled = false;
 
@@ -491,9 +492,13 @@ export function createSwaptionDataHandlers({ appState } = {}) {
 
     appState.setSwaptionActive(safeRows);
 
+    updateVolScenarioWarningUI();
+
     dispatchSwaptionEvent('swaption:active:ready', {
       count: safeRows.length,
     });
+
+    applyActiveSwaptionScenarioFromState();
   }
 
     document.addEventListener('swaption:rebuild-active-scenario', () => {

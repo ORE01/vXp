@@ -74,7 +74,7 @@ export function renderActiveSwaptionScenarioPanel() {
 
   const scenario = active?.scenario_id || 'BASE';
   const runId = active?.active_run_id || active?.run_id || '-';
-  const cubeId = active?.cube_id || active?.surface_id || '-';
+ 
 
   const isBase = scenario === 'BASE';
 

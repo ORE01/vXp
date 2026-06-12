@@ -3,7 +3,7 @@ import processData from '../../../core/ui/modal/modalData.js';
 
 import createBarChart from '../../../charts/BarChart.js';
 
-import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/format.js';
+import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../utils/trafficLight.js';
 
 
@@ -16,7 +16,7 @@ let filteredEADMainData = [];
 
 
 export function handleEADData(receivedData) {
-  const port_name = appState.getSelectedPortTableName(); // z. B. "UNI"
+  const port_name = appState.getSelectedPortTableName(); 
 
   // âœ… If no portfolio selected: do nothing (no DOM, no chart, no warnings)
   if (!port_name) return;

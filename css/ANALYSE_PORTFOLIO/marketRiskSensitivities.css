@@ -1,0 +1,361 @@
+/* ===========================
+   Market Risk Sensitivities
+   Dashboard Layout
+   =========================== */
+
+#panel-sensitivities .sub-panel-body {
+  padding: 16px;
+  overflow: auto;
+}
+
+/* Main wrapper */
+.sens-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ===========================
+   KPI Summary Row
+   =========================== */
+
+.sens-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sens-kpi-card {
+  background: var(--panel-surface, #101011);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.sens-kpi-label {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.sens-kpi-value {
+  font-size: 20px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.92);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===========================
+   Tabs
+   =========================== */
+
+.sens-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.sens-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255,255,255,0.68);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.sens-tab:hover:not(:disabled) {
+  color: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.07);
+}
+
+.sens-tab.is-active {
+  color: #ffffff;
+  background: rgba(52, 152, 219, 0.28);
+  border-color: rgba(52, 152, 219, 0.48);
+}
+
+.sens-tab:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ===========================
+   Views
+   =========================== */
+
+.sens-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(340px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.sens-view[hidden] {
+  display: none !important;
+}
+
+/* ===========================
+   Cards
+   =========================== */
+
+.sens-chart-card,
+.sens-table-card {
+  background: var(--panel-surface, #101011);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 14px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.sens-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sens-card-title {
+  font-size: 14px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+}
+
+.sens-card-subtitle {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255,255,255,0.48);
+  margin-top: 4px;
+}
+
+/* ===========================
+   Chart Containers
+   =========================== */
+
+#panel-sensitivities .chart-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+}
+
+/* PV01: 30 tenor buckets on X-axis */
+#panel-sensitivities .pv01-chart-container canvas {
+  display: block;
+  width: 1500px !important;
+  max-width: none !important;
+  height: 320px !important;
+}
+
+/* CPV01: rating buckets on X-axis */
+#panel-sensitivities .cpv01-chart-container canvas {
+  display: block;
+  width: 1100px !important;
+  max-width: none !important;
+  height: 320px !important;
+}
+
+/* ===========================
+   Detail Tables
+   =========================== */
+
+#panel-sensitivities .data-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.025);
+}
+
+#panel-sensitivities table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+#panel-sensitivities th,
+#panel-sensitivities td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.72);
+  text-align: right;
+  white-space: nowrap;
+}
+
+#panel-sensitivities th {
+  color: rgba(255,255,255,0.86);
+  font-weight: 800;
+  background: rgba(255,255,255,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+#panel-sensitivities th:first-child,
+#panel-sensitivities td:first-child {
+  text-align: left;
+}
+
+#panel-sensitivities tr:last-child td {
+  border-bottom: none;
+}
+
+/* Existing generated sensitivity tables */
+#panel-sensitivities .irsens-table,
+#panel-sensitivities .cssens-table {
+  min-width: 720px;
+}
+
+#panel-sensitivities .irsens-table th,
+#panel-sensitivities .cssens-table th {
+  text-align: center;
+}
+
+/* ===========================
+   Scrollbar polish
+   =========================== */
+
+#panel-sensitivities .chart-container::-webkit-scrollbar,
+#panel-sensitivities .data-container::-webkit-scrollbar {
+  height: 9px;
+  width: 9px;
+}
+
+#panel-sensitivities .chart-container::-webkit-scrollbar-track,
+#panel-sensitivities .data-container::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+}
+
+#panel-sensitivities .chart-container::-webkit-scrollbar-thumb,
+#panel-sensitivities .data-container::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+}
+
+#panel-sensitivities .chart-container::-webkit-scrollbar-thumb:hover,
+#panel-sensitivities .data-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.32);
+}
+
+/* ===========================
+   Responsive
+   =========================== */
+
+@media (max-width: 1200px) {
+  .sens-view {
+    grid-template-columns: 1fr;
+  }
+
+  #panel-sensitivities .pv01-chart-container canvas {
+    width: 1400px !important;
+    height: 300px !important;
+  }
+
+  #panel-sensitivities .cpv01-chart-container canvas {
+    width: 1000px !important;
+    height: 300px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .sens-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sens-tabs {
+    width: 100%;
+  }
+
+  .sens-tab {
+    flex: 1 1 auto;
+  }
+
+  #panel-sensitivities .pv01-chart-container canvas {
+    width: 1300px !important;
+    height: 280px !important;
+  }
+
+  #panel-sensitivities .cpv01-chart-container canvas {
+    width: 900px !important;
+    height: 280px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .sens-kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sens-chart-card,
+  .sens-table-card {
+    padding: 12px;
+  }
+}
+
+/* ===========================
+   PV01 Detail Table Compact
+   =========================== */
+
+#panel-sensitivities #IRSensDataContainer {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#panel-sensitivities #IRSensDataContainer .irsens-table {
+  width: 100%;
+  min-width: 0 !important;
+  table-layout: fixed;
+}
+
+#panel-sensitivities #IRSensDataContainer .irsens-table th,
+#panel-sensitivities #IRSensDataContainer .irsens-table td {
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+#panel-sensitivities #IRSensDataContainer .irsens-table th:nth-child(1),
+#panel-sensitivities #IRSensDataContainer .irsens-table td:nth-child(1) {
+  width: 28%;
+  text-align: left;
+}
+
+#panel-sensitivities #IRSensDataContainer .irsens-table th:nth-child(2),
+#panel-sensitivities #IRSensDataContainer .irsens-table td:nth-child(2) {
+  width: 42%;
+  text-align: right;
+}
+
+#panel-sensitivities #IRSensDataContainer .irsens-table th:nth-child(3),
+#panel-sensitivities #IRSensDataContainer .irsens-table td:nth-child(3) {
+  width: 30%;
+  text-align: right;
+}

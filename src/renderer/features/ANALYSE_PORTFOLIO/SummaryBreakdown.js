@@ -1,6 +1,6 @@
 ﻿import { getColorForPieChart} from '../../utils/colors.js';
 import { setupHiDPICanvas } from './SummaryYield.js';
-import { getFormatRules } from '../../utils/format.js';
+import { getFormatRules } from '../../utils/tableCellFormats.js';
 
 const { jsPDF } = window.jspdf;
 

@@ -22,57 +22,80 @@ module.exports = function registerDealsSelectionHandlers({
   if (typeof insertSelection !== 'function') {
     throw new Error('[dealsSelection.handlers] dbApi.insertSelection missing');
   }
-  if (typeof deleteTable !== 'function') {
-    throw new Error('[dealsSelection.handlers] dbApi.deleteTable missing');
-  }
+
 
   // Avoid double registration during refactors
-  try { ipcMain.removeAllListeners('save-deals-selection'); } catch {}
-  try { ipcMain.removeAllListeners('delete-selected-table'); } catch {}
+try { ipcMain.removeAllListeners('save-deals-selection'); } catch {}
+try { ipcMain.removeAllListeners('create-empty-portfolio'); } catch {}
+try { ipcMain.removeAllListeners('delete-selected-table'); } catch {}
 
-  // SAVE DEALS SELECTION
-  // ipcMain.on('save-deals-selection', async (_event, selectionData = {}) => {
-  //   console.log('save-deals-selection: STARTED')
-  //   const { port_name, selectedTradeIDs } = selectionData || {};
-  //   try {
-  //     const port = String(port_name || '').trim();
-  //     const ids = Array.isArray(selectedTradeIDs) ? selectedTradeIDs : [];
+ipcMain.on('create-empty-portfolio', async (event, payload = {}) => {
+  const rawPort = payload?.port_name;
+  const port = String(rawPort ?? '').trim();
 
-  //     if (!port) throw new Error('port_name missing');
-  //     // ids darf leer sein (dann speichert insertSelection evtl. "none")
+  console.log('[CREATE EMPTY PORTFOLIO] START');
+  console.log('[CREATE EMPTY PORTFOLIO] raw port_name:', rawPort);
+  console.log('[CREATE EMPTY PORTFOLIO] normalized port_name:', `"${port}"`);
 
-  //     await insertSelection(port, ids);
-  //     refreshTable('DealsMain');
-  //   } catch (error) {
-  //     console.error('[dealsSelection] save-deals-selection error:', error?.message || error);
-  //   }
-  // });
-
-  ipcMain.on('save-deals-selection', async (event, selectionData = {}) => {
-    console.log('save-deals-selection: STARTED')
-  const { port_name, selectedTradeIDs } = selectionData || {};
   try {
-    const port = String(port_name || '').trim();
-
-    const ids = Array.isArray(selectedTradeIDs)
-      ? selectedTradeIDs
-          .map(x => Number(String(x).trim()))
-          .filter(n => Number.isFinite(n))
-      : [];
-
     if (!port) throw new Error('port_name missing');
-    if (!ids.length) throw new Error('selectedTradeIDs empty');
 
-    await insertSelection(port, ids);
+    /*
+      Important:
+      Do NOT use dbApi.runSQL here.
+      This handler officially receives dbApi.insertSelection/deleteTable only.
+
+      insertSelection(port, []) is the existing portfolio-selection write path.
+      Empty ids means: create portfolio placeholder without trades.
+    */
+    await insertSelection(port, []);
+
     refreshTable('DealsMain');
 
-    try { event.sender.send('save-deals-selection-success', { port, count: ids.length }); } catch {}
+    console.log('[CREATE EMPTY PORTFOLIO] DONE');
+
+    try {
+      event.sender.send('create-empty-portfolio-success', {
+        port,
+        inserted: true,
+      });
+    } catch {}
+
   } catch (error) {
-    console.error('[dealsSelection] save-deals-selection error:', error?.message || error);
-    try { event.sender.send('save-deals-selection-error', { message: error?.message || String(error) }); } catch {}
+    console.error('[CREATE EMPTY PORTFOLIO] ERROR:', error?.message || error);
+
+    try {
+      event.sender.send('create-empty-portfolio-error', {
+        message: error?.message || String(error),
+      });
+    } catch {}
   }
 });
 
+ipcMain.on('save-deals-selection', async (event, selectionData = {}) => {
+  console.log('save-deals-selection: STARTED')
+const { port_name, selectedTradeIDs } = selectionData || {};
+try {
+  const port = String(port_name || '').trim();
+
+  const ids = Array.isArray(selectedTradeIDs)
+    ? selectedTradeIDs
+        .map(x => Number(String(x).trim()))
+        .filter(n => Number.isFinite(n))
+    : [];
+
+  if (!port) throw new Error('port_name missing');
+  if (!ids.length) throw new Error('selectedTradeIDs empty');
+
+  await insertSelection(port, ids);
+  refreshTable('DealsMain');
+
+  try { event.sender.send('save-deals-selection-success', { port, count: ids.length }); } catch {}
+} catch (error) {
+  console.error('[dealsSelection] save-deals-selection error:', error?.message || error);
+  try { event.sender.send('save-deals-selection-error', { message: error?.message || String(error) }); } catch {}
+}
+});
 
 try { ipcMain.removeAllListeners('delete-deals-selection'); } catch {}
 
