@@ -170,3 +170,8 @@ export function getPortColumnLabel(columnKey) {
   const column = SELECTABLE_PORT_COLUMNS.find(col => col.key === columnKey);
   return column ? column.label : columnKey;
 }
+
+export const ALL_PORT_COLUMNS = ALL_PORT_COLUMN_KEYS.map((key) => ({
+  key,
+  label: getPortColumnLabel(key),
+}));

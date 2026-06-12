@@ -88,9 +88,19 @@ function generateTableHeader(columnNames, includeRadioSelect, includeEditColumn,
   }
 
   columnNames.forEach((columnName) => {
-    const label = columnLabelMap[columnName] || columnName; // sichtbarer Text
-    html += `<th class="table-header" title="${label}">${label}</th>`;
-  });
+  const label = columnLabelMap[columnName] || columnName;
+
+      html += `
+        <th
+          class="table-header sortable-header"
+          data-column-key="${columnName}"
+          title="${label}"
+        >
+          ${label}
+        </th>
+      `;
+    });
+    
 
   if (includeEditColumn) {
     html += '<th class="table-header">Edit</th>';

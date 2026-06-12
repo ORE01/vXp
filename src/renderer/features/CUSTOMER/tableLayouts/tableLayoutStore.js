@@ -43,6 +43,47 @@ export function subscribeTableLayout(tableId, listener) {
   };
 }
 
+// export function ensureTableLayout(tableId, { visibleColumns = [] } = {}) {
+//   const defaultColumns = cloneArray(visibleColumns);
+//   const existing = tableLayouts.get(tableId);
+
+//   if (!existing) {
+//     tableLayouts.set(tableId, {
+//       defaultVisibleColumns: defaultColumns,
+//       visibleColumns: defaultColumns,
+//       savedVisibleColumns: defaultColumns,
+//       storedLayouts: {},
+//       activeLayoutName: 'default',
+//     });
+
+//     return;
+//   }
+
+//   existing.defaultVisibleColumns = defaultColumns;
+
+//   const customLayout = existing.storedLayouts?.custom;
+
+//   if (Array.isArray(customLayout?.visibleColumns)) {
+//     existing.visibleColumns = cloneArray(customLayout.visibleColumns);
+//     existing.savedVisibleColumns = cloneArray(customLayout.visibleColumns);
+//     existing.activeLayoutName = 'custom';
+
+//     notifyTableLayoutListeners(tableId);
+//     return;
+//   }
+
+//   if (
+//     !Array.isArray(existing.visibleColumns) ||
+//     existing.visibleColumns.length === 0
+//   ) {
+//     existing.visibleColumns = defaultColumns;
+//     existing.savedVisibleColumns = defaultColumns;
+//     existing.activeLayoutName = 'default';
+
+//     notifyTableLayoutListeners(tableId);
+//   }
+// }
+
 export function ensureTableLayout(tableId, { visibleColumns = [] } = {}) {
   const defaultColumns = cloneArray(visibleColumns);
   const existing = tableLayouts.get(tableId);
@@ -59,29 +100,46 @@ export function ensureTableLayout(tableId, { visibleColumns = [] } = {}) {
     return;
   }
 
+  const hadDefaultColumns =
+    Array.isArray(existing.defaultVisibleColumns) &&
+    existing.defaultVisibleColumns.length > 0;
+
   existing.defaultVisibleColumns = defaultColumns;
 
-  const customLayout = existing.storedLayouts?.custom;
+  // Nur beim ersten echten Initialisieren gespeichertes Custom übernehmen.
+  // Nicht bei jedem Re-Render, sonst werden Checkbox-Änderungen sofort zurückgesetzt.
+  if (!hadDefaultColumns) {
+    const customLayout = existing.storedLayouts?.custom;
 
-  if (Array.isArray(customLayout?.visibleColumns)) {
-    existing.visibleColumns = cloneArray(customLayout.visibleColumns);
-    existing.savedVisibleColumns = cloneArray(customLayout.visibleColumns);
-    existing.activeLayoutName = 'custom';
+    if (Array.isArray(customLayout?.visibleColumns)) {
+      existing.visibleColumns = cloneArray(customLayout.visibleColumns);
+      existing.savedVisibleColumns = cloneArray(customLayout.visibleColumns);
+      existing.activeLayoutName = 'custom';
 
-    notifyTableLayoutListeners(tableId);
-    return;
+      notifyTableLayoutListeners(tableId);
+      return;
+    }
   }
 
-  if (
-    !Array.isArray(existing.visibleColumns) ||
-    existing.visibleColumns.length === 0
-  ) {
-    existing.visibleColumns = defaultColumns;
-    existing.savedVisibleColumns = defaultColumns;
-    existing.activeLayoutName = 'default';
+  // if (
+  //   !Array.isArray(existing.visibleColumns) ||
+  //   existing.visibleColumns.length === 0
+  // ) {
+  //   existing.visibleColumns = defaultColumns;
+  //   existing.savedVisibleColumns = defaultColumns;
+  //   existing.activeLayoutName = 'default';
 
-    notifyTableLayoutListeners(tableId);
-  }
+  //   notifyTableLayoutListeners(tableId);
+  // }
+
+if (!Array.isArray(existing.visibleColumns)) {
+  existing.visibleColumns = defaultColumns;
+  existing.savedVisibleColumns = defaultColumns;
+  existing.activeLayoutName = 'default';
+
+  notifyTableLayoutListeners(tableId);
+}
+
 }
 
 export function getVisibleColumns(tableId) {

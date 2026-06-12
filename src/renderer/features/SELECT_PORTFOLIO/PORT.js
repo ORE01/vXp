@@ -24,6 +24,9 @@ import {
   getVisibleColumns,
 } from '../CUSTOMER/tableLayouts/tableLayoutStore.js';
 
+import { renderConfigurableTable }
+  from '../../core/ui/tables/configurableTable.js';
+
 let tableName = 'Portfolios';
 
 const TABLE_ID = 'portTable0';
@@ -41,28 +44,73 @@ const safeDiv = (num, den) => (den ? num / den : 0);
 // =============================
 // 🔹 TABLE RENDER
 // =============================
+// function renderPortTableOnly(portData, index) {
+//   const elementId = `portDataContainer${index}`;
+//   const portDataContainer = document.getElementById(elementId);
+
+//   if (!portDataContainer) return;
+
+//   const visibleColumns =
+//     getVisibleColumns(TABLE_ID) ||
+//     DEFAULT_VISIBLE_PORT_COLUMN_KEYS;
+
+//   const filteredColumnsPortData = filterColumnsInData(portData, visibleColumns);
+
+//   const displayPortData = mapPortDataForDisplay(filteredColumnsPortData);
+
+//   const portDataHTML = processData(displayPortData, tableName);
+//   portDataContainer.innerHTML = portDataHTML;
+
+//   applyPortfolioTableColoring(portDataContainer);
+//   attachIdLinks(portDataContainer);
+
+//   addTooltipsForTruncatedText(portDataContainer);
+//   addProdIdTooltips(portDataContainer);
+// }
+
 function renderPortTableOnly(portData, index) {
-  const elementId = `portDataContainer${index}`;
-  const portDataContainer = document.getElementById(elementId);
 
-  if (!portDataContainer) return;
+  renderConfigurableTable({
+    tableId: TABLE_ID,
 
-  const visibleColumns =
-    getVisibleColumns(TABLE_ID) ||
-    DEFAULT_VISIBLE_PORT_COLUMN_KEYS;
+    rows: portData,
 
-  const filteredColumnsPortData = filterColumnsInData(portData, visibleColumns);
+    tableContainerId: `portDataContainer${index}`,
+    selectorContainerId: 'portColumnSelector',
 
-  const displayPortData = mapPortDataForDisplay(filteredColumnsPortData);
+    selectedTableName: tableName,
 
-  const portDataHTML = processData(displayPortData, tableName);
-  portDataContainer.innerHTML = portDataHTML;
+    sorting: {
+    enabled: true,
+    },
 
-  applyPortfolioTableColoring(portDataContainer);
-  attachIdLinks(portDataContainer);
+    defaultVisibleColumns:
+      DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
 
-  addTooltipsForTruncatedText(portDataContainer);
-  addProdIdTooltips(portDataContainer);
+    columnLabelMap: Object.fromEntries(
+      ALL_PORT_COLUMN_KEYS.map((key) => [
+        key,
+        getPortColumnLabel(key),
+      ])
+    ),
+
+    mapDisplayRows: null,
+
+    onLayoutChange: () => {
+      renderPortTableOnly(portData, index);
+    },
+
+    afterRender: (container) => {
+
+      applyPortfolioTableColoring(container);
+
+      attachIdLinks(container);
+
+      addTooltipsForTruncatedText(container);
+
+      addProdIdTooltips(container);
+    },
+  });
 }
 
 // =============================
