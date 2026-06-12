@@ -8,7 +8,8 @@ import portfolioRiskSensitivitiesStore from '../../../../core/state/portfolioRis
  * Responsibility:
  * - Accept raw rows from DataRouter/DataPump
  * - Normalize to safe array
- * - Replace portfolioRiskSensitivitiesStore rows
+ * - Store rows through appState if available
+ * - Keep legacy direct store fallback
  *
  * Not responsible for:
  * - UI rendering
@@ -18,18 +19,27 @@ import portfolioRiskSensitivitiesStore from '../../../../core/state/portfolioRis
  * - portfolio-risk-sensitivities-data-refreshed
  * after rows have actually been replaced.
  */
-export function handlePortfolioRiskSensitivitiesData(rows) {
+export function handlePortfolioRiskSensitivitiesData(rows, { appState } = {}) {
   const safeRows = Array.isArray(rows) ? rows : [];
 
-  portfolioRiskSensitivitiesStore.setRows(safeRows, {
+  const setRows =
+    appState?.setPortfolioRiskSensitivitiesData ??
+    portfolioRiskSensitivitiesStore.setRows.bind(portfolioRiskSensitivitiesStore);
+
+  const getRows =
+    appState?.getPortfolioRiskSensitivitiesData ??
+    portfolioRiskSensitivitiesStore.getRows.bind(portfolioRiskSensitivitiesStore);
+
+  setRows(safeRows, {
     source: 'PortfolioRiskSensitivitiesData',
   });
 
   console.log('[PRS HANDLER] PortfolioRiskSensitivitiesData handled', {
     incomingRows: safeRows.length,
-    storeRows: portfolioRiskSensitivitiesStore.getRows().length,
+    storeRows: getRows().length,
     ports: portfolioRiskSensitivitiesStore.getPorts(),
     riskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
     sample: safeRows[0],
+    viaAppState: Boolean(appState?.setPortfolioRiskSensitivitiesData),
   });
 }

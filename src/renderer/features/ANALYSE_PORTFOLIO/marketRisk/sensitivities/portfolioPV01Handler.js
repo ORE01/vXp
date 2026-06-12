@@ -5,7 +5,6 @@ import { getIrSensitivityColor } from '../../../../utils/colors.js';
 
 import { updateMarketRiskSensitivityKpis } from './marketRiskSensitivityKpis.js';
 
-import portfolioRiskSensitivitiesStore from '../../../../core/state/portfolioRiskSensitivitiesStore.js';
 
 let PV01Chart;
 
@@ -40,7 +39,15 @@ export function handleIRSensData(appState, forcedPortName = null) {
 
   
 
-const availablePorts = portfolioRiskSensitivitiesStore.getPorts();
+const riskRowsAll = appState.getPortfolioRiskSensitivitiesData?.() || [];
+
+const availablePorts = [
+  ...new Set(
+    riskRowsAll
+      .map(r => normalizePortfolioName(r.PORT_NAME ?? r.port_name))
+      .filter(Boolean)
+  ),
+];
 
 const selectedPort = normalizePortfolioName(
   rawPortName ||
@@ -59,25 +66,37 @@ console.log('[IR SENS] selected portfolio resolved', {
   rawPortName,
   selectedPort,
   availablePorts,
-  storeRows: portfolioRiskSensitivitiesStore.getRows().length,
-  riskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
+  storeRows: riskRowsAll.length,
+  riskTypes: [
+    ...new Set(
+      riskRowsAll
+        .map(r => String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim())
+        .filter(Boolean)
+    ),
+  ],
 });
 
-  const pv01Rows = portfolioRiskSensitivitiesStore.getByPortfolioAndType(
-    selectedPort,
-    'PV01'
-  );
+const pv01Rows = riskRowsAll.filter(r =>
+  normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
+  String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim() === 'PV01'
+);
 
   if (!Array.isArray(pv01Rows) || pv01Rows.length === 0) {
     console.warn('[IR SENS] no PV01 rows for selected portfolio', {
       selectedPort,
-      storeRows: portfolioRiskSensitivitiesStore.getRows().length,
-      availablePorts: portfolioRiskSensitivitiesStore.getPorts(),
-      availableRiskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
+      storeRows: riskRowsAll.length,
+      availablePorts,
+      availableRiskTypes: [
+        ...new Set(
+          riskRowsAll
+            .map(r => String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim())
+            .filter(Boolean)
+        ),
+      ],
     });
 
-    clearPV01Details();
     clearPV01Chart();
+    clearPV01Details();
 
     return;
   }
@@ -98,13 +117,15 @@ console.log('[IR SENS] selected portfolio resolved', {
       sampleKeys: pv01Rows[0] ? Object.keys(pv01Rows[0]) : [],
     });
 
-    clearPV01Details();
     clearPV01Chart();
+    clearPV01Details();
 
     return;
   }
 
-  const portfolioRows = portfolioRiskSensitivitiesStore.getByPortfolio(selectedPort);
+  const portfolioRows = riskRowsAll.filter(r =>
+  normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort
+);
 
   updateMarketRiskSensitivityKpis({
     rows: portfolioRows,
@@ -397,34 +418,18 @@ function mountPV01Details(wrapper) {
     tableRows: wrapper.querySelectorAll('tr').length,
   });
 
-  // Hard reset, damit kein altes CSS/Layout die Tabelle "verschluckt"
-function mountPV01Details(wrapper) {
-  const target = document.getElementById('IRSensDataContainer');
+  // Hard reset, damit kein altes CSS/Layout die Tabelle verschluckt
+  target.innerHTML = '';
+  target.style.display = 'block';
+  target.style.minHeight = '120px';
+  target.style.height = 'auto';
+  target.style.overflow = 'visible';
+  target.style.padding = '8px';
 
-  if (!target) {
-    console.error('[PV01 DETAILS] IRSensDataContainer not found');
-    return;
-  }
-
-  console.log('[PV01 DETAILS] target before mount:', {
-    target,
-    targetHeight: target.offsetHeight,
-    wrapperChildren: wrapper.children.length,
-    tableRows: wrapper.querySelectorAll('tr').length,
-  });
-
-  // Hard reset, damit kein altes CSS/Layout die Tabelle "verschluckt"
-    target.innerHTML = '';
-    target.style.display = 'block';
-    target.style.minHeight = '120px';
-    target.style.height = 'auto';
-    target.style.overflow = 'visible';
-    target.style.padding = '8px';
-
-    wrapper.style.display = 'block';
-    wrapper.style.width = '100%';
-    wrapper.style.height = 'auto';
-    wrapper.style.overflow = 'visible';
+  wrapper.style.display = 'block';
+  wrapper.style.width = '100%';
+  wrapper.style.height = 'auto';
+  wrapper.style.overflow = 'visible';
 
   const table = wrapper.querySelector('table');
 
@@ -452,28 +457,7 @@ function mountPV01Details(wrapper) {
     childCount: target.children.length,
     htmlPreview: target.innerHTML.slice(0, 300),
   });
-
-  }
-
-  const table = wrapper.querySelector('table');
-
-  if (table) {
-    table.style.display = 'table';
-    table.style.width = '100%';
-    table.style.borderCollapse = 'collapse';
-    table.style.color = '#fff';
-    table.style.fontSize = '13px';
-  }
-
-  target.appendChild(wrapper);
-
-  console.log('[PV01 DETAILS] mounted:', {
-    targetHeight: target.offsetHeight,
-    childCount: target.children.length,
-    htmlPreview: target.innerHTML.slice(0, 300),
-  });
-
-  }
+}
 
   function clearPV01Details() {
   const target = document.getElementById('IRSensDataContainer');
@@ -485,7 +469,12 @@ function mountPV01Details(wrapper) {
 
 function clearPV01Chart() {
   if (PV01Chart) {
-    PV01Chart.destroy();
+    try {
+      PV01Chart.destroy();
+    } catch (e) {
+      console.warn('[PV01 CHART] destroy failed', e);
+    }
+
     PV01Chart = null;
   }
 }

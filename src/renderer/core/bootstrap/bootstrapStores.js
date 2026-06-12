@@ -10,11 +10,13 @@ import { installProductsStore } from '../state/productsStore.js';
 import { installNameListsStore } from '../state/nameListsStore.js';
 import { installCustomerReportsStore } from '../state/customerReportsStore.js';
 import { installDataUpdatePipeline } from '../state/dataUpdatePipeline.js';
+import { installPortfolioRiskSensitivitiesStore } from '../state/portfolioRiskSensitivitiesStore.js';
 
 export function bootstrapStores(appState) {
   installUIStateStore({ appState });
   installDropdownFilterEngine({ appState });
   installPortfolioDataStore({ appState });
+  installPortfolioRiskSensitivitiesStore({ appState });
   installMarketRiskStore({ appState });
   installCreditRiskStore({ appState });
   installMarketDataStore({ appState });

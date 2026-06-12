@@ -16,8 +16,6 @@ import { handleVegaSensData } from './sensitivities/portfolioVegaHandler.js';
 
 import { initMarketRiskSensitivityTabs } from './sensitivities/marketRiskSensitivityTabs.js';
 
-import portfolioRiskSensitivitiesStore from '../../../core/state/portfolioRiskSensitivitiesStore.js';
-
 let sensitivitiesListenerInstalled = false;
 let sensitivityTabsInitialized = false;
 
@@ -25,6 +23,36 @@ function normalizePortfolioName(portName) {
   return String(portName ?? '')
     .replace(/^Portfolios[_-]?/i, '')
     .trim();
+}
+
+function normalizeRiskType(riskType) {
+  return String(riskType ?? '')
+    .toUpperCase()
+    .trim();
+}
+
+function getRiskRows(appState) {
+  return appState.getPortfolioRiskSensitivitiesData?.() || [];
+}
+
+function getAvailablePorts(rows = []) {
+  return [
+    ...new Set(
+      rows
+        .map(r => normalizePortfolioName(r.PORT_NAME ?? r.port_name))
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function getAvailableRiskTypes(rows = []) {
+  return [
+    ...new Set(
+      rows
+        .map(r => normalizeRiskType(r.RISK_TYPE ?? r.risk_type))
+        .filter(Boolean)
+    ),
+  ];
 }
 
 export function createMarketRiskRefresh({ appState } = {}) {
@@ -51,10 +79,11 @@ export function createMarketRiskRefresh({ appState } = {}) {
       return normalizedPort;
     }
 
-    const ports = portfolioRiskSensitivitiesStore.getPorts?.() || [];
+    const riskRows = getRiskRows(appState);
+    const ports = getAvailablePorts(riskRows);
 
     // Fallback nur für ersten Render erlaubt:
-    // Wenn eindeutig nur ein Portfolio im Store ist, darf dieses verwendet werden.
+    // Wenn eindeutig nur ein Portfolio in den Risk Rows ist, darf dieses verwendet werden.
     if (ports.length === 1) {
       return normalizePortfolioName(ports[0]);
     }
@@ -105,7 +134,6 @@ export function createMarketRiskRefresh({ appState } = {}) {
     // Legacy / summary renderers first.
     // Important: these may touch product containers.
     handleSummaryMarketRiskData(port, scenario, null);
-    
 
     // ProductPL must render LAST.
     // It owns the Product VaR detail panel chart/table after refresh.
@@ -122,16 +150,17 @@ export function createMarketRiskRefresh({ appState } = {}) {
   function refreshMarketRiskSensitivitiesUI(reason = 'manual') {
     ensureSensitivityTabsInitialized();
 
+    const riskRows = getRiskRows(appState);
+    const availablePorts = getAvailablePorts(riskRows);
+    const availableRiskTypes = getAvailableRiskTypes(riskRows);
+
     const port = resolveSelectedPortfolioForSensitivities();
-    const storeRows = portfolioRiskSensitivitiesStore.getRows?.() || [];
-    const availablePorts = portfolioRiskSensitivitiesStore.getPorts?.() || [];
-    const availableRiskTypes = portfolioRiskSensitivitiesStore.getRiskTypes?.() || [];
 
     if (!port) {
       console.warn('[marketRiskRefresh] sensitivities skipped: no selected portfolio', {
         reason,
         availablePorts,
-        storeRows: storeRows.length,
+        storeRows: riskRows.length,
         availableRiskTypes,
       });
 
@@ -141,7 +170,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
     console.log('[marketRiskRefresh] refresh sensitivities UI START', {
       reason,
       port,
-      storeRows: storeRows.length,
+      storeRows: riskRows.length,
       availablePorts,
       availableRiskTypes,
     });
@@ -172,24 +201,32 @@ export function createMarketRiskRefresh({ appState } = {}) {
     ensureSensitivityTabsInitialized();
 
     document.addEventListener('portfolio-risk-sensitivities-data-refreshed', (event) => {
+      const riskRows = getRiskRows(appState);
+      const availablePorts = getAvailablePorts(riskRows);
+      const availableRiskTypes = getAvailableRiskTypes(riskRows);
+
       console.log('[marketRiskRefresh] portfolio-risk-sensitivities-data-refreshed received', {
         detail: event?.detail,
         selectedPort: appState.getSelectedPortTableName?.(),
-        storeRows: portfolioRiskSensitivitiesStore.getRows?.().length || 0,
-        availablePorts: portfolioRiskSensitivitiesStore.getPorts?.() || [],
-        availableRiskTypes: portfolioRiskSensitivitiesStore.getRiskTypes?.() || [],
+        storeRows: riskRows.length,
+        availablePorts,
+        availableRiskTypes,
       });
 
       refreshMarketRiskSensitivitiesUI('portfolio-risk-sensitivities-data-refreshed');
     });
 
     document.addEventListener('portfolio-context-changed', (event) => {
+      const riskRows = getRiskRows(appState);
+      const availablePorts = getAvailablePorts(riskRows);
+      const availableRiskTypes = getAvailableRiskTypes(riskRows);
+
       console.log('[marketRiskRefresh] portfolio-context-changed received', {
         detail: event?.detail,
         selectedPort: appState.getSelectedPortTableName?.(),
-        storeRows: portfolioRiskSensitivitiesStore.getRows?.().length || 0,
-        availablePorts: portfolioRiskSensitivitiesStore.getPorts?.() || [],
-        availableRiskTypes: portfolioRiskSensitivitiesStore.getRiskTypes?.() || [],
+        storeRows: riskRows.length,
+        availablePorts,
+        availableRiskTypes,
       });
 
       refreshMarketRiskSensitivitiesUI('portfolio-context-changed');

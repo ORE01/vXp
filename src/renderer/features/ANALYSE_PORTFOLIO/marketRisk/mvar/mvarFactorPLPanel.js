@@ -312,7 +312,9 @@ export function renderMVaRFactorPLPanel() {
   const riskTypeRows = buildRiskTypeRows(filteredRows, confidence, denominator, horizonDays);
   const factorRows = buildFactorRows(filteredRows, confidence, denominator, horizonDays);
 
+  requestAnimationFrame(() => {
     renderRiskTypeVaRRelChart(riskTypeRows);
+  });
 
 
 

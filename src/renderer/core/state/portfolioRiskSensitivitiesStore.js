@@ -135,4 +135,18 @@ const portfolioRiskSensitivitiesStore = {
   },
 };
 
+export function installPortfolioRiskSensitivitiesStore({ appState } = {}) {
+  if (!appState) {
+    throw new Error('[installPortfolioRiskSensitivitiesStore] appState missing');
+  }
+
+  appState.setPortfolioRiskSensitivitiesData = (rows, meta = {}) =>
+    portfolioRiskSensitivitiesStore.setRows(rows, meta);
+
+  appState.getPortfolioRiskSensitivitiesData = () =>
+    portfolioRiskSensitivitiesStore.getRows();
+
+  return portfolioRiskSensitivitiesStore;
+}
+
 export default portfolioRiskSensitivitiesStore;

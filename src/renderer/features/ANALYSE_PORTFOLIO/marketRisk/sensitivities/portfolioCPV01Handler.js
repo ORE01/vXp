@@ -1,14 +1,13 @@
 ﻿'use strict';
 
+// src/renderer/features/ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioCPV01Handler.js
+
 import processData from '../../../../core/ui/modal/modalData.js';
 import createBarChart from '../../../../charts/BarChart.js';
 
 import { formatNumberWithGrouping } from '../../../../utils/tableCellFormats.js';
-import { getCreditSensitivityColor } from '../../../../utils/colors.js';
 
 import { updateMarketRiskSensitivityKpis } from './marketRiskSensitivityKpis.js';
-
-import portfolioRiskSensitivitiesStore from '../../../../core/state/portfolioRiskSensitivitiesStore.js';
 
 let CPV01Chart;
 
@@ -16,6 +15,32 @@ function normalizePortfolioName(portName) {
   return String(portName ?? '')
     .replace(/^Portfolios[_-]?/i, '')
     .trim();
+}
+
+function normalizeRiskType(riskType) {
+  return String(riskType ?? '')
+    .toUpperCase()
+    .trim();
+}
+
+function getAvailablePorts(rows = []) {
+  return [
+    ...new Set(
+      rows
+        .map(r => normalizePortfolioName(r.PORT_NAME ?? r.port_name))
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function getAvailableRiskTypes(rows = []) {
+  return [
+    ...new Set(
+      rows
+        .map(r => normalizeRiskType(r.RISK_TYPE ?? r.risk_type))
+        .filter(Boolean)
+    ),
+  ];
 }
 
 function normalizeCreditBucket(value) {
@@ -77,7 +102,10 @@ export function handleCSSensData(appState, forcedPortName = null) {
           )
     );
 
-  const availablePorts = portfolioRiskSensitivitiesStore.getPorts();
+  const riskRowsAll = appState.getPortfolioRiskSensitivitiesData?.() || [];
+
+  const availablePorts = getAvailablePorts(riskRowsAll);
+  const availableRiskTypes = getAvailableRiskTypes(riskRowsAll);
 
   const selectedPort = normalizePortfolioName(
     rawPortName ||
@@ -90,8 +118,8 @@ export function handleCSSensData(appState, forcedPortName = null) {
       availablePorts,
     });
 
-    clearCPV01Details();
     clearCPV01Chart();
+    clearCPV01Details();
 
     return;
   }
@@ -100,25 +128,25 @@ export function handleCSSensData(appState, forcedPortName = null) {
     rawPortName,
     selectedPort,
     availablePorts,
-    storeRows: portfolioRiskSensitivitiesStore.getRows().length,
-    riskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
+    storeRows: riskRowsAll.length,
+    riskTypes: availableRiskTypes,
   });
 
-  const cpv01Rows = portfolioRiskSensitivitiesStore.getByPortfolioAndType(
-    selectedPort,
-    'CPV01'
+  const cpv01Rows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
+    normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'CPV01'
   );
 
   if (!Array.isArray(cpv01Rows) || cpv01Rows.length === 0) {
     console.warn('[CP SENS] no CPV01 rows for selected portfolio', {
       selectedPort,
-      storeRows: portfolioRiskSensitivitiesStore.getRows().length,
-      availablePorts: portfolioRiskSensitivitiesStore.getPorts(),
-      availableRiskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
+      storeRows: riskRowsAll.length,
+      availablePorts,
+      availableRiskTypes,
     });
 
-    clearCPV01Details();
     clearCPV01Chart();
+    clearCPV01Details();
 
     return;
   }
@@ -139,13 +167,14 @@ export function handleCSSensData(appState, forcedPortName = null) {
       cpv01TotalByCcy: calcData.cpv01TotalByCcy,
     });
 
-    clearCPV01Details();
     clearCPV01Chart();
-
+    clearCPV01Details();
     return;
   }
 
-  const portfolioRows = portfolioRiskSensitivitiesStore.getByPortfolio(selectedPort);
+  const portfolioRows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort
+  );
 
   updateMarketRiskSensitivityKpis({
     rows: portfolioRows,
@@ -164,7 +193,6 @@ export function handleCSSensData(appState, forcedPortName = null) {
 function calculateCreditSensitivity(rows, portName) {
   const selectedPort = normalizePortfolioName(portName);
 
-  // Store already filters by portfolio + RISK_TYPE = CPV01.
   // IMPORTANT:
   // Do NOT filter to EUR.
   // Do NOT aggregate different CCYs into one CPV01.
@@ -416,7 +444,12 @@ function clearCPV01Details() {
 
 function clearCPV01Chart() {
   if (CPV01Chart) {
-    CPV01Chart.destroy();
+    try {
+      CPV01Chart.destroy();
+    } catch (e) {
+      console.warn('[CPV01 CHART] destroy failed', e);
+    }
+
     CPV01Chart = null;
   }
 }
