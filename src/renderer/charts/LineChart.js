@@ -157,6 +157,7 @@ const trendlinePlugin = {
   // --- gespeicherte Trendlinien nach Init laden ---
 loadTrendlines(modalIndex, chartName).then((loaded) => {
   console.log('[TS-TL][CHART][APPLY] modal=', modalIndex, 'chart=', chartName, 'count=', Array.isArray(loaded) ? loaded.length : 0);
+  if (!chartInstance.ctx) return;
   if (Array.isArray(loaded) && loaded.length) {
     trendState.lines = loaded.map(({ x1, y1, x2, y2 }) => ({ x1, y1, x2, y2 }));
     chartInstance.update();

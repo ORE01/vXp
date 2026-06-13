@@ -369,7 +369,7 @@ function mountCPV01Details(wrapper) {
     th.style.position = 'sticky';
     th.style.top = '0';
     th.style.zIndex = '2';
-    th.style.background = '#3a3a3a';
+    th.style.background = 'var(--surface-raised)';
   });
 
   target.appendChild(wrapper);

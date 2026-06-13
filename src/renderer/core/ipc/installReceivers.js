@@ -1,6 +1,6 @@
 'use strict';
 
-import { routeTableData } from '../state/dataRouter.js';
+import { routeTableData } from '../data/dataRouter.js';
 
 
 export function installReceivers(deps = {}) {

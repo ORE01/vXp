@@ -7,6 +7,7 @@ import { updateMarketRiskSensitivityKpis } from './marketRiskSensitivityKpis.js'
 
 
 let PV01Chart;
+let PV01RenderToken = 0;
 
 /**
  * Render PV01 sensitivity view for the currently selected portfolio.
@@ -306,10 +307,39 @@ function renderIRSensTableAndChart(data, portName) {
 
   mountPV01Details(wrapper);
 
+  // CRITICAL:
+  // Cancel stale chart renders.
+  // MVaR / Risk refreshes can rebuild the DOM while this RAF is still pending.
+  const renderToken = ++PV01RenderToken;
+
+  // Destroy the old chart BEFORE scheduling the new one.
+  // Otherwise Chart.js can still run delayed resize/update logic on a removed canvas.
+  clearPV01Chart({ preserveRenderToken: true });
+
   requestAnimationFrame(() => {
+    if (renderToken !== PV01RenderToken) {
+      console.warn('[PV01 CHART] skipped stale RAF render', {
+        renderToken,
+        currentToken: PV01RenderToken,
+      });
+      return;
+    }
+
+    const canvas = document.getElementById('PV01Chart');
+
+    if (!canvas || !canvas.isConnected || !canvas.parentNode) {
+      console.warn('[PV01 CHART] skipped RAF render: canvas not attached', {
+        exists: !!canvas,
+        isConnected: canvas?.isConnected,
+        hasParentNode: !!canvas?.parentNode,
+      });
+      return;
+    }
+
     createPV01Chart({
       irSensitivityByCcy,
       pv01PartialPctByCcy,
+      expectedRenderToken: renderToken,
     });
   });
 
@@ -325,12 +355,29 @@ function renderIRSensTableAndChart(data, portName) {
   return wrapper;
 }
 
-function createPV01Chart({ irSensitivityByCcy = {}, pv01PartialPctByCcy = {} } = {}) {
+function createPV01Chart({
+  irSensitivityByCcy = {},
+  pv01PartialPctByCcy = {},
+  expectedRenderToken = PV01RenderToken,
+} = {}) {
+  if (expectedRenderToken !== PV01RenderToken) {
+    console.warn('[PV01 CHART] skipped stale createPV01Chart call', {
+      expectedRenderToken,
+      currentToken: PV01RenderToken,
+    });
+    return;
+  }
+
   const canvasId = 'PV01Chart';
   const canvas = document.getElementById(canvasId);
 
-  if (!canvas) {
-    console.warn('[PV01 CHART] canvas not found:', canvasId);
+  if (!canvas || !canvas.isConnected || !canvas.parentNode) {
+    console.warn('[PV01 CHART] canvas not ready:', {
+      canvasId,
+      exists: !!canvas,
+      isConnected: canvas?.isConnected,
+      hasParentNode: !!canvas?.parentNode,
+    });
     return;
   }
 
@@ -347,6 +394,12 @@ function createPV01Chart({ irSensitivityByCcy = {}, pv01PartialPctByCcy = {} } =
         borderWidth: 1,
       };
     });
+
+  if (!fullDatasets.length) {
+    console.warn('[PV01 CHART] skipped render: no datasets');
+    clearPV01Chart({ preserveRenderToken: true });
+    return;
+  }
 
   // --------------------------------------------------
   // Trim chart range to the first/last tenor where
@@ -382,9 +435,15 @@ function createPV01Chart({ irSensitivityByCcy = {}, pv01PartialPctByCcy = {} } =
     data: ds.data.slice(startIndex, endIndex + 1),
   }));
 
-  if (PV01Chart) {
-    PV01Chart.destroy();
-    PV01Chart = null;
+  // Final DOM check directly before Chart creation.
+  // The canvas can disappear between RAF guard and this point during fast UI refreshes.
+  if (!canvas.isConnected || !canvas.parentNode) {
+    console.warn('[PV01 CHART] skipped render: canvas detached before createBarChart', {
+      canvasId,
+      isConnected: canvas.isConnected,
+      hasParentNode: !!canvas.parentNode,
+    });
+    return;
   }
 
   const chartConfig = {
@@ -393,6 +452,15 @@ function createPV01Chart({ irSensitivityByCcy = {}, pv01PartialPctByCcy = {} } =
   };
 
   PV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x');
+
+  if (!PV01Chart) {
+    console.warn('[PV01 CHART] createBarChart returned null', {
+      canvasId,
+      labelsCount: labels.length,
+      datasetsCount: datasets.length,
+    });
+    return;
+  }
 
   console.log('[PV01 CHART] rendered by CCY (trimmed)', {
     canvasId,
@@ -447,7 +515,7 @@ function mountPV01Details(wrapper) {
     th.style.position = 'sticky';
     th.style.top = '0';
     th.style.zIndex = '2';
-    th.style.background = '#3a3a3a';
+    th.style.background = 'var(--surface-raised)';
   });
 
   target.appendChild(wrapper);
@@ -467,7 +535,11 @@ function mountPV01Details(wrapper) {
   }
 }
 
-function clearPV01Chart() {
+function clearPV01Chart({ preserveRenderToken = false } = {}) {
+  if (!preserveRenderToken) {
+    PV01RenderToken += 1;
+  }
+
   if (PV01Chart) {
     try {
       PV01Chart.destroy();
@@ -476,6 +548,24 @@ function clearPV01Chart() {
     }
 
     PV01Chart = null;
+  }
+
+  const canvas = document.getElementById('PV01Chart');
+
+  if (
+    canvas &&
+    typeof Chart !== 'undefined' &&
+    typeof Chart.getChart === 'function'
+  ) {
+    const existingChart = Chart.getChart(canvas);
+
+    if (existingChart) {
+      try {
+        existingChart.destroy();
+      } catch (e) {
+        console.warn('[PV01 CHART] Chart.getChart(canvas).destroy failed', e);
+      }
+    }
   }
 }
 

@@ -1,26 +1,187 @@
-/* Default (Dark Theme) */
+/* ==========================================================================
+   Design Tokens — Dark (default) + Light Theme
+   Alle Farbwerte der App leben hier. Kein anderes CSS-File verwendet
+   hardcodierte Farben — nur var(--token-name).
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   DARK THEME (default, :root)
+   -------------------------------------------------------------------------- */
 :root {
-    --bg-color: rgb(70, 69, 69);
-    --text-color: rgb(161, 160, 160);
-    --border-color: rgb(100, 100, 100);
-    --highlight-color: #4CAF50;
-    --hover-text-color: white;
-    --hover-bg-color: #333;
-    --font-family: "Your Font Name", sans-serif;
-    --font-size: 13px;
-    --header-bg-color: #222;
-    --header-text-color: rgb(161, 160, 160);
-  }
-  
-  /* Light Theme */
-  .light-theme {
-    --bg-color: #f9f9f9;
-    --text-color: #333;
-    --border-color: #ccc;
-    --highlight-color: #4CAF50;
-    --hover-text-color: #000;
-    --hover-bg-color: #e0e0e0;
-    --header-bg-color: #ddd;
-    --header-text-color: #333;
-  }
-  
+
+  /* --- Surfaces: Hintergrund-Ebenen (dunkel → heller) --- */
+  --surface-base:      rgb(70, 69, 69);   /* Seitenhintergrund */
+  --surface-raised:    #444;              /* Cards, Panel-Inhalt */
+  --surface-overlay:   #333;             /* Inputs, gerade Tabellenzeilen */
+  --surface-header:    #222;             /* Toolbar, Thead, Sidebar */
+  --surface-deep:        #161719;                  /* sehr dunkle Elemente (z.B. Icon-Buttons) */
+  --surface-card:        #0f0f10;                  /* Chart/Table Card-Hintergrund */
+  --surface-card-border: rgba(255, 255, 255, 0.08);
+  --surface-modal:       rgb(70, 69, 69);          /* Modal-Content-Hintergrund */
+  --surface-modal-backdrop: rgba(0, 0, 0, 0.5);   /* Modal-Overlay */
+
+  /* --- Text --- */
+  --text-primary:      rgb(161, 160, 160); /* Standardtext */
+  --text-bright:       #ffffff;            /* Hover, aktive Elemente */
+  --text-muted:        #888888;            /* Hinweise, deaktiviert */
+  --text-heading:      rgb(161, 160, 160); /* Tabellenköpfe, Section-Header */
+  --text-inverted:     #222222;            /* Text auf hellem Hintergrund (z.B. Inputs) */
+  --text-on-accent:    #ffffff;            /* Text auf Akzentfarbe (Buttons) */
+
+  /* --- Borders --- */
+  --border:            #555555;            /* Standard-Rand */
+  --border-subtle:     rgb(100, 100, 100); /* Dezenter Rand (data-container) */
+  --border-strong:     #000000;            /* Starker Rand (Tabellenzellen) */
+  --border-accent:     #4CAF50;            /* Fokus-Rand (Input focus) */
+
+  /* --- Interaktiv: Hover / Zeilen --- */
+  --hover-bg:          #202020;            /* Hover-Hintergrund (Nav, Tabs) */
+  --hover-text:        #ffffff;            /* Hover-Textfarbe */
+  --row-even:          #333333;            /* Gerade Tabellenzeilen */
+  --row-odd:           #444444;            /* Ungerade Tabellenzeilen */
+  --row-hover-text:    #ffffff;            /* Zeilenhover Text */
+  --row-selected:      #4CAF50;            /* Ausgewählte Zeile */
+
+  /* --- Scrollbar --- */
+  --scrollbar-thumb:        #888888;
+  --scrollbar-thumb-hover:  #555555;
+  --scrollbar-track:        transparent;
+
+  /* --- Akzentfarben (thema-unabhängig, bleiben in light gleich) --- */
+  --accent:            #4CAF50;   /* Primary / Erfolg */
+  --accent-hover:      #45a049;
+  --accent-active:     #3e8e41;
+  --danger:            #b30000;   /* Löschen / Fehler */
+  --danger-hover:      #a00000;
+  --warning:           #ff6666;   /* Warnungen, Highlights */
+  --link:              #4aa3ff;   /* Links */
+  --link-hover:        #72b8ff;
+
+  /* --- Chart / Diagramme --- */
+  --chart-grid:        rgb(90, 90, 90);
+  --chart-text:        rgb(161, 160, 160);
+
+  /* --- Typografie --- */
+  --font-family:       "Your Font Name", sans-serif;
+  --font-size-base:    13px;
+  --font-size-sm:      12px;
+  --font-size-md:      14px;
+  --font-size-lg:      16px;
+
+  /* --- Shadows --- */
+  --shadow-sm:         0 2px 5px rgba(0, 0, 0, 0.3);
+  --shadow-md:         0 4px 8px rgba(0, 0, 0, 0.4);
+
+  /* --- Toolbar / Tab-Leiste --- */
+  --toolbar-bg:        #222222;
+  --tab-bg:            rgb(70, 69, 69);
+  --tab-hover-bg:      #202020;
+
+  /* --- Inputs --- */
+  --input-bg:          #ffffff;
+  --input-text:        #222222;
+  --input-border:      #555555;
+  --input-focus-bg:    #333333;
+  --input-focus-border: #4CAF50;
+
+  /* --- Backwards-Kompatibilität / Aliases --- */
+  --panel-surface:     var(--surface-card);   /* Alias für alle var(--panel-surface,...) Aufrufe */
+  --notification-bg:   #1f2937;
+
+  --bg-color:          var(--surface-base);
+  --text-color:        var(--text-primary);
+  --border-color:      var(--border-subtle);
+  --highlight-color:   var(--accent);
+  --hover-text-color:  var(--hover-text);
+  --hover-bg-color:    var(--hover-bg);
+  --header-bg-color:   var(--surface-header);
+  --header-text-color: var(--text-heading);
+}
+
+
+/* --------------------------------------------------------------------------
+   LIGHT THEME (.light-theme auf <body> oder <html>)
+   -------------------------------------------------------------------------- */
+.light-theme {
+
+  /* --- Surfaces --- */
+  --surface-base:      #f5f5f5;
+  --surface-raised:    #ffffff;
+  --surface-overlay:   #ebebeb;
+  --surface-header:    #dcdcdc;
+  --surface-deep:        #c8c8c8;
+  --surface-card:        #ffffff;
+  --surface-card-border: rgba(0, 0, 0, 0.08);
+  --surface-modal:       #ffffff;
+  --surface-modal-backdrop: rgba(0, 0, 0, 0.35);
+
+  /* --- Text --- */
+  --text-primary:      #333333;
+  --text-bright:       #000000;
+  --text-muted:        #777777;
+  --text-heading:      #333333;
+  --text-inverted:     #f5f5f5;
+  --text-on-accent:    #ffffff;
+
+  /* --- Borders --- */
+  --border:            #cccccc;
+  --border-subtle:     #bbbbbb;
+  --border-strong:     #999999;
+  --border-accent:     #4CAF50;
+
+  /* --- Interaktiv --- */
+  --hover-bg:          #e0e0e0;
+  --hover-text:        #000000;
+  --row-even:          #f0f0f0;
+  --row-odd:           #ffffff;
+  --row-hover-text:    #000000;
+  --row-selected:      #4CAF50;
+
+  /* --- Scrollbar --- */
+  --scrollbar-thumb:        #aaaaaa;
+  --scrollbar-thumb-hover:  #888888;
+  --scrollbar-track:        transparent;
+
+  /* --- Akzentfarben — bleiben gleich --- */
+  --accent:            #4CAF50;
+  --accent-hover:      #45a049;
+  --accent-active:     #3e8e41;
+  --danger:            #b30000;
+  --danger-hover:      #a00000;
+  --warning:           #ff6666;
+  --link:              #0070cc;
+  --link-hover:        #0058a0;
+
+  /* --- Chart --- */
+  --chart-grid:        rgb(200, 200, 200);
+  --chart-text:        #555555;
+
+  /* --- Toolbar / Tab --- */
+  --toolbar-bg:        #dcdcdc;
+  --tab-bg:            #e8e8e8;
+  --tab-hover-bg:      #d0d0d0;
+
+  /* --- Inputs --- */
+  --input-bg:          #ffffff;
+  --input-text:        #222222;
+  --input-border:      #cccccc;
+  --input-focus-bg:    #ffffff;
+  --input-focus-border: #4CAF50;
+
+  /* --- Shadows --- */
+  --shadow-sm:         0 2px 5px rgba(0, 0, 0, 0.12);
+  --shadow-md:         0 4px 8px rgba(0, 0, 0, 0.15);
+
+  /* --- Backwards-Kompatibilität --- */
+  --panel-surface:     var(--surface-card);
+  --notification-bg:   #f0f4f8;
+
+  --bg-color:          var(--surface-base);
+  --text-color:        var(--text-primary);
+  --border-color:      var(--border-subtle);
+  --highlight-color:   var(--accent);
+  --hover-text-color:  var(--hover-text);
+  --hover-bg-color:    var(--hover-bg);
+  --header-bg-color:   var(--surface-header);
+  --header-text-color: var(--text-heading);
+}

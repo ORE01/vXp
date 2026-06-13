@@ -1,16 +1,16 @@
 // src/renderer/core/bootstrap/bootstrapStores.js
 
-import { installUIStateStore } from '../state/uiStateStore.js';
+import { installUIStateStore } from '../state/stores/uiStateStore.js';
 import { installDropdownFilterEngine } from '../state/dropdownFilterEngine.js';
-import { installPortfolioDataStore } from '../state/portfolioDataStore.js';
-import { installMarketRiskStore } from '../state/marketRiskStore.js';
-import { installCreditRiskStore } from '../state/creditRiskStore.js';
-import { installMarketDataStore } from '../state/marketDataStore.js';
-import { installProductsStore } from '../state/productsStore.js';
-import { installNameListsStore } from '../state/nameListsStore.js';
-import { installCustomerReportsStore } from '../state/customerReportsStore.js';
-import { installDataUpdatePipeline } from '../state/dataUpdatePipeline.js';
-import { installPortfolioRiskSensitivitiesStore } from '../state/portfolioRiskSensitivitiesStore.js';
+import { installPortfolioDataStore } from '../state/stores/portfolioDataStore.js';
+import { installMarketRiskStore } from '../state/stores/marketRiskStore.js';
+import { installCreditRiskStore } from '../state/stores/creditRiskStore.js';
+import { installMarketDataStore } from '../state/stores/marketDataStore.js';
+import { installProductsStore } from '../state/stores/productsStore.js';
+import { installNameListsStore } from '../state/stores/nameListsStore.js';
+import { installCustomerReportsStore } from '../state/stores/customerReportsStore.js';
+import { installDataUpdatePipeline } from '../data/dataUpdatePipeline.js';
+import { installPortfolioRiskSensitivitiesStore } from '../state/stores/portfolioRiskSensitivitiesStore.js';
 
 export function bootstrapStores(appState) {
   installUIStateStore({ appState });

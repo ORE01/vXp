@@ -26,7 +26,7 @@
   overflow: auto;
 
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
@@ -42,7 +42,7 @@
 #panel-market #inputMvarContainer th,
 #panel-market #inputMvarContainer td{
   padding: 4px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 #panel-market #inputMvarContainer th{
@@ -100,7 +100,7 @@
   min-width: 260px;
 
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
@@ -116,7 +116,7 @@
 #panel-market #MVaRDataContainer0 th,
 #panel-market #MVaRDataContainer0 td{
   padding: 4px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 #panel-market #MVaRDataContainer0 th{
@@ -129,7 +129,7 @@
   margin: 0;
   flex: 0 0 90px;                /* fixe Breite */
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid #000000;     /* schwarze Umrandung */
+  border: 1px solid var(--border-strong);     /* schwarze Umrandung */
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
@@ -152,7 +152,7 @@
 
 #panel-market .chart-box{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
@@ -192,6 +192,3 @@
   #panel-market .chart-box{ min-width:0; width:100%; }
   #panel-market .chart-box canvas{ height: 280px !important; }
 }
-
-
-

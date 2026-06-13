@@ -6,23 +6,23 @@
 ===================================================== */
 
 #structureTimelineModal {
-  background-color: rgb(70, 69, 69) !important;
-  color: rgb(190, 190, 190) !important;
-  border: 1px solid #555 !important;
+  background-color: var(--surface-base) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-  font-family: "Your Font Name", sans-serif;
+  font-family: var(--font-family);
 }
 
 #structureTimelineModal h2,
 #structureTimelineModal h3 {
-  color: #fff;
+  color: var(--text-bright);
   font-weight: 700;
 }
 
 #structureTimelineModal p,
 #structureTimelineModal div {
-  color: rgb(190, 190, 190);
+  color: var(--text-primary);
 }
 
 /* =====================================================
@@ -30,9 +30,9 @@
 ===================================================== */
 
 #structureTimelineModal button {
-  background-color: #4CAF50;
+  background-color: var(--accent);
   border: none;
-  color: #fff;
+  color: var(--text-bright);
   padding: 7px 11px;
   font-size: 13px;
   border-radius: 4px;
@@ -41,7 +41,7 @@
 }
 
 #structureTimelineModal button:hover {
-  background-color: #015f06;
+  background-color: var(--accent-hover);
 }
 
 #structureTimelineModal button:active {
@@ -65,7 +65,7 @@
 
   background: transparent !important;
   border: none !important;
-  color: #fff !important;
+  color: var(--text-bright) !important;
 
   font-size: 42px !important;
   line-height: 1 !important;
@@ -76,8 +76,8 @@
 }
 
 #structureTimelineModal #closeStructureTimelineModal.structure-timeline-close:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #fff !important;
+  background: var(--hover-bg) !important;
+  color: var(--text-bright) !important;
 }
 
 /* =====================================================
@@ -89,8 +89,8 @@
 #saveNewCallRow,
 #saveBulkCallRows,
 #saveStructureEventRow {
-  background-color: #4CAF50 !important;
-  color: #fff !important;
+  background-color: var(--accent) !important;
+  color: var(--text-bright) !important;
 }
 
 #addCallStructureRow:hover,
@@ -98,16 +98,16 @@
 #saveNewCallRow:hover,
 #saveBulkCallRows:hover,
 #saveStructureEventRow:hover {
-  background-color: #015f06 !important;
+  background-color: var(--accent-hover) !important;
 }
 
 #deleteStructureEventRow {
-  background-color: #800000 !important;
-  color: #fff !important;
+  background-color: var(--danger-hover) !important;
+  color: var(--text-bright) !important;
 }
 
 #deleteStructureEventRow:hover {
-  background-color: #a00000 !important;
+  background-color: var(--danger-hover) !important;
 }
 
 /* =====================================================
@@ -117,26 +117,26 @@
 #structureTimelineModal table {
   border-collapse: collapse;
   width: 100%;
-  background-color: rgb(70, 69, 69) !important;
-  color: rgb(190, 190, 190);
+  background-color: var(--surface-base) !important;
+  color: var(--text-primary);
 }
 
 #structureTimelineModal table th,
 #structureTimelineModal table td {
-  border: 1px solid #555;
+  border: 1px solid var(--border);
   padding: 8px;
   text-align: left;
   font-size: 13px;
 }
 
 #structureTimelineModal table th {
-  background-color: #333;
-  color: #fff;
+  background-color: var(--surface-overlay);
+  color: var(--text-bright);
   font-weight: bold;
 }
 
 #structureTimelineModal table tr:hover {
-  background-color: #444;
+  background-color: var(--surface-raised);
 }
 
 /* =====================================================
@@ -144,41 +144,41 @@
 ===================================================== */
 
 #structureDetailDrawer {
-  background-color: #3f3e3e !important;
-  color: rgb(190, 190, 190) !important;
-  border: 1px solid #555 !important;
+  background-color: var(--surface-raised) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px !important;
 }
 
 #structureDetailDrawer label {
-  color: #ccc;
+  color: var(--text-muted);
 }
 
 #structureDetailDrawer strong {
-  color: #fff;
+  color: var(--text-bright);
 }
 
 #structureDetailDrawer input,
 #structureDetailDrawer textarea {
-  background-color: #fff;
-  border: 1px solid #555;
-  color: #222;
+  background-color: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--input-text);
   padding: 5px;
   border-radius: 4px;
 }
 
 #structureDetailDrawer input:focus,
 #structureDetailDrawer textarea:focus {
-  background-color: #fff;
-  border: 1px solid #4CAF50;
-  color: #222;
+  background-color: var(--input-bg);
+  border: 1px solid var(--accent);
+  color: var(--input-text);
   outline: none;
 }
 
 #structureDetailDrawer pre {
-  background-color: #333 !important;
-  color: #ccc;
-  border: 1px solid #555;
+  background-color: var(--surface-overlay) !important;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: 4px;
 }
 
@@ -187,22 +187,22 @@
 ===================================================== */
 
 #bulkCallPreview {
-  background-color: #333 !important;
-  color: #ccc;
-  border: 1px solid #555 !important;
+  background-color: var(--surface-overlay) !important;
+  color: var(--text-muted);
+  border: 1px solid var(--border) !important;
   border-radius: 6px;
 }
 
 #bulkCallPreview strong {
-  color: #fff;
+  color: var(--text-bright);
 }
 
 #bulkCallPreview table {
-  background-color: #333 !important;
+  background-color: var(--surface-overlay) !important;
 }
 
 #bulkCallPreview td {
-  border-bottom: 1px solid #555 !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 /* =====================================================
@@ -223,12 +223,12 @@
 
 
 .structure-drawer-card {
-  border: 1px solid var(--border-1, #374151);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
-  background: var(--surface-2, #2f2f2f);
-  color: var(--text-1, #f9fafb);
+  background: var(--surface-raised);
+  color: var(--text-bright);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
@@ -243,12 +243,12 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-1, #f9fafb);
+  color: var(--text-bright);
 }
 
 .structure-drawer-prod-id {
   font-size: 12px;
-  color: var(--text-2, #c7c7c7);
+  color: var(--text-muted);
   opacity: 0.8;
 }
 
@@ -267,14 +267,14 @@
 .structure-drawer-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-2, #c7c7c7);
+  color: var(--text-muted);
 }
 
 .structure-drawer-input {
   padding: 8px 10px;
-  border: 1px solid var(--border-1, #555);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  background: var(--surface-1, #3b3b3b);
+  background: var(--surface-overlay);
   color: var(--text-1, #ffffff);
   font-size: 13px;
 }
@@ -288,7 +288,7 @@
 .structure-drawer-note {
   margin-top: 12px;
   font-size: 12px;
-  color: var(--text-2, #c7c7c7);
+  color: var(--text-muted);
   opacity: 0.7;
 }
 
@@ -318,12 +318,12 @@
 }
 
 #structureTimelineModal .structure-action-button-danger {
-  background-color: #800000 !important;
-  color: #fff !important;
+  background-color: var(--danger-hover) !important;
+  color: var(--text-bright) !important;
 }
 
 #structureTimelineModal .structure-action-button-danger:hover {
-  background-color: #a00000 !important;
+  background-color: var(--danger-hover) !important;
 }
 
 /* =====================================================
@@ -334,25 +334,25 @@
 #structureTimelineModal .structure-drawer-input:focus,
 #structureTimelineModal .structure-drawer-input:focus-visible,
 #structureTimelineModal .structure-drawer-input:active {
-  color: #fff !important;
-  background-color: var(--surface-1, #3b3b3b) !important;
+  color: var(--text-bright) !important;
+  background-color: var(--surface-overlay) !important;
 
-  caret-color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
+  caret-color: var(--text-bright) !important;
+  -webkit-text-fill-color: var(--text-bright) !important;
 
-  border-color: var(--border-1, #555) !important;
+  border-color: var(--border-subtle) !important;
   outline: none !important;
 }
 
 #structureTimelineModal .structure-drawer-input::placeholder {
-  color: rgba(255, 255, 255, 0.45) !important;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
+  color: var(--text-muted) !important;
+  -webkit-text-fill-color: var(--text-muted) !important;
 }
 
 #structureTimelineModal select.structure-drawer-input,
 #structureTimelineModal select.structure-drawer-input option {
-  color: #fff !important;
-  background-color: var(--surface-1, #3b3b3b) !important;
+  color: var(--text-bright) !important;
+  background-color: var(--surface-overlay) !important;
 }
 
 /* =====================================================
@@ -376,9 +376,9 @@
   align-items: center;
   justify-content: center;
 
-  background: #333 !important;
-  color: #ccc !important;
-  border: 1px solid #555 !important;
+  background: var(--surface-overlay) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 50% !important;
 
   font-size: 20px !important;
@@ -387,8 +387,8 @@
 }
 
 #structureTimelineModal .structure-drawer-close:hover {
-  background: #444 !important;
-  color: #fff !important;
+  background: var(--surface-raised) !important;
+  color: var(--text-bright) !important;
 }
 
 /* =====================================================
@@ -401,8 +401,8 @@
   gap: 10px;
   margin: 12px 0 18px 0;
   padding: 12px;
-  background: rgba(20, 20, 20, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
 }
 
@@ -415,14 +415,14 @@
 #structureTimelineModal .structure-valuation-summary span {
   font-size: 11px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.55) !important;
+  color: var(--text-muted) !important;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 #structureTimelineModal .structure-valuation-summary strong {
   font-size: 14px;
-  color: #fff !important;
+  color: var(--text-bright) !important;
 }
 
 
@@ -437,7 +437,7 @@
   padding: 18px;
   max-width: 920px;
 
-  background: linear-gradient(180deg, rgba(42, 42, 42, 0.98), rgba(32, 32, 32, 0.98));
+  background: var(--surface-raised);
   border: 1px solid rgba(76, 175, 80, 0.45);
   border-radius: 14px;
 
@@ -454,14 +454,14 @@
   margin: 0 0 8px 0;
   font-size: 17px;
   font-weight: 800;
-  color: #fff !important;
+  color: var(--text-bright) !important;
 }
 
 #structureTimelineModal .structure-valuation-result-card .structure-drawer-note {
   margin: 0 0 16px 0 !important;
   font-size: 12px;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.62) !important;
+  color: var(--text-muted) !important;
 }
 
 
@@ -483,20 +483,20 @@
   justify-content: space-between;
   gap: 8px;
 
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
 }
 
 #structureTimelineModal .structure-valuation-result-grid > div:hover {
-  background: rgba(255, 255, 255, 0.065);
-  border-color: rgba(255, 255, 255, 0.13);
+  background: var(--hover-bg);
+  border-color: var(--border);
 }
 
 #structureTimelineModal .structure-valuation-result-grid span {
   font-size: 11px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.55) !important;
+  color: var(--text-muted) !important;
   text-transform: uppercase;
   letter-spacing: 0.045em;
 }
@@ -504,7 +504,7 @@
 #structureTimelineModal .structure-valuation-result-grid strong {
   font-size: 18px;
   font-weight: 800;
-  color: #ffffff !important;
+  color: var(--text-bright) !important;
   line-height: 1.1;
 }
 
@@ -520,7 +520,7 @@
 #structureTimelineModal .structure-valuation-result-grid > div:nth-child(1) strong,
 #structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) strong {
   font-size: 22px;
-  color: #ffffff !important;
+  color: var(--text-bright) !important;
 }
 
 
@@ -529,19 +529,19 @@
 #structureTimelineModal .structure-valuation-raw {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
 }
 
 #structureTimelineModal .structure-valuation-raw summary {
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.65) !important;
+  color: var(--text-muted) !important;
   user-select: none;
 }
 
 #structureTimelineModal .structure-valuation-raw summary:hover {
-  color: #fff !important;
+  color: var(--text-bright) !important;
 }
 
 #structureTimelineModal .structure-valuation-raw pre {
@@ -550,10 +550,10 @@
   overflow: auto;
 
   padding: 12px;
-  background: #202020 !important;
-  color: #cfcfcf !important;
+  background: var(--hover-bg) !important;
+  color: var(--text-primary) !important;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
 
   font-size: 11px;
@@ -567,13 +567,13 @@
   margin-top: 14px;
   padding: 12px 14px;
 
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
 
   font-size: 13px;
   font-weight: 700;
-  color: #fff !important;
+  color: var(--text-bright) !important;
 }
 
 #structureTimelineModal .structure-valuation-error {
@@ -584,11 +584,11 @@
   border: 1px solid rgba(255, 120, 120, 0.45);
   border-radius: 10px;
 
-  color: #fff !important;
+  color: var(--text-bright) !important;
 }
 
 #structureTimelineModal .structure-valuation-error strong {
-  color: #fff !important;
+  color: var(--text-bright) !important;
 }
 
 #structureTimelineModal .structure-valuation-error pre {
@@ -682,7 +682,7 @@
 
 .structure-cashflow-table-wrap {
   overflow-x: auto;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
 }
 
@@ -695,7 +695,7 @@
 .structure-cashflow-table th,
 .structure-cashflow-table td {
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--border-subtle);
   text-align: left;
   white-space: nowrap;
 }
@@ -713,10 +713,10 @@
 }
 
 .valuation-curve-card {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-overlay);
 }
 
 .valuation-curve-label {
@@ -765,8 +765,7 @@
   height: 34px;
   border-radius: 8px;
   padding: 0 10px;
-  background: #333;
-  color: #eee;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
 }
-

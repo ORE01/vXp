@@ -5,8 +5,8 @@
     }
     /* Language buttons */
     .language-button {
-        background-color: #4CAF50; /* Green background */
-        color: white; /* White text */
+        background-color: var(--accent); /* Green background */
+        color: var(--text-bright); /* White text */
         border: none;
         padding: 8px 12px;
         font-size: 14px;
@@ -14,17 +14,17 @@
         border-radius: 4px;
         transition: background-color 0.2s ease;
       }
-  
+
       .language-button:hover {
-        background-color: #45a049;
+        background-color: var(--accent-hover);
       }
-  
+
   /* BOX */
 .info-icon {
     display: inline-block;
     margin-left: 5px;
-    background-color: #4CAF50; /* Green background */
-    color: white; /* White text */
+    background-color: var(--accent); /* Green background */
+    color: var(--text-bright); /* White text */
     border-radius: 50%; /* Circular shape */
     width: 16px; /* Fixed width */
     height: 16px; /* Fixed height */
@@ -34,7 +34,7 @@
     cursor: pointer; /* Pointer cursor for interaction */
     position: relative; /* For positioning the tooltip */
   }
-  
+
   /* Tooltip container */
   .info-icon::after {
     content: attr(data-tooltip); /* Use the data-tooltip attribute */
@@ -44,7 +44,7 @@
     transform: translateX(-50%);
     bottom: 150%; /* Position above the icon */
     background-color: rgba(0, 0, 0, 0.9); /* Dark background */
-    color:rgb(161, 160, 160); /* Light gray text */
+    color: var(--text-primary); /* Light gray text */
     padding: 10px; /* Add padding for readability */
     border-radius: 8px; /* Rounded corners */
     font-size: 12px; /* Tooltip font size */
@@ -55,7 +55,7 @@
     z-index: 900; /* Ensure it appears above other elements */
     text-align: left; /* Align text for readability */
   }
-  
+
   /* Tooltip arrow */
   .info-icon::before {
     content: '';
@@ -69,7 +69,7 @@
     border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent; /* Arrow color and direction */
     z-index: 1001;
   }
-  
+
   /* Show tooltip on hover */
   .info-icon:hover::after,
   .info-icon:hover::before {
@@ -77,4 +77,3 @@
   }
 
 
-  

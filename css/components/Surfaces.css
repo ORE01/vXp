@@ -4,23 +4,21 @@
    (Look only, NO layout rules)
    ============================================================ */
 
-:root{
-  --surface-bg: var(--panel-surface, #0f0f10);
-  --surface-border: rgba(255,255,255,.08);
-  --surface-radius: 12px;
+:root {
+  --surface-radius:  12px;
   --surface-padding: 12px;
 }
 
 /* ===== Chart Surface ===== */
-.chart-container{
-  background: var(--surface-bg);
-  border: 1px solid var(--surface-border);
+.chart-container {
+  background:    var(--surface-card);
+  border:        1px solid var(--surface-card-border);
   border-radius: var(--surface-radius);
-  padding: var(--surface-padding);
-  overflow: hidden;
+  padding:       var(--surface-padding);
+  overflow:      hidden;
 }
 
-.chart-container canvas{
+.chart-container canvas {
   background: transparent !important;
   display: block;
   width: 100% !important;
@@ -29,10 +27,10 @@
 
 /* ===== Table / Data Surface ===== */
 .table-card,
-.data-container{
-  background: var(--surface-bg);
-  border: 1px solid var(--surface-border);
+.data-container {
+  background:    var(--surface-card);
+  border:        1px solid var(--surface-card-border);
   border-radius: var(--surface-radius);
-  padding: var(--surface-padding);
-  overflow: auto;
+  padding:       var(--surface-padding);
+  overflow:      auto;
 }

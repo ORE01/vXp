@@ -1,8 +1,6 @@
 /* ───────────────── COMPARE PORTFOLIOS – Layout & Look ───────────────── */
 
-#COMP_Modal{
-  --panel-surface: #0f0f10;
-}
+/* --panel-surface global in themes.css definiert */
 
 /* table-content bleibt wie bei den anderen Modals:
    triggers links, Panels sliden von rechts rein.
@@ -19,7 +17,7 @@
   font-size: 16px;
   font-weight: 600;
   margin: 14px 0 8px;
-  color: #eaeaea;
+  color: var(--text-bright);
 }
 
 /* Sub-Panel-Body: Spacings für alle COMP-Panels */
@@ -35,20 +33,20 @@
 #COMP_Modal .deals-dropdown{
   appearance: none;
   -webkit-appearance: none;
-  background: #1a1a1a;
-  color: #f1f1f1;
-  border: 1px solid #555;
+  background: var(--surface-card);
+  color: var(--text-bright);
+  border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
   min-width: 220px;
   outline: none;
 }
 #COMP_Modal .deals-dropdown:focus{
-  border-color: #8aa3ff;
+  border-color: var(--link);
   box-shadow: 0 0 0 3px rgba(138,163,255,.18);
 }
 
-/* Haupt-Grid je Portfolio: links „Details“, rechts „Tabelle“ */
+/* Haupt-Grid je Portfolio: links „Details", rechts „Tabelle" */
 #COMP_Modal .portfolio-comparison-container{
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(420px, 2fr);
@@ -71,7 +69,7 @@
 /* Einheitliche Card-Optik für alle Data-Container */
 #COMP_Modal .data-container{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 10px;
   box-sizing: border-box;
@@ -89,10 +87,10 @@
   text-overflow: ellipsis;
 }
 
-/* Info-Labels („Market VaR“, „Credit VaR“) */
+/* Info-Labels („Market VaR", „Credit VaR") */
 #COMP_Modal .portfolio-details-container > p{
   margin: 6px 0 4px;
-  color: #d8d8d8;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -112,7 +110,7 @@
 #COMP_Modal .comp-chart-container{
   position: relative;
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   height: 360px;
@@ -148,10 +146,10 @@
   top: 8px;
   font-size: 22px;
   line-height: 1;
-  color: #ddd;
+  color: var(--text-muted);
   cursor: pointer;
 }
-#COMP_Modal > .table-content > .close:hover{ color: #fff; }
+#COMP_Modal > .table-content > .close:hover{ color: var(--text-bright); }
 
 
 /* Nur die großen Tabellen im Compare: natürliche Breite + Wrap */
@@ -168,6 +166,3 @@
   overflow: visible !important;
   text-overflow: clip !important;
 }
-
-
-

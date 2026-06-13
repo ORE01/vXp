@@ -16,7 +16,7 @@
 /* Filter-Card links: wie PORT-Filter-Card */
 #products_Modal #panel-issuer-np .cp-card{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px 16px;
   box-shadow: 0 2px 10px rgba(0,0,0,.15);
@@ -54,7 +54,7 @@
   -webkit-overflow-scrolling: touch;
 
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
 }
@@ -73,11 +73,11 @@
 
 /* Dünnes Raster in Schwarz */
 #products_Modal #issuerDataContainer tr > *{
-  border-top: 1px solid #000 !important;
+  border-top: 1px solid var(--border-strong) !important;
 }
 #products_Modal #issuerDataContainer tr:first-child > *{
   border-top: 0 !important;
 }
 #products_Modal #issuerDataContainer tr > *:not(:first-child){
-  border-left: 1px solid #000 !important;
+  border-left: 1px solid var(--border-strong) !important;
 }

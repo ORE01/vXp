@@ -11,7 +11,7 @@
 
   padding: 16px 20px;                             /* etwas mehr Luft innen */
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   box-sizing: border-box;
 }
@@ -42,8 +42,8 @@
 /* Analyse Sidebar: "Save to Historic Metrics" Button grün (scoped via ID) */
 #historicMetricsAddButton{
   background: #2e7d32;
-  border: 1px solid rgba(255,255,255,0.25);
-  color: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--text-bright);
 }
 
 #historicMetricsAddButton:hover{
@@ -60,8 +60,3 @@
   color: inherit;
   opacity: 0.95;
 }
-
-
-
-
-

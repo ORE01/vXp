@@ -19,8 +19,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: #222;
-  color: #eee;
+  background: var(--surface-header);
+  color: var(--text-primary);
   padding: 16px 20px;
   border-radius: 10px;
   max-height: 80vh;
@@ -47,13 +47,13 @@
 
 #prod-conflict-modal .conflict-table th,
 #prod-conflict-modal .conflict-table td {
-  border: 1px solid #444;
+  border: 1px solid var(--surface-raised);
   padding: 4px 6px;
   font-size: 12px;
 }
 
 #prod-conflict-modal .conflict-table th {
-  background: #333;
+  background: var(--surface-overlay);
 }
 
 #prod-conflict-modal .decision-row {

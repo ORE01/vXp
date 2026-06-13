@@ -6,7 +6,7 @@
 
 /* Erstes Feld NACH dem Header-Block (also START_DATE) */
 .form-row[data-coupon-section="HEADER"] + .form-row:not([data-coupon-section="HEADER"]) {
-  border-top: 2px solid rgba(255, 255, 255, 0.35);  /* gut sichtbarer Strich */
+  border-top: 2px solid var(--border);  /* gut sichtbarer Strich */
   padding-top: 6px;    /* Luft über START_DATE */
   margin-top: 12px;    /* Abstand zum Header-Block */
 }

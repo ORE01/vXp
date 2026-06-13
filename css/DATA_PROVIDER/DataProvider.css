@@ -24,18 +24,18 @@
   gap: 6px;
   padding: 4px 10px;
   font-size: 13px;
-  color: #cfcfcf;
+  color: var(--text-primary);
   text-decoration: none;
-  background: #444;
-  border: 1px solid #666;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 8px;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 
 #DataProvider_Modal .provider-link:hover{
-  background: #555;
-  border-color: #888;
-  color: #fff;
+  background: var(--border);
+  border-color: var(--text-muted);
+  color: var(--text-bright);
 }
 
 /* Icon fein zentrieren */
@@ -48,4 +48,3 @@
   #DataProvider_Modal .provider-link{ padding: 4px 8px; }
   #DataProvider_Modal .provider-link svg{ margin-right: 0; }
 }
-

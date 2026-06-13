@@ -30,9 +30,9 @@
 /* Close button look consistent (component-ish, but reports-scoped) */
 #REPORTS_Modal .sub-panel-close{
   appearance: none;
-  background: #444;
-  color: #cfcfcf;
-  border: 1px solid #666;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 16px;
@@ -41,9 +41,9 @@
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 #REPORTS_Modal .sub-panel-close:hover{
-  background: #555;
-  border-color: #888;
-  color: #fff;
+  background: var(--border);
+  border-color: var(--text-muted);
+  color: var(--text-bright);
 }
 
 /* link-style utility (actions in headers) */
@@ -53,17 +53,17 @@
   gap: 6px;
   padding: 4px 10px;
   font-size: 13px;
-  color: #cfcfcf;
+  color: var(--text-primary);
   text-decoration: none;
-  background: #444;
-  border: 1px solid #666;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 8px;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 #REPORTS_Modal .report-link:hover{
-  background: #555;
-  border-color: #888;
-  color: #fff;
+  background: var(--border);
+  border-color: var(--text-muted);
+  color: var(--text-bright);
 }
 #REPORTS_Modal .report-link svg{
   display: block;
@@ -77,12 +77,12 @@
 /* ===== Risk Preview Surface ===== */
 #reportsRiskPreview{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   min-height: 120px;
 }
 #reportsRiskPreview code{
-  background:#222;
+  background: var(--surface-header);
   padding:2px 6px;
   border-radius:6px;
 }
@@ -93,24 +93,24 @@
 /* Risk-Report: Dateiname immer weiß, auch bei :focus */
 #panel-reports-risk input#rr-filename,
 #panel-reports-risk input#rr-filename:focus{
-  background: #fff !important;
-  color: #000 !important;
-  border: 1px solid #666;
+  background: var(--input-bg) !important;
+  color: var(--border-strong) !important;
+  border: 1px solid var(--border);
   box-shadow: none !important;
   outline: none !important;
-  caret-color: #000;
+  caret-color: var(--border-strong);
 }
 
 /* Placeholder-Farbe neutral */
 #panel-reports-risk input#rr-filename::placeholder{
-  color: #666;
+  color: var(--text-muted);
   opacity: 1;
 }
 
 /* Chrome/Edge Autofill nicht gelb einfärben */
 #panel-reports-risk input#rr-filename:-webkit-autofill{
-  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
-  -webkit-text-fill-color: #000 !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--border-strong) !important;
 }
 
 #rr-filename{
@@ -198,7 +198,7 @@
 #reportsRiskPreview .risk-section{
   margin-bottom: 1.2rem;
   padding-bottom: 0.8rem;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 #reportsRiskPreview .risk-section__title{
@@ -206,7 +206,7 @@
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #e5e7eb;
+  color: var(--text-bright);
   margin: 0.6rem 0 0.3rem;
 }
 
@@ -226,7 +226,7 @@
 #reportsRiskPreview .risk-section__label{
   font-size: 0.7rem;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: var(--text-muted);
   padding-top: 0.25rem;
 }
 
@@ -242,7 +242,7 @@
   align-items: center;
   gap: 0.3rem;
   font-size: 0.78rem;
-  color: #e5e7eb;
+  color: var(--text-bright);
 }
 
 #reportsRiskPreview .risk-section__controls input[type="checkbox"]{
@@ -255,7 +255,7 @@
   height: 50px;
   object-fit: cover;
   border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.14);
+  border: 1px solid var(--border-subtle);
   box-shadow: 0 1px 2px rgba(0,0,0,0.25);
 }
 
@@ -285,11 +285,3 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-
-
-
-
-
-
-
-

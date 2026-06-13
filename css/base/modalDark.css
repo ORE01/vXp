@@ -4,58 +4,58 @@
   z-index: 3000;
   inset: 0;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.4);
-  font-family: "Your Font Name", sans-serif;
+  background-color: var(--surface-modal-backdrop);
+  font-family: var(--font-family);
 }
 
 .modal-content {
-  position: absolute; /* Allows free positioning */
-  top: 50%; /* Initial centered position */
+  position: absolute;
+  top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%); /* Center it initially */
+  transform: translate(-50%, -50%);
   width: 400px;
-  max-width: 90%; /* Make it responsive for smaller screens */
-  max-height: 90%; /* Prevent overflow on smaller screens */
-  overflow-y: auto; /* Enable scrolling if content exceeds modal height */
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
   padding: 20px;
-  background-color: rgb(70, 69, 69);
-  color: rgb(161, 160, 160);
-  font-size: 14px;
-  border-radius: 8px; /* Add rounded corners for a modern look */
-  z-index: 3001; /* Ensure it stays above the overlay */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: var(--surface-modal);
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  border-radius: 8px;
+  z-index: 3001;
+  box-shadow: var(--shadow-md);
 }
 
 .draggable {
   cursor: move;
   position: absolute;
   z-index: 3000;
-  -webkit-app-region: drag; /* lassen wir, aber Buttons bekommen no-drag */
+  -webkit-app-region: drag;
 }
 
 .modal-content.draggable input[type="text"],
 .modal-content.draggable textarea {
   position: relative;
   z-index: 3000;
-  background-color: #fff; /* Lighter background for visibility */
-  color: #222; /* White text */
-  border: 1px solid #555; /* Subtle border */
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
   padding: 5px;
   border-radius: 4px;
 }
 
 input[type="text"]:focus,
 textarea:focus {
-  background-color: #333; 
-  border: 1px solid #4CAF50; 
-  color: #222; 
+  background-color: var(--input-focus-bg);
+  border: 1px solid var(--input-focus-border);
+  color: var(--input-text);
 }
 
 .modal-content input[type="text"],
 .modal-content textarea {
-  background-color: #fff;
-  border: 1px solid #555;
-  color: #222;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--input-text);
   padding: 4px;
 }
 
@@ -76,77 +76,74 @@ textarea:focus {
 }
 
 .close {
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 28px;
   font-weight: bold;
   cursor: pointer;
-
-  position: absolute;      /* statt relative */
-  top: 8px;                /* gleiche Höhe wie Max-Button */
-  right: 8px;              /* direkt am rechten Rand */
-
+  position: absolute;
+  top: 8px;
+  right: 8px;
   z-index: 4000;
   -webkit-app-region: no-drag;
-  float: none;             /* float entfernen, falls noch aktiv */
+  float: none;
 }
-
 
 .close:hover,
 .close:focus {
-  color: #fff;
+  color: var(--text-bright);
 }
 
 table {
   border-collapse: collapse;
-  width: 100%; /* Make table take up full modal width */
+  width: 100%;
 }
 
 table th,
 table td {
-  border: 1px solid #555; /* Subtle border for better readability */
+  border: 1px solid var(--border);
   padding: 8px;
-  text-align: left; /* Align table content */
-  font-size: 13px; /* Slightly smaller text for tables */
+  text-align: left;
+  font-size: 13px;
 }
 
 table th {
-  background-color: #333;
-  color: #fff;
+  background-color: var(--surface-overlay);
+  color: var(--text-bright);
   font-weight: bold;
 }
 
 table tr:hover {
-  background-color: #444; /* Highlight row on hover */
+  background-color: var(--row-odd);
 }
 
 #saveButton,
 #eraseButton {
-  background-color: #4CAF50;
+  background-color: var(--accent);
   border: none;
-  color: #fff;
+  color: var(--text-on-accent);
   padding: 8px 12px;
   font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
-  margin-right: 10px; /* Add spacing between buttons */
+  margin-right: 10px;
 }
 
 #saveButton:hover {
-  background-color: #015f06;
+  background-color: var(--accent-hover);
 }
 
 #eraseButton {
-  background-color: #800000;
+  background-color: var(--danger);
 }
 
 #eraseButton:hover {
-  background-color: #a00000;
+  background-color: var(--danger-hover);
 }
 
 #saveButton:active,
 #eraseButton:active {
-  transform: scale(0.95); /* Add a subtle click effect */
+  transform: scale(0.95);
 }
 
 #modalBody {
@@ -154,30 +151,28 @@ table tr:hover {
 }
 
 p {
-  color: #ccc; /* Adjust text color for better contrast */
+  color: var(--text-primary);
   margin: 0;
   padding: 5px 0;
 }
 
-/* Button rechts oben fürs Maximieren – nur minimal angepasst */
 .modal-maximize-btn {
   position: absolute;
   top: 8px;
-  right: 40px; /* etwas links vom Close-X */
+  right: 40px;
   background: transparent;
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #ccc;             /* heller, damit sichtbar */
-  z-index: 4000;           /* über Inhalt */
-  -webkit-app-region: no-drag; /* damit nicht vom Drag geschluckt */
+  color: var(--text-muted);
+  z-index: 4000;
+  -webkit-app-region: no-drag;
 }
 
 .modal-maximize-btn:hover {
-  color: #fff;
+  color: var(--text-bright);
 }
 
-/* Vollbild-Modus für modal-content */
 .modal-content.fullscreen {
   position: fixed !important;
   top: 0 !important;
@@ -191,45 +186,24 @@ p {
   transform: none !important;
 }
 
-.modal-content.fullscreen .close {
-  display: none;
-}
-
-/* Close-Button ausblenden, wenn irgendein Fullscreen-Status aktiv ist */
 .modal-content.fullscreen .close,
 .modal.fullscreen .close {
   display: none !important;
 }
 
-
-/* Close-Button NUR im Coupon-Modal ausblenden, wenn Vollbild */
 #coupon-modal .modal-content.fullscreen > .close {
   display: none !important;
   opacity: 0 !important;
   pointer-events: none !important;
 }
 
-
 #modal .form-section-header {
   margin-top: 22px;
   margin-bottom: 10px;
   padding-bottom: 6px;
-
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.5px;
-
-  color: #ffffff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-bright);
+  border-bottom: 1px solid var(--border);
 }
-
-
-
-
-
-
-
-
-
-  
-  

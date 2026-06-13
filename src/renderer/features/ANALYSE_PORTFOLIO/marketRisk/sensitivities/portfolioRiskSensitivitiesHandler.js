@@ -1,6 +1,6 @@
 // src/renderer/features/ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioRiskSensitivitiesHandler.js
 
-import portfolioRiskSensitivitiesStore from '../../../../core/state/portfolioRiskSensitivitiesStore.js';
+import portfolioRiskSensitivitiesStore from '../../../../core/state/stores/portfolioRiskSensitivitiesStore.js';
 
 /**
  * Handles fresh PortfolioRiskSensitivitiesData from the DataRouter.

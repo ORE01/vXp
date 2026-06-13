@@ -38,10 +38,10 @@
 .fill-down-btn {
   width: 22px;
   height: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.2); /* sanfter weißer Rahmen */
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   background-color: rgba(200, 200, 200, 0.1); /* leicht grauer Hintergrund */
-  color: rgba(255, 255, 255, 0.8); /* heller weißer Pfeil */
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,8 +53,8 @@
 
 .fill-down-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #ffffff;
+  border-color: var(--border);
+  color: var(--text-bright);
 }
 
 
@@ -67,7 +67,3 @@
 }
 
 
-
-
-
-  

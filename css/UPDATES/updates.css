@@ -36,7 +36,7 @@
 /* Hinweistext oben (nur Historic) */
 #panel-upd-historic .hist-hint{
   font-size: 12.5px;
-  color: #cfcfcf;
+  color: var(--text-primary);
   line-height: 1.35;
   margin-bottom: 2px;
 }
@@ -93,15 +93,15 @@
   margin-top: 2px;
   border-radius: 999px;
   overflow: hidden;
-  background: #222;
-  border: 1px solid #555;
+  background: var(--surface-header);
+  border: 1px solid var(--border);
   box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
 }
 
 /* WebKit (Chromium/Electron) */
 #panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-bar,
 #panel-upd-excel    progress[id^="progressBar_"]::-webkit-progress-bar{
-  background-color: #222;
+  background-color: var(--surface-header);
   border-radius: 999px;
 }
 
@@ -127,7 +127,7 @@
   grid-column: 2;
   margin-top: 4px;
   font-size: 12.5px;
-  color: #cfcfcf;
+  color: var(--text-primary);
   letter-spacing: .2px;
   min-height: 16px;
   opacity: .9;

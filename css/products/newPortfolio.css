@@ -80,7 +80,7 @@
 /* Labels im NEW-Portfolio-Panel + Edit-Panel hell */
 #panel-newDeals label,
 #panel-deals  .cp-card.cp-card--edit label{
-  color: #fff;
+  color: var(--text-bright);
 }
 
 /* Inputs im NEW-Portfolio-Panel + Edit-Panel */
@@ -90,13 +90,13 @@
   width: 100%;
   box-sizing: border-box;
 
-  color: #fff !important;
-  background: #222 !important;
+  color: var(--text-bright) !important;
+  background: var(--surface-header) !important;
 
-  caret-color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
+  caret-color: var(--text-bright) !important;
+  -webkit-text-fill-color: var(--text-bright) !important;
 
-  border: 1px solid #555 !important;
+  border: 1px solid var(--border) !important;
   border-radius: 3px;
   padding: 4px 8px;
   min-height: 28px;
@@ -110,15 +110,13 @@
 #panel-deals  .cp-card.cp-card--edit .cp-field .input-field:focus-visible,
 #panel-deals  .cp-card.cp-card--edit .cp-field select:focus,
 #panel-deals  .cp-card.cp-card--edit .cp-field select:focus-visible{
-  color: #fff !important;
-  background: #222 !important;
+  color: var(--text-bright) !important;
+  background: var(--surface-header) !important;
 
-  caret-color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
+  caret-color: var(--text-bright) !important;
+  -webkit-text-fill-color: var(--text-bright) !important;
 
-  border-color: #888 !important;
+  border-color: var(--text-muted) !important;
   outline: none !important;
   box-shadow: 0 0 0 2px rgba(255,255,255,.12) !important;
 }
-
-

@@ -48,9 +48,9 @@
 #panel-ts .ts-tools-toggle,
 #panel-ts .filter-wrapper .tools-toggle,
 #panel-ts .filter-wrapper #tsToolsToggle{
-  border: 1px solid rgba(255,255,255,0.12);
-  background: #1a1a1a;
-  color: #cfcfcf;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-header);
+  color: var(--text-primary);
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
@@ -59,9 +59,9 @@
 #panel-ts .ts-tools-toggle:hover,
 #panel-ts .filter-wrapper .tools-toggle:hover,
 #panel-ts .filter-wrapper #tsToolsToggle:hover{
-  background: #222;
-  color: #fff;
-  border-color: rgba(255,255,255,0.2);
+  background: var(--surface-header);
+  color: var(--text-bright);
+  border-color: var(--border);
 }
 
 /* Tools content stack */
@@ -75,8 +75,8 @@
 #panel-ts .moving-average-container,
 #panel-ts .normalization-container,
 #panel-ts .load-and-toggle-container{
-  background: #151618;
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--surface-deep);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 12px;
 }
@@ -114,15 +114,15 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: #161719;
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--surface-deep);
+  border: 1px solid var(--border-subtle);
   border-radius: 999px;
   cursor: pointer;
   user-select: none;
 }
 
 #panel-ts .sma-toggle input[type="checkbox"]{
-  accent-color: #1f6feb;
+  accent-color: var(--link);
   width: 16px;
   height: 16px;
   margin: 0;
@@ -136,9 +136,9 @@
 #panel-ts .sma-row input[type="number"],
 #panel-ts .normalization-container select{
   width: 80px;
-  background: #161719;
-  color: #eaeaea;
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--surface-deep);
+  color: var(--text-bright);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 6px 8px;
 }
@@ -156,8 +156,8 @@
 }
 
 #panel-ts .load-and-toggle-container #loadButton{
-  background: #1f6feb;
-  color: #fff;
+  background: var(--link);
+  color: var(--text-bright);
   border: 0;
   border-radius: 10px;
   padding: 10px 14px;
@@ -201,9 +201,9 @@
 }
 
 #panel-ts .time-range-buttons button{
-  background: #161719;
-  color: #eaeaea;
-  border: 1px solid rgba(255,255,255,.08);
+  background: var(--surface-deep);
+  color: var(--text-bright);
+  border: 1px solid var(--border-subtle);
   border-radius: 999px;
   padding: 6px 10px;
   cursor: pointer;
@@ -225,7 +225,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 0 16px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 #panel-ts .sub-panel-title{
@@ -307,9 +307,3 @@
 }
 #panel-ts #modal-content-container > .table-content:first-child{ margin-top: 0 !important; }
 #panel-ts #modal-content-container > .table-content:last-child{  margin-bottom: 0 !important; }
-
-
-
-
-
-
