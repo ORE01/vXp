@@ -99,6 +99,14 @@ export function renderConfigurableTable({
   const tableContainer =
     document.getElementById(tableContainerId);
 
+console.log('[CONFIG TABLE]', {
+  tableId,
+  tableContainerId,
+  selectorContainerId,
+  rowCount: rows?.length,
+  firstRow: rows?.[0],
+});
+
   if (!tableContainer) return;
 
   const features = normalizeTableFeatures({

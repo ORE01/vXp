@@ -7,7 +7,8 @@ import { attachIssuerRankRatingDrawer } from './issuerRankRatingDrawer.js';
 
 import {
   ISSUER_COLUMN_LABELS,
-  filterIssuerColumnsForDisplay,
+  ISSUER_VISIBLE_COLUMNS,
+  // filterIssuerColumnsForDisplay,
 } from './issuerTableView.js';
 
 import {
@@ -20,56 +21,53 @@ let filteredIssuerData;
 const ISSUER_TABLE_NAME = 'Issuer';
 const ISSUER_TABLE_ID = 'issuerTable0';
 
-<<<<<<< HEAD:src/renderer/features/products/ISSUER.js
-const ISSUER_VISIBLE_COLUMNS = [
-  'INCLUDE',
-  'ISSUER',
-  'TICKER',
-  'BASE_RATING',
-  'Country',
-  'RANK_RATING_COUNT',
-  'EXPLICIT_COUNT',
-  'GENERATED_COUNT',
-  'RATING_STATUS',
-];
+// const ISSUER_VISIBLE_COLUMNS = [
+//   'INCLUDE',
+//   'ISSUER',
+//   'TICKER',
+//   'BASE_RATING',
+//   'Country',
+//   'RANK_RATING_COUNT',
+//   'EXPLICIT_COUNT',
+//   'GENERATED_COUNT',
+//   'RATING_STATUS',
+// ];
 
-const ISSUER_COLUMN_LABELS = {
-  INCLUDE: 'Include',
-  ISSUER: 'Issuer',
-  TICKER: 'Ticker',
-  BASE_RATING: 'Base Rating',
-  Country: 'Country',
-  RANK_RATING_COUNT: 'Ranks',
-  EXPLICIT_COUNT: 'Explicit',
-  GENERATED_COUNT: 'Generated',
-  RATING_STATUS: 'Status',
-};
+// const ISSUER_COLUMN_LABELS = {
+//   INCLUDE: 'Include',
+//   ISSUER: 'Issuer',
+//   TICKER: 'Ticker',
+//   BASE_RATING: 'Base Rating',
+//   Country: 'Country',
+//   RANK_RATING_COUNT: 'Ranks',
+//   EXPLICIT_COUNT: 'Explicit',
+//   GENERATED_COUNT: 'Generated',
+//   RATING_STATUS: 'Status',
+// };
 
-function mapIssuerViewRowToIssuerTableRow(row = {}) {
-  const baseRating = row.RATING ?? row.BASE_RATING ?? '';
+// function mapIssuerViewRowToIssuerTableRow(row = {}) {
+//   const baseRating = row.RATING ?? row.BASE_RATING ?? '';
 
-  return {
-    INCLUDE: row.INCLUDE ?? 1,
-    ISSUER: row.ISSUER ?? '',
-    TICKER: row.TICKER ?? '',
-    RATING: baseRating,
+//   return {
+//     INCLUDE: row.INCLUDE ?? 1,
+//     ISSUER: row.ISSUER ?? '',
+//     TICKER: row.TICKER ?? '',
+//     RATING: baseRating,
 
-    senior_secured: row.senior_secured ?? '',
-    senior_preferred: row.senior_preferred ?? '',
-    senior_unsecured: row.senior_unsecured ?? baseRating,
-    senior_subordinated: row.senior_subordinated ?? '',
-    junior_subordinated: row.junior_subordinated ?? '',
+//     senior_secured: row.senior_secured ?? '',
+//     senior_preferred: row.senior_preferred ?? '',
+//     senior_unsecured: row.senior_unsecured ?? baseRating,
+//     senior_subordinated: row.senior_subordinated ?? '',
+//     junior_subordinated: row.junior_subordinated ?? '',
 
-    Country: row.Country ?? '',
-  };
-}
+//     Country: row.Country ?? '',
+//   };
+// }
 
-function buildIssuerModalRows(rows) {
-  return (Array.isArray(rows) ? rows : []).map(mapIssuerViewRowToIssuerTableRow);
-}
+// function buildIssuerModalRows(rows) {
+//   return (Array.isArray(rows) ? rows : []).map(mapIssuerViewRowToIssuerTableRow);
+// }
 
-=======
->>>>>>> 027fbfbaccefebf67ac7d3b80fdfe177de763d3f:src/renderer/features/issuer/issuerPanel.js
 function bindIssuerEditButtons(container) {
   const issuerEditButtons = container.querySelectorAll('.edit-button');
 
