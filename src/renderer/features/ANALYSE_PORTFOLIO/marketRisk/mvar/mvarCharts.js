@@ -17,6 +17,14 @@ function getRiskTypeChartColor(riskType) {
   return getMarketMvarColors('TOTAL', 1);
 }
 
+function isCanvasAttached(canvas) {
+  return Boolean(
+    canvas &&
+    canvas.parentNode &&
+    document.body.contains(canvas)
+  );
+}
+
 export function destroyRiskTypeVaRRelChart() {
   const canvas = document.getElementById('MVaRChart');
 
@@ -30,7 +38,7 @@ export function destroyRiskTypeVaRRelChart() {
     mvarRiskTypeVaRRelChart = null;
   }
 
-  if (canvas && window.Chart?.getChart) {
+  if (canvas && isCanvasAttached(canvas) && window.Chart?.getChart) {
     const existingChart = window.Chart.getChart(canvas);
 
     if (existingChart) {
@@ -44,14 +52,23 @@ export function destroyRiskTypeVaRRelChart() {
 }
 
 export function renderRiskTypeVaRRelChart(riskTypeRows) {
-  const canvas = document.getElementById('MVaRChart');
+  let canvas = document.getElementById('MVaRChart');
 
-  if (!canvas) {
-    console.warn('[MVaR FactorPL Chart] #MVaRChart missing');
+  if (!isCanvasAttached(canvas)) {
+    console.warn('[MVaR FactorPL Chart] skipped: #MVaRChart missing or detached before destroy');
     return;
   }
 
   destroyRiskTypeVaRRelChart();
+
+  // Nach destroy nochmal frisch holen.
+  // Wichtig: Panel/DOM kann während Refresh neu aufgebaut worden sein.
+  canvas = document.getElementById('MVaRChart');
+
+  if (!isCanvasAttached(canvas)) {
+    console.warn('[MVaR FactorPL Chart] skipped: #MVaRChart missing or detached after destroy');
+    return;
+  }
 
   const chartRows = Array.isArray(riskTypeRows)
     ? riskTypeRows.filter(row =>
@@ -93,5 +110,6 @@ export function renderRiskTypeVaRRelChart(riskTypeRows) {
   console.log('[MVaR FactorPL Chart] rendered', {
     labels,
     values,
+    chartCreated: Boolean(mvarRiskTypeVaRRelChart),
   });
 }

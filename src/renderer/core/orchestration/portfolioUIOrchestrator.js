@@ -13,7 +13,7 @@ import { handleLossIssuerMainData } from '../../features/ANALYSE_PORTFOLIO/CREDI
 import { createComparisonCharts } from '../../features/COMPARE_PORTFOLIOS/COMP.js';
 import { formatPercentage } from '../../utils/tableCellFormats.js';
 import { handleDealsData } from '../../features/portfolio/tradeTableRenderer.js';
-import portfolioRiskSensitivitiesStore from './portfolioRiskSensitivitiesStore.js';
+
 
 export function createPortfolioUIOrchestrator({ appState } = {}) {
   if (!appState) throw new Error('[portfolioUIOrchestrator] appState fehlt');
@@ -235,7 +235,22 @@ export function createPortfolioUIOrchestrator({ appState } = {}) {
       (item) => String(item?.port_name) === String(port_name)
     );
 
-    const pv01Rows = portfolioRiskSensitivitiesStore.getByPortfolioAndType(port_name, 'PV01');
+    const riskRowsAll = appState.getPortfolioRiskSensitivitiesData?.() || [];
+
+    const normalizePortName = (v) =>
+      String(v ?? '')
+        .replace(/^Portfolios[_-]?/i, '')
+        .trim();
+
+    const normalizeRiskType = (v) =>
+      String(v ?? '')
+        .toUpperCase()
+        .trim();
+
+    const pv01Rows = riskRowsAll.filter(r =>
+      normalizePortName(r.PORT_NAME ?? r.port_name) === normalizePortName(port_name) &&
+      normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'PV01'
+    );
 
 const pv01TotalByTradeId = new Map();
 

@@ -8,14 +8,38 @@ import { getCreditSensitivityColor } from '../../../../utils/colors.js';
 
 import { updateMarketRiskSensitivityKpis } from './marketRiskSensitivityKpis.js';
 
-import portfolioRiskSensitivitiesStore from '../../../../core/state/portfolioRiskSensitivitiesStore.js';
-
 let VegaChart;
 
 function normalizePortfolioName(portName) {
   return String(portName ?? '')
     .replace(/^Portfolios[_-]?/i, '')
     .trim();
+}
+
+function normalizeRiskType(riskType) {
+  return String(riskType ?? '')
+    .toUpperCase()
+    .trim();
+}
+
+function getAvailablePorts(rows = []) {
+  return [
+    ...new Set(
+      rows
+        .map(r => normalizePortfolioName(r.PORT_NAME ?? r.port_name))
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function getAvailableRiskTypes(rows = []) {
+  return [
+    ...new Set(
+      rows
+        .map(r => normalizeRiskType(r.RISK_TYPE ?? r.risk_type))
+        .filter(Boolean)
+    ),
+  ];
 }
 
 function normalizeVegaBucket(row) {
@@ -51,7 +75,10 @@ export function handleVegaSensData(appState, forcedPortName = null) {
           )
     );
 
-  const availablePorts = portfolioRiskSensitivitiesStore.getPorts();
+  const riskRowsAll = appState.getPortfolioRiskSensitivitiesData?.() || [];
+
+  const availablePorts = getAvailablePorts(riskRowsAll);
+  const availableRiskTypes = getAvailableRiskTypes(riskRowsAll);
 
   const selectedPort = normalizePortfolioName(
     rawPortName ||
@@ -64,8 +91,8 @@ export function handleVegaSensData(appState, forcedPortName = null) {
       availablePorts,
     });
 
-    clearVegaDetails();
     clearVegaChart();
+    clearVegaDetails();
 
     return;
   }
@@ -74,26 +101,25 @@ export function handleVegaSensData(appState, forcedPortName = null) {
     rawPortName,
     selectedPort,
     availablePorts,
-    storeRows: portfolioRiskSensitivitiesStore.getRows().length,
-    riskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
+    storeRows: riskRowsAll.length,
+    riskTypes: availableRiskTypes,
   });
 
-  const vegaRows = portfolioRiskSensitivitiesStore.getByPortfolioAndType(
-    selectedPort,
-    'VEGA_PARALLEL'
+  const vegaRows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
+    normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'VEGA_PARALLEL'
   );
 
   if (!Array.isArray(vegaRows) || vegaRows.length === 0) {
     console.warn('[VEGA SENS] no VEGA_PARALLEL rows for selected portfolio', {
       selectedPort,
-      storeRows: portfolioRiskSensitivitiesStore.getRows().length,
-      availablePorts: portfolioRiskSensitivitiesStore.getPorts(),
-      availableRiskTypes: portfolioRiskSensitivitiesStore.getRiskTypes(),
+      storeRows: riskRowsAll.length,
+      availablePorts,
+      availableRiskTypes,
     });
 
-    clearVegaDetails();
     clearVegaChart();
-
+    clearVegaDetails();   
     return;
   }
 
@@ -106,13 +132,15 @@ export function handleVegaSensData(appState, forcedPortName = null) {
       firstRow: vegaRows[0],
     });
 
-    clearVegaDetails();
     clearVegaChart();
+    clearVegaDetails();
 
     return;
   }
 
-  const portfolioRows = portfolioRiskSensitivitiesStore.getByPortfolio(selectedPort);
+  const portfolioRows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort
+  );
 
   updateMarketRiskSensitivityKpis({
     rows: portfolioRows,
@@ -289,7 +317,12 @@ function clearVegaDetails() {
 
 function clearVegaChart() {
   if (VegaChart) {
-    VegaChart.destroy();
+    try {
+      VegaChart.destroy();
+    } catch (e) {
+      console.warn('[VEGA CHART] destroy failed', e);
+    }
+
     VegaChart = null;
   }
 }

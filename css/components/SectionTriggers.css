@@ -20,11 +20,11 @@
   /* Optik */
   --trigger-gap: 10px;
   --trigger-radius: 10px;
-  --trigger-bg: #2a2a2a;
-  --trigger-bg-hover: #353535;
-  --trigger-border: #3a3a3a;
-  --trigger-text: #eaeaea;
-  --trigger-text-muted: #bdbdbd;
+  --trigger-bg: var(--surface-header);
+  --trigger-bg-hover: var(--hover-bg);
+  --trigger-border: var(--border);
+  --trigger-text: var(--text-bright);
+  --trigger-text-muted: var(--text-muted);
 
   /* Sub-Indent */
   --trigger-sub-indent: 20px;

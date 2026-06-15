@@ -12,8 +12,8 @@
 
 /* Sektion (Issuer/Product/General) */
 .pie-section{
-  background:#0f0f10;
-  border:1px solid #2a2a2a;
+  background: var(--surface-card);
+  border:1px solid var(--border);
   border-radius:12px;
   padding:12px;
 }
@@ -23,7 +23,7 @@
   margin:0 0 8px 0;
   font-size:16px;
   font-weight:700;
-  color:#eaeaea;
+  color:var(--text-bright);
   letter-spacing:.2px;
 }
 
@@ -56,8 +56,8 @@
 
 /* Einzelner Block (Chart-Kachel) */
 .chart-block{
-  background:#141416;
-  border:1px solid #2a2a2a;
+  background:var(--surface-card);
+  border:1px solid var(--border);
   border-radius:10px;
   padding:8px;
 
@@ -75,7 +75,7 @@
   text-align:center;
   font-size:13px;
   font-weight:600;
-  color:#d0d0d0;
+  color:var(--text-primary);
 }
 
 /* Canvas: skaliert sauber */
@@ -89,8 +89,8 @@
 
 /* Legend-Kachel (Table Tile) */
 .legend-block{
-  background:#141416;
-  border:1px solid #2a2a2a;
+  background:var(--surface-card);
+  border:1px solid var(--border);
   border-radius:10px;
   padding:8px;
 
@@ -107,9 +107,9 @@
   width:fit-content;
   max-width:100%;
   margin:0 auto;
-  border:1px solid #2a2a2a;
+  border:1px solid var(--border);
   border-radius:8px;
-  background:#2a2a2a;
+  background:var(--surface-header);
 
   border-collapse:separate;
   border-spacing:0;
@@ -128,7 +128,7 @@
 .chart-legend-table th,
 .chart-legend-table td{
   padding:2px 4px;
-  border-bottom:1px solid #2a2a2a;
+  border-bottom:1px solid var(--border);
 }
 
 .chart-legend-table th{
@@ -136,19 +136,19 @@
   text-align:left;
   position:sticky;
   top:0;
-  background:#2a2a2a;
+  background:var(--surface-header);
   z-index:1;
 }
 
 /* Scrollbar Styling (Chrome / Edge / Safari) für Tabellen */
 .chart-legend-table::-webkit-scrollbar { width:6px; height:6px; }
-.chart-legend-table::-webkit-scrollbar-track { background:#222; }
-.chart-legend-table::-webkit-scrollbar-thumb { background:#444; border-radius:4px; }
+.chart-legend-table::-webkit-scrollbar-track { background: var(--surface-header); }
+.chart-legend-table::-webkit-scrollbar-thumb { background: var(--surface-raised); border-radius:4px; }
 
 /* Firefox scrollbar */
 .chart-legend-table{
   scrollbar-width:thin;
-  scrollbar-color:#444 #222;
+  scrollbar-color: var(--surface-raised) var(--surface-header);
 }
 
 /* Responsiv: ab 900px 1 Spalte -> etwas niedriger */
@@ -178,9 +178,9 @@
   align-items:center;
   justify-content:center;
 
-  border:1px solid #444;
+  border:1px solid var(--surface-raised);
   border-radius:6px;
-  background:#111;
+  background:var(--surface-card);
   overflow:hidden;
 }
 
@@ -195,12 +195,12 @@
   max-height:120px;
   overflow:auto;
   scrollbar-width:thin;
-  scrollbar-color:#444 #222;
+  scrollbar-color: var(--surface-raised) var(--surface-header);
 }
 
 .rr-thumb-pair-table .mini-table-wrap::-webkit-scrollbar{ width:6px; height:6px; }
-.rr-thumb-pair-table .mini-table-wrap::-webkit-scrollbar-track{ background:#222; }
-.rr-thumb-pair-table .mini-table-wrap::-webkit-scrollbar-thumb{ background:#444; border-radius:4px; }
+.rr-thumb-pair-table .mini-table-wrap::-webkit-scrollbar-track{ background: var(--surface-header); }
+.rr-thumb-pair-table .mini-table-wrap::-webkit-scrollbar-thumb{ background: var(--surface-raised); border-radius:4px; }
 
 /* =========================================================
    Übersicht über das Breakdown-Schema
@@ -209,11 +209,11 @@
 .breakdown-overview{
   margin-top:6px;
   padding:6px 10px;
-  background:#131314;
-  border:1px solid #2a2a2a;
+  background:var(--surface-card);
+  border:1px solid var(--border);
   border-radius:8px;
   font-size:12px;
-  color:#ccc;
+  color:var(--text-muted);
 }
 
 .ov-title{
@@ -222,7 +222,7 @@
   text-transform:uppercase;
   letter-spacing:.6px;
   font-size:11px;
-  color:#d8d8d8;
+  color:var(--text-primary);
 }
 
 .ov-list{
@@ -233,20 +233,5 @@
 }
 
 .ov-list li strong{
-  color:#e9e9e9;
+  color:var(--text-bright);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

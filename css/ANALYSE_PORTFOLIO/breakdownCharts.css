@@ -11,8 +11,8 @@
 }
 
 #ANALYSE_Modal #panel-breakdown .pie-section{
-  background:#0f0f10;
-  border:1px solid #2a2a2a;
+  background: var(--surface-card);
+  border:1px solid var(--border);
   border-radius:12px;
   padding:12px;
 }
@@ -21,7 +21,7 @@
   margin:0 0 8px 0;
   font-size:16px;
   font-weight:700;
-  color:#eaeaea;
+  color:var(--text-bright);
   letter-spacing:.2px;
 }
 
@@ -48,8 +48,8 @@
 
 /* Chart Tile */
 #ANALYSE_Modal #panel-breakdown .chart-block{
-  background:#141416;
-  border:1px solid #2a2a2a;
+  background:var(--surface-card);
+  border:1px solid var(--border);
   border-radius:10px;
   padding:8px;
   min-height:280px;
@@ -63,7 +63,7 @@
   text-align:center;
   font-size:13px;
   font-weight:600;
-  color:#d0d0d0;
+  color:var(--text-primary);
 }
 
 #ANALYSE_Modal #panel-breakdown .chart-block .pieChart{
@@ -76,8 +76,8 @@
 
 /* Legend Tile */
 #ANALYSE_Modal #panel-breakdown .legend-block{
-  background:#141416;
-  border:1px solid #2a2a2a;
+  background:var(--surface-card);
+  border:1px solid var(--border);
   border-radius:10px;
   padding:8px;
   min-height:280px;
@@ -90,9 +90,9 @@
   width:fit-content;
   max-width:100%;
   margin:0 auto;
-  border:1px solid #2a2a2a;
+  border:1px solid var(--border);
   border-radius:8px;
-  background:#2a2a2a;
+  background:var(--surface-header);
   border-collapse:separate;
   border-spacing:0;
 
@@ -105,7 +105,7 @@
 #ANALYSE_Modal #panel-breakdown .chart-legend-table th,
 #ANALYSE_Modal #panel-breakdown .chart-legend-table td{
   padding:2px 4px;
-  border-bottom:1px solid #2a2a2a;
+  border-bottom:1px solid var(--border);
 }
 
 #ANALYSE_Modal #panel-breakdown .chart-legend-table th{
@@ -113,15 +113,15 @@
   text-align:left;
   position:sticky;
   top:0;
-  background:#2a2a2a;
+  background:var(--surface-header);
   z-index:1;
 }
 
 /* Scrollbars */
 #ANALYSE_Modal #panel-breakdown .chart-legend-table::-webkit-scrollbar{ width:6px; height:6px; }
-#ANALYSE_Modal #panel-breakdown .chart-legend-table::-webkit-scrollbar-track{ background:#222; }
-#ANALYSE_Modal #panel-breakdown .chart-legend-table::-webkit-scrollbar-thumb{ background:#444; border-radius:4px; }
+#ANALYSE_Modal #panel-breakdown .chart-legend-table::-webkit-scrollbar-track{ background: var(--surface-header); }
+#ANALYSE_Modal #panel-breakdown .chart-legend-table::-webkit-scrollbar-thumb{ background: var(--surface-raised); border-radius:4px; }
 #ANALYSE_Modal #panel-breakdown .chart-legend-table{
   scrollbar-width:thin;
-  scrollbar-color:#444 #222;
+  scrollbar-color: var(--surface-raised) var(--surface-header);
 }

@@ -8,6 +8,7 @@ import { renderModelSetupDrawer } from './structureTimeline/complexModelSetupDra
 import { renderSimpleFixedDrawer } from './structureTimeline/simpleFixedDrawer.js';
 import { renderSimpleFrnDrawer } from './structureTimeline/simpleFrnDrawer.js';
 import { renderProductValuationDrawer } from './structureTimeline/valuationDrawer.js';
+import { makeModalDraggable } from '../../core/ui/modal/draggableModal.js';
 
 
 let activeStructureTimelineModal = {
@@ -106,7 +107,13 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     modal = document.createElement('div');
     modal.id = 'structureTimelineModal';
     modal.className = 'structure-timeline-modal';
-
+    modal.style.position = 'fixed';
+    modal.style.top = '40px';
+    modal.style.left = '40px';
+    modal.style.width = '1400px';
+    modal.style.height = '800px';
+    modal.style.zIndex = '999999';
+    modal.style.overflow = 'hidden';
     document.body.appendChild(modal);
   }
 
@@ -140,32 +147,20 @@ export function handleStructureTimelineModal(prodId, options = {}) {
   `
   : '';
 
-  // Keep positioning here for now.
-  // Visual styling belongs to css/products/structureTimeline.css
-  modal.style.position = 'fixed';
-  modal.style.top = '40px';
-  modal.style.left = '40px';
-  modal.style.width = '1400px';
-  modal.style.height = '800px';
-  modal.style.zIndex = '999999';
-  modal.style.overflow = 'auto';
-
   modal.innerHTML = `
-    <button
-      id="closeStructureTimelineModal"
-      class="close structure-timeline-close"
-      type="button"
-      aria-label="Close Structure Timeline"
-    >
-      &times;
-    </button>
+    <div class="structure-timeline-drag-bar modal-drag-handle">
+      <span class="structure-timeline-drag-title">${titleText}</span>
+      <button
+        id="closeStructureTimelineModal"
+        class="close structure-timeline-close"
+        type="button"
+        aria-label="Close Structure Timeline"
+      >&times;</button>
+    </div>
 
-    <div class="structure-timeline-header">
-      <h2 class="structure-timeline-title">
-        ${titleText}
-      </h2>
-
-      ${productTypeSelectorHtml}
+    <div class="structure-timeline-body">
+      <div class="structure-timeline-header">
+        ${productTypeSelectorHtml}
 
 <div class="structure-timeline-actions">
   ${
@@ -210,33 +205,36 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     Valuation
   </button>
 </div>
-    </div>
+      </div>
 
-    <div
-      id="structureProductSetupDrawer"
-      class="structure-setup-drawer"
-      style="display:none;"
-    ></div>
-
-    <div
-      id="structureModelSetupDrawer"
-      class="structure-setup-drawer"
-      style="display:none;"
-    ></div>
-
-    <div
-      id="structureProductValuationDrawer"
-      class="structure-setup-drawer"
-      style="display:none;"
-    ></div>
-
-    <div class="table structure-timeline-table-shell">
       <div
-        id="structureTimelineContainer"
-        class="data-container structure-timeline-container"
+        id="structureProductSetupDrawer"
+        class="structure-setup-drawer"
+        style="display:none;"
       ></div>
+
+      <div
+        id="structureModelSetupDrawer"
+        class="structure-setup-drawer"
+        style="display:none;"
+      ></div>
+
+      <div
+        id="structureProductValuationDrawer"
+        class="structure-setup-drawer"
+        style="display:none;"
+      ></div>
+
+      <div class="table structure-timeline-table-shell">
+        <div
+          id="structureTimelineContainer"
+          class="data-container structure-timeline-container"
+        ></div>
+      </div>
     </div>
   `;
+
+  makeModalDraggable(modal);
 
   document
     .getElementById('closeStructureTimelineModal')

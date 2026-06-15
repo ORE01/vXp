@@ -3,15 +3,13 @@
   display: none;
 }
 
-/* Design-Variablen passend zu deinem Dark-Theme */
-:root {
-  --bg-card: rgb(70, 69, 69);          /* wie .table .data-container */
-  --bg-card-alt: #333333;              /* etwas dunkler */
-  --accent: #38bdf8;
+/* Login-spezifische Tokens — scoped auf .login-page, kein Konflikt mit globalen Tokens */
+.login-page {
+  --bg-card:    var(--surface-base);
+  --bg-card-alt: var(--surface-overlay);
+  --login-accent: #38bdf8;             /* sky-blue nur für Login, kein Override von --accent */
   --accent-soft: rgba(56, 189, 248, 0.25);
-  --text-main: #f5f5f5;
-  --text-muted: rgb(161, 160, 160);    /* wie Tabellen-Text */
-  --border-subtle: #555555;            /* wie Tabellen-Border */
+  --text-main:  var(--text-bright);
   --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.65);
 }
 
@@ -91,7 +89,7 @@ body {
   bottom: 18px;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #202020;
+  background: var(--surface-deep);
   color: var(--text-muted);
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -190,7 +188,7 @@ body {
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid var(--border-subtle);
-  background: #444444;                 /* wie Zeilenhintergrund */
+  background: var(--surface-overlay);
   color: var(--text-main);
   font-size: 14px;
   outline: none;
@@ -204,9 +202,9 @@ body {
 }
 
 .login-field input:focus {
-  border-color: var(--accent);
+  border-color: var(--login-accent);
   box-shadow: 0 0 0 1px var(--accent-soft);
-  background: #4a4a4a;
+  background: var(--surface-raised);
 }
 
 /* Button in Logo-Orange */
@@ -281,8 +279,3 @@ body {
     border-radius: 16px;
   }
 }
-
-
-
-
-

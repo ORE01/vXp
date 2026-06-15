@@ -98,13 +98,18 @@ export function attachIdLinks(container, opts = {}) {
       if (cell) {
         const txt = (cell.textContent || '').trim();
         cell.classList.add('prod-id-cell');
-        if (!cell.querySelector('.prod-id-link')) {
+        if (!txt) {
+          // Placeholder row (e.g. empty-portfolio dummy): no product assigned yet.
+          // Render plain text instead of a dead link button.
+          cell.classList.add('prod-id-placeholder');
+          cell.textContent = 'No product yet';
+        } else if (!cell.querySelector('.prod-id-link')) {
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'prod-id-link link-button';
-          btn.textContent = txt || '—';
-          btn.dataset.prodId = txt || '';
-          btn.setAttribute('aria-label', `Produkt öffnen: ${txt || '—'}`);
+          btn.textContent = txt;
+          btn.dataset.prodId = txt;
+          btn.setAttribute('aria-label', `Produkt öffnen: ${txt}`);
           btn.setAttribute('role', 'link');
           if (addKeyboardSupport) btn.tabIndex = 0;
           cell.textContent = '';
@@ -272,13 +277,35 @@ function openDealEditorByTradeId(tradeId) {
       currentTarget: fakeBtn
   };
 
+  // Use the SAME curated DealsMain field set as the Change-Portfolio "Add" modal,
+  // so editing shows exactly the editable deal fields (PROD_ID, Notional, Trade
+  // Date, Category, Depot Bank, Buy Price) instead of the enriched/derived columns.
+  const curatedRows = dealsArr.map(toDealsMainEditRow);
+
   try {
-      handleModalAction(fakeEvt, dealsArr, rowIndex, 'DealsMain', 'edit');
+      handleModalAction(fakeEvt, curatedRows, rowIndex, 'DealsMain', 'edit');
       return true;
   } catch (err) {
       console.error('[openDealEditorByTradeId] handleFormAction Fehler:', err);
       return false;
   }
+}
+
+// Mirror of mapDealViewRowToDealsMainRow (tradeTableRenderer.js): the curated
+// editable DealsMain shape used by the Add modal. Kept local to avoid a circular
+// import (tradeTableRenderer.js already imports from this module).
+function toDealsMainEditRow(row = {}) {
+    return {
+        TRADE_ID: row.TRADE_ID ?? '',
+        INCLUDE: row.INCLUDE ?? 1,
+        port_name: row.port_name ?? row.PORT_NAME ?? '',
+        Depotbank: row.Depotbank ?? row.DEPOT_BANK ?? '',
+        PROD_ID: row.PROD_ID ?? row.product_id ?? '',
+        TRADE_DATE: row.TRADE_DATE ?? '',
+        CATEGORY: row.CATEGORY ?? '',
+        NOTIONAL: row.NOTIONAL ?? '',
+        PRICE_BUY: row.PRICE_BUY ?? '',
+    };
 }
     // -------- helpers (modul-intern) --------
     function normalizeId(v){ return String(v ?? '').trim(); }

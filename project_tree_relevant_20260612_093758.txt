@@ -1,5 +1,5 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-06-10 09:23:30
+Generated: 2026-06-12 09:37:58
 Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 8
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
@@ -259,9 +259,6 @@ electron_app
 │   │   │   │   └── SummaryYield.js
 │   │   │   ├── COMPARE_PORTFOLIOS
 │   │   │   │   └── COMP.js
-│   │   │   ├── CREATE_PORTFOLIO
-│   │   │   │   ├── DEALS.js
-│   │   │   │   └── dealsUI.js
 │   │   │   ├── CUSTOMER
 │   │   │   │   └── customerHandlers.js
 │   │   │   ├── DATA_PROVIDER
@@ -323,15 +320,17 @@ electron_app
 │   │   │   │   ├── offersUI.js
 │   │   │   │   └── readOffers.js
 │   │   │   ├── portfolio
-│   │   │   │   ├── dealsPortfolioActions.js
-│   │   │   │   ├── PORT.js
+│   │   │   │   ├── index.js
 │   │   │   │   ├── portfolioAggregates.js
 │   │   │   │   ├── portfolioColumns.js
+│   │   │   │   ├── portfolioCreationActions.js
+│   │   │   │   ├── portfolioCreationPanel.js
 │   │   │   │   ├── portfolioDisplayNames.js
 │   │   │   │   ├── portfolioDropdownUI.js
 │   │   │   │   ├── portfolioRiskEnrichment.js
 │   │   │   │   ├── portfolioTable.js
-│   │   │   │   └── YIELD.js
+│   │   │   │   ├── tradeTableRenderer.js
+│   │   │   │   └── tradeUI.js
 │   │   │   ├── products
 │   │   │   │   ├── structureTimeline
 │   │   │   │   │   ├── schedules
@@ -341,7 +340,6 @@ electron_app
 │   │   │   │   │   │   └── structureRowApi.js
 │   │   │   │   │   ├── complexModelSetupDrawer.js
 │   │   │   │   │   ├── complexProductSetupDrawer.js
-│   │   │   │   │   ├── complexProductValuationDrawer.js
 │   │   │   │   │   ├── complexTimelineData.js
 │   │   │   │   │   ├── complexTimelineDrawer.js
 │   │   │   │   │   ├── complexTimelineGrid.js
@@ -349,7 +347,8 @@ electron_app
 │   │   │   │   │   ├── complexTimelineUtils.js
 │   │   │   │   │   ├── productDrawerDelete.js
 │   │   │   │   │   ├── simpleFixedDrawer.js
-│   │   │   │   │   └── simpleFrnDrawer.js
+│   │   │   │   │   ├── simpleFrnDrawer.js
+│   │   │   │   │   └── valuationDrawer.js
 │   │   │   │   ├── templates
 │   │   │   │   │   ├── complexBondTemplate.js
 │   │   │   │   │   ├── simpleFixedBondTemplate.js

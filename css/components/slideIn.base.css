@@ -68,10 +68,10 @@
 
   max-width: var(--trigger-max-width);
 
-  background: #555;
-  border: 1px solid #777;
+  background: var(--border);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  color: #cfcfcf;
+  color: var(--text-primary);
 
   cursor: pointer;
   margin: 0;
@@ -89,8 +89,8 @@
 }
 
 .table .section-trigger:hover {
-  color: #fff;
-  border-color: #999;
+  color: var(--text-bright);
+  border-color: var(--border-subtle);
 }
 
 /* Unterpunkt-Trigger */
@@ -100,7 +100,7 @@
 
   font-size: 11px;
   padding-left: 22px;
-  background: #444;
+  background: var(--surface-raised);
 
   max-width: calc(var(--trigger-max-width) - var(--sub-indent));
   position: relative;
@@ -149,8 +149,8 @@
   width: calc(100vw - var(--sidebar-width));
   height: calc(100vh - var(--topbar-height));
 
-  background: #333;
-  border-left: 1px solid #ccc;
+  background: var(--surface-overlay);
+  border-left: 1px solid var(--border-subtle);
   box-shadow: -12px 0 24px rgba(0,0,0,.2);
 
   transition: right .25s ease;
@@ -172,13 +172,13 @@
   gap: 12px;
 
   padding: 8px 12px;
-  border-bottom: 1px solid rgba(255,255,255,.12);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .table .sub-panel-title {
   font-size: 14px;
   font-weight: 600;
-  color: #f0f0f0;
+  color: var(--text-bright);
 }
 
 .table .sub-panel-close {
@@ -187,7 +187,7 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  color: #fff;
+  color: var(--text-bright);
 }
 
 .table .sub-panel-body {
@@ -247,7 +247,7 @@
   /* ...dein Rest... */
   font-size: 12px;
   line-height: 1;
-  background: #555;            /* statt rot */
+  background: var(--border);            /* statt rot */
 }
 
 .table .section-trigger .section-header{
@@ -267,24 +267,3 @@
   font-weight: 700;
   margin: 0 0 6px;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

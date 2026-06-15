@@ -1,5 +1,5 @@
 /* ============================================================
-   analyse.css 
+   analyse.css
    ============================================================ */
 
 
@@ -100,7 +100,7 @@
 
 #ANALYSE_Modal .sens-left{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   overflow: hidden;
@@ -113,9 +113,7 @@
 
 #ANALYSE_Modal .sens-right .chart-container{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
 }
-
-

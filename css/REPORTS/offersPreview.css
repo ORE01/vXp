@@ -19,9 +19,9 @@
 /* Cards & Charts */
 .offers-card {
   width: 100%;
-  border: 1px solid #444;
+  border: 1px solid var(--surface-raised);
   border-radius: 8px;
-  background: #0b0b0b;
+  background: var(--surface-card);
   padding: 12px;
   box-sizing: border-box;
 }
@@ -29,7 +29,7 @@
 .offers-h3 { margin: 0; font-weight: 600; font-size: 16px; line-height: 1.2; }
 .offers-card__body {
   overflow: visible;
-  background: #000;
+  background: var(--border-strong);
   border-radius: 8px;
   padding: 8px;
 }
@@ -39,7 +39,7 @@
   width: 100%;
   max-width: 760px;
   height: 400px;
-  background: #000 !important;
+  background: var(--border-strong) !important;
 }
 #yieldChartSection { margin-top: 0; }
 #durationChartSection { margin-top: 12px; }
@@ -47,9 +47,9 @@
 
 /* Header-Controls (schwarzer Container, Inputs WEISS) */
 .offers-controls{
-  border: 1px solid #444;
+  border: 1px solid var(--surface-raised);
   border-radius: 10px;
-  background: #0b0b0b;
+  background: var(--surface-card);
   padding: 14px;
   box-sizing: border-box;
 }
@@ -59,7 +59,7 @@
   gap: 10px;
 }
 .offers-controls label{
-  color: #ddd;
+  color: var(--text-primary);
   font-size: 14px;
   display: block;
 }
@@ -75,10 +75,10 @@
 .offers-textarea{
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #666;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;      /* bleibt WEISS */
-  color: #111;
+  background: var(--input-bg);      /* bleibt WEISS */
+  color: var(--input-text);
   padding: 10px 12px;
   font-size: 15px;       /* größer */
   line-height: 1.35;
@@ -90,7 +90,7 @@
 .offers-input:focus,
 .offers-textarea:focus{
   outline: none;
-  border-color: #8aa3ff;
+  border-color: var(--link);
   box-shadow: 0 0 0 3px rgba(138,163,255,.18);
 }
 
@@ -105,49 +105,48 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #ddd;
+  color: var(--text-primary);
 }
 
 /* Save-Button + Status */
 #offersSaveHeaderButton{
-  border: 1px solid #555;
-  background: #1a1a1a;
-  color: #eee;
+  border: 1px solid var(--border);
+  background: var(--surface-header);
+  color: var(--text-primary);
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
 }
-#offersSaveHeaderButton:hover{ background: #242424; }
+#offersSaveHeaderButton:hover{ background: var(--hover-bg); }
 #or-saveStatusHeader{ font-size: 12px; opacity: .85; }
 
 /* Inputs/Textareas IMMER weiß lassen – auch bei Focus/Autofill */
 .offers-input,
 .offers-textarea{
-  background: #fff !important;
-  color: #111 !important;
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
   -webkit-appearance: none;
   appearance: none;
   background-clip: padding-box;
 }
 .offers-input:focus,
 .offers-textarea:focus{
-  background: #fff !important;
-  color: #111 !important;
-  border-color: #8aa3ff;
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border-color: var(--link);
   box-shadow: 0 0 0 3px rgba(138,163,255,.18);
 }
 
 /* Chrome/Safari Autofill gelb überschreiben */
 .offers-input:-webkit-autofill,
 .offers-textarea:-webkit-autofill{
-  -webkit-text-fill-color: #111 !important;
-  box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+  box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
 }
 
 /* (optional) Standard-Autofill Pseudo-Klasse */
 .offers-input:autofill,
 .offers-textarea:autofill{
-  background: #fff !important;
-  color: #111 !important;
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
 }
-

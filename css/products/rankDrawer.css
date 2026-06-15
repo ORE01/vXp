@@ -1,0 +1,183 @@
+/* electron_app/css/products/rankDrawer.css */
+
+/* =====================================================
+   ISSUER RANK / RATING DRAWER
+   Token-basiert, passt zu structureTimeline.css
+===================================================== */
+
+.issuer-rating-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(460px, 92vw);
+  height: 100vh;
+  padding: 22px;
+  overflow-y: auto;
+
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+
+  z-index: 9999;
+  transform: translateX(105%);
+  transition: transform 180ms ease-out;
+}
+
+.issuer-rating-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* =====================================================
+   Header
+===================================================== */
+
+.rank-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.rank-drawer-eyebrow {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.rank-drawer-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--text-bright);
+}
+
+.rank-drawer-subtitle {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.rank-drawer-close {
+  flex-shrink: 0;
+  padding: 6px 10px;
+
+  background: transparent;
+  color: var(--text-bright);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.rank-drawer-close:hover {
+  background: var(--hover-bg);
+}
+
+/* =====================================================
+   Base Rating Card
+===================================================== */
+
+.rank-drawer-base-card {
+  margin-top: 18px;
+  padding: 14px;
+
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+}
+
+.rank-drawer-base-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.rank-drawer-base-value {
+  margin-top: 2px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-bright);
+}
+
+/* =====================================================
+   Ratings Table
+===================================================== */
+
+.rank-drawer-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.rank-drawer-table thead tr {
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.rank-drawer-table th {
+  padding: 8px;
+  font-weight: 700;
+}
+
+.rank-drawer-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rank-drawer-table td.rank-drawer-rating {
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.rank-drawer-empty {
+  padding: 14px 8px;
+  color: var(--warning);
+}
+
+/* =====================================================
+   Source Badge
+===================================================== */
+
+.rank-drawer-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+
+  background: var(--surface-header);
+  color: var(--text-bright);
+
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rank-drawer-badge--explicit {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+/* =====================================================
+   Row Trigger Button (in der Issuer-Tabelle)
+===================================================== */
+
+.rank-drawer-trigger {
+  padding: 5px 9px;
+
+  background: var(--surface-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.rank-drawer-trigger:hover {
+  background: var(--hover-bg);
+  color: var(--text-bright);
+}

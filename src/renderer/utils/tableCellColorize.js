@@ -31,23 +31,6 @@ export function colorizeSpreadDelta(container, headerText = 'C_SPREAD_DELTA') {
   });
 }
 
-export function colorizeCleanPrice(container, headerText = 'clean_price') {
-  const table = container?.querySelector('table');
-  if (!table) return;
-
-  const ths = Array.from(table.querySelectorAll('thead th'));
-  const colIdx = ths.findIndex(th => th.textContent.trim() === headerText);
-  if (colIdx === -1) return;
-
-  table.querySelectorAll('tbody tr').forEach(tr => {
-    const td = tr.children[colIdx];
-    if (!td) return;
-
-    td.style.color = 'orange';
-    td.style.fontWeight = '700';
-  });
-}
-
 export function applyCleanPriceHighlight(container) {
   if (!container) return;
 
@@ -87,11 +70,48 @@ export function applyCleanPriceHighlight(container) {
 
 
 
+export function applyCreditSpreadHighlight(container) {
+  if (!container) return;
+
+  const tables = container.querySelectorAll('table');
+
+  tables.forEach(table => {
+    const headerCells = Array.from(table.querySelectorAll('thead th'));
+
+    if (!headerCells.length) return;
+
+    // Exact match only: must not catch "Base Credit Spread" / "Credit Spread Delta".
+    const columnIndex = headerCells.findIndex(th => {
+      const label = String(th.textContent || '').trim();
+
+      return (
+        label === 'Credit Spread' ||
+        label === 'C_SPREAD'
+      );
+    });
+
+    if (columnIndex < 0) return;
+
+    headerCells[columnIndex].classList.add('credit-spread-highlight-header');
+
+    const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+
+    bodyRows.forEach(row => {
+      const cell = Array.from(row.children)[columnIndex];
+
+      if (!cell) return;
+
+      cell.classList.add('credit-spread-highlight-cell');
+    });
+  });
+}
+
+
 // ---------- default bundle ----------
 export function applyPortfolioTableColoring(container) {
   if (!container) return;
 
   colorizeSpreadDelta(container);
-  colorizeCleanPrice(container);
   applyCleanPriceHighlight(container);
+  applyCreditSpreadHighlight(container);
 }

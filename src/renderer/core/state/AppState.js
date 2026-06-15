@@ -102,7 +102,7 @@
         this.dropdownConfig = {
             issuer: {
                 'issuerIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },
-                'issuerRatingDropdown': { dataKey: 'RATING', selection: ['ALL'] },
+                'issuerRatingDropdown': { dataKey: 'BASE_RATING', selection: ['ALL'] },
             },
             port: {
                 'portIssuerDropdown': { dataKey: 'ISSUER', selection: ['ALL'] },

@@ -18,7 +18,7 @@
   flex: 1 1 420px;
   min-width: 320px;
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   overflow: auto;
@@ -38,7 +38,7 @@
   align-items: flex-start;
 }
 
-/* Header darf nichts „floaten“ */
+/* Header darf nichts „floaten" */
 #MARKETDATA_Modal .portfolio-info{
   display: block;
   float: none;
@@ -70,7 +70,7 @@
 /* Chart als Card (nur RATES), bleibt im Grid rechts */
 #MARKETDATA_Modal #panel-rates .chart-container{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   overflow: hidden;
@@ -99,7 +99,7 @@
   flex: 1 1 420px;
   min-width: 320px;
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   overflow: auto;
@@ -127,7 +127,7 @@
 /* FORWARD: Chart-Card */
 #MARKETDATA_Modal #panel-forward .chart-container{
   background: var(--panel-surface, #0f0f10) !important;
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   height: 420px;
@@ -163,7 +163,7 @@
 #MARKETDATA_Modal #panel-ml .ml-left .table-wrapper,
 #MARKETDATA_Modal #panel-ml .ml-left .table-card{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   overflow: auto;
@@ -180,7 +180,7 @@
 #MARKETDATA_Modal #panel-ml .ml-table th,
 #MARKETDATA_Modal #panel-ml .ml-table td{
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
@@ -210,9 +210,9 @@
 }
 
 #MARKETDATA_Modal #panel-ml .input-container input{
-  background: #fff;
-  color: #222;
-  border: 1px solid #555;
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   padding: 6px;
 }

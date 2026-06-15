@@ -2,6 +2,7 @@
 
 import { appState } from '../../../../renderer.js';
 import { formatNumber, formatNumberWithCommas } from '../../../../utils/tableCellFormats.js';
+import { attachIdLinks } from '../../../../utils/linksToTables.js';
 
 import {
   getAvailableMvarPorts,
@@ -457,8 +458,8 @@ function renderMvarProductChart(productRows) {
 
     const label = document.createElement('div');
     label.textContent = row.prod_id || '-';
-    label.style.fontSize = '12px';
-    label.style.color = '#d0d0d0';
+    label.style.fontSize = 'inherit';
+    label.style.color = 'var(--text-primary)';
     label.style.overflow = 'hidden';
     label.style.textOverflow = 'ellipsis';
     label.style.whiteSpace = 'nowrap';
@@ -466,7 +467,7 @@ function renderMvarProductChart(productRows) {
     const axis = document.createElement('div');
     axis.style.position = 'relative';
     axis.style.height = '18px';
-    axis.style.background = 'rgba(255, 255, 255, 0.08)';
+    axis.style.background = 'var(--surface-overlay)';
     axis.style.borderRadius = '999px';
     axis.style.overflow = 'hidden';
 
@@ -476,7 +477,7 @@ function renderMvarProductChart(productRows) {
     zeroLine.style.top = '0';
     zeroLine.style.bottom = '0';
     zeroLine.style.width = '1px';
-    zeroLine.style.background = 'rgba(255, 255, 255, 0.35)';
+    zeroLine.style.background = 'var(--border)';
 
     const bar = document.createElement('div');
     bar.style.position = 'absolute';
@@ -495,8 +496,8 @@ function renderMvarProductChart(productRows) {
     const valueEl = document.createElement('div');
     valueEl.textContent = formatMaybeAbs(value);
     valueEl.style.textAlign = 'right';
-    valueEl.style.fontSize = '12px';
-    valueEl.style.color = '#d0d0d0';
+    valueEl.style.fontSize = 'inherit';
+    valueEl.style.color = 'var(--text-primary)';
     valueEl.style.fontVariantNumeric = 'tabular-nums';
 
     axis.appendChild(zeroLine);
@@ -618,6 +619,10 @@ export function renderMvarProductPLPanel() {
       ],
       'No MVaR product P/L data.'
     );
+
+    // Make the "Product" column (prod_id) clickable -> opens the product editor,
+    // same as in the other tables.
+    attachIdLinks(productTableContainer, { prodHeader: 'Product' });
   }
 
   const topRows = productRows

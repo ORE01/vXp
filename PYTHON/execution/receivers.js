@@ -24,20 +24,89 @@ export function createPythonExecutionReceivers(ctx) {
   let _lastFairValueRefreshAt = 0;
 
   function getFairValueButton(data) {
+    // The clicked button was disabled by handleProjectButtonClick; re-enable
+    // exactly that one (covers fairValueButton1, the Create-panel button, etc.).
+    const ids = [
+      'fairValueButton',
+      'fairValueButton1',
+      'fairValueButton2',
+      'fairValueButton3',
+      'fairValueButtonCreate',
+    ];
+
+    const disabledId = ids.find((id) => document.getElementById(id)?.disabled);
+    if (disabledId) return document.getElementById(disabledId);
+
     const sourceToId = {
       deals: 'fairValueButton1',
       port: 'fairValueButton',
       offers: 'fairValueButton2',
     };
 
-    let buttonId = sourceToId[data?.source];
+    const buttonId = sourceToId[data?.source];
+    return buttonId ? document.getElementById(buttonId) : null;
+  }
 
-    if (!buttonId) {
-      buttonId = ['fairValueButton', 'fairValueButton1', 'fairValueButton2']
-        .find(id => document.getElementById(id)?.disabled);
+  // Resolve the portfolio that was actually calculated, based on the trigger
+  // source. For the Change-Portfolio "Calculate" button (source 'deals') the
+  // selection lives in the deals dropdown, NOT in the SELECT PORTFOLIO dropdown.
+  function resolveFairValuePortName(data) {
+    const bySource =
+      data?.source === 'offers' ? appState.getSelectedOffersTableName?.() :
+      data?.source === 'port'   ? appState.getSelectedPortTableName?.() :
+                                  appState.getSelectedDealsTableName?.();
+
+    return String(
+      bySource
+      || appState.getSelectedPortTableName?.()
+      || appState.getSelectedDealsTableName?.()
+      || ''
+    ).trim();
+  }
+
+  // Switch to the SELECT PORTFOLIO tab and select the portfolio in its dropdown,
+  // so the freshly calculated results become visible there.
+  function activatePortfolioResultTab(port_name) {
+    document.getElementById('PORT_Tab')?.click();
+
+    // Persist the wanted selection in the dropdown-engine config so any later
+    // (async) rebuild of the port dropdown keeps it selected instead of
+    // resetting to "ALL".
+    try {
+      appState.updateDropdownSelection?.('portTables0', 'createdPortDropdown0', [port_name]);
+      appState.setSelectedPortTableName?.(port_name);
+    } catch {}
+
+    // The port dropdown may still be repopulating after the refresh, so retry
+    // until the option exists, then select it (and re-assert a few times to
+    // survive late rebuilds).
+    selectPortfolioInDropdown(port_name, 0);
+  }
+
+  function selectPortfolioInDropdown(port_name, attempt) {
+    const dd = document.getElementById('createdPortDropdown0');
+    if (!dd) return;
+
+    const norm = (s) => String(s ?? '').trim();
+    const wanted = norm(port_name);
+
+    const hasOption = Array.from(dd.options).some((o) => norm(o.value) === wanted);
+
+    if (hasOption) {
+      if (norm(dd.value) !== wanted) {
+        dd.value = port_name;
+        dd.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // Re-assert a few times in case a late refresh rebuilds the dropdown.
+      if (attempt < 4) {
+        setTimeout(() => selectPortfolioInDropdown(port_name, attempt + 1), 250);
+      }
+      return;
     }
 
-    return buttonId ? document.getElementById(buttonId) : null;
+    if (attempt < 15) {
+      setTimeout(() => selectPortfolioInDropdown(port_name, attempt + 1), 200);
+    }
   }
 
   function handleFairValueComplete(data) {
@@ -72,7 +141,7 @@ export function createPythonExecutionReceivers(ctx) {
       return;
     }
 
-    const port_name = appState.getSelectedPortTableName?.();
+    const port_name = resolveFairValuePortName(data);
 
     if (!port_name) {
       console.warn('[PY RECEIVER] py-fairValue refresh skipped: no selected portfolio', {
@@ -100,8 +169,13 @@ export function createPythonExecutionReceivers(ctx) {
       return;
     }
 
-    appState.setActiveTable?.('deals');
+    // Results live in the SELECT PORTFOLIO tab. Switch there and select the
+    // calculated portfolio so the user immediately sees the results.
+    appState.setSelectedPortTableName?.(port_name);
+    appState.setActiveTable?.('port');
     appState.setActiveElementId?.('portDataContainer0');
+
+    activatePortfolioResultTab(port_name);
 
     console.log('[PY RECEIVER] calling fetchAndUpdateFairValueData', {
       port_name,

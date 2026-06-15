@@ -7,14 +7,14 @@
 .traffic-light {
     width: 60px;
     height: 180px;
-    background: #333;
+    background: var(--surface-overlay);
     border-radius: 15px;
     padding: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-around;
-    border: 3px solid #555;/* Frame around the traffic light */
+    border: 3px solid var(--border);/* Frame around the traffic light */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -22,10 +22,9 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: #555;
+    background: var(--border);
 }
 
-.green.active { background: #4caf50; }
+.green.active { background: var(--accent); }
 .yellow.active { background: yellow; }
 .red.active { background: red; }
-    

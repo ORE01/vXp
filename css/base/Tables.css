@@ -1,14 +1,13 @@
 /* ===== Global: neutrale Basis nur für Tabellen (sicher für Slide-Ins) ===== */
 
-/* Root-Design-Variablen pro Modal/Section erlauben */
 .table {
-  --tbl-font: "Your Font Name", sans-serif;
-  --tbl-fz: 13px;
-  --tbl-fg: rgb(161,160,160);
-  --tbl-border: #555;
-  --tbl-head-bg: #222;
-  --tbl-row-even: #333;
-  --tbl-row-odd: #444;
+  --tbl-font:     var(--font-family);
+  --tbl-fz:       var(--font-size-base);
+  --tbl-fg:       var(--text-primary);
+  --tbl-border:   var(--border);
+  --tbl-head-bg:  var(--surface-header);
+  --tbl-row-even: var(--row-even);
+  --tbl-row-odd:  var(--row-odd);
   --tbl-cell-pad: 6px 12px;
   --tbl-head-pad: 10px;
   --tbl-head-minw: 100px;
@@ -16,31 +15,30 @@
 
 .table {
   font-family: var(--tbl-font);
-  font-size: var(--tbl-fz);
-  color: var(--tbl-fg);
+  font-size:   var(--tbl-fz);
+  color:       var(--tbl-fg);
 }
 
-/* Nur echte Datenbereiche! */
 .table .data-container {
-  background: rgb(70,69,69);
-  max-height: 500px;
-  overflow: auto;                 /* wichtig für sticky thead */
-  border: 1px solid rgb(100,100,100);
+  background:   var(--surface-base);
+  max-height:   500px;
+  overflow:     auto;
+  border:       1px solid var(--border-subtle);
   border-radius: 5px;
 }
 
-/* Scrollbar hübsch */
-.table .data-container::-webkit-scrollbar { width: 8px; height: 8px; }
-.table .data-container::-webkit-scrollbar-thumb { background:#888; border-radius:4px; }
-.table .data-container::-webkit-scrollbar-thumb:hover { background:#555; }
-.table .data-container::-webkit-scrollbar-track { background: transparent; }
+/* Scrollbar */
+.table .data-container::-webkit-scrollbar             { width: 8px; height: 8px; }
+.table .data-container::-webkit-scrollbar-thumb       { background: var(--scrollbar-thumb); border-radius: 4px; }
+.table .data-container::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.table .data-container::-webkit-scrollbar-track       { background: var(--scrollbar-track); }
 
 /* Tabellen-Grundlayout */
 .table .data-container table {
   table-layout: auto;
   border-collapse: collapse;
   width: 100%;
-  border: 1px solid black;
+  border: 1px solid var(--border-strong);
   box-sizing: border-box;
 }
 
@@ -50,9 +48,10 @@
   top: 0;
   z-index: 20;
   background: var(--tbl-head-bg);
-  box-shadow: 0 3px 5px rgba(0,0,0,.3);
+  box-shadow: var(--shadow-sm);
   border: none;
 }
+
 .table .data-container thead th {
   position: sticky;
   top: 0;
@@ -66,16 +65,14 @@
   font-size: 14px;
   height: 40px;
   min-width: var(--tbl-head-minw);
-
-  /* 🔹 Neu: Überschrift kürzen + Tooltip-ready */
-  max-width: 150px;          /* Breite nach Bedarf anpassen */
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: help;              /* zeigt an, dass ein Tooltip sinnvoll ist */
+  cursor: help;
 }
 
-.table .data-container thead tr { margin:0; padding:0; }
+.table .data-container thead tr { margin: 0; padding: 0; }
 .table .data-container th:first-child { padding-left: 10px; }
 .table .data-container th:last-child  { padding-right: 10px; }
 
@@ -84,13 +81,13 @@
 .table .data-container th {
   padding: var(--tbl-cell-pad);
   text-align: left;
-  border: 1px solid black;
+  border: 1px solid var(--border-strong);
 }
 
 /* Alternierende Zeilen */
 .table .data-container tr:nth-child(even) { background: var(--tbl-row-even); }
-.table .data-container tr:nth-child(odd)  { background: var(--tbl-row-odd);  }
-.table .data-container tr:hover { color:#fff; }
+.table .data-container tr:nth-child(odd)  { background: var(--tbl-row-odd); }
+.table .data-container tr:hover           { color: var(--row-hover-text); }
 
 /* Truncation/Tooltip-ready */
 .table .data-container td {
@@ -102,63 +99,45 @@
 }
 
 /* Utility/Optionals */
-.table .table-selected { background:#4CAF50; color:#fff; }
+.table .table-selected { background: var(--accent); color: var(--text-on-accent); }
+
 .table .table-wrapper {
   max-height: 300px;
   overflow: auto;
-  border: 1px solid rgb(100,100,100);
+  border: 1px solid var(--border-subtle);
   border-radius: 5px;
 }
-.table .table-wrapper::-webkit-scrollbar { width:8px; }
-.table .table-wrapper::-webkit-scrollbar-thumb { background:#888; border-radius:4px; }
-.table .table-wrapper::-webkit-scrollbar-thumb:hover { background:#555; }
 
-/* Form-/Layout-Utilities – NICHT .table-content global verbiegen */
+.table .table-wrapper::-webkit-scrollbar             { width: 8px; }
+.table .table-wrapper::-webkit-scrollbar-thumb       { background: var(--scrollbar-thumb); border-radius: 4px; }
+.table .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+/* Form-/Layout-Utilities */
 .table .data-wrapper {
   margin: 0 40px 0 20px;
   display: flex;
   flex-direction: column;
 }
-.MLInputWrapper { width: 300px; }
+
+.MLInputWrapper      { width: 300px; }
 .input-table-wrapper { margin-bottom: 20px; }
 
-/* Beispiel: spezielle Spaltenfärbung */
+/* Spezielle Spaltenfärbung (Business-Logik) */
 .table .data-container td[data-column="clean_price"] {
-  background: orange; color: #fff;
+  background: orange;
+  color: var(--text-on-accent);
 }
 
-/* Mobile Feinheiten, ohne Layout zu sprengen */
 @media (max-width: 768px) {
   .table .data-container { max-height: 60vh; }
 }
 
-
-.table .dropdown-wrapper{
-  display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end;
+.table .dropdown-wrapper {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
   margin-bottom: 12px;
 }
-.table .select-dropdown{ min-width: 180px; }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
+.table .select-dropdown { min-width: 180px; }

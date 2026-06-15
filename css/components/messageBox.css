@@ -14,15 +14,15 @@
 
 /* Modal container */
 .confirmation-modal {
-    background-color: #222; /* Dark background like table headers */
+    background-color: var(--surface-header); /* Dark background like table headers */
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Stronger shadow for depth */
     text-align: center;
     max-width: 400px;
     width: 100%;
-    font-family: "Your Font Name", sans-serif;
-    color: rgb(161, 160, 160); /* Subtle grey text */
+    font-family: var(--font-family);
+    color: var(--text-primary); /* Subtle grey text */
 }
 
 /* Message text */
@@ -49,36 +49,34 @@
 
 /* Green confirm button */
 .confirmation-button-green {
-    background-color: #4CAF50; /* Green */
-    color: white;
+    background-color: var(--accent); /* Green */
+    color: var(--text-bright);
 }
 
 .confirmation-button-green:hover {
-    background-color: #45a049;
+    background-color: var(--accent-hover);
 }
 
 /* Grey cancel button */
 .confirmation-button-grey {
-    background-color: #333; /* Dark grey */
-    color: rgb(161, 160, 160);
-    border: 1px solid #4CAF50; /* Green border */
+    background-color: var(--surface-overlay); /* Dark grey */
+    color: var(--text-primary);
+    border: 1px solid var(--accent); /* Green border */
 }
 
 .confirmation-button-grey:hover {
-    background-color: #444;
+    background-color: var(--surface-raised);
 }
 
 /* Red confirm button (For dangerous actions) */
 .confirmation-button-red {
     background-color: #f44336; /* 🔴 Red */
-    color: white;
+    color: var(--text-bright);
 }
 
 .confirmation-button-red:hover {
     background-color: #d32f2f;
 }
-
-
 
 
 

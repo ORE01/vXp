@@ -30,9 +30,9 @@
 /* Close button */
 #REPORTS_Modal .sub-panel-close{
   appearance: none;
-  background: #444;
-  color: #cfcfcf;
-  border: 1px solid #666;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 16px;
@@ -41,9 +41,9 @@
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 #REPORTS_Modal .sub-panel-close:hover{
-  background: #555;
-  border-color: #888;
-  color: #fff;
+  background: var(--border);
+  border-color: var(--text-muted);
+  color: var(--text-bright);
 }
 
 /* Link buttons (e.g. "Open PDF") */
@@ -53,17 +53,17 @@
   gap: 6px;
   padding: 4px 10px;
   font-size: 13px;
-  color: #cfcfcf;
+  color: var(--text-primary);
   text-decoration: none;
-  background: #444;
-  border: 1px solid #666;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 8px;
   transition: background .2s ease, border-color .2s ease, color .2s ease;
 }
 #REPORTS_Modal .report-link:hover{
-  background: #555;
-  border-color: #888;
-  color: #fff;
+  background: var(--border);
+  border-color: var(--text-muted);
+  color: var(--text-bright);
 }
 #REPORTS_Modal .report-link svg{
   display: block;

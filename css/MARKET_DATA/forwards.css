@@ -19,7 +19,7 @@
   flex: 1 1 420px;
   min-width: 320px;
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   overflow: auto;
@@ -47,7 +47,7 @@
 /* FORWARD: Chart-Card */
 #MARKETDATA_Modal #panel-forward .chart-container{
   background: var(--panel-surface, #0f0f10) !important;
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   height: 420px;

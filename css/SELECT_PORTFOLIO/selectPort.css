@@ -36,23 +36,20 @@
 
 /* responsive: unter 1100px einspaltig stapeln */
 @media (max-width: 1100px){
-  #PORT_Modal .port-layout{ 
-    grid-template-columns: 1fr; 
-    column-gap: 16px; 
-    row-gap: 12px; 
+  #PORT_Modal .port-layout{
+    grid-template-columns: 1fr;
+    column-gap: 16px;
+    row-gap: 12px;
   }
 }
 
-/* PORT: Basis für Card-Look wie Slide-Ins */
-#PORT_Modal{ 
-  --panel-surface: #0f0f10;
-}
+/* --panel-surface global in themes.css definiert */
 
 /* Links: die beiden Agg-Boxen als Cards (nur Container, keine Table-Optik) */
 #PORT_Modal #portAggDataContainer3,
 #PORT_Modal #portAggDataContainer0{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 14px 16px;
   width: auto;
@@ -62,7 +59,7 @@
 /* Filterleiste als Card + Layout */
 #PORT_Modal .controls-bar{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px 16px;
   box-shadow: 0 2px 10px rgba(0,0,0,.15);
@@ -72,7 +69,7 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  position: relative; 
+  position: relative;
   z-index: 60;  /* > thead (20) */
 
   /* etwas mehr Platz nach unten für den Button in der Ecke */
@@ -80,10 +77,10 @@
 }
 
 #PORT_Modal .controls-bar .dropdown-wrapper{
-  display: flex; 
-  gap: 14px; 
-  flex-wrap: wrap; 
-  align-items: flex-end; 
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
   flex: 1 1 auto;
 }
 
@@ -100,15 +97,15 @@
 
 /* Tabelle: nur Container-Scroll + Card-Rahmen (keine Tabellen-Styles!) */
 #PORT_Modal #portDataContainer0{
-  overflow: auto; 
-  width: 100%; 
-  max-width: 100%; 
+  overflow: auto;
+  width: 100%;
+  max-width: 100%;
   -webkit-overflow-scrolling: touch;
 
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
-  padding: 12px; 
+  padding: 12px;
 }
 
 /* ========= PORT: feines Raster ohne Doppel-Kanten (nur innerhalb PORT) ========= */
@@ -127,13 +124,13 @@
 
 /* Dünnes Raster in SCHWARZ zeichnen */
 #PORT_Modal #portDataContainer0 tr > * {
-  border-top: 1px solid #000 !important;
+  border-top: 1px solid var(--border-strong) !important;
 }
 #PORT_Modal #portDataContainer0 tr:first-child > * {
   border-top: 0 !important;
 }
 #PORT_Modal #portDataContainer0 tr > *:not(:first-child) {
-  border-left: 1px solid #000 !important;
+  border-left: 1px solid var(--border-strong) !important;
 }
 
 /* Sticky-Spalten: rechte Kante ebenfalls schwarz */
@@ -141,9 +138,8 @@
 #PORT_Modal #portDataContainer0 tbody td:nth-child(1),
 #PORT_Modal #portDataContainer0 thead th:nth-child(2),
 #PORT_Modal #portDataContainer0 tbody td:nth-child(2){
-  border-right: 1px solid #000 !important;
+  border-right: 1px solid var(--border-strong) !important;
 }
-
 
 
 
@@ -156,7 +152,7 @@
 }
 #portDataContainer0 table{
   border-collapse: separate; border-spacing: 0; table-layout: fixed;
-  width: max-content; 
+  width: max-content;
 }
 :is(#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) table{
   border-collapse: separate; border-spacing: 0; table-layout: auto;
@@ -167,7 +163,7 @@
   white-space: nowrap;
 }
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th{
-  position: sticky; top: 0; z-index: 4; background: #222; color: inherit;
+  position: sticky; top: 0; z-index: 4; background: var(--surface-header); color: inherit;
 }
 
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) tbody td:nth-child(1),
@@ -175,7 +171,7 @@
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(1){
   position: sticky; left: 0;
   min-width: var(--col1w); max-width: var(--col1w);
-  z-index: 3; background: inherit; border-right: 1px solid #555;
+  z-index: 3; background: inherit; border-right: 1px solid var(--border);
 }
 
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) tbody td:nth-child(2),
@@ -183,18 +179,10 @@
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(2){
   position: sticky; left: var(--col1w);
   min-width: var(--col2w); max-width: var(--col2w);
-  z-index: 3; background: inherit; border-right: 1px solid #555;
+  z-index: 3; background: inherit; border-right: 1px solid var(--border);
 }
 
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(1),
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(2){
-  background: #222; z-index: 5;
+  background: var(--surface-header); z-index: 5;
 }
-
-
-
-
-
-
-
-

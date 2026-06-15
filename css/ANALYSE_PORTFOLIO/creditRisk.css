@@ -37,7 +37,7 @@
 :is(#panel-cvar, #panel-EAD) .cvar-left .data-container{
   width:100%;
   background: var(--panel-surface, #0f0f10);
-  border:1px solid rgba(255,255,255,.08);
+  border:1px solid var(--border-subtle);
   border-radius:10px;
   padding:10px;
   box-sizing:border-box;
@@ -62,7 +62,7 @@
 :is(#panel-cvar, #panel-EAD) .chart-container-inner{
   position:relative;
   background: var(--panel-surface, #0f0f10);
-  border:1px solid rgba(255,255,255,.08);
+  border:1px solid var(--border-subtle);
   border-radius:12px;
   padding:12px;
   box-sizing:border-box;
@@ -90,7 +90,7 @@
   max-width:100%;
   margin:0 0 12px 0;
   background: var(--panel-surface, #0f0f10);
-  border:1px solid rgba(255,255,255,.08);
+  border:1px solid var(--border-subtle);
   border-radius:12px;
   padding:12px;
   box-sizing:border-box;
@@ -228,7 +228,7 @@
 #panel-credit .data-container{
   width: 100%;
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 10px;
   box-sizing: border-box;
@@ -272,7 +272,7 @@
 
 #panel-credit .chart-box{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;

@@ -34,7 +34,7 @@
 #MARKETDATA_Modal #panel-ml .ml-table th,
 #MARKETDATA_Modal #panel-ml .ml-table td{
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
 }
 
@@ -66,9 +66,9 @@
 
 /* Input-Look ggf. schon global – NUR drin lassen, wenn du es wirklich nur im ML willst */
 #MARKETDATA_Modal #panel-ml .input-container input{
-  background: #fff;
-  color: #222;
-  border: 1px solid #555;
+  background: var(--input-bg);
+  color: var(--input-text);
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   padding: 6px;
 }

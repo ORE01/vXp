@@ -1,4 +1,4 @@
-// electron_app/src/renderer/features/products/issuerRankRatingDrawer.js
+// electron_app/src/renderer/features/issuer/issuerRankRatingDrawer.js
 
 'use strict';
 
@@ -35,23 +35,6 @@ function ensureDrawer() {
   drawer.id = DRAWER_ID;
   drawer.className = 'issuer-rating-drawer';
 
-  drawer.style.cssText = `
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: min(460px, 92vw);
-    height: 100vh;
-    background: #111827;
-    color: #f9fafb;
-    box-shadow: -12px 0 30px rgba(0,0,0,0.35);
-    z-index: 9999;
-    transform: translateX(105%);
-    transition: transform 180ms ease-out;
-    padding: 22px;
-    overflow-y: auto;
-    border-left: 1px solid rgba(255,255,255,0.12);
-  `;
-
   document.body.appendChild(drawer);
   return drawer;
 }
@@ -60,7 +43,7 @@ function closeDrawer() {
   const drawer = document.getElementById(DRAWER_ID);
   if (!drawer) return;
 
-  drawer.style.transform = 'translateX(105%)';
+  drawer.classList.remove('is-open');
 }
 
 function openDrawer({ issuer, ticker, country, baseRating, ratings }) {
@@ -75,82 +58,55 @@ function openDrawer({ issuer, ticker, country, baseRating, ratings }) {
 
   const rowsHtml = sortedRatings.map((r) => {
     const source = String(r.SOURCE ?? '').toLowerCase();
-    const badgeBg = source === 'explicit' ? '#065f46' : '#374151';
+    const badgeClass = source === 'explicit'
+      ? 'rank-drawer-badge rank-drawer-badge--explicit'
+      : 'rank-drawer-badge';
 
     return `
       <tr>
-        <td style="padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.10);">
-          ${escapeHtml(formatRank(r.RANK))}
-        </td>
-        <td style="padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.10); font-weight: 700;">
-          ${escapeHtml(r.RATING)}
-        </td>
-        <td style="padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.10);">
-          <span style="
-            display:inline-block;
-            padding: 3px 8px;
-            border-radius: 999px;
-            background: ${badgeBg};
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-          ">
-            ${escapeHtml(r.SOURCE)}
-          </span>
+        <td>${escapeHtml(formatRank(r.RANK))}</td>
+        <td class="rank-drawer-rating">${escapeHtml(r.RATING)}</td>
+        <td>
+          <span class="${badgeClass}">${escapeHtml(r.SOURCE)}</span>
         </td>
       </tr>
     `;
   }).join('');
 
   drawer.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+    <div class="rank-drawer-header">
       <div>
-        <div style="font-size:13px; color:#9ca3af; margin-bottom:4px;">Issuer Ratings</div>
-        <h2 style="margin:0; font-size:22px; line-height:1.2;">
+        <div class="rank-drawer-eyebrow">Issuer Ratings</div>
+        <h2 class="rank-drawer-title">
           ${escapeHtml(issuer || ticker)}
         </h2>
-        <div style="margin-top:6px; color:#d1d5db; font-size:14px;">
+        <div class="rank-drawer-subtitle">
           ${escapeHtml(ticker)}${country ? ` · ${escapeHtml(country)}` : ''}
         </div>
       </div>
 
-      <button id="issuerRatingDrawerClose" style="
-        border: 1px solid rgba(255,255,255,0.2);
-        background: transparent;
-        color: #f9fafb;
-        border-radius: 8px;
-        padding: 6px 10px;
-        cursor: pointer;
-        font-size: 18px;
-        line-height: 1;
-      ">×</button>
+      <button id="issuerRatingDrawerClose" class="rank-drawer-close">×</button>
     </div>
 
-    <div style="
-      margin-top: 18px;
-      padding: 14px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
-    ">
-      <div style="font-size:13px; color:#9ca3af;">Base Rating</div>
-      <div style="font-size:28px; font-weight:800; margin-top:2px;">
+    <div class="rank-drawer-base-card">
+      <div class="rank-drawer-base-label">Base Rating</div>
+      <div class="rank-drawer-base-value">
         ${escapeHtml(baseRating || '-')}
       </div>
     </div>
 
-    <table style="width:100%; border-collapse:collapse; margin-top:20px; font-size:14px;">
+    <table class="rank-drawer-table">
       <thead>
-        <tr style="color:#9ca3af; text-align:left;">
-          <th style="padding:8px;">Rank</th>
-          <th style="padding:8px;">Rating</th>
-          <th style="padding:8px;">Source</th>
+        <tr>
+          <th>Rank</th>
+          <th>Rating</th>
+          <th>Source</th>
         </tr>
       </thead>
       <tbody>
         ${rowsHtml || `
           <tr>
-            <td colspan="3" style="padding:14px 8px; color:#fca5a5;">
+            <td colspan="3" class="rank-drawer-empty">
               No rank ratings found.
             </td>
           </tr>
@@ -163,7 +119,7 @@ function openDrawer({ issuer, ticker, country, baseRating, ratings }) {
     .querySelector('#issuerRatingDrawerClose')
     ?.addEventListener('click', closeDrawer);
 
-  drawer.style.transform = 'translateX(0)';
+  drawer.classList.add('is-open');
 }
 
 export function attachIssuerRankRatingDrawer({
@@ -208,16 +164,7 @@ export function attachIssuerRankRatingDrawer({
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = 'Ratings';
-
-    btn.style.cssText = `
-      padding: 5px 9px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.08);
-      color: inherit;
-      cursor: pointer;
-      font-size: 12px;
-    `;
+    btn.className = 'rank-drawer-trigger';
 
     btn.addEventListener('click', (event) => {
       event.stopPropagation();

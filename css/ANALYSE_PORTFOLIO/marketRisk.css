@@ -55,7 +55,7 @@
 #panel-market .MVaR-block,
 #panel-mvar .MVaR-block{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
@@ -68,7 +68,7 @@
 #ANALYSE_Modal #panel-mvar .MVaR-block--total,
 #panel-market .MVaR-block--total,
 #panel-mvar .MVaR-block--total{
-  border-color: rgba(255,255,255,0.18);
+  border-color: var(--border);
 }
 
 /* Tabellencontainer: innerhalb der Box horizontal scrollen */
@@ -133,7 +133,7 @@
 #panel-market .chart-box,
 #panel-mvar-products .chart-box{
   background: var(--panel-surface, #0f0f10);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
@@ -209,7 +209,7 @@
 #panel-mvar-products .mvar-mini-table th,
 #panel-mvar-products .mvar-mini-table td{
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 #panel-mvar-products .mvar-mini-table td:last-child,
 #panel-mvar-products .mvar-mini-table th:last-child{
@@ -252,4 +252,3 @@
 .mvar-map-status--invalid {
   color: #b02a37;
 }
-

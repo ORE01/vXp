@@ -2,42 +2,42 @@
 
 /* Risk-Preview-Rahmen */
 #reportsRiskPreview {
-  background: #050506;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
   min-height: 120px;
   padding: 8px 12px 10px;
 }
 
-#reportsRiskPreview code { 
-  background:#222; 
-  padding:2px 6px; 
-  border-radius:4px; 
+#reportsRiskPreview code {
+  background: var(--surface-header);
+  padding:2px 6px;
+  border-radius:4px;
 }
 
-#reportsRiskPreview ul li { 
-  line-height:1.6; 
+#reportsRiskPreview ul li {
+  line-height:1.6;
 }
 
 /* Dateiname-Feld für Risk-PDF im Risk-Panel */
 #panel-reports-risk input#rr-filename,
 #panel-reports-risk input#rr-filename:focus {
-  background: #fff !important;
-  color: #000 !important;
-  border: 1px solid #666;
+  background: var(--input-bg) !important;
+  color: var(--border-strong) !important;
+  border: 1px solid var(--border);
   box-shadow: none !important;
   outline: none !important;
-  caret-color: #000;
+  caret-color: var(--border-strong);
 }
 
 #panel-reports-risk input#rr-filename::placeholder {
-  color: #666;
+  color: var(--text-muted);
   opacity: 1;
 }
 
 #panel-reports-risk input#rr-filename:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
-  -webkit-text-fill-color: #000 !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+  -webkit-text-fill-color: var(--border-strong) !important;
 }
 
 #rr-filename {
@@ -127,7 +127,7 @@
 #reportsRiskPreview .risk-section {
   margin-bottom: 0.9rem;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 #reportsRiskPreview .risk-section:last-of-type {
@@ -140,7 +140,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #f3f4f6;
+  color: var(--text-bright);
   margin: 0.35rem 0 0.2rem;
 }
 
@@ -161,7 +161,7 @@
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #9ca3af;
+  color: var(--text-muted);
   padding-top: 0.25rem;
 }
 
@@ -179,12 +179,12 @@
   align-items: center;
   gap: 0.3rem;
   font-size: 0.76rem;
-  color: #e5e7eb;
+  color: var(--text-bright);
 }
 
 /* aktive Checkbox optisch leicht stärken */
 #reportsRiskPreview .risk-section__controls input[type="checkbox"]:checked + span {
-  color: #f9fafb;
+  color: var(--text-bright);
   font-weight: 500;
 }
 
@@ -199,7 +199,7 @@
   height: 52px;
   object-fit: cover;
   border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--border-subtle);
   box-shadow: 0 1px 2px rgba(0,0,0,0.18);
 }
 
