@@ -156,6 +156,7 @@ export function createPythonExecutionRouter(ctx) {
   }
 
   function handleProjectResponse(buttonElement, projectName, response) {
+    console.log('handleProjectResponse: wird ausgeführt')
     const projectLabels = {
       'py-fairValue':    'Fair Value',
       'py-MVaR':         'P/L Dist',

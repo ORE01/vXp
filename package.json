@@ -8,7 +8,7 @@
   "scripts": {
     "ipc:audit": "node src/scripts/ipc-audit.js",
     "start:electron": "electron .",
-    "start": "set NODE_ENV=development && npm run ipc:audit && npm run start:electron",
+    "start": "set NODE_ENV=thomasdev && npm run ipc:audit && npm run start:electron",
     "build": "electron-builder"
   },
   "build": {

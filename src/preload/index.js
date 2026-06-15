@@ -121,10 +121,11 @@ contextBridge.exposeInMainWorld('api', {
       ...opts, // z.B. prospectusOptions, etc.
     }),
 
+   tableLayouts: {
+  saveOne: (tableId, layoutName, layout) =>
+    ipcRenderer.invoke('table-layout:save-one', tableId, layoutName, layout),
+    },
 
-  onProgress: (callback) => {
-    ipcRenderer.on('py-progress', (_event, data) => callback(data));
-  },
 });
 
 window.addEventListener('DOMContentLoaded', () => {

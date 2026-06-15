@@ -24,5 +24,6 @@ export function bootstrapStores(appState) {
   installNameListsStore({ appState });
   installCustomerReportsStore({ appState });
   installDataUpdatePipeline({ appState });
+  // installTableLayoutStore({ appState });
 }
 

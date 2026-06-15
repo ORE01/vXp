@@ -25,6 +25,8 @@
        
         this.currentReceivedData = null;
 
+        this.tableLayouts = {};
+
         // Handlers werden im renderer/bootstrap injiziert
         this.handleIssuerData = null;
         this.renderProductTable   = null;
@@ -429,6 +431,36 @@
             return this.filteredPortData;
             
     }
+
+setVisibleColumns(tableId, columns) {
+    if (!tableId) return;
+
+    if (!this.tableLayouts[tableId]) {
+        this.tableLayouts[tableId] = {};
+    }
+
+    this.tableLayouts[tableId].visibleColumns =
+        Array.isArray(columns) ? [...columns] : [];
+}
+
+getVisibleColumns(tableId) {
+    if (!tableId) return null;
+    return this.tableLayouts[tableId]?.visibleColumns || null;
+}
+
+ensureTableLayout(tableId, defaults = {}) {
+    if (!tableId) return;
+
+    if (!this.tableLayouts[tableId]) {
+        this.tableLayouts[tableId] = { ...defaults };
+        return;
+    }
+
+    this.tableLayouts[tableId] = {
+        ...defaults,
+        ...this.tableLayouts[tableId],
+    };
+}
 
     // =====================
     // Compare Portfolio Names

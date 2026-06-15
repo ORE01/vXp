@@ -11,6 +11,8 @@ import { handlePortfolioRiskSensitivitiesData } from '../../features/ANALYSE_POR
 
 import {handleCSParameterData} from '../../features/MARKET_DATA/CREDIT_SPREADS/csParameterHandlers.js';
 
+import { handleCustomerTableLayoutsData } from '../../features/CUSTOMER/tableLayouts/handleCustomerTableLayoutsData.js';
+
 import {
   handleCSBaseData,
   handleCS_ACTIVEData,
@@ -81,6 +83,7 @@ export function bootstrapHandlers(appState, deps) {
     handleCS_ACTIVEData,
     handleCSBaseData,
     handleCSScenarioData,
+    handleCustomerTableLayoutsData,
 
     // canonical Swaption names for installReceivers/dataRouter
     handleSwaptionAtmBaseData: handleSwaptionATMData,
