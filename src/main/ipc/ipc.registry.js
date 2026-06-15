@@ -166,6 +166,31 @@ module.exports = [
   },
 
   {
+    name: 'portfolioProducts',
+    register: require('./handlers/portfolioProducts.handlers'),
+    getCtx: ({ ipcMain, mainFct, refreshTable }) => ({
+      ipcMain,
+      dbApi: {
+        runSQL: mainFct.runSQL,
+        selectAll: mainFct.selectAll,
+      },
+      refreshTable,
+    }),
+  },
+
+  {
+    name: 'dealsUpdate',
+    register: require('./handlers/dealsUpdate.handlers'),
+    getCtx: ({ ipcMain, mainFct, refreshTable }) => ({
+      ipcMain,
+      dbApi: {
+        runSQL: mainFct.runSQL,
+      },
+      refreshTable,
+    }),
+  },
+
+  {
     name: 'customer',
     register: require('./handlers/customer.handlers'),
     getCtx: ({ ipcMain, mainFct, sqliteDb, refreshTable, emitToRenderer }) => ({

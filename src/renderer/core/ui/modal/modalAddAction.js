@@ -88,6 +88,11 @@ export async function addSaveButtonHandler(form, selectedTableName, onReload) {
     delete newRowData.ID;
     delete newRowData.id;
 
+    if (selectedTableName === 'Issuer') {
+      // senior_unsecured ist der Notching-Anker und entspricht dem Base-Rating.
+      newRowData.senior_unsecured = newRowData.RATING;
+    }
+
     if (selectedTableName === 'DealsMain') {
       if (Object.prototype.hasOwnProperty.call(newRowData, 'DEPOT_BANK')) {
         newRowData.Depotbank = newRowData.DEPOT_BANK;

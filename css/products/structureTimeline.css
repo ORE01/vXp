@@ -48,15 +48,44 @@
   transform: scale(0.96);
 }
 
-/* Close Button im Structure Modal */
-#structureTimelineModal #closeStructureTimelineModal.structure-timeline-close {
-  position: absolute;
-  top: 8px;
-  right: 14px;
-  z-index: 10;
+/* Drag-Leiste */
+.structure-timeline-drag-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 16px;
+  height: 44px;
+  background: var(--surface-header);
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
 
-  width: 42px;
-  height: 42px;
+.structure-timeline-drag-bar:active {
+  cursor: grabbing;
+}
+
+.structure-timeline-drag-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+/* Scrollbarer Body-Bereich unterhalb der Drag-Leiste */
+.structure-timeline-body {
+  height: calc(100% - 44px);
+  overflow: auto;
+}
+
+/* Close Button in der Drag-Leiste */
+#structureTimelineModal #closeStructureTimelineModal.structure-timeline-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
   padding: 0 !important;
 
   display: flex;
@@ -67,7 +96,7 @@
   border: none !important;
   color: var(--text-bright) !important;
 
-  font-size: 42px !important;
+  font-size: 28px !important;
   line-height: 1 !important;
   font-weight: 300;
 
@@ -513,14 +542,31 @@
 
 #structureTimelineModal .structure-valuation-result-grid > div:nth-child(1),
 #structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) {
-  background: rgba(76, 175, 80, 0.13);
-  border-color: rgba(76, 175, 80, 0.45);
+  background: #f57c00;
+  border-color: #e66c00;
+}
+
+/* Highlight tiles: always white text in both light and dark theme */
+#structureTimelineModal .structure-valuation-result-grid > div:nth-child(1) span,
+#structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) span {
+  color: #ffffff !important;
 }
 
 #structureTimelineModal .structure-valuation-result-grid > div:nth-child(1) strong,
 #structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) strong {
   font-size: 22px;
-  color: var(--text-bright) !important;
+  color: #ffffff !important;
+}
+
+/* Credit Spread tile: strong blue, white text in both themes */
+#structureTimelineModal .structure-valuation-result-grid > div.cs-spread-tile {
+  background: #2f6fb0;
+  border-color: #2563a8;
+}
+
+#structureTimelineModal .cs-spread-tile span,
+#structureTimelineModal .cs-spread-tile strong {
+  color: #ffffff !important;
 }
 
 

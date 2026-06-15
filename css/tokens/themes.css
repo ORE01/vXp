@@ -138,9 +138,9 @@
   --row-selected:      #4CAF50;
 
   /* --- Scrollbar --- */
-  --scrollbar-thumb:        #aaaaaa;
-  --scrollbar-thumb-hover:  #888888;
-  --scrollbar-track:        transparent;
+  --scrollbar-thumb:        #8f8f8f;
+  --scrollbar-thumb-hover:  #6b6b6b;
+  --scrollbar-track:        #e2e2e2;
 
   /* --- Akzentfarben — bleiben gleich --- */
   --accent:            #4CAF50;

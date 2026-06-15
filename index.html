@@ -75,6 +75,9 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/products/newPortfolio.css" rel="stylesheet">
   <link href="./css/products/offers.css" rel="stylesheet">
   <link href="./css/products/structureTimeline.css" rel="stylesheet">
+  <link href="./css/products/rankDrawer.css" rel="stylesheet">
+  <link href="./css/products/addProductsDrawer.css" rel="stylesheet">
+  <link href="./css/products/fillTradeDetailsDrawer.css" rel="stylesheet">
   
   <link href="./css/MARKET_DATA/creditSpreads.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
@@ -232,8 +235,9 @@ Feature:    Wenn es nur in einem Panel gilt
       <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button> 
       <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button> 
       <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button> 
-      <button class="tablinks" id="products_Tab">PRODUCTS</button> 
-      <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button> 
+      <button class="tablinks" id="ISSUER_Tab">ISSUER</button>
+      <button class="tablinks" id="products_Tab">PRODUCTS</button>
+      <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button>
       <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
       <button class="tablinks" id="DATA_Tab">UPDATES</button> 
       <button class="tablinks" id="REPORTS_Tab">REPORTS</button> 
@@ -1479,7 +1483,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
-        <span class="section-header">New Portfolio</span><span class="chev"></span>
+        <span class="section-header">Create Portfolio</span><span class="chev"></span>
       </button>
     </div> 
 
@@ -1520,7 +1524,9 @@ Feature:    Wenn es nur in einem Panel gilt
               <!-- <button id="savePortfolioButton" class="edit-button">Save Portfolio</button> -->
 
               <div class="button-wrapper">
-                <button id="portfolioDealsAddButton" class="edit-button">ADD</button>
+                <button id="portfolioDealsAddButton" class="edit-button">Create Portfolio</button>
+                <button id="addProductsButtonCreate" class="edit-button">Add Products</button>
+                <button id="fillDetailsButtonCreate" class="edit-button">Fill Trade Details</button>
               </div>
             </div>
           </div>
@@ -1528,7 +1534,11 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <!-- ðŸ†• Hier: Deals-Preview fÃ¼r das aktuelle Portfolio -->
           <div class="data-container cp-table" id="newPortfolioDealsDataContainer"></div>
-        
+
+          <div class="button-wrapper">
+            <button id="fairValueButtonCreate" class="edit-button">Calculate Portfolio</button>
+          </div>
+
       </div>
     </div>
 
@@ -1546,8 +1556,9 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <div class="cp-form-grid">
             <!-- <label for="createdDealsDropdown">Select PORTFOLIO:</label> -->
-            <div class="cp-field">
-              <select id="createdDealsDropdown" class="deals-dropdown"></select>
+            <div class="cp-field" style="display:flex; align-items:center; gap:14px;">
+              <select id="createdDealsDropdown" class="deals-dropdown" style="flex:0 0 260px;"></select>
+              <button id="deletePortfolioButton" class="edit-button delete-button" style="margin-left:auto;">Delete Portfolio</button>
             </div>
           </div>
         </section>
@@ -1588,6 +1599,8 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <div class="button-wrapper">
             <button id="dealsAddButton" class="edit-button">ADD</button>
+            <button id="addProductsButtonChange" class="edit-button">Add Products</button>
+            <button id="fillDetailsButtonChange" class="edit-button">Fill Trade Details</button>
           </div>
         </section>
 
@@ -2651,6 +2664,62 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 </div>
 
+<!-- Modal: ISSUER -->
+<div id="issuer_Modal" class="table">
+  <div class="table-content">
+    <div class="portfolio-info">
+      <h2 class="panel-title">ISSUER</h2>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-issuer-np"
+              aria-controls="panel-issuer-np"
+              aria-expanded="false">
+        <span class="section-header">Issuer</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <div id="panel-issuer-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title-np" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-issuer-title-np" class="sub-panel-title">ISSUER</div>
+        <button class="sub-panel-close" data-close="panel-issuer-np" aria-label="close">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          <div class="dropdown-wrapper">
+            <div>
+              <p>Select Issuers:</p>
+              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
+            </div>
+            <div>
+              <p>Select Rating:</p>
+              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
+            </div>
+          </div>
+
+<p style="margin:10px 0;">
+<button id="issuerResetFiltersButton"
+        class="reset-FiltersButton"
+        type="button"
+        title="Reset filters"
+        aria-label="Reset filters"></button>
+</p>
+
+          <div class="button-wrapper">
+            <button id="issuerAddButton" class="edit-button">ADD</button>
+          </div>
+        </div>
+
+        <div class="data-container cp-table" id="issuerDataContainer"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: New Products -->
 <div id="products_Modal" class="table">
   <div class="table-content">
@@ -2661,15 +2730,6 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <!-- Triggers -->
-    <div class="chart-section">
-      <button class="section-trigger"
-              data-panel="panel-issuer-np"
-              aria-controls="panel-issuer-np"
-              aria-expanded="false">
-        <span class="section-header">Issuer</span><span class="chev"></span>
-      </button>
-    </div>
-
     <div class="chart-section">
       <button class="section-trigger"
               data-panel="panel-products-np"
@@ -2703,46 +2763,6 @@ Feature:    Wenn es nur in einem Panel gilt
     <div class="sub-panel-backdrop" hidden></div>
 
     <!-- ===== PANELS ===== -->
-
-    <!-- Panel: ISSUER -->
-    <div id="panel-issuer-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-issuer-title-np" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-issuer-title-np" class="sub-panel-title">ISSUER</div>
-
-        <button class="sub-panel-close" data-close="panel-issuer-np" aria-label="close">&times;</button>
-      </div>
-
-      <div class="sub-panel-body">
-        <div class="cp-card">
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Issuers:</p>
-              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
-            </div>
-          </div>
-
-<p style="margin:10px 0;">
-<button id="issuerResetFiltersButton"
-        class="reset-FiltersButton"
-        type="button"
-        title="Reset filters"
-        aria-label="Reset filters"></button>
-
-</p>
-
-
-          <div class="button-wrapper">
-            <button id="issuerAddButton" class="edit-button">ADD</button>
-          </div>
-        </div>
-
-        <div class="data-container cp-table" id="issuerDataContainer"></div>
-      </div>
-    </div>
 
     <!-- Panel: PRODUCTS -->
     <div id="panel-products-np" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-products-title" hidden>

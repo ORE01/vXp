@@ -24,9 +24,18 @@ const tableHandlers = {
 
 // Felder, die im Modal NICHT angezeigt werden sollen - je Tabelle
 const hiddenFieldsByTable = {
-  MVaRInput: new Set(['id']),  
+  MVaRInput: new Set(['id']),
   //CreditVaRInput: new Set(['is_active', 'updated_at']), bleibt als Beispiel stehen
-  CreditVaRInput: new Set(['is_active', 'id']), 
+  CreditVaRInput: new Set(['is_active', 'id']),
+  // Issuer: senior_unsecured == RATING (Notching-Anker), die übrigen Ränge
+  // werden daraus abgeleitet -> nur RATING als Eingabe zeigen.
+  Issuer: new Set([
+    'senior_secured',
+    'senior_preferred',
+    'senior_unsecured',
+    'senior_subordinated',
+    'junior_subordinated',
+  ]),
 };
 
 

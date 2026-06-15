@@ -451,6 +451,9 @@ function renderResult(container, payload, prodId) {
       ? 'Model Yield'
       : 'Yield';
 
+  // Present Value = dirty value (clean + accrued) × Notional, day-count-correct in Python.
+  const pvDirty = result.pv_dirty != null ? result.pv_dirty : result.pv;
+
   const resultHtml = `
     <div class="structure-valuation-result-card">
       <h4 class="structure-valuation-result-title">
@@ -468,8 +471,13 @@ function renderResult(container, payload, prodId) {
         </div>
 
         <div>
-          <span>Present Value</span>
-          <strong>${formatNumber(result.pv, 6)}</strong>
+          <span>Present Value (dirty)</span>
+          <strong>${formatNumber(pvDirty, 6)}</strong>
+        </div>
+
+        <div class="cs-spread-tile">
+          <span>Credit Spread</span>
+          <strong>${result.c_spread == null ? '–' : formatNumber(result.c_spread, 2)}</strong>
         </div>
 
         <div>

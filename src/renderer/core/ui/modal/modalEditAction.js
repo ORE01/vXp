@@ -53,6 +53,11 @@ const editSaveButtonHandler = (selectedTableName, rowIndex, data) => async () =>
       }
     }
 
+    if (String(selectedTableName).trim() === 'Issuer') {
+      // senior_unsecured ist der Notching-Anker und entspricht dem Base-Rating.
+      newData.senior_unsecured = newData.RATING;
+    }
+
     const cleanTableName = getCleanTableName(selectedTableName);
     const uniqueIdentifier = getUniqueIdentifier(newData, selectedTableName);
 

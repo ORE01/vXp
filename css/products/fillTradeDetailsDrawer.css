@@ -1,0 +1,180 @@
+/* electron_app/css/products/fillTradeDetailsDrawer.css */
+
+/* =====================================================
+   FILL TRADE DETAILS DRAWER
+   Token-based, matches addProductsDrawer.css
+===================================================== */
+
+.ftd-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(900px, 98vw);
+  height: 100vh;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+
+  z-index: 9999;
+  transform: translateX(105%);
+  transition: transform 180ms ease-out;
+}
+
+.ftd-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* ---------- Header ---------- */
+.ftd-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ftd-header-text {
+  min-width: 0;
+}
+
+.ftd-eyebrow {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.ftd-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--text-bright);
+}
+
+.ftd-subtitle {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.ftd-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ftd-save {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.ftd-actions .edit-button[disabled],
+.ftd-footer .edit-button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ftd-close {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--text-bright);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ftd-close:hover {
+  background: var(--hover-bg);
+}
+
+/* ---------- Grid ---------- */
+.ftd-list-head,
+.ftd-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.1fr 1.6fr 1.3fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.ftd-list-head {
+  flex-shrink: 0;
+  margin-top: 18px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.ftd-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.ftd-row {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ftd-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ftd-prodid {
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.ftd-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--surface-card);
+  color: var(--text-bright);
+  caret-color: var(--text-bright);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+/* Highlight still-empty fields */
+.ftd-input.ftd-empty {
+  border-color: var(--warning);
+  box-shadow: inset 0 0 0 1px var(--warning);
+}
+
+.ftd-empty-msg {
+  padding: 18px 8px;
+  color: var(--warning);
+}
+
+/* ---------- Footer ---------- */
+.ftd-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.ftd-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}

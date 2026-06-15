@@ -1,0 +1,216 @@
+/* electron_app/css/products/addProductsDrawer.css */
+
+/* =====================================================
+   ADD PRODUCTS DRAWER
+   Token-based, matches rankDrawer.css / structureTimeline.css
+===================================================== */
+
+.add-products-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(720px, 96vw);
+  height: 100vh;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+
+  z-index: 9999;
+  transform: translateX(105%);
+  transition: transform 180ms ease-out;
+}
+
+.add-products-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* ---------- Header ---------- */
+.apd-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.apd-eyebrow {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.apd-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--text-bright);
+}
+
+.apd-subtitle {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.apd-close {
+  flex-shrink: 0;
+  padding: 6px 10px;
+
+  background: transparent;
+  color: var(--text-bright);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.apd-close:hover {
+  background: var(--hover-bg);
+}
+
+/* ---------- Toolbar ---------- */
+.apd-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.apd-search {
+  flex: 1;
+  padding: 8px 10px;
+
+  background: var(--surface-card);
+  color: var(--text-bright);
+  caret-color: var(--text-bright);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.apd-selectall {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---------- List ---------- */
+.apd-list-head,
+.apd-row {
+  display: grid;
+  grid-template-columns: 28px 1.4fr 2fr 1.4fr 1fr 0.6fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.apd-list-head {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.apd-list {
+  flex: 1 1 auto;
+  min-height: 0;          /* allow the list to shrink so the footer stays visible */
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.apd-row {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.apd-row:hover {
+  background: var(--hover-bg);
+}
+
+.apd-row.apd-hidden {
+  display: none;
+}
+
+.apd-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apd-prodid {
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.apd-meta {
+  color: var(--text-muted);
+}
+
+.apd-empty {
+  padding: 18px 8px;
+  color: var(--warning);
+}
+
+/* ---------- Footer ---------- */
+.apd-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.apd-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.apd-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.apd-actions .edit-button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Prominent primary action */
+.apd-add {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+/* Header text block must be able to shrink so the action buttons stay visible */
+.apd-header-text {
+  min-width: 0;
+}
+
+/* Push the selection count to the right edge of the toolbar */
+.apd-toolbar .apd-count {
+  margin-left: auto;
+  white-space: nowrap;
+}

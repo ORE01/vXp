@@ -296,6 +296,22 @@ module.exports = function registerCrudHandlers({
         }
 
         try {
+          // Once a real trade (with PROD_ID) is added to a portfolio, drop the
+          // empty-portfolio placeholder/dummy row(s) for that portfolio.
+          if (cleanTableName === 'DealsMain') {
+            const portName = String(row.port_name ?? row.PORT_NAME ?? '').trim();
+            const newProdId = String(row.PROD_ID ?? '').trim();
+
+            if (portName && newProdId) {
+              await dbApi.runSQL(
+                `DELETE FROM "DealsMain"
+                   WHERE TRIM(port_name) = ?
+                     AND (PROD_ID IS NULL OR TRIM(PROD_ID) = '')`,
+                [portName]
+              );
+            }
+          }
+
           const refreshList = computeRefreshList(cleanTableName, row);
 
           await refreshWithOptionalLock(refreshList);

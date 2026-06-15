@@ -91,6 +91,17 @@ function formatValue(value) {
   return String(value);
 }
 
+function formatPercent(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return raw;
+  if (n !== 0 && Math.abs(n) < 1) {
+    return String(parseFloat((n * 100).toFixed(10)));
+  }
+  return raw;
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -207,6 +218,22 @@ function renderField(field, row) {
           class="structure-drawer-input"
           value="${escapeHtml(selectedValue)}"
           data-field="${field}"
+        />
+      </label>
+    `;
+  }
+
+  if (field === 'COUPON') {
+    const displayValue = formatPercent(value);
+    return `
+      <label class="structure-drawer-field">
+        <span class="structure-drawer-label">COUPON (%)</span>
+        <input
+          type="text"
+          class="structure-drawer-input"
+          value="${escapeHtml(displayValue)}"
+          data-field="COUPON"
+          placeholder="e.g. 4.00"
         />
       </label>
     `;

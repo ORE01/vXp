@@ -8,6 +8,7 @@ export function initializeTabs() {
     'CREATE_PORTFOLIO_Tab': 'CREATE_PORTFOLIO_Modal',
     'MARKETDATA_Tab': 'MARKETDATA_Modal',
     'products_Tab': 'products_Modal',
+    'ISSUER_Tab': 'issuer_Modal',
     'REPORTS_Tab': 'REPORTS_Modal',
   };
 

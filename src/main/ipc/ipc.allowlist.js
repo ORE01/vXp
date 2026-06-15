@@ -51,6 +51,8 @@ module.exports = {
     'create-empty-portfolio',
     'delete-deals-selection',
     'delete-portfolio-everywhere',
+    'add-products-to-portfolio',
+    'update-deals-fields',
 
 
   ],
@@ -184,6 +186,14 @@ module.exports = {
     // Deals portfolio deletion feedback
     'delete-portfolio-everywhere-success',
     'delete-portfolio-everywhere-error',
+
+    // Add products to portfolio feedback
+    'add-products-to-portfolio-success',
+    'add-products-to-portfolio-error',
+
+    // Fill trade details feedback
+    'update-deals-fields-success',
+    'update-deals-fields-error',
   ],
 
   // =====================================================

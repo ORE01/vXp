@@ -5,6 +5,9 @@ import {
   focusPortfolioCreationName,
 } from './portfolioCreationPanel.js';
 
+import { openAddProductsDrawer } from './addProductsDrawer.js';
+import { openFillTradeDetailsDrawer } from './fillTradeDetailsDrawer.js';
+
 const USE_NEW_DEALS_UI = true;
 const ALL = '__ALL__';
 
@@ -46,6 +49,26 @@ export function createDealsPortfolioActions({
     api.receive?.('delete-portfolio-everywhere-error', ({ message } = {}) => {
       console.error('[UI] delete-portfolio-everywhere-error', message);
       alert(message || 'Delete failed.');
+    });
+
+    api.receive?.('add-products-to-portfolio-success', ({ port, inserted } = {}) => {
+      console.log('[UI] add-products-to-portfolio-success', { port, inserted });
+      showMessageBox?.(`${inserted ?? 0} product(s) added to "${port}".`, () => {});
+    });
+
+    api.receive?.('add-products-to-portfolio-error', ({ message } = {}) => {
+      console.error('[UI] add-products-to-portfolio-error', message);
+      alert(message || 'Adding products failed.');
+    });
+
+    api.receive?.('update-deals-fields-success', ({ port, updated } = {}) => {
+      console.log('[UI] update-deals-fields-success', { port, updated });
+      showMessageBox?.(`Trade details saved (${updated ?? 0} updated) for "${port}".`, () => {});
+    });
+
+    api.receive?.('update-deals-fields-error', ({ message } = {}) => {
+      console.error('[UI] update-deals-fields-error', message);
+      alert(message || 'Saving trade details failed.');
     });
   }
 
@@ -216,6 +239,78 @@ export function createDealsPortfolioActions({
     }
   }
 
+  function handleAddProductsCreate() {
+    const port =
+      String(getPortfolioCreationName?.() ?? '').trim() ||
+      String(appState.__lastCreatedPortfolioName ?? '').trim();
+
+    if (!port) {
+      alert('Please enter a portfolio name and click "Create Portfolio" first.');
+      focusPortfolioCreationName?.();
+      return;
+    }
+
+    openAddProductsDrawer({ appState, api, portName: port });
+  }
+
+  function handleAddProductsChange() {
+    const port =
+      String(appState.getSelectedDealsTableName?.() ?? '').trim() ||
+      String(document.getElementById('createdDealsDropdown')?.value ?? '').trim();
+
+    if (!port || port === '__NONE__' || port === '__ALL__' || port === 'Select a table') {
+      alert('Please select a specific portfolio first.');
+      return;
+    }
+
+    openAddProductsDrawer({ appState, api, portName: port });
+  }
+
+  // Prepare a "Calculate Portfolio" run from the Create panel: point the deals
+  // selection at the just-created portfolio so the fair-value flow (and the
+  // auto-switch to the SELECT PORTFOLIO tab) targets it. Returns '' if invalid.
+  function prepareCalculateCreate() {
+    const port =
+      String(getPortfolioCreationName?.() ?? '').trim() ||
+      String(appState.__lastCreatedPortfolioName ?? '').trim();
+
+    if (!port) {
+      alert('Please enter a portfolio name and click "Create Portfolio" first.');
+      focusPortfolioCreationName?.();
+      return '';
+    }
+
+    appState.setSelectedDealsTableName?.(port);
+    return port;
+  }
+
+  function handleFillDetailsCreate() {
+    const port =
+      String(getPortfolioCreationName?.() ?? '').trim() ||
+      String(appState.__lastCreatedPortfolioName ?? '').trim();
+
+    if (!port) {
+      alert('Please enter a portfolio name and click "Create Portfolio" first.');
+      focusPortfolioCreationName?.();
+      return;
+    }
+
+    openFillTradeDetailsDrawer({ appState, api, portName: port });
+  }
+
+  function handleFillDetailsChange() {
+    const port =
+      String(appState.getSelectedDealsTableName?.() ?? '').trim() ||
+      String(document.getElementById('createdDealsDropdown')?.value ?? '').trim();
+
+    if (!port || port === '__NONE__' || port === '__ALL__' || port === 'Select a table') {
+      alert('Please select a specific portfolio first.');
+      return;
+    }
+
+    openFillTradeDetailsDrawer({ appState, api, portName: port });
+  }
+
   function handleAddTradeToNewPortfolio(event) {
     const port_name = getPortfolioCreationName();
 
@@ -285,6 +380,11 @@ export function createDealsPortfolioActions({
     handlePortNameList,
     handleSaveSelection,
     handleDeleteSelection,
+    handleAddProductsCreate,
+    handleAddProductsChange,
+    handleFillDetailsCreate,
+    handleFillDetailsChange,
+    prepareCalculateCreate,
     handleAddTradeToNewPortfolio,
     handleDealsMainData,
     handlePortfolioData,
