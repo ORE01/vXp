@@ -1,5 +1,19 @@
 /* ===== Global: neutrale Basis nur für Tabellen (sicher für Slide-Ins) ===== */
 
+/* --------------------------------------------------------------------------
+   Global scrollbar coloring — theme-aware, via the STANDARD `scrollbar-color`.
+   IMPORTANT: In this Chromium version `var(--token)` does NOT resolve inside
+   `::-webkit-scrollbar` pseudo-elements (thumb/track become transparent ->
+   invisible "white on white" in the light theme). The standard property does
+   resolve custom properties, so we use it everywhere and AVOID `::-webkit-
+   scrollbar` rules for these containers. Note: defining `::-webkit-scrollbar`
+   on an element makes Chromium ignore this standard property for that element,
+   which is exactly why the table containers stayed white before.
+   -------------------------------------------------------------------------- */
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
 .table {
   --tbl-font:     var(--font-family);
   --tbl-fz:       var(--font-size-base);
@@ -27,11 +41,9 @@
   border-radius: 5px;
 }
 
-/* Scrollbar */
-.table .data-container::-webkit-scrollbar             { width: 8px; height: 8px; }
-.table .data-container::-webkit-scrollbar-thumb       { background: var(--scrollbar-thumb); border-radius: 4px; }
-.table .data-container::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-.table .data-container::-webkit-scrollbar-track       { background: var(--scrollbar-track); }
+/* Scrollbar: colored via the global standard `scrollbar-color` above.
+   (No ::-webkit-scrollbar rules here — they would disable that and render an
+   invisible scrollbar, because var() doesn't resolve in the webkit pseudo.) */
 
 /* Tabellen-Grundlayout */
 .table .data-container table {
@@ -108,9 +120,7 @@
   border-radius: 5px;
 }
 
-.table .table-wrapper::-webkit-scrollbar             { width: 8px; }
-.table .table-wrapper::-webkit-scrollbar-thumb       { background: var(--scrollbar-thumb); border-radius: 4px; }
-.table .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+/* Scrollbar: colored via the global standard `scrollbar-color` (no webkit rules). */
 
 /* Form-/Layout-Utilities */
 .table .data-wrapper {

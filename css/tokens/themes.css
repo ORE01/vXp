@@ -9,6 +9,11 @@
    -------------------------------------------------------------------------- */
 :root {
 
+  /* Native UI (Scrollbars, Form-Controls) an das App-Theme koppeln, damit es
+     NICHT der OS-Einstellung folgt. Sonst rendert der Browser im Light-Theme
+     eine dunkle (weiß-transluzente) Default-Scrollbar -> "weiß auf weiß". */
+  color-scheme: dark;
+
   /* --- Surfaces: Hintergrund-Ebenen (dunkel → heller) --- */
   --surface-base:      rgb(70, 69, 69);   /* Seitenhintergrund */
   --surface-raised:    #444;              /* Cards, Panel-Inhalt */
@@ -102,7 +107,21 @@
 /* --------------------------------------------------------------------------
    LIGHT THEME (.light-theme auf <body> oder <html>)
    -------------------------------------------------------------------------- */
+/* Die Viewport-Scrollbar folgt <html>. Die Theme-Klasse liegt aber auf <body>,
+   deshalb das Light-Theme per :has() auf <html> spiegeln (color-scheme + die
+   hellen Scrollbar-Tokens), sonst bleibt der oberste/rechte Balken dunkel. */
+html:has(body.light-theme) {
+  color-scheme: light;
+  --scrollbar-thumb:        #8f8f8f;
+  --scrollbar-thumb-hover:  #6b6b6b;
+  --scrollbar-track:        #e2e2e2;
+}
+
 .light-theme {
+
+  /* Light-Theme -> native Scrollbars/Controls im hellen Stil (dunkler Thumb
+     auf hellem Track), damit sie auf weißem Grund sichtbar sind. */
+  color-scheme: light;
 
   /* --- Surfaces --- */
   --surface-base:      #f5f5f5;

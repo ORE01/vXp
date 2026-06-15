@@ -105,20 +105,23 @@
   background: var(--sb-thumb-hover);
 }
 
-/* Optional: alle großen Data-Container im App-Look halten */
-.data-container {
+/* Optional: alle großen Data-Container im App-Look halten
+   SCOPED auf die Reports-Vorschau — der nackte `.data-container`-Selektor hat
+   die weißen Report-Scrollbar-Farben auf ALLE Tabellen-Container der App
+   übertragen (z.B. SELECT PORTFOLIO -> "weiß auf weiß"). */
+#reportsRiskPreview .data-container {
   scrollbar-width: thin;
   scrollbar-color: var(--sb-thumb) var(--sb-track);
 }
-.data-container::-webkit-scrollbar {
+#reportsRiskPreview .data-container::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-.data-container::-webkit-scrollbar-thumb {
+#reportsRiskPreview .data-container::-webkit-scrollbar-thumb {
   background: var(--sb-thumb);
   border-radius: 8px;
 }
-.data-container::-webkit-scrollbar-thumb:hover {
+#reportsRiskPreview .data-container::-webkit-scrollbar-thumb:hover {
   background: var(--sb-thumb-hover);
 }
 

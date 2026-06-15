@@ -177,20 +177,23 @@
   background: var(--sb-thumb-hover);
 }
 
-/* If you also want your big data containers to be slim: */
-.data-container{
+/* If you also want your big data containers to be slim:
+   SCOPED to the reports preview — a bare `.data-container` selector leaked the
+   white report scrollbar colors onto every table container in the app
+   (e.g. SELECT PORTFOLIO -> "white on white"). */
+#reportsRiskPreview .data-container{
   scrollbar-width: thin;
   scrollbar-color: var(--sb-thumb) var(--sb-track);
 }
-.data-container::-webkit-scrollbar{
+#reportsRiskPreview .data-container::-webkit-scrollbar{
   width: 8px;
   height: 8px;
 }
-.data-container::-webkit-scrollbar-thumb{
+#reportsRiskPreview .data-container::-webkit-scrollbar-thumb{
   background: var(--sb-thumb);
   border-radius: 8px;
 }
-.data-container::-webkit-scrollbar-thumb:hover{
+#reportsRiskPreview .data-container::-webkit-scrollbar-thumb:hover{
   background: var(--sb-thumb-hover);
 }
 
