@@ -140,61 +140,108 @@ function closeOpenPopover(apply) {
   if (apply && typeof onChange === 'function') onChange();
 }
 
+// Sort direction for the value list in the filter popovers. Kept globally so it
+// persists across columns/popovers. 'asc' = A–Z / smallest first (default),
+// 'desc' = Z–A / largest first. Numeric-aware via localeCompare(numeric).
+let _sortDir = 'asc';
+
+function sortFilterValues(values, dir) {
+  const sorted = [...values].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
+  return dir === 'desc' ? sorted.reverse() : sorted;
+}
+
 function openPopover(btn, { tableId, col, allRows, onChange }) {
   closeOpenPopover(false);
 
-  const state = getState(tableId);
-  const selected = state[col.key] || new Set();
+  const st = getState(tableId);
 
-  const values = [...new Set((allRows || []).map((r) => String(r?.[col.key] ?? '')))]
-    .filter((v) => v !== '')
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  const rawValues = (allRows || []).map((r) => String(r?.[col.key] ?? ''));
+  const hasEmpty = rawValues.includes(''); // are there rows with a blank value?
+  const baseValues = [...new Set(rawValues)].filter((v) => v !== '');
 
   const el = document.createElement('div');
   el.className = 'tcf-h-popover';
   el.innerHTML = `
     <input type="text" class="tcf-h-search" placeholder="Search…">
-    <label class="tcf-h-all"><input type="checkbox" class="tcf-h-allcb"${selected.size === 0 ? ' checked' : ''}> ALL</label>
-    <div class="tcf-h-list">
-      ${values.map((v) => `<label><input type="checkbox" class="tcf-h-cb" value="${escapeHtml(v)}"${selected.has(v) ? ' checked' : ''}> ${escapeHtml(formatFilterLabel(col.key, v))}</label>`).join('')}
-    </div>`;
+    <div class="tcf-h-sort">
+      <button type="button" class="tcf-h-sortbtn" data-dir="asc" title="Sort ascending (A–Z / smallest first)">A–Z ↑</button>
+      <button type="button" class="tcf-h-sortbtn" data-dir="desc" title="Sort descending (Z–A / largest first)">Z–A ↓</button>
+    </div>
+    <label class="tcf-h-all"><input type="checkbox" class="tcf-h-allcb"> ALL</label>
+    <div class="tcf-h-list"></div>`;
 
   document.body.appendChild(el);
 
   const rect = btn.getBoundingClientRect();
-  el.style.top = `${Math.max(4, Math.min(rect.bottom + 4, window.innerHeight - 340))}px`;
+  el.style.top = `${Math.max(4, Math.min(rect.bottom + 4, window.innerHeight - 360))}px`;
   el.style.left = `${Math.max(4, Math.min(rect.left, window.innerWidth - 252))}px`;
 
   el.addEventListener('mousedown', (e) => e.stopPropagation());
   el.addEventListener('click', (e) => e.stopPropagation());
 
-  const st = getState(tableId);
+  const listEl = el.querySelector('.tcf-h-list');
+  const searchEl = el.querySelector('.tcf-h-search');
   const allCb = el.querySelector('.tcf-h-allcb');
+
+  const applySearch = () => {
+    const q = searchEl.value.trim().toLowerCase();
+    listEl.querySelectorAll('label').forEach((lab) => {
+      const t = (lab.textContent || '').trim().toLowerCase();
+      lab.style.display = (q === '' || t.includes(q)) ? '' : 'none';
+    });
+  };
+
+  const renderList = () => {
+    const selected = st[col.key] || new Set();
+    const sorted = sortFilterValues(baseValues, _sortDir);
+    // Keep the active filter: checked values stay selected and are grouped at
+    // the top after sorting, so the current selection stays visible.
+    const ordered = selected.size
+      ? [...sorted.filter((v) => selected.has(v)), ...sorted.filter((v) => !selected.has(v))]
+      : sorted;
+    // "(empty)" pinned at the top so blank fields can be filtered too.
+    const vals = hasEmpty ? ['', ...ordered] : ordered;
+    listEl.innerHTML = vals.map((v) => {
+      const label = v === ''
+        ? '<em class="tcf-h-empty">(empty)</em>'
+        : escapeHtml(formatFilterLabel(col.key, v));
+      return `<label><input type="checkbox" class="tcf-h-cb" value="${escapeHtml(v)}"${selected.has(v) ? ' checked' : ''}> ${label}</label>`;
+    }).join('');
+    allCb.checked = selected.size === 0;
+    el.querySelectorAll('.tcf-h-sortbtn').forEach((b) =>
+      b.classList.toggle('is-active', b.dataset.dir === _sortDir)
+    );
+    applySearch();
+  };
+
+  el.querySelectorAll('.tcf-h-sortbtn').forEach((b) => {
+    b.addEventListener('click', () => {
+      _sortDir = b.dataset.dir;
+      renderList();
+    });
+  });
 
   allCb.addEventListener('change', () => {
     if (allCb.checked) {
       delete st[col.key];
-      el.querySelectorAll('.tcf-h-cb').forEach((cb) => { cb.checked = false; });
+      listEl.querySelectorAll('.tcf-h-cb').forEach((cb) => { cb.checked = false; });
     }
   });
 
-  el.querySelector('.tcf-h-list').addEventListener('change', (e) => {
+  listEl.addEventListener('change', (e) => {
     if (!e.target.classList.contains('tcf-h-cb')) return;
-    const chosen = new Set(Array.from(el.querySelectorAll('.tcf-h-cb:checked')).map((cb) => cb.value));
+    const chosen = new Set(Array.from(listEl.querySelectorAll('.tcf-h-cb:checked')).map((cb) => cb.value));
     if (chosen.size) st[col.key] = chosen;
     else delete st[col.key];
     allCb.checked = chosen.size === 0;
   });
 
-  el.querySelector('.tcf-h-search').addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    el.querySelectorAll('.tcf-h-list label').forEach((lab) => {
-      const t = (lab.textContent || '').trim().toLowerCase();
-      lab.style.display = (q === '' || t.includes(q)) ? '' : 'none';
-    });
-  });
+  searchEl.addEventListener('input', applySearch);
 
-  el.querySelector('.tcf-h-search').focus();
+  renderList();
+  searchEl.focus();
   btn.classList.add('is-open');
   _openPopover = { el, btn, onChange };
 }

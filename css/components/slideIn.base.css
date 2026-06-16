@@ -49,7 +49,11 @@
 .table .chart-section.is-open + .chart-section--sub,
 .table .chart-section.is-open + .chart-section--sub + .chart-section--sub,
 .table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub,
-.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub {
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub,
+.table .chart-section.is-open + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub + .chart-section--sub {
   display: block;
 }
 

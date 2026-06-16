@@ -71,6 +71,87 @@ function syncRiskDropdownFromPort() {
   }
 }
 
+// The Calculate buttons in the RISK "Select Portfolio" panel proxy to the
+// existing buttons, so all wiring (radio payloads, py calls, progress) is reused.
+function bindRiskCalcProxies() {
+  const proxy = (srcId, dstId) => {
+    const src = document.getElementById(srcId);
+    if (!src || src.dataset.proxyBound === '1') return;
+    src.dataset.proxyBound = '1';
+    src.addEventListener('click', () => {
+      document.getElementById(dstId)?.click();
+    });
+  };
+  proxy('riskCalcPortfolio', 'fairValueButton'); // py-fairValue
+  proxy('riskCalcMarket', 'mvaRDistButton');     // py-MVaR
+  proxy('riskCalcCredit', 'CVaRButton');         // py-CVaR
+}
+
+// Move the risk INPUT sections out of panel-market/panel-credit into the
+// dedicated "Risk Metrics Input" sub-panels. Done on the browser-parsed nodes,
+// so the (tangled) source markup is irrelevant. Containers keep their IDs, so
+// the renderers (handleMVaRData input, handleCvarInput*View) still target them.
+function relocateRiskInputs() {
+  const mvarInput = document.getElementById('inputMvarContainer')?.closest('.mvar-input');
+  const cfgSec    = document.getElementById('inputCreditVaRConfigContainer')?.closest('.cvar-config-section');
+  const thrSec    = document.getElementById('inputCreditVaRThresholdContainer')?.closest('.threshold-section');
+
+  const marketHost = document.getElementById('riskInputMarketHost');
+  const creditHost = document.getElementById('riskInputCreditHost');
+
+  if (marketHost && mvarInput) marketHost.appendChild(mvarInput);
+  if (creditHost && cfgSec)    creditHost.appendChild(cfgSec);
+  if (creditHost && thrSec)    creditHost.appendChild(thrSec);
+}
+
+// Status dot next to each RISK Calculate button: gray (idle) -> red (running)
+// -> green (done). Driven by the original button's `disabled` state, which the
+// project router sets true while running and false on completion.
+function wireRiskCalcStatus() {
+  const specs = [
+    { proxy: 'riskCalcPortfolio', target: 'fairValueButton', dot: 'riskDotPortfolio' },
+    { proxy: 'riskCalcMarket',    target: 'mvaRDistButton',  dot: 'riskDotMarket' },
+    { proxy: 'riskCalcCredit',    target: 'CVaRButton',      dot: 'riskDotCredit' },
+  ];
+
+  specs.forEach(({ proxy, target, dot }) => {
+    const proxyEl = document.getElementById(proxy);
+    const targetEl = document.getElementById(target);
+    const dotEl = document.getElementById(dot);
+    if (!proxyEl || !targetEl || !dotEl) return;
+    if (targetEl.dataset.riskStatusBound === '1') return;
+    targetEl.dataset.riskStatusBound = '1';
+
+    const label = proxyEl.textContent;
+    let wasBusy = false;
+
+    const update = () => {
+      if (targetEl.disabled) {
+        wasBusy = true;
+        dotEl.classList.remove('is-done');
+        dotEl.classList.add('is-busy');
+        dotEl.title = 'calculating…';
+        proxyEl.disabled = true;
+        proxyEl.textContent = 'Calculating…';
+      } else {
+        proxyEl.disabled = false;
+        proxyEl.textContent = label;
+        if (wasBusy) {
+          dotEl.classList.remove('is-busy');
+          dotEl.classList.add('is-done');
+          dotEl.title = 'done';
+          wasBusy = false;
+        }
+      }
+    };
+
+    new MutationObserver(update).observe(targetEl, {
+      attributes: true,
+      attributeFilter: ['disabled'],
+    });
+  });
+}
+
 export function initializeTabs() {
   const map = {
     'DATA_Tab': 'DATA_Modal',
@@ -115,6 +196,10 @@ export function initializeTabs() {
       syncRiskDropdownFromPort();
     });
   }
+
+  bindRiskCalcProxies();
+  relocateRiskInputs();
+  wireRiskCalcStatus();
 
   // Default to the ANALYSE view.
   setAnalyseView('analyse');

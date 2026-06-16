@@ -264,10 +264,6 @@ Feature:    Wenn es nur in einem Panel gilt
         Market &amp; Credit Risk for the selected portfolio &mdash; whole portfolio,
         not affected by the table filter.
       </p>
-      <div class="risk-port-select view-risk-only">
-        <label for="createdPortDropdownRisk">Portfolio:</label>
-        <select id="createdPortDropdownRisk" class="deals-dropdown"></select>
-      </div>
     </div>
 
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
@@ -349,6 +345,50 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- Market Risk & Credit Risk triggers — shown only in the RISK view
          (modal class view-risk); hidden in the ANALYSE view. -->
+    <!--   Risk Metrics Input   (Haupt-Trigger) + Sub-Trigger -->
+    <div class="chart-section risk-section">
+      <button class="section-trigger" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
+        <span class="section-header">Risk Metrics Input</span>
+        <span class="chev"></span>
+      </button>
+    </div>
+
+        <!-- Input Market Risk (sub-trigger) + Select Model + Factor Mapping -->
+        <div class="chart-section chart-section--sub risk-section">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
+            <span class="section-header">Input Market Risk</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
+        <div class="chart-section chart-section--sub risk-section risk-deep">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
+            <span class="section-header">Select Model</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
+        <div class="chart-section chart-section--sub risk-section risk-deep">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-mvar-factor-series-map" aria-controls="panel-mvar-factor-series-map" aria-expanded="false">
+            <span class="section-header">Factor Mapping</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
+        <div class="chart-section chart-section--sub risk-section">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
+            <span class="section-header">Input Credit Risk</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
+        <div class="chart-section chart-section--sub risk-section">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-select" aria-controls="panel-risk-select" aria-expanded="false">
+            <span class="section-header">Select Portfolio</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
     <!--   Market Risk   Trigger (Hauptpunkt) -->
     <div class="chart-section risk-section">
       <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
@@ -357,25 +397,14 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
-        <!-- MVaR Factor Mapping   Unterpunkt -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub"
-                  data-panel="panel-mvar-factor-series-map"
-                  aria-controls="panel-mvar-factor-series-map"
-                  aria-expanded="false"
-                  style="max-width: 184px;">
-            <span class="section-header">Factor Mapping</span>
-            <span class="chev"></span>
-          </button>
-        </div>
+        <!-- Factor Mapping moved under Risk Metrics Input → Input Market Risk -->
 
         <!-- Market Factor VaR   Unterpunkt -->
         <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-mvar"
                   aria-controls="panel-mvar"
-                  aria-expanded="false"
-                  style="max-width: 184px;">
+                  aria-expanded="false">
             <span class="section-header">Factors</span>
             <span class="chev"></span>
           </button>
@@ -386,8 +415,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-mvar-products"
                   aria-controls="panel-mvar-products"
-                  aria-expanded="false"
-                  style="max-width: 184px;">
+                  aria-expanded="false">
             <span class="section-header">Products</span>
             <span class="chev"></span>
           </button>
@@ -649,6 +677,52 @@ Feature:    Wenn es nur in einem Panel gilt
 
 
 
+
+<!-- Panel: RISK Input Market (inputMvarContainer is moved here at runtime) -->
+<div id="panel-risk-input-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-input-market-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-risk-input-market-title" class="sub-panel-title">SELECT MODEL</div>
+    <button class="sub-panel-close" data-close="panel-risk-input-market" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body" id="riskInputMarketHost"></div>
+</div>
+
+<!-- Panel: RISK Input Credit (config + threshold sections moved here at runtime) -->
+<div id="panel-risk-input-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-input-credit-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-risk-input-credit-title" class="sub-panel-title">INPUT CREDIT RISK</div>
+    <button class="sub-panel-close" data-close="panel-risk-input-credit" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body" id="riskInputCreditHost"></div>
+</div>
+
+<!-- Panel: RISK Select Portfolio (Portfolio-Auswahl + Calculate-Buttons; RISK-View) -->
+<div id="panel-risk-select" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-select-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-risk-select-title" class="sub-panel-title">SELECT PORTFOLIO</div>
+    <button class="sub-panel-close" data-close="panel-risk-select" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body">
+    <div class="risk-select-form">
+      <div class="risk-port-select">
+        <label for="createdPortDropdownRisk">Portfolio:</label>
+        <select id="createdPortDropdownRisk" class="deals-dropdown"></select>
+      </div>
+      <div class="risk-calc-row">
+        <button type="button" id="riskCalcPortfolio" class="edit-button">Calculate Portfolio</button>
+        <span class="risk-calc-dot" id="riskDotPortfolio" title="not calculated"></span>
+      </div>
+      <div class="risk-calc-row">
+        <button type="button" id="riskCalcMarket" class="edit-button">Calculate Market Risk</button>
+        <span class="risk-calc-dot" id="riskDotMarket" title="not calculated"></span>
+      </div>
+      <div class="risk-calc-row">
+        <button type="button" id="riskCalcCredit" class="edit-button">Calculate Credit Risk</button>
+        <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Panel: Market VaR -->
 <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>

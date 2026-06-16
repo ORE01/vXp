@@ -9,6 +9,28 @@
                  Performance, Liquidity, Performance History) + the analyse title.
    ============================================================ */
 #ANALYSE_Modal.view-analyse .risk-section { display: none; }
+
+/* Trigger list alignment: main triggers fill the full trigger width; sub
+   triggers are clearly indented at the FRONT (margin on the button itself) and
+   shortened so their RIGHT edge lines up with the mains. The indent lives on
+   the button (not the wrapper) so it renders reliably; border-box keeps
+   padding/border from shifting the right edge. */
+#ANALYSE_Modal .section-trigger {
+  box-sizing: border-box;
+  width: var(--trigger-max-width);
+  max-width: var(--trigger-max-width);
+}
+/* Neutralise the wrapper indents so the button margin isn't doubled. */
+#ANALYSE_Modal .chart-section--sub { margin-left: 0; }
+#ANALYSE_Modal .section-trigger--sub {
+  margin-left: 18px;
+  width: calc(var(--trigger-max-width) - 18px);
+  max-width: none;
+}
+#ANALYSE_Modal .chart-section--sub.risk-deep .section-trigger--sub {
+  margin-left: 36px;
+  width: calc(var(--trigger-max-width) - 36px);
+}
 #ANALYSE_Modal.view-risk .chart-section:not(.risk-section) { display: none; }
 #ANALYSE_Modal.view-analyse .view-risk-only { display: none; }
 #ANALYSE_Modal.view-risk .view-analyse-only { display: none; }
@@ -25,6 +47,54 @@
   font-size: 13px;
 }
 #ANALYSE_Modal .risk-port-select .deals-dropdown { min-width: 200px; }
+
+/* RISK "Select Portfolio" panel: dropdown + Calculate buttons stacked. */
+#ANALYSE_Modal #panel-risk-select .risk-select-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  max-width: 320px;
+}
+#ANALYSE_Modal #panel-risk-select .risk-port-select {
+  margin-bottom: 4px;
+}
+/* Each Calculate button sits in a row with a status dot to its right. */
+#ANALYSE_Modal #panel-risk-select .risk-calc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#ANALYSE_Modal #panel-risk-select .risk-calc-row .edit-button {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+/* Status dot: gray = not calculated, red = calculating, green = done. */
+.risk-calc-dot {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  box-shadow: 0 0 0 1px var(--border-subtle) inset;
+}
+.risk-calc-dot.is-busy {
+  background: var(--danger);
+  animation: riskDotPulse 1s ease-in-out infinite;
+}
+.risk-calc-dot.is-done { background: var(--accent); }
+@keyframes riskDotPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .35; }
+}
+
+/* Risk Metrics Input panels: bodies host the relocated input sections. */
+#ANALYSE_Modal #panel-risk-input-market .sub-panel-body,
+#ANALYSE_Modal #panel-risk-input-credit .sub-panel-body {
+  padding: 16px 20px;
+  overflow: auto;
+}
 
 
 /* ============================================================

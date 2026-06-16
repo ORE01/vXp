@@ -12,14 +12,16 @@
    1) INPUT OBEN
    =========================== */
 
-#panel-market .mvar-input{
+/* Input section is moved (at runtime) into #panel-risk-input-market, so these
+   are scoped by class/ID instead of #panel-market. */
+.mvar-input{
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 /* Tabelle mit Intervallen */
-#panel-market #inputMvarContainer{
+#inputMvarContainer{
   flex: 1 1 auto;
   min-width: 320px;
   max-height: 260px;
@@ -33,32 +35,32 @@
 }
 
 /* Tabellen im Input-Container */
-#panel-market #inputMvarContainer table{
+#inputMvarContainer table{
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
 
-#panel-market #inputMvarContainer th,
-#panel-market #inputMvarContainer td{
+#inputMvarContainer th,
+#inputMvarContainer td{
   padding: 4px 8px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-#panel-market #inputMvarContainer th{
+#inputMvarContainer th{
   text-align: left;
   opacity: 0.8;
 }
 
 
 /* Buttons UNTER der Tabelle, LINKS bündig */
-#panel-market .mvar-input-buttons{
+.mvar-input-buttons{
   display: flex;
   justify-content: flex-start;
   gap: 8px;
 }
 
-#panel-market .mvar-input-buttons .edit-button{
+.mvar-input-buttons .edit-button{
   white-space: nowrap;
 }
 

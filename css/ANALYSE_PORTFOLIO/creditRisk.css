@@ -249,17 +249,19 @@
   text-overflow: ellipsis;
 }
 
-/* ➕ General Settings + Threshold Settings schmäler machen */
-#panel-credit .cvar-config-section,
-#panel-credit .threshold-section{
+/* ➕ General Settings + Threshold Settings schmäler machen.
+   These sections are moved (at runtime) into #panel-risk-input-credit, so they
+   are scoped by class instead of #panel-credit. */
+.cvar-config-section,
+.threshold-section{
   width: 100%;
   max-width: 1000px;          /* hier stellst du die max. Breite ein */
   margin: 0 0 16px 0;
 }
 
 /* Data-Container darin nutzen die volle Blockbreite */
-#panel-credit .cvar-config-section .data-container,
-#panel-credit .threshold-section .data-container{
+.cvar-config-section .data-container,
+.threshold-section .data-container{
   width: 100%;
 }
 

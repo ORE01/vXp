@@ -72,17 +72,26 @@ export function createPythonExecutionReceivers(ctx) {
     ).trim();
   }
 
-  // Switch to the ANALYSE PORTFOLIO tab, open the "Select Portfolio" sub-panel
-  // and select the portfolio in its dropdown, so the freshly calculated results
-  // become visible there.
+  // After a portfolio calc, switch to the ANALYSE PORTFOLIO tab + "Select
+  // Portfolio" sub-panel so the results become visible there — UNLESS the user
+  // triggered it from the RISK view (Risk Metrics Input → Select Portfolio), in
+  // which case we stay in RISK so the flow there isn't interrupted.
   function activatePortfolioResultTab(port_name) {
-    document.getElementById('ANALYSE_Tab')?.click();
+    const analyseModal = document.getElementById('ANALYSE_Modal');
+    const inRiskView =
+      !!analyseModal &&
+      analyseModal.classList.contains('view-risk') &&
+      analyseModal.style.visibility !== 'hidden';
 
-    // Open the Select Portfolio sub-panel (only if not already open, so a
-    // re-calculation doesn't toggle it shut).
-    const selectPanel = document.getElementById('panel-selectPort');
-    if (selectPanel && (selectPanel.hidden || !selectPanel.classList.contains('open'))) {
-      document.querySelector('.section-trigger[data-panel="panel-selectPort"]')?.click();
+    if (!inRiskView) {
+      document.getElementById('ANALYSE_Tab')?.click();
+
+      // Open the Select Portfolio sub-panel (only if not already open, so a
+      // re-calculation doesn't toggle it shut).
+      const selectPanel = document.getElementById('panel-selectPort');
+      if (selectPanel && (selectPanel.hidden || !selectPanel.classList.contains('open'))) {
+        document.querySelector('.section-trigger[data-panel="panel-selectPort"]')?.click();
+      }
     }
 
     // Persist the wanted selection in the dropdown-engine config so any later

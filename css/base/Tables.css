@@ -82,12 +82,35 @@ th.tcf-filtered {
 }
 .tcf-h-popover .tcf-h-search {
   width: 100%;
+  box-sizing: border-box;   /* width incl. padding+border -> no overflow right */
   padding: 5px 7px;
   margin-bottom: 6px;
   background: var(--surface-card);
   color: var(--text-bright);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
+}
+.tcf-h-popover .tcf-h-sort {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.tcf-h-popover .tcf-h-sortbtn {
+  flex: 1 1 0;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tcf-h-popover .tcf-h-sortbtn:hover { background: var(--hover-bg); }
+.tcf-h-popover .tcf-h-sortbtn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 .tcf-h-popover .tcf-h-all {
   display: flex;
@@ -112,6 +135,7 @@ th.tcf-filtered {
   cursor: pointer;
 }
 .tcf-h-popover .tcf-h-list label:hover { background: var(--hover-bg); }
+.tcf-h-popover .tcf-h-empty { color: var(--text-muted); font-style: italic; }
 
 .table {
   --tbl-font:     var(--font-family);
