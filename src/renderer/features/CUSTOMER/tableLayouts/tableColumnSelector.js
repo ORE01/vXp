@@ -40,12 +40,12 @@ function updateLayoutStatus(container, tableId) {
   const dirty = isTableLayoutDirty(tableId);
 
   if (dirty) {
-    statusElement.textContent = 'Ungespeicherte Änderungen';
+    statusElement.textContent = 'Unsaved changes';
     statusElement.style.color = '#b45309';
     return;
   }
 
-  statusElement.textContent = 'Gespeichert';
+  statusElement.textContent = 'Saved';
   statusElement.style.color = '#166534';
 }
 
@@ -100,23 +100,23 @@ const selected =
       style="margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;"
     >
       <button type="button" data-action="select-all">
-        Alle auswählen
+        Select all
       </button>
 
       <button type="button" data-action="select-none">
-        Alle abwählen
+        Deselect all
       </button>
 
       <button type="button" data-action="select-default">
-        Standard
+        Default
       </button>
 
       <button type="button" data-action="save-layout">
-        Layout speichern
+        Save layout
       </button>
 
       <button type="button" data-action="discard-layout">
-        Änderungen verwerfen
+        Discard changes
       </button>
     </div>
 

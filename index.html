@@ -231,9 +231,9 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
     <div class="tab">
-      <button class="tablinks" id="CREATE_PORTFOLIO_Tab">CREATE PORTFOLIO</button>
-      <button class="tablinks" id="PORT_Tab">SELECT PORTFOLIO</button>
+      <button class="tablinks" id="CREATE_PORTFOLIO_Tab">PORTFOLIO</button>
       <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button>
+      <button class="tablinks" id="RISK_Tab">RISK</button>
       <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button>
       <button class="tablinks" id="REPORTS_Tab">REPORTS</button>
       <button class="tablinks" id="ISSUER_Tab">ISSUER</button>
@@ -246,103 +246,8 @@ Feature:    Wenn es nur in einem Panel gilt
 
 
 
-<!-- Modal: PORT / ANALYSE PORTFOLIO -->
-<div id="PORT_Modal" class="table">
-  <div class="table-content">
-    <span class="close">&times;</span>
-
-    <!-- Kopfbereich bleibt wie gehabt -->
-    <div class="portfolio-info">
-      <h2 class="panel-title">PORTFOLIO</h2>
-
-      <div class="created-tables-dropdown portfolio-select-spacing" style="display:flex; margin-bottom:10px;">
-        <select id="createdPortDropdown0" class="deals-dropdown"></select>
-      </div>
-
-      <div class="button-wrapper">
-        <button id="fairValueButton" class="edit-button">Recalculate Portfolio</button>
-      </div>
-    </div>
-
-    <!-- NEU: 2-Spalten-Layout -->
-    <div class="port-layout">
-      <!-- LINKE SPALTE: Agg-Container -->
-      <aside class="port-left">
-        <div class="data-container" id="portAggDataContainer3"></div>
-
-        <div>
-          <p style="margin:6px 0 4px;">filtered:</p>
-          <div class="data-container" id="portAggDataContainer0"></div>
-        </div>
-      </aside>
-
-      <!-- RECHTE SPALTE: Filterleiste + Tabelle -->
-      <section class="port-right">
-        <!-- Controls-Bar: Filter + Reset -->
-        <div class="controls-bar">
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Issuers:</p>
-              <select id="portIssuerDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Product Ids:</p>
-              <select id="portProdIdDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Coupon Type:</p>
-              <select id="portCouponTypeDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Category:</p>
-              <select id="portCategoryDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="portRatingDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rank:</p>
-              <select id="portRankDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Maturity Year:</p>
-              <select id="portMaturityDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Depotbank:</p>
-              <select id="portDepotbankDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Country:</p>
-              <select id="portCountryDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Region:</p>
-              <select id="portRegionDropdown" multiple class="select-dropdown"></select>
-            </div>
-
-          </div>
-
-          <!-- Reset rechts -->
-          <button id="portResetFiltersButton"
-                  class="reset-FiltersButton"
-                  type="button"
-                  title="Reset filters"
-                  aria-label="Reset filters"></button>
-        </div>
-
-      <!-- Spaltenauswahl -->
-        <div class="table-column-selector-wrap">
-          <div id="portColumnSelector"></div>
-        </div>
-
-        <!-- Tabelle -->
-        <div class="data-container" id="portDataContainer0"></div>
-      </section>
-    </div>
-  </div>
-</div>
+<!-- SELECT PORTFOLIO content lives in the PORTFOLIO tab as the
+     "Select Portfolio" sub-panel (#panel-selectPort) -->
 
 
 
@@ -353,10 +258,26 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="panel-title">ANALYSE PORTFOLIO</h2>
+      <h2 class="panel-title view-analyse-only">ANALYSE PORTFOLIO</h2>
+      <h2 class="panel-title view-risk-only">RISK</h2>
+      <p class="risk-view-note view-risk-only" style="margin:4px 0 8px; color: var(--text-muted); font-size: 13px;">
+        Market &amp; Credit Risk for the selected portfolio &mdash; whole portfolio,
+        not affected by the table filter.
+      </p>
+      <div class="risk-port-select view-risk-only">
+        <label for="createdPortDropdownRisk">Portfolio:</label>
+        <select id="createdPortDropdownRisk" class="deals-dropdown"></select>
+      </div>
     </div>
 
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
+
+<!-- Select Portfolio Trigger (erster Einstieg: Portfolio wählen, dann Auswertungen) -->
+<div class="chart-section">
+  <button class="section-trigger" data-panel="panel-selectPort" aria-controls="panel-selectPort" aria-expanded="false">
+    <span class="section-header">Select Portfolio</span><span class="chev"></span>
+  </button>
+</div>
 
 <!-- Portfolio Breakdown Trigger -->
 <div class="chart-section">
@@ -426,17 +347,18 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
+    <!-- Market Risk & Credit Risk triggers — shown only in the RISK view
+         (modal class view-risk); hidden in the ANALYSE view. -->
     <!--   Market Risk   Trigger (Hauptpunkt) -->
-    <div class="chart-section">
+    <div class="chart-section risk-section">
       <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
         <span class="section-header">Market Risk</span>
         <span class="chev"></span>
       </button>
     </div>
 
-
         <!-- MVaR Factor Mapping   Unterpunkt -->
-        <div class="chart-section chart-section--sub">
+        <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-mvar-factor-series-map"
                   aria-controls="panel-mvar-factor-series-map"
@@ -448,7 +370,7 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
 
         <!-- Market Factor VaR   Unterpunkt -->
-        <div class="chart-section chart-section--sub">
+        <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-mvar"
                   aria-controls="panel-mvar"
@@ -460,7 +382,7 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
 
         <!-- Market Product VaR   Unterpunkt -->
-        <div class="chart-section chart-section--sub">
+        <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-mvar-products"
                   aria-controls="panel-mvar-products"
@@ -471,9 +393,8 @@ Feature:    Wenn es nur in einem Panel gilt
           </button>
         </div>
 
-
         <!--   Market Sensitivities   Unterpunkt von Market Risk -->
-        <div class="chart-section chart-section--sub">
+        <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
             <span class="section-header">Sensitivities</span>
             <span class="chev"></span>
@@ -481,7 +402,7 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
 
     <!--   Credit Risk   Trigger -->
-    <div class="chart-section no-after-divider">
+    <div class="chart-section no-after-divider risk-section">
       <button class="section-trigger" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
         <span class="section-header">Credit Risk</span>
         <span class="chev"></span>
@@ -489,7 +410,7 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
         <!--   EAD   Sub-Trigger -->
-        <div class="chart-section chart-section--sub">
+        <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-EAD"
                   aria-controls="panel-EAD"
@@ -500,7 +421,7 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
 
         <!--   CVaR   Sub-Trigger -->
-        <div class="chart-section chart-section--sub">
+        <div class="chart-section chart-section--sub risk-section">
           <button class="section-trigger section-trigger--sub"
                   data-panel="panel-cvar"
                   aria-controls="panel-cvar"
@@ -598,6 +519,66 @@ Feature:    Wenn es nur in einem Panel gilt
     <div id="subPanelBackdrop_ANALYSE" class="sub-panel-backdrop" hidden></div>
 
     <!-- ========= PANELS ==========================================================================================PANELS=========================================== -->
+
+<!-- Panel: SELECT PORTFOLIO (Einstieg: Portfolio wählen, darunter die Auswertungen) -->
+<div id="panel-selectPort" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-selectPort-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-selectPort-title" class="sub-panel-title">SELECT PORTFOLIO</div>
+    <button class="sub-panel-close" data-close="panel-selectPort" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="portfolio-info">
+      <div class="created-tables-dropdown portfolio-select-spacing" style="display:flex; margin-bottom:10px;">
+        <select id="createdPortDropdown0" class="deals-dropdown"></select>
+      </div>
+
+      <div class="button-wrapper">
+        <button id="fairValueButton" class="edit-button">Recalculate Portfolio</button>
+      </div>
+    </div>
+
+    <!-- Layout: Summen-Karten oben nebeneinander, Toolbar, Tabelle in voller Breite -->
+    <div class="port-layout">
+      <!-- Summen-Karten nebeneinander -->
+      <div class="port-summary">
+        <div class="port-agg-card">
+          <p class="port-agg-title">Portfolio Total</p>
+          <div class="data-container" id="portAggDataContainer3"></div>
+        </div>
+        <div class="port-agg-card">
+          <p class="port-agg-title">Filtered</p>
+          <div class="data-container" id="portAggDataContainer0"></div>
+        </div>
+      </div>
+
+      <!-- Toolbar: Columns + Reset rechtsbündig (Filter leben in den Headern) -->
+      <div class="port-toolbar">
+        <button id="portColumnsBtn" type="button" class="edit-button">Columns</button>
+        <button id="portResetFiltersButton"
+                class="reset-FiltersButton"
+                type="button"
+                title="Reset filters"
+                aria-label="Reset filters"></button>
+      </div>
+
+      <!-- Tabelle in voller Breite -->
+      <div class="data-container" id="portDataContainer0"></div>
+
+      <!-- Drawer: Spaltenauswahl (Container wird von PORT.js befüllt) -->
+      <aside id="portColumnDrawer" class="column-drawer">
+        <div class="column-drawer-header">
+          <div class="column-drawer-header-text">
+            <div class="column-drawer-eyebrow">Column Selection</div>
+            <h2 class="column-drawer-title">Portfolio Table</h2>
+          </div>
+          <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+        </div>
+        <div id="portColumnSelector" class="column-drawer-body"></div>
+      </aside>
+    </div>
+  </div>
+</div>
 
 <!-- Panel: Breakdown -->
 <div id="panel-breakdown"
@@ -1477,6 +1458,7 @@ Feature:    Wenn es nur in einem Panel gilt
   </div><!-- /table-content -->
 </div>
 
+
 <!-- Modal: Create Portfolio -->
 <div id="CREATE_PORTFOLIO_Modal" class="table">
   <div class="table-content">
@@ -1603,7 +1585,6 @@ Feature:    Wenn es nur in einem Panel gilt
           </p>
 
           <div class="button-wrapper">
-            <button id="dealsAddButton" class="edit-button">ADD</button>
             <button id="addProductsButtonChange" class="edit-button">Add Products</button>
             <button id="fillDetailsButtonChange" class="edit-button">Fill Trade Details</button>
           </div>
@@ -2695,16 +2676,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
       <div class="sub-panel-body">
         <div class="cp-card">
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Issuers:</p>
-              <select id="issuerIssuerDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="issuerRatingDropdown" multiple class="select-dropdown"></select>
-            </div>
-          </div>
+          <!-- Filters now live in the column headers (funnel icons) -->
 
 <p style="margin:10px 0;">
 <button id="issuerResetFiltersButton"
@@ -2716,10 +2688,23 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <div class="button-wrapper">
             <button id="issuerAddButton" class="edit-button">ADD</button>
+            <button id="issuerColumnsBtn" type="button" class="edit-button">Columns</button>
           </div>
         </div>
 
         <div class="data-container cp-table" id="issuerDataContainer"></div>
+
+        <!-- Drawer: column selection (filled by renderConfigurableTable) -->
+        <aside id="issuerColumnDrawer" class="column-drawer">
+          <div class="column-drawer-header">
+            <div class="column-drawer-header-text">
+              <div class="column-drawer-eyebrow">Column Selection</div>
+              <h2 class="column-drawer-title">Issuer Table</h2>
+            </div>
+            <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+          </div>
+          <div id="issuerColumnSelector" class="column-drawer-body"></div>
+        </aside>
       </div>
     </div>
   </div>
@@ -2778,32 +2763,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
       <div class="sub-panel-body">
         <div class="cp-card">
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Issuers:</p>
-              <select id="prodIssuerDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Product Ids:</p>
-              <select id="prodProdIdDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Coupon Type:</p>
-              <select id="prodCouponTypeDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rating:</p>
-              <select id="prodRatingProdDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Maturity:</p>
-              <select id="prodMaturityDropdown" multiple class="select-dropdown"></select>
-            </div>
-            <div>
-              <p>Select Rank:</p>
-              <select id="prodRankDropdown" multiple class="select-dropdown"></select>
-            </div>
-          </div>
+          <!-- Filters now live in the column headers (funnel icons) -->
 
 <p style="margin:10px 0;">
 <button id="prodResetFiltersButton"
@@ -2816,10 +2776,23 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <div class="button-wrapper">
             <button id="prodAddButton" class="edit-button">ADD</button>
+            <button id="prodColumnsBtn" type="button" class="edit-button">Columns</button>
           </div>
         </div>
 
         <div class="data-container cp-table" id="prodDataContainer"></div>
+
+        <!-- Drawer: column selection (filled by renderConfigurableTable) -->
+        <aside id="prodColumnDrawer" class="column-drawer">
+          <div class="column-drawer-header">
+            <div class="column-drawer-header-text">
+              <div class="column-drawer-eyebrow">Column Selection</div>
+              <h2 class="column-drawer-title">Products Table</h2>
+            </div>
+            <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+          </div>
+          <div id="prodColumnSelector" class="column-drawer-body"></div>
+        </aside>
       </div>
     </div>
 
@@ -3489,20 +3462,28 @@ Feature:    Wenn es nur in einem Panel gilt
   <!-- Modal - Edit Row -->
   <div id="modal" class="modal">
     <div class="modal-content draggable">
-      <span class="close">&times;</span>
-      <h2>Edit Row</h2>
-      <form id="editForm">
-        
-        <label for="issuerSelect">Select Issuer:</label>
-        <select id="issuerSelect" class="input-field"></select>
-        
-      </form>
-      <div id="modalBody">
-        
+      <div class="modal-drawer-header">
+        <h2>Edit Row</h2>
+        <span class="close">&times;</span>
       </div>
-      <button id="saveButton">Save</button>
-      <button id="eraseButton">Delete</button>
-      <div id="errorMessage"></div>
+
+      <div class="modal-drawer-body">
+        <form id="editForm">
+
+          <label for="issuerSelect">Select Issuer:</label>
+          <select id="issuerSelect" class="input-field"></select>
+
+        </form>
+        <div id="modalBody">
+
+        </div>
+      </div>
+
+      <div class="modal-drawer-footer">
+        <button id="saveButton" class="edit-button">Save</button>
+        <button id="eraseButton" class="edit-button delete-button">Delete</button>
+        <div id="errorMessage"></div>
+      </div>
     </div>
   </div>
 

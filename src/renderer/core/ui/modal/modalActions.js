@@ -145,7 +145,10 @@ function displayModal(actionType, rowIndex = null) {
   const closeButton = modal.querySelector('.close');
   if (closeButton) closeButton.onclick = closeModal;
 
-  if (modalContent) makeModalDraggable(modalContent);
+  // #modal is now presented as a fixed right-side drawer (see modalDark.css),
+  // so it must not be draggable — dragging would set inline top/left and break
+  // the drawer positioning.
+  // if (modalContent) makeModalDraggable(modalContent);
 }
 
 function setupModalFields(actionType, data, rowIndex, selectedTableName) {

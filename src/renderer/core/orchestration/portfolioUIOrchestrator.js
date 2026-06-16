@@ -13,6 +13,11 @@ import { handleLossIssuerMainData } from '../../features/ANALYSE_PORTFOLIO/CREDI
 import { createComparisonCharts } from '../../features/COMPARE_PORTFOLIOS/COMP.js';
 import { formatPercentage } from '../../utils/tableCellFormats.js';
 import { handleDealsData } from '../../features/portfolio/tradeTableRenderer.js';
+import { applyColumnFilters } from '../../features/CUSTOMER/tableLayouts/tableColumnFilters.js';
+
+// Table id of the SELECT PORTFOLIO table whose per-column header filters should
+// also drive the analyse sections (Breakdown / Performance / Liquidity / sums).
+const PORT_TABLE_ID = 'portTable0';
 
 
 export function createPortfolioUIOrchestrator({ appState } = {}) {
@@ -231,9 +236,17 @@ export function createPortfolioUIOrchestrator({ appState } = {}) {
     const port_name = appState.getSelectedPortTableName?.();
     if (!port_name) return;
 
+    // Rows of the selected portfolio (full set -> drives the table, whose
+    // header-filter popovers must keep listing ALL values).
     const filteredData = data.filter(
       (item) => String(item?.port_name) === String(port_name)
     );
+
+    // Same rows, additionally narrowed by the SELECT PORTFOLIO table's
+    // per-column header filters. Drives the analyse sections (Breakdown /
+    // Performance / Liquidity / sums) and the "Filtered" summary box so they
+    // follow the filter. Empty filter state -> no-op (full portfolio).
+    const analyseData = applyColumnFilters(filteredData, PORT_TABLE_ID);
 
     const riskRowsAll = appState.getPortfolioRiskSensitivitiesData?.() || [];
 
@@ -297,6 +310,9 @@ const filteredDataWithRisk = filteredData.map(row => {
   };
 });
 
+// Risk-merged rows narrowed by the header filters (for the yield/summary view).
+const analyseDataWithRisk = applyColumnFilters(filteredDataWithRisk, PORT_TABLE_ID);
+
 console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
   port_name,
   filteredRows: filteredData.length,
@@ -338,7 +354,9 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
     const elementId = `portDataContainer${index}`;
 
     // Sofort: leichte Basisdaten
-    handlePortAggData(filteredData, index, port_name);
+    // "Filtered" summary box follows the header filters; the TABLE gets the full
+    // port rows so its header-filter popovers keep all values.
+    handlePortAggData(analyseData, index, port_name);
     handlePortProdData(filteredData, index, port_name);
 
     const mvarData = appState.getAllMvarData?.() || [];
@@ -382,11 +400,12 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
     );
 
     const renderTasks = [
-      () => handleLiquidityData(filteredData, { appState }),
+      // Analyse sections follow the header filters (analyseData / -WithRisk).
+      () => handleLiquidityData(analyseData, { appState }),
 
-      () => handleSummaryNotionalData(filteredData, index, port_name),
+      () => handleSummaryNotionalData(analyseData, index, port_name),
 
-      () => handleSummaryYieldData(filteredDataWithRisk, index, port_name),
+      () => handleSummaryYieldData(analyseDataWithRisk, index, port_name),
 
       () => handleSummaryMarketRiskData(port_name, scenario_name, '2021-01-03'),
 

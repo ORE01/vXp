@@ -4,6 +4,8 @@ import { appState } from '../../renderer.js';
 import { openProdEditorByProdId } from '../../utils/linksToTables.js';
 import { updateProductCSWarningUI } from '../../core/ui/warnings.js';
 import { handleStructureTimelineModal } from './productSetupModal.js';
+import { renderConfigurableTable } from '../../core/ui/tables/configurableTable.js';
+import { clearColumnFilters } from '../CUSTOMER/tableLayouts/tableColumnFilters.js';
 
 
 
@@ -29,73 +31,95 @@ const PROD_TABLE_COLUMNS = [
 
 let prodData;
 
-export function renderProductTable(filtersConfig) {
+const PROD_TABLE_ID = 'prodTable0';
+
+export function renderProductTable() {
   const prodDataContainer = document.getElementById('prodDataContainer');
   if (!prodDataContainer) return;
 
-  // Daten holen
   prodData = appState.getProdData();
   if (!Array.isArray(prodData) || prodData.length === 0) {
-    console.warn('renderProductTable: prodData leer/ungÃ¼ltig');
     prodDataContainer.innerHTML = '';
     return;
   }
 
-  // Spalten filtern fÃ¼r Anzeige
-  const filteredProdData = filterColumnsInData(
-    filterProdData(prodData, filtersConfig),
-    PROD_TABLE_COLUMNS
-  );
+  bindProdResetFiltersOnce();
+  bindProdAddButtonOnce();
 
-  appState.setFilteredProdData(filteredProdData);
-  updateProductCSWarningUI?.(filteredProdData);
+  // Only the product display columns are offered (selector/filter use this set).
+  const rows = filterColumnsInData(prodData, PROD_TABLE_COLUMNS);
+  appState.setFilteredProdData(rows);
+  try { updateProductCSWarningUI?.(rows); } catch {}
 
-  // Render Tabelle
-  prodDataContainer.innerHTML = processData(filteredProdData, 'v_PRODUCTS_APP');
+  renderConfigurableTable({
+    tableId: PROD_TABLE_ID,
+    rows,
 
-  // Tooltips
-  try {
-    addTooltipsForTruncatedText(prodDataContainer);
-  } catch (e) {
-    console.warn('Tooltips fail:', e);
-  }
+    tableContainerId: 'prodDataContainer',
+    selectorContainerId: 'prodColumnSelector',
+    selectedTableName: 'v_PRODUCTS_APP',
 
-  // PROD_ID zu Buttons machen
-  makeProdIdButtons(prodDataContainer);
+    // PROD_ID is the identity + edit link -> always first, not toggleable.
+    lockedColumns: ['PROD_ID'],
 
-  // Delegierter Klick-Listener fÃ¼r PROD_ID-Buttons (einmalig)
-  if (prodDataContainer.dataset.prodLinksBound !== '1') {
-    prodDataContainer.dataset.prodLinksBound = '1';
-    prodDataContainer.addEventListener('click', (ev) => {
-      const btn = ev.target.closest('.prod-id-link');
-      if (!btn) return;
+    defaultVisibleColumns: PROD_TABLE_COLUMNS,
 
-      ev.preventDefault();
-      ev.stopPropagation();
+    sorting: { enabled: true },
+    filtering: { enabled: true, mode: 'header' },
 
-      const prodId = (btn.dataset.prodId || btn.textContent || '').trim();
-      if (prodId) openProdEditorByProdId(prodId);
-    });
-  }
+    onLayoutChange: () => renderProductTable(),
 
-  // Add-Button: products now use the new Product Editor / Structure Timeline flow
+    afterRender: (container) => {
+      try { addTooltipsForTruncatedText(container); } catch (e) { console.warn('Tooltips fail:', e); }
+      makeProdIdButtons(container);
+      bindProdIdLinkClicks(container);
+    },
+  });
+}
+
+function bindProdIdLinkClicks(container) {
+  if (container.dataset.prodLinksBound === '1') return;
+  container.dataset.prodLinksBound = '1';
+
+  container.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.prod-id-link');
+    if (!btn) return;
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const prodId = (btn.dataset.prodId || btn.textContent || '').trim();
+    if (prodId) openProdEditorByProdId(prodId);
+  });
+}
+
+function bindProdAddButtonOnce() {
   const prodAddButton = document.getElementById('prodAddButton');
-  if (prodAddButton && !prodAddButton.dataset.bound) {
-    prodAddButton.dataset.bound = '1';
+  if (!prodAddButton || prodAddButton.dataset.bound) return;
+  prodAddButton.dataset.bound = '1';
 
-    prodAddButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
+  prodAddButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
 
-      console.log('[PRODUCT ADD ROUTE] opening new product editor create mode');
-
-      handleStructureTimelineModal(null, {
-        mode: 'create',
-        source: 'prod-add-button',
-        templateName: null,
-      });
+    handleStructureTimelineModal(null, {
+      mode: 'create',
+      source: 'prod-add-button',
+      templateName: null,
     });
-  }
+  });
+}
+
+function bindProdResetFiltersOnce() {
+  const btn = document.getElementById('prodResetFiltersButton');
+  if (!btn || btn.dataset.tcfResetBound === '1') return;
+  btn.dataset.tcfResetBound = '1';
+
+  btn.addEventListener('click', () => {
+    clearColumnFilters(PROD_TABLE_ID);
+
+    renderProductTable();
+  });
 }
 
 function filterProdData(data, filtersConfig) {

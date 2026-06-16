@@ -165,6 +165,16 @@ registerTableLayoutHandlers({
   refreshTable: pump.refreshTable,
 });
 
+  // Ensure app-managed tables (e.g. CustomerTableLayouts for saved column
+  // layouts) exist. Idempotent (CREATE TABLE IF NOT EXISTS).
+  if (sqliteDb) {
+    ensureAppSchema(sqliteDb)
+      .then(() => console.log('[main] App schema ready'))
+      .catch((e) => console.error('[main] Schema initialization failed', e));
+  } else {
+    console.warn('[main] sqliteDb not available for schema initialization');
+  }
+
   pump.installWindowDidFinishLoadSend();
 
   const windows = createAppWindows({

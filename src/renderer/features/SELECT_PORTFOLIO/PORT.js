@@ -15,7 +15,7 @@ import {
 
 import {
   formatNumberWithGrouping,
-} from '../../utils/format.js';
+} from '../../utils/tableCellFormats.js';
 
 import {
   attachIdLinks,
@@ -23,26 +23,73 @@ import {
 
 import {
   applyPortfolioTableColoring,
-} from '../../utils/tableColorize.js';
+} from '../../utils/tableCellColorize.js';
 
 import {
   ALL_PORT_COLUMN_KEYS,
   DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
-} from './portTableColumns.js';
+} from '../portfolio/portTableColumns.js';
 
 import {
   PORTFOLIO_DISPLAY_NAMES,
-} from './portfolioDisplayNames.js';
+} from '../portfolio/portfolioDisplayNames.js';
 
 import {
   renderConfigurableTable,
 } from '../../core/ui/tables/configurableTable.js';
+
+import {
+  clearColumnFilters,
+  applyColumnFilters,
+} from '../CUSTOMER/tableLayouts/tableColumnFilters.js';
+
+// The active aggregate renderer for the "filtered:" summary box.
+import {
+  handlePortAggData as renderFilteredAgg,
+} from '../portfolio/portfolioAggregates.js';
 
 let tableName = 'Portfolios';
 
 const TABLE_ID = 'portTable0';
 
 const portDataMap = {};
+
+// Last data rendered into the port table (for the "reset filters" button).
+let lastPortRender = null;
+
+// Raw (un-column-reduced) rows + portfolio name of the current selection, so the
+// "filtered:" summary box can be recomputed from the active header filters.
+let lastPortRawRows = null;
+let lastPortName = null;
+
+// Recompute the "filtered:" summary (portAggDataContainer<index>) from the rows
+// that pass the current per-column header filters.
+function updateFilteredAgg(index) {
+  if (!Array.isArray(lastPortRawRows) || !lastPortName) return;
+
+  const filteredRows = applyColumnFilters(lastPortRawRows, TABLE_ID);
+  renderFilteredAgg(filteredRows, index, lastPortName);
+}
+
+function bindPortResetFiltersOnce() {
+  const btn = document.getElementById('portResetFiltersButton');
+  if (!btn || btn.dataset.tcfResetBound === '1') return;
+  btn.dataset.tcfResetBound = '1';
+
+  btn.addEventListener('click', () => {
+    clearColumnFilters(TABLE_ID);
+
+    // Re-run the full pipeline so the analyse sections reset to the full
+    // portfolio too (not just the table + agg box).
+    const index = lastPortRender?.index ?? 0;
+    if (typeof appState.handlePortTable === 'function') {
+      appState.handlePortTable(appState.getAllPortfolioData?.() || [], index);
+    } else if (lastPortRender) {
+      renderPortTableOnly(lastPortRender.rows, index);
+      updateFilteredAgg(index);
+    }
+  });
+}
 
 const pf = (v) => {
   if (v == null) return 0;
@@ -63,6 +110,9 @@ const safeDiv = (num, den) => (
 // =============================
 
 function renderPortTableOnly(portData, index) {
+  lastPortRender = { rows: portData, index };
+  bindPortResetFiltersOnce();
+
   renderConfigurableTable({
     tableId: TABLE_ID,
 
@@ -73,6 +123,9 @@ function renderPortTableOnly(portData, index) {
 
     selectedTableName: tableName,
 
+    // Always shown first, not toggleable, hidden from the column selector.
+    lockedColumns: ['TRADE_ID', 'PROD_ID', 'DESCRIPTION', 'clean_price', 'C_SPREAD', 'NOTIONAL', 'NAV'],
+
     defaultVisibleColumns: DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
 
     columnLabelMap: PORTFOLIO_DISPLAY_NAMES,
@@ -81,11 +134,33 @@ function renderPortTableOnly(portData, index) {
       enabled: true,
     },
 
+    // Dynamic per-column value filters, integrated into the column headers.
+    filtering: {
+      enabled: true,
+      mode: 'header',
+    },
+
+    // Column-visibility change: light re-render of just the table + agg box.
     onLayoutChange: () => {
       const currentFilteredPortData =
         appState.getFilteredPortData?.() || portData;
 
       renderPortTableOnly(currentFilteredPortData, index);
+      updateFilteredAgg(index);
+    },
+
+    // Header value-filter change: re-run the whole portfolio render pipeline so
+    // the analyse sections (Breakdown / Performance / Liquidity / sums) follow
+    // the filter — just like the former AppState filter path did. The
+    // orchestrator now applies the same header filters (applyColumnFilters).
+    onFilterChange: () => {
+      const all = appState.getAllPortfolioData?.() || [];
+      if (typeof appState.handlePortTable === 'function') {
+        appState.handlePortTable(all, index);
+      } else {
+        renderPortTableOnly(appState.getFilteredPortData?.() || portData, index);
+        updateFilteredAgg(index);
+      }
     },
 
     afterRender: (container) => {
@@ -110,8 +185,24 @@ export function handlePortProdData(receivedData, index, port_name) {
 
   if (!portDataContainer || !Array.isArray(receivedData)) return;
 
+  // The Portfolios table doesn't carry the per-product Credit Spread Override;
+  // it lives in the product data (keyed by PROD_ID). Enrich each row from there.
+  const enriched = receivedData.map((row) => {
+    const prodId = row?.PROD_ID ?? row?.product_id;
+    const override = appState.getProdById?.(prodId)?.CS_SPREAD_OVERRIDE_BP;
+    return {
+      ...row,
+      CS_SPREAD_OVERRIDE_BP: override ?? row?.CS_SPREAD_OVERRIDE_BP ?? null,
+    };
+  });
+
+  // Keep the raw rows + name so the "filtered:" box can be recomputed from the
+  // header filters (the sums need fields that the reduced view drops).
+  lastPortRawRows = enriched;
+  lastPortName = port_name;
+
   const filteredPortData = filterColumnsInData(
-    receivedData,
+    enriched,
     ALL_PORT_COLUMN_KEYS
   );
 

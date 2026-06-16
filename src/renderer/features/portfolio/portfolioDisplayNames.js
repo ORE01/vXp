@@ -16,6 +16,7 @@ export const PORTFOLIO_DISPLAY_NAMES = {
   C_SPREAD: 'Credit Spread',
   C_SPREAD_BASE: 'Base Credit Spread',
   C_SPREAD_DELTA: 'Credit Spread Delta',
+  CS_SPREAD_OVERRIDE_BP: 'Credit Spread Override',
 
   NOTIONAL: 'Notional',
   PRICE_BUY: 'Buy Price',

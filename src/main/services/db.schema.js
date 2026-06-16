@@ -30,7 +30,24 @@ function ensureAppSchema(db) {
             return;
           }
 
-          resolve();
+          // Table actually used by the save handler + data pump
+          // (src/main/ipc/handlers/tableLayout.handlers.js -> CustomerTableLayouts).
+          db.run(`
+            CREATE TABLE IF NOT EXISTS CustomerTableLayouts (
+              table_id    TEXT NOT NULL,
+              layout_name TEXT NOT NULL,
+              layout_json TEXT NOT NULL,
+              updated_at  TEXT NOT NULL,
+              PRIMARY KEY (table_id, layout_name)
+            )
+          `, (err3) => {
+            if (err3) {
+              reject(err3);
+              return;
+            }
+
+            resolve();
+          });
         });
       });
     });

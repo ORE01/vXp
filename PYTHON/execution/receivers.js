@@ -51,6 +51,14 @@ export function createPythonExecutionReceivers(ctx) {
   // source. For the Change-Portfolio "Calculate" button (source 'deals') the
   // selection lives in the deals dropdown, NOT in the SELECT PORTFOLIO dropdown.
   function resolveFairValuePortName(data) {
+    // Prefer the portfolio that was actually calculated — it is echoed back in
+    // the py-fairValue-complete event as `tableName`. Re-reading the live
+    // selection is unreliable: the post-calc refreshTable('Portfolios') rebuilds
+    // the port dropdown BEFORE this event fires and can reset the selection to
+    // the previously calculated portfolio.
+    const fromEvent = String(data?.tableName ?? '').trim();
+    if (fromEvent) return fromEvent;
+
     const bySource =
       data?.source === 'offers' ? appState.getSelectedOffersTableName?.() :
       data?.source === 'port'   ? appState.getSelectedPortTableName?.() :
@@ -64,10 +72,18 @@ export function createPythonExecutionReceivers(ctx) {
     ).trim();
   }
 
-  // Switch to the SELECT PORTFOLIO tab and select the portfolio in its dropdown,
-  // so the freshly calculated results become visible there.
+  // Switch to the ANALYSE PORTFOLIO tab, open the "Select Portfolio" sub-panel
+  // and select the portfolio in its dropdown, so the freshly calculated results
+  // become visible there.
   function activatePortfolioResultTab(port_name) {
-    document.getElementById('PORT_Tab')?.click();
+    document.getElementById('ANALYSE_Tab')?.click();
+
+    // Open the Select Portfolio sub-panel (only if not already open, so a
+    // re-calculation doesn't toggle it shut).
+    const selectPanel = document.getElementById('panel-selectPort');
+    if (selectPanel && (selectPanel.hidden || !selectPanel.classList.contains('open'))) {
+      document.querySelector('.section-trigger[data-panel="panel-selectPort"]')?.click();
+    }
 
     // Persist the wanted selection in the dropdown-engine config so any later
     // (async) rebuild of the port dropdown keeps it selected instead of

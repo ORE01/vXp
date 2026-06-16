@@ -107,6 +107,59 @@ export function applyCreditSpreadHighlight(container) {
 }
 
 
+// Right-align numeric columns. A column counts as numeric when every sampled
+// (non-empty) body cell parses as a number after stripping grouping/units
+// (",", "%", "EUR", "bp"). Identity/link/text columns are excluded so they
+// stay left-aligned.
+const NUMERIC_ALIGN_EXCLUDE = new Set(['TRADE_ID', 'PROD_ID', 'DESCRIPTION']);
+
+function looksNumeric(text) {
+  const s = String(text).trim();
+  if (s === '' || s === '-') return false;
+  const cleaned = s
+    .replace(/[\s,%]/g, '')
+    .replace(/eur$/i, '')
+    .replace(/bp$/i, '');
+  return cleaned !== '' && Number.isFinite(Number(cleaned));
+}
+
+export function applyPortfolioNumericAlignment(container) {
+  const table = container?.querySelector('table');
+  if (!table) return;
+
+  const ths = Array.from(table.querySelectorAll('thead th'));
+  const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+  if (!ths.length || !bodyRows.length) return;
+
+  ths.forEach((th, colIdx) => {
+    const key =
+      th.getAttribute('data-column-key') ||
+      String(th.textContent || '').trim();
+
+    if (NUMERIC_ALIGN_EXCLUDE.has(key)) return;
+
+    let seen = 0;
+    let numeric = 0;
+
+    for (const tr of bodyRows) {
+      const cell = tr.children[colIdx];
+      if (!cell) continue;
+
+      const txt = (cell.textContent || '').trim();
+      if (txt === '') continue;
+
+      seen += 1;
+      if (looksNumeric(txt)) numeric += 1;
+      if (seen >= 8) break;
+    }
+
+    if (seen > 0 && numeric === seen) {
+      th.classList.add('port-num');
+      bodyRows.forEach((tr) => tr.children[colIdx]?.classList.add('port-num'));
+    }
+  });
+}
+
 // ---------- default bundle ----------
 export function applyPortfolioTableColoring(container) {
   if (!container) return;
@@ -114,4 +167,5 @@ export function applyPortfolioTableColoring(container) {
   colorizeSpreadDelta(container);
   applyCleanPriceHighlight(container);
   applyCreditSpreadHighlight(container);
+  applyPortfolioNumericAlignment(container);
 }

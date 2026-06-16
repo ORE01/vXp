@@ -126,6 +126,26 @@ export function bindAppButtons({
   document.getElementById('portfolioDealsAddButton')
     ?.addEventListener('click', dealsActions.handleAddTradeToNewPortfolio);
 
+  // ---------- Column selector drawers (SELECT PORTFOLIO, ISSUER, ...) ----------
+  const wireColumnDrawer = (btnId, drawerId) => {
+    const drawer = document.getElementById(drawerId);
+    if (!drawer) return;
+
+    document.getElementById(btnId)
+      ?.addEventListener('click', () => drawer.classList.add('is-open'));
+
+    drawer.querySelector('[data-col-drawer-close]')
+      ?.addEventListener('click', () => drawer.classList.remove('is-open'));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') drawer.classList.remove('is-open');
+    });
+  };
+
+  wireColumnDrawer('portColumnsBtn', 'portColumnDrawer');
+  wireColumnDrawer('issuerColumnsBtn', 'issuerColumnDrawer');
+  wireColumnDrawer('prodColumnsBtn', 'prodColumnDrawer');
+
   // ---------- Historic Metrics ----------
   document.getElementById('historicMetricsAddButton')
     ?.addEventListener('click', handleHistoricMetricsAddClick);

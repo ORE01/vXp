@@ -16,6 +16,12 @@ import {
 
 import { sortRows } from './tableSorting.js';
 
+import {
+  renderColumnFilters,
+  applyColumnFilters,
+  attachHeaderColumnFilters,
+} from '../../../features/CUSTOMER/tableLayouts/tableColumnFilters.js';
+
 function createColumnsFromRows(rows = [], columnLabelMap = {}) {
   const firstRow = rows.find(
     (row) => row && typeof row === 'object'
@@ -37,6 +43,7 @@ function normalizeTableFeatures({
   columns,
   sorting,
   filtering,
+  filterContainerId,
 }) {
   return {
     columns: {
@@ -67,6 +74,8 @@ function normalizeTableFeatures({
 
     filtering: {
       enabled: filtering?.enabled ?? false,
+      containerId: filtering?.containerId ?? filterContainerId,
+      mode: filtering?.mode ?? 'bar', // 'bar' | 'header'
     },
   };
 }
@@ -89,6 +98,19 @@ export function renderConfigurableTable({
   columns,
   sorting,
   filtering,
+
+  // Optional: separate callback fired only when a VALUE FILTER changes (not on
+  // column-visibility changes). Lets a host re-run heavier work (e.g. the whole
+  // portfolio analyse pipeline) on filter changes only. Falls back to the
+  // column onChange when not provided.
+  onFilterChange,
+
+  // container for the dynamic per-column filter bar
+  filterContainerId,
+
+  // columns that are always shown first and cannot be toggled
+  // (they are not offered in the selector)
+  lockedColumns = [],
 
   mapDisplayRows,
 
@@ -117,6 +139,7 @@ console.log('[CONFIG TABLE]', {
     columns,
     sorting,
     filtering,
+    filterContainerId,
   });
 
   const effectiveColumnLabelMap =
@@ -133,35 +156,43 @@ console.log('[CONFIG TABLE]', {
 
   const allColumnKeys = allColumns.map((col) => col.key);
 
+  // Locked columns: always shown first, never toggleable, never offered in the
+  // selector. Order is preserved as given in lockedColumns.
+  const lockedKeys = (lockedColumns || []).filter((k) => allColumnKeys.includes(k));
+
+  // Columns the user can actually pick (everything except the locked ones).
+  const selectableColumns = allColumns.filter((c) => !lockedKeys.includes(c.key));
+  const selectableColumnKeys = selectableColumns.map((c) => c.key);
+
   // =====================================
   // Column layout feature
   // =====================================
 
-  let visibleColumns = allColumnKeys;
+  let visibleColumns = selectableColumnKeys;
 
   if (features.columns.enabled) {
+    const defaultVisible = (
+      features.columns.defaultVisibleColumns?.length
+        ? features.columns.defaultVisibleColumns
+        : selectableColumnKeys
+    ).filter((k) => !lockedKeys.includes(k));
+
     ensureTableLayout(tableId, {
-      visibleColumns:
-        features.columns.defaultVisibleColumns?.length
-          ? features.columns.defaultVisibleColumns
-          : allColumnKeys,
+      visibleColumns: defaultVisible,
     });
 
     if (features.columns.selectorContainerId) {
       renderTableColumnSelector({
         tableId,
         containerId: features.columns.selectorContainerId,
-        columns: allColumns,
-        defaultVisibleColumns:
-          features.columns.defaultVisibleColumns?.length
-            ? features.columns.defaultVisibleColumns
-            : allColumnKeys,
+        columns: selectableColumns,
+        defaultVisibleColumns: defaultVisible,
       });
 
       bindTableColumnSelector({
         tableId,
         containerId: features.columns.selectorContainerId,
-        allColumnKeys,
+        allColumnKeys: selectableColumnKeys,
         onChange: () => {
           if (typeof features.columns.onChange === 'function') {
             features.columns.onChange();
@@ -172,22 +203,41 @@ console.log('[CONFIG TABLE]', {
 
     const storedVisibleColumns = getVisibleColumns(tableId);
 
-visibleColumns =
-  Array.isArray(storedVisibleColumns)
-    ? storedVisibleColumns
-    : (
-        features.columns.defaultVisibleColumns?.length
-          ? features.columns.defaultVisibleColumns
-          : allColumnKeys
-      );
+    visibleColumns =
+      Array.isArray(storedVisibleColumns)
+        ? storedVisibleColumns.filter((k) => !lockedKeys.includes(k))
+        : defaultVisible;
   }
+
+  // Final column order: locked columns first, then the selected ones.
+  const orderedColumns = features.columns.enabled
+    ? [...lockedKeys, ...visibleColumns.filter((k) => !lockedKeys.includes(k))]
+    : allColumnKeys;
 
   // =====================================
   // Future hooks
   // =====================================
 
-  // filtering.enabled will be applied here later.
   let workingRows = rows;
+
+  // filtering: one value-filter per visible column, derived from the data.
+  // Follows the visible columns automatically (re-rendered on layout change).
+  if (features.filtering.enabled) {
+    if (features.filtering.mode === 'bar' && features.filtering.containerId) {
+      renderColumnFilters({
+        tableId,
+        containerId: features.filtering.containerId,
+        columns: orderedColumns.map((k) => ({
+          key: k,
+          label: effectiveColumnLabelMap[k] || k,
+        })),
+        allRows: rows,
+        onChange: onFilterChange ?? features.columns.onChange,
+      });
+    }
+
+    workingRows = applyColumnFilters(workingRows, tableId);
+  }
 
   // sorting
   if (features.sorting.enabled) {
@@ -204,7 +254,7 @@ visibleColumns =
 
   const rowsWithVisibleColumns =
     features.columns.enabled
-      ? filterColumnsInData(workingRows, visibleColumns)
+      ? filterColumnsInData(workingRows, orderedColumns)
       : workingRows;
 
   // =====================================
@@ -235,5 +285,22 @@ visibleColumns =
 
   if (typeof afterRender === 'function') {
     afterRender(tableContainer);
+  }
+
+  // Header-integrated filters: a funnel button per column header.
+  // Added AFTER afterRender so header-label-based helpers (e.g. attachIdLinks,
+  // which detects the PROD_ID/TRADE_ID columns by header text) see clean
+  // headers first.
+  if (features.filtering.enabled && features.filtering.mode === 'header') {
+    attachHeaderColumnFilters({
+      tableId,
+      tableContainer,
+      columns: orderedColumns.map((k) => ({
+        key: k,
+        label: effectiveColumnLabelMap[k] || k,
+      })),
+      allRows: rows,
+      onChange: onFilterChange ?? features.columns.onChange,
+    });
   }
 }

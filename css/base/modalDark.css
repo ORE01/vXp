@@ -26,6 +26,93 @@
   box-shadow: var(--shadow-md);
 }
 
+/* =====================================================
+   Edit/Add modal (#modal) rendered as a right-side DRAWER.
+   Scoped to #modal only — all other modals stay centered.
+   Form logic is untouched; only the presentation changes.
+   ===================================================== */
+#modal .modal-content,
+#modal .modal-content.draggable {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: auto;
+  transform: none;
+  margin: 0;
+  padding: 0;                 /* header/body/footer handle their own padding */
+  width: min(520px, 96vw);
+  max-width: none;
+  height: 100vh;
+  max-height: none;
+  border-radius: 0;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;           /* the body scrolls, not the whole content */
+  cursor: default;
+  -webkit-app-region: no-drag;
+  animation: cm-drawer-in 180ms ease-out;
+}
+
+@keyframes cm-drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* Header */
+#modal .modal-drawer-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+#modal .modal-drawer-header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--text-bright);
+}
+#modal .modal-drawer-header .close {
+  position: static;
+  margin: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-bright);
+  cursor: pointer;
+}
+
+/* Body (scrollable) */
+#modal .modal-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px;
+}
+
+/* Footer (fixed action bar) */
+#modal .modal-drawer-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+}
+#modal .modal-drawer-footer #saveButton {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+#modal #errorMessage {
+  margin-left: auto;
+  color: var(--danger);
+  font-size: 13px;
+}
+
 .draggable {
   cursor: move;
   position: absolute;

@@ -1,105 +1,93 @@
-/* --- PORT: 2-Spalten-Layout ------------------------------------------- */
-#PORT_Modal .port-layout{
+/* --- PORT: Stack-Layout (Summen oben, Tabelle darunter) --------------- */
+#panel-selectPort .port-layout{
   display: grid;
-  grid-template-columns: minmax(260px, 360px) 1fr; /* links fix, rechts flexibel */
-  column-gap: 40px;  /* viel Luft zwischen links/rechts */
-  row-gap: 20px;
+  grid-template-columns: 1fr;   /* alles volle Breite, vertikal gestapelt */
+  row-gap: 18px;
   align-items: start;
 }
 
-/* linke Spalte: zwei Boxen untereinander */
-#PORT_Modal .port-left{
+/* Summen-Karten nebeneinander */
+#panel-selectPort .port-summary{
   display: grid;
-  gap: 16px;             /* Karten links weiter auseinander */
-  justify-items: start;  /* Items nicht auf 100% strecken */
-}
-#PORT_Modal .port-left .data-container{
-  width: auto;                                /* überschreibt globales width:100% */
-  inline-size: clamp(260px, 32vw, 360px);     /* saubere Maxbreite */
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
 }
 
-/* rechte Spalte: Filterleiste oben, Tabelle darunter */
-#PORT_Modal .port-right{
-  display: grid;
-  gap: 16px;          /* Filter/Tabelle mit mehr Abstand */
-  min-width: 0;       /* verhindert Überlaufen */
+#panel-selectPort .port-agg-card{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 0;   /* erlaubt Schrumpfen im Grid */
 }
 
-/* --- PORT: Innenabstand am Rand ---------------------------------------- */
-#PORT_Modal .table-content{
-  padding-inline: 28px;  /* links & rechts Luft zum Bildschirmrand */
-  padding-bottom: 20px;  /* etwas unten, falls nötig */
+#panel-selectPort .port-agg-title{
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Toolbar über der Tabelle: Columns + Reset, rechtsbündig */
+#panel-selectPort .port-toolbar{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --- PORT: Innenabstand + Scroll im Sub-Panel-Body --------------------- */
+#panel-selectPort .sub-panel-body{
+  padding: 16px 28px 20px;  /* Luft zu den Rändern */
+  overflow: auto;            /* großes View scrollt innerhalb des Panels */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 @media (max-width: 900px){
-  #PORT_Modal .table-content{ padding-inline: 18px; }
+  #panel-selectPort .sub-panel-body{ padding-inline: 18px; }
 }
 
-/* responsive: unter 1100px einspaltig stapeln */
+/* responsive: unter 1100px die Summen-Karten untereinander */
 @media (max-width: 1100px){
-  #PORT_Modal .port-layout{
+  #panel-selectPort .port-summary{
     grid-template-columns: 1fr;
-    column-gap: 16px;
-    row-gap: 12px;
+    gap: 14px;
   }
 }
 
 /* --panel-surface global in themes.css definiert */
 
-/* Links: die beiden Agg-Boxen als Cards (nur Container, keine Table-Optik) */
-#PORT_Modal #portAggDataContainer3,
-#PORT_Modal #portAggDataContainer0{
-  background: var(--panel-surface, #0f0f10);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 14px 16px;
-  width: auto;
-  inline-size: clamp(260px, 32vw, 360px);
+/* Agg-Container: Karten-Chrome liegt jetzt auf .port-agg-card,
+   der Container selbst füllt nur die Karte aus. */
+#panel-selectPort #portAggDataContainer3,
+#panel-selectPort #portAggDataContainer0{
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  width: 100%;
+  inline-size: auto;
+  max-height: none;
 }
 
-/* Filterleiste als Card + Layout */
-#PORT_Modal .controls-bar{
-  background: var(--panel-surface, #0f0f10);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.15);
-
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+/* Reset-Button: in der Toolbar. position:relative, damit das rote ::after-Kreuz
+   am Button verankert bleibt (sonst rutscht es in die Seitenmitte). */
+#panel-selectPort #portResetFiltersButton{
   position: relative;
-  z-index: 60;  /* > thead (20) */
-
-  /* etwas mehr Platz nach unten für den Button in der Ecke */
-  padding-bottom: 44px;
-}
-
-#PORT_Modal .controls-bar .dropdown-wrapper{
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  flex: 1 1 auto;
-}
-
-/* Reset-Button: linke untere Ecke der Filter-Card */
-#PORT_Modal #portResetFiltersButton{
-  position: absolute;
-  left: 16px;
-  bottom: 10px;
-
-  margin-left: 0;   /* override früheres auto */
+  margin: 0;
   flex: 0 0 auto;
 }
 
 
 /* Tabelle: nur Container-Scroll + Card-Rahmen (keine Tabellen-Styles!) */
-#PORT_Modal #portDataContainer0{
+#panel-selectPort #portDataContainer0{
   overflow: auto;
   width: 100%;
   max-width: 100%;
+  min-width: 0;   /* verhindert, dass die breite Tabelle das Grid aufbläht */
   -webkit-overflow-scrolling: touch;
 
   background: var(--panel-surface, #0f0f10);
@@ -108,36 +96,58 @@
   padding: 12px;
 }
 
+/* Light theme: der horizontale Scrollbar erschien als kräftig-grauer Balken
+   ("schwarzer Rand unten"). Hier ein schlanker, heller Scrollbar. Eigene
+   Farben, weil var() im ::-webkit-scrollbar-Pseudo nicht auflöst. Nur im
+   Light-Theme -> Dark bleibt beim Standard `scrollbar-color`. */
+body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-track {
+  background: transparent;
+}
+body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-thumb:hover {
+  background: #b5b5b5;
+  background-clip: padding-box;
+}
+
 /* ========= PORT: feines Raster ohne Doppel-Kanten (nur innerhalb PORT) ========= */
 /* 1) Alle Standard-Borders neutralisieren */
 /* Sicherstellen: kein Abstand zwischen Zellen */
-#PORT_Modal #portDataContainer0 table{
+#panel-selectPort #portDataContainer0 table{
   border-collapse: separate;
   border-spacing: 0;
 }
 
 /* Erst ALLE Standard-Borders killen */
-#PORT_Modal #portDataContainer0 th,
-#PORT_Modal #portDataContainer0 td{
+#panel-selectPort #portDataContainer0 th,
+#panel-selectPort #portDataContainer0 td{
   border: none !important;
 }
 
 /* Dünnes Raster in SCHWARZ zeichnen */
-#PORT_Modal #portDataContainer0 tr > * {
+#panel-selectPort #portDataContainer0 tr > * {
   border-top: 1px solid var(--border-strong) !important;
 }
-#PORT_Modal #portDataContainer0 tr:first-child > * {
+#panel-selectPort #portDataContainer0 tr:first-child > * {
   border-top: 0 !important;
 }
-#PORT_Modal #portDataContainer0 tr > *:not(:first-child) {
+#panel-selectPort #portDataContainer0 tr > *:not(:first-child) {
   border-left: 1px solid var(--border-strong) !important;
 }
 
 /* Sticky-Spalten: rechte Kante ebenfalls schwarz */
-#PORT_Modal #portDataContainer0 thead th:nth-child(1),
-#PORT_Modal #portDataContainer0 tbody td:nth-child(1),
-#PORT_Modal #portDataContainer0 thead th:nth-child(2),
-#PORT_Modal #portDataContainer0 tbody td:nth-child(2){
+#panel-selectPort #portDataContainer0 thead th:nth-child(1),
+#panel-selectPort #portDataContainer0 tbody td:nth-child(1),
+#panel-selectPort #portDataContainer0 thead th:nth-child(2),
+#panel-selectPort #portDataContainer0 tbody td:nth-child(2){
   border-right: 1px solid var(--border-strong) !important;
 }
 
@@ -185,4 +195,76 @@
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(1),
 :is(#portDataContainer0,#portDataContainer1,#portDataContainer2,#portDataContainer3,#portDataContainer4) thead th:nth-child(2){
   background: var(--surface-header); z-index: 5;
+}
+
+/* =====================================================
+   COLUMN SELECTOR DRAWER (Spaltenauswahl)
+   ===================================================== */
+.column-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(460px, 94vw);
+  height: 100vh;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+
+  z-index: 9999;
+  transform: translateX(105%);
+  transition: transform 180ms ease-out;
+}
+
+.column-drawer.is-open {
+  transform: translateX(0);
+}
+
+.column-drawer-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.column-drawer-eyebrow {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.column-drawer-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--text-bright);
+}
+
+.column-drawer-close {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--text-bright);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.column-drawer-close:hover {
+  background: var(--hover-bg);
+}
+
+.column-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }

@@ -2,6 +2,30 @@
    analyse.css
    ============================================================ */
 
+/* ============================================================
+   ANALYSE vs RISK views (same #ANALYSE_Modal, toggled by class in tabs.js).
+   ANALYSE view: hide the Market/Credit risk triggers.
+   RISK view:    hide every non-risk trigger (Select Portfolio, Breakdown,
+                 Performance, Liquidity, Performance History) + the analyse title.
+   ============================================================ */
+#ANALYSE_Modal.view-analyse .risk-section { display: none; }
+#ANALYSE_Modal.view-risk .chart-section:not(.risk-section) { display: none; }
+#ANALYSE_Modal.view-analyse .view-risk-only { display: none; }
+#ANALYSE_Modal.view-risk .view-analyse-only { display: none; }
+
+/* RISK-view portfolio picker (mirrors createdPortDropdown0). */
+#ANALYSE_Modal .risk-port-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+#ANALYSE_Modal .risk-port-select label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+#ANALYSE_Modal .risk-port-select .deals-dropdown { min-width: 200px; }
+
 
 /* ============================================================
    BREAKDOWN: Controls / Value Selector

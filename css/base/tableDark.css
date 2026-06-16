@@ -22,6 +22,14 @@ html, body {
   height: 100%;
 }
 
+/* #app-root paints its own themed surface so that, when its content is taller
+   than the viewport, the dark <html> background can't show through at the
+   bottom (the light-theme surface override lives on body, not on <html>). */
+#app-root {
+  background-color: var(--surface-base);
+  min-height: 100vh;
+}
+
 body {
   padding-top: 110px;
   box-sizing: border-box;
