@@ -3,6 +3,26 @@
   margin-bottom: 10px;
 }
 
+/* Tabellen-Toolbar (Issuer / Products): ADD bleibt links, "Columns" rechtsbündig.
+   Nur die Wrapper mit dem Columns-Toggle treffen — .button-wrapper ist generisch. */
+.button-wrapper:has(#issuerColumnsBtn),
+.button-wrapper:has(#prodColumnsBtn) {
+  display: flex;
+  align-items: center;
+}
+#issuerColumnsBtn,
+#prodColumnsBtn {
+  margin-left: auto;   /* schiebt "Columns" nach rechts, ADD bleibt links */
+}
+
+/* ADD + Columns (inkl. Portfolio-Columns) einheitlich gleich groß. */
+#issuerAddButton, #issuerColumnsBtn,
+#prodAddButton,   #prodColumnsBtn,
+#portColumnsBtn {
+  min-width: 96px;
+  text-align: center;
+}
+
 .close-button {
   float: right;
   cursor: pointer;
@@ -70,11 +90,13 @@
   background-color: var(--accent);
   border: none;
   color: var(--text-on-accent);
-  padding: 8px 12px;
+  /* Gleiches Padding/Font wie das generische .edit-button (= Columns-Button),
+     damit ADD und Columns exakt gleich hoch sind. */
+  padding: 4px 12px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
-  font-size: 14px;
+  font-size: 12px;
   border-radius: 4px;
   cursor: pointer;
 }

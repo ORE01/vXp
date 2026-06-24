@@ -110,6 +110,26 @@ function generateTableHeader(columnNames, includeRadioSelect, includeEditColumn,
   return html;
 }
 
+// Market Risk radio default. Order:
+//   CustomerMarketRiskSetting.default_mvar_interval_name (window-exposed)
+//   -> ROLLING_1 -> STRESSED -> first MVaRInput row.
+function resolveMvarDefaultIntervalName(data) {
+  const rows = Array.isArray(data) ? data : [];
+  const names = new Set(rows.map((r) => String(r.INTERVAL_NAME)));
+
+  const candidates = [
+    (typeof window !== 'undefined' ? window.__customerMarketRiskDefaultInterval : null),
+    'ROLLING_1',
+    'STRESSED',
+  ];
+
+  for (const c of candidates) {
+    if (c && names.has(String(c))) return String(c);
+  }
+
+  return rows.length ? String(rows[0].INTERVAL_NAME) : null;
+}
+
 function generateTableData(
   data,
   columnNames,
@@ -120,7 +140,10 @@ function generateTableData(
 ) {
   let html = '<tbody>';
 
-  const defaultInterval = 'STRESSED';
+  // MVaRInput radio default is the customer-configured default
+  // (CustomerMarketRiskSetting), not a hardcoded interval. See resolver below.
+  const mvarDefaultInterval =
+    selectedTableName === 'MVaRInput' ? resolveMvarDefaultIntervalName(data) : null;
 
   // FÃ¼r CreditVaRInput: Index der aktiven Konfiguration ermitteln
   let activeIndex = -1;
@@ -138,7 +161,7 @@ function generateTableData(
       let isChecked = false;
 
       if (selectedTableName === 'MVaRInput') {
-        isChecked = (item.INTERVAL_NAME === defaultInterval);
+        isChecked = (item.INTERVAL_NAME === mvarDefaultInterval);
       } else if (selectedTableName === 'CreditVaRInput') {
         isChecked = (rowIndex === activeIndex);
       }
@@ -169,13 +192,16 @@ function generateTableData(
 function generateRadioCell(item, rowIndex, selectedTableName, isChecked) {
   const checkedAttr = isChecked ? 'checked' : '';
 
-  // ðŸ”¹ MVaRInput - bestehendes Verhalten beibehalten
+  // ðŸ”¹ MVaRInput - Single-Select checkbox/tile group. UI style only; exactly one
+  // interval stays selected (enforced in JS in mvarInputPanel.js). Class/data
+  // attributes kept so existing selectors (.scenario-radio:checked, data-interval,
+  // data-id) keep working.
   if (selectedTableName === 'MVaRInput') {
     return `<td>
-      <input 
-        type="radio" 
+      <input
+        type="checkbox"
         name="scenario-select"
-        class="scenario-radio"
+        class="scenario-radio scenario-checkbox"
         data-interval="${item.INTERVAL_NAME}"
         data-id="${item.id ?? ''}"
         ${checkedAttr}>

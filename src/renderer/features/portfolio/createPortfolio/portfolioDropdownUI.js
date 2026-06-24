@@ -1,6 +1,26 @@
+import { showMessageBox } from '../../../core/ui/dialogs/confirm.js';
 
 export function createPortfolioDropdownUI({ appState } = {}) {
   if (!appState) throw new Error('[portfolioDropdownUI] appState fehlt');
+
+  // Risk-Tabellen wie die Portfolio-Daten behandeln: sobald ein Portfolio gewählt
+  // wird, die vorberechneten Risk-Tabellen einmalig aus der DB in die Stores
+  // laden. Danach filtern die Re-Render-Aufrufe weiter unten pro Portfolio aus
+  // den Stores (gleiche Mechanik wie Trade-Tabelle/Aggregationen) — ohne dass
+  // erst eine Berechnung laufen muss.
+  let __riskTablesLoaded = false;
+  function ensureRiskTablesLoadedOnce() {
+    if (__riskTablesLoaded) return;
+    __riskTablesLoaded = true;
+    // Genau die Tabellen, die eine Berechnung erzeugt; das Rendern filtert je
+    // Portfolio (port_name). fetch-table-data routet über die normale Pipeline
+    // in die Stores (setAllMvarData / setMvarProductData / setAllEADData / …).
+    const tables = ['MarketVaR', 'MarketVaR_Dist', 'MarketVaR_Product', 'MarketVaR_FactorPL', 'EAD', 'CreditVaR'];
+    for (const t of tables) {
+      try { window.api?.send?.('fetch-table-data', t); }
+      catch (e) { console.warn('[portfolioDropdownUI] risk table fetch failed:', t, e); }
+    }
+  }
 
 function getContainerIdForDropdown(dropdownId) {
   switch (dropdownId) {
@@ -82,6 +102,7 @@ function updateDropdownOptions({
   updateMvarDataFunction,
   updateCvarDataFunction,
   updateEADDataFunction,
+  updateMvarProductDataFunction,
 }) {
   const dropdownElement = document.getElementById(dropdownElementId);
 
@@ -163,6 +184,9 @@ if (isPortfolio && (safeIndex === 1 || safeIndex === 2)) {
 
     appState.setSelectedPortTableName?.(nextSelectedPort);
 
+    // Nur die Hauptanalyse-Auswahl (Slot 0) lädt die Risk-Tabellen (einmalig).
+    if (safeIndex === 0) ensureRiskTablesLoadedOnce();
+
     /**
      * System event payload:
      * The active analysis portfolio changed.
@@ -191,8 +215,30 @@ if (isPortfolio && (safeIndex === 1 || safeIndex === 2)) {
 
   if (!filteredData.length) {
     console.warn(`[portfolioDropdownUI] Keine Daten für '${dropdownElement.value}'.`);
+
+    // Enriched-Warnung (ALLE Slots 0/1/2): Port-Dropdowns kommen jetzt aus DealsMain,
+    // d.h. auch NICHT berechnete Portfolios sind wählbar. Warnen, sobald die
+    // enriched-View einmal empfangen wurde (__enrichedReceived – auch wenn leer)
+    // und das gewählte Portfolio NICHT darin ist = noch nicht berechnet.
+    // Dedup pro Dropdown+Wert verhindert Mehrfach-Warnungen bei Rebuilds.
+    if (isPortfolio && appState.__enrichedReceived) {
+      const val = String(dropdownElement.value || '');
+      appState.__lastEnrichedWarnByDd = appState.__lastEnrichedWarnByDd || {};
+      if (val && appState.__lastEnrichedWarnByDd[dropdownElementId] !== val) {
+        appState.__lastEnrichedWarnByDd[dropdownElementId] = val;
+        const msg = `Portfolio "${val}" ist noch nicht berechnet `
+          + `(keine v_Portfolios_enriched-Daten). Bitte "Recalculate Portfolio" ausführen.`;
+        if (typeof showMessageBox === 'function') showMessageBox(msg);
+        else console.warn('[portfolioDropdownUI]', msg);
+      }
+    }
     return;
   }
+
+  // Erfolgreiche Auswahl (enriched vorhanden) → Warn-Dedup für dieses Dropdown
+  // zurücksetzen, damit ein erneutes Wählen eines nicht-berechneten Portfolios
+  // wieder warnt.
+  try { if (appState.__lastEnrichedWarnByDd) appState.__lastEnrichedWarnByDd[dropdownElementId] = null; } catch {}
 
   
 
@@ -226,10 +272,17 @@ if (typeof updateCvarDataFunction === 'function') {
 
 
   if (typeof updateEADDataFunction === 'function') {
-    const ead = (appState.getAllEADData?.() || []).filter(
-      e => String(e?.port_name) === String(dropdownElement.value)
-    );
-    updateEADDataFunction(ead, safeIndex);
+    // Vollen Store übergeben — handleEADData filtert intern nach aktivem
+    // Portfolio. NICHT vorfiltern: sonst überschreibt setAllEADData den Store mit
+    // der Teilmenge und der Wechsel auf ein anderes Portfolio zeigt dann leer.
+    updateEADDataFunction(appState.getAllEADData?.() || [], safeIndex);
+  }
+
+  // Product VaR: fehlte bisher in der Switch-Liste → der Chart aktualisierte beim
+  // Portfolio-Wechsel nicht. NICHT-destruktiv aus dem vollen Store neu rendern
+  // (filtert selbst nach aktivem Portfolio/Szenario).
+  if (typeof updateMvarProductDataFunction === 'function') {
+    updateMvarProductDataFunction();
   }
 
     if (portfolioContextChangeDetail) {

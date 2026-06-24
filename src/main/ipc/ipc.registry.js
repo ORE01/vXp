@@ -22,6 +22,26 @@ module.exports = [
 },
 
   {
+    name: 'customerMarketRiskSetting',
+    register: require('./handlers/customerMarketRiskSetting.handlers'),
+    getCtx: ({ ipcMain, dbApi, refreshTable }) => ({
+      ipcMain,
+      dbApi,
+      refreshTable,
+    }),
+  },
+
+  {
+    name: 'customerCreditRiskSetting',
+    register: require('./handlers/customerCreditRiskSetting.handlers'),
+    getCtx: ({ ipcMain, dbApi, refreshTable }) => ({
+      ipcMain,
+      dbApi,
+      refreshTable,
+    }),
+  },
+
+  {
     name: 'ratesActive',
     register: require('./handlers/ratesActive.handlers'),
     getCtx: ({ ipcMain, dbApi, refreshTable }) => ({

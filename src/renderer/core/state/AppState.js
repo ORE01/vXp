@@ -349,21 +349,10 @@
 
     }
 
-    setCustomerData(data) {
-        this.customerData = data;
-    }
-
-    getCustomerData() {
-        return this.customerData;
-    }
-
-    setCustomerTSData(data) {
-        this.customerTSData = data;
-    }
-
-    getCustomerTSData() {
-        return this.customerTSData;
-    }
+    // Customer state (customerData, customerTSData, customerMarketRiskSetting,
+    // customerMarketRiskThresholds) now lives in customerDataStore.js. It attaches
+    // the get/set methods onto appState in bootstrapStores, so existing
+    // appState.getCustomerMarketRiskSetting() etc. keep working unchanged.
 
     updateCustomerField(key, value) {
         if (!this.customerData) this.customerData = {};

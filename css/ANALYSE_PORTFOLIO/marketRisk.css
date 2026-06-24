@@ -128,6 +128,27 @@
   display:flex;
   gap:20px;
   flex-wrap:wrap;
+  align-items:flex-start;
+}
+
+/* Overview-Charts (tsEU1YChart + plMvarDist) in #panel-market: nebeneinander,
+   NICHT umbrechen (keine Wrap-Oszillation / kein Zittern), und die Reihe füllt
+   die VOLLE Panel-Breite (max-width/Zentrierung der Grid-Regel aufgehoben). */
+#panel-market .chart-2x1-row{
+  flex-wrap: nowrap;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+/* Deckel der generischen .chart-box (max-width:550px) für die Overview-Charts
+   aufheben, damit sie die halbe Reihe ausfüllen statt klein zu bleiben. */
+#panel-market .chart-2x1-row .chart-box{
+  max-width: none;
+}
+@media (max-width: 900px){
+  #panel-market .chart-2x1-row{
+    flex-wrap: wrap;
+  }
 }
 
 #panel-market .chart-box,
@@ -196,6 +217,8 @@
   display:flex;
   gap:20px;
   flex-wrap:wrap;
+  /* Chart-Höhe nicht an die Tabellen-Box koppeln → kein Resize-Loop. */
+  align-items:flex-start;
 }
 
 #panel-mvar-products .mvar-prod-chart{ flex: 2 1 520px; min-width: 320px; }

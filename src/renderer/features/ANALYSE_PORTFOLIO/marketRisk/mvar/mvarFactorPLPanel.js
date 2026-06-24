@@ -55,15 +55,42 @@ function getStoredRowsForCurrentContext() {
     rowMatchesMvarContext(row, context)
   );
 
-  console.log('[MVaR FactorPL] local context filter', {
-    selectedPort: normalizePortfolioName(portName),
-    selectedScenario: normalizeMvarText(scenarioName),
-    allRows: allRows.length,
-    filteredRows: filteredRows.length,
-    availablePorts: getAvailableMvarPorts(allRows),
-    availableScenarios: getAvailableMvarScenarios(allRows),
-    sample: filteredRows[0] || allRows[0],
-  });
+  // console.log('[MVaR FactorPL] local context filter', {
+  //   selectedPort: normalizePortfolioName(portName),
+  //   selectedScenario: normalizeMvarText(scenarioName),
+  //   allRows: allRows.length,
+  //   filteredRows: filteredRows.length,
+  //   availablePorts: getAvailableMvarPorts(allRows),
+  //   availableScenarios: getAvailableMvarScenarios(allRows),
+  //   sample: filteredRows[0] || allRows[0],
+  // });
+
+  // Diagnostic only: raw vs context-matched rows, with field-name variants so we can
+  // tell whether the filter drops existing data (port/scenario field/spelling).
+  // console.log('[MVAR FACTOR FILTER CHECK]', {
+  //   selectedPort: appState.getSelectedPortTableName?.(),
+  //   selectedScenario: appState.selectedMvarInterval,
+
+  //   inputRowsCount: Array.isArray(allRows) ? allRows.length : null,
+  //   matchedRowsCount: Array.isArray(filteredRows) ? filteredRows.length : null,
+
+  //   sampleBeforeFilter: Array.isArray(allRows) ? allRows[0] : null,
+  //   sampleAfterFilter: Array.isArray(filteredRows) ? filteredRows[0] : null,
+
+  //   availablePorts: Array.isArray(allRows)
+  //     ? [...new Set(allRows.map(r => r.PORT_NAME ?? r.portName ?? r.port_name ?? r.PORT).filter(Boolean))].slice(0, 20)
+  //     : [],
+
+  //   availableScenarios: Array.isArray(allRows)
+  //     ? [...new Set(allRows.map(r =>
+  //         r.SCENARIO_NAME ??
+  //         r.scenarioName ??
+  //         r.scenario_name ??
+  //         r.INTERVAL_NAME ??
+  //         r.interval_name
+  //       ).filter(Boolean))].slice(0, 20)
+  //     : [],
+  // });
 
   return filteredRows;
 }
@@ -313,6 +340,16 @@ export function renderMVaRFactorPLPanel() {
   const factorRows = buildFactorRows(filteredRows, confidence, denominator, horizonDays);
 
   requestAnimationFrame(() => {
+    const factorChartEl = document.getElementById('MVaRChart');
+
+    // console.log('[MVAR FACTOR CHART DOM CHECK]', {
+    //   containerId: 'MVaRChart',
+    //   exists: !!factorChartEl,
+    //   width: factorChartEl?.clientWidth,
+    //   height: factorChartEl?.clientHeight,
+    //   rect: factorChartEl?.getBoundingClientRect?.(),
+    // });
+
     renderRiskTypeVaRRelChart(riskTypeRows);
   });
 
@@ -400,29 +437,36 @@ export function renderMVaRFactorPLPanel() {
     );
   }
 
-  console.log('[MVaR FactorPL] rendered', {
-    portName,
-    scenarioName,
-    confidence,
-    horizonDays,
-    denominator,
-    storeRows: appState.getMvarFactorPLData?.()?.length || 0,
-    filteredRows: filteredRows.length,
-    riskTypeRows: riskTypeRows.length,
-    factorRows: factorRows.length,
-    sample: filteredRows[0],
-  });
+  // console.log('[MVaR FactorPL] rendered', {
+  //   portName,
+  //   scenarioName,
+  //   confidence,
+  //   horizonDays,
+  //   denominator,
+  //   storeRows: appState.getMvarFactorPLData?.()?.length || 0,
+  //   filteredRows: filteredRows.length,
+  //   riskTypeRows: riskTypeRows.length,
+  //   factorRows: factorRows.length,
+  //   sample: filteredRows[0],
+  // });
 }
 
 export function handleMVaRFactorPLData(receivedData) {
-  const safeRows = Array.isArray(receivedData) ? receivedData : [];
+  const rows = Array.isArray(receivedData) ? receivedData : [];
 
-  console.log('[MVaR FactorPL] handler called', {
-    receivedRows: safeRows.length,
-    receivedSample: safeRows[0],
-    storeRows: appState.getMvarFactorPLData?.()?.length || 0,
-    hasStoreGetter: typeof appState.getMvarFactorPLData === 'function',
-  });
+  if (typeof appState.setMvarFactorPLData !== 'function') {
+    throw new Error('[MVaR FactorPL] Missing store: appState.setMvarFactorPLData');
+  }
+
+  appState.setMvarFactorPLData(rows);
+
+  // console.log('[MVaR FactorPL] handler called', {
+  //   receivedRows: rows.length,
+  //   receivedSample: rows[0],
+  //   storeRows: appState.getMvarFactorPLData?.()?.length || 0,
+  //   hasStoreGetter: typeof appState.getMvarFactorPLData === 'function',
+  //   hasStoreSetter: typeof appState.setMvarFactorPLData === 'function',
+  // });
 
   renderMVaRFactorPLPanel();
 }

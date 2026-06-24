@@ -11,6 +11,65 @@ let lastSummaryYieldArgs = null;
 let summaryYieldRatesListenerBound = false;
 let summaryYieldRefreshTimer = null;
 
+// Gewählte historische Kurve für die Performance-Charts (Wert = Options-Key).
+let _yieldSel = 'y5';            // Default: 5 Years Back
+let _yieldYearsBackBound = false;
+
+// Mögliche Vergleichszeiträume (Monate + Jahre) als Handelstage zurück
+// (~21 Tage/Monat, 252 Tage/Jahr), gefiltert nach verfügbarer Historie.
+function buildYieldHistoryOptions(tsLen) {
+  const opts = [
+    { value: 'm1', days: 21,  label: '1 Month Back'  },
+    { value: 'm3', days: 63,  label: '3 Months Back' },
+    { value: 'm6', days: 126, label: '6 Months Back' },
+  ];
+  const maxYears = Math.min(15, Math.max(1, Math.floor((tsLen - 1) / 252)));
+  for (let y = 1; y <= maxYears; y++) {
+    opts.push({ value: `y${y}`, days: 252 * y, label: `${y} Year${y > 1 ? 's' : ''} Back` });
+  }
+  // nur Optionen, für die genug Historie vorhanden ist
+  return opts.filter(o => o.days <= tsLen - 1);
+}
+
+// Befüllt das "Historical curve"-Dropdown und re-rendert die Charts bei Auswahl.
+function setupYieldYearsBackDropdown(options) {
+  const sel = document.getElementById('yieldYearsBackSelect');
+  if (!sel) return;
+
+  // Optionen nur neu aufbauen, wenn sich die Liste geändert hat.
+  const sig = options.map(o => o.value).join(',');
+  if (sel.dataset.sig !== sig) {
+    sel.dataset.sig = sig;
+    sel.innerHTML = '';
+    for (const o of options) {
+      const opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.label;
+      sel.appendChild(opt);
+    }
+  }
+
+  // Auswahl validieren (fällt auf 5 Jahre bzw. letzte verfügbare zurück).
+  if (!options.some(o => o.value === _yieldSel)) {
+    _yieldSel = options.some(o => o.value === 'y5') ? 'y5' : (options[options.length - 1]?.value || 'm1');
+  }
+  sel.value = _yieldSel;
+
+  if (!_yieldYearsBackBound) {
+    _yieldYearsBackBound = true;
+    sel.addEventListener('change', () => {
+      _yieldSel = sel.value;
+      if (lastSummaryYieldArgs) {
+        handleSummaryYieldData(
+          lastSummaryYieldArgs.filteredData,
+          lastSummaryYieldArgs.index,
+          lastSummaryYieldArgs.port_name
+        );
+      }
+    });
+  }
+}
+
 function bindSummaryYieldRatesRefresh() {
   if (summaryYieldRatesListenerBound) return;
   summaryYieldRatesListenerBound = true;
@@ -32,6 +91,7 @@ function bindSummaryYieldRatesRefresh() {
   document.addEventListener('rates:active-data:ready', refresh);
   document.addEventListener('rates:scenario-data:ready', refresh);
   document.addEventListener('interestRates:updated', refresh);
+  document.addEventListener('theme:changed', refresh); // Farben theme-aware neu zeichnen
 }
 
 
@@ -168,10 +228,24 @@ console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
   );
 
   const latestRow = TSData[TSData.length - 1];
-  const fiveYearsAgoRow = TSData[TSData.length - 1 - (252 * 5)];
+
+  // Historische Kurve: wählbar über das Dropdown (Monate/Jahre zurück).
+  const histOptions = buildYieldHistoryOptions(TSData.length);
+  setupYieldYearsBackDropdown(histOptions);
+  const selOpt =
+    histOptions.find(o => o.value === _yieldSel) ||
+    histOptions[histOptions.length - 1] ||
+    { days: 252 * 5, label: '5 Years Back' };
+  const pastIdx = TSData.length - 1 - selOpt.days;
+  const pastRow = pastIdx >= 0 ? TSData[pastIdx] : undefined;
+  // Kurzform fuer die Legende: "5 Years Back" -> "5Y Back", "6 Months Back" -> "6M Back"
+  const shortBack = String(selOpt.label || '')
+    .replace(/\s*Years?\b/i, 'Y')
+    .replace(/\s*Months?\b/i, 'M');
+  const pastLabel = `EU ${shortBack}`;
 
   const yieldCurve = transformTSDataToEUSWFormat(latestRow);
-  const pastYieldCurve = transformTSDataToEUSWFormat(fiveYearsAgoRow);
+  const pastYieldCurve = transformTSDataToEUSWFormat(pastRow);
 
   // =========================
   // PORTFOLIO
@@ -211,6 +285,7 @@ drawYieldVsTimeChart({
   heading: 'Portfolio Yield vs Maturity',
   yieldCurve: EUSWData,
   pastYieldCurve,
+  pastLabel,
   euswDataOriginal: [],
   points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
 });
@@ -223,6 +298,7 @@ drawYieldVsTimeChart({
   heading: 'Product Yields vs Maturity',
   yieldCurve: EUSWData,
   pastYieldCurve,
+  pastLabel,
   euswDataOriginal: [],
   points: filteredData
 });
@@ -260,6 +336,7 @@ const durationEUSWData = [];
       heading: 'Portfolio Yield vs Duration',
       yieldCurve: durationCurve,
       pastYieldCurve: durationCurvePast,
+      pastLabel,
       euswDataOriginal: durationEUSWData,
       points: durationPoints
     });
@@ -352,6 +429,7 @@ console.log('[PRODUCT DURATION POINTS CHECK]', {
       heading: 'Product Yields vs Duration',
       yieldCurve: durationCurve,
       pastYieldCurve: durationCurvePast,
+      pastLabel,
       euswDataOriginal: durationEUSWData,
       points: productDurationPoints
     });
@@ -363,6 +441,7 @@ export function drawYieldVsTimeChart({
   heading = 'Yield vs EU Yield Curve',
   yieldCurve = [],
   pastYieldCurve = [],
+  pastLabel = 'EU Yield Curve 5 Years Back', // Label der historischen Kurve (wählbar)
   euswDataOriginal = [],
   points = [], // entweder Array {x,y} ODER EintrÃ¤ge mit .TtM/.ytm
 }) {
@@ -393,14 +472,14 @@ export function drawYieldVsTimeChart({
     chartCanvas.id = targetId;
     chartCanvas.className = 'lineChart';
     chartCanvas.style.maxWidth = '600px';
-    chartCanvas.style.height = '400px';
+    chartCanvas.style.height = '190px';
 
     container.appendChild(headingElem);
     container.appendChild(chartCanvas);
     canvas = chartCanvas;
   }
 
-  const ctx = setupHiDPICanvas(canvas, 600, 400);
+  const ctx = setupHiDPICanvas(canvas, 600, 190, true); // true = an tatsächliche Anzeigegröße anpassen (Tooltip-Koordinaten)
 
   // Vorherigen Chart zerstÃ¶ren
   if (window[targetId + '_chartInstance']) {
@@ -452,6 +531,7 @@ export function drawYieldVsTimeChart({
           pointRadius: 5,
           pointHoverRadius: 7,
           isProduct: true,
+          order: 1, // Punkte über den Kurven (niedrigerer order = oben)
         };
       }).filter(Boolean)
     : [];
@@ -472,7 +552,8 @@ export function drawYieldVsTimeChart({
       borderColor: euswSolid.borderColor,
       backgroundColor: euswFill.backgroundColor,
       tension: 0.3,
-      pointRadius: 3
+      pointRadius: 3,
+      order: 3 // Kurven hinter den Punkten (höherer order = unten)
     });
   }
 
@@ -480,14 +561,15 @@ export function drawYieldVsTimeChart({
   // Ja: geht exakt so mit borderDash
   if (pastPoints.length) {
     datasets.push({
-      label: 'EU Yield Curve 5 Years Back',
+      label: pastLabel,
       data: pastPoints,
       showLine: true,
       borderColor: euswSolid.borderColor,
       backgroundColor: euswFill.backgroundColor,
       borderDash: [6, 6],
       tension: 0.3,
-      pointRadius: 3
+      pointRadius: 3,
+      order: 3 // Kurven hinter den Punkten
     });
   }
   
@@ -503,7 +585,8 @@ export function drawYieldVsTimeChart({
       backgroundColor: getColorFromPalette(COLOR_IDX.swap, 0.2),
       borderDash: [2, 4],
       tension: 0.3,
-      pointRadius: 3
+      pointRadius: 3,
+      order: 3 // Kurven hinter den Punkten
     });
   }
 
@@ -524,7 +607,8 @@ export function drawYieldVsTimeChart({
       borderColor: pCol.borderColor,
       borderWidth: 3,
       pointRadius: 8,
-      pointHoverRadius: 10
+      pointHoverRadius: 10,
+      order: 0 // Portfolio-Punkt ganz oben (niedrigster order = oberste Ebene)
     });
   }
 
@@ -549,6 +633,11 @@ export function drawYieldVsTimeChart({
   const yMax = yVals.length ? Math.max(...yVals) : 5;
   const yMin = yVals.length ? Math.min(...yVals) : 0;
 
+  // Puffer um den Datenbereich, damit Kurve/Punkte nicht am oberen/unteren Rand
+  // kleben (z. B. EU Yield Curve am Top), sondern mittiger im Chart liegen.
+  const yRange = (yMax - yMin) || 1;
+  const yPad = Math.max(0.5, yRange * 0.18);
+
   // ---- Legend anzeigen? Nur wenn es mind. ein Dataset mit Daten gibt ----
   const showLegend = datasets.some(ds => Array.isArray(ds.data) && ds.data.length > 0);
 
@@ -560,14 +649,19 @@ export function drawYieldVsTimeChart({
       responsive: false,
       maintainAspectRatio: false,
 
-      // âœ… NUR Tooltip wenn Cursor wirklich auf einem Punkt ist
+      // Tooltip NUR in der Nähe eines Punktes (intersect:true → nicht überall).
+      // axis:'xy' ist entscheidend: "nearest" wird in 2D (x UND y) berechnet, so
+      // dass beim Draufstehen genau dieser Punkt gewählt wird statt des
+      // x-nächsten Nachbarn (Default ohne axis ist oft nur 'x').
       interaction: {
         mode: 'nearest',
-        intersect: true
+        intersect: true,
+        axis: 'xy'
       },
       hover: {
         mode: 'nearest',
-        intersect: true
+        intersect: true,
+        axis: 'xy'
       },
 
       // âœ… Punkte leichter treffen (ohne anderes Verhalten zu Ã¤ndern)
@@ -581,19 +675,19 @@ export function drawYieldVsTimeChart({
       scales: {
         x: {
           type: 'linear',
-          title: { display: true, text: 'Years', font: { size: 16 } },
-          ticks: { font: { size: 14 } },
+          title: { display: true, text: 'Years', align: 'end', font: { size: 11 } },
+          ticks: { font: { size: 11 } },
           min: 0,
           max: xMax + 1
         },
         y: {
-          title: { display: true, text: 'Yield (%)', font: { size: 16 } },
+          title: { display: true, text: 'Yield (%)', font: { size: 11 } },
           ticks: {
-            font: { size: 14 },
+            font: { size: 11 },
             callback: val => `${Number(val).toFixed(2)}%`
           },
-          min: Math.floor(yMin),
-          max: Math.ceil(yMax)
+          min: Math.floor(yMin - yPad),
+          max: Math.ceil(yMax + yPad)
         }
       },
 
@@ -608,9 +702,12 @@ export function drawYieldVsTimeChart({
 
         legend: {
           display: showLegend,
-          position: 'top',
+          position: 'right',
           labels: {
-            font: { size: 14 },
+            font: { size: 10 },
+            boxWidth: 18,
+            boxHeight: 10,
+            padding: 14,
             filter: (legendItem, data) => {
               const ds = data.datasets?.[legendItem.datasetIndex];
               if (!ds || !Array.isArray(ds.data) || ds.data.length === 0) return false;
@@ -644,13 +741,27 @@ export function drawYieldVsTimeChart({
        * @param {number} widthPx - Sichtbare Breite in Pixel (z.â€¯B. 600)
        * @param {number} heightPx - Sichtbare HÃ¶he in Pixel (z.â€¯B. 300)
        */
-      export function setupHiDPICanvas(canvas, widthPx, heightPx) {
+      export function setupHiDPICanvas(canvas, widthPx, heightPx, useActualSize = false) {
         const dpr = window.devicePixelRatio || 2;
 
-        canvas.width = widthPx * dpr;
-        canvas.height = heightPx * dpr;
-        canvas.style.width = `${widthPx}px`;
-        canvas.style.height = `${heightPx}px`;
+        let w = widthPx, h = heightPx;
+
+        // useActualSize: die TATSÄCHLICHE Anzeigegröße verwenden. Nötig wenn CSS
+        // die Canvas-Größe erzwingt (width:100% !important / height per !important).
+        // Weicht der Logikraum (z. B. 600×400) von der Darstellung ab, stimmen
+        // Maus- und Zeichen-Koordinaten nicht überein → Tooltip-Offset (man muss
+        // neben den Punkt zeigen). Fällt auf die übergebenen Maße zurück, falls
+        // (noch) nicht im Layout.
+        if (useActualSize) {
+          const rect = canvas.getBoundingClientRect();
+          w = Math.round(rect.width)  || widthPx;
+          h = Math.round(rect.height) || heightPx;
+        }
+
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
 
         const ctx = canvas.getContext('2d');
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

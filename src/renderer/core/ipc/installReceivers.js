@@ -22,7 +22,13 @@ export function installReceivers(deps = {}) {
     handleCustomerData,
     handleCustomerTSData,
     handleCustomerTableLayoutsData,
-    handleRATESData,
+    handleCustomerProductCategorySetupData,
+    handleCustomerMarketRiskSettingData,
+    handleCustomerMarketRiskThresholdSettingData,
+    handleCustomerCreditRiskSettingData,
+    handleCustomerCreditRiskThresholdSettingData,
+    handleCustomerMarketRiskIntervalOptions,
+    handleRATES_BASEData,
     handleRatesScenarioData,
     handleRatesActiveData,
     handleForwardData,
@@ -49,6 +55,7 @@ export function installReceivers(deps = {}) {
     handleVegaSensData,
 
     handleMvarInputData,
+    handleMvarModelSelectionAppData,
     handleAllMVaRData,
     handleMvarDistData,
     handleMvarProductData,
@@ -197,7 +204,13 @@ api.receive(channel, (data) => {
     handleCustomerData,
     handleCustomerTSData,
     handleCustomerTableLayoutsData,
-    handleRATESData,
+    handleCustomerProductCategorySetupData,
+    handleCustomerMarketRiskSettingData,
+    handleCustomerMarketRiskThresholdSettingData,
+    handleCustomerCreditRiskSettingData,
+    handleCustomerCreditRiskThresholdSettingData,
+    handleCustomerMarketRiskIntervalOptions,
+    handleRATES_BASEData,
     handleRatesScenarioData,
     handleRatesActiveData,
     handleForwardData,
@@ -223,6 +236,7 @@ api.receive(channel, (data) => {
     handleVegaSensData,
 
     handleMvarInputData,
+    handleMvarModelSelectionAppData,
     handleAllMVaRData,
     handleMvarDistData,
     handleMvarProductData,
@@ -263,6 +277,11 @@ api.receive(channel, (data) => {
   route('CustomerData', { required: true });
   route('CustomerTSSelectionData');
   route('CustomerTableLayoutsData');
+  route('CUSTOMER_PRODUCT_CATEGORY_SETUPData');
+  route('CustomerMarketRiskSettingData');
+  route('CustomerMarketRiskThresholdSettingData');
+  route('CustomerCreditRiskSettingData');
+  route('CustomerCreditRiskThresholdSettingData');
 
   // MARKET DATA
   route('RATES_ACTIVEData');
@@ -311,6 +330,7 @@ api.receive(channel, (data) => {
 
   // MVaR
   route('MVaRInputData');
+  route('v_MVAR_MODEL_SELECTION_APPData');
   route('MarketVaRData');
   route('MarketVaR_DistData');
   route('MarketVaR_ProductData');

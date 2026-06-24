@@ -1,52 +1,60 @@
-﻿// src/renderer/features/SELECT_PORTFOLIO/PORT.js
+﻿// src/renderer/features/portfolio/selectPortfolio/portfolioSelectionTable.js
 
 import {
   filterColumnsInData,
-} from '../../core/ui/modal/modalData.js';
+} from '../../../core/ui/modal/modalData.js';
 
-import processData from '../../core/ui/modal/modalData.js';
+import processData from '../../../core/ui/modal/modalData.js';
 
-import { appState } from '../../renderer.js';
+import { appState } from '../../../renderer.js';
 
 import {
   addTooltipsForTruncatedText,
   addProdIdTooltips,
-} from '../../utils/tooltips.js';
+} from '../../../utils/tooltips.js';
 
 import {
   formatNumberWithGrouping,
-} from '../../utils/tableCellFormats.js';
+} from '../../../utils/tableCellFormats.js';
 
 import {
   attachIdLinks,
-} from '../../utils/linksToTables.js';
+} from '../../../utils/linksToTables.js';
 
 import {
   applyPortfolioTableColoring,
-} from '../../utils/tableCellColorize.js';
+} from '../../../utils/tableCellColorize.js';
 
 import {
   ALL_PORT_COLUMN_KEYS,
   DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
-} from '../portfolio/portTableColumns.js';
+  LOCKED_PORT_COLUMN_KEYS,
+} from '../selectPortfolio/portfolioSelectionTableColumns.js';
 
 import {
   PORTFOLIO_DISPLAY_NAMES,
-} from '../portfolio/portfolioDisplayNames.js';
+} from '../shared/portfolioDisplayNames.js';
 
 import {
   renderConfigurableTable,
-} from '../../core/ui/tables/configurableTable.js';
+} from '../../../core/ui/tables/configurableTable.js';
 
 import {
   clearColumnFilters,
   applyColumnFilters,
-} from '../CUSTOMER/tableLayouts/tableColumnFilters.js';
+} from '../../CUSTOMER/tableLayouts/tableColumnFilters.js';
 
 // The active aggregate renderer for the "filtered:" summary box.
 import {
   handlePortAggData as renderFilteredAgg,
-} from '../portfolio/portfolioAggregates.js';
+} from '../shared/portfolioAggregates.js';
+
+// Risk-Anreicherung (PV01rel/CPV01rel = IR/CS Duration, Risk-Summaries) — wie im
+// alten portfolioTable.js. Beim Spaltenauswahl-Umbau ging dieser Schritt im
+// SELECT-PORTFOLIO-Pfad verloren, dadurch fehlten die Duration-Werte.
+import {
+  enrichPortfolioRowsWithRisk,
+} from '../shared/portfolioRiskEnrichment.js';
 
 let tableName = 'Portfolios';
 
@@ -124,7 +132,7 @@ function renderPortTableOnly(portData, index) {
     selectedTableName: tableName,
 
     // Always shown first, not toggleable, hidden from the column selector.
-    lockedColumns: ['TRADE_ID', 'PROD_ID', 'DESCRIPTION', 'clean_price', 'C_SPREAD', 'NOTIONAL', 'NAV'],
+    lockedColumns: LOCKED_PORT_COLUMN_KEYS,
 
     defaultVisibleColumns: DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
 
@@ -179,20 +187,54 @@ function renderPortTableOnly(portData, index) {
 
 console.log('[PORT MODULE] loaded');
 
+// Display-only enrichment helper: keep the existing portfolio row value if it is
+// already present; otherwise take the first non-empty candidate from product data.
+function fillFromProduct(rowValue, productCandidates = []) {
+  const isMissing = (v) =>
+    v === null || v === undefined || String(v).trim() === '';
+
+  if (!isMissing(rowValue)) return rowValue;
+
+  for (const candidate of productCandidates) {
+    if (!isMissing(candidate)) return candidate;
+  }
+
+  return rowValue ?? '';
+}
+
 export function handlePortProdData(receivedData, index, port_name) {
   const elementId = `portDataContainer${index}`;
   const portDataContainer = document.getElementById(elementId);
 
   if (!portDataContainer || !Array.isArray(receivedData)) return;
 
-  // The Portfolios table doesn't carry the per-product Credit Spread Override;
-  // it lives in the product data (keyed by PROD_ID). Enrich each row from there.
-  const enriched = receivedData.map((row) => {
-    const prodId = row?.PROD_ID ?? row?.product_id;
-    const override = appState.getProdById?.(prodId)?.CS_SPREAD_OVERRIDE_BP;
+  // 1) Risk-Anreicherung: fügt PV01rel/CPV01rel (= IR/CS Duration) und Risk-
+  //    Summaries pro Trade hinzu (port_name nötig für den Trade-Join).
+  const riskEnriched = enrichPortfolioRowsWithRisk(receivedData, port_name);
+
+  // 2) Produkt-Config (Credit Spread Override, FINLIB/MODEL/METHODE) aus den
+  //    Produktdaten (keyed by PROD_ID) ergänzen — display only, nie zurückgeschrieben.
+  const enriched = riskEnriched.map((row) => {
+    const prodId =
+      row?.PRODUCT_ID ?? row?.['Product ID'] ?? row?.product_id ?? row?.PROD_ID;
+    const product = appState.getProdById?.(prodId) || null;
+    const override = product?.CS_SPREAD_OVERRIDE_BP;
+
     return {
       ...row,
       CS_SPREAD_OVERRIDE_BP: override ?? row?.CS_SPREAD_OVERRIDE_BP ?? null,
+
+      // Fill product-level config only when the portfolio row value is missing.
+      FINLIB: fillFromProduct(row?.FINLIB, [
+        product?.FINLIB, product?.finlib, product?.pricing_library,
+      ]),
+      MODEL: fillFromProduct(row?.MODEL, [
+        product?.MODEL, product?.model, product?.pricing_model,
+      ]),
+      METHODE: fillFromProduct(row?.METHODE, [
+        product?.METHODE, product?.METHOD, product?.method,
+        product?.pricing_method, product?.lmm_method,
+      ]),
     };
   });
 

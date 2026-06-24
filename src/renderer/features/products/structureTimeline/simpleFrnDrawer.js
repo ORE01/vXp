@@ -507,15 +507,6 @@ export function renderSimpleFrnDrawer(container, prodId, options = {}) {
         <span class="structure-drawer-prod-id">
             ${isCreateMode ? 'New Product' : escapeHtml(formatValue(row.PROD_ID))}
         </span>
-
-        <button
-            id="closeSimpleFrnDrawer"
-            type="button"
-            class="structure-drawer-close"
-            aria-label="Close drawer"
-        >
-            &times;
-        </button>
         </div>
 
       <div class="structure-drawer-grid">
@@ -568,12 +559,6 @@ export function renderSimpleFrnDrawer(container, prodId, options = {}) {
     .querySelector('#saveSimpleFrnDrawer')
     ?.addEventListener('click', () => {
       saveSimpleFrn(container, prodId, options);
-    });
-
-  container
-    .querySelector('#closeSimpleFrnDrawer')
-    ?.addEventListener('click', () => {
-        container.style.display = 'none';
     });
 
   container

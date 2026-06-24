@@ -1,5 +1,16 @@
 /* MARKETDATA ▸ RATES Layout (Grid only) */
 
+/* SET SCENARIOS panel: alle Szenario-Dropdowns gleich breit
+   (IR Curve Mapping, Credit Spread Mapping, Swaption Vol) — sonst skalieren
+   sie nach der Länge der Szenario-Namen. */
+#ScenarioMappingContainer .scenario-select,
+#csScenarioContainer .cs-scenario-select,
+#volScenarioSelect {
+  width: 200px;
+  min-width: 200px;
+  box-sizing: border-box;
+}
+
 #MARKETDATA_Modal #panel-rates .sub-panel-body{
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr);

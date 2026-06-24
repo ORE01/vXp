@@ -7,6 +7,7 @@ import { installMarketRiskStore } from '../state/stores/marketRiskStore.js';
 import { installCreditRiskStore } from '../state/stores/creditRiskStore.js';
 import { installMarketDataStore } from '../state/stores/marketDataStore.js';
 import { installProductsStore } from '../state/stores/productsStore.js';
+import { installCustomerDataStore } from '../state/stores/customerDataStore.js';
 import { installNameListsStore } from '../state/stores/nameListsStore.js';
 import { installCustomerReportsStore } from '../state/stores/customerReportsStore.js';
 import { installDataUpdatePipeline } from '../data/dataUpdatePipeline.js';
@@ -21,6 +22,7 @@ export function bootstrapStores(appState) {
   installCreditRiskStore({ appState });
   installMarketDataStore({ appState });
   installProductsStore({ appState });
+  installCustomerDataStore({ appState });
   installNameListsStore({ appState });
   installCustomerReportsStore({ appState });
   installDataUpdatePipeline({ appState });

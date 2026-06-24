@@ -102,15 +102,42 @@ function getStoredProductRowsForCurrentContext() {
     rowMatchesMvarContext(row, context)
   );
 
-  console.log('[MVaR ProductPL] local context filter', {
-    selectedPort: normalizePortfolioName(portName),
-    selectedScenario: normalizeMvarText(scenarioName),
-    allRows: allRows.length,
-    filteredRows: filteredRows.length,
-    availablePorts: getAvailableMvarPorts(allRows),
-    availableScenarios: getAvailableMvarScenarios(allRows),
-    sample: filteredRows[0] || allRows[0],
-  });
+  // console.log('[MVaR ProductPL] local context filter', {
+  //   selectedPort: normalizePortfolioName(portName),
+  //   selectedScenario: normalizeMvarText(scenarioName),
+  //   allRows: allRows.length,
+  //   filteredRows: filteredRows.length,
+  //   availablePorts: getAvailableMvarPorts(allRows),
+  //   availableScenarios: getAvailableMvarScenarios(allRows),
+  //   sample: filteredRows[0] || allRows[0],
+  // });
+
+  // Diagnostic only: raw vs context-matched rows, with field-name variants so we can
+  // tell whether the filter drops existing data (port/scenario field/spelling).
+  // console.log('[MVAR PRODUCT FILTER CHECK]', {
+  //   selectedPort: appState.getSelectedPortTableName?.(),
+  //   selectedScenario: appState.selectedMvarInterval,
+
+  //   inputRowsCount: Array.isArray(allRows) ? allRows.length : null,
+  //   matchedRowsCount: Array.isArray(filteredRows) ? filteredRows.length : null,
+
+  //   sampleBeforeFilter: Array.isArray(allRows) ? allRows[0] : null,
+  //   sampleAfterFilter: Array.isArray(filteredRows) ? filteredRows[0] : null,
+
+  //   availablePorts: Array.isArray(allRows)
+  //     ? [...new Set(allRows.map(r => r.PORT_NAME ?? r.portName ?? r.port_name ?? r.PORT).filter(Boolean))].slice(0, 20)
+  //     : [],
+
+  //   availableScenarios: Array.isArray(allRows)
+  //     ? [...new Set(allRows.map(r =>
+  //         r.SCENARIO_NAME ??
+  //         r.scenarioName ??
+  //         r.scenario_name ??
+  //         r.INTERVAL_NAME ??
+  //         r.interval_name
+  //       ).filter(Boolean))].slice(0, 20)
+  //     : [],
+  // });
 
   return filteredRows;
 }
@@ -512,13 +539,57 @@ function renderMvarProductChart(productRows) {
 
   chartBox.appendChild(wrapper);
 
-  console.log('[MVaR ProductPL] DOM chart rendered', {
-    rows: chartRows.length,
-    labels: chartRows.map(row => row.prod_id),
-    values,
-    maxAbs,
-    productRows: safeRows.length,
-  });
+  // console.log('[MVaR ProductPL] DOM chart rendered', {
+  //   rows: chartRows.length,
+  //   labels: chartRows.map(row => row.prod_id),
+  //   values,
+  //   maxAbs,
+  //   productRows: safeRows.length,
+  // });
+}
+
+// Deferred product-chart render: only draw once the chart CONTAINER has a real width.
+// NOTE: the product chart is a DOM bar chart drawn into the canvas's PARENT box; the
+// <canvas> itself is intentionally display:none (always 0x0), so we must measure the
+// container (.mvar-prod-chart), not the canvas. Gate on width only (height grows with
+// content via min-height). Max 3 retries, no interval; last attempt renders anyway.
+function renderProductChartWhenReady(productRows, attempt = 0) {
+  const canvas = document.getElementById('mvarProdIdVarContribChart');
+  const chartBox =
+    canvas?.parentElement ||
+    document.querySelector('#panel-mvar-products .mvar-prod-chart') ||
+    document.querySelector('.mvar-prod-chart');
+
+  const width = chartBox?.clientWidth ?? 0;
+  const height = chartBox?.clientHeight ?? 0;
+
+  // console.log('[MVAR PRODUCT CHART READY CHECK]', {
+  //   attempt,
+  //   canvasExists: !!canvas,
+  //   chartBoxExists: !!chartBox,
+  //   width,
+  //   height,
+  //   rows: Array.isArray(productRows) ? productRows.length : null,
+  // });
+
+  if (!chartBox || width <= 0) {
+    if (attempt < 3) {
+      requestAnimationFrame(() => {
+        setTimeout(() => renderProductChartWhenReady(productRows, attempt + 1), 50);
+      });
+      return;
+    }
+
+    // Last resort: render anyway. The DOM chart uses width:100% / min-height:220px and
+    // does not depend on the canvas, so a final render is safe and avoids a blank tile.
+    console.warn('[MVAR PRODUCT CHART] container not sized after retries, rendering anyway', {
+      chartBoxExists: !!chartBox,
+      width,
+      height,
+    });
+  }
+
+  renderMvarProductChart(productRows);
 }
 
 export function renderMvarProductPLPanel() {
@@ -584,7 +655,7 @@ export function renderMvarProductPLPanel() {
       productRows,
       [
         {
-          label: 'Product',
+          label: 'Product ID',
           value: r => r.prod_id,
         },
         {
@@ -622,7 +693,7 @@ export function renderMvarProductPLPanel() {
 
     // Make the "Product" column (prod_id) clickable -> opens the product editor,
     // same as in the other tables.
-    attachIdLinks(productTableContainer, { prodHeader: 'Product' });
+    attachIdLinks(productTableContainer, { prodHeader: 'Product ID' });
   }
 
   const topRows = productRows
@@ -635,7 +706,7 @@ export function renderMvarProductPLPanel() {
       topRows,
         [
         {
-            label: 'Product',
+            label: 'Product ID',
             value: r => r.prod_id,
         },
         {
@@ -653,17 +724,20 @@ export function renderMvarProductPLPanel() {
     );
   }
 
-  renderMvarProductChart(productRows);
+  // Initial-open fix: the product canvas can still be 0x0 while the layout settles,
+  // so a direct render draws into a zero-size canvas and stays blank. Defer until the
+  // canvas has a real size (max 3 retries; no interval / no endless loop).
+  renderProductChartWhenReady(productRows);
 
-  console.log('[MVaR ProductPL] rendered', {
-    portName,
-    scenarioName,
-    storeRows: appState.getMvarProductData?.()?.length || 0,
-    filteredRows: filteredRows.length,
-    productRows: productRows.length,
-    topRows: topRows.length,
-    sample: filteredRows[0],
-  });
+  // console.log('[MVaR ProductPL] rendered', {
+  //   portName,
+  //   scenarioName,
+  //   storeRows: appState.getMvarProductData?.()?.length || 0,
+  //   filteredRows: filteredRows.length,
+  //   productRows: productRows.length,
+  //   topRows: topRows.length,
+  //   sample: filteredRows[0],
+  // });
 }
 
 function normalizeProductContributionRows(rows) {
@@ -745,14 +819,14 @@ export function handleMVaRProductPLData(receivedData) {
 
   appState.setMvarProductData(rows);
 
-  console.log('[MVaR ProductPL] handler called', {
-    receivedRows: rawRows.length,
-    normalizedRows: rows.length,
-    receivedSample: rawRows[0],
-    normalizedSample: rows[0],
-    storeRows: appState.getMvarProductData?.()?.length || 0,
-    hasStoreGetter: typeof appState.getMvarProductData === 'function',
-  });
+  // console.log('[MVaR ProductPL] handler called', {
+  //   receivedRows: rawRows.length,
+  //   normalizedRows: rows.length,
+  //   receivedSample: rawRows[0],
+  //   normalizedSample: rows[0],
+  //   storeRows: appState.getMvarProductData?.()?.length || 0,
+  //   hasStoreGetter: typeof appState.getMvarProductData === 'function',
+  // });
 
   renderMvarProductPLPanel();
 }

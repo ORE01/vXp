@@ -55,7 +55,7 @@ module.exports = function registerCrudHandlers({
     PRODUCTS_PRICING_CONFIG: ['PRODUCTS_PRICING_CONFIG', 'v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'],
     Issuer:              ['Issuer', 'IssuerRankRating'],
     Portfolios:          ['Portfolios'],
-    MVaRInput:           ['MVaRInput'],
+    MVaRInput:           ['MVaRInput', 'v_MVAR_MODEL_SELECTION_APP'],
     MarketVaR_FactorSeriesMap: ['MarketVaR_FactorSeriesMap'],
     
     ecb:                 ['ecb'],

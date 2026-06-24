@@ -16,9 +16,8 @@
   flex: 1 1 calc(50% - 20px);
   min-width: 400px;
   max-width: 550px;
-  aspect-ratio: 4 / 3;
   background: var(--surface-raised);
-  padding: 20px;
+  padding: 12px 16px;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   color: var(--text-bright);
@@ -26,9 +25,20 @@
 
 #ANALYSE_Modal .chart-box canvas{
   max-width:100%;
-  max-height:100%;
   width:100%;
-  height:auto;
+  height:190px;   /* flacher, damit beide Reihen auf den Bildschirm passen */
+}
+
+/* Reihen-Unterteilung im Performance-Grid: volle Breite erzwingt Zeilenumbruch. */
+#ANALYSE_Modal #yieldChartGrid .yield-group-title{
+  flex: 0 0 100%;
+  width: 100%;
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-bright);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 6px;
 }
 
 /* 2x1 Chart Grid */
@@ -43,11 +53,14 @@
 #ANALYSE_Modal .chart-2x1-row .chart-box{
   width:100%;
   height:400px;
+  /* Sizing-Container für die responsiven Chart.js-Canvas. */
+  position:relative;
 }
 
+/* KEINE erzwungene Canvas-Größe für responsive Chart.js-Charts (kämpft sonst
+   gegen Chart.js' Sizing → Resize-Schleife). Chart.js füllt die 400px-Box selbst. */
 #ANALYSE_Modal .chart-2x1-row canvas{
-  width:100% !important;
-  height:100% !important;
+  display:block;
 }
 
 @media (max-width:800px){

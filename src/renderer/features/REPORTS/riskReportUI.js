@@ -1,5 +1,6 @@
 import { generateRiskPDF } from './RiskPDF.js';
 import { wireRiskPreview } from './RiskPDFPreview.js';
+import { showMessageBox } from '../../core/ui/dialogs/confirm.js';
 
 /**
  * Verdrahtet Risk Report UI (Thumbnails Refresh + Risk PDF).
@@ -25,47 +26,47 @@ export function wireRiskReportUI({ appRoot, reportRoot, appState, handleIRSensDa
     const btn = e?.currentTarget || appRoot.querySelector('#refreshThumbnailsBtn');
     if (!btn) return;
 
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Refreshing…';
+    // Button-Status (Executing… + Punkt) wird zentral in RiskPDFPreview gesteuert.
+    // Arbeit erst NACH dem Paint, sonst blockiert sie die Busy-Anzeige.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      try {
+        const portMainData =
+          (appState?.getPortMainData?.() ||
+           appState?.getPortMainTable?.() ||
+           window.appState?.getPortMainData?.() ||
+           window.appState?.getPortMainTable?.() ||
+           []);
 
-    try {
-      const portMainData =
-        (appState?.getPortMainData?.() ||
-         appState?.getPortMainTable?.() ||
-         window.appState?.getPortMainData?.() ||
-         window.appState?.getPortMainTable?.() ||
-         []);
+        if (typeof handleIRSensData !== 'function') {
+          throw new Error('handleIRSensData is not available (import missing or wrong)');
+        }
 
-      if (typeof handleIRSensData !== 'function') {
-        throw new Error('handleIRSensData is not available (import missing or wrong)');
+        const irTable = handleIRSensData(portMainData);
+        replaceContent(appRoot, 'IRSensDataContainer', irTable);
+
+        if (typeof handleCSSensData === 'function') {
+          const crTable = handleCSSensData(portMainData);
+          replaceContent(appRoot, 'CSSensDataContainer', crTable);
+        }
+
+        document.dispatchEvent(
+          new CustomEvent('risk:refresh-thumbnails', { detail: { source: 'manual-refresh' } })
+        );
+      } catch (err) {
+        console.error('[RiskPDF] refresh failed:', err);
       }
-
-      const irTable = handleIRSensData(portMainData);
-      replaceContent(appRoot, 'IRSensDataContainer', irTable);
-
-      if (typeof handleCSSensData === 'function') {
-        const crTable = handleCSSensData(portMainData);
-        replaceContent(appRoot, 'CSSensDataContainer', crTable);
-      }
-
-      document.dispatchEvent(
-        new CustomEvent('risk:refresh-thumbnails', { detail: { source: 'manual-refresh' } })
-      );
-    } catch (err) {
-      console.error('[RiskPDF] refresh failed:', err);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = original;
-    }
+    }));
   });
 
   // Risk PDF
   appRoot.querySelector('#riskPDFButton')?.addEventListener('click', () => {
     const data = appState?.getFilteredPortData?.() || [];
+    // Portfolio-Daten werden NUR für portfolioabhängige Teile gebraucht (Produkt-
+    // Appendix, der in generateRiskPDF ohnehin nur bei vorhandenen Daten gezeichnet
+    // wird). Kundenweite Sektionen (CUSTOMER SETUP) sollen auch OHNE Portfolio
+    // druckbar sein → nicht mehr hart abbrechen, nur Hinweis loggen.
     if (!data.length) {
-      alert('❌ Keine Angebotsdaten verfügbar!');
-      return;
+      console.warn('[RiskReportUI] kein Portfolio gewählt — PDF wird nur aus den ausgewählten Sektionen erzeugt (kein Produkt-Appendix).');
     }
 
     try {
@@ -77,7 +78,9 @@ export function wireRiskReportUI({ appRoot, reportRoot, appState, handleIRSensDa
       generateRiskPDF(data, { fileName, appRoot, reportRoot });
     } catch (e) {
       console.error(e);
-      alert('Risk-PDF-Erstellung fehlgeschlagen.');
+      const msg = 'Risk-PDF-Erstellung fehlgeschlagen.';
+      if (typeof showMessageBox === 'function') showMessageBox(msg);
+      else console.warn('[RiskReportUI]', msg);
     }
   });
 }

@@ -7,8 +7,10 @@ import { initLazyPanels, refreshOpenPanels as refreshCore } from "./panelOrchest
 import { renderInterestRateCurvePanel} from "../../features/MARKET_DATA/interestRates/interestRateCurvePanel.js";
 import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/forwards/forwardCurvePanel.js";
 
-// Swaption Vols: 3D-ATM-Surface (Plotly) + Smile (Chart.js)
-import { renderSwaptionIfReady } from "../../features/MARKET_DATA/VOLS/swaptionVols.js";
+// Swaption Vols: ATM-Surface (HTML-Heatmap) + Smile (Chart.js) + Cube (Heatmap).
+// Direkte Renderer (ohne Open-Guard), damit sie auch beim Report-Warm-up greifen.
+import { renderSwaptionIfReady, renderVolSurfacePanel, renderSwaptionSmile } from "../../features/MARKET_DATA/VOLS/swaptionVols.js";
+import { renderSwaptionCubeHeatmap, renderSwaptionCubeSummary } from "../../features/MARKET_DATA/VOLS/volCube.js";
 import { notifyRiskPreview } from '../../features/REPORTS/RiskPDFPreview.js';
 
 import { createTSModals } from "../../features/MARKET_DATA/HISTORIC_DATA/TS.js";
@@ -68,10 +70,19 @@ export function getMarketDataPanelRenderers() {
     },
 
     // ======================================================
-    // SWAPTION VOLS (ATM Surface + Smile)
+    // SWAPTION VOLS — direkte Renderer (kein Open-Guard), damit Lazy-Open UND
+    // Report-Warm-up den Inhalt aus dem State materialisieren.
     // ======================================================
     "panel-swaption": () => {
-      renderSwaptionAndPreview();
+      renderVolSurfacePanel();   // ATM Surface (HTML-Heatmap)
+      renderSwaptionSmile();     // Smile (Chart.js) – falls Daten vorhanden
+    },
+    "panel-swaption-smile": () => {
+      renderSwaptionSmile();
+    },
+    "panel-swaption-cube": () => {
+      renderSwaptionCubeHeatmap();
+      renderSwaptionCubeSummary();
     },
 
     // ======================================================

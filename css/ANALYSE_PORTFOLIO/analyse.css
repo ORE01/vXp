@@ -10,62 +10,132 @@
    ============================================================ */
 #ANALYSE_Modal.view-analyse .risk-section { display: none; }
 
-/* Trigger list alignment: main triggers fill the full trigger width; sub
-   triggers are clearly indented at the FRONT (margin on the button itself) and
-   shortened so their RIGHT edge lines up with the mains. The indent lives on
-   the button (not the wrapper) so it renders reliably; border-box keeps
-   padding/border from shifting the right edge. */
-#ANALYSE_Modal .section-trigger {
+/* Trigger list alignment — APP-WIDE (all .table modals). Main triggers fill the
+   full trigger width; sub triggers are clearly indented at the FRONT (margin on
+   the button itself) and shortened so their RIGHT edge lines up with the mains.
+   The indent lives on the button (not the wrapper) so it renders reliably;
+   border-box keeps padding/border from shifting the right edge. */
+.table .section-trigger {
   box-sizing: border-box;
   width: var(--trigger-max-width);
   max-width: var(--trigger-max-width);
 }
 /* Neutralise the wrapper indents so the button margin isn't doubled. */
-#ANALYSE_Modal .chart-section--sub { margin-left: 0; }
-#ANALYSE_Modal .section-trigger--sub {
+.table .chart-section--sub { margin-left: 0; }
+.table .section-trigger--sub {
   margin-left: 18px;
   width: calc(var(--trigger-max-width) - 18px);
   max-width: none;
 }
-#ANALYSE_Modal .chart-section--sub.risk-deep .section-trigger--sub {
+.table .chart-section--sub.risk-deep .section-trigger--sub {
   margin-left: 36px;
   width: calc(var(--trigger-max-width) - 36px);
+}
+
+/* Light theme: trigger text black on the light field; on HOVER the field turns
+   dark and the text turns white. The label sits in .section-header with its OWN
+   color (var(--trigger-text)), so the color is set there too; the chevron + ↳
+   arrow follow the button's currentColor. */
+.light-theme .table .section-trigger,
+.light-theme .table .section-trigger .section-header,
+.light-theme #structureTimelineModal .section-trigger,
+.light-theme #structureTimelineModal .section-trigger .section-header {
+  color: var(--text-bright);
+}
+.light-theme .table .section-trigger:hover,
+.light-theme #structureTimelineModal .section-trigger:hover {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+}
+.light-theme .table .section-trigger:hover,
+.light-theme .table .section-trigger:hover .section-header,
+.light-theme #structureTimelineModal .section-trigger:hover,
+.light-theme #structureTimelineModal .section-trigger:hover .section-header {
+  color: #fff;
 }
 #ANALYSE_Modal.view-risk .chart-section:not(.risk-section) { display: none; }
 #ANALYSE_Modal.view-analyse .view-risk-only { display: none; }
 #ANALYSE_Modal.view-risk .view-analyse-only { display: none; }
 
-/* RISK-view portfolio picker (mirrors createdPortDropdown0). */
-#ANALYSE_Modal .risk-port-select {
+/* ============================================================
+   Nested RISK accordion (Risk Metrics Input group): group toggles expand only
+   their own next level; leaves open a slide-in.
+   ============================================================ */
+#ANALYSE_Modal .risk-acc { margin: 8px 0; }   /* top group ~ a main (RISK + VALUATION) */
+/* Verschachtelte Accordions (in einem .risk-acc-body, z.B. Market Risk / Credit Risk)
+   bekommen KEINEN Top-Group-Abstand – Abstand kommt allein aus dem .risk-acc-body
+   gap (6px). Sonst entsteht eine zu große Lücke zwischen den Sub-Gruppen. */
+#ANALYSE_Modal .risk-acc-body .risk-acc { margin: 0; }
+#ANALYSE_Modal .risk-acc-body {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+}
+#ANALYSE_Modal .risk-acc.is-expanded > .risk-acc-body { display: flex; }
+
+/* Level-3 leaves (Model Selection / Factor Mapping / Risk-Results-Blätter):
+   one step deeper. */
+#ANALYSE_Modal .section-trigger--sub.risk-acc--l3 {
+  margin-left: 36px;
+  width: calc(var(--trigger-max-width) - 36px);
+}
+
+/* Chevron points down when a group is expanded. */
+#ANALYSE_Modal .risk-acc.is-expanded > .risk-acc-toggle .chev::before {
+  transform: rotate(90deg);
+  opacity: .95;
+}
+
+/* RISK-view portfolio picker (mirrors createdPortDropdown0): a trigger-like
+   "Select Portfolio" heading with the dropdown right below, both the same width
+   as the triggers. */
+#ANALYSE_Modal .risk-select-inline {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-bottom: 12px;
 }
-#ANALYSE_Modal .risk-port-select label {
-  color: var(--text-muted);
-  font-size: 13px;
+/* Heading: looks like a (non-clickable) main trigger. */
+#ANALYSE_Modal .risk-select-heading {
+  width: var(--trigger-max-width);
+  box-sizing: border-box;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-bright);
+  font-size: 14px;
+  font-weight: 600;
 }
-#ANALYSE_Modal .risk-port-select .deals-dropdown { min-width: 200px; }
+#ANALYSE_Modal .risk-select-inline .deals-dropdown {
+  width: var(--trigger-max-width);
+  min-width: 0;
+  box-sizing: border-box;
+}
 
 /* RISK "Select Portfolio" panel: dropdown + Calculate buttons stacked. */
-#ANALYSE_Modal #panel-risk-select .risk-select-form {
+/* Shared layout for the Select Portfolio (dropdown) and Risk Metrics Calculate
+   (buttons) panels. */
+#ANALYSE_Modal .risk-select-form {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 12px;
   max-width: 320px;
 }
-#ANALYSE_Modal #panel-risk-select .risk-port-select {
-  margin-bottom: 4px;
-}
 /* Each Calculate button sits in a row with a status dot to its right. */
-#ANALYSE_Modal #panel-risk-select .risk-calc-row {
+#ANALYSE_Modal .risk-calc-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-#ANALYSE_Modal #panel-risk-select .risk-calc-row .edit-button {
+#ANALYSE_Modal .risk-calc-row .edit-button {
   flex: 1 1 auto;
   text-align: center;
 }

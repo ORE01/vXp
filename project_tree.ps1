@@ -4,7 +4,7 @@
 # ASCII-safe version
 # ============================================================
 
-$Root = "C:\Users\wendlert\Desktop\valueXpro_dev\aktuell\electron_app"
+$Root = "C:\Users\Ronald\riskApp\electron_app"
 $MaxDepth = 6
 
 $ExcludeDirs = @(

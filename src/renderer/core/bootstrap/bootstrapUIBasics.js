@@ -1,7 +1,7 @@
 // src/renderer/core/bootstrap/bootstrapUIBasics.js
 
 import { createPortfolioUIOrchestrator } from '../orchestration/portfolioUIOrchestrator.js';
-import { createPortfolioDropdownUI } from '../../features/portfolio/portfolioDropdownUI.js';
+import { createPortfolioDropdownUI } from '../../features/portfolio/createPortfolio/portfolioDropdownUI.js';
 import { createMarketRiskRefresh } from '../../features/ANALYSE_PORTFOLIO/marketRisk/marketRiskRefresh.js';
 
 // ✅ central UI enhancer (INCLUDE checkbox)

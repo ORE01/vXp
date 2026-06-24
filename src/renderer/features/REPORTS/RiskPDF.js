@@ -13,6 +13,9 @@
 const { jsPDF } = window.jspdf;
 
 import { getActiveRiskSectionsForPdf, RISK_CONFIG } from './RiskPDFPreview.js';
+// Cross-module element lookups (chart/container ids from the source modules)
+// go through the capture adapter — see captureAdapter.js for the rationale.
+import { getInAppById } from './captureAdapter.js';
 
 // =====================================================================
 // REPORT DEFAULTS
@@ -47,7 +50,7 @@ function resolveBreakdownChartLabel(chartId, ctx) {
   if (BREAKDOWN_CHART_LABELS[key]) return BREAKDOWN_CHART_LABELS[key];
 
   try {
-    const el = ctx?.getById?.(chartId) || document.getElementById(chartId);
+    const el = ctx?.getById?.(chartId) || getInAppById(chartId);
     const lbl = el?.dataset?.label;
     if (lbl && String(lbl).trim()) return String(lbl).trim();
   } catch {}
@@ -197,58 +200,20 @@ function safeAutoTable(doc, layout, options = {}) {
 // =====================================================================
 // HIERARCHY
 // =====================================================================
-function applyPdfHierarchy(sections, config) {
-  const parents = config?.sectionParents || {};
-  const orderByParent = config?.sectionChildrenOrder || {};
-
-  const byKey = new Map(sections.map((s) => [s.key, s]));
-  const childrenMap = new Map();
-
-  for (const s of sections) {
-    const p = parents[s.key];
-    if (p && byKey.has(p)) {
-      if (!childrenMap.has(p)) childrenMap.set(p, []);
-      childrenMap.get(p).push(s.key);
-    }
-  }
-
-  for (const [p, arr] of childrenMap.entries()) {
-    const pref = orderByParent[p];
-    if (Array.isArray(pref) && pref.length) {
-      const set = new Set(arr);
-      const ordered = [
-        ...pref.filter((k) => set.has(k)),
-        ...arr.filter((k) => !pref.includes(k)),
-      ];
-      childrenMap.set(p, ordered);
-    }
-  }
-
-  const roots = sections
-    .filter((s) => {
-      const p = parents[s.key];
-      return !(p && byKey.has(p));
-    })
-    .map((s) => s.key);
-
-  const seenRoot = new Set(roots);
-  const rootsInOriginalOrder = sections.map((s) => s.key).filter((k) => seenRoot.has(k));
-
-  const out = [];
-  const visit = (key, level, number) => {
-    const sec = byKey.get(key);
-    if (!sec) return;
-
+// Die Sektionen kommen bereits HIERARCHISCH geordnet (mit __level) aus
+// getActiveRiskSectionsForPdf → identisch zur Preview, generisch aus dem
+// Trigger-DOM. Hier nur noch TOC-Level + verschachtelte Nummerierung (1, 1.1,
+// 1.1.1 …) anhand von __level vergeben — keine RISK_CONFIG-Abhängigkeit mehr.
+function applyPdfHierarchy(sections) {
+  const counters = [];
+  for (const sec of sections) {
+    const level = sec.__level || 1;
+    counters.length = level;                         // tiefere Ebenen verwerfen
+    counters[level - 1] = (counters[level - 1] || 0) + 1;
     sec.tocLevel = level;
-    sec.sectionNumber = number;
-    out.push(sec);
-
-    const kids = childrenMap.get(key) || [];
-    kids.forEach((ck, idx) => visit(ck, level + 1, `${number}.${idx + 1}`));
-  };
-
-  rootsInOriginalOrder.forEach((rk, idx) => visit(rk, 1, String(idx + 1)));
-  return out;
+    sec.sectionNumber = counters.slice(0, level).join('.');
+  }
+  return sections;
 }
 
 // =====================================================================
@@ -372,7 +337,7 @@ function groupBreakdownChartsBySection(charts, ctx) {
   const groupsMap = new Map();
 
   for (const ch of charts) {
-    const el = ctx?.getById?.(ch.id) || document.getElementById(ch.id);
+    const el = ctx?.getById?.(ch.id) || getInAppById(ch.id);
     if (!el) continue;
 
     const section = el.closest?.('.pie-section');
@@ -422,7 +387,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     if (b) return b;
 
     // 3) last fallback (avoid, but keep as safety)
-    return document.getElementById(id);
+    return getInAppById(id);
   };
 
   const ctx = { appRoot, reportRoot, domRoot, getById };
@@ -439,10 +404,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText });
 
   const includeTOC = !!opts.includeTOC;
-  if (includeTOC) doc.addPage();
+  // TOC-Seiten werden weiter unten reserviert — erst wenn die Eintragsanzahl
+  // (Sektionen + Breakdown-Untereinträge + Appendix) bekannt ist (Mehrseiten-TOC).
 
   let sections = getActiveRiskSectionsForPdf() || [];
-  sections = applyPdfHierarchy(sections, RISK_CONFIG);
+  sections = applyPdfHierarchy(sections);
 
   const sectionNoByKey = {};
   sections.forEach((s) => (sectionNoByKey[s.key] = s.sectionNumber));
@@ -482,22 +448,60 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     tocEntries.push({ title: `${number}. ${title}`, page, level });
   };
 
+  // TOC-Seiten VORAB reservieren, sonst werden überzählige Einträge verworfen
+  // (Mehrseiten-TOC). Eintragsanzahl exakt: 1 pro Sektion (Gruppe ODER Blatt) +
+  // Breakdown-Untereinträge + Appendix. Seitenzahl per Simulation der Schreib-
+  // logik (gleicher lineStep/Threshold) → reservierte Seiten == benötigte Seiten.
+  const TOC_LINE_STEP = 8;
+  if (includeTOC) {
+    let estEntries = sections.length;
+    const bn = breakdownSec?.breakdownNumbering;
+    if (bn) estEntries += Object.keys(bn.groups || {}).length + Object.keys(bn.charts || {}).length;
+    if (Array.isArray(filteredData) && filteredData.length) estEntries += 1;
+
+    const tl = createPdfLayout(doc, layout.cfg);
+    let tocPagesNeeded = 1, y = tl.startY() + 12;
+    for (let i = 0; i < estEntries; i++) {
+      if (y > tl.bottomY - 6) { tocPagesNeeded++; y = tl.startY(); }
+      y += TOC_LINE_STEP;
+    }
+    for (let i = 0; i < tocPagesNeeded; i++) doc.addPage();
+  }
+
   doc.addPage();
 
   let wroteAnySection = false;
+  const pendingGroupToc = []; // TOC-Indizes von Gruppen-Überschriften ohne eigene Seite
 
   for (let i = 0; i < sections.length; i++) {
     const sec = sections[i];
     const sectionNo = sectionNoByKey[sec.key] || String(i + 1);
     sec.sectionNumber = sectionNo;
 
+    const title = sec.title || sec.key;
+    const level = sec.tocLevel || 1;
+    const hasContent =
+      (sec.enabledCharts && sec.enabledCharts.length) ||
+      (sec.enabledTables && sec.enabledTables.length);
+
+    // Gruppen-/Überschrift-Sektionen (ohne Inhalt): NUR ins Inhaltsverzeichnis,
+    // keine eigene Seite. Die Seitenzahl folgt dem ersten Blatt darunter.
+    if (!hasContent) {
+      pendingGroupToc.push(tocEntries.length);
+      addTOCEntry(sec.sectionNumber, title, null, level);
+      continue;
+    }
+
     if (wroteAnySection) doc.addPage();
     wroteAnySection = true;
 
-    const title = sec.title || sec.key;
     const pageIndex = doc.internal.getNumberOfPages();
 
-    addTOCEntry(sec.sectionNumber, title, pageIndex, sec.tocLevel || 1);
+    addTOCEntry(sec.sectionNumber, title, pageIndex, level);
+
+    // ausstehende Gruppen-Überschriften auf diese (erste Inhalts-)Seite zeigen lassen
+    pendingGroupToc.forEach((idx) => { if (tocEntries[idx]) tocEntries[idx].page = pageIndex; });
+    pendingGroupToc.length = 0;
 
     if (sec.key === 'breakdown' && sec.breakdownNumbering && typeof groupBreakdownChartsBySection === 'function') {
       const chartsForGroups = sec.enabledCharts || [];
@@ -520,19 +524,29 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     await renderPanelSectionToPDF(doc, sec, layout, ctx);
   }
 
+  // Gruppen-Überschriften ohne folgendes Blatt: auf die letzte Seite zeigen.
+  {
+    const lastPage = doc.internal.getNumberOfPages();
+    pendingGroupToc.forEach((idx) => { if (tocEntries[idx] && tocEntries[idx].page == null) tocEntries[idx].page = lastPage; });
+    pendingGroupToc.length = 0;
+  }
+
   // Appendix: products
   if (Array.isArray(filteredData) && filteredData.length) {
     doc.addPage();
     const pageIndex = doc.internal.getNumberOfPages();
-    const appendixNo = String(sections.length + 1);
+    // Nächste Top-Level-Nummer (zählt nur Ebene-1-Sektionen, nicht Untergruppen).
+    const topLevelCount = sections.filter((s) => (s.tocLevel || 1) === 1).length;
+    const appendixNo = String(topLevelCount + 1);
 
     tocEntries.push({ title: `${appendixNo}. Appendix: Product Table`, page: pageIndex, level: 1 });
     drawProductTableSection(doc, filteredData, layout, { appendixNo });
   }
 
-  // Write TOC (page 2)
+  // Write TOC (ab Seite 2; fließt über die vorab reservierten Seiten).
   if (includeTOC) {
-    doc.setPage(2);
+    let tocPage = 2;
+    doc.setPage(tocPage);
     const tocLayout = createPdfLayout(doc, layout.cfg);
 
     doc.setFontSize(16);
@@ -540,15 +554,18 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     doc.text('Table of Contents', tocLayout.left, tocLayout.startY());
     doc.setFontSize(11);
 
-    const lineStartY = tocLayout.startY() + 12;
-    const lineStep = 8;
+    let y = tocLayout.startY() + 12; // erste TOC-Seite: unter der Überschrift
 
-    tocEntries.forEach((entry, index) => {
+    tocEntries.forEach((entry) => {
+      // Überlauf → nächste (reservierte) TOC-Seite, oben beginnen.
+      if (y > tocLayout.bottomY - 6) {
+        tocPage++;
+        doc.setPage(tocPage);
+        doc.setFontSize(11);
+        y = tocLayout.startY();
+      }
+
       const indent = (entry.level - 1) * 5;
-      const y = lineStartY + index * lineStep;
-
-      if (y > tocLayout.bottomY - 6) return;
-
       const pageText = String(entry.page);
       const marginLeft = tocLayout.left + indent;
       const marginRight = tocLayout.right;
@@ -563,6 +580,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       const dots = dotW ? '.'.repeat(Math.floor(dotsWidth / dotW)) : '';
 
       doc.text(`${titleText} ${dots} ${pageText}`, marginLeft, y);
+      y += TOC_LINE_STEP;
     });
   }
 
@@ -874,6 +892,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     doc.text(String(t.label || t.id), marginX, y);
 
     const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
+    const cellStatus = tbl.cellStatus || [];
 
     safeAutoTable(doc, layout, {
       startY: y + 6,
@@ -884,6 +903,22 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       tableWidth: layout.contentWidth,
+      // Ampelpunkt: kleiner gefüllter Kreis am rechten Zellenrand, wo die Live-
+      // Tabelle einen Traffic-Light-Dot hat (Text geht via textContent verloren).
+      didDrawCell: (data) => {
+        if (!data || data.section !== 'body') return;
+        const status = cellStatus?.[data.row?.index]?.[data.column?.index];
+        if (!status) return;
+        const palette = { green: [76, 175, 80], yellow: [224, 176, 0], red: [211, 47, 47] };
+        const rgb = palette[status];
+        if (!rgb) return;
+        const cell = data.cell;
+        const r = 1.3;
+        const cx = cell.x + cell.width - r - 1.6;
+        const cy = cell.y + cell.height / 2;
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+        doc.circle(cx, cy, r, 'F');
+      },
     });
 
     y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 60;
@@ -1000,12 +1035,57 @@ function extractProductRiskData(filteredData) {
 // =====================================================================
 // GENERIC TABLE EXTRACT — ROOT-SCOPED
 // =====================================================================
+// Traffic-light dot status of a table cell (real DOM dot rendered by the MVaR
+// renderer: <span class="mvar-status-dot risk-dot risk-dot--green" data-risk-status="green">).
+// textContent loses it, so we read it separately to draw a coloured circle in the PDF.
+function dotStatusFromCell(td) {
+  if (!td || typeof td.querySelector !== 'function') return null;
+  const el = td.querySelector('[data-risk-status], .risk-dot, .mvar-status-dot');
+  if (!el) return null;
+  let s = ((el.getAttribute && el.getAttribute('data-risk-status')) || '').toLowerCase();
+  if (s !== 'green' && s !== 'yellow' && s !== 'red') {
+    const m = /risk-dot--(green|yellow|red)/.exec(String(el.className || ''));
+    s = m ? m[1] : '';
+  }
+  return (s === 'green' || s === 'yellow' || s === 'red') ? s : null;
+}
+
+// Zelltext robust lesen: Werte stehen oft in <input>/<select>/<textarea> (z.B.
+// Customer-Setup Threshold-/Limit-Tabellen), NICHT in td.textContent. Ohne das
+// erscheint im PDF nur das "%"/Label, der Wert fehlt. Fallback: textContent.
+function cellText(el) {
+  if (!el || typeof el.querySelector !== 'function') return (el?.textContent || '').trim();
+
+  const input = el.querySelector('input:not([type="checkbox"]):not([type="radio"])');
+  if (input) {
+    // Einheit/Suffix (z.B. "%") steht oft in einem verschachtelten <span>, nicht als
+    // direkter Text-Node. textContent erfasst beides; das <input> selbst hat keinen
+    // textContent, liefert also nur den Einheiten-/Suffix-Text.
+    const suffix = (el.textContent || '').trim();
+    return `${input.value ?? ''}${suffix ? ' ' + suffix : ''}`.trim();
+  }
+
+  const select = el.querySelector('select');
+  if (select) {
+    return (
+      select.options?.[select.selectedIndex]?.textContent?.trim() ||
+      select.value ||
+      ''
+    ).trim();
+  }
+
+  const textarea = el.querySelector('textarea');
+  if (textarea) return (textarea.value || '').trim();
+
+  return (el.textContent || '').trim();
+}
+
 function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20, ctx } = {}) {
   const ids = Array.isArray(containerIds) ? containerIds : [containerIds];
   let host = null;
 
   for (const id of ids) {
-    const el = ctx?.getById?.(id) || document.getElementById(id);
+    const el = ctx?.getById?.(id) || getInAppById(id);
     if (el) { host = el; break; }
   }
   if (!host) return null;
@@ -1039,12 +1119,19 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20, 
 
   const body = rows.map((tr) => {
     const cells = Array.from(tr.children).slice(0, maxCols);
-    return cells.map((td) => (td.textContent || '').trim());
+    return cells.map((td) => cellText(td));
+  });
+
+  // Per-cell traffic-light status (same row/col indexing as body) so the PDF can
+  // draw a coloured dot where the live table has one.
+  const cellStatus = rows.map((tr) => {
+    const cells = Array.from(tr.children).slice(0, maxCols);
+    return cells.map((td) => dotStatusFromCell(td));
   });
 
   if (!head.length && body.length) head = body[0].map((_, i) => `COL ${i + 1}`);
   if (!head.length && !body.length) return null;
 
-  return { head, body };
+  return { head, body, cellStatus };
 }
 

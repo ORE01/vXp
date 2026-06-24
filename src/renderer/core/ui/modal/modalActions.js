@@ -178,6 +178,12 @@ function setupModalFields(actionType, data, rowIndex, selectedTableName) {
     if ('id' in rowDataForForm) rowDataForForm.id = '';
     if ('ID' in rowDataForForm) rowDataForForm.ID = '';
 
+    // New customer categories default to "Bewertung aktiv" (empty category_type),
+    // independent of the template row used for Add.
+    if (selectedTableName === 'CUSTOMER_PRODUCT_CATEGORY_SETUP') {
+      rowDataForForm.category_type = '';
+    }
+
     if ('ISSUER' in rowDataForForm && !rowDataForForm.ISSUER) {
       rowDataForForm.ISSUER = uniqueIssuers[0] || '';
     }

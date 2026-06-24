@@ -104,6 +104,20 @@ function relocateRiskInputs() {
   if (creditHost && thrSec)    creditHost.appendChild(thrSec);
 }
 
+// Compare-Panels (panel-comp-port1/port2/charts) aus dem COMP_Modal in das
+// #ANALYSE_Modal verschieben. Dann öffnen die "Risk Comparison"-Sub-Trigger sie
+// als Slide-In im RISK-View (RISK-Tree bleibt sichtbar) — wie alle anderen RISK-
+// Punkte. IDs bleiben → Dropdown-Bindings/Render/CSS (per Panel-ID) greifen weiter.
+function relocateCompPanels() {
+  const analyseModal = document.getElementById(ANALYSE_MODAL_ID);
+  if (!analyseModal) return;
+  const content = analyseModal.querySelector('.table-content') || analyseModal;
+  ['panel-comp-port1', 'panel-comp-port2', 'panel-comp-charts'].forEach((id) => {
+    const panel = document.getElementById(id);
+    if (panel && panel.parentElement !== content) content.appendChild(panel);
+  });
+}
+
 // Status dot next to each RISK Calculate button: gray (idle) -> red (running)
 // -> green (done). Driven by the original button's `disabled` state, which the
 // project router sets true while running and false on completion.
@@ -152,16 +166,35 @@ function wireRiskCalcStatus() {
   });
 }
 
+// Nested accordion for the RISK "Risk Metrics Input" group. A group toggle
+// (.risk-acc-toggle, no data-panel) just expands/collapses its OWN next level;
+// the leaf triggers (with data-panel) open a slide-in via bootstrapTriggers.
+function bindRiskAccordion() {
+  if (window.__riskAccBound) return;
+  window.__riskAccBound = true;
+
+  document.addEventListener('click', (e) => {
+    const toggle = e.target.closest && e.target.closest('.risk-acc-toggle');
+    if (!toggle) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const acc = toggle.closest('.risk-acc');
+    if (!acc) return;
+    const open = acc.classList.toggle('is-expanded');
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+}
+
 export function initializeTabs() {
   const map = {
     'DATA_Tab': 'DATA_Modal',
-    'COMP_Tab': 'COMP_Modal',
     'DataProvider_Tab': 'DataProvider_Modal',
     'CREATE_PORTFOLIO_Tab': 'CREATE_PORTFOLIO_Modal',
     'MARKETDATA_Tab': 'MARKETDATA_Modal',
     'products_Tab': 'products_Modal',
     'ISSUER_Tab': 'issuer_Modal',
     'REPORTS_Tab': 'REPORTS_Modal',
+    'CUSTOMER_SETUP_Tab': 'CUSTOMER_SETUP_Modal',
   };
 
   const tables = document.querySelectorAll('.table');
@@ -177,6 +210,11 @@ export function initializeTabs() {
     tab.addEventListener('click', () => showModal(modalId, tables));
   });
 
+  // Compare-Panels in #ANALYSE_Modal verschieben, damit "Risk Comparison" sie
+  // — wie alle anderen RISK-Punkte — als Slide-In im RISK-View öffnet (RISK-Tree
+  // bleibt links sichtbar). Die Sub-Trigger nutzen normales data-panel.
+  relocateCompPanels();
+
   // ANALYSE + RISK both open #ANALYSE_Modal, only differing by the view class.
   const analyseTab = document.getElementById('ANALYSE_Tab');
   const riskTab = document.getElementById('RISK_Tab');
@@ -186,6 +224,9 @@ export function initializeTabs() {
       closeOpenSubPanels();
       setAnalyseView('analyse');
       showModal(ANALYSE_MODAL_ID, tables);
+      // VALUATION uses the same inline "Select Portfolio" picker as RISK -> keep it
+      // mirrored to createdPortDropdown0, exactly like the RISK tab does.
+      syncRiskDropdownFromPort();
     });
   }
   if (riskTab) {
@@ -200,7 +241,10 @@ export function initializeTabs() {
   bindRiskCalcProxies();
   relocateRiskInputs();
   wireRiskCalcStatus();
+  bindRiskAccordion();
 
   // Default to the ANALYSE view.
   setAnalyseView('analyse');
+  // Populate the shared inline "Select Portfolio" picker for the default view too.
+  syncRiskDropdownFromPort();
 }

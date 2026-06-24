@@ -1,6 +1,6 @@
 import { openPanel } from '../ui/panels/index.js';
 import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
-import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/tradeUI.js';
+import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/trades/tradeUI.js';
 
 // ------------------------------------------------------------
 // Panel open hook registry (fix for installReceivers warning)
@@ -86,12 +86,12 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
       appState.activeBreakdownGroup = group;
     }
 
-    console.log('[TRIGGER] clicked', {
-      panelId,
-      breakdownGroup: group,
-      isSub,
-      wrapperIsOpen: section ? section.classList.contains('is-open') : null,
-    });
+    // console.log('[TRIGGER] clicked', {
+    //   panelId,
+    //   breakdownGroup: group,
+    //   isSub,
+    //   wrapperIsOpen: section ? section.classList.contains('is-open') : null,
+    // });
 
     // ============================
     // BREAKDOWN – Sonderfall
@@ -99,7 +99,10 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     if (panelId === 'panel-breakdown') {
       if (!isSub) {
         // Hauptpunkt → Overview
-        applyBreakdownFocus('__NONE__');
+        // Panel open + ALLE Gruppen zeigen (konsistent mit Portfolio-Wechsel)
+        openPanel(panelId);
+        emitPanelOpen?.(panelId);
+        applyBreakdownFocus('__ALL__');
       } else {
         // Subpunkt → Panel + Fokus
         openPanel(panelId);
@@ -130,7 +133,7 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     // ✅ MVaR Panel: beim Öffnen bestehende Daten aus Store/AppState rendern.
     // Wichtig: erst nach openPanel(), damit Chart.js auf sichtbarem Canvas rendert.
     if (panelId === 'panel-mvar') {
-      console.log('[TRIGGER] panel-mvar opened → refreshMarketRiskUI');
+      // console.log('[TRIGGER] panel-mvar opened → refreshMarketRiskUI');
 
       requestAnimationFrame(() => {
         if (typeof window.appState?.refreshMarketRiskUI === 'function') {
@@ -174,7 +177,7 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     }
   });
 
-  console.log('[BOOT] bootstrapTriggers active');
+  // console.log('[BOOT] bootstrapTriggers active');
 }
 
 

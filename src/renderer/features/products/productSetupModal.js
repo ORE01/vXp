@@ -150,12 +150,21 @@ export function handleStructureTimelineModal(prodId, options = {}) {
   modal.innerHTML = `
     <div class="structure-timeline-drag-bar modal-drag-handle">
       <span class="structure-timeline-drag-title">${titleText}</span>
-      <button
-        id="closeStructureTimelineModal"
-        class="close structure-timeline-close"
-        type="button"
-        aria-label="Close Structure Timeline"
-      >&times;</button>
+      <div class="structure-timeline-header-actions">
+        <button
+          id="toggleFullscreenStructureTimeline"
+          class="structure-timeline-fullscreen"
+          type="button"
+          title="Fullscreen"
+          aria-label="Fullscreen"
+        >⛶</button>
+        <button
+          id="closeStructureTimelineModal"
+          class="close structure-timeline-close"
+          type="button"
+          aria-label="Close Structure Timeline"
+        >&times;</button>
+      </div>
     </div>
 
     <div class="structure-timeline-body">
@@ -168,41 +177,41 @@ export function handleStructureTimelineModal(prodId, options = {}) {
       ? `
         <button
           id="toggleProductSetupDrawer"
-          class="structure-action-button"
+          class="section-trigger structure-action-button"
           type="button"
         >
-          Product Setup
+          <span class="section-header">Product Setup</span>
         </button>
       `
       : `
         <button
           id="toggleSimpleProductDataDrawer"
-          class="structure-action-button"
+          class="section-trigger structure-action-button"
           type="button"
         >
-          Product Data
+          <span class="section-header">Product Data</span>
         </button>
       `
   }
 
   <button
     id="toggleModelSetupDrawer"
-    class="structure-action-button"
+    class="section-trigger structure-action-button"
     type="button"
     ${isCreateMode ? 'disabled' : ''}
     title="${isCreateMode ? 'Create and save the product first.' : ''}"
   >
-    Model Setup
+    <span class="section-header">Model Setup</span>
   </button>
 
   <button
     id="toggleProductValuationDrawer"
-    class="structure-action-button"
+    class="section-trigger structure-action-button"
     type="button"
     ${isCreateMode ? 'disabled' : ''}
     title="${isCreateMode ? 'Create and save the product first.' : ''}"
   >
-    Valuation
+    <span class="section-header">Valuation</span>
   </button>
 </div>
       </div>
@@ -242,10 +251,66 @@ export function handleStructureTimelineModal(prodId, options = {}) {
       modal.remove();
     });
 
+  // Fullscreen-Toggle: schaltet nur die Modifier-Klasse auf dem Root-Modal +
+  // tauscht Symbol/Tooltip. Reiner UI-State, keine Logikänderung.
+  document
+    .getElementById('toggleFullscreenStructureTimeline')
+    ?.addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      const isFullscreen = modal.classList.toggle('structure-timeline-modal--fullscreen');
+
+      if (isFullscreen) {
+        btn.textContent = '🗗';
+        btn.title = 'Exit fullscreen';
+        btn.setAttribute('aria-label', 'Exit fullscreen');
+      } else {
+        btn.textContent = '⛶';
+        btn.title = 'Fullscreen';
+        btn.setAttribute('aria-label', 'Fullscreen');
+      }
+    });
+
   const productSetupDrawer = document.getElementById('structureProductSetupDrawer');
   const modelSetupDrawer = document.getElementById('structureModelSetupDrawer');
   const timelineContainer = document.getElementById('structureTimelineContainer');
   const productValuationDrawer = document.getElementById('structureProductValuationDrawer');
+
+
+  function setActiveDrawer(activeDrawer) {
+  if (productSetupDrawer) {
+    productSetupDrawer.style.display =
+      activeDrawer === 'product' ? 'block' : 'none';
+  }
+
+  if (modelSetupDrawer) {
+    modelSetupDrawer.style.display =
+      activeDrawer === 'model' ? 'block' : 'none';
+  }
+
+  if (productValuationDrawer) {
+    productValuationDrawer.style.display =
+      activeDrawer === 'valuation' ? 'block' : 'none';
+  }
+
+  document
+    .querySelectorAll(
+      '#toggleProductSetupDrawer, #toggleSimpleProductDataDrawer, #toggleModelSetupDrawer, #toggleProductValuationDrawer'
+    )
+    .forEach((btn) => btn.classList.remove('active'));
+
+  if (activeDrawer === 'product') {
+    document.getElementById('toggleProductSetupDrawer')?.classList.add('active');
+    document.getElementById('toggleSimpleProductDataDrawer')?.classList.add('active');
+  }
+
+  if (activeDrawer === 'model') {
+    document.getElementById('toggleModelSetupDrawer')?.classList.add('active');
+  }
+
+  if (activeDrawer === 'valuation') {
+    document.getElementById('toggleProductValuationDrawer')?.classList.add('active');
+  }
+}
 
   function reopenAfterCreate(newProdId, templateName = options.templateName || 'COMPLEX_BOND') {
     if (!newProdId) return;
@@ -262,14 +327,6 @@ export function handleStructureTimelineModal(prodId, options = {}) {
   function openProductSetupDrawer() {
     if (!productSetupDrawer) return;
 
-    if (modelSetupDrawer) {
-      modelSetupDrawer.style.display = 'none';
-    }
-
-    if (productValuationDrawer) {
-      productValuationDrawer.style.display = 'none';
-    }
-
     renderProductSetupDrawer(productSetupDrawer, prodId, {
       ...options,
       onCreated: (newProdId) => reopenAfterCreate(
@@ -277,23 +334,16 @@ export function handleStructureTimelineModal(prodId, options = {}) {
         options.templateName || 'COMPLEX_BOND'
       ),
     });
-    productSetupDrawer.style.display = 'block';
+
+    setActiveDrawer('product');
   }
 
   function openModelSetupDrawer() {
     if (isCreateMode) return;
     if (!modelSetupDrawer) return;
 
-    if (productSetupDrawer) {
-      productSetupDrawer.style.display = 'none';
-    }
-
-    if (productValuationDrawer) {
-      productValuationDrawer.style.display = 'none';
-    }
-
     renderModelSetupDrawer(modelSetupDrawer, prodId, options);
-    modelSetupDrawer.style.display = 'block';
+    setActiveDrawer('model');
   }
 
   function openProductValuationDrawer() {
@@ -359,21 +409,13 @@ export function handleStructureTimelineModal(prodId, options = {}) {
       productValuationDrawer.dataset.renderedForProdId = currentProdId;
     }
 
-    productValuationDrawer.style.display = 'block';
+    setActiveDrawer('valuation');
   }
 
   document
     .getElementById('toggleProductSetupDrawer')
     ?.addEventListener('click', () => {
       if (!productSetupDrawer) return;
-
-      const isOpen = productSetupDrawer.style.display !== 'none';
-
-      if (isOpen) {
-        productSetupDrawer.style.display = 'none';
-        return;
-      }
-
       openProductSetupDrawer();
     });
 
@@ -381,14 +423,6 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     .getElementById('toggleModelSetupDrawer')
     ?.addEventListener('click', () => {
       if (!modelSetupDrawer || isCreateMode) return;
-
-      const isOpen = modelSetupDrawer.style.display !== 'none';
-
-      if (isOpen) {
-        modelSetupDrawer.style.display = 'none';
-        return;
-      }
-
       openModelSetupDrawer();
     });
     
@@ -397,21 +431,6 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     ?.addEventListener('click', () => {
       if (isCreateMode || !productSetupDrawer) return;
 
-      if (productValuationDrawer) {
-        productValuationDrawer.style.display = 'none';
-      }
-
-      if (modelSetupDrawer) {
-        modelSetupDrawer.style.display = 'none';
-      }
-
-      const isOpen = productSetupDrawer.style.display !== 'none';
-
-      if (isOpen) {
-        productSetupDrawer.style.display = 'none';
-        return;
-      }
-
       if (options.templateName === 'FIXED_BOND') {
         renderSimpleFixedDrawer(productSetupDrawer, prodId, {
           ...options,
@@ -419,7 +438,7 @@ export function handleStructureTimelineModal(prodId, options = {}) {
           templateName: 'FIXED_BOND',
         });
 
-        productSetupDrawer.style.display = 'block';
+        setActiveDrawer('product');
         return;
       }
 
@@ -430,7 +449,7 @@ export function handleStructureTimelineModal(prodId, options = {}) {
           templateName: 'FRN',
         });
 
-        productSetupDrawer.style.display = 'block';
+        setActiveDrawer('product');
       }
     });
 
@@ -438,16 +457,8 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     .getElementById('toggleProductValuationDrawer')
     ?.addEventListener('click', () => {
       if (!productValuationDrawer || isCreateMode) return;
-
-      const isOpen = productValuationDrawer.style.display !== 'none';
-
-      if (isOpen) {
-        productValuationDrawer.style.display = 'none';
-        return;
-      }
-
       openProductValuationDrawer();
-    });  
+    });
 
   if (isCreateMode) {
     const productTypeSelect = document.getElementById('structureProductTypeSelect');
@@ -548,7 +559,7 @@ export function handleStructureTimelineModal(prodId, options = {}) {
         templateName: 'FIXED_BOND',
       });
 
-      productSetupDrawer.style.display = 'block';
+      setActiveDrawer('product');
     }
 
     if (timelineContainer) {
@@ -570,7 +581,7 @@ export function handleStructureTimelineModal(prodId, options = {}) {
         templateName: 'FRN',
       });
 
-      productSetupDrawer.style.display = 'block';
+      setActiveDrawer('product');
     }
 
     if (timelineContainer) {

@@ -308,7 +308,7 @@ function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
   const btnDraw = document.createElement('button');
   btnDraw.type = 'button';
   btnDraw.title = 'Trendline zeichnen (Shift = horizontal)';
-  btnDraw.innerHTML = 'ðŸ”¨ Draw Line';
+  btnDraw.innerHTML = 'Draw Line';
   btnDraw.style.padding = '6px 10px';
   btnDraw.style.borderRadius = '8px';
   btnDraw.style.border = '1px solid rgba(255,255,255,.12)';
@@ -319,7 +319,7 @@ function ensureDrawToolbar(canvasEl, modalIndex, onToggleDraw, onClear) {
   const btnClear = document.createElement('button');
   btnClear.type = 'button';
   btnClear.title = 'Alle Trendlines lÃ¶schen';
-  btnClear.innerHTML = 'âœ• Clear';
+  btnClear.innerHTML = 'Clear';
   btnClear.style.padding = '6px 10px';
   btnClear.style.borderRadius = '8px';
   btnClear.style.border = '1px solid rgba(255,255,255,.12)';

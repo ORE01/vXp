@@ -67,7 +67,7 @@
   --chart-text:        rgb(161, 160, 160);
 
   /* --- Typografie --- */
-  --font-family:       "Your Font Name", sans-serif;
+  --font-family:       "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-size-base:    13px;
   --font-size-sm:      12px;
   --font-size-md:      14px;
@@ -101,6 +101,19 @@
   --hover-bg-color:    var(--hover-bg);
   --header-bg-color:   var(--surface-header);
   --header-text-color: var(--text-heading);
+
+  /* Shared Tints: Clean Price (orange) + Credit Spread (blau) — genutzt von der
+     Portfolio-Tabelle UND den Valuation-Drawer-Kacheln (single source of truth).
+     Hier ändern → beide Stellen aktualisieren sich automatisch. */
+  --cs-clean-bg:      linear-gradient(135deg, rgba(245, 124, 0, 0.30), rgba(230, 108, 0, 0.30));
+  --cs-clean-border:  rgba(255, 167, 38, 0.35);
+  --cs-spread-bg:     linear-gradient(135deg, rgba(47, 111, 176, 0.30), rgba(37, 99, 168, 0.30));
+  --cs-spread-border: rgba(96, 165, 250, 0.35);
+}
+
+/* Globale Schriftart: Inter überall (auch außerhalb der .table-Container). */
+html, body {
+  font-family: var(--font-family);
 }
 
 

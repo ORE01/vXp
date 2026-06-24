@@ -23,9 +23,21 @@
    ------------------------------------------------------------ */
 .table .table-content {
   position: relative;
-  min-height: 100vh;
+  /* Nur die Resthöhe unter der Topbar, sonst wird das Dokument höher als der
+     Bildschirm und es entsteht ein zusätzlicher (äußerer) Body-Scrollbar. */
+  min-height: calc(100vh - var(--topbar-height));
   overflow: visible;
   display: block;
+}
+
+/* Einheitlicher linker Rand für ALLE Tabs: Trigger & Überschriften kleben nicht
+   am Bildschirmrand. Nur der Top-Level-Content jedes Tab-Modals (direktes Kind),
+   damit verschachtelte Sub-Panel-Inhalte unberührt bleiben. */
+.table > .table-content {
+  padding-left: 14px;
+  /* Platz für die jetzt fixe Suchbox (#app-page-search) oben links — ersetzt den
+     Versatz, den sie vorher als In-Flow-Element erzeugt hat. */
+  padding-top: 48px;
 }
 
 /* Trigger-Zeilen (NUR in table) */
@@ -60,7 +72,8 @@
 /* ------------------------------------------------------------
    TRIGGER BUTTONS (scoped) — LOOK WIE ALT, aber 2-ZEILEN SAFE
    ------------------------------------------------------------ */
-.table .section-trigger {
+.table .section-trigger,
+#structureTimelineModal .section-trigger {
   display: inline-flex;
   justify-content: space-between;
   align-items: center;
@@ -92,7 +105,8 @@
   font-family: inherit;
 }
 
-.table .section-trigger:hover {
+.table .section-trigger:hover,
+#structureTimelineModal .section-trigger:hover {
   color: var(--text-bright);
   border-color: var(--border-subtle);
 }
@@ -247,14 +261,16 @@
   opacity: 0.95;
 }
 
-.table .section-trigger{
+.table .section-trigger,
+#structureTimelineModal .section-trigger{
   /* ...dein Rest... */
   font-size: 12px;
   line-height: 1;
   background: var(--border);            /* statt rot */
 }
 
-.table .section-trigger .section-header{
+.table .section-trigger .section-header,
+#structureTimelineModal .section-trigger .section-header{
   font-size: inherit !important;
   line-height: inherit !important;
 }

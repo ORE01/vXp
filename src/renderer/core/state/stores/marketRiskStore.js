@@ -382,7 +382,18 @@ function setIRSensData(rows) {
 
 
 
+  // MVaR Model Selection read-model (view v_MVAR_MODEL_SELECTION_APP)
+  function setMvarModelSelectionAppRows(rows) {
+    appState.mvarModelSelectionAppRows = Array.isArray(rows) ? rows : [];
+  }
+  function getMvarModelSelectionAppRows() {
+    return Array.isArray(appState.mvarModelSelectionAppRows) ? appState.mvarModelSelectionAppRows : [];
+  }
+
   // expose
+
+  appState.setMvarModelSelectionAppRows = setMvarModelSelectionAppRows;
+  appState.getMvarModelSelectionAppRows = getMvarModelSelectionAppRows;
 
   appState.setIRSensData = setIRSensData;
   appState.getIRSensData = getIRSensData;
@@ -409,6 +420,8 @@ function setIRSensData(rows) {
   appState.getMarketVarFactorSeriesMap = getMarketVarFactorSeriesMap;
 
   return {
+    setMvarModelSelectionAppRows,
+    getMvarModelSelectionAppRows,
     setIRSensData,
     getIRSensData,
     setAllMvarData,

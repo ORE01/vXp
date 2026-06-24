@@ -1,0 +1,156 @@
+/* css/CUSTOMER_SETUP/customerMarketRisk.css
+   Layout/styling only for Customer Setup -> Risk -> Market Risk
+   (#panel-customer-market-risk-interval). No logic; all IDs/data-* unchanged.
+   Theme-aware via tokens with the requested light values as fallbacks. */
+
+.customer-mr-page {
+  max-width: 820px;
+}
+
+.customer-mr-title {
+  margin: 4px 0 14px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+/* ---- Cards ---- */
+.customer-mr-card {
+  background: var(--surface-raised, #ffffff);
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.customer-mr-card-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+/* ---- Label + input row ---- */
+.customer-mr-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.customer-mr-field:last-child {
+  margin-bottom: 0;
+}
+
+.customer-mr-field > label {
+  flex: 0 0 200px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Dropdowns: capped width, not full width. */
+.customer-mr-select {
+  flex: 0 0 auto;
+  width: 360px;
+  max-width: 360px;
+  padding: 6px 8px;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 6px;
+  background: var(--input-bg, #ffffff);
+  color: var(--input-text, #222);
+  font-size: 13px;
+}
+
+/* Numeric inputs: compact. */
+.customer-mr-input-num {
+  width: 140px;
+  max-width: 140px;
+  padding: 6px 8px;
+  text-align: right;
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 6px;
+  background: var(--input-bg, #ffffff);
+  color: var(--input-text, #222);
+  font-size: 13px;
+}
+
+.customer-mr-input-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.customer-mr-unit {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ---- Profile hint ---- */
+.customer-mr-profile-hint {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.customer-mr-profile-hint strong {
+  color: var(--text-bright);
+}
+
+/* ---- Warning Limits table ---- */
+.customer-mr-limits {
+  max-width: 760px;
+}
+
+.customer-mr-limits-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.customer-mr-limits-table {
+  width: 100%;
+  max-width: 760px;
+  border-collapse: collapse;
+}
+
+.customer-mr-limits-table th {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border, #d0d0d0);
+}
+
+.customer-mr-limits-table td {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.customer-mr-limits-table .cmr-metric {
+  white-space: nowrap;
+  color: var(--text-bright);
+}
+
+/* Limit inputs are narrower than the model-default numbers. */
+.customer-mr-limits-table .customer-mr-input-num {
+  width: 100px;
+  max-width: 100px;
+}
+
+/* ---- Actions ---- */
+.customer-mr-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.customer-mr-status {
+  font-weight: 600;
+  font-size: 13px;
+}

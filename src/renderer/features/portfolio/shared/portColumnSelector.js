@@ -9,7 +9,7 @@ import {
 import {
   renderTableColumnSelector,
   bindTableColumnSelector,
-} from '../CUSTOMER/tableLayouts/tableColumnSelector.js';
+} from '../../CUSTOMER/tableLayouts/tableColumnSelector.js';
 
 const TABLE_ID = 'portTable0';
 

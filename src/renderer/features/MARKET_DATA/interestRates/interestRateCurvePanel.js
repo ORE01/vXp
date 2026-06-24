@@ -69,9 +69,10 @@ function renderActiveRatesScenarioPanel({ selectedCurrency, selectedCurveId }) {
     <div class="ir-active-scenario-panel" style="
       margin: 0 0 14px 0;
       padding: 12px 14px;
-      border: 1px solid rgba(255,255,255,0.10);
+      border: 1px solid var(--border-subtle);
       border-radius: 10px;
-      background: #1e1e1e;
+      background: var(--surface-overlay);
+      color: var(--text-primary);
     ">
       <div style="font-size:0.78rem; opacity:0.72; margin-bottom:6px;">
         Active Interest Rate Scenario

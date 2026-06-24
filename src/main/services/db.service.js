@@ -411,7 +411,11 @@ function insertSelection(port_name, selectedTradeIDs = []) {
 
       const selectCols = [
         '? as port_name',
-        '1 as INCLUDE',
+        // INCLUDE vom Quell-Trade ÜBERNEHMEN (nicht hart auf 1): sonst landen
+        // abgehakte Bonds beim Anlegen eines NEUEN Portfolios trotzdem mit
+        // INCLUDE=1 in DealsMain → werden mitberechnet. COALESCE(...,1) = Fallback
+        // "inkludiert", falls die Quelle (noch) keinen Wert hat.
+        'COALESCE("INCLUDE", 1) as INCLUDE',
         ...copyCols.map(c => `"${c}"`),
       ];
 

@@ -80,34 +80,154 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
 }
 }
 
-    function extractChartDataFromSavedValues(savedValues, indexA = 1, indexB = 2) {
-      // console.log('savedValues:', savedValues)
-      const fields = {
-        PV01: 'formPortPV01',
-        CPV01: 'formPortCPV01',
+function normalizePortName(value) {
+  return String(value ?? '')
+    .replace(/^Portfolios[_-]?/i, '')
+    .trim();
+}
 
-        MvarTOT: 'formVaR_T_rel',
-        MvarIR: 'formVaR_IR_rel',
-        MvarCS: 'formVaR_CS_rel',
+function normalizeScenarioName(value) {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase();
+}
 
-        CvarRating: 'formVaR_rating_rel',
-        CvarMarket: 'formVaR_market_rel',
-        CvarNorm: 'formVaR_norm_rel',
-      };
+function parseUiNumber(value) {
+  if (value === null || value === undefined || value === '') return 0;
 
-      const chartData = {};
-      const keyA = `portDataContainer${indexA}`;
-      const keyB = `portDataContainer${indexB}`;
+  const normalized = String(value)
+    .replace('%', '')
+    .replace(/\s/g, '')
+    .replace(',', '.');
 
-      for (const [key, formId] of Object.entries(fields)) {
-        const valA = parseFloat((savedValues[keyA]?.[formId] || '').replace(',', '.')) || 0;
-        const valB = parseFloat((savedValues[keyB]?.[formId] || '').replace(',', '.')) || 0;
-        const diff = +(valA - valB).toFixed(2);
-        chartData[key] = [valA, valB, diff];
-      }
+  const n = Number.parseFloat(normalized);
 
-      return chartData;
-    }
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getLatestMvarRowForPort(portName, scenarioName) {
+  const rows = window.appState?.getAllMvarData?.() || [];
+  const selectedPort = normalizePortName(portName);
+  const selectedScenario = normalizeScenarioName(scenarioName);
+
+  const matches = rows.filter(row => {
+    const rowPort = normalizePortName(row.port_name ?? row.PORT_NAME);
+    const rowScenario = normalizeScenarioName(
+      row.scenario_name ??
+      row.SCENARIO_NAME ??
+      row.interval_name ??
+      row.INTERVAL_NAME
+    );
+
+    return (
+      rowPort === selectedPort &&
+      (!selectedScenario || rowScenario === selectedScenario)
+    );
+  });
+
+  if (!matches.length) {
+    console.warn('[COMPARE MVAR] no MVaR row found', {
+      portName,
+      scenarioName,
+      available: rows.slice(0, 10).map(r => ({
+        port_name: r.port_name ?? r.PORT_NAME,
+        scenario_name: r.scenario_name ?? r.SCENARIO_NAME,
+        ASOF_DATE: r.ASOF_DATE ?? r.asof_date,
+      })),
+    });
+
+    return null;
+  }
+
+  return matches
+    .slice()
+    .sort((a, b) =>
+      String(a.ASOF_DATE ?? a.asof_date ?? '')
+        .localeCompare(String(b.ASOF_DATE ?? b.asof_date ?? ''))
+    )
+    .at(-1);
+}
+
+function getMvarRelValue(row, key) {
+  if (!row) return 0;
+
+  const raw = row?.[key];
+
+  const n = Number(raw);
+
+  if (!Number.isFinite(n)) return 0;
+
+  // MVaR rel is usually stored as decimal, e.g. -0.014 = -1.4%.
+  // Chart displays percentage points.
+  return +(n * 100).toFixed(2);
+}
+
+function extractChartDataFromSavedValues(savedValues, indexA = 1, indexB = 2) {
+  const compareNames =
+    window.appState?.getComparePortNames?.() || {};
+
+  const portNameA = compareNames[indexA] || 'Portfolio 1';
+  const portNameB = compareNames[indexB] || 'Portfolio 2';
+  const scenarioName = window.appState?.selectedMvarInterval ?? null;
+
+  const keyA = `portDataContainer${indexA}`;
+  const keyB = `portDataContainer${indexB}`;
+
+  const mvarRowA = getLatestMvarRowForPort(portNameA, scenarioName);
+  const mvarRowB = getLatestMvarRowForPort(portNameB, scenarioName);
+
+  const chartData = {};
+
+  const uiFields = {
+    PV01: 'formPortPV01',
+    CPV01: 'formPortCPV01',
+
+    CvarRating: 'formVaR_rating_rel',
+    CvarMarket: 'formVaR_market_rel',
+    CvarNorm: 'formVaR_norm_rel',
+  };
+
+  for (const [key, formId] of Object.entries(uiFields)) {
+    const valA = parseUiNumber(savedValues[keyA]?.[formId]);
+    const valB = parseUiNumber(savedValues[keyB]?.[formId]);
+    const diff = +(valA - valB).toFixed(2);
+
+    chartData[key] = [valA, valB, diff];
+  }
+
+  chartData.MvarTOT = buildDiffValues(
+    getMvarRelValue(mvarRowA, 'VaR_T_rel'),
+    getMvarRelValue(mvarRowB, 'VaR_T_rel')
+  );
+
+  chartData.MvarIR = buildDiffValues(
+    getMvarRelValue(mvarRowA, 'VaR_IR_rel'),
+    getMvarRelValue(mvarRowB, 'VaR_IR_rel')
+  );
+
+  chartData.MvarCS = buildDiffValues(
+    getMvarRelValue(mvarRowA, 'VaR_CS_rel'),
+    getMvarRelValue(mvarRowB, 'VaR_CS_rel')
+  );
+
+  console.log('[COMPARE CHART DATA]', {
+    portNameA,
+    portNameB,
+    scenarioName,
+    mvarRowA,
+    mvarRowB,
+    MvarTOT: chartData.MvarTOT,
+    MvarIR: chartData.MvarIR,
+    MvarCS: chartData.MvarCS,
+  });
+
+  return chartData;
+}
+
+function buildDiffValues(valA, valB) {
+  const diff = +(valA - valB).toFixed(2);
+  return [valA, valB, diff];
+}
 
 
 

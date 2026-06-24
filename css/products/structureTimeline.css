@@ -29,7 +29,7 @@
    Header / Close
 ===================================================== */
 
-#structureTimelineModal button {
+#structureTimelineModal button:not(.section-trigger) {
   background-color: var(--accent);
   border: none;
   color: var(--text-bright);
@@ -40,7 +40,7 @@
   transition: background-color 0.2s, transform 0.1s;
 }
 
-#structureTimelineModal button:hover {
+#structureTimelineModal button:not(.section-trigger):hover {
   background-color: var(--accent-hover);
 }
 
@@ -504,13 +504,13 @@
 }
 
 #structureTimelineModal .structure-valuation-result-grid > div {
-  min-height: 74px;
-  padding: 12px 13px;
+  min-height: 50px;
+  padding: 7px 12px;
 
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
 
   background: var(--surface-overlay);
   border: 1px solid var(--border-subtle);
@@ -531,42 +531,50 @@
 }
 
 #structureTimelineModal .structure-valuation-result-grid strong {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--text-bright) !important;
   line-height: 1.1;
 }
 
 
-/* Highlight Clean Price + PV */
-
-#structureTimelineModal .structure-valuation-result-grid > div:nth-child(1),
-#structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) {
-  background: #f57c00;
-  border-color: #e66c00;
+/* Alle Reihen 4-spaltig -> gleiche Kachelbreite wie Reihe 1.
+   Reihe 2/3 haben 3 Kacheln; die 4. Spalte bleibt leer. */
+#structureTimelineModal .structure-valuation-result-grid.svr-row--3 {
+  grid-template-columns: repeat(4, minmax(145px, 1fr));
 }
 
-/* Highlight tiles: always white text in both light and dark theme */
-#structureTimelineModal .structure-valuation-result-grid > div:nth-child(1) span,
-#structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) span {
-  color: #ffffff !important;
+/* Clean-Price-Kachel: dieselbe dezente Optik wie in der Tabelle
+   (.clean-price-highlight-cell, createPortfolio.css): weicher Orange-Tint,
+   normale Schrift, normale Textfarbe. */
+#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) {
+  background: var(--cs-clean-bg);
+  border-color: var(--cs-clean-border);
 }
 
-#structureTimelineModal .structure-valuation-result-grid > div:nth-child(1) strong,
-#structureTimelineModal .structure-valuation-result-grid > div:nth-child(2) strong {
-  font-size: 22px;
-  color: #ffffff !important;
+#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) span,
+#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) strong {
+  color: var(--text-primary) !important;
 }
 
-/* Credit Spread tile: strong blue, white text in both themes */
+#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) strong {
+  font-size: 16px;
+  font-weight: normal;
+}
+
+/* Credit-Spread-Kachel: dieselbe dezente Optik wie .credit-spread-highlight-cell. */
 #structureTimelineModal .structure-valuation-result-grid > div.cs-spread-tile {
-  background: #2f6fb0;
-  border-color: #2563a8;
+  background: var(--cs-spread-bg);
+  border-color: var(--cs-spread-border);
 }
 
 #structureTimelineModal .cs-spread-tile span,
 #structureTimelineModal .cs-spread-tile strong {
-  color: #ffffff !important;
+  color: var(--text-primary) !important;
+}
+
+#structureTimelineModal .cs-spread-tile strong {
+  font-weight: normal;
 }
 
 
@@ -814,4 +822,159 @@
   background: var(--surface-overlay);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
+}
+
+/* ===================== Structure Timeline Fullscreen ===================== */
+/* Toggle via JS: Klasse structure-timeline-modal--fullscreen am Root-Modal.
+   !important überschreibt die inline gesetzten Modal-Maße. */
+.structure-timeline-modal--fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  z-index: 9999 !important;
+}
+
+/* Body füllt die Höhe unter der 44px hohen Drag-Bar und scrollt. */
+.structure-timeline-modal--fullscreen .structure-timeline-body {
+  height: calc(100vh - 44px);
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+}
+
+/* Fullscreen-Button: klein, neben dem Close-X, neutral/transparent, Hover sichtbar.
+   margin-left:auto schiebt Fullscreen + Close zusammen nach rechts (Titel bleibt links). */
+#structureTimelineModal #toggleFullscreenStructureTimeline.structure-timeline-fullscreen {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-bright);
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+#structureTimelineModal #toggleFullscreenStructureTimeline.structure-timeline-fullscreen:hover {
+  background: var(--hover-bg);
+  color: var(--text-bright);
+}
+
+/* Header-Actions: Fullscreen + Close nebeneinander, rechts oben (kein Überlappen).
+   Die Drag-Bar selbst nutzt bereits display:flex + justify-content:space-between. */
+.structure-timeline-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.structure-timeline-header-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Close-X aus der globalen absoluten .close-Positionierung (modalDark.css) lösen,
+   damit er im Actions-Container neben dem Fullscreen-Button im Fluss steht. */
+#structureTimelineModal #closeStructureTimelineModal.structure-timeline-close {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  float: none !important;
+}
+
+/* ============= Structure Timeline Fullscreen: Formbreite begrenzen =============
+   Im Fullscreen (100vw) sollen Formulare/Inputs nicht über die ganze Breite
+   gezogen werden. Bestehende Form-Wrapper werden wiederverwendet
+   (.structure-drawer-card / .structure-drawer-grid) — KEINE Parallelstruktur.
+   Valuation-Ergebnis-Kacheln (.structure-valuation-result-*) und Cashflow-
+   Tabellen (.structure-cashflow-*) sind hiervon NICHT betroffen -> volle Breite.
+   Reines Layout, scoped auf den Fullscreen-Modifier. */
+/* Form-Shell: kompakter, zentriert (Karte trägt bereits padding:16px). */
+.structure-timeline-modal--fullscreen .structure-drawer-card {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Form-Grid: 3 Spalten mit professioneller Maximalbreite je Spalte (~360px),
+   linksbündig statt gestreckt, saubere Abstände. */
+.structure-timeline-modal--fullscreen .structure-drawer-grid {
+  grid-template-columns: repeat(3, minmax(240px, 360px));
+  justify-content: start;
+  column-gap: 24px;
+  row-gap: 14px;
+}
+
+.structure-timeline-modal--fullscreen .structure-drawer-grid input,
+.structure-timeline-modal--fullscreen .structure-drawer-grid select,
+.structure-timeline-modal--fullscreen .structure-drawer-grid textarea {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+}
+
+/* Responsive Degradation bei schmalem Fullscreen. */
+@media (max-width: 1250px) {
+  .structure-timeline-modal--fullscreen .structure-drawer-grid {
+    grid-template-columns: repeat(2, minmax(240px, 360px));
+  }
+}
+
+@media (max-width: 780px) {
+  .structure-timeline-modal--fullscreen .structure-drawer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .structure-timeline-modal--fullscreen .structure-drawer-grid input,
+  .structure-timeline-modal--fullscreen .structure-drawer-grid select,
+  .structure-timeline-modal--fullscreen .structure-drawer-grid textarea {
+    max-width: 100%;
+  }
+}
+
+/* Grüne (accent) Buttons im gesamten Structure-Timeline-Drawer: weiße Schrift.
+   Ausgenommen (behalten ihre Farbe): rote Danger-/Delete-Buttons und der
+   transparente Close-/Fullscreen-Button. */
+#structureTimelineModal button:not(.section-trigger):not(.structure-action-button-danger):not(#deleteStructureEventRow):not(.delete-button):not(.structure-timeline-close):not(.structure-timeline-fullscreen) {
+  color: #ffffff !important;
+}
+
+/* Aktive Registerkarte (Tab) = gleiche Flaeche wie der geoeffnete Drawer
+   (--surface-raised: weiss im Light, #444 im Dark). Inaktive Tabs behalten den
+   grauen .section-trigger-Look. Hover ist mit drin (auch .light-theme), damit
+   der aktive Tab nicht in den dunklen Trigger-Hover springt. Tokens -> Dark+Light. */
+#structureTimelineModal .section-trigger.active,
+#structureTimelineModal .section-trigger.active:hover,
+.light-theme #structureTimelineModal .section-trigger.active,
+.light-theme #structureTimelineModal .section-trigger.active:hover {
+  background: var(--surface-raised);
+  border-color: var(--surface-raised);
+  color: var(--text-bright);
+}
+
+/* Aktiver Tab: Hover darf den Text nicht aendern (sonst wird der .section-header
+   im Light-Theme weiss). Span-Farbe auch im :hover auf --text-bright halten. */
+#structureTimelineModal .section-trigger.active .section-header,
+#structureTimelineModal .section-trigger.active:hover .section-header,
+.light-theme #structureTimelineModal .section-trigger.active .section-header,
+.light-theme #structureTimelineModal .section-trigger.active:hover .section-header {
+  color: var(--text-bright);
+}
+
+/* Register-Tabs halb so breit wie die Trigger-Referenzbreite (--trigger-max-width: 200px). */
+#structureTimelineModal .section-trigger {
+  width: 100px;
+  max-width: 100px;
 }

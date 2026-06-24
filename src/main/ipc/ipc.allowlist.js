@@ -96,6 +96,18 @@ module.exports = {
     'get-table-rows',
     'table-layout:save-one',
 
+    // Customer Setup -> Risk -> Market Risk -> Interval
+    'customer-mr-setting.save',
+    'customer-mr-setting.get',
+    'customer-mr-thresholds.get',
+    'customer-mr-thresholds.save',
+
+    // Customer Setup -> Risk -> Credit Risk -> General Settings
+    'customer-cr-setting.save',
+    'customer-cr-setting.get',
+    'customer-cr-thresholds.save',
+    'customer-cr-thresholds.get',
+
     // -------------------------------------------------
     // Insert / normalize helpers
     // -------------------------------------------------

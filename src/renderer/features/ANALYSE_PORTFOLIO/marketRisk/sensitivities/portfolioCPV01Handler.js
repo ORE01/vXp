@@ -124,13 +124,13 @@ export function handleCSSensData(appState, forcedPortName = null) {
     return;
   }
 
-  console.log('[CP SENS] selected portfolio resolved', {
-    rawPortName,
-    selectedPort,
-    availablePorts,
-    storeRows: riskRowsAll.length,
-    riskTypes: availableRiskTypes,
-  });
+  // console.log('[CP SENS] selected portfolio resolved', {
+  //   rawPortName,
+  //   selectedPort,
+  //   availablePorts,
+  //   storeRows: riskRowsAll.length,
+  //   riskTypes: availableRiskTypes,
+  // });
 
   const cpv01Rows = riskRowsAll.filter(r =>
     normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
@@ -250,20 +250,20 @@ function calculateCreditSensitivity(rows, portName) {
     })
   );
 
-  console.log('[CP SENS] RESULT BY CCY:', {
-    selectedPort,
-    inputRows: rows.length,
-    filteredRows: filteredRows.length,
-    cpv01TotalByCcy,
-    groupedCPV01ByCcy,
-    sortedCPV01ByCcy,
-    uniqueCcys: [
-      ...new Set(
-        rows.map(r => String(r.CCY ?? r.ccy ?? '').toUpperCase().trim())
-      ),
-    ],
-    firstFilteredRow: filteredRows[0],
-  });
+  // console.log('[CP SENS] RESULT BY CCY:', {
+  //   selectedPort,
+  //   inputRows: rows.length,
+  //   filteredRows: filteredRows.length,
+  //   cpv01TotalByCcy,
+  //   groupedCPV01ByCcy,
+  //   sortedCPV01ByCcy,
+  //   uniqueCcys: [
+  //     ...new Set(
+  //       rows.map(r => String(r.CCY ?? r.ccy ?? '').toUpperCase().trim())
+  //     ),
+  //   ],
+  //   firstFilteredRow: filteredRows[0],
+  // });
 
   return {
     cpv01TotalByCcy,
@@ -320,13 +320,13 @@ function renderCPV01TableAndChart(data, portName) {
     });
   });
 
-  console.log('[CP SENS] rendered from PortfolioRiskSensitivities by CCY', {
-    portName,
-    cpv01TotalByCcy,
-    tableRows: tableData.length,
-    canvasExists: !!document.getElementById('CPV01Chart'),
-    detailsContainerExists: !!document.getElementById('CSSensDataContainer'),
-  });
+  // console.log('[CP SENS] rendered from PortfolioRiskSensitivities by CCY', {
+  //   portName,
+  //   cpv01TotalByCcy,
+  //   tableRows: tableData.length,
+  //   canvasExists: !!document.getElementById('CPV01Chart'),
+  //   detailsContainerExists: !!document.getElementById('CSSensDataContainer'),
+  // });
 
   return wrapper;
 }
@@ -374,9 +374,9 @@ function mountCPV01Details(wrapper) {
 
   target.appendChild(wrapper);
 
-  console.log('[CPV01 DETAILS] mounted', {
-    rows: wrapper.querySelectorAll('tr').length,
-  });
+  // console.log('[CPV01 DETAILS] mounted', {
+  //   rows: wrapper.querySelectorAll('tr').length,
+  // });
 }
 
 function createCPV01Chart({
@@ -427,11 +427,11 @@ function createCPV01Chart({
 
   CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x');
 
-  console.log('[CPV01 CHART] rendered by CCY', {
-    canvasId,
-    labels: allBuckets,
-    datasetLabels: datasets.map(d => d.label),
-  });
+  // console.log('[CPV01 CHART] rendered by CCY', {
+  //   canvasId,
+  //   labels: allBuckets,
+  //   datasetLabels: datasets.map(d => d.label),
+  // });
 }
 
 function clearCPV01Details() {

@@ -20,7 +20,18 @@ const tableHandlers = {
   CreditVaRInput: handleCreditVaRInputFields,
   MVaRInput: handleMVaRInputFields,
   Issuer: handleIssuerFields,
+  CUSTOMER_PRODUCT_CATEGORY_SETUP: handleCustomerCategoryFields,
 };
+
+// Risk -> Market Risk -> Model Selection Edit (table MVaRInput): only model
+// parameters are editable here. Legacy MVaRInput columns (red_threshold,
+// yellow_threshold) and id are NOT shown. Customer warning limits live in
+// CustomerMarketRiskThresholdSetting and are edited only in Customer Setup.
+const MVAR_INPUT_EDIT_FIELDS = new Set([
+  'INTERVAL_NAME',
+  'START',
+  'END',
+]);
 
 // Felder, die im Modal NICHT angezeigt werden sollen - je Tabelle
 const hiddenFieldsByTable = {
@@ -36,6 +47,8 @@ const hiddenFieldsByTable = {
     'senior_subordinated',
     'junior_subordinated',
   ]),
+  // Customer category setup: technical columns are not user-editable.
+  CUSTOMER_PRODUCT_CATEGORY_SETUP: new Set(['id', 'created_at', 'updated_at']),
 };
 
 
@@ -61,6 +74,9 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
 
   Object.keys(rowData).forEach((fieldName) => {
     if (hiddenFields && hiddenFields.has(fieldName)) return;        // generisches Hiding
+
+    // MVaRInput edit drawer: allowlist of editable model parameters only.
+    if (selectedTableName === 'MVaRInput' && !MVAR_INPUT_EDIT_FIELDS.has(fieldName)) return;
 
     if (fieldName === 'ISSUER' && shouldSkipTable(selectedTableName)) return;
 
@@ -291,6 +307,40 @@ input.classList.add('input-field');
   formRow.appendChild(label);
   formRow.appendChild(input);
   return true;  // sagt dem Generator: "Ich habe dieses Feld behandelt."
+}
+
+function handleCustomerCategoryFields(fieldName, rowData, formRow, label) {
+  // Only category_type is a dropdown; all other columns use the default input.
+  if (fieldName !== 'category_type') return false;
+
+  // value -> visible label. Business rule:
+  //   ""          -> "Valuation active" (normal valuation)
+  //   FIXED_VALUE  -> "No valuation"     (no valuation / fixed value override)
+  const options = [
+    { value: '', label: 'Valuation active' },
+    { value: 'FIXED_VALUE', label: 'No valuation' },
+  ];
+
+  const select = document.createElement('select');
+  select.id = `${fieldName.toLowerCase()}Select`;
+  select.setAttribute('data-field', fieldName);
+  select.classList.add('input-field');
+
+  options.forEach(({ value, label: text }) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = text;
+    select.appendChild(option);
+  });
+
+  // Only an explicit FIXED_VALUE means "no valuation". Empty / NULL / "" / anything
+  // else maps to normal valuation (never treat empty as FIXED_VALUE).
+  const current = String(rowData[fieldName] ?? '').trim().toUpperCase();
+  select.value = current === 'FIXED_VALUE' ? 'FIXED_VALUE' : '';
+
+  formRow.appendChild(label);
+  formRow.appendChild(select);
+  return true;
 }
 
 function handleIssuerFields(fieldName, rowData, formRow, label) {

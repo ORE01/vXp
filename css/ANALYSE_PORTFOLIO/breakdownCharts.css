@@ -1,44 +1,66 @@
 /* =========================================================
    ANALYSE_PORTFOLIO/breakdownCharts.css
-   NUR Breakdown Chart/Layout (Pie + Legend)
+   Breakdown Chart/Layout (Pie + Legend) — modernisiert.
    Scoped: #ANALYSE_Modal #panel-breakdown
+   (überschreibt die globalen Alt-Regeln in breakdown.css)
+   Farben der Pie-Segmente bleiben unverändert (separater System-Pass).
    ========================================================= */
 
 #ANALYSE_Modal #panel-breakdown .pie-chart-grid{
   display:flex;
   flex-direction:column;
-  gap:18px;
+  gap:16px;
 }
 
+/* Kategorie ist nur noch ein Container (Titel + Raster) — die Kachel-Optik
+   liegt jetzt auf jedem Paar (.pie-pair-row). */
 #ANALYSE_Modal #panel-breakdown .pie-section{
-  background: var(--surface-card);
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:12px;
+  background: transparent;
+  border:0;
+  border-radius:0;
+  padding:0;
+  box-shadow:none;
 }
 
 #ANALYSE_Modal #panel-breakdown .pie-section-title{
   margin:0 0 8px 0;
-  font-size:16px;
+  font-size:13px;
   font-weight:700;
   color:var(--text-bright);
   letter-spacing:.2px;
 }
 
+/* DREI Paare (Chart+Legende) pro Zeile. */
 #ANALYSE_Modal #panel-breakdown .pie-section-grid{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:12px 16px;
+  align-items:start;
 }
 
+/* Jedes Paar = eine Kachel: Chart links | Legende rechts. minmax(0,…) lässt die
+   Kachel in die halbe Spaltenbreite schrumpfen, damit 2 nebeneinander passen. */
 #ANALYSE_Modal #panel-breakdown .pie-pair-row{
   display:grid;
-  grid-template-columns:minmax(320px, 1.35fr) minmax(260px, 1fr);
-  gap:12px;
-  align-items:stretch;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap:10px;
+  align-items:center;
+
+  background: var(--surface-card);
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  padding:10px 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 
+/* Zu schmal für 2 Paare → eines pro Zeile. */
+@media (max-width:1300px){
+  #ANALYSE_Modal #panel-breakdown .pie-section-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
 @media (max-width:900px){
+  #ANALYSE_Modal #panel-breakdown .pie-section-grid{ grid-template-columns:1fr; }
+}
+@media (max-width:640px){
   #ANALYSE_Modal #panel-breakdown .pie-pair-row{ grid-template-columns:1fr; }
 }
 
@@ -46,66 +68,67 @@
   display:none !important;
 }
 
-/* Chart Tile */
-#ANALYSE_Modal #panel-breakdown .chart-block{
-  background:var(--surface-card);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:8px;
-  min-height:280px;
-  height:100%;
+/* Tiles: KEIN eigener Rahmen/Hintergrund mehr (verschachtelte Kästen weg) */
+#ANALYSE_Modal #panel-breakdown .chart-block,
+#ANALYSE_Modal #panel-breakdown .legend-block{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  padding:0;
+  min-height:0;
   display:flex;
   flex-direction:column;
 }
 
 #ANALYSE_Modal #panel-breakdown .chart-block-title{
-  margin:4px 0 6px;
+  margin:0 0 6px;
   text-align:center;
-  font-size:13px;
+  font-size:10px;
   font-weight:600;
-  color:var(--text-primary);
+  color:var(--text-muted);
+  text-transform:uppercase;
+  letter-spacing:.4px;
 }
 
+/* Canvas: FESTE Höhe → keine Überlappung; an Box-Breite skaliert.
+   (setupHiDPICanvas(..., true) misst exakt diese Größe.) */
 #ANALYSE_Modal #panel-breakdown .chart-block .pieChart{
   width:100%;
-  max-width:520px;
-  height:auto;
+  height:150px;
   display:block;
   margin:0 auto;
 }
 
-/* Legend Tile */
-#ANALYSE_Modal #panel-breakdown .legend-block{
-  background:var(--surface-card);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:8px;
-  min-height:280px;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-}
-
+/* Legende: kompakte, scrollbare Tabelle */
 #ANALYSE_Modal #panel-breakdown .chart-legend-table{
-  width:fit-content;
-  max-width:100%;
-  margin:0 auto;
-  border:1px solid var(--border);
-  border-radius:8px;
-  background:var(--surface-header);
+  width:100%;
+  margin:0;
+  border:1px solid var(--border-subtle);
+  border-radius:10px;
+  background:var(--surface-card);
   border-collapse:separate;
   border-spacing:0;
-
   display:block;
   overflow:auto;
-  flex:1 1 auto;
-  max-height:200px;
+  max-height:150px;
+  font-size:8px;   /* Inhalt (td) = gleiche Größe wie die Spaltennamen (th) */
 }
 
 #ANALYSE_Modal #panel-breakdown .chart-legend-table th,
 #ANALYSE_Modal #panel-breakdown .chart-legend-table td{
-  padding:2px 4px;
-  border-bottom:1px solid var(--border);
+  padding:3px 6px;
+  border-bottom:1px solid var(--border-subtle);
+  white-space:nowrap;
+}
+
+/* Nur der Inhalt (td) wird klein gemacht — die Spaltennamen (th) behalten
+   ihre Originalgröße (11px, siehe th-Regel unten). */
+#ANALYSE_Modal #panel-breakdown .chart-legend-table td{
+  font-size:9px;
+}
+
+#ANALYSE_Modal #panel-breakdown .chart-legend-table tr:last-child td{
+  border-bottom:1px solid var(--border-subtle);
 }
 
 #ANALYSE_Modal #panel-breakdown .chart-legend-table th{
@@ -114,6 +137,10 @@
   position:sticky;
   top:0;
   background:var(--surface-header);
+  color:var(--text-muted);
+  text-transform:uppercase;
+  font-size:11px;
+  letter-spacing:.3px;
   z-index:1;
 }
 

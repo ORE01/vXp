@@ -6,6 +6,10 @@ export {
 } from './mvarInputPanel.js';
 
 export {
+  handleMvarModelSelectionAppData,
+} from './mvarModelSelectionHandler.js';
+
+export {
   handleMVaRData,
 } from './mvarAggregatePanel.js';
 

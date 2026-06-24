@@ -27,7 +27,10 @@ html, body {
    bottom (the light-theme surface override lives on body, not on <html>). */
 #app-root {
   background-color: var(--surface-base);
-  min-height: 100vh;
+  /* Body hat padding-top:110px (fixe Topbar) und box-sizing:border-box, die
+     Content-Fläche ist also nur 100vh-110px hoch. min-height:100vh würde
+     #app-root 110px zu hoch machen -> äußerer Body-Scrollbar. */
+  min-height: calc(100vh - 110px);
 }
 
 body {

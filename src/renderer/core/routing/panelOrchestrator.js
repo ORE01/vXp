@@ -90,6 +90,37 @@ export function refreshOpenPanels(key = "default") {
   }
 }
 
+/**
+ * Materialisiert ALLE registrierten Lazy-Panel-Renderer (über alle Registries),
+ * auch Panels, die nie geöffnet wurden. Die Renderer zeichnen aus dem Store in
+ * die (off-screen, aber voll dimensionierten) Panels → ihr Inhalt steht damit
+ * im DOM bereit, ohne dass man die Tabs manuell öffnen muss.
+ *
+ * Durchgängige Logik: jedes Lazy-Panel, das hier registriert ist, wird erfasst —
+ * kein Spezialfall pro Panel.
+ */
+export function renderAllRegisteredPanels() {
+  for (const [, entry] of registry.entries()) {
+    const { panelRenderState, panelRenderers } = entry || {};
+    if (!panelRenderers) continue;
+    for (const id of Object.keys(panelRenderers)) {
+      const fn = panelRenderers[id];
+      if (typeof fn !== "function") continue;
+      if (panelRenderState) panelRenderState[id] = true; // gilt ab jetzt als gerendert
+      try {
+        fn();
+      } catch (err) {
+        console.error(`[LazyRender] renderAllRegisteredPanels: ${id} failed`, err);
+      }
+    }
+  }
+
+  // Charts brauchen evtl. einen Tick zum Zeichnen → Report zweimal nachtriggern.
+  const ping = () => { try { document.dispatchEvent(new Event("risk:refresh-thumbnails")); } catch {} };
+  ping();
+  setTimeout(ping, 400);
+}
+
 export function refreshPanel(panelId, key = "default") {
   const entry = registry.get(key);
   if (!entry || !panelId) return;

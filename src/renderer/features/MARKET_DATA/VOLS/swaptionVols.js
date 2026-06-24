@@ -154,7 +154,7 @@ export function renderVolSurfacePanel() {
 
   const cellStyle = (value) => {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
-      return 'background:#222; color:#777;';
+      return 'background:var(--surface-overlay); color:var(--text-muted);';
     }
 
     const intensity = (value - minVol) / range;
@@ -182,7 +182,7 @@ export function renderVolSurfacePanel() {
             ${cellStyle(value)}
             padding:10px 12px;
             text-align:center;
-            border:1px solid rgba(255,255,255,0.08);
+            border:1px solid var(--border-subtle);
             min-width:72px;
           ">
           ${label}
@@ -195,11 +195,11 @@ export function renderVolSurfacePanel() {
         <th style="
           position:sticky;
           left:0;
-          background:#151515;
-          color:rgb(190,190,190);
+          background:var(--surface-header);
+          color:var(--text-primary);
           padding:10px 12px;
           text-align:left;
-          border:1px solid rgba(255,255,255,0.08);
+          border:1px solid var(--border-subtle);
           z-index:1;
         ">
           ${swapTenor}
@@ -211,11 +211,11 @@ export function renderVolSurfacePanel() {
 
   const headerHtml = optionTenors.map(t => `
     <th style="
-      background:#151515;
-      color:rgb(190,190,190);
+      background:var(--surface-header);
+      color:var(--text-primary);
       padding:10px 12px;
       text-align:center;
-      border:1px solid rgba(255,255,255,0.08);
+      border:1px solid var(--border-subtle);
       position:sticky;
       top:0;
       z-index:2;
@@ -226,7 +226,7 @@ export function renderVolSurfacePanel() {
 
   el.innerHTML = `
     <div style="height:100%; overflow:auto; padding:10px;">
-      <div style="margin-bottom:10px; color:rgb(190,190,190); font-weight:600;">
+      <div style="margin-bottom:10px; color:var(--text-primary); font-weight:600;">
         EUR Swaption ATM Vol Heatmap
       </div>
 
@@ -239,11 +239,11 @@ export function renderVolSurfacePanel() {
         <thead>
           <tr>
             <th style="
-              background:#151515;
-              color:rgb(190,190,190);
+              background:var(--surface-header);
+              color:var(--text-primary);
               padding:10px 12px;
               text-align:left;
-              border:1px solid rgba(255,255,255,0.08);
+              border:1px solid var(--border-subtle);
               position:sticky;
               top:0;
               left:0;

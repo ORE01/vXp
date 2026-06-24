@@ -1,5 +1,6 @@
 ﻿import { getColorFromPalette, getPortfolioColor } from '../../utils/colors.js';
 import { appState } from '../../renderer.js';
+import { renderMvarProductPLPanel } from './marketRisk/mvar/mvarProductPLPanel.js';
 
 
 
@@ -23,6 +24,20 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
   if (Number.isFinite(portValue) && Number.isFinite(portNotional) && portNotional !== 0) {
     portValueRel = portValue / portNotional;
     portfolioEndValue = portValueRel * 100;
+  }
+
+  // --- Synthetic Bond vs. Portfolio line chart (tsEU1YChart) ---
+  // Drawn HERE, independently of the distribution-data early-returns below: this chart
+  // only needs the time series (tblTS) + portfolio PV01, NOT the MVaR distribution.
+  // Previously it sat after the '[DIST] No distribution' return, so it stayed blank on
+  // initial open (no dist rows yet) and only appeared after a recalc.
+  console.log('[TS EU1Y CHART] reached synthetic-chart gate (early)', {
+    portPV01,
+    portPV01IsFinite: Number.isFinite(portPV01),
+  });
+
+  if (Number.isFinite(portPV01)) {
+    drawSyntheticPortfolioChart(portfolioEndValue, portPV01, 5);
   }
 
   // --- NAV ---
@@ -58,23 +73,35 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
   const varTRel = Number(chosenAgg?.VaR_T_rel) || 0;
 
   // --- Distribution data: try exact (port, scenario, asof) first ---
-const mvarDistData = appState.getMvarDistData({
+let mvarDistData = appState.getMvarDistData({
   port_name,
   scenario_name,
   asof_date: chosenAsof,
 }) || [];
 
-// console.log('[DBG] dist lookup:', {
-//   port_name,
-//   scenario_name,
-//   chosenAsof,
-//   len: Array.isArray(mvarDistData) ? mvarDistData.length : null,
-// });
+// Fallback: if the EXACT aggregate asof has no distribution rows (common at initial
+// open / test mode, where the aggregate asof and the stored distribution asof differ),
+// fall back to the LATEST available distribution for this port+scenario instead of
+// rendering nothing. The histogram only needs SOME distribution for the selection;
+// the store getter returns the latest asof when asof_date is omitted.
+if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
+  const anyAsofDist = appState.getMvarDistData({ port_name, scenario_name }) || [];
+
+  console.warn('[DIST] no dist for exact asof; falling back to latest available', {
+    port_name,
+    scenario_name,
+    chosenAsof,
+    exactCount: 0,
+    fallbackCount: anyAsofDist.length,
+  });
+
+  mvarDistData = anyAsofDist;
+}
 
 if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
   console.warn(
-    '[DIST] No distribution for EXACT selection - nothing rendered (expected in test mode)',
-    { port_name, scenario_name, chosenAsof }
+    '[DIST] No distribution for selection (any asof) - nothing rendered',
+    { port_name, scenario_name }
   );
   return;
 }
@@ -116,9 +143,8 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
   const { data, options } = drawMvarHistogram(plValues, portValueRel, varTRel);
   window.plMvarDistChartInstance = new Chart(ctx, { type: 'bar', data, options });
 
-  if (Number.isFinite(portPV01)) {
-    drawSyntheticPortfolioChart(portfolioEndValue, portPV01, 5);
-  }
+  // NOTE: the synthetic line chart (tsEU1YChart) is now drawn earlier in this function
+  // (before the distribution-data early-returns), so it is not redrawn here.
 }
 
 // HISTOGRAMM:
@@ -290,6 +316,23 @@ function createAllProductData(tsData, testTtM, pv01, startValue = 100) {
 
 function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM = 5) {
   const tsData = appState.getTblTSData();
+
+  console.log('[TS EU1Y CHART] drawSyntheticPortfolioChart called', {
+    tsDataLen: Array.isArray(tsData) ? tsData.length : null,
+    targetEndValue,
+    portPV01,
+    canvasExists: !!document.getElementById('tsEU1YChart'),
+  });
+
+  // Guard: without a usable time-series, tsData[last] is undefined and the
+  // interpolation below would THROW (Object.entries(undefined)), which previously
+  // also aborted the product render that runs after this in refreshMarketRiskUI.
+  if (!Array.isArray(tsData) || tsData.length < 2) {
+    console.warn('[TS EU1Y CHART] skipped: tblTS time-series empty/too short', {
+      tsDataLen: Array.isArray(tsData) ? tsData.length : null,
+    });
+    return;
+  }
 
   const testCurr = tsData[tsData.length - 1];
   const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM) / 100;
@@ -559,56 +602,16 @@ function formatDateLabel(val) {
 }
 
 //MarketVaR_Product
-export function handleMvarProductTable(port_name, scenario_name, asof_date = null) {
-  const container = document.getElementById('mvarProductTableContainer');
-  if (!container) {
-    console.warn('[PRODUCT] Container #mvarProductTableContainer not found');
-    return;
+// Delegiert an den kuratierten Product-VaR-Renderer, damit der INITIAL-Feed
+// dieselbe Tabelle zeigt wie nach einer Berechnung (Product ID / Description /
+// VaR / ES / Obs) — kein Roh-DB-Dump (id, asof_date, var_contrib_* …) mehr.
+// Die Daten stehen bereits im Store (setMvarProductData lief davor).
+export function handleMvarProductTable(/* port_name, scenario_name, asof_date */) {
+  try {
+    renderMvarProductPLPanel();
+  } catch (e) {
+    console.warn('[PRODUCT] renderMvarProductPLPanel delegation failed', e);
   }
-
-  // Daten holen (latest asof_date, wenn null -> Ã¼bernimmt get() Logik)
-  const rows = appState.getMvarProductData({
-    port_name,
-    scenario_name,
-    asof_date
-  }) || [];
-
-  if (!Array.isArray(rows) || rows.length === 0) {
-    container.innerHTML = `<div class="muted">No product VaR data for selection.</div>`;
-    return;
-  }
-
-  // Optional: sortiere nach grÃ¶ÃŸtem Risiko zuerst (passende Key-Reihenfolge)
-  const riskKeyCandidates = [
-  'var_contrib_total',   // âœ… neu
-  'var_contrib',
-  'VaR_Contrib',
-  'var', 'VaR',
-  'pl_var', 'PL_VaR'
-];
-
-  const riskKey = riskKeyCandidates.find(k => k in (rows[0] || {})) || null;
-
-  const sorted = rows.slice().sort((a, b) => {
-    if (!riskKey) return 0;
-    const av = Number(a?.[riskKey]);
-    const bv = Number(b?.[riskKey]);
-    if (!Number.isFinite(av) || !Number.isFinite(bv)) return 0;
-    return Math.abs(bv) - Math.abs(av);
-  });
-
-  // Spalten: robuste Default-Auswahl + Fallback auf alle Keys
-  const columns = pickProductColumns(sorted);
-
-  // Render
-  container.innerHTML = '';
-  container.appendChild(renderHtmlTable(sorted, columns));
-
-  // renderMvarProdIdVarContribChart(rows);
-  // renderMvarProdIdEsContribChart(rows);
-
-
-
 }
 
 function pickProductColumns(rows) {

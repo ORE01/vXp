@@ -7,12 +7,17 @@ import { handleLiquidityData } from '../../features/ANALYSE_PORTFOLIO/liquidity.
 import { handleSummaryNotionalData } from '../../features/ANALYSE_PORTFOLIO/SummaryBreakdown.js';
 import { handleSummaryYieldData } from '../../features/ANALYSE_PORTFOLIO/SummaryYield.js';
 import { handleSummaryMarketRiskData, handleMvarProductTable } from '../../features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
-import { handleMVaRData } from '../../features/ANALYSE_PORTFOLIO/marketRisk/mvar/index.js';
-import { handleCVaRData } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
+
+import {
+  handleMVaRData,
+  renderMVaRFactorPLPanel,
+} from '../../features/ANALYSE_PORTFOLIO/marketRisk/mvar/index.js';
+
+import { handleCVaRData, handleEADData } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
 import { handleLossIssuerMainData } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js';
 import { createComparisonCharts } from '../../features/COMPARE_PORTFOLIOS/COMP.js';
 import { formatPercentage } from '../../utils/tableCellFormats.js';
-import { handleDealsData } from '../../features/portfolio/tradeTableRenderer.js';
+import { handleDealsData } from '../../features/portfolio/trades/tradeTableRenderer.js';
 import { applyColumnFilters } from '../../features/CUSTOMER/tableLayouts/tableColumnFilters.js';
 
 // Table id of the SELECT PORTFOLIO table whose per-column header filters should
@@ -22,6 +27,9 @@ const PORT_TABLE_ID = 'portTable0';
 
 export function createPortfolioUIOrchestrator({ appState } = {}) {
   if (!appState) throw new Error('[portfolioUIOrchestrator] appState fehlt');
+
+  // Registrierung für Pipeline-/Dropdown-Refreshes, die über appState gehen.
+  appState.handleEADData = handleEADData;
 
   let portfolioRenderToken = 0;
 
@@ -413,6 +421,8 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
 
       () => handleMVaRData(mvarData, index),
 
+      () => renderMVaRFactorPLPanel(),
+
       () => handleCVaRData(cvarData, index),
 
       () => createComparisonCharts(appState.portDataMap, false),
@@ -437,9 +447,9 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
 
       () => {
         const EADData = appState.getAllEADData?.() || [];
-        appState.handleEADData?.(EADData);
+        handleEADData(EADData, index, port_name);
       },
-
+      
       () => {
         const LossData = appState.getAllLossData?.() || [];
         handleLossIssuerMainData(LossData);

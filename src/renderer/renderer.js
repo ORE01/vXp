@@ -19,12 +19,27 @@ import { bootstrapPython } from './core/bootstrap/bootstrapPython.js';
 import { bootstrapIPC } from './core/bootstrap/bootstrapIPC.js';
 import { bootstrapBindings } from './core/bootstrap/bootstrapBindings.js';
 import { handleCustomerTableLayoutsData } from './features/CUSTOMER/tableLayouts/handleCustomerTableLayoutsData.js';
+import { renderCustomerCategoryPanel, initCustomerCategoryCrud } from './features/CUSTOMER_SETUP/customerCategoryPanel.js';
+import {
+  handleCustomerMarketRiskIntervalOptions,
+  initCustomerMarketRiskSave,
+} from './features/CUSTOMER_SETUP/customerMarketRiskPanel.js';
+import {
+  handleCustomerMarketRiskSettingData,
+  handleCustomerMarketRiskThresholdSettingData,
+} from './features/CUSTOMER_SETUP/customerMarketRiskSettingHandler.js';
+import {
+  handleCustomerCreditRiskSettingData,
+  handleCustomerCreditRiskThresholdSettingData,
+} from './features/CUSTOMER_SETUP/customerCreditRiskSettingHandler.js';
+import { initCustomerCreditRiskSave } from './features/CUSTOMER_SETUP/customerCreditRiskPanel.js';
 
 import { openPanel } from './core/ui/panels/index.js';
 import { showMessageBox, showConfirmationBox } from './core/ui/dialogs/confirm.js';
 
 import { initPortfolioPanelsLazyRender } from './core/routing/initAnalysePortfolioPanels.js';
 import { initMarketDataPanelsLazyRender } from './core/routing/initMarketDataPanels.js';
+import { initCustomerSetupPanelsLazyRender } from './core/routing/initCustomerSetupPanels.js';
 import { initMarketDataChartsAutoRefresh } from './core/routing/initMarketDataRefresh.js';
 import { initCreditSpreadCurveChartListener } from './features/MARKET_DATA/CREDIT_SPREADS/renderCreditSpreadCurveChart.js';
 
@@ -36,7 +51,7 @@ import { handlePortAggData, handlePortProdData } from './features/portfolio/inde
 
 import { handleIssuerData } from './features/issuer/issuerPanel.js';
 import { renderProductTable }   from './features/products/productTableController.js';
-import { handleDealsData }  from './features/portfolio/tradeTableRenderer.js';
+import { handleDealsData }  from './features/portfolio/trades/tradeTableRenderer.js';
 
 import { marketRiskHandlers } from './features/ANALYSE_PORTFOLIO/marketRisk/marketRiskHandlers.js';
 
@@ -223,6 +238,12 @@ const {
     handleCSBaseData,
     handleCSScenarioData,
     handleCustomerTableLayoutsData,
+    handleCustomerProductCategorySetupData: renderCustomerCategoryPanel,
+    handleCustomerMarketRiskIntervalOptions,
+    handleCustomerMarketRiskSettingData,
+    handleCustomerMarketRiskThresholdSettingData,
+    handleCustomerCreditRiskSettingData,
+    handleCustomerCreditRiskThresholdSettingData,
 
 
     ...issuerProdHandlers,
@@ -264,6 +285,16 @@ const {
     setupCustomerReportsPresetUI,
   });
 
+  // Customer Setup -> Category: render the categories table via the app framework
+  // and wire the framework Add button (Edit buttons are wired on each render).
+  renderCustomerCategoryPanel();
+  initCustomerCategoryCrud();
+
+  // Customer Setup -> Risk -> Market Risk -> Interval: wire the Save button.
+  initCustomerMarketRiskSave();
+
+  // Customer Setup -> Risk -> Credit Risk -> General Settings: wire the Save button.
+  initCustomerCreditRiskSave();
 
 });
 
@@ -274,6 +305,7 @@ function bootstrapCreateAppState() {
 function initAllPanelsLazyRender() {
   initPortfolioPanelsLazyRender({ panelRenderState });
   initMarketDataPanelsLazyRender({ panelRenderState });
+  initCustomerSetupPanelsLazyRender({ panelRenderState });
 }
 
   function updateTooltips(language) {

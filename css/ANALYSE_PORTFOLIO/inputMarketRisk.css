@@ -96,10 +96,12 @@
   flex-wrap: nowrap;
 }
 
-/* MVaR-Box links – normale Karte, keine Flex-Spielereien innen */
+/* MVaR-Box links – kompakte Karte, NICHT über die ganze Seite ziehen.
+   (Die Ampel ist ausgeblendet, daher Breite hier begrenzen.) */
 #panel-market #MVaRDataContainer0{
-  flex: 1 1 320px;
-  min-width: 260px;
+  flex: 0 1 260px;
+  min-width: 220px;
+  max-width: 260px;
 
   background: var(--panel-surface, #0f0f10);
   border: 1px solid var(--border-subtle);
@@ -193,4 +195,26 @@
   #panel-market .chart-2x1-row{ gap:16px; }
   #panel-market .chart-box{ min-width:0; width:100%; }
   #panel-market .chart-box canvas{ height: 280px !important; }
+}
+
+/* Market Risk interval: visual marker for the SAVED customer default
+   (CustomerMarketRiskSetting.default_market_risk_interval_code). Independent of
+   the active session selection (checked). Green matches the Add Entry button
+   (.edit-button -> background: var(--accent)). */
+.customer-default-interval {
+  border: 2px solid var(--accent);
+}
+
+.customer-default-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  vertical-align: middle;
+  white-space: nowrap;
 }

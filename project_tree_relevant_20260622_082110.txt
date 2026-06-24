@@ -1,11 +1,15 @@
 ﻿PROJECT TREE (relevant files only)
-Generated: 2026-05-22 13:54:48
-Root: C:\Users\wendlert\Desktop\valueXpro_dev\aktuell\electron_app
+Generated: 2026-06-22 08:21:10
+Root: C:\Users\Ronald\riskApp\electron_app
 MaxDepth: 6
 Excluded dirs: node_modules, venv, dist, assets, bin, ML_TrainedModels, .git, .vscode, __pycache__
 Included: *.js, *.html, *.css, *.json, *.py
 
 electron_app
++-- .claude
+|   \-- settings.local.json
++-- build
+|   \-- main
 +-- css
 |   +-- ANALYSE_PORTFOLIO
 |   |   +-- analyse.css
@@ -16,34 +20,38 @@ electron_app
 |   |   +-- liquidity.css
 |   |   +-- marketData.css
 |   |   +-- marketRisk.css
+|   |   +-- marketRiskSensitivities.css
 |   |   +-- performance.css
 |   |   +-- performanceCharts.css
 |   |   \-- riskMetricsHistory.css
 |   +-- base
-|   |   +-- LOGIN.css
+|   |   +-- login.css
 |   |   +-- modalDark.css
 |   |   +-- tableDark.css
-|   |   \-- Tables.css
+|   |   \-- tables.css
 |   +-- COMPARE
 |   |   \-- compare.css
 |   +-- components
-|   |   +-- Button.css
-|   |   +-- Chart.css
+|   |   +-- button.css
+|   |   +-- chart.css
 |   |   +-- couponModal.css
-|   |   +-- Dropdown.css
+|   |   +-- dropdown.css
 |   |   +-- messageBox.css
 |   |   +-- notifications.css
-|   |   +-- SectionTriggers.css
+|   |   +-- pageSearch.css
+|   |   +-- sectionTriggers.css
 |   |   +-- slideIn.base.css
-|   |   +-- Surfaces.css
+|   |   +-- surfaces.css
 |   |   +-- toolbar.css
-|   |   +-- ToolTip.css
+|   |   +-- toolTip.css
 |   |   +-- trafficLight.css
-|   |   \-- Warnings.css
+|   |   \-- warnings.css
 |   +-- CREATE_PORTFOLIO
-|   |   \-- CreatePortfolio.css
+|   |   \-- createPortfolio.css
+|   +-- CUSTOMER_SETUP
+|   |   \-- customerMarketRisk.css
 |   +-- DATA_PROVIDER
-|   |   \-- DataProvider.css
+|   |   \-- dataProvider.css
 |   +-- MARKET_DATA
 |   |   +-- creditSpreads.css
 |   |   +-- forecasting.css
@@ -52,10 +60,13 @@ electron_app
 |   |   +-- MarketDataSlideIn.css
 |   |   \-- rates.css
 |   +-- products
+|   |   +-- addProductsDrawer.css
+|   |   +-- fillTradeDetailsDrawer.css
 |   |   +-- issuer.css
 |   |   +-- newPortfolio.css
 |   |   +-- offers.css
 |   |   +-- products.css
+|   |   +-- rankDrawer.css
 |   |   \-- structureTimeline.css
 |   +-- REPORTS
 |   |   +-- offersPreview.css
@@ -73,11 +84,15 @@ electron_app
 |       +-- updates.css
 |       \-- vxpImports.css
 +-- docs
+|   \-- architecture
 +-- files
+|   +-- Archiv
+|   \-- inspect_all_tables.py
 +-- PYTHON
 |   +-- bridge
 |   |   \-- pythonBridge.js
 |   +-- execution
+|   |   +-- architecture
 |   |   +-- fetch.js
 |   |   +-- index.js
 |   |   +-- receivers.js
@@ -86,28 +101,12 @@ electron_app
 |       +-- pythonProgressBars.js
 |       \-- pythonProgressBarsBridge.js
 +-- src
-|   +-- architecture
-|   +-- legacy
-|   |   \-- legacyProspectusCollector.js
+|   +-- ARCHITECTURE
 |   +-- main
 |   |   +-- bootstrap
-|   |   |   +-- dataCollector.bootstrap.js
 |   |   |   \-- windows.bootstrap.js
-|   |   +-- features
-|   |   |   +-- BOND_PROSPECTUS
-|   |   |   |   +-- bondProspectusFinder.bootstrap.js
-|   |   |   |   +-- bondProspectusFinder.domains.js
-|   |   |   |   +-- bondProspectusFinder.ipc.js
-|   |   |   |   +-- bondProspectusFinder.resolver.js
-|   |   |   |   \-- bondProspectusFinder.service.js
-|   |   |   \-- BONDS
-|   |   |       +-- bonds.bootstrap.js
-|   |   |       +-- bonds.domains.js
-|   |   |       +-- bonds.ipc.js
-|   |   |       \-- bonds.service.js
 |   |   +-- ipc
 |   |   |   +-- handlers
-|   |   |   |   +-- bondFetch.handlers.js
 |   |   |   |   +-- columnImport.handlers.js
 |   |   |   |   +-- couponWindow.handlers.js
 |   |   |   |   +-- crud.handlers.js
@@ -115,13 +114,17 @@ electron_app
 |   |   |   |   +-- csParameter.handlers.js
 |   |   |   |   +-- csScenario.handlers.js
 |   |   |   |   +-- customer.handlers.js
+|   |   |   |   +-- customerCreditRiskSetting.handlers.js
+|   |   |   |   +-- customerMarketRiskSetting.handlers.js
 |   |   |   |   +-- db.handlers.js
 |   |   |   |   +-- dealsImport.handlers.js
 |   |   |   |   +-- dealsSelection.handlers.js
+|   |   |   |   +-- dealsUpdate.handlers.js
 |   |   |   |   +-- excel.handlers.js
 |   |   |   |   +-- ipcMeta.handlers.js
 |   |   |   |   +-- issuer.handlers.js
 |   |   |   |   +-- portfolioDelete.handlers.js
+|   |   |   |   +-- portfolioProducts.handlers.js
 |   |   |   |   +-- products.handlers.js
 |   |   |   |   +-- python.handlers.js
 |   |   |   |   +-- ratesActive.handlers.js
@@ -172,6 +175,9 @@ electron_app
 |   |   |   |   +-- bootstrapStores.js
 |   |   |   |   +-- bootstrapTriggers.js
 |   |   |   |   \-- bootstrapUIBasics.js
+|   |   |   +-- data
+|   |   |   |   +-- dataRouter.js
+|   |   |   |   \-- dataUpdatePipeline.js
 |   |   |   +-- debug
 |   |   |   |   +-- chartDebug.js
 |   |   |   |   +-- chartTrace.js
@@ -180,26 +186,30 @@ electron_app
 |   |   |   +-- ipc
 |   |   |   |   +-- installReceivers.js
 |   |   |   |   \-- ipcBridge.js
+|   |   |   +-- orchestration
+|   |   |   |   \-- portfolioUIOrchestrator.js
 |   |   |   +-- routing
 |   |   |   |   +-- initAnalysePortfolioPanels.js
 |   |   |   |   +-- initMarketDataPanels.js
 |   |   |   |   +-- initMarketDataRefresh.js
 |   |   |   |   \-- panelOrchestrator.js
 |   |   |   +-- state
+|   |   |   |   +-- ARCHITECTURE
+|   |   |   |   +-- stores
+|   |   |   |   |   +-- creditRiskStore.js
+|   |   |   |   |   +-- customerDataStore.js
+|   |   |   |   |   +-- customerReportsStore.js
+|   |   |   |   |   +-- marketDataStore.js
+|   |   |   |   |   +-- marketRiskStore.js
+|   |   |   |   |   +-- nameListsStore.js
+|   |   |   |   |   +-- portfolioDataStore.js
+|   |   |   |   |   +-- portfolioRiskSensitivitiesStore.js
+|   |   |   |   |   +-- productsStore.js
+|   |   |   |   |   \-- uiStateStore.js
 |   |   |   |   +-- AppState.js
-|   |   |   |   +-- creditRiskStore.js
-|   |   |   |   +-- customerReportsStore.js
-|   |   |   |   +-- dataRouter.js
-|   |   |   |   +-- dataUpdatePipeline.js
 |   |   |   |   +-- dropdownFilterEngine.js
-|   |   |   |   +-- marketDataStore.js
-|   |   |   |   +-- marketRiskStore.js
-|   |   |   |   +-- nameListsStore.js
-|   |   |   |   +-- portfolioDataStore.js
-|   |   |   |   +-- portfolioUIOrchestrator.js
-|   |   |   |   +-- productsStore.js
 |   |   |   |   +-- tableLayoutStore_alt.js
-|   |   |   |   \-- uiStateStore.js
+|   |   |   |   \-- tableSortStore.js
 |   |   |   \-- ui
 |   |   |       +-- changeHandlers
 |   |   |       |   +-- offersDropdownChange.js
@@ -229,9 +239,14 @@ electron_app
 |   |   |       |   +-- panelFocus.js
 |   |   |       |   +-- panelHooks.js
 |   |   |       |   \-- panelVisibility.js
+|   |   |       +-- tables
+|   |   |       |   +-- configurableTable.js
+|   |   |       |   +-- tableSortBindings.js
+|   |   |       |   \-- tableSorting.js
 |   |   |       +-- bindAppButtons.js
 |   |   |       +-- bindDropdowns.js
 |   |   |       +-- globalChangeDelegation.js
+|   |   |       +-- pageSearch.js
 |   |   |       \-- warnings.js
 |   |   +-- features
 |   |   |   +-- ANALYSE_PORTFOLIO
@@ -243,12 +258,11 @@ electron_app
 |   |   |   |   +-- HISTORIC_RISK_METRICS
 |   |   |   |   |   +-- historicRiskMetrics.js
 |   |   |   |   |   \-- saveHistoricRiskMetrics.js
-|   |   |   |   +-- MARKET_RISK
-|   |   |   |   |   +-- CSSens.js
-|   |   |   |   |   +-- IRSens.js
+|   |   |   |   +-- marketRisk
+|   |   |   |   |   +-- mvar
+|   |   |   |   |   +-- sensitivities
 |   |   |   |   |   +-- marketRiskHandlers.js
-|   |   |   |   |   +-- marketRiskRefresh.js
-|   |   |   |   |   \-- MVaR.js
+|   |   |   |   |   \-- marketRiskRefresh.js
 |   |   |   |   +-- analysePortfolioHandlers.js
 |   |   |   |   +-- liquidity.js
 |   |   |   |   +-- SummaryBreakdown.js
@@ -256,18 +270,28 @@ electron_app
 |   |   |   |   \-- SummaryYield.js
 |   |   |   +-- COMPARE_PORTFOLIOS
 |   |   |   |   \-- COMP.js
-|   |   |   +-- CREATE_PORTFOLIO
-|   |   |   |   +-- DEALS.js
-|   |   |   |   \-- dealsUI.js
 |   |   |   +-- CUSTOMER
 |   |   |   |   +-- tableLayouts
 |   |   |   |   |   +-- handleCustomerTableLayoutsData.js
+|   |   |   |   |   +-- tableColumnFilters.js
+|   |   |   |   |   +-- tableColumnSelector.js
 |   |   |   |   |   \-- tableLayoutStore.js
 |   |   |   |   \-- customerHandlers.js
+|   |   |   +-- CUSTOMER_SETUP
+|   |   |   |   +-- customerCategoryPanel.js
+|   |   |   |   +-- customerCreditRiskPanel.js
+|   |   |   |   +-- customerCreditRiskSettingHandler.js
+|   |   |   |   +-- customerMarketRiskPanel.js
+|   |   |   |   \-- customerMarketRiskSettingHandler.js
 |   |   |   +-- DATA_PROVIDER
 |   |   |   |   +-- DATAProvider.js
 |   |   |   |   +-- issuerProductHandlers.js
 |   |   |   |   \-- providerHandlers.js
+|   |   |   +-- issuer
+|   |   |   |   +-- issuerModalMapper.js
+|   |   |   |   +-- issuerPanel.js
+|   |   |   |   +-- issuerRankRatingDrawer.js
+|   |   |   |   \-- issuerTableView.js
 |   |   |   +-- MARKET_DATA
 |   |   |   |   +-- CREDIT_SPREADS
 |   |   |   |   |   +-- creditSpreadCurveData.js
@@ -278,15 +302,14 @@ electron_app
 |   |   |   |   |   \-- renderCreditSpreadCurveChart.js
 |   |   |   |   +-- FORECASTING
 |   |   |   |   |   \-- ML.js
-|   |   |   |   +-- FORWARDS
-|   |   |   |   |   +-- forwards.js
-|   |   |   |   |   +-- forwardsHandlers.js
-|   |   |   |   |   +-- forwardsUI.js
+|   |   |   |   +-- forwards
+|   |   |   |   |   +-- forwardCurveHandlers.js
+|   |   |   |   |   +-- forwardCurvePanel.js
 |   |   |   |   |   \-- initForwardPanelGlobal.js
 |   |   |   |   +-- HISTORIC_DATA
 |   |   |   |   |   +-- ChartAnalyses.js
 |   |   |   |   |   \-- TS.js
-|   |   |   |   +-- INTEREST_RATES
+|   |   |   |   +-- interestRates
 |   |   |   |   |   +-- interestRateCurveData.js
 |   |   |   |   |   +-- interestRateCurveHandlers.js
 |   |   |   |   |   +-- interestRateCurvePanel.js
@@ -308,37 +331,59 @@ electron_app
 |   |   |   +-- OFFERS
 |   |   |   |   +-- csScenarioUI.js
 |   |   |   |   +-- dealsEnhancerBridge.js
-|   |   |   |   \-- offersUI.js
+|   |   |   |   +-- offersUI.js
+|   |   |   |   \-- readOffers.js
+|   |   |   +-- portfolio
+|   |   |   |   +-- selectPortfolio
+|   |   |   |   |   \-- portfolioSelectionTable.js
+|   |   |   |   +-- tradeEditor
+|   |   |   |   |   +-- bindTradeButtons.js
+|   |   |   |   |   +-- tradeActions.js
+|   |   |   |   |   +-- tradeDataHandlers.js
+|   |   |   |   |   \-- tradeIpcFeedback.js
+|   |   |   |   +-- addProductsDrawer.js
+|   |   |   |   +-- fillTradeDetailsDrawer.js
+|   |   |   |   +-- index.js
+|   |   |   |   +-- portColumnSelector.js
+|   |   |   |   +-- portfolioAggregates.js
+|   |   |   |   +-- portfolioColumns.js
+|   |   |   |   +-- portfolioCreationActions.js
+|   |   |   |   +-- portfolioCreationPanel.js
+|   |   |   |   +-- portfolioDisplayNames.js
+|   |   |   |   +-- portfolioDropdownUI.js
+|   |   |   |   +-- portfolioRiskEnrichment.js
+|   |   |   |   +-- portfolioTable.js
+|   |   |   |   +-- portTableColumns.js
+|   |   |   |   +-- portTableSort.js
+|   |   |   |   +-- tradeTableRenderer.js
+|   |   |   |   \-- tradeUI.js
 |   |   |   +-- products
-|   |   |   |   +-- legacy
-|   |   |   |   |   \-- PRODCoupon.legacy.js
 |   |   |   |   +-- structureTimeline
 |   |   |   |   |   +-- schedules
-|   |   |   |   |   +-- structureModelSetupDrawer.js
-|   |   |   |   |   +-- structureProductSetupDrawer.js
-|   |   |   |   |   +-- structureProductValuationDrawer.js
-|   |   |   |   |   +-- structureSimpleFixedDrawer.js
-|   |   |   |   |   +-- structureSimpleFrnDrawer.js
-|   |   |   |   |   +-- structureTimelineData.js
-|   |   |   |   |   +-- structureTimelineDrawer.js
-|   |   |   |   |   +-- structureTimelineGrid.js
-|   |   |   |   |   +-- structureTimelineSchedules.js
-|   |   |   |   |   \-- structureTimelineUtils.js
+|   |   |   |   |   +-- complexModelSetupDrawer.js
+|   |   |   |   |   +-- complexProductSetupDrawer.js
+|   |   |   |   |   +-- complexTimelineData.js
+|   |   |   |   |   +-- complexTimelineDrawer.js
+|   |   |   |   |   +-- complexTimelineGrid.js
+|   |   |   |   |   +-- complexTimelineSchedules.js
+|   |   |   |   |   +-- complexTimelineUtils.js
+|   |   |   |   |   +-- productDrawerDelete.js
+|   |   |   |   |   +-- simpleFixedDrawer.js
+|   |   |   |   |   +-- simpleFrnDrawer.js
+|   |   |   |   |   \-- valuationDrawer.js
 |   |   |   |   +-- templates
 |   |   |   |   |   +-- complexBondTemplate.js
 |   |   |   |   |   +-- simpleFixedBondTemplate.js
 |   |   |   |   |   \-- simpleFRNTemplate.js
-|   |   |   |   +-- ISSUER.js
-|   |   |   |   +-- issuerRankRatingDrawer.js
-|   |   |   |   +-- prodSimpleCoupon.js
 |   |   |   |   +-- productFieldConfig.js
+|   |   |   |   +-- productFieldRenderer.js
+|   |   |   |   +-- productSetupModal.js
 |   |   |   |   +-- productTableController.js
 |   |   |   |   +-- productTemplateResolver.js
 |   |   |   |   +-- productTemplates.js
-|   |   |   |   +-- productValidation.js
-|   |   |   |   +-- readOffers.js
-|   |   |   |   \-- StructureTimelineModal.js
+|   |   |   |   \-- productValidation.js
 |   |   |   +-- REPORTS
+|   |   |   |   +-- captureAdapter.js
 |   |   |   |   +-- CustomerReports.js
 |   |   |   |   +-- CustomerReportsPresetUI.js
 |   |   |   |   +-- OffersPDF.js
@@ -349,24 +394,17 @@ electron_app
 |   |   |   |   +-- RiskPDF.js
 |   |   |   |   +-- RiskPDFPreview.js
 |   |   |   |   \-- riskReportUI.js
-|   |   |   +-- SELECT_PORTFOLIO
-|   |   |   |   +-- dealsPortfolioActions.js
-|   |   |   |   +-- PORT.js
-|   |   |   |   +-- portColumnSelector.js
-|   |   |   |   +-- portfolioDropdownUI.js
-|   |   |   |   +-- portTableColumns.js
-|   |   |   |   +-- portTableSort.js
-|   |   |   |   \-- YIELD.js
 |   |   |   \-- UPDATES
 |   |   |       +-- bulkUpdateBridge.js
 |   |   |       \-- updatesExcel.js
 |   |   +-- utils
 |   |   |   +-- colors.js
 |   |   |   +-- domHelpers.js
-|   |   |   +-- format.js
 |   |   |   +-- linksToTables.js
 |   |   |   +-- slideIn.js
-|   |   |   +-- tableColorize.js
+|   |   |   +-- tableCellAlignment.js
+|   |   |   +-- tableCellColorize.js
+|   |   |   +-- tableCellFormats.js
 |   |   |   +-- tableUtils.js
 |   |   |   +-- tabs.js
 |   |   |   +-- ToolTip.js
@@ -375,7 +413,7 @@ electron_app
 |   |   \-- renderer.js
 |   \-- scripts
 |       \-- ipc-audit.js
-+-- zzzBACK_END
++-- check_model_selection_db.py
 +-- electron-builder.json
 +-- index.html
 +-- login.js

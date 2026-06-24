@@ -1,6 +1,7 @@
 // FRONT_END/REPORTS/offersReportUI.js
 
 import { generateOfferPDF } from './OffersPDF.js';
+import { OFFERS_TABLE_CONTAINER_ID } from './captureAdapter.js';
 import {
   getOffersReportData,
   getOffersReportOptions,
@@ -9,6 +10,8 @@ import {
   setOffersReportData,
   wireOffersPreview
 } from './OffersPDFPreview.js';
+
+import { showMessageBox } from '../../core/ui/dialogs/confirm.js';
 
 /**
  * Verdrahtet Offers Report UI (Preview + PDF).
@@ -20,8 +23,18 @@ export function wireOffersReportUI({ openPanel } = {}) {
 
   // "Go to Report" Button
   document.getElementById('offersGoToReportButton')?.addEventListener('click', () => {
-    const rows = rowsAsObjectsFrom('portDataContainer4');
-    if (!rows.length) { alert('❌ Keine Daten in #portDataContainer4.'); return; }
+    // Approach A: echte Offer-Datenobjekte aus dem State bevorzugen (richtige Keys);
+    // DOM-Scrape der configurable Tabelle nur als Fallback.
+    const stateRows = window.appState?.offersReportRows;
+    const rows = (Array.isArray(stateRows) && stateRows.length)
+      ? stateRows
+      : rowsAsObjectsFrom(OFFERS_TABLE_CONTAINER_ID);
+    if (!rows.length) {
+      const msg = `❌ Keine Daten in #${OFFERS_TABLE_CONTAINER_ID}.`;
+      if (typeof showMessageBox === 'function') showMessageBox(msg);
+      else console.warn('[OffersReportUI]', msg);
+      return;
+    }
 
     setOffersReportData(rows);
 
@@ -31,12 +44,12 @@ export function wireOffersReportUI({ openPanel } = {}) {
     // Preview wiring
     wireOffersPreview({
       containerPreviewId: 'reportsOffersPreview',
-      containerId: 'portDataContainer4',
+      containerId: OFFERS_TABLE_CONTAINER_ID,
       dropdownId: 'reportsOffersDropdown'
     });
 
     // Render Preview
-    renderOffersPreview?.('reportsOffersPreview', 'portDataContainer4');
+    renderOffersPreview?.('reportsOffersPreview', OFFERS_TABLE_CONTAINER_ID);
   });
 
   // "PDF" Button
@@ -54,7 +67,12 @@ export function wireOffersReportUI({ openPanel } = {}) {
 
     // 2) PDF erzeugen
     const data = getOffersReportData();
-    if (!data.length) { alert('❌ Bitte zuerst "Go to Report" klicken.'); return; }
+    if (!data.length) {
+      const msg = '❌ Bitte zuerst "Go to Report" klicken.';
+      if (typeof showMessageBox === 'function') showMessageBox(msg);
+      else console.warn('[OffersReportUI]', msg);
+      return;
+    }
     const opts = getOffersReportOptions();
     generateOfferPDF(data, opts);
   });

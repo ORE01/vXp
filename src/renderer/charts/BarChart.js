@@ -65,7 +65,14 @@ function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y') {
       type: Type,
       data: {
         labels: Array.isArray(data?.labels) ? data.labels : [],
-        datasets: Array.isArray(data?.datasets) ? data.datasets : [],
+        // Default-Obergrenze für die Balkenbreite: Bei wenigen Kategorien (z.B.
+        // CPV01 mit 2 Rating-Buckets) skaliert Chart.js die Balken sonst extrem
+        // breit. maxBarThickness kappt nur zu breite Balken; Charts mit vielen/
+        // dünnen Balken bleiben unberührt. Pro Dataset überschreibbar.
+        datasets: (Array.isArray(data?.datasets) ? data.datasets : []).map((ds) => ({
+          maxBarThickness: 64,
+          ...ds,
+        })),
       },
       options: {
         // CRITICAL:

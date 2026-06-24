@@ -1,9 +1,9 @@
-﻿import processData from '../../../core/ui/modal/modalData.js';
 import { appState } from '../../../renderer.js';
 import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 import { ensureRendered } from '../../../utils/domHelpers.js';
 
-// Spalten der CreditVaRInput-Tabelle - ggf. an dein Schema anpassen
+// Data columns of the CVaR General Settings table (CreditVaRInput). Select /
+// Customer Default / Edit are control columns added directly in the renderer.
 const CVAR_CONFIG_COLUMNS = [
   'name',
   'conf_level',
@@ -13,74 +13,178 @@ const CVAR_CONFIG_COLUMNS = [
   'n_simulations',
   'description',
   'cr_model',
-  'updated_at'
 ];
 
-// Tabellen-Name im generischen Table-/Form-System
+// Table name in the generic table-/form-system (Edit/Add modal field set).
 const TABLE_CVAR_CONFIG = 'CreditVaRInput';
+const CONTAINER_ID = 'inputCreditVaRConfigContainer';
 
+// ---- formatting ----------------------------------------------------------
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// conf_level / recovery_rate as percent (0.999 -> "99.90%"), matching the
+// previous processData formatting (decimals: 2, multiplyBy100).
+function fmtPct(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  const n = Number(value);
+  return Number.isFinite(n) ? `${(n * 100).toFixed(2)}%` : escapeHtml(value);
+}
+
+// Plain numeric / text value (corr, horizon_days, n_simulations).
+function fmtNum(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  return escapeHtml(value);
+}
+
+// ---- CVaR General Settings table (Model-Selection style, like Market Risk) --
 export function handleCvarInput() {
-  //console.log('handleCvarInputConfigView');
-
-  const container = document.getElementById('inputCreditVaRConfigContainer');
+  const container = document.getElementById(CONTAINER_ID);
   if (!container) {
-    console.warn('âš ï¸ Container #inputCreditVaRConfigContainer nicht gefunden.');
+    console.warn('⚠️ Container #inputCreditVaRConfigContainer nicht gefunden.');
     return;
   }
 
-  // Container leeren
   while (container.firstChild) container.removeChild(container.firstChild);
 
-  // Daten ausschlieÃŸlich aus appState holen
+  // Edit/Add modal flow stays untouched: keep the old CreditVaRInput store populated
+  // so the (unchanged) Add/Edit modal below keeps working exactly as before.
   const receivedData = appState.getCvarInput() || [];
-
-  // Daten in definierter Spaltenreihenfolge fÃ¼r processData vorbereiten
-  const tableData = Array.isArray(receivedData)
-    ? receivedData.map(row => {
-        const newRow = {};
-        CVAR_CONFIG_COLUMNS.forEach(col => {
-          if (Object.prototype.hasOwnProperty.call(row, col)) {
-            newRow[col] = row[col];
-          }
-        });
-        return newRow;
-      })
-    : [];
-
-  // Tabelle rendern
-  container.innerHTML = processData(tableData, TABLE_CVAR_CONFIG);
-
-  // Sicherheitshalber wieder in den State schreiben
   appState.setCvarInput(receivedData);
 
-  // Buttons nach Rendern binden
-  ensureRendered(async () => {
-    const reloadConfig = async () => {
-      // Wenn du eine eigene Fetch-Funktion hast, kannst du sie hier aufrufen
-      // await fetchAndUpdateCreditVaRInputData(TABLE_CVAR_CONFIG);
-      // oder einfach nur neu rendern, wenn handleFormAction den State aktualisiert:
-      handleCvarInputConfigView();
-    };
+  // DISPLAY SOURCE (only this changed): show the customer's General Settings from the
+  // store (CustomerCreditRiskSetting) — exactly the same pattern the Threshold table
+  // uses with appState.getCustomerCreditRiskThresholds(). Map the single setting into
+  // the table's column shape (default_credit_config_name -> name).
+  const customerSetting = appState.getCustomerCreditRiskSetting?.() || null;
 
-    // ADD-Button
+  const rows = customerSetting
+    ? [{
+        id: customerSetting.id,
+        name: customerSetting.default_credit_config_name,
+        conf_level: customerSetting.conf_level,
+        corr: customerSetting.corr,
+        recovery_rate: customerSetting.recovery_rate,
+        horizon_days: customerSetting.horizon_days,
+        n_simulations: customerSetting.n_simulations,
+        description: customerSetting.description,
+        cr_model: customerSetting.cr_model,
+        is_active: 1,
+      }]
+    : [];
+
+  // Customer Default = config name from the same Customer Setup setting.
+  const customerDefaultConfigName = customerSetting?.default_credit_config_name ?? null;
+
+  // Default-selected config (kept from the previous radio behaviour): the active
+  // row (is_active = 1), otherwise the last row.
+  let activeIndex = rows.findIndex((r) => r.is_active === 1 || r.is_active === true);
+  if (activeIndex === -1 && rows.length > 0) activeIndex = rows.length - 1;
+
+  const selectedConfigName = activeIndex >= 0 ? (rows[activeIndex]?.name ?? null) : null;
+
+  console.log('[CVAR GENERAL SETTINGS RENDER]', {
+    customerSetting: appState.getCustomerCreditRiskSetting?.(),
+    tableDataCount: rows.length,
+  });
+
+  console.log('[CREDIT RISK GENERAL SETTINGS DISPLAY]', {
+    selectedConfigName,
+    customerDefaultConfigName,
+    rows,
+  });
+
+  if (!rows.length) {
+    container.innerHTML =
+      '<table id="dataTable"><thead><tr><th>No data available</th></tr></thead><tbody></tbody></table>';
+    return;
+  }
+
+  const headers = [
+    'Select', 'Customer Default', 'name', 'conf_level', 'corr', 'recovery_rate',
+    'horizon_days', 'n_simulations', 'description', 'cr_model', 'Edit',
+  ];
+
+  let html = '<table id="dataTable"><thead><tr>';
+  headers.forEach((h) => { html += `<th class="table-header">${h}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  rows.forEach((r, i) => {
+    const name = escapeHtml(r.name ?? '');
+    const idAttr = r.id ?? '';
+    const isDefault =
+      customerDefaultConfigName != null &&
+      String(r.name) === String(customerDefaultConfigName);
+    const checkedAttr = i === activeIndex ? 'checked' : '';
+
+    html += '<tr>';
+    // Select = session single-select. Class .cvar-radio + data-name are kept so the
+    // existing run logic (CVaRButton -> '.cvar-radio:checked' -> data-name) keeps
+    // working unchanged; only radio -> checkbox changed.
+    html += `<td><input type="checkbox" name="cvar-config" class="cvar-radio cvar-checkbox" data-name="${name}" data-id="${escapeHtml(idAttr)}" ${checkedAttr}></td>`;
+    // Customer Default badge where row.name === default_credit_config_name.
+    html += `<td>${isDefault ? '<span class="customer-default-badge">Customer Default</span>' : ''}</td>`;
+    html += `<td>${name}</td>`;
+    html += `<td>${fmtPct(r.conf_level)}</td>`;
+    html += `<td>${fmtNum(r.corr)}</td>`;
+    html += `<td>${fmtPct(r.recovery_rate)}</td>`;
+    html += `<td>${fmtNum(r.horizon_days)}</td>`;
+    html += `<td>${fmtNum(r.n_simulations)}</td>`;
+    html += `<td>${escapeHtml(r.description ?? '')}</td>`;
+    html += `<td>${escapeHtml(r.cr_model ?? '')}</td>`;
+    // Edit operates on the CreditVaRInput row at this index (unchanged modal flow).
+    html += `<td><button class="edit-button" data-row="${i}">Edit</button></td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  wireCvarSelection(container);
+  wireCvarButtons(container);
+}
+
+// Single-select: activating one checkbox deactivates all others in this table.
+function wireCvarSelection(container) {
+  const checkboxes = container.querySelectorAll('input.cvar-radio');
+  if (!checkboxes.length) return;
+
+  const applySelection = (el) => {
+    if (!el) return;
+    checkboxes.forEach((other) => { if (other !== el) other.checked = false; });
+    el.checked = true;
+  };
+
+  checkboxes.forEach((cb) => {
+    cb.addEventListener('click', () => applySelection(cb));
+  });
+}
+
+// Add / Edit buttons -> existing modal flow (unchanged).
+function wireCvarButtons(container) {
+  ensureRendered(async () => {
+    const reloadConfig = async () => { handleCvarInput(); };
+
     const addButton = document.getElementById('cvarConfigAddButton');
     if (addButton) {
-      addButton.addEventListener('click', (event) => {
+      addButton.onclick = (event) => {
         handleModalAction(
           event,
           appState.getCvarInput() || [],
-          null,                     // kein rowIndex â†’ ADD
+          null,                     // kein rowIndex -> ADD
           TABLE_CVAR_CONFIG,
           'add',
-          { modalId: 'editModal', onReload: reloadConfig }
+          { modalId: 'editModal', onReload: reloadConfig },
         );
-      });
+      };
     }
 
-    // EDIT-Buttons in der Tabelle
-    const editButtons = container.querySelectorAll('.edit-button');
-    editButtons.forEach((button) => {
-      button.addEventListener('click', (event) => {
+    container.querySelectorAll('.edit-button').forEach((button) => {
+      button.onclick = (event) => {
         const rowIndex = parseInt(button.getAttribute('data-row'), 10);
         handleModalAction(
           event,
@@ -88,14 +192,9 @@ export function handleCvarInput() {
           rowIndex,
           TABLE_CVAR_CONFIG,
           'edit',
-          { modalId: 'editModal', onReload: reloadConfig }
+          { modalId: 'editModal', onReload: reloadConfig },
         );
-      });
+      };
     });
   });
 }
-
-
-
-
-

@@ -1,11 +1,11 @@
 
-import processData from '../../core/ui/modal/modalData.js';
+import processData from '../../../core/ui/modal/modalData.js';
 
-import { appState } from '../../renderer.js';
+import { appState } from '../../../renderer.js';
 
-import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
-import { formatNumberWithGrouping } from '../../utils/tableCellFormats.js';
-import { attachIdLinks } from '../../utils/linksToTables.js';
+import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../../utils/tooltips.js';
+import { formatNumberWithGrouping } from '../../../utils/tableCellFormats.js';
+import { attachIdLinks } from '../../../utils/linksToTables.js';
 
 import {
   PORTFOLIO_TABLE_NAME,

@@ -2,8 +2,8 @@
 // selector + sorting) from SELECT_PORTFOLIO/PORT.js.
 export {
   handlePortProdData,
-} from '../SELECT_PORTFOLIO/PORT.js';
+} from './selectPortfolio/portfolioSelectionTable.js';
 
 export {
   handlePortAggData,
-} from './portfolioAggregates.js';
+} from './shared/portfolioAggregates.js';

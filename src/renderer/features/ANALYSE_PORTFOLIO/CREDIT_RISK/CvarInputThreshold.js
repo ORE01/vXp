@@ -27,19 +27,35 @@ export function handleCvarInputThresholdView() {
 
   while (container.firstChild) container.removeChild(container.firstChild);
 
+  // Edit path stays untouched: keep the old CreditVaRInputThreshold store populated
+  // so the (unchanged) Edit/Add modal flow below keeps working exactly as before.
   const receivedData = appState.getCvarInputThreshold() || [];
 
-  const tableData = Array.isArray(receivedData)
-    ? receivedData.map(row => {
-        const newRow = {};
-        CVAR_THRESHOLD_COLUMNS.forEach(col => {
-          if (Object.prototype.hasOwnProperty.call(row, col)) {
-            newRow[col] = row[col];
-          }
-        });
-        return newRow;
-      })
-    : [];
+  // DISPLAY SOURCE (only this changed): show the live customer thresholds from the
+  // Customer Store (CustomerCreditRiskThresholdSetting), not the old
+  // CreditVaRInputThreshold rows / local defaults. Map metric_code / yellow_threshold
+  // / red_threshold / description into the table's column shape. Percent formatting
+  // (decimal -> e.g. 0.04 -> 4.00%) is handled by the existing format rules.
+  const customerThresholds = appState.getCustomerCreditRiskThresholds?.() || [];
+
+  console.warn('[CREDIT RISK THRESHOLD DISPLAY SOURCE]', {
+    source: 'CustomerCreditRiskThresholdSetting/appState',
+    thresholds: customerThresholds,
+  });
+
+  const tableData = customerThresholds.map(row => ({
+    metric: row.metric_code,
+    yellow_threshold: Number(row.yellow_threshold),
+    red_threshold: Number(row.red_threshold),
+    description: row.description ?? '',
+  }));
+
+  console.warn('[CVAR THRESHOLD TABLE RENDER]', {
+  customerThresholdCount: customerThresholds.length,
+  tableDataCount: tableData.length,
+  tableData,
+  tableName: TABLE_CVAR_THRESHOLD,
+});
 
   container.innerHTML = processData(tableData, TABLE_CVAR_THRESHOLD);
 

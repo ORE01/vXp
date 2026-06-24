@@ -440,15 +440,6 @@ export function renderSimpleFixedDrawer(container, prodId, options = {}) {
             <span class="structure-drawer-prod-id">
                 ${isCreateMode ? 'New Product' : escapeHtml(formatValue(row.PROD_ID))}
             </span>
-
-            <button
-                id="closeSimpleFixedDrawer"
-                type="button"
-                class="structure-drawer-close"
-                aria-label="Close drawer"
-            >
-                &times;
-            </button>
         </div>
 
       <div class="structure-drawer-grid">
@@ -501,12 +492,6 @@ export function renderSimpleFixedDrawer(container, prodId, options = {}) {
     .querySelector('#saveSimpleFixedDrawer')
     ?.addEventListener('click', () => {
         saveSimpleFixed(container, prodId, options);
-    });
-
-    container
-    .querySelector('#closeSimpleFixedDrawer')
-    ?.addEventListener('click', () => {
-        container.style.display = 'none';
     });
 
     container

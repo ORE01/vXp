@@ -42,6 +42,10 @@ export function getUniqueIdentifier(newData, selectedTableName) {
         uniqueIdentifierColumn = 'ID';
         break;
 
+      case 'CUSTOMER_PRODUCT_CATEGORY_SETUP':
+        uniqueIdentifierColumn = 'id';
+        break;
+
       default:
         console.error('Unknown table:', selectedTableName);
         return null;

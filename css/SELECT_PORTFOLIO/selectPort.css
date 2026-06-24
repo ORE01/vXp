@@ -1,3 +1,52 @@
+/* --- PORT: Obere Reihe — links Dropdown+Button, rechts Summen-Karten --- */
+#panel-selectPort .select-port-top{
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+/* Links: Dropdown + Button gestapelt, gleiche Breite (Button bestimmt sie). */
+#panel-selectPort .select-port-top .portfolio-info{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: max-content;
+  flex: 0 0 auto;
+  margin: 0;
+}
+#panel-selectPort .select-port-top .portfolio-info .created-tables-dropdown{
+  width: 100%;
+}
+#panel-selectPort .select-port-top .portfolio-info .deals-dropdown{
+  width: 100%;            /* Dropdown so breit wie der Button darunter */
+}
+#panel-selectPort .select-port-top .portfolio-info #fairValueButton{
+  width: 100%;
+}
+
+/* Rechts: die zwei Summen-Karten, schmal (nach Inhalt) + kleinere Schrift. */
+#panel-selectPort .select-port-top .port-summary{
+  grid-template-columns: auto auto;
+  gap: 16px;
+}
+#panel-selectPort .select-port-top .port-agg-card{
+  padding: 8px 12px;
+}
+#panel-selectPort .select-port-top .port-agg-title{
+  margin: 0 0 4px;
+  font-size: 11px;
+}
+#panel-selectPort .select-port-top .port-summary table{
+  width: auto;                  /* nicht volle Kartenbreite -> schmäler */
+  font-size: 11px;
+}
+#panel-selectPort .select-port-top .port-summary th,
+#panel-selectPort .select-port-top .port-summary td{
+  padding: 3px 8px;
+}
+
 /* --- PORT: Stack-Layout (Summen oben, Tabelle darunter) --------------- */
 #panel-selectPort .port-layout{
   display: grid;

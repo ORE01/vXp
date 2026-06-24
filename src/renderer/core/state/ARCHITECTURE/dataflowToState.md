@@ -1,15 +1,25 @@
 # ARCHITECTURE.md — DataPump → State → Render Flow
 
-## Grundregel
-
-Der `dataRouter` routet nur.
-
-Er darf keine fachliche Verarbeitung, kein Store-Merging und keine Render-Logik enthalten.
-
-Der korrekte Flow ist:
+## Core Rule
 
 ```text
-DataPump Channel
+Router routet.
+Handler verarbeitet.
+Store speichert.
+Renderer rendert.
+```
+
+Kein Layer übernimmt Aufgaben eines anderen Layers.
+
+---
+
+## Standard Flow
+
+```text
+DB / View
+→ rendererDataPump.js
+→ IPC Event
+→ installReceivers.js
 → dataRouter.js
 → Feature Handler
 → appState Store Setter
@@ -17,28 +27,45 @@ DataPump Channel
 → UI
 ```
 
-## Verantwortlichkeiten
-
-### 1. `rendererDataPump.js`
-
-Liest Tabellen aus der Datenbank und sendet sie als Channel an den Renderer.
-
 Beispiel:
 
 ```text
-MarketVaR_Product
-→ MarketVaR_ProductData
+v_MVAR_MODEL_SELECTION_APPData
+→ dataRouter.js
+→ handleMvarModelSelectionAppData(rows)
+→ appState.setMvarModelSelectionAppRows(rows)
+→ renderMvarModelSelectionPanel()
+→ UI
 ```
 
-### 2. `installReceivers.js`
+---
 
-Empfängt IPC/DataPump Events und gibt sie an den zentralen Router weiter.
+## Layer Responsibilities
 
-Keine fachliche Logik.
+### rendererDataPump.js
 
-### 3. `dataRouter.js`
+Liest Tabellen/Views aus SQLite und sendet sie als Data-Channel.
 
-Mappt nur Channel auf Handler.
+```text
+Table/View: MarketVaR_Product
+Channel:    MarketVaR_ProductData
+```
+
+Keine UI-Logik. Keine Transformation außer Daten senden.
+
+---
+
+### installReceivers.js
+
+Empfängt DataPump/IPC Events und gibt sie an `dataRouter.js` weiter.
+
+Keine fachliche Logik. Kein Store-Write. Kein Render.
+
+---
+
+### dataRouter.js
+
+Der Router mapped nur Channel auf Handler.
 
 Richtig:
 
@@ -55,163 +82,150 @@ case 'MarketVaR_ProductData':
   return handlers.handleMVaRProductPLData(rows);
 ```
 
-Warum falsch?
+Der Router darf keine Feature-Store-Logik kennen.
 
-Weil der Router sonst beginnt, Feature-spezifische Store-Logik zu kennen. Dann verteilt sich der Datenfluss auf mehrere Orte.
+---
 
-## Handler-Regel
+### Feature Handler
 
-Der Feature Handler ist verantwortlich für:
+Der Handler macht drei Dinge:
 
 ```text
-1. Input validieren
+1. Daten validieren/normalisieren
 2. Store setzen
-3. Render-Funktion aufrufen
+3. Renderer triggern
 ```
 
 Beispiel:
 
 ```js
-export function handleMVaRProductPLData(receivedData) {
-  const rows = Array.isArray(receivedData) ? receivedData : [];
+export function handleMVaRProductPLData(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
 
   if (typeof appState.setMvarProductData !== 'function') {
-    throw new Error('[MVaR ProductPL] Missing store: appState.setMvarProductData');
+    throw new Error('[MVaR ProductPL] Missing appState.setMvarProductData');
   }
 
-  appState.setMvarProductData(rows);
+  appState.setMvarProductData(safeRows);
   renderMvarProductPLPanel();
 }
 ```
 
-## Store-Regel
+---
 
-Stores speichern Daten und bieten Getter/Filter an.
+### Store
 
-Beispiel:
-
-```text
-marketRiskStore.js
-- setMvarProductData(rows)
-- getMvarProductData(context)
-```
-
-Der Store rendert nichts.
-
-Der Store kennt keine DOM-Elemente.
-
-Der Store startet keine Recalculations.
-
-## Render-Regel
-
-Renderer lesen nur aus `appState`.
+Stores speichern Daten und bieten Getter/Filter.
 
 Beispiel:
 
 ```js
-export function renderMvarProductPLPanel() {
-  const context = getCurrentMvarContext(appState);
-  const rows = appState.getMvarProductData(context);
+setMvarProductData(rows)
+getMvarProductData(context)
+```
 
+Stores dürfen nicht:
+
+* rendern
+* DOM lesen/schreiben
+* DB laden
+* Recalculations starten
+
+---
+
+### Renderer
+
+Renderer lesen aus `appState` und bauen UI.
+
+```js
+export function renderMvarProductPLPanel() {
+  const rows = appState.getMvarProductData(getCurrentMvarContext());
   renderTable(rows);
   renderChart(rows);
 }
 ```
 
-Renderer dürfen keine DB-Tabellen direkt laden.
+Renderer dürfen nicht direkt SQLite lesen.
 
-Renderer dürfen keine Store-Daten heimlich verändern.
+---
 
-## Pflichtfunktionen vs optionale Funktionen
+## Pflichtfunktionen
 
-Für Kern-Datenflüsse keine stillen Fehler.
+Für Kern-Flows keine stillen Fehler.
 
 Richtig:
 
 ```js
 if (typeof appState.setMvarProductData !== 'function') {
-  throw new Error('[MVaR ProductPL] Missing store: appState.setMvarProductData');
+  throw new Error('[MVaR ProductPL] Missing store setter');
 }
 ```
 
-Optional chaining ist nur für echte optionale Features erlaubt.
-
-In Kern-Flows vermeiden:
+Falsch:
 
 ```js
 appState.setMvarProductData?.(rows);
 handlers.handleMVaRProductPLData?.(rows);
 ```
 
-Warum?
+Optional chaining nur für echte optionale Features verwenden.
 
-Weil sonst ein fehlender Handler oder Store still verschluckt wird.
+---
 
-## Replace vs Upsert
+## Replace vs Upsert im Frontend
 
-Runtime-/Result-Tabellen, die bei Recalculation neu erzeugt oder ersetzt werden, müssen im Frontend-Store ebenfalls ersetzt werden.
-
-Beispiele:
-
-```text
-MarketVaR_Product
-MarketVaR_FactorPL
-MarketVaR_Dist
-MarketVaR
-```
+Runtime-/Result-Tabellen werden bei Recalc neu erzeugt.
+Der Store muss sie daher ersetzen, nicht mergen.
 
 Richtig:
 
 ```js
-function setMvarProductData(rows) {
-  appState.mvarProductDataAll = Array.isArray(rows) ? rows : [];
-}
+appState.mvarProductDataAll = Array.isArray(rows) ? rows : [];
 ```
 
-Gefährlich:
+Falsch:
 
 ```js
 appState.mvarProductDataAll = appState.mvarProductDataAll.concat(rows);
 ```
 
-Oder Upsert ohne Delete.
+Gilt besonders für:
 
-Warum gefährlich?
+```text
+MarketVaR
+MarketVaR_Dist
+MarketVaR_Product
+MarketVaR_FactorPL
+```
 
-Weil alte Rows im UI bleiben können, obwohl sie in der Datenbank nicht mehr existieren.
+Sonst bleiben alte Rows im UI hängen.
 
-## Naming-Regel
+---
 
-Channel Name folgt der Tabelle:
+## Naming
+
+Channel folgt Tabelle/View:
 
 ```text
 MarketVaR_ProductData
+v_MVAR_MODEL_SELECTION_APPData
 ```
 
-Feature Handler benennt die fachliche Ansicht:
+Handler beschreibt fachliche Ansicht:
 
 ```text
 handleMVaRProductPLData
+handleMvarModelSelectionAppData
+```
+
+Renderer beschreibt Panel:
+
+```text
 renderMvarProductPLPanel
+renderMvarModelSelectionPanel
 ```
 
-Panel-Datei:
-
-```text
-src/renderer/features/ANALYSE_PORTFOLIO/marketRisk/mvar/mvarProductPLPanel.js
-```
-
-## Zielbild für MarketVaR_Product
-
-```text
-MarketVaR_ProductData
-→ dataRouter.js
-→ handleMVaRProductPLData(rows)
-→ appState.setMvarProductData(rows)
-→ renderMvarProductPLPanel()
-→ appState.getMvarProductData(currentContext)
-→ Product Table + Product Chart
-```
+---
 
 ## Anti-Patterns
 
@@ -219,17 +233,20 @@ Nicht erlaubt:
 
 ```text
 - Store-Write im dataRouter
+- Render-Logik im dataRouter
 - DOM-Zugriff im Store
 - DB-Zugriff im Renderer
 - stilles Optional Chaining bei Pflichtfunktionen
-- concat/upsert für vollständig neu berechnete Result-Tabellen
-- Product-Panel-Code in SummaryMarketRisk.js
-- mehrere Namen für denselben Flow
+- concat/upsert für Recalc-Result-Tabellen
+- gleiche Daten unter mehreren Namen führen
+- Feature-Code in falschen Summary-Dateien verstecken
 ```
 
 ## Kurzregel
 
 ```text
+DataPump sendet.
+Receiver empfängt.
 Router routet.
 Handler verarbeitet.
 Store speichert.

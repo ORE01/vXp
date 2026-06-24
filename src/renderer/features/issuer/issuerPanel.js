@@ -22,55 +22,7 @@ let filteredIssuerData;
 const ISSUER_TABLE_NAME = 'Issuer';
 const ISSUER_TABLE_ID = 'issuerTable0';
 
-// const ISSUER_VISIBLE_COLUMNS = [
-//   'INCLUDE',
-//   'ISSUER',
-//   'TICKER',
-//   'BASE_RATING',
-//   'Country',
-//   'RANK_RATING_COUNT',
-//   'EXPLICIT_COUNT',
-//   'GENERATED_COUNT',
-//   'RATING_STATUS',
-// ];
 
-// const ISSUER_COLUMN_LABELS = {
-//   INCLUDE: 'Include',
-//   ISSUER: 'Issuer',
-//   TICKER: 'Ticker',
-//   BASE_RATING: 'Base Rating',
-//   Country: 'Country',
-//   RANK_RATING_COUNT: 'Ranks',
-//   EXPLICIT_COUNT: 'Explicit',
-//   GENERATED_COUNT: 'Generated',
-//   RATING_STATUS: 'Status',
-// };
-
-// function mapIssuerViewRowToIssuerTableRow(row = {}) {
-//   const baseRating = row.RATING ?? row.BASE_RATING ?? '';
-
-//   return {
-//     INCLUDE: row.INCLUDE ?? 1,
-//     ISSUER: row.ISSUER ?? '',
-//     TICKER: row.TICKER ?? '',
-//     RATING: baseRating,
-
-//     senior_secured: row.senior_secured ?? '',
-//     senior_preferred: row.senior_preferred ?? '',
-//     senior_unsecured: row.senior_unsecured ?? baseRating,
-//     senior_subordinated: row.senior_subordinated ?? '',
-//     junior_subordinated: row.junior_subordinated ?? '',
-
-//     Country: row.Country ?? '',
-//   };
-// }
-
-// function buildIssuerModalRows(rows) {
-//   return (Array.isArray(rows) ? rows : []).map(mapIssuerViewRowToIssuerTableRow);
-// }
-
-// Make the "Issuer" cell a clickable link that opens the edit modal
-// (replaces the former Edit column — same pattern as the Portfolios ID links).
 function bindIssuerNameLinks(container) {
   const table = container.querySelector('table');
   if (!table) return;

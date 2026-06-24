@@ -63,19 +63,19 @@ if (!selectedPort) {
   return;
 }
 
-console.log('[IR SENS] selected portfolio resolved', {
-  rawPortName,
-  selectedPort,
-  availablePorts,
-  storeRows: riskRowsAll.length,
-  riskTypes: [
-    ...new Set(
-      riskRowsAll
-        .map(r => String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim())
-        .filter(Boolean)
-    ),
-  ],
-});
+// console.log('[IR SENS] selected portfolio resolved', {
+//   rawPortName,
+//   selectedPort,
+//   availablePorts,
+//   storeRows: riskRowsAll.length,
+//   riskTypes: [
+//     ...new Set(
+//       riskRowsAll
+//         .map(r => String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim())
+//         .filter(Boolean)
+//     ),
+//   ],
+// });
 
 const pv01Rows = riskRowsAll.filter(r =>
   normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
@@ -197,37 +197,37 @@ function calculateIRSensitivity(rows, portName) {
     });
   });
 
-  console.log('[IR SENS] FILTER CHECK:', {
-    selectedPort,
-    inputRows: rows.length,
-    filteredRows: filteredRows.length,
-    uniquePorts: [
-      ...new Set(rows.map(r => String(r.PORT_NAME ?? r.port_name ?? '').trim())),
-    ],
-    uniqueRiskTypes: [
-      ...new Set(
-        rows.map(r =>
-          String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim()
-        )
-      ),
-    ],
-    uniqueCcys: [
-      ...new Set(
-        rows.map(r => String(r.CCY ?? r.ccy ?? '').toUpperCase().trim())
-      ),
-    ],
-    uniqueTenors: [
-      ...new Set(filteredRows.map(r => r.TENOR ?? r.tenor)),
-    ].sort((a, b) => Number(a) - Number(b)),
-    firstFilteredRow: filteredRows[0],
-  });
+  // console.log('[IR SENS] FILTER CHECK:', {
+  //   selectedPort,
+  //   inputRows: rows.length,
+  //   filteredRows: filteredRows.length,
+  //   uniquePorts: [
+  //     ...new Set(rows.map(r => String(r.PORT_NAME ?? r.port_name ?? '').trim())),
+  //   ],
+  //   uniqueRiskTypes: [
+  //     ...new Set(
+  //       rows.map(r =>
+  //         String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim()
+  //       )
+  //     ),
+  //   ],
+  //   uniqueCcys: [
+  //     ...new Set(
+  //       rows.map(r => String(r.CCY ?? r.ccy ?? '').toUpperCase().trim())
+  //     ),
+  //   ],
+  //   uniqueTenors: [
+  //     ...new Set(filteredRows.map(r => r.TENOR ?? r.tenor)),
+  //   ].sort((a, b) => Number(a) - Number(b)),
+  //   firstFilteredRow: filteredRows[0],
+  // });
 
-  console.log('[IR SENS] RESULT BY CCY:', {
-    irSensitivityByCcy,
-    pv01TotalByCcy,
-    pv01PartialPctByCcy,
-    filteredRowsCount: filteredRows.length,
-  });
+  // console.log('[IR SENS] RESULT BY CCY:', {
+  //   irSensitivityByCcy,
+  //   pv01TotalByCcy,
+  //   pv01PartialPctByCcy,
+  //   filteredRowsCount: filteredRows.length,
+  // });
 
   return {
     irSensitivityByCcy,
@@ -343,14 +343,14 @@ function renderIRSensTableAndChart(data, portName) {
     });
   });
 
-  console.log('[PV01 RENDER] wrapper created by CCY', {
-    portName,
-    tableRows: table.rows.length,
-    chartRows: chartData.length,
-    pv01TotalByCcy,
-    canvasExists: !!document.getElementById('PV01Chart'),
-    detailsContainerExists: !!document.getElementById('IRSensDataContainer'),
-  });
+  // console.log('[PV01 RENDER] wrapper created by CCY', {
+  //   portName,
+  //   tableRows: table.rows.length,
+  //   chartRows: chartData.length,
+  //   pv01TotalByCcy,
+  //   canvasExists: !!document.getElementById('PV01Chart'),
+  //   detailsContainerExists: !!document.getElementById('IRSensDataContainer'),
+  // });
 
   return wrapper;
 }
@@ -462,13 +462,13 @@ function createPV01Chart({
     return;
   }
 
-  console.log('[PV01 CHART] rendered by CCY (trimmed)', {
-    canvasId,
-    startLabel: labels[0],
-    endLabel: labels[labels.length - 1],
-    labels,
-    datasetLabels: datasets.map(d => d.label),
-  });
+  // console.log('[PV01 CHART] rendered by CCY (trimmed)', {
+  //   canvasId,
+  //   startLabel: labels[0],
+  //   endLabel: labels[labels.length - 1],
+  //   labels,
+  //   datasetLabels: datasets.map(d => d.label),
+  // });
 }
 
 function mountPV01Details(wrapper) {
@@ -479,12 +479,12 @@ function mountPV01Details(wrapper) {
     return;
   }
 
-  console.log('[PV01 DETAILS] target before mount:', {
-    target,
-    targetHeight: target.offsetHeight,
-    wrapperChildren: wrapper.children.length,
-    tableRows: wrapper.querySelectorAll('tr').length,
-  });
+  // console.log('[PV01 DETAILS] target before mount:', {
+  //   target,
+  //   targetHeight: target.offsetHeight,
+  //   wrapperChildren: wrapper.children.length,
+  //   tableRows: wrapper.querySelectorAll('tr').length,
+  // });
 
   // Hard reset, damit kein altes CSS/Layout die Tabelle verschluckt
   target.innerHTML = '';
@@ -520,11 +520,11 @@ function mountPV01Details(wrapper) {
 
   target.appendChild(wrapper);
 
-  console.log('[PV01 DETAILS] mounted:', {
-    targetHeight: target.offsetHeight,
-    childCount: target.children.length,
-    htmlPreview: target.innerHTML.slice(0, 300),
-  });
+  // console.log('[PV01 DETAILS] mounted:', {
+  //   targetHeight: target.offsetHeight,
+  //   childCount: target.children.length,
+  //   htmlPreview: target.innerHTML.slice(0, 300),
+  // });
 }
 
   function clearPV01Details() {

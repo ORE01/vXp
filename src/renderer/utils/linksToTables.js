@@ -195,31 +195,71 @@ const prodIdUpper = String(
   ''
 ).trim().toUpperCase();
 
+// ------------------------------------------------------
+// Resolve editor route from product semantics.
+// IMPORTANT:
+// MODEL / pricing model must NOT decide whether a product is complex.
+// Example:
+//   A simple fixed bond may be priced with LMM_vxp.
+//   It must still open the simple fixed bond editor.
+// ------------------------------------------------------
+
+const isFixedBond =
+  couponType === 'FIX' ||
+  couponType === 'FIXED' ||
+  couponType === 'FIXED_COUPON' ||
+  productType === 'FIX' ||
+  productType === 'FIXED' ||
+  productType === 'FIXED_COUPON';
+
+const isFloatingBond =
+  couponType === 'FLOATER' ||
+  couponType === 'FLOATING' ||
+  couponType === 'FLOATING_COUPON' ||
+  couponType === 'FRN' ||
+  productType === 'FLOATER' ||
+  productType === 'FLOATING' ||
+  productType === 'FLOATING_COUPON' ||
+  productType === 'FRN';
+
 const isCmsOrStructured =
   productType === 'STRUCTURED' ||
   productType === 'COMPLEX' ||
   productType === 'COMPLEX_BOND' ||
   couponType === 'CMS' ||
-  model.includes('LMM') ||
+  couponType === 'FORMULA' ||
+  couponType === 'STRUCTURED' ||
+  // Complex Bonds werden mit CouponType='CUSTOM' gespeichert (siehe
+  // productCanonical.service / resolveProductTemplateName). Ohne diese Zeile fiel
+  // der Complex Bond in den FIXED_BOND-Fallback und öffnete als Simple Fixed.
+  couponType === 'CUSTOM' ||
+  couponType === 'COMPLEX' ||
+  couponType === 'COMPLEX_BOND' ||
   prodIdUpper.startsWith('CMS');
 
-if (isCmsOrStructured) {
-  row.__PRODUCT_TEMPLATE__ = 'COMPLEX_BOND';
-  row.__UI_MODE__ = 'complex';
-} else if (couponType === 'FLOATER' || couponType === 'FRN') {
-  row.__PRODUCT_TEMPLATE__ = 'FRN';
-  row.__UI_MODE__ = 'simple_frn';
-} else if (couponType === 'FIX' || couponType === 'FIXED') {
+// Simple products win over model/pricing method.
+// LMM_vxp is allowed for simple fixed / simple FRN products.
+if (isFixedBond) {
   row.__PRODUCT_TEMPLATE__ = 'FIXED_BOND';
   row.__UI_MODE__ = 'simple_fixed';
-} else {
+} else if (isFloatingBond) {
+  row.__PRODUCT_TEMPLATE__ = 'FRN';
+  row.__UI_MODE__ = 'simple_frn';
+} else if (isCmsOrStructured) {
   row.__PRODUCT_TEMPLATE__ = 'COMPLEX_BOND';
   row.__UI_MODE__ = 'complex';
+} else {
+  // Safer fallback for ordinary bonds:
+  // If product metadata is incomplete, do not force complex timeline.
+  row.__PRODUCT_TEMPLATE__ = 'FIXED_BOND';
+  row.__UI_MODE__ = 'simple_fixed';
 }
 
-  console.log('[PRODUCT EDITOR ROUTE] opening new product editor', {
+  console.log('[PRODUCT EDITOR ROUTE] opening product editor', {
     prodId: needle,
-    couponType: row.CouponType,
+    productType,
+    couponType,
+    model,
     template: row.__PRODUCT_TEMPLATE__,
     uiMode: row.__UI_MODE__,
   });

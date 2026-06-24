@@ -1,6 +1,120 @@
 
 import { handleIRSensData } from '../ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioPV01Handler.js';
 import { handleCSSensData } from '../ANALYSE_PORTFOLIO/marketRisk/sensitivities/portfolioCPV01Handler.js';
+// Cross-module DOM access goes through the capture adapter (single source of
+// truth for where Breakdown/Market/Credit render their charts & traffic lights).
+import {
+  getBreakdownPanel,
+  getMarketPanel,
+  getCreditPanel,
+  hasCreditTrafficDom,
+  hasMarketTrafficDom,
+} from './captureAdapter.js';
+// Lazy-Panels (Market Data, Analyse …) materialisieren, damit der Report ihren
+// Inhalt erfassen kann, ohne dass man die Tabs vorher manuell öffnet.
+import { renderAllRegisteredPanels } from '../../core/routing/panelOrchestrator.js';
+
+// Materialisiert ALLE Report-Quellen aus dem Store, ohne dass Tabs/Panels offen
+// sein müssen. Durchgängig: Lazy-Panels (Registry) + RISK-Charts, die nicht an
+// der Registry hängen (MVaR Factors/Products via appState.refreshMarketRiskUI).
+// Report-eigenes "Select Portfolio"-Dropdown: spiegelt createdPortDropdown0
+// (die zentrale Portfolio-Auswahl). Bei Auswahl wird die zentrale Auswahl gesetzt
+// + deren change-Event gefeuert (treibt die Pipeline), danach der Report neu
+// materialisiert. So muss man zum Portfolio-Wechsel nicht den RISK-Tab öffnen.
+let __reportDropdownBound = false;
+function syncReportPortfolioDropdown() {
+  const src = document.getElementById('createdPortDropdown0');
+  const dst = document.getElementById('createdPortDropdownReport');
+  if (!src || !dst) return;
+
+  dst.innerHTML = src.innerHTML; // gleiche Optionsliste
+  dst.value = src.value;         // aktuelle Auswahl spiegeln
+
+  if (!__reportDropdownBound) {
+    __reportDropdownBound = true;
+    dst.addEventListener('change', () => {
+      const s = document.getElementById('createdPortDropdown0');
+      if (s && s.value !== dst.value) {
+        s.value = dst.value;
+        s.dispatchEvent(new Event('change', { bubbles: true })); // treibt Pipeline
+      }
+      // Daten werden NICHT automatisch geladen — der Nutzer klickt danach
+      // "Get Risk Data", um die Vorschau für das gewählte Portfolio zu füllen.
+    });
+  }
+}
+
+// Report-Portfolio-Auswahl HART in die zentrale Auswahl (createdPortDropdown0)
+// schreiben und deren input/change-Events feuern, BEVOR der Warmup rendert. Sonst
+// bleibt selectedPort=null und refreshMarketRiskUI() bricht ab.
+function syncReportPortfolioSelectionToMain() {
+  const reportSel = document.getElementById('createdPortDropdownReport');
+  const mainSel   = document.getElementById('createdPortDropdown0');
+
+  const reportValue = reportSel?.value || '';
+  if (!reportValue || !mainSel) {
+    console.warn('[RiskPreview] cannot sync report portfolio selection', {
+      reportValue,
+      hasReportDropdown: !!reportSel,
+      hasMainDropdown: !!mainSel,
+      mainValue: mainSel?.value || null,
+    });
+    return false;
+  }
+
+  if (mainSel.value !== reportValue) {
+    mainSel.value = reportValue;
+  }
+
+  // Zentralen Port-State HART setzen — refreshMarketRiskUI() liest
+  // getSelectedPortTableName(); falls der change-Handler nicht (synchron) greift,
+  // bleibt selectedPort sonst null und Market/Credit rendert nicht.
+  try { window.appState?.setSelectedPortTableName?.(reportValue); } catch {}
+
+  try { mainSel.dispatchEvent(new Event('input',  { bubbles: true })); } catch {}
+  try { mainSel.dispatchEvent(new Event('change', { bubbles: true })); } catch {}
+
+  console.log('[RiskPreview] synced report portfolio selection', {
+    reportValue,
+    mainValue: mainSel.value,
+    selectedPortTableName: window.appState?.getSelectedPortTableName?.(),
+  });
+
+  return true;
+}
+
+function warmUpReportSources() {
+  const as = window.appState;
+  // 1) Lazy-Panels (Market Data, Historic) materialisieren.
+  try { renderAllRegisteredPanels(); } catch (e) { console.warn('[RiskPreview] warmup panels failed', e); }
+  // 2) Market-VaR (Factors/Products) aus dem Store rendern.
+  try { as?.refreshMarketRiskUI?.(0); } catch (e) { console.warn('[RiskPreview] warmup market risk failed', e); }
+  // 3) Credit-Risk (EAD/LGD, CVaR/ES) aus dem Store rendern — die Credit-Handler
+  //    haben keinen eigenen Store-Refresh, daher hier aus den Stores einspeisen.
+  try {
+    const ead = as?.getAllEADData?.();
+    if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead);
+  } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); }
+  try {
+    const cvar = as?.getCvarData?.();
+    if (cvar && cvar.length) (as?.handleCVaRData || window.handleCVaRData)?.(cvar, 0);
+  } catch (e) { console.warn('[RiskPreview] warmup CVaR failed', e); }
+
+  console.log('[RiskPreview warmup]', {
+    hasAppState: !!window.appState,
+    hasRefreshMarketRiskUI: typeof window.appState?.refreshMarketRiskUI,
+    reportPortfolioValue: document.getElementById('createdPortDropdownReport')?.value,
+    mainPortfolioValue: document.getElementById('createdPortDropdown0')?.value,
+    marketPanel: !!getMarketPanel?.(),
+    creditPanel: !!getCreditPanel?.(),
+    marketSummaryRow: !!getMarketPanel?.()?.querySelector?.('.mvar-summary-row'),
+    creditTrafficRow: !!getCreditPanel?.()?.querySelector?.('.cvar-pair'),
+    mvarContainer: !!document.getElementById('MVaRDataContainer0'),
+    cvarContainer: !!document.getElementById('CVaRDataContainer0'),
+    irSens: !!document.getElementById('IRSensDataContainer'),
+    csSens: !!document.getElementById('CSSensDataContainer'),
+  });
+}
 
 
 
@@ -16,9 +130,77 @@ let __riskRaf = 0;
 let __riskIdle = 0;
 let __riskScheduled = false;
 let __riskControlsMO = null;
-let __riskRendering = false;      
+let __riskRendering = false;
 let __lastRenderTs = 0;           // letzter erfolgreicher Render (ms)
 const RENDER_THROTTLE_MS = 200;   // Mindestabstand zwischen Renders
+
+// Accordion-Navigation der Preview: welche Sektion ist gerade offen (über
+// Re-Renders hinweg gemerkt) + Guard, damit der Klick-Listener nur 1× bindet.
+let __riskActiveSecId = '';
+// Set der aufgeklappten Nav-Gruppen-IDs (beliebige Tiefe). null = noch nie
+// gesetzt (→ Default: Vorfahren der aktiven Sektion auf); danach User-gesteuert.
+let __riskExpandedKeys = null;
+let __riskNavBound = false;
+// Nach dem Laden eines Reports: beim nächsten Render alle Gruppen aufklappen,
+// die eine aktivierte (checked) Section enthalten, und einmal zur ersten
+// aktivierten Sektion scrollen.
+let __riskExpandCheckedOnce = false;
+let __riskScrollActiveOnce = false;
+
+// "Include all"-Bulk: pro Gruppen-Key die State-Keys aller Nachkommen (Sections/
+// Untergruppen) + die Chart-Prefixe (zum Entfernen einzelner Chart-Overrides).
+// Sowie die Gesamtlisten für die globalen Buttons "Select all / Deselect all".
+// Werden bei jedem Render aus der Hierarchie neu aufgebaut.
+let __riskGroupBulk = new Map();
+let __riskAllSectionKeys = [];
+let __riskAllGroupKeys = [];
+
+// "Get Risk Data"-Statusanzeige (Executing… + roter Punkt → grün), analog zu den
+// Run/Calculate-Risk-Buttons. Der Punkt wird beim Klick rot, das "fertig"-Signal
+// ist das risk:refresh-thumbnails-Event. Mindest-Anzeigedauer, damit der Zustand
+// sichtbar ist (die Arbeit läuft teils synchron).
+const GET_RISK_MIN_BUSY_MS = 700;
+let __getRiskBusyT0 = 0;
+let __getRiskDoneTimer = 0;
+let __getRiskFailSafe = 0;
+
+function getRiskDataEls() {
+  return {
+    btn: document.getElementById('refreshThumbnailsBtn'),
+    dot: document.getElementById('riskDotGetData'),
+  };
+}
+function setGetRiskDataBusy() {
+  const { btn, dot } = getRiskDataEls();
+  __getRiskBusyT0 = Date.now();
+  clearTimeout(__getRiskDoneTimer);
+  clearTimeout(__getRiskFailSafe);
+  if (dot) { dot.classList.remove('is-done'); dot.classList.add('is-busy'); dot.title = 'executing…'; }
+  if (btn) {
+    if (!btn.dataset.label) btn.dataset.label = (btn.textContent || 'Get Risk Data').trim();
+    btn.disabled = true;
+    btn.textContent = 'Executing…';
+  }
+  __getRiskFailSafe = setTimeout(applyGetRiskDataDone, 8000); // Notausstieg
+}
+function setGetRiskDataDone() {
+  const wait = Math.max(0, GET_RISK_MIN_BUSY_MS - (Date.now() - __getRiskBusyT0));
+  clearTimeout(__getRiskDoneTimer);
+  __getRiskDoneTimer = setTimeout(applyGetRiskDataDone, wait);
+}
+function applyGetRiskDataDone() {
+  clearTimeout(__getRiskFailSafe);
+  const { btn, dot } = getRiskDataEls();
+  if (dot) { dot.classList.remove('is-busy'); dot.classList.add('is-done'); dot.title = 'done'; }
+  if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || 'Get Risk Data'; }
+}
+// Führt fn NACH dem nächsten Paint aus (doppeltes rAF), damit der vorher gesetzte
+// Busy-Zustand sofort sichtbar wird, bevor die (teils synchrone) Arbeit blockiert.
+function afterPaint(fn) {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { fn(); } catch (e) { console.error('[risk] afterPaint', e); }
+  }));
+}
 
 //Report Title//
 const RISK_REPORT_TITLE_KEY = 'rr-report-title';
@@ -90,6 +272,10 @@ function discoverTablesFromPanel(panel) {
     ...panel.querySelectorAll('.data-container[id]'),
     // NEU: unsere Legend-Tabellen (direkte Tabellen mit ID)
     ...panel.querySelectorAll('table.chart-legend-table[id]'),
+    // NEU: kundenweite CUSTOMER-SETUP-Settings (Market-Risk-Limits /
+    // Credit-Risk-Thresholds). Eigener Container-Stil (.customer-mr-limits), aber
+    // genauso report-relevant wie .data-container — portfolio-UNABHÄNGIG.
+    ...panel.querySelectorAll('.customer-mr-limits[id]'),
   ];
 
   return containers.map(el => ({
@@ -126,7 +312,7 @@ function injectBreakdownChildren(sections, chartState = {}) {
   const existing = new Set(sections.map(s => s?.key).filter(Boolean));
 
   // 3) Alle Breakdown-Charts aus dem DOM holen (einmal)
-  const breakdownPanel = document.getElementById('panel-breakdown');
+  const breakdownPanel = getBreakdownPanel();
   const breakdownCharts = breakdownPanel ? discoverChartsFromPanel(breakdownPanel) : [];
 
   // byId: chartId -> chartMeta
@@ -289,6 +475,9 @@ export const RISK_CONFIG = {
     // ===== Breakdown =====
     breakdown: 'Portfolio Breakdown',
 
+    // ===== Market Data (synthetischer Parent; Children = echte MD-Panels) =====
+    marketData: 'Market Data',
+
     // ✅ Injected Breakdown Children (künstliche Sections)
     breakdownIssuer: 'Issuer',
     breakdownProducts: 'Products',
@@ -343,21 +532,10 @@ export const RISK_CONFIG = {
     breakdownGeneral: 'breakdown',
     breakdownGeography: 'breakdown',
 
-    // Market children
-    marketTraffic: 'market',
-    mvar: 'market',
-    sensitivities: 'market',
-
-    // Credit children
-    creditTraffic: 'credit',
-    EAD: 'credit',
-    cvar: 'credit',
-
-    // Historic Performance children
-    'portfolio-value': 'PORTFOLIO_HISTORY',
-    'hist-sensitivities': 'PORTFOLIO_HISTORY',
-    'market-risk': 'PORTFOLIO_HISTORY',
-    'credit-risk': 'PORTFOLIO_HISTORY',
+    // Market Data: DYNAMISCH (alle Sub-Panels im #MARKETDATA_Modal).
+    // RISK (Market/Credit/History + Untergruppen): DYNAMISCH aus dem Trigger-DOM
+    //   (#ANALYSE_Modal .risk-acc) — siehe buildRiskHierarchy(). NICHT hier
+    //   hartcodieren, sonst weicht der Report von den RISK-Triggern ab.
   },
 
   // -------------------------------------------------------------------
@@ -372,13 +550,13 @@ export const RISK_CONFIG = {
       'breakdownGeography',
     ],
 
-    market: ['marketTraffic', 'mvar', 'sensitivities'],
-    credit: ['creditTraffic', 'EAD', 'cvar'],
-    PORTFOLIO_HISTORY: ['portfolio-value', 'hist-sensitivities', 'market-risk', 'credit-risk'],
+    // marketData + RISK-Reihenfolgen: dynamisch (siehe applySectionHierarchy).
   },
 
   // -------------------------------------------------------------------
-  // Plotly-DIVs, die nicht über js-plotly-plot erkannt werden
+  // Nicht-Canvas-Chartcontainer (DIVs), die als Chart erkannt werden sollen.
+  // Heute HTML-Heatmap-Tabellen (kein Plotly mehr) → Erfassung via HTML-Snapshot
+  // in smartThumb(). Label kommt aus data-label am Element.
   // -------------------------------------------------------------------
   swaptionPlotlyIds: [
     'swaption-atm-surface-3d',
@@ -632,17 +810,40 @@ function sectionTitleFromKey(key) {
 
 // SECTION CONTROLL: 
 
+// Opt-in-Modell: Default AUS. Eine Section ist nur im Report, wenn ihr Toggle
+// (direkt oder via "Include all" der Gruppe) explizit auf true gesetzt wurde.
 function isSectionEnabled(sectionKey, state = {}) {
   const v = state[`${sectionKey}:__section__`];
-  return (typeof v === 'boolean') ? v : true; // Default: true
+  return (typeof v === 'boolean') ? v : false; // Default: aus
 }
 
+
+
+// Master-Checkbox einer Gruppe (Tab/Untergruppe) – steht rechts in der "Section"-
+// Zeile, identisch platziert wie "Include section". AUS = ganzer Teilbaum fliegt
+// aus dem Report.
+function buildGroupControlsHTML(groupKey, chartState = {}) {
+  const domId   = `rr-group-${groupKey}`;
+  const checked = (chartState[`${groupKey}:__group__`] === true) ? 'checked' : '';
+
+  return `
+    <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+      <input
+        type="checkbox"
+        id="${domId}"
+        data-rr-group-toggle="${groupKey}"
+        ${checked}
+      >
+      <span style="opacity:.85;">Include all</span>
+    </label>
+  `;
+}
 
 
 function buildSectionControlsHTML(sectionKey, chartState = {}) {
   const domId   = `rr-section-${sectionKey}`;
   const flatKey = `${sectionKey}:__section__`;
-  const checked = (chartState[flatKey] !== false) ? 'checked' : '';
+  const checked = (chartState[flatKey] === true) ? 'checked' : ''; // Opt-in: Default aus
 
   return `
     <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
@@ -784,7 +985,9 @@ function buildBreakdownControlsWithThumbs(sectionKey, charts, enabledCharts, cha
   const renderCheckbox = (ch) => {
     const chartId = ch.id;
     const label   = ch.label || chartId;
-    const flatKey = `${sectionKey}:${chartId}`;
+    // WICHTIG: kanonischer Key (chartStateFlatKey), identisch zu save/isChartEnabled.
+    // Sonst (roher Key) ist der State immer undefined → Box lässt sich nicht abhaken.
+    const flatKey = chartStateFlatKey(sectionKey, chartId);
     const domId   = `rr-chart-${sectionKey}-${chartId}`;
     const checked = state[flatKey] !== false ? 'checked' : '';
 
@@ -922,22 +1125,39 @@ function saveChartToggleStateFromDOM() {
     st[`${sec}:__section__`] = !!el.checked;
   });
 
+  // Gruppen-Master-Checkboxen (Tabs/Untergruppen): AUS = ganzer Teilbaum aus.
+  document.querySelectorAll('input[data-rr-group-toggle]').forEach(el => {
+    const key = el.dataset.rrGroupToggle;
+    if (!key) return;
+    st[`${key}:__group__`] = !!el.checked;
+  });
+
   try { localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st)); } catch {}
 }
 
 
 // Prüfen, ob ein Chart enabled ist (Default: true)
+// Default eines Charts ohne expliziten State: er FOLGT seiner Section (Opt-in).
+// Traffic-Charts hängen an der jeweiligen Overview (market/credit).
+function chartDefaultEnabled(section, chartKey, state) {
+  if (section === 'marketTraffic') return isSectionEnabled('market', state);
+  if (section === 'creditTraffic') return isSectionEnabled('credit', state);
+  const canon = canonicalChartSection(section, chartKey); // breakdown* → breakdown
+  return isSectionEnabled(canon, state);
+}
+
 function isChartEnabled(section, key, state) {
   const sKey = chartStateFlatKey(section, key);
   const v = (state || {})[sKey];
-  return (typeof v === 'boolean') ? v : true;
+  if (typeof v === 'boolean') return v;
+  return chartDefaultEnabled(section, key, state);
 }
 
 
 // Event-Wiring für diese Checkboxen
 function wireChartControlsOnce() {
   const nodes = document.querySelectorAll(
-    'input[data-chart-section][data-chart-key], input[data-section-key]'
+    'input[data-chart-section][data-chart-key], input[data-section-key], input[data-rr-group-toggle]'
   );
 
   // Helper: Child sections für einen Parent bestimmen (aus RISK_CONFIG)
@@ -956,6 +1176,33 @@ function wireChartControlsOnce() {
     if (el.dataset.bound) return;
 
     el.addEventListener('change', () => {
+      // ✅ Gruppen-Master "Include all": ganzer Teilbaum an/aus. State-basiert,
+      //    weil Charts ausgeschalteter Sektionen NICHT im DOM stehen.
+      if (el.dataset.rrGroupToggle) {
+        const G  = el.dataset.rrGroupToggle;
+        const on = !!el.checked;
+        const st = loadChartToggleState();
+        const bulk = __riskGroupBulk.get(G) || { keys: [], prefixes: new Set() };
+
+        // 1) Einzelne Chart/Table-Overrides der Nachkommen entfernen → Charts
+        //    erben wieder den (neuen) Section-Status (alle an bzw. alle aus).
+        for (const k of Object.keys(st)) {
+          const i = k.lastIndexOf(':');
+          if (i < 0) continue;
+          const suf = k.slice(i + 1);
+          if (suf === '__section__' || suf === '__group__') continue;
+          if (bulk.prefixes.has(k.slice(0, i))) delete st[k];
+        }
+
+        // 2) Alle Nachkommen-Sections + Untergruppen + die Gruppe selbst setzen.
+        st[`${G}:__group__`] = on;
+        bulk.keys.forEach(k => { st[k] = on; });
+
+        try { localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st)); } catch {}
+        try { scheduleRiskPreviewRender(); } catch {}
+        return;
+      }
+
       // ✅ Section-Checkbox geändert → Charts/Tables in der gleichen Box sync
       if (el.dataset.sectionKey) {
         const sec = el.dataset.sectionKey;
@@ -1166,7 +1413,7 @@ function canvasThumb(id, targetWidth = 160) {
         src="${data}"
         width="${targetWidth}"
         height="${targetHeight}"
-        style="border:1px solid #444;border-radius:6px;background:#111;"
+        style="border:1px solid var(--border);border-radius:6px;background:var(--surface-card);"
       />
     `.trim();
 
@@ -1178,58 +1425,56 @@ function canvasThumb(id, targetWidth = 160) {
   }
 }
 
-function smartThumb(id, label, w = 160) {
-  // ✅ Spezialfall: Plotly Swaption Surface Preview
-  if (id === "swaption-atm-surface-3d") {
-    const png = appState?.swaptionATMSurfacePng;
-    if (png) {
-      const ratio = 900 / 520;
-      const h = Math.round(w / ratio);
-      return `
-        <img
-          src="${png}"
-          width="${w}"
-          height="${h}"
-          style="border:1px solid #444;border-radius:6px;background:#111;"
-        />
-      `.trim();
-    }
-    return `
-      <div style="
-        width:${w}px;min-height:60px;border:1px dashed #555;border-radius:6px;
-        padding:6px;font-size:11px;color:#aaa;display:flex;align-items:center;
-        justify-content:center;text-align:center;background:#111;">
-        ${label || id}<br><span style="opacity:.7">Surface PNG noch nicht verfügbar</span>
-      </div>
-    `;
-  }
+// Erkennbarer, inhaltstragender Chart-Content innerhalb eines Elements:
+// Tabellen/SVG (Swaption-Heatmaps) oder DOM-Charts (Balken-Divs, z. B. das
+// Product-VaR-Panel rendert einen DOM-Chart statt eines Canvas).
+const SNAPSHOT_CONTENT_SELECTOR = 'table, svg, .mvar-product-dom-chart, [class*="dom-chart"]';
+// Nur DOM-CHARTS (nicht beliebige Tabellen) — für die Canvas-Placeholder-Erkennung:
+// manche Panels rendern einen DOM-Chart NEBEN einem ausgeblendeten Canvas.
+const DOM_CHART_SELECTOR = '.mvar-product-dom-chart, [class*="dom-chart"]';
 
-  if (id === "swaption-cube-surface-3d") {
-  const png = appState?.swaptionCubeSurfacePng;
-  if (png) {
-    const ratio = 900 / 520;
-    const h = Math.round(w / ratio);
-    return `
-      <img
-        src="${png}"
-        width="${w}"
-        height="${h}"
-        style="border:1px solid #444;border-radius:6px;background:#111;"
-      />
-    `.trim();
-  }
+// HTML-Snapshot eines (Nicht-Canvas-)Chartcontainers. Skaliert den gerenderten
+// Inhalt in eine Thumbnail-Box. Liefert '' wenn kein echter Inhalt da ist.
+function htmlSnapshotThumb(el, w = 160) {
+  if (!el) return '';
+  const content = el.matches?.(SNAPSHOT_CONTENT_SELECTOR)
+    ? el
+    : el.querySelector?.(SNAPSHOT_CONTENT_SELECTOR);
+  if (!content) return '';
+
+  const scale = 0.4;
+  const boxH = Math.round(w * 0.72);
   return `
-    <div style="
-      width:${w}px;min-height:60px;border:1px dashed #555;border-radius:6px;
-      padding:6px;font-size:11px;color:#aaa;display:flex;align-items:center;
-      justify-content:center;text-align:center;background:#111;">
-      ${label || id}<br><span style="opacity:.7">Cube PNG noch nicht verfügbar</span>
-    </div>
-  `;
+    <div style="width:${w}px;max-height:${boxH}px;overflow:hidden;border:1px solid var(--border);border-radius:6px;background:var(--surface-card);">
+      <div style="transform:scale(${scale});transform-origin:top left;width:${Math.round(100 / scale)}%;pointer-events:none;">
+        ${content.outerHTML}
+      </div>
+    </div>`.trim();
 }
 
+function smartThumb(id, label, w = 160) {
+  const el = document.getElementById(id);
 
-  // Default: Canvas
+  if (el && el.tagName === 'CANVAS') {
+    // Manche Panels rendern einen DOM-Chart NEBEN einem ausgeblendeten Canvas
+    // (z. B. Product VaR: canvas.style.display='none' + .mvar-product-dom-chart).
+    // Der Canvas ist dann nur Platzhalter → den DOM-Chart snapshotten.
+    // (canvasThumb würde sonst ein leeres 300×150-Bild liefern.)
+    const domChart = el.parentElement?.querySelector?.(DOM_CHART_SELECTOR);
+    if (domChart) {
+      const snap = htmlSnapshotThumb(domChart, w);
+      if (snap) return snap;
+    }
+    // Sonst: echtes Canvas-Bild (Chart.js).
+    return safeThumb(id, label, w);
+  }
+
+  // Nicht-Canvas-Chartcontainer (z. B. Swaption-Heatmap-Tabellen) → HTML-Snapshot.
+  if (el) {
+    const snap = htmlSnapshotThumb(el, w);
+    if (snap) return snap;
+  }
+
   return safeThumb(id, label, w);
 }
 
@@ -1244,16 +1489,16 @@ function safeThumb(id, label, w = 160) {
     <div style="
       width:${w}px;
       min-height:40px;
-      border:1px dashed #555;
+      border:1px dashed var(--border);
       border-radius:6px;
       padding:4px;
       font-size:11px;
-      color:#aaa;
+      color:var(--text-muted);
       display:flex;
       align-items:center;
       justify-content:center;
       text-align:center;
-      background:#111;
+      background:var(--surface-card);
     ">
       ${label || id}<br><span style="opacity:.7">${info}</span>
     </div>
@@ -1264,14 +1509,24 @@ function safeThumb(id, label, w = 160) {
 
 
 function buildMarketTrafficLightsSection(chartState = {}) {
-  const marketPanel = document.getElementById('panel-market');
+  const marketPanel = getMarketPanel();
+  console.log('[RiskPreview marketTraffic]', {
+    marketPanel,
+    marketPanelId: marketPanel?.id,
+    hasSummaryRow: !!marketPanel?.querySelector?.('.mvar-summary-row'),
+    hasMVaRDataContainer0: !!document.getElementById('MVaRDataContainer0'),
+    allMvarContainers: [...document.querySelectorAll('[id*="MVaR"], [id*="mvar"]')].map(el => el.id),
+  });
   if (!marketPanel) return null;
 
   const summaryRow = marketPanel.querySelector('.mvar-summary-row');
   if (!summaryRow) return null;
 
-  const sectionOn = isSectionEnabled('marketTraffic', chartState);
-  const sectionControls = buildSectionControlsHTML('marketTraffic', chartState);
+  const sectionOn =
+    isSectionEnabled('market', chartState) ||
+    isSectionEnabled('marketTraffic', chartState);
+
+const sectionControls = buildSectionControlsHTML('market', chartState);
 
   // ✅ Section OFF → NUR Include section anzeigen (Sub-Checkboxen verstecken)
   if (!sectionOn) {
@@ -1358,14 +1613,24 @@ function buildMarketTrafficLightsSection(chartState = {}) {
 }
 
 function buildCreditTrafficLightsSection(chartState = {}) {
-  const creditPanel = document.getElementById('panel-credit');
+  const creditPanel = getCreditPanel();
+  console.log('[RiskPreview creditTraffic]', {
+    creditPanel,
+    creditPanelId: creditPanel?.id,
+    hasCvarPair: !!creditPanel?.querySelector?.('.cvar-pair'),
+    hasCVaRDataContainer0: !!document.getElementById('CVaRDataContainer0'),
+    allCreditContainers: [...document.querySelectorAll('[id*="CVaR"], [id*="cvar"], [id*="credit"], [id*="Credit"]')].map(el => el.id),
+  });
   if (!creditPanel) return null;
 
   const trafficRow = creditPanel.querySelector('.cvar-pair');
   if (!trafficRow) return null;
 
-  const sectionOn = isSectionEnabled('creditTraffic', chartState);
-  const sectionControls = buildSectionControlsHTML('creditTraffic', chartState);
+  const sectionOn =
+    isSectionEnabled('credit', chartState) ||
+    isSectionEnabled('creditTraffic', chartState);
+
+  const sectionControls = buildSectionControlsHTML('credit', chartState);
 
   // Section OFF → nur Checkbox, sonst nichts
   if (!sectionOn) {
@@ -1434,70 +1699,302 @@ function buildCreditTrafficLightsSection(chartState = {}) {
   };
 }
 
-function applySectionHierarchy(sections) {
-  const parents = (RISK_CONFIG && RISK_CONFIG.sectionParents) || {};
-  const orderByParent = (RISK_CONFIG && RISK_CONFIG.sectionChildrenOrder) || {};
 
-  // Index maps
-  const byKey = new Map();
-  sections.forEach((s, i) => {
-    if (!s?.key) return;
-    byKey.set(s.key, { sec: s, idx: i });
-  });
+// ─────────────────────────────────────────────────────────────────────────
+// RISK-Hierarchie GENERISCH aus dem Trigger-DOM ableiten (keine Hardcodierung):
+// die .risk-acc-Gruppen in #ANALYSE_Modal definieren Haupt/Sub/Sub-Sub. Gruppen-
+// Toggles (ohne data-panel) werden synthetische Gruppen-Knoten; Blätter mappen
+// über data-panel auf ihre Panel-Keys. Bei Änderungen an den RISK-Triggern
+// folgt der Report automatisch.
+// ─────────────────────────────────────────────────────────────────────────
+function parseRiskAccNode(el) {
+  const keyFromBtn = (btn) => {
+    const p = btn?.getAttribute('data-panel') || btn?.getAttribute('aria-controls') || '';
+    return p ? p.replace(/^panel-/, '').replace(/[_-]?Modal$/i, '') : null;
+  };
+  const labelOf = (btn) => btn?.querySelector('.section-header')?.textContent?.trim() || '';
 
-  // Build children lists
-  const childrenMap = new Map(); // parentKey -> array of child keys
-  const childKeys = new Set();
+  const toggle = el.querySelector(':scope > button.section-trigger');
+  const node = { key: keyFromBtn(toggle), label: labelOf(toggle), children: [] };
 
-  Object.entries(parents).forEach(([childKey, parentKey]) => {
-    if (!byKey.has(childKey) || !byKey.has(parentKey)) return;
-    childKeys.add(childKey);
-    if (!childrenMap.has(parentKey)) childrenMap.set(parentKey, []);
-    childrenMap.get(parentKey).push(childKey);
-  });
-
-  // Helper: stable unique
-  const uniq = (arr) => {
-    const out = [];
-    const seen = new Set();
-    for (const x of arr) {
-      if (!x || seen.has(x)) continue;
-      seen.add(x);
-      out.push(x);
+  const body = el.querySelector(':scope > .risk-acc-body');
+  if (body) {
+    for (const child of Array.from(body.children)) {
+      if (child.matches?.('.risk-acc')) {
+        node.children.push(parseRiskAccNode(child));
+      } else if (child.matches?.('button.section-trigger')) {
+        node.children.push({ key: keyFromBtn(child), label: labelOf(child), children: [] });
+      }
     }
+  }
+  return node;
+}
+
+function getRiskTriggerTree() {
+  const modal = document.getElementById('ANALYSE_Modal');
+  if (!modal) return [];
+  const roots = [];
+  modal.querySelectorAll('.risk-acc.risk-section').forEach(el => {
+    if (el.parentElement?.closest('.risk-acc')) return; // nur Top-Level (Rest via Rekursion)
+    roots.push(parseRiskAccNode(el));
+  });
+  return roots;
+}
+
+// Tab-Beschriftung aus dem Tab-Button lesen (nicht hardcoden).
+function tabLabel(tabId, fallback) {
+  return ((document.getElementById(tabId)?.textContent) || fallback).trim() || fallback;
+}
+
+// .chart-section/.chart-section--sub-Adjazenz (MARKET DATA, ANALYSE) → Trigger-
+// Baum. Ein Haupt-.chart-section startet eine Gruppe; folgende .chart-section--sub
+// sind ihre Kinder. (Nur Trigger-Ebene; Panels selbst werden übersprungen.)
+function parseChartSectionTree(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return [];
+  const keyOf = (sec) => {
+    const btn = sec.querySelector(':scope > button.section-trigger');
+    const p = btn?.getAttribute('data-panel') || btn?.getAttribute('aria-controls') || '';
+    return p ? p.replace(/^panel-/, '').replace(/[_-]?Modal$/i, '') : null;
+  };
+  const labelOf = (sec) => sec.querySelector(':scope > button.section-trigger .section-header')?.textContent?.trim() || '';
+
+  const secs = Array.from(modal.querySelectorAll('.chart-section')).filter(s => !s.closest('.sub-panel'));
+  const roots = [];
+  let current = null;
+  for (const sec of secs) {
+    const node = { key: keyOf(sec), label: labelOf(sec), children: [] };
+    if (!node.key && !node.label) continue; // Aktions-Buttons etc. überspringen
+    if (sec.classList.contains('chart-section--sub') && current) current.children.push(node);
+    else { roots.push(node); current = node; }
+  }
+  return roots;
+}
+
+// GENERISCH: Trigger-Baum (roots) → { parents, order, groupNodes, labels },
+// gewurzelt unter einem Tab-Knoten. Knoten OHNE data-panel werden synthetische
+// Gruppen-Knoten (pfad-stabiler Key); Knoten MIT data-panel mappen auf ihr Panel
+// (und dürfen zugleich Kinder haben → z. B. Volatilities → Swaption*).
+function buildHierarchyFromTree(roots, { tabKey, tabTitle, prefix }) {
+  const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'group';
+  const parents = {}, order = {}, labels = {}, groupNodes = [];
+
+  const walk = (node, parentKey) => {
+    let key = node.key;
+    if (!key) {
+      key = (parentKey ? parentKey + '__' : prefix + '__') + slug(node.label);
+      groupNodes.push({ key, title: node.label || 'Group' });
+    }
+    if (node.label) labels[key] = node.label;
+    if (parentKey) parents[key] = parentKey;
+    if (node.children?.length) order[key] = node.children.map(ch => walk(ch, key));
+    return key;
+  };
+
+  if (!roots.length) return { parents, order, groupNodes, labels };
+  groupNodes.push({ key: tabKey, title: tabTitle });
+  labels[tabKey] = tabTitle;
+  order[tabKey] = roots.map(r => walk(r, tabKey));
+  return { parents, order, groupNodes, labels };
+}
+
+// RISK-Trigger (#ANALYSE_Modal .risk-acc) → Hierarchie unter Tab "RISK".
+function buildRiskHierarchy() {
+  return buildHierarchyFromTree(getRiskTriggerTree(), {
+    tabKey: 'tab__risk', tabTitle: tabLabel('RISK_Tab', 'RISK'), prefix: 'risk',
+  });
+}
+
+// MARKET-DATA-Trigger (#MARKETDATA_Modal .chart-section) → Hierarchie unter Tab
+// "MARKET DATA". Spiegelt die echte Verschachtelung (Volatilities → Swaption*,
+// Interest Rates → Forward, Scenarios → …) automatisch.
+function buildMarketDataHierarchy() {
+  return buildHierarchyFromTree(parseChartSectionTree('MARKETDATA_Modal'), {
+    tabKey: 'marketData', tabTitle: tabLabel('MARKETDATA_Tab', 'Market Data'), prefix: 'md',
+  });
+}
+
+
+function applySectionHierarchy(sections) {
+  const uniq = (arr) => {
+    const out = []; const seen = new Set();
+    for (const x of arr) { if (!x || seen.has(x)) continue; seen.add(x); out.push(x); }
     return out;
   };
 
-  // Sort children per parent
-  for (const [parentKey, childList] of childrenMap.entries()) {
-    const configured = orderByParent[parentKey] || [];
-    const configuredFiltered = configured.filter(k => childList.includes(k));
+  // Hierarchie-Quellen zusammenführen — alle GENERISCH aus dem Trigger-DOM:
+  //  - Breakdown: statische RISK_CONFIG (Breakdown-Children bleiben).
+  //  - Market Data: aus #MARKETDATA_Modal-Triggern (echte Verschachtelung).
+  //  - RISK: aus #ANALYSE_Modal .risk-acc-Gruppen.
+  const mdH  = buildMarketDataHierarchy();
+  const risk = buildRiskHierarchy();
 
-    // Remaining children keep original order from sections[]
-    const remaining = childList
-      .filter(k => !configuredFiltered.includes(k))
-      .sort((a, b) => (byKey.get(a)?.idx ?? 0) - (byKey.get(b)?.idx ?? 0));
+  // Weitere Inhalts-Tabs GENERISCH über denselben Mechanismus wie MARKET DATA
+  // (parseChartSectionTree + buildHierarchyFromTree). REPORTING (REPORTS_Modal) ist
+  // bewusst ausgeschlossen; ANALYSE/RISK laufen über die Builder oben. Tabs ohne
+  // report-relevante Panels werden weiter unten automatisch weggepruned
+  // (synthetische Gruppe ohne echte Descendant-Sektion).
+  // Nur Tabs, deren Panel-Inhalte der Report-Warmup auch rendert (Lazy-Registry).
+  // CUSTOMER SETUP ist registriert (initCustomerSetupPanelsLazyRender). Weitere Tabs
+  // erst aufnehmen, wenn ihre Panels ebenfalls registriert sind — sonst leere Sektionen.
+  const EXTRA_TABS = [
+    { tabId: 'CUSTOMER_SETUP_Tab', modalId: 'CUSTOMER_SETUP_Modal', prefix: 'cs' },
+  ];
+  const extraH = EXTRA_TABS.map(({ tabId, modalId, prefix }) =>
+    buildHierarchyFromTree(parseChartSectionTree(modalId), {
+      tabKey: 'tab__' + prefix,
+      tabTitle: tabLabel(tabId, prefix.toUpperCase()),
+      prefix,
+    })
+  );
 
-    childrenMap.set(parentKey, uniq([...configuredFiltered, ...remaining]));
+  // Alle Hierarchie-Quellen generisch zusammenführen.
+  const allH = [mdH, risk, ...extraH];
+
+  const parents = { ...((RISK_CONFIG && RISK_CONFIG.sectionParents) || {}) };
+  const orderByParent = { ...((RISK_CONFIG && RISK_CONFIG.sectionChildrenOrder) || {}) };
+  const groupNodes = [];
+  const labelEntries = [];
+  for (const h of allH) {
+    Object.assign(parents, h.parents);
+    Object.assign(orderByParent, h.order);
+    groupNodes.push(...h.groupNodes);
+    labelEntries.push(...Object.entries(h.labels));
   }
+  const groupKeys = new Set(groupNodes.map(g => g.key));
+  const groupTitle = new Map(groupNodes.map(g => [g.key, g.title]));
+  const labels = new Map(labelEntries);
 
-  // Build final flat list with levels
-  const out = [];
+  // ── Oberste Schicht = Tab-Namen (aus den Tab-Buttons gelesen, NICHT hardcoded).
+  const tabName = (id, fb) => ((document.getElementById(id)?.textContent) || fb).trim() || fb;
+
+  // ANALYSE: reale Top-Sektionen aus #ANALYSE_Modal ohne eigenen Parent
+  // (Breakdown, Performance, Liquidity, …) unter den Tab "ANALYSE".
+  const analyseTabKey = 'tab__analyse';
+  const analyseTab = tabName('ANALYSE_Tab', 'Analyse');
+  let analyseUsed = false;
   for (const s of sections) {
-    if (!s?.key) continue;
-
-    // skip children at top-level
-    if (childKeys.has(s.key)) continue;
-
-    out.push({ ...s, __level: 1, __isChild: false });
-
-    const kids = childrenMap.get(s.key) || [];
-    for (const ck of kids) {
-      const child = byKey.get(ck)?.sec;
-      if (!child) continue;
-      out.push({ ...child, __level: 2, __isChild: true, __parentKey: s.key });
+    const k = s?.key;
+    if (!k || groupKeys.has(k) || parents[k]) continue;  // synthetisch oder schon Kind
+    const panel = document.getElementById('panel-' + k)
+      || document.getElementById(k + '_Modal')
+      || document.getElementById(k);
+    if (panel?.closest?.('.table')?.id === 'ANALYSE_Modal') {
+      parents[k] = analyseTabKey;
+      analyseUsed = true;
     }
   }
+  if (analyseUsed) {
+    groupKeys.add(analyseTabKey);
+    groupTitle.set(analyseTabKey, analyseTab);
+    labels.set(analyseTabKey, analyseTab);
+  }
+
+  // Parents OHNE eigenes Panel → synthetische Gruppen (z. B. "Scenarios" hat
+  // keinen panel-scenarios-root). So überlebt der Teilbaum bzw. wird sauber
+  // gepruned, ohne dass ein dangling Parent Kinder verliert.
+  const realKeys = new Set(sections.map(s => s?.key).filter(Boolean));
+  for (const pk of new Set([...Object.values(parents), ...Object.keys(orderByParent)])) {
+    if (!pk || realKeys.has(pk) || groupKeys.has(pk)) continue;
+    groupKeys.add(pk);
+    if (!groupTitle.has(pk)) groupTitle.set(pk, labels.get(pk) || pk);
+  }
+
+  // Arbeitskopie + fehlende Gruppen-Sektionen injizieren (Inhalt leer).
+  const work = sections.slice();
+  const present = new Set(work.map(s => s?.key).filter(Boolean));
+  const mkGroup = (key) => ({
+    key, title: groupTitle.get(key) || key,
+    sectionControls: '', chartItems: [], tableItems: [], chartThumbs: [], tableThumbs: [],
+    breakdownControlsHtml: '', hasThumbs: true, sectionEnabled: true, __synthetic: true,
+  });
+  for (const gk of groupKeys) {
+    if (!present.has(gk)) { work.push(mkGroup(gk)); present.add(gk); }
+  }
+
+  // Index
+  const byKey = new Map();
+  work.forEach((s, i) => { if (s?.key && !byKey.has(s.key)) byKey.set(s.key, { sec: s, idx: i }); });
+
+  // Eltern → Kinder (nur wo beide existieren)
+  const childrenMap = new Map();
+  const childKeys = new Set();
+  Object.entries(parents).forEach(([ck, pk]) => {
+    if (!byKey.has(ck) || !byKey.has(pk)) return;
+    childKeys.add(ck);
+    if (!childrenMap.has(pk)) childrenMap.set(pk, []);
+    childrenMap.get(pk).push(ck);
+  });
+
+  // Kinder ordnen (konfigurierte Reihenfolge zuerst, Rest nach DOM-Index)
+  for (const [pk, list] of childrenMap.entries()) {
+    const cfg = (orderByParent[pk] || []).filter(k => list.includes(k));
+    const rest = list.filter(k => !cfg.includes(k)).sort((a, b) => (byKey.get(a)?.idx ?? 0) - (byKey.get(b)?.idx ?? 0));
+    childrenMap.set(pk, uniq([...cfg, ...rest]));
+  }
+
+  // Pruning DATEN-UNABHÄNGIG: eine synthetische Gruppe nur entfernen, wenn ihr
+  // Teilbaum KEINE echte Panel-Sektion enthält (z. B. "Select Portfolio" = nur
+  // Dropdown). NICHT nach aktuell gerenderten Thumbnails prunen — sonst
+  // verschwinden Tabs, deren Charts erst beim Öffnen des Tabs entstehen.
+  const realCache = new Map();
+  const hasRealDescendant = (key) => {
+    if (realCache.has(key)) return realCache.get(key);
+    realCache.set(key, false); // Zyklus-Guard
+    let res = byKey.has(key) && !groupKeys.has(key); // echte (Panel-)Sektion?
+    if (!res) for (const ck of (childrenMap.get(key) || [])) { if (hasRealDescendant(ck)) { res = true; break; } }
+    realCache.set(key, res);
+    return res;
+  };
+
+  // Anker-Index für Root-Reihenfolge (kleinster DOM-Index im Teilbaum)
+  const anchorCache = new Map();
+  const anchorIdx = (key) => {
+    if (anchorCache.has(key)) return anchorCache.get(key);
+    anchorCache.set(key, Infinity);
+    let m = byKey.get(key)?.idx ?? Infinity;
+    for (const ck of (childrenMap.get(key) || [])) m = Math.min(m, anchorIdx(ck));
+    anchorCache.set(key, m);
+    return m;
+  };
+
+  // Rekursiv emittieren (beliebige Tiefe). Leere synthetische Gruppen (+Teilbaum)
+  // werden übersprungen → Config/Calculation/Eingaben fallen automatisch weg.
+  const out = [];
+  const emit = (key, level, parentKey) => {
+    if (groupKeys.has(key) && !hasRealDescendant(key)) return;
+    const sec = byKey.get(key)?.sec;
+    if (!sec) return;
+    out.push({
+      ...sec,
+      title: labels.get(key) || sec.title,
+      __level: level,
+      __isChild: level > 1,
+      __isGroup: groupKeys.has(key),   // Tab/Untergruppe (Master-Checkbox "alles an/aus")
+      __parentKey: parentKey || null,
+    });
+    for (const ck of (childrenMap.get(key) || [])) emit(ck, level + 1, key);
+  };
+
+  // Tab-Wurzeln in TAB-Reihenfolge (ANALYSE → RISK → MARKET DATA …) statt nach
+  // Panel-Discovery-Index. Generisch: liest die Reihenfolge aus den Tab-Buttons,
+  // folgt also automatisch, wenn die Tabs umsortiert werden.
+  const TAB_NODE_BUTTON = {
+    tab__analyse: 'ANALYSE_Tab', tab__risk: 'RISK_Tab', marketData: 'MARKETDATA_Tab',
+    tab__cs: 'CUSTOMER_SETUP_Tab',
+  };
+  const tabOrder = {};
+  (typeof document !== 'undefined' ? Array.from(document.querySelectorAll('.tablinks')) : [])
+    .forEach((b, i) => { if (b.id) tabOrder[b.id] = i; });
+  const rootRank = (key) => {
+    const btn = TAB_NODE_BUTTON[key];
+    if (btn && tabOrder[btn] != null) return tabOrder[btn]; // Tab-Reihenfolge
+    const a = anchorIdx(key);
+    return 100 + (a === Infinity ? 0 : a / 1e6);            // Rest nach den Tabs, in Discovery-Reihenfolge
+  };
+
+  const roots = uniq(work.map(s => s?.key).filter(k => k && !childKeys.has(k)));
+  roots.sort((a, b) => rootRank(a) - rootRank(b)).forEach(k => emit(k, 1, null));
 
   return out;
 }
@@ -1526,6 +2023,8 @@ function renderRiskPreview() {
 
     // ✅ Inject Breakdown child sections (Issuer / Products / General)
     sections = injectBreakdownChildren(sections, chartState) || sections;
+    // Der "Market Data"-Parent + die RISK-/Tab-Gruppen werden in
+    // applySectionHierarchy generisch injiziert (aus dem Trigger-DOM).
 
     // ─────────────────────────────────────────────
     // Helpers
@@ -1578,118 +2077,210 @@ function renderRiskPreview() {
     };
 
     // ─────────────────────────────────────────────
-    // 1) CREDIT – remove any auto-discovered duplicates
+    // Traffic Lights gehören in die "Overview" (panel-market / panel-credit):
+    // deren Inhalt in die Sektionen 'market' bzw. 'credit' mergen, KEINE
+    // eigenen *Traffic-Sektionen mehr.
     // ─────────────────────────────────────────────
-    removeWhere(sec => {
-      const t = norm(sec?.title);
-      const k = sec?.key;
-      if (k === 'creditTraffic') return true;
-      if (t.includes('credit') && t.includes('traffic') && t.includes('light')) return true;
-      return false;
-    });
+    removeWhere(sec => sec?.key === 'marketTraffic' || sec?.key === 'creditTraffic');
 
-    // 2) Insert the dedicated credit traffic section
-    const creditTrafficSection = buildCreditTrafficLightsSection(chartState);
-    if (creditTrafficSection) {
-      insertBeforeTitleMatch(
-        creditTrafficSection,
-        sec => {
-          const t = norm(sec?.title);
-          return t.includes('credit') && t.includes('loss');
-        }
-      );
-    }
+    const mergeTraffic = (trafficSec, targetKey) => {
+      if (!trafficSec) return;
 
-    // ─────────────────────────────────────────────
-    // 3) MARKET – ONLY necessary changes here:
-    //    - remove accidental dupes (as before)
-    //    - insert specifically BEFORE "Market Profit/Loss distribution"
-    // ─────────────────────────────────────────────
-    removeWhere(sec => {
-      const t = norm(sec?.title);
-      const k = sec?.key;
-      if (k === 'marketTraffic') return true;
-      if (t.includes('market') && t.includes('traffic') && t.includes('light')) return true;
-      return false;
-    });
+      let tgt = sections.find(s => s?.key === targetKey);
 
-    const marketTrafficSection = buildMarketTrafficLightsSection(chartState);
-    if (marketTrafficSection) {
-      insertBeforeTitleMatch(
-        marketTrafficSection,
-        sec => {
-          const t = norm(sec?.title);
+      if (!tgt) {
+        tgt = {
+          key: targetKey,
+          title: sectionTitleFromKey(targetKey),
+          sectionControls: buildSectionControlsHTML(targetKey, chartState),
+          chartItems: [],
+          chartThumbs: [],
+          tableItems: [],
+          tableThumbs: [],
+          hasThumbs: true,
+          sectionEnabled: isSectionEnabled(targetKey, chartState),
+        };
+        sections.push(tgt);
+      }
 
-          // Anchor: Market Profit/Loss distribution (robust variants)
-          const isMarket = t.includes('market');
-          const isPL =
-            t.includes('profit/loss') ||
-            t.includes('profit loss') ||
-            t.includes('p/l') ||
-            (t.includes('profit') && t.includes('loss')) ||
-            (t.includes('loss') && t.includes('distribution'));
+      tgt.chartItems  = [...(tgt.chartItems  || []), ...(trafficSec.chartItems  || [])];
+      tgt.chartThumbs = [...(tgt.chartThumbs || []), ...(trafficSec.chartThumbs || [])];
+      tgt.hasThumbs = true;
+    };
+    mergeTraffic(buildMarketTrafficLightsSection(chartState), 'market');
+    mergeTraffic(buildCreditTrafficLightsSection(chartState), 'credit');
 
-          return isMarket && isPL;
-        }
-      );
-    }
-
-    // ─────────────────────────────────────────────
-    // 4) HARD DEDUPE BY KEY (unchanged)
-    // ─────────────────────────────────────────────
+    // Hard dedupe by key (reichere Instanz gewinnt).
     dedupeByKeyPrefer((a, b) => {
-      const aSpecial = !!(a?.isCreditTraffic || a?.isMarketTraffic);
-      const bSpecial = !!(b?.isCreditTraffic || b?.isMarketTraffic);
-      if (aSpecial !== bSpecial) return bSpecial ? b : a;
-
       const score = (s) =>
         (s?.chartThumbs?.length || 0) +
         (s?.tableThumbs?.length || 0) +
         (s?.chartItems?.length || 0) +
         (s?.tableItems?.length || 0) +
         (s?.breakdownControlsHtml ? 10 : 0);
-
       return score(b) >= score(a) ? b : a;
     });
 
-    // ✅ HIER: nach Insert + Dedupe die Hierarchie anwenden
+    // Hierarchie anwenden (rekursiv, DOM-abgeleitet).
     sections = applySectionHierarchy(sections);
 
 
     // ─────────────────────────────────────────────
-    // Render HTML (unchanged)
+    // Accordion-Nav: stabile ID je Sektion (key-basiert wo möglich) + aktive
+    // Sektion bestimmen (gemerkte beibehalten, sonst erste).
+    // ─────────────────────────────────────────────
+    const secMeta = sections.map((sec, i) => ({
+      sec,
+      key: sec?.key || null,
+      id: sec?.key ? `k-${sec.key}` : `i-${i}`,
+      level: sec.__level || 1,
+      parentKey: sec.__parentKey || null,
+      children: [],
+    }));
+    const ids = secMeta.map(m => m.id);
+    // Keine Default-Auswahl: beim Öffnen ist NICHTS aktiv (kein schwarzer Trigger,
+    // rechts leer) – erst ein Klick aktiviert eine Sektion. Nur eine bereits
+    // gewählte Sektion bleibt aktiv.
+    let activeId = ids.includes(__riskActiveSecId) ? __riskActiveSecId : '';
+    __riskActiveSecId = activeId;
+
+    // Baum über __parentKey aufbauen (beliebige Tiefe).
+    const nodeByKey = new Map();
+    secMeta.forEach(m => { if (m.key) nodeByKey.set(m.key, m); });
+    const navRoots = [];
+    secMeta.forEach(m => {
+      const parent = m.parentKey ? nodeByKey.get(m.parentKey) : null;
+      if (parent) parent.children.push(m);
+      else navRoots.push(m);
+    });
+
+    // ── "Include all"-Bulk + globale Select/Deselect-Listen aus der Hierarchie.
+    {
+      const parentOf = new Map(secMeta.map(m => [m.key, m.parentKey]));
+      const chainHas = (sk, G) => { let k = sk; while (k) { if (k === G) return true; k = parentOf.get(k); } return false; };
+      __riskAllSectionKeys = secMeta.filter(m => m.key && !m.sec.__isGroup).map(m => m.key);
+      __riskAllGroupKeys   = secMeta.filter(m => m.key &&  m.sec.__isGroup).map(m => m.key);
+      __riskGroupBulk = new Map();
+      __riskAllGroupKeys.forEach(G => {
+        const keys = [];
+        const prefixes = new Set();
+        secMeta.forEach(m => {
+          const sk = m.key;
+          if (!sk || sk === G || !chainHas(sk, G)) return;
+          if (m.sec.__isGroup) {
+            keys.push(`${sk}:__group__`);
+          } else {
+            keys.push(`${sk}:__section__`);
+            prefixes.add(sk);
+            prefixes.add(canonicalChartSection(sk, '__x__')); // breakdown* → breakdown
+          }
+        });
+        __riskGroupBulk.set(G, { keys, prefixes });
+      });
+    }
+
+    // Expand-Status = Set von Node-IDs. null = noch nie gesetzt. Opt-in-Modell:
+    // Baum startet KOMPLETT eingeklappt; der User öffnet selbst. Danach
+    // User-Status respektieren (kein Zwang).
+    if (__riskExpandedKeys === null) {
+      __riskExpandedKeys = new Set();
+    }
+
+    // Nach Report-Load: Gruppen bis zur Leaf-Sektion aufklappen UND die erste
+    // aktivierte Leaf-Sektion aktiv schalten, damit rechts direkt ihre Graphen/
+    // Tabellen sichtbar werden.
+    if (__riskExpandCheckedOnce) {
+      __riskExpandCheckedOnce = false;
+      let firstLeafWithContent = '';
+      let firstEnabledLeaf = '';
+      const hasContent = (s) =>
+        (s?.chartThumbs?.length || s?.tableThumbs?.length ||
+         s?.chartItems?.length  || s?.tableItems?.length);
+
+      secMeta.forEach(m => {
+        if (m.sec.__isGroup || !m.key) return;
+        if (!isSectionEnabled(m.key, chartState)) return;
+        if (!firstEnabledLeaf) firstEnabledLeaf = m.id;
+        if (!firstLeafWithContent && hasContent(m.sec)) firstLeafWithContent = m.id;
+
+        // alle Vorfahr-Gruppen entlang des Pfads aufklappen
+        let pk = m.parentKey;
+        while (pk) {
+          const pnode = nodeByKey.get(pk);
+          if (!pnode) break;
+          __riskExpandedKeys.add(pnode.id);
+          pk = pnode.parentKey;
+        }
+      });
+
+      // Bevorzugt eine Leaf mit echtem Inhalt (Graphen/Tabellen) anzeigen.
+      const target = firstLeafWithContent || firstEnabledLeaf;
+      if (target) { activeId = target; __riskActiveSecId = target; __riskScrollActiveOnce = true; }
+    }
+
+    const esc = (s) => String(s || '').replace(/"/g, '&quot;');
+    const renderNavNode = (m) => {
+      const hasKids = m.children.length > 0;
+      const sub = m.level > 1 ? ' rr-nav-trigger--sub' : '';
+      const active = m.id === activeId ? ' is-active' : '';
+      const label = m.sec.title || '';
+      const arrow = m.level > 1 ? '↳ ' : '';
+      if (!hasKids) {
+        return `<button type="button" class="rr-nav-trigger${sub}${active}" data-rr-target="${m.id}" title="${esc(label)}">${arrow}${label}</button>`;
+      }
+      const expanded = __riskExpandedKeys.has(m.id) ? ' is-expanded' : '';
+      return `<div class="rr-nav-group${expanded}" data-rr-group="${m.id}">`
+        + `<button type="button" class="rr-nav-trigger rr-nav-trigger--has-children${sub}${active}" data-rr-target="${m.id}" data-rr-haskids="1" title="${esc(label)}">`
+        + `<span class="rr-chev"></span><span class="rr-nav-label">${arrow}${label}</span></button>`
+        + `<div class="rr-nav-children">${m.children.map(renderNavNode).join('')}</div>`
+        + `</div>`;
+    };
+    const navHtml = navRoots.map(renderNavNode).join('');
+
+    // Scroll-Position von Tree/Content merken, damit der Re-Render (z. B. nach
+    // Checkbox-Auswahl) NICHT an den Anfang zurückspringt.
+    const __prevNav = wrap.querySelector('.rr-nav');
+    const __navScroll = __prevNav ? __prevNav.scrollTop : 0;
+    const __prevContent = wrap.querySelector('.rr-content');
+    const __contentScroll = __prevContent ? __prevContent.scrollTop : 0;
+
+    // ─────────────────────────────────────────────
+    // Render HTML
     // ─────────────────────────────────────────────
     wrap.innerHTML = `
-      <div style="padding:10px">
+      <div style="padding:10px;display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;">
 
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex:0 0 auto;">
           <button id="rr-all-on"
-                  style="padding:6px 10px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#ddd;cursor:pointer;">
+                  style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-overlay);color:var(--text-primary);cursor:pointer;">
             Select all
           </button>
           <button id="rr-all-off"
-                  style="padding:6px 10px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#ddd;cursor:pointer;">
+                  style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-overlay);color:var(--text-primary);cursor:pointer;">
             Deselect all
           </button>
           <span style="opacity:.7;font-size:12px;margin-left:auto;">Preview Controls</span>
         </div>
 
-        ${sections.map(sec => `
-          <div class="risk-section">
+        <div class="rr-layout">
+          <nav class="rr-nav">${navHtml}</nav>
+          <div class="rr-content">
+        ${secMeta.map(({ sec, id }) => `
+          <div class="risk-section${id === activeId ? ' is-active-sec' : ''}" data-rr-sec="${id}">
             <div class="risk-section__title"
      style="
-       padding-left:${sec.__level === 2 ? '18px' : '0'};
-       opacity:${sec.__level === 2 ? '0.92' : '1'};
-       font-size:${sec.__level === 2 ? '12px' : '13px'};
+       padding-left:${(Math.max(1, sec.__level || 1) - 1) * 18}px;
+       opacity:${(sec.__level || 1) > 1 ? '0.92' : '1'};
+       font-size:${(sec.__level || 1) > 1 ? '12px' : '13px'};
      ">
-  ${sec.__level === 2 ? '↳ ' : ''}${sec.title}
+  ${(sec.__level || 1) > 1 ? '↳ ' : ''}${sec.title}
 </div>
 
 
             <div class="risk-section__row">
               <div class="risk-section__label">Section</div>
               <div class="risk-section__controls">
-                ${sec.sectionControls || ''}
+                ${sec.__isGroup ? buildGroupControlsHTML(sec.key, chartState) : (sec.sectionControls || '')}
               </div>
             </div>
 
@@ -1776,17 +2367,102 @@ function renderRiskPreview() {
             }
           </div>
         `).join('')}
+          </div>
+        </div>
 
       </div>
     `;
 
     wireChartControlsOnce?.();
+    bindRiskNavOnce();
+
+    // Scroll-Position von Tree/Content wiederherstellen (Re-Render-sicher).
+    const __newNav = wrap.querySelector('.rr-nav');
+    if (__newNav) __newNav.scrollTop = __navScroll;
+    const __newContent = wrap.querySelector('.rr-content');
+    if (__newContent) __newContent.scrollTop = __contentScroll;
+
+    // Nach Report-Load: einmalig zur ersten aktivierten Sektion scrollen.
+    if (__riskScrollActiveOnce) {
+      __riskScrollActiveOnce = false;
+      try { applyRiskNavState({ scroll: true }); } catch {}
+    }
   } catch (err) {
     console.error('[RiskPreview] ERROR in renderRiskPreview', err);
   } finally {
     __lastRenderTs  = Date.now();
     __riskRendering = false;
   }
+}
+
+// Wendet den aktuellen Nav-Zustand (aktive Sektion + aufgeklappte Gruppe) auf
+// das DOM an — OHNE Re-Render, damit die Checkbox-Zustände erhalten bleiben.
+function applyRiskNavState({ scroll = false } = {}) {
+  const wrap = document.getElementById('reportsRiskPreview');
+  if (!wrap) return;
+  const expanded = __riskExpandedKeys || new Set();
+  // Vollvorschau: ALLE Sektionen bleiben sichtbar (nichts ausblenden). Die aktive
+  // Sektion wird nur hervorgehoben und ggf. in den Sichtbereich gescrollt.
+  wrap.querySelectorAll('.risk-section[data-rr-sec]').forEach(el => {
+    el.classList.toggle('is-active-sec', el.getAttribute('data-rr-sec') === __riskActiveSecId);
+  });
+  wrap.querySelectorAll('.rr-nav-trigger').forEach(btn => {
+    btn.classList.toggle('is-active', btn.getAttribute('data-rr-target') === __riskActiveSecId);
+  });
+  wrap.querySelectorAll('.rr-nav-group').forEach(g => {
+    g.classList.toggle('is-expanded', expanded.has(g.getAttribute('data-rr-group')));
+  });
+
+  if (scroll && __riskActiveSecId) {
+    const content = wrap.querySelector('.rr-content');
+    const target  = wrap.querySelector(`.risk-section[data-rr-sec="${__riskActiveSecId}"]`);
+    if (content && target) {
+      const tr = target.getBoundingClientRect();
+      const cr = content.getBoundingClientRect();
+      content.scrollTop += (tr.top - cr.top);
+    }
+  }
+}
+
+// Delegierter Klick-Listener für die Nav-Trigger (nur 1× gebunden; das
+// innerHTML wird bei jedem Render neu gebaut, der Listener am Container bleibt).
+function bindRiskNavOnce() {
+  if (__riskNavBound) return;
+  const wrap = document.getElementById('reportsRiskPreview');
+  if (!wrap) return;
+  __riskNavBound = true;
+  wrap.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('.rr-nav-trigger');
+    if (!btn || !wrap.contains(btn)) return;
+    e.preventDefault();
+    if (!__riskExpandedKeys) __riskExpandedKeys = new Set();
+
+    // Immer: Inhalt dieser Sektion aktivieren.
+    __riskActiveSecId = btn.getAttribute('data-rr-target');
+
+    const group   = btn.closest('.rr-nav-group');
+    const hasKids = btn.hasAttribute('data-rr-haskids');
+    const addAncestors = (from) => {
+      let p = from;
+      while (p) { __riskExpandedKeys.add(p.getAttribute('data-rr-group')); p = p.parentElement?.closest('.rr-nav-group'); }
+    };
+
+    if (hasKids && group) {
+      const id = group.getAttribute('data-rr-group');
+      if (__riskExpandedKeys.has(id)) {
+        // Gruppe + alle Untergruppen einklappen.
+        __riskExpandedKeys.delete(id);
+        group.querySelectorAll('.rr-nav-group').forEach(g => __riskExpandedKeys.delete(g.getAttribute('data-rr-group')));
+      } else {
+        __riskExpandedKeys.add(id);
+        addAncestors(group.parentElement?.closest('.rr-nav-group'));
+      }
+    } else {
+      // Blatt: Vorfahren offen halten.
+      addAncestors(btn.closest('.rr-nav-group'));
+    }
+    applyRiskNavState({ scroll: true }); // zur angeklickten Sektion scrollen
+  });
 }
 
 
@@ -1797,6 +2473,11 @@ export function wireRiskPreview({ appRoot, force = false } = {}) {
   if (force) { try { teardownRiskPreview(); } catch {} }
   if (__riskWired && !force) return;
   __riskWired = true;
+
+  // Report-Portfolio-Dropdown initial spiegeln + bei jedem Öffnen des Risk-
+  // Report-Panels aktualisieren (Optionen kommen ggf. erst async).
+  try { syncReportPortfolioDropdown(); } catch {}
+  try { window.registerPanelOpenHook?.('panel-reports-risk', () => { try { syncReportPortfolioDropdown(); } catch {} }); } catch {}
 
   const scheduleSafe = () => { try { scheduleRiskPreviewRender(); } catch (e) { console.error(e); } };
 
@@ -1848,7 +2529,13 @@ __riskDocDelegatedHandler = (ev) => {
   try {
     const reportsBtn = document.getElementById('REPORTS_Tab');
     if (reportsBtn) {
-      const onClickReports = () => setTimeout(kick, 0);
+      const onClickReports = () => {
+        // Beim Öffnen von REPORTS nur das Portfolio-Dropdown spiegeln + die
+        // Vorschau-Struktur rendern. Die (teure) Daten-Materialisierung läuft
+        // NICHT automatisch, sondern erst auf "Get Risk Data" → kein Warten.
+        syncReportPortfolioDropdown();
+        setTimeout(kick, 0);
+      };
       reportsBtn.addEventListener('click', onClickReports, true);
       // nicht in __riskRefreshBtn speichern, das ist für den Refresh-Button reserviert
     }
@@ -1860,18 +2547,22 @@ __riskDocDelegatedHandler = (ev) => {
   if (refreshBtn) {
     __riskRefreshBtn = refreshBtn;
     __riskRefreshHandler = (e) => {
+      setGetRiskDataBusy(); // Executing… + roter Punkt SOFORT (synchron)
       const fn = window.handleRefreshThumbnailsClick
         || (typeof handleRefreshThumbnailsClick === 'function' ? handleRefreshThumbnailsClick : null);
-      if (!fn) return;
-      try { fn(e); } catch (err) { console.warn('[risk preview] refresh handler error', err); }
-      try { if (typeof clearThumbCache === 'function') clearThumbCache(); } catch {}
-      setTimeout(kick, 0);
+      // Arbeit erst nach dem Paint → der Busy-Zustand erscheint sofort.
+      afterPaint(() => {
+        if (fn) { try { fn(e); } catch (err) { console.warn('[risk preview] refresh handler error', err); } }
+        try { if (typeof clearThumbCache === 'function') clearThumbCache(); } catch {}
+        setTimeout(kick, 0);
+      });
     };
     try { refreshBtn.addEventListener('click', __riskRefreshHandler, true); } catch {}
   }
 
-  // Externes Custom-Refresh
+  // Externes Custom-Refresh + "fertig"-Signal für die Get-Risk-Data-Anzeige.
   __riskDocRefreshHandler = () => {
+    try { setGetRiskDataDone(); } catch {}  // Punkt → grün, "Get Risk Data" zurück
     try { if (typeof clearThumbCache === 'function') clearThumbCache(); } catch {}
     kick();
   };
@@ -1962,7 +2653,7 @@ function miniTableFromContainer(
   const headHTML = headLabels.length
     ? `<thead><tr>${
         headLabels.map(lbl => `
-          <th style="padding:${cellPad}px ${cellPad + 1}px; border:1px solid #555; text-align:left;">
+          <th style="padding:${cellPad}px ${cellPad + 1}px; border:1px solid var(--border); text-align:left;">
             ${lbl}
           </th>`).join('')
       }</tr></thead>`
@@ -2039,7 +2730,103 @@ function miniTableFromContainer(
       return checked ? '✓' : '';
     }
 
-    // 4) Sonst normaler Text
+    // 3b) Eingabefelder: Werte stehen in <input>/<select>/<textarea>, NICHT in
+    //     td.textContent (z.B. Customer-Setup Threshold-/Limit-Tabellen). Ohne das
+    //     blieb nur das "%"/Label sichtbar, der eigentliche Wert fehlte.
+    const input = td.querySelector('input:not([type="checkbox"]):not([type="radio"])');
+    if (input) {
+      // Einheit/Suffix (z.B. "%") steht oft in einem verschachtelten <span>, nicht
+      // als direkter Text-Node. td.textContent erfasst beides; das <input> selbst
+      // hat keinen textContent, liefert also nur den Einheiten-/Suffix-Text.
+      const suffix = (td.textContent || '').trim();
+      return `${input.value ?? ''}${suffix ? ' ' + suffix : ''}`.trim();
+    }
+
+    const select = td.querySelector('select');
+    if (select) {
+      const selectedText =
+        select.options?.[select.selectedIndex]?.textContent?.trim() ||
+        select.value ||
+        '';
+      return selectedText;
+    }
+
+    const textarea = td.querySelector('textarea');
+    if (textarea) {
+      return textarea.value || '';
+    }
+
+    // 4) Traffic-/Ampel-Dots innerhalb der Zelle erhalten
+    const trafficDot =
+      td.querySelector('.traffic-dot') ||
+      td.querySelector('.risk-dot') ||
+      td.querySelector('.status-dot') ||
+      td.querySelector('.ampel-dot') ||
+      td.querySelector('.traffic-light-dot') ||
+      td.querySelector('[data-traffic]') ||
+      td.querySelector('[data-risk-status]') ||
+      td.querySelector('[data-traffic-status]')
+
+    if (trafficDot) {
+      let color = '';
+
+      const cls = Array.from(trafficDot.classList || []).join(' ').toLowerCase();
+
+      if (cls.includes('green') || cls.includes('ok') || cls.includes('good')) {
+        color = '#4caf50';
+      } else if (cls.includes('yellow') || cls.includes('orange') || cls.includes('warn')) {
+        color = '#ff9800';
+      } else if (cls.includes('red') || cls.includes('bad') || cls.includes('fail')) {
+        color = '#f44336';
+      }
+
+      const status = String(
+        trafficDot.dataset?.status ||
+        trafficDot.dataset?.traffic ||
+        ''
+      ).toLowerCase();
+
+      if (!color && (status.includes('green') || status.includes('ok') || status.includes('good'))) {
+        color = '#4caf50';
+      }
+      if (!color && (status.includes('yellow') || status.includes('orange') || status.includes('warn'))) {
+        color = '#ff9800';
+      }
+      if (!color && (status.includes('red') || status.includes('bad') || status.includes('fail'))) {
+        color = '#f44336';
+      }
+
+      if (!color) {
+        try {
+          const cs = getComputedStyle(trafficDot);
+          color =
+            cs.backgroundColor &&
+            cs.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+            cs.backgroundColor !== 'transparent'
+              ? cs.backgroundColor
+              : cs.color;
+        } catch {}
+      }
+
+      const text = (td.textContent || '').trim();
+
+      return `
+        <span style="display:inline-flex;align-items:center;gap:5px;">
+          <span style="
+            display:inline-block;
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            background:${color || '#999'};
+            border:1px solid rgba(0,0,0,0.15);
+            flex:0 0 auto;
+          "></span>
+          <span>${text}</span>
+        </span>
+      `;
+    }
+
+    // 5) Sonst normaler Text
     return (td.textContent || '').trim();
   };
 
@@ -2052,7 +2839,7 @@ function miniTableFromContainer(
           td.querySelector('input[type="radio"]');
         const align = isSelectCol ? 'center' : 'left';
         return `
-          <td style="padding:${cellPad}px ${cellPad + 1}px; border:1px solid #333; text-align:${align};">
+          <td style="padding:${cellPad}px ${cellPad + 1}px; border:1px solid var(--border); text-align:${align};">
             ${renderCell(td, idx)}
           </td>`;
       }).join('')
@@ -2067,9 +2854,9 @@ function miniTableFromContainer(
           max-width:${maxWidth}px;
           ${maxHeight ? `max-height:${maxHeight}px;` : ''}
           overflow:auto;
-          border:1px solid #444;
+          border:1px solid var(--border);
           border-radius:6px;
-          background:#111;">
+          background:var(--surface-card);">
       <div style="
            transform:scale(${scale});
            transform-origin: top left;
@@ -2078,9 +2865,9 @@ function miniTableFromContainer(
         <table style="
                border-collapse:collapse;
                font-size:${fontSize}px;
-               color:#ddd;
+               color:var(--text-primary);
                white-space:nowrap;
-               background:#111;">
+               background:var(--surface-card);">
           ${headHTML}
           <tbody>${bodyHTML}</tbody>
         </table>
@@ -2105,20 +2892,24 @@ document.addEventListener('reports:leave', () => {
 
 
 
+// Globale Buttons "Select all / Deselect all". State-basiert (nicht DOM), damit
+// auch Sektionen erfasst werden, deren Inhalt aktuell nicht gerendert ist.
 function setAllRRCheckboxes(checked) {
-  const panel = document.getElementById('panel-reports-risk') || document;
+  const st = loadChartToggleState();
 
-  // ✅ Sections jetzt MIT togglen
-  panel.querySelectorAll('input[data-section-key]').forEach(el => {
-    el.checked = !!checked;
-  });
+  // 1) Alle einzelnen Chart/Table-Overrides entfernen → Charts erben Section.
+  for (const k of Object.keys(st)) {
+    const i = k.lastIndexOf(':');
+    if (i < 0) continue;
+    const suf = k.slice(i + 1);
+    if (suf !== '__section__' && suf !== '__group__') delete st[k];
+  }
 
-  // ✅ Charts + Tables togglen
-  panel.querySelectorAll('input[data-chart-section][data-chart-key]').forEach(el => {
-    el.checked = !!checked;
-  });
+  // 2) Alle bekannten Section- + Gruppen-Toggles setzen.
+  (__riskAllSectionKeys || []).forEach(k => { st[`${k}:__section__`] = !!checked; });
+  (__riskAllGroupKeys   || []).forEach(k => { st[`${k}:__group__`]   = !!checked; });
 
-  saveChartToggleStateFromDOM();
+  try { localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st)); } catch {}
   try { scheduleRiskPreviewRender(); } catch {}
 }
 
@@ -2131,131 +2922,93 @@ export function getActiveRiskSectionsForPdf() {
   const chartState = loadChartToggleState?.() || {};
   const layout     = computeRiskLayout(chartState) || [];
 
-  // Helper: Section-Toggle respektieren (Default: true)
+  // Helper: Section-Toggle respektieren (Opt-in → Default: aus)
   const isSectionOn = (key) => {
     const v = chartState[`${key}:__section__`];
-    return (typeof v === 'boolean') ? v : true;
+    return (typeof v === 'boolean') ? v : false;
   };
 
-  // 1) Standard-Sections wie bisher (nur mit Charts/Tables)
-  //    + SPEZIAL: Breakdown-Legend-Tabellen für das PDF ergänzen
-  const sections = layout
+  // 1) Roh-Sections (Section-Toggle respektieren). NICHT nach Inhalt filtern —
+  //    Traffic wird gleich in market/credit eingefaltet, dann erst gefiltert.
+  //    + SPEZIAL: Breakdown-Legend-Tabellen für das PDF ergänzen.
+  let sections = layout
     .filter(sec => isSectionOn(sec.key)) // ✅ Section Checkbox wirkt im PDF
-    .filter(sec =>
-      (sec.enabledCharts && sec.enabledCharts.length) ||
-      (sec.enabledTables && sec.enabledTables.length)
-    )
     .map(sec => {
-      const enabledCharts = sec.enabledCharts || [];
+      let enabledCharts = sec.enabledCharts || [];
       let enabledTables   = sec.enabledTables ? [...sec.enabledTables] : [];
 
-      // 🔹 SPEZIALFALL: Breakdown – Legend-Tabellen explizit fürs PDF dazunehmen
+      // 🔹 SPEZIALFALL: Breakdown. Der PDF-Pfad kennt nur die Parent-Section
+      //    'breakdown' mit ALLEN Charts. Pro Unter-Section (Issuer/Products/…)
+      //    gaten: ein Chart/Legend kommt nur ins PDF, wenn seine Unter-Section
+      //    angehakt ist. Unbekannte Charts hängen am Parent-Toggle.
       if (sec.key === 'breakdown') {
         const groups = (RISK_CONFIG && RISK_CONFIG.breakdownGroups) || {};
-        const existingIds = new Set(enabledTables.map(t => t.id));
+        const childToGroup = (RISK_CONFIG && RISK_CONFIG.breakdownChildToGroup) || {};
 
-        Object.entries(groups).forEach(([groupName, ids]) => {
-          (ids || []).forEach(chartId => {
+        // chartId → Unter-Section-Key
+        const chartToChild = new Map();
+        Object.entries(childToGroup).forEach(([childKey, groupName]) => {
+          (groups[groupName] || []).forEach(cid => chartToChild.set(cid, childKey));
+        });
+        // Unter-Section an? Explizit gesetzt → das; sonst dem Parent folgen.
+        const childOn = (childKey) => {
+          const v = chartState[`${childKey}:__section__`];
+          return (typeof v === 'boolean') ? v : isSectionOn('breakdown');
+        };
+
+        // 1) Charts nur behalten, wenn ihre Unter-Section an ist.
+        enabledCharts = enabledCharts.filter(ch => {
+          const child = chartToChild.get(ch.id);
+          return child ? childOn(child) : true;
+        });
+
+        // 2) Legend-Tabellen NUR für aktive Unter-Sections ergänzen.
+        const existingIds = new Set(enabledTables.map(t => t.id));
+        Object.entries(childToGroup).forEach(([childKey, groupName]) => {
+          if (!childOn(childKey)) return;
+          (groups[groupName] || []).forEach(chartId => {
             const legendId = `${chartId}-legend`;
             if (existingIds.has(legendId)) return;
-
-            enabledTables.push({
-              id: legendId,
-              label: `${groupName} Breakdown`,
-            });
+            existingIds.add(legendId);
+            enabledTables.push({ id: legendId, label: `${groupName} Breakdown` });
           });
         });
       }
 
-      return {
-        key: sec.key,
-        title: sec.title,
-        enabledCharts,
-        enabledTables,
-        isCreditTraffic: false,
-        isMarketTraffic: false,
-      };
+      return { key: sec.key, title: sec.title, enabledCharts, enabledTables };
     });
 
-  // 2) CREDIT – Traffic-Lights-Section (mit Einzel-Ampel-Toggles)
-  const hasCreditTrafficDom =
-    typeof document !== 'undefined' && (
-      document.getElementById('traffic-credit-cvar') ||
-      document.getElementById('traffic-credit-tsi')  ||
-      document.getElementById('traffic-credit-msd')
-    );
+  // 2) Traffic-Lights in die Overview-Sektionen (market/credit) FALTEN — wie die
+  //    Preview. So liegen sie unter Market/Credit Risk statt als eigene Wurzel.
+  const foldTraffic = (targetKey, charts) => {
+    if (!charts.length) return;
+    let tgt = sections.find(s => s.key === targetKey);
+    if (!tgt) { tgt = { key: targetKey, title: targetKey, enabledCharts: [], enabledTables: [] }; sections.push(tgt); }
+    tgt.enabledCharts = [...(tgt.enabledCharts || []), ...charts];
+  };
 
-  if (hasCreditTrafficDom && isSectionOn('creditTraffic')) {
-    const enabledCharts = [];
-
-    // ✅ Einzel-Checkboxen respektieren (Default true)
-    if (isChartEnabled('creditTraffic', 'traffic-credit-cvar', chartState)) {
-      enabledCharts.push({ id: 'traffic-credit-cvar', label: 'CVaR' });
-    }
-    if (isChartEnabled('creditTraffic', 'traffic-credit-tsi', chartState)) {
-      enabledCharts.push({ id: 'traffic-credit-tsi', label: 'TSI' });
-    }
-    if (isChartEnabled('creditTraffic', 'traffic-credit-msd', chartState)) {
-      enabledCharts.push({ id: 'traffic-credit-msd', label: 'MSD' });
-    }
-
-    // Wenn alle drei abgewählt sind: Section nicht ins PDF aufnehmen
-    if (enabledCharts.length) {
-      const creditTrafficSection = {
-        key: 'creditTraffic',
-        title: 'Credit Risk – Traffic Lights',
-        enabledCharts,
-        enabledTables: [],
-        isCreditTraffic: true,
-        isMarketTraffic: false,
-      };
-
-      const insertIdx = sections.findIndex(sec =>
-        typeof sec.title === 'string' &&
-        /credit/i.test(sec.title) &&
-        /loss/i.test(sec.title)
-      );
-
-      if (insertIdx >= 0) sections.splice(insertIdx, 0, creditTrafficSection);
-      else sections.push(creditTrafficSection);
-    }
+  if (hasCreditTrafficDom() && isSectionOn('creditTraffic')) {
+    const c = [];
+    if (isChartEnabled('creditTraffic', 'traffic-credit-cvar', chartState)) c.push({ id: 'traffic-credit-cvar', label: 'CVaR' });
+    if (isChartEnabled('creditTraffic', 'traffic-credit-tsi',  chartState)) c.push({ id: 'traffic-credit-tsi',  label: 'TSI'  });
+    if (isChartEnabled('creditTraffic', 'traffic-credit-msd',  chartState)) c.push({ id: 'traffic-credit-msd',  label: 'MSD'  });
+    foldTraffic('credit', c);
+  }
+  if (hasMarketTrafficDom() && isSectionOn('marketTraffic')) {
+    const c = [];
+    if (isChartEnabled('marketTraffic', 'traffic-mvar', chartState)) c.push({ id: 'traffic-mvar', label: 'Market VaR/ES' });
+    foldTraffic('market', c);
   }
 
-  // 3) MARKET – Traffic-Light-Section (mit Toggle)
-  const hasMarketTrafficDom =
-    typeof document !== 'undefined' &&
-    document.getElementById('traffic-mvar');
+  // 3) Nur Sektionen mit Inhalt behalten.
+  sections = sections.filter(s => (s.enabledCharts?.length) || (s.enabledTables?.length));
 
-  if (hasMarketTrafficDom && isSectionOn('marketTraffic')) {
-    const enabledCharts = [];
-
-    if (isChartEnabled('marketTraffic', 'traffic-mvar', chartState)) {
-      enabledCharts.push({ id: 'traffic-mvar', label: 'Market VaR/ES' });
-    }
-
-    // Wenn abgewählt: Section nicht ins PDF aufnehmen
-    if (enabledCharts.length) {
-      const marketTrafficSection = {
-        key: 'marketTraffic',
-        title: 'Market Risk – Traffic Light',
-        enabledCharts,
-        enabledTables: [],
-        isCreditTraffic: false,
-        isMarketTraffic: true,
-      };
-
-      const insertIdx = sections.findIndex(sec =>
-        typeof sec.title === 'string' &&
-        /market/i.test(sec.title) &&
-        /profit/i.test(sec.title)
-      );
-
-      if (insertIdx >= 0) sections.splice(insertIdx, 0, marketTrafficSection);
-      else sections.push(marketTrafficSection);
-    }
-  }
-
-  return sections;
+  // 4) GENERISCHE Hierarchie aus dem Trigger-DOM (Tabs/Gruppen/Verschachtelung) —
+  //    IDENTISCH zur Preview. Synthetische Gruppen ohne Inhalt sind reine
+  //    Überschriften (RiskPDF gibt sie nur ins Inhaltsverzeichnis).
+  // Opt-in: Leere synthetische Gruppen (keine eingeschaltete Sektion darunter)
+  // werden von applySectionHierarchy automatisch entfernt → kein stehender Titel.
+  return applySectionHierarchy(sections);
 }
 
 
@@ -2285,6 +3038,9 @@ export function applyRiskPresetState(state = {}, { forceRender = false } = {}) {
       const v = st[`${sec}:__section__`];
       el.checked = (typeof v === 'boolean') ? v : true;
     });
+
+    // Geladener Report: beim Render die Gruppen mit aktivierten Sections aufklappen.
+    __riskExpandCheckedOnce = true;
 
     // 3) Thumbs neu + Preview neu bauen (dein Bugfix)
     try { clearThumbCache(); } catch {}
@@ -2326,15 +3082,19 @@ export function syncRiskPdfStateFromDOM() {
 
 
 export async function handleRefreshThumbnailsClick(e) {
-  const btn = e?.currentTarget || appRoot.querySelector('#refreshThumbnailsBtn')
-;
+  // e.currentTarget ist nach dem (deferred) Event null → robust per ID holen.
+  const btn = e?.currentTarget || document.getElementById('refreshThumbnailsBtn');
   if (!btn) return;
 
-  const original = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Refreshing…';
-
+  // Button-Status (Executing… + Punkt) wird zentral über setGetRiskDataBusy/
+  // setGetRiskDataDone gesteuert (siehe wireRiskPreview), nicht hier.
   try {
+    // ✅ Durchgängig: ALLE Report-Quellen (Lazy-Panels + RISK-Charts) aus dem
+    // Store rendern, damit ihr Inhalt im DOM steht — ohne dass man die Tabs
+    // vorher manuell öffnen muss.
+    syncReportPortfolioSelectionToMain();
+    warmUpReportSources();
+
     // Daten holen (aus State)
     const portMainData =
       (window.appState?.getPortMainData?.() ||
@@ -2364,9 +3124,7 @@ export async function handleRefreshThumbnailsClick(e) {
 
   } catch (err) {
     console.error('[RiskPDF] refresh failed:', err);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = original;
+    try { setGetRiskDataDone(); } catch {} // bei Fehler nicht hängen bleiben
   }
 }
 

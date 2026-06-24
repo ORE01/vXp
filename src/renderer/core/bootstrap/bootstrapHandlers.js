@@ -2,7 +2,7 @@
 
 import { createIssuerProductHandlers } from '../../features/DATA_PROVIDER/issuerProductHandlers.js';
 import { createCustomerHandlers } from '../../features/CUSTOMER/customerHandlers.js';
-import { createDealsPortfolioActions } from '../../features/portfolio/portfolioCreationActions.js';
+import { createTradePortfolioActions } from '../../features/portfolio/createPortfolio/portfolioCreationActions.js';
 import { createRatesHandlers } from '../../features/MARKET_DATA/interestRates/interestRateCurveHandlers.js';
 import { createSwaptionDataHandlers } from '../../features/MARKET_DATA/VOLS/swaptionDataHandlers.js';
 import { createForwardsHandlers } from '../../features/MARKET_DATA/forwards/forwardCurveHandlers.js';
@@ -40,7 +40,7 @@ export function bootstrapHandlers(appState, deps) {
   const issuerProdHandlers = createIssuerProductHandlers({ appState });
   const customerHandlers = createCustomerHandlers({ appState });
 
-  const dealsActions = createDealsPortfolioActions({
+  const dealsActions = createTradePortfolioActions({
     appState,
     api,
     showMessageBox,

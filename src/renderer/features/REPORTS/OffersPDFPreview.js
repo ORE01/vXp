@@ -2,6 +2,8 @@ import { REPORT_DEFAULTS_OFFERS } from './OffersPDF.js';
 import { handleModalAction } from '../../core/ui/modal/modalActions.js';
 import { appState } from '../../../renderer/renderer.js';
 import { drawYieldVsTimeChart, transformTSDataToEUSWFormat, swapPointToDurationAsYearRate } from '../../../renderer/features/ANALYSE_PORTFOLIO/SummaryYield.js';
+// Cross-module DOM access (the OFFERS table host) goes through the capture adapter.
+import { getOffersTableHost, OFFERS_TABLE_CONTAINER_ID } from './captureAdapter.js';
 
 
 
@@ -120,10 +122,10 @@ export function getOffersReportOptions() {
 
 
 // ---------- DOM-Parsing ----------
-export const OFFERS_CONTAINER_ID = 'portDataContainer4';
+export const OFFERS_CONTAINER_ID = OFFERS_TABLE_CONTAINER_ID;
 
 export function parseOffersFromDOM(containerId = OFFERS_CONTAINER_ID) {
-  const host = document.getElementById(containerId);
+  const host = getOffersTableHost(containerId);
   const table = host?.querySelector('table');
   if (!table) return { headers: [], rows: [] };
 
@@ -140,7 +142,7 @@ export function parseOffersFromDOM(containerId = OFFERS_CONTAINER_ID) {
 }
 
 export function rowsAsObjectsFrom(containerId = OFFERS_CONTAINER_ID, maxCols = 80, maxRows = 2000) {
-  const host  = document.getElementById(containerId);
+  const host  = getOffersTableHost(containerId);
   const table = host?.querySelector('table');
   if (!table) return [];
 
@@ -194,8 +196,8 @@ export function populateOffersDropdown(selectId = 'reportsOffersDropdown', conta
 
 const li = (txt) => `<li>${txt}</li>`;
 const kvBox = (label, val) => `
-  <div style="border:1px solid #444;border-radius:6px;padding:8px;background:#111">
-    <div style="font-size:11px;opacity:.7;margin-bottom:4px">${label}</div>
+  <div style="border:1px solid var(--border-subtle);border-radius:6px;padding:8px;background:var(--surface-raised);color:var(--text-primary)">
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${label}</div>
     <div>${val}</div>
   </div>`;
 
@@ -228,6 +230,15 @@ export function renderOffersPreview(
     const data = getOffersReportData();
     if (Array.isArray(data) && data.length) rows = data;
   } catch {}
+  // Approach A: echte Offer-Datenobjekte aus dem State (richtige Keys wie
+  // PROD_ID/ISSUER/PRICE_BUY/ytm) bevorzugen, statt die gerenderte configurable
+  // Tabelle zu scrapen (deren th.textContent enthält Filter-/Sortier-UI).
+  if (!rows.length) {
+    try {
+      const stateRows = appState?.offersReportRows;
+      if (Array.isArray(stateRows) && stateRows.length) rows = stateRows;
+    } catch {}
+  }
   if (!rows.length) rows = rowsAsObjectsFrom(containerId);
 
   // ✅ Selektierte DOM-Zeilen bevorzugen (Checkbox .offer-select ODER Spalte "SELECTED")
@@ -241,7 +252,7 @@ export function renderOffersPreview(
     wrap.innerHTML = `
       <div style="padding:10px">
         ${controlsHTML(prefillHeader)}
-        <div style="opacity:.65;padding:10px;border:1px dashed #444;border-radius:8px;margin-top:10px">
+        <div style="opacity:.65;padding:10px;border:1px dashed var(--border-subtle);border-radius:8px;margin-top:10px">
           Keine Daten gefunden.
         </div>
       </div>`;
@@ -322,15 +333,15 @@ export function renderOffersPreview(
   const signatureHTML = sections.signature ? `
     <div style="margin:12px 0 10px">
       <div style="font-weight:600;margin:0 0 6px">Signature</div>
-      <div style="border:1px dashed rgba(255,255,255,.2);border-radius:6px;padding:8px">
+      <div style="border:1px dashed var(--border-subtle);border-radius:6px;padding:8px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div>
             <div style="margin-bottom:12px;font-weight:600">Freigabe</div>
-            <div style="border-top:1px solid #555;height:1px;margin:12px 0 4px"></div>
+            <div style="border-top:1px solid var(--border);height:1px;margin:12px 0 4px"></div>
             <div style="opacity:.8">Ort, Datum</div>
           </div>
           <div>
-            <div style="border-top:1px solid #555;height:1px;margin:24px 0 4px"></div>
+            <div style="border-top:1px solid var(--border);height:1px;margin:24px 0 4px"></div>
             <div style="opacity:.8">Unterschrift</div>
             <div style="opacity:.8;margin-top:4px">Rektor Dr. Peter Riedler</div>
           </div>
@@ -400,7 +411,7 @@ export function renderOffersPreview(
 //  - Checkbox pro Zeile: <input type="checkbox" class="offer-select">
 //  - ODER Spalte "SELECTED" (1/true/x/yes)
 function selectedOffersFromDOM(containerId = OFFERS_CONTAINER_ID, maxCols = 80) {
-  const host  = document.getElementById(containerId);
+  const host  = getOffersTableHost(containerId);
   const table = host?.querySelector('table');
   if (!table) return [];
 
@@ -567,7 +578,7 @@ export function wireOffersPreview({
   }
 
   // MutationObserver – nur EINMAL und nur auf Daten-Container
-  const host = document.getElementById(containerId);
+  const host = getOffersTableHost(containerId);
   if (host && !__offersMO) {
     __offersMO = new MutationObserver(() => {
       scheduleOffersPreviewRender(containerPreviewId, containerId);
@@ -685,7 +696,7 @@ function handleOffersHeaderEditAction() {
         try { customer.pdf_header = headerVal; } catch {}
         setStatus('✓ Gespeichert'); setBtn('Header speichern');
         if (btn) btn.disabled = false;
-        try { scheduleOffersPreviewRender(PREVIEW_ID, 'portDataContainer4'); } catch {}
+        try { scheduleOffersPreviewRender(PREVIEW_ID, OFFERS_TABLE_CONTAINER_ID); } catch {}
         setTimeout(() => { if (status) status.textContent = ''; }, 1200);
       })
       .catch(err => {

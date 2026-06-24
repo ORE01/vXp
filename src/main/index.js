@@ -169,7 +169,12 @@ registerTableLayoutHandlers({
   // layouts) exist. Idempotent (CREATE TABLE IF NOT EXISTS).
   if (sqliteDb) {
     ensureAppSchema(sqliteDb)
-      .then(() => console.log('[main] App schema ready'))
+      .then(() => {
+        console.log('[main] App schema ready');
+        // Schema (incl. late-created tables/views) is complete -> let the DataPump
+        // re-enumerate so every table is sent through the standard read flow.
+        pump.onSchemaReady();
+      })
       .catch((e) => console.error('[main] Schema initialization failed', e));
   } else {
     console.warn('[main] sqliteDb not available for schema initialization');

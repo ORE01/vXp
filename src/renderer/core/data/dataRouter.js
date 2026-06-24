@@ -21,6 +21,21 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CustomerTableLayoutsData':
       return handlers.handleCustomerTableLayoutsData?.(rows);
 
+    case 'CUSTOMER_PRODUCT_CATEGORY_SETUPData':
+      return handlers.handleCustomerProductCategorySetupData?.(rows);
+
+    case 'CustomerMarketRiskSettingData':
+      return handlers.handleCustomerMarketRiskSettingData?.(rows);
+
+    case 'CustomerMarketRiskThresholdSettingData':
+      return handlers.handleCustomerMarketRiskThresholdSettingData?.(rows);
+
+    case 'CustomerCreditRiskSettingData':
+      return handlers.handleCustomerCreditRiskSettingData?.(rows);
+
+    case 'CustomerCreditRiskThresholdSettingData':
+      return handlers.handleCustomerCreditRiskThresholdSettingData?.(rows);
+
     // MARKET DATA
     case 'RATES_BASEData':
       return handlers.handleRATES_BASEData?.(rows);
@@ -169,7 +184,13 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
 
 
     case 'MVaRInputData':
+      // Feed the Customer Setup interval dropdown (source of truth for intervals),
+      // then keep the existing Market Risk input render.
+      handlers.handleCustomerMarketRiskIntervalOptions?.(rows);
       return handlers.handleMvarInputData?.(data);
+
+    case 'v_MVAR_MODEL_SELECTION_APPData':
+      return handlers.handleMvarModelSelectionAppData?.(rows);
 
     case 'MarketVaRData':
       return handlers.handleAllMVaRData?.(data);

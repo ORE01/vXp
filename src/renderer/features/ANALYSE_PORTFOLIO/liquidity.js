@@ -22,7 +22,22 @@ const $$ = (sel, root = liquRoot) => Array.from(root?.querySelectorAll(sel) || [
  *
  * CLEAN: appState wird per DI Ã¼bergeben (kein import, kein window.appState)
  */
+// Letzte Args + Theme-Listener: bei Theme-Wechsel mit denselben Daten neu rendern
+// (Bar-Farben sind theme-aware aus colors.js).
+let _lastLiquidityArgs = null;
+let _liquidityThemeBound = false;
+
 export function handleLiquidityData(filteredData, { appState } = {}) {
+  _lastLiquidityArgs = { filteredData, appState };
+  if (!_liquidityThemeBound) {
+    _liquidityThemeBound = true;
+    document.addEventListener('theme:changed', () => {
+      if (_lastLiquidityArgs) {
+        handleLiquidityData(_lastLiquidityArgs.filteredData, { appState: _lastLiquidityArgs.appState });
+      }
+    });
+  }
+
   const data = Array.isArray(filteredData) ? filteredData : [];
 
   const liquDataContainer  = $('#liquDataContainer');

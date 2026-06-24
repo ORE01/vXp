@@ -359,6 +359,32 @@ function formatPercent(value, digits = 4) {
   return `${(n * 100).toFixed(digits)}%`;
 }
 
+// Cashflow-Tabellen-Formatter: Datum -> YYYY-MM-DD, sonst "-".
+function fmtCfDate(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  const s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;                 // bereits YYYY-MM-DD
+  const m = s.match(/^(\d{4})(\d{2})(\d{2})$/);                // YYYYMMDD
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  const d = new Date(s);                                       // ISO / parsebar
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${mo}-${da}`;
+  }
+  return s;                                                    // Fallback: roh
+}
+
+// Feste Dezimalstellen, "-" falls nicht numerisch/leer.
+function formatOptionalNumber(value, digits = 6) {
+  // Wichtig: null/undefined/'' VOR Number() abfangen — Number(null) === 0
+  // würde sonst fehlende Werte fälschlich als 0.000000 anzeigen.
+  if (value === null || value === undefined || value === '') return '-';
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(digits) : '-';
+}
+
 function renderCashflowTable(cashflows = []) {
   if (!Array.isArray(cashflows) || cashflows.length === 0) {
     return `
@@ -383,27 +409,25 @@ function renderCashflowTable(cashflows = []) {
               <th>Type</th>
               <th>Start</th>
               <th>End</th>
-              <th>Pay Date</th>
-              <th>Fixing</th>
-              <th>Index</th>
-              <th>Tenor</th>
+              <th>Period</th>
               <th>Rate</th>
-              <th>Amount</th>
+              <th>Coupon CF</th>
+              <th>DF</th>
+              <th>PV</th>
             </tr>
           </thead>
           <tbody>
-            ${cashflows.map(cf => `
+            ${cashflows.map((cf, i) => `
               <tr>
-                <td>${escapeHtml(formatValue(cf.cashflow_no))}</td>
-                <td>${escapeHtml(formatValue(cf.cashflow_type))}</td>
-                <td>${escapeHtml(formatValue(cf.start_date))}</td>
-                <td>${escapeHtml(formatValue(cf.end_date))}</td>
-                <td>${escapeHtml(formatValue(cf.pay_date))}</td>
-                <td>${escapeHtml(formatValue(cf.fixing_date))}</td>
-                <td>${escapeHtml(formatValue(cf.prod_index || cf.ql_index))}</td>
-                <td>${escapeHtml(formatValue(cf.prod_index_tenor || cf.ql_index_tenor))}</td>
-                <td>${escapeHtml(formatPercent(cf.rate, 4))}</td>
-                <td>${escapeHtml(formatNumber(cf.amount, 4))}</td>
+                <td>${escapeHtml(formatValue(cf.cashflow_no ?? i))}</td>
+                <td>${escapeHtml(formatValue(cf.cashflow_type ?? cf.type))}</td>
+                <td>${escapeHtml(fmtCfDate(cf.start_date))}</td>
+                <td>${escapeHtml(fmtCfDate(cf.end_date ?? cf.pay_date))}</td>
+                <td>${escapeHtml(formatOptionalNumber(cf.period, 6))}</td>
+                <td>${escapeHtml(formatOptionalNumber(cf.rate ?? cf.coupon, 6))}</td>
+                <td>${escapeHtml(formatOptionalNumber(cf.coupon_cf ?? cf.amount, 4))}</td>
+                <td>${escapeHtml(formatOptionalNumber(cf.df, 6))}</td>
+                <td>${escapeHtml(formatOptionalNumber(cf.pv, 4))}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -464,15 +488,11 @@ function renderResult(container, payload, prodId) {
         This product was valued as a standalone instrument using the current market snapshot.
       </div>
 
-      <div class="structure-valuation-result-grid">
+      <!-- Reihe 1: Main Valuation -->
+      <div class="structure-valuation-result-grid svr-row--main">
         <div>
           <span>Clean Price</span>
           <strong>${formatNumber(result.clean_price, 6)}</strong>
-        </div>
-
-        <div>
-          <span>Present Value (dirty)</span>
-          <strong>${formatNumber(pvDirty, 6)}</strong>
         </div>
 
         <div class="cs-spread-tile">
@@ -486,6 +506,14 @@ function renderResult(container, payload, prodId) {
         </div>
 
         <div>
+          <span>Status</span>
+          <strong>${escapeHtml(formatValue(result.status || payload?.status || 'ok')).toUpperCase()}</strong>
+        </div>
+      </div>
+
+      <!-- Reihe 2: Sensitivities -->
+      <div class="structure-valuation-result-grid svr-row--3">
+        <div>
           <span>IR PV01 (price bp)</span>
           <strong>${formatNumber(result.pv01, 6)}</strong>
         </div>
@@ -496,8 +524,16 @@ function renderResult(container, payload, prodId) {
         </div>
 
         <div>
-          <span>Vega (price bp)</span>
-          <strong>${formatNumber(result.vega_parallel, 6)}</strong>
+          <span>Vega PV100 (price bp)</span>
+          <strong>${result.vega_parallel == null ? '–' : formatNumber(Number(result.vega_parallel) * 10000, 6)}</strong>
+        </div>
+      </div>
+
+      <!-- Reihe 3: Economics / Meta -->
+      <div class="structure-valuation-result-grid svr-row--3">
+        <div>
+          <span>Present Value (dirty)</span>
+          <strong>${formatNumber(pvDirty, 6)}</strong>
         </div>
 
         <div>
@@ -508,11 +544,6 @@ function renderResult(container, payload, prodId) {
         <div>
           <span>As of Date</span>
           <strong>${escapeHtml(formatValue(result.asof_date))}</strong>
-        </div>
-
-        <div>
-          <span>Status</span>
-          <strong>${escapeHtml(formatValue(result.status || payload?.status || 'ok')).toUpperCase()}</strong>
         </div>
       </div>
 
@@ -710,15 +741,6 @@ console.log('[VALUATION HEADER ROW]', {
         <span class="structure-drawer-prod-id">
           ${escapeHtml(prodId)}
         </span>
-
-        <button
-          id="closeProductValuationDrawer"
-          type="button"
-          class="structure-drawer-close"
-          aria-label="Close drawer"
-        >
-          &times;
-        </button>
       </div>
 
       <div class="structure-valuation-summary">
@@ -865,21 +887,4 @@ console.log('[VALUATION HEADER ROW]', {
     container._productDataRefreshedHandler
   );
 
-  container
-    .querySelector('#closeProductValuationDrawer')
-    ?.addEventListener('click', () => {
-      container.style.display = 'none';
-
-      if (container._productDataRefreshedHandler) {
-        window.removeEventListener(
-          'product-data-refreshed',
-          container._productDataRefreshedHandler
-        );
-        container._productDataRefreshedHandler = null;
-      }
-
-      if (typeof options.onClose === 'function') {
-        options.onClose();
-      }
-    });
 }

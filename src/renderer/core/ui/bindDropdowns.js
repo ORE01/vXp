@@ -1,5 +1,6 @@
 ﻿// FRONT_END/UI/bindDropdowns.js
 import { rerenderHistoricCharts } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
+import { renderMvarProductPLPanel } from '../../features/ANALYSE_PORTFOLIO/marketRisk/mvar/mvarProductPLPanel.js';
 
 const debounce = (fn, ms = 120) => {
   let t;
@@ -19,6 +20,7 @@ function setupDropdown({
   updateMvarDataFunction,
   updateCvarDataFunction,
   updateEADDataFunction,
+  updateMvarProductDataFunction,
   updateLiquidityDataFunction,
   setSelectedPortTableName,
   setSelectedDealsTableName,
@@ -33,6 +35,7 @@ function setupDropdown({
   const updateMvar      = updateMvarDataFunction?.bind(appState);
   const updateCvar      = updateCvarDataFunction?.bind(appState);
   const updateEAD       = updateEADDataFunction?.bind(appState);
+  const updateProduct   = updateMvarProductDataFunction?.bind(appState);
   const updateLiquidity = updateLiquidityDataFunction?.bind(appState);
 
   const scheduleOptionsUpdate = debounceRaf((selectedTableName) => {
@@ -43,6 +46,7 @@ function setupDropdown({
       updateMvarDataFunction: updateMvar,
       updateCvarDataFunction: updateCvar,
       updateEADDataFunction: updateEAD,
+      updateMvarProductDataFunction: updateProduct,
       updateLiquidityDataFunction: updateLiquidity,
       selectedTableName,
       index,

@@ -18,6 +18,12 @@ function focusBreakdownGroup(group) {
       return;
     }
 
+    // "__ALL__" (oder kein Group) -> ALLE Sektionen anzeigen
+    if (group === '__ALL__' || !group) {
+      sec.style.display = '';
+      return;
+    }
+
     // Unterpunkte â†’ nur passende Section zeigen
     if (group && g === group) {
       sec.style.display = '';
@@ -27,7 +33,7 @@ function focusBreakdownGroup(group) {
   });
 
   // Scroll nur bei echten Gruppen
-  if (group && group !== '__NONE__') {
+  if (group && group !== '__NONE__' && group !== '__ALL__') {
     const target = document.querySelector(
       `#pieChartGrid .pie-section[data-breakdown-group="${group}"]`
     );
@@ -81,8 +87,9 @@ const BREAKDOWN_CONFIG = [
 
     // âœ… diese fehlen dir aktuell:
     { key: 'IssuerIsEU',   label: 'EU' },
-    { key: 'IssuerIsEEA',  label: 'EEA' },
-    { key: 'IssuerIsOECD', label: 'OECD' },
+    // EEA + OECD ausgeblendet (nicht geloescht — bei Bedarf wieder einkommentieren):
+    // { key: 'IssuerIsEEA',  label: 'EEA' },
+    // { key: 'IssuerIsOECD', label: 'OECD' },
     { key: 'IssuerIsEuro', label: 'Euro' },
   ],
 },
@@ -92,7 +99,26 @@ const BREAKDOWN_CONFIG = [
 
 
 
+// Letzte Args + Theme-Listener: bei Theme-Wechsel mit denselben Daten neu rendern
+// (Pie-Farben sind theme-aware aus colors.js).
+let _lastBreakdownArgs = null;
+let _breakdownThemeBound = false;
+
 export function handleSummaryNotionalData(filteredData, index, port_name) {
+  _lastBreakdownArgs = { filteredData, index, port_name };
+  if (!_breakdownThemeBound) {
+    _breakdownThemeBound = true;
+    document.addEventListener('theme:changed', () => {
+      if (_lastBreakdownArgs) {
+        handleSummaryNotionalData(
+          _lastBreakdownArgs.filteredData,
+          _lastBreakdownArgs.index,
+          _lastBreakdownArgs.port_name
+        );
+      }
+    });
+  }
+
   const elementId      = `portDataContainer${0}`;
   const aggContainerId = `portAggDataContainer${5}`;
   const pieChartGridId = 'pieChartGrid';
@@ -181,8 +207,8 @@ BREAKDOWN_CONFIG.forEach(g => {
     const canvas = document.createElement('canvas');
     canvas.id = canvasId;
     canvas.className = 'pieChart';
-    canvas.width = 420;
-    canvas.height = 250;
+    canvas.width = 240;
+    canvas.height = 150;
 
     chartBlock.appendChild(chartHeading);
     chartBlock.appendChild(canvas);
@@ -222,25 +248,40 @@ container.appendChild(row);
     notifyRiskPreview('breakdown:init');
   } catch {}
 
-  // ==== Value-Selector (NAV / Notional) nur 1x binden ====
+  // ==== Value-Selector (NAV / Notional) ====
+  // Bei JEDEM Render neu binden, damit der Handler das filteredData GENAU dieses
+  // Renders nutzt (das auch gerade angezeigt wird). Vorher 1x gebunden → er fror
+  // über die Daten des ersten Renders ein (Default-Portfolio).
   const valueSel = document.getElementById('valueSelector');
-  if (valueSel && !valueSel.dataset.bound) {
-    valueSel.addEventListener('change', () => {
+  if (valueSel) {
+    if (valueSel.__breakdownHandler) {
+      valueSel.removeEventListener('change', valueSel.__breakdownHandler);
+    }
+    const handler = () => {
       columnsToChart.forEach(column => drawPieChartByColumn(filteredData, column));
-      try {
-        notifyRiskPreview('breakdown:valueSelector');
-      } catch {}
-    });
-    valueSel.dataset.bound = '1';
+      try { notifyRiskPreview('breakdown:valueSelector'); } catch {}
+    };
+    valueSel.addEventListener('change', handler);
+    valueSel.__breakdownHandler = handler;
   }
 }
 
+
+// Datenfeld pro Breakdown-Spalte (entkoppelt von Canvas-ID/Label).
+// "Product Ratings" soll das EIGENE Produkt-Rating (RATING_PROD) zeigen, NICHT
+// das aufgelöste RATINGres (das bei fehlendem Produkt-Rating aufs Issuer-Rating
+// zurückfällt → sonst tauchen alle Produkte auf).
+const COLUMN_DATA_FIELD = { RATINGres: 'RATING_PROD' };
+// Spalten, bei denen Zeilen OHNE Wert ausgeschlossen werden (statt "Unknown").
+const COLUMN_EXCLUDE_EMPTY = new Set(['RATINGres']); // nur Produkte mit eigenem Rating
 
 function drawPieChartByColumn(filteredData, columnName) {
   const valueTypeElem = document.getElementById('valueSelector');
   const valueType = valueTypeElem ? valueTypeElem.value : 'NAV';
 
-  const { labels: rawLabels, values } = getValuesByColumn(filteredData, columnName, valueType);
+  const dataField = COLUMN_DATA_FIELD[columnName] || columnName;
+  const excludeEmpty = COLUMN_EXCLUDE_EMPTY.has(columnName);
+  const { labels: rawLabels, values } = getValuesByColumn(filteredData, dataField, valueType, excludeEmpty);
   const canvasId = `${columnName.toLowerCase()}PieChart`;
   const legendId = `${canvasId}-legend`;
 
@@ -259,7 +300,7 @@ function drawPieChartByColumn(filteredData, columnName) {
   newCanvas.className = 'pieChart';
   canvasParent.appendChild(newCanvas);
 
-  const ctx = setupHiDPICanvas(newCanvas, 420, 250);
+  const ctx = setupHiDPICanvas(newCanvas, 240, 150, true); // true = an tatsächliche Anzeigegröße anpassen (verhindert Überlappung/Unschärfe)
 
   const colors = rawLabels.map((_, index) => getColorForPieChart(index));
   const total = values.reduce((a, b) => a + b, 0) || 1; // Division durch 0 vermeiden
@@ -317,7 +358,7 @@ function drawPieChartByColumn(filteredData, columnName) {
 
   // Optional: Headerzeile
   const headerRow = document.createElement('tr');
-  ['Farbe', 'Kategorie', valueType, '%'].forEach(text => {
+  ['', 'Category', valueType, '%'].forEach(text => {
     const th = document.createElement('th');
     th.textContent = text;
     headerRow.appendChild(th);
@@ -364,14 +405,16 @@ function drawPieChartByColumn(filteredData, columnName) {
   });
 }
 
-function getValuesByColumn(data, columnName, valueType = 'NAV') {
-  // Hard fail if the column does not exist (prevents silently creating "Unknown" due to typos)
+function getValuesByColumn(data, columnName, valueType = 'NAV', excludeEmpty = false) {
+  // Hard fail if the column does not exist (prevents silently creating "Unknown" due to typos).
+  // Ausnahme: bei excludeEmpty sind fehlende/leere Werte gewollt (→ überspringen).
   const hasColumn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 
   const map = {};
 
   data.forEach(entry => {
     if (!hasColumn(entry, columnName)) {
+      if (excludeEmpty) return; // Feld fehlt → ausschließen statt Hard-Fail
       throw new Error(
         `[getValuesByColumn] Column "${columnName}" not found on entry. ` +
         `Check columnName spelling / mapping. Sample keys: ${Object.keys(entry).slice(0, 20).join(', ')}`
@@ -379,12 +422,12 @@ function getValuesByColumn(data, columnName, valueType = 'NAV') {
     }
 
     const raw = entry[columnName];
+    const isEmpty = raw === undefined || raw === null || String(raw).trim() === '';
+
+    if (excludeEmpty && isEmpty) return; // z. B. Produkte ohne eigenes Rating ausblenden
 
     // Normalize "empty" values to Unknown (ONLY for real categorical columns)
-    const key =
-      raw === undefined || raw === null || raw === ''
-        ? 'Unknown'
-        : String(raw).trim();
+    const key = isEmpty ? 'Unknown' : String(raw).trim();
 
     const value = Number(entry[valueType]) || 0;
     map[key] = (map[key] || 0) + value;

@@ -413,23 +413,23 @@ if (hasPV01Data) {
   setSensitivityKpiVisible('SensTotalPV01', hasVisiblePV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopIRTenor', hasVisiblePV01 ? 1 : 0);
 
-  if (DEBUG_SENS_KPI) {
-    console.log('[SENS KPI] PV01 by CCY updated:', {
-      selectedPort,
-      pv01ByCcy,
-      topIRTenorByCcy,
-      pv01Rows: pv01Rows.length,
-    });
-  }
+  // if (DEBUG_SENS_KPI) {
+  //   console.log('[SENS KPI] PV01 by CCY updated:', {
+  //     selectedPort,
+  //     pv01ByCcy,
+  //     topIRTenorByCcy,
+  //     pv01Rows: pv01Rows.length,
+  //   });
+  // }
 } else {
   clearAndHideSensitivityKpi('SensTotalPV01');
   clearAndHideSensitivityKpi('SensTopIRTenor');
 
-  if (DEBUG_SENS_KPI) {
-    console.log('[SENS KPI] PV01 hidden: no data for selected portfolio', {
-      selectedPort,
-    });
-  }
+  // if (DEBUG_SENS_KPI) {
+  //   console.log('[SENS KPI] PV01 hidden: no data for selected portfolio', {
+  //     selectedPort,
+  //   });
+  // }
 }
 
 // -------------------------------
@@ -465,24 +465,24 @@ if (hasCPV01Data) {
   setSensitivityKpiVisible('SensTotalCPV01', hasVisibleCPV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopCreditBucket', hasVisibleCPV01 ? 1 : 0);
 
-  if (DEBUG_SENS_KPI) {
-    console.log('[SENS KPI] CPV01 by CCY updated:', {
-      selectedPort,
-      cpv01ByCcy,
-      topCreditBucketByCcy,
-      cpv01RowsFromRiskStore: cpv01RowsFromRiskStore.length,
-      cpv01SourceRows: safeCpv01SourceRows.length,
-    });
-  }
+  // if (DEBUG_SENS_KPI) {
+  //   console.log('[SENS KPI] CPV01 by CCY updated:', {
+  //     selectedPort,
+  //     cpv01ByCcy,
+  //     topCreditBucketByCcy,
+  //     cpv01RowsFromRiskStore: cpv01RowsFromRiskStore.length,
+  //     cpv01SourceRows: safeCpv01SourceRows.length,
+  //   });
+  // }
 } else {
   clearAndHideSensitivityKpi('SensTotalCPV01');
   clearAndHideSensitivityKpi('SensTopCreditBucket');
 
-  if (DEBUG_SENS_KPI) {
-    console.log('[SENS KPI] CPV01 hidden: no data for selected portfolio', {
-      selectedPort,
-    });
-  }
+  // if (DEBUG_SENS_KPI) {
+  //   console.log('[SENS KPI] CPV01 hidden: no data for selected portfolio', {
+  //     selectedPort,
+  //   });
+  // }
 }
 
   // -------------------------------
@@ -508,14 +508,14 @@ if (hasCPV01Data) {
       Math.abs(Number(totalVega)) > 1e-12
     );
 
-    if (DEBUG_SENS_KPI) {
-      console.log('[SENS KPI] VEGA updated:', {
-        selectedPort,
-        totalVega,
-        visible: isMeaningfulSensitivityValue(totalVega),
-        vegaRows: vegaRowsFromRiskStore.length,
-      });
-    }
+    // if (DEBUG_SENS_KPI) {
+    //   console.log('[SENS KPI] VEGA updated:', {
+    //     selectedPort,
+    //     totalVega,
+    //     visible: isMeaningfulSensitivityValue(totalVega),
+    //     vegaRows: vegaRowsFromRiskStore.length,
+    //   });
+    // }
   } else {
     clearAndHideSensitivityKpi('SensTotalVega');
 
@@ -524,12 +524,12 @@ if (hasCPV01Data) {
       false
     );
 
-    if (DEBUG_SENS_KPI) {
-      console.log('[SENS KPI] VEGA hidden: no data for selected portfolio', {
-        selectedPort,
-        vegaRows: vegaRowsFromRiskStore.length,
-        vegaCalcData,
-      });
-    }
+    // if (DEBUG_SENS_KPI) {
+    //   console.log('[SENS KPI] VEGA hidden: no data for selected portfolio', {
+    //     selectedPort,
+    //     vegaRows: vegaRowsFromRiskStore.length,
+    //     vegaCalcData,
+    //   });
+    // }
   }
 }

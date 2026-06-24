@@ -152,6 +152,12 @@ export function createPythonExecutionReceivers(ctx) {
 
     const btn = getFairValueButton(data);
 
+    // A2: Wurde der Calc aus dem OFFERS-Panel ausgelöst ("Calibrate Offers" =
+    // fairValueButton2)? Dann bleibt das Ergebnis in OFFERS — unabhängig davon,
+    // ob das gewählte Portfolio ein "OFFERS_"-Namenspräfix hat. (btn.id bleibt
+    // stabil, auch nachdem handleProjectResponse den Button wieder aktiviert.)
+    const triggeredFromOffers = btn?.id === 'fairValueButton2';
+
     if (btn) {
       handleProjectResponse(btn, data.projectName, data);
     }
@@ -177,7 +183,7 @@ export function createPythonExecutionReceivers(ctx) {
       return;
     }
 
-    const isOffer = /^OFFERS?_/i.test(String(port_name || ''));
+    const isOffer = triggeredFromOffers || /^OFFERS?_/i.test(String(port_name || ''));
 
     console.log('[PY RECEIVER] py-fairValue complete -> refresh start', {
       projectName: data.projectName,

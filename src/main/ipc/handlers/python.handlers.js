@@ -165,7 +165,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
   // ===================== MVaR =====================
   ipcMain.on('start-py-MVaR', async (event, args) => {
-    const { tableName, selectedInterval } = args || {};
+    const { tableName, selectedInterval, var_days, confidence } = args || {};
 
     const tablesToRefresh = [
       'MarketVaR',
@@ -194,6 +194,15 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
 
     const pythonArgs = ['--table', tableName, '--intervalName', selectedInterval];
+
+    // Customer risk-calc settings (VaR horizon days + confidence). Forwarded so the
+    // MVaR run uses them as horizon/alpha instead of MVaRInput legacy values.
+    if (var_days !== undefined && var_days !== null && var_days !== '') {
+      pythonArgs.push('--varDays', String(var_days));
+    }
+    if (confidence !== undefined && confidence !== null && confidence !== '') {
+      pythonArgs.push('--confidence', String(confidence));
+    }
 
     try {
       await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', pythonArgs);

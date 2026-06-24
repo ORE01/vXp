@@ -15,7 +15,8 @@
  *   openFillTradeDetailsDrawer({ appState, api, portName });
  */
 
-import { convertDateToISO } from '../../utils/tableCellFormats.js';
+import { convertDateToISO } from '../../../utils/tableCellFormats.js';
+import { showMessageBox } from '../../../core/ui/dialogs/confirm.js';
 
 const DRAWER_ID = 'fillTradeDetailsDrawer';
 
@@ -198,7 +199,9 @@ export function openFillTradeDetailsDrawer({ appState, api, portName } = {}) {
   const port = String(portName ?? '').trim();
 
   if (!port || port === '__NONE__' || port === '__ALL__' || port === 'Select a table') {
-    alert('Please select or create a specific portfolio first.');
+    const msg = 'Please select or create a specific portfolio first.';
+    if (typeof showMessageBox === 'function') showMessageBox(msg);
+    else console.warn('[FillTradeDetailsDrawer]', msg);
     return;
   }
 

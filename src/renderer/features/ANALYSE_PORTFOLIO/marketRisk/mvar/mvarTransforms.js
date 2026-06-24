@@ -124,33 +124,33 @@ export function lowerTailVaR(values, confidence, horizonDays = 1, debugLabel = '
   const varAbs = var1d * scale;
   const esAbs = es1d * scale;
 
-  console.log('[MVaR lowerTailVaR DEBUG]', {
-    debugLabel,
+  // console.log('[MVaR lowerTailVaR DEBUG]', {
+  //   debugLabel,
 
-    rawRows: rawValues.length,
-    validObs: totalObs,
+  //   rawRows: rawValues.length,
+  //   validObs: totalObs,
 
-    confidenceInput: confidence,
-    confidenceUsed: safeConfidence,
-    tailProbability,
+  //   confidenceInput: confidence,
+  //   confidenceUsed: safeConfidence,
+  //   tailProbability,
 
-    horizonDaysInput: horizonDays,
-    horizonDaysUsed: safeHorizonDays,
-    scale,
+  //   horizonDaysInput: horizonDays,
+  //   horizonDaysUsed: safeHorizonDays,
+  //   scale,
 
-    tailCount,
-    varIndex,
+  //   tailCount,
+  //   varIndex,
 
-    worstValue: clean[0],
-    var1d,
-    es1d,
+  //   worstValue: clean[0],
+  //   var1d,
+  //   es1d,
 
-    varScaled: varAbs,
-    esScaled: esAbs,
+  //   varScaled: varAbs,
+  //   esScaled: esAbs,
 
-    first20SortedLosses: clean.slice(0, 20),
-    tailValuesUsedForES: tail,
-  });
+  //   first20SortedLosses: clean.slice(0, 20),
+  //   tailValuesUsedForES: tail,
+  // });
 
   return {
     varAbs,
@@ -230,28 +230,28 @@ export function buildRiskTypeRows(rows, confidence, denominator, horizonDays = 1
     valuesByRiskType.get(riskType).push(value);
   }
 
-  console.log('[MVaR buildRiskTypeRows DEBUG] input/distribution', {
-    inputRows: safeRows.length,
-    confidence,
-    horizonDays,
-    denominator,
+  // console.log('[MVaR buildRiskTypeRows DEBUG] input/distribution', {
+  //   inputRows: safeRows.length,
+  //   confidence,
+  //   horizonDays,
+  //   denominator,
 
-    totalDates: totalByDate.size,
-    riskTypeDateKeys: riskTypeByKey.size,
+  //   totalDates: totalByDate.size,
+  //   riskTypeDateKeys: riskTypeByKey.size,
 
-    riskTypes: Array.from(valuesByRiskType.keys()),
+  //   riskTypes: Array.from(valuesByRiskType.keys()),
 
-    obsByRiskType: Array.from(valuesByRiskType.entries()).map(([riskType, values]) => ({
-      riskType,
-      valuesCount: values.length,
-      min: values.length ? Math.min(...values) : null,
-      max: values.length ? Math.max(...values) : null,
-      first10Sorted: values
-        .slice()
-        .sort((a, b) => a - b)
-        .slice(0, 10),
-    })),
-  });
+  //   obsByRiskType: Array.from(valuesByRiskType.entries()).map(([riskType, values]) => ({
+  //     riskType,
+  //     valuesCount: values.length,
+  //     min: values.length ? Math.min(...values) : null,
+  //     max: values.length ? Math.max(...values) : null,
+  //     first10Sorted: values
+  //       .slice()
+  //       .sort((a, b) => a - b)
+  //       .slice(0, 10),
+  //   })),
+  // });
 
   return Array.from(valuesByRiskType.entries())
     .map(([riskType, values]) => {
@@ -280,10 +280,10 @@ export function buildRiskTypeRows(rows, confidence, denominator, horizonDays = 1
         scale: stats.scale,
       };
 
-      console.log('[MVaR buildRiskTypeRows RESULT]', {
-        riskType,
-        result,
-      });
+      // console.log('[MVaR buildRiskTypeRows RESULT]', {
+      //   riskType,
+      //   result,
+      // });
 
       return result;
     })
@@ -315,26 +315,26 @@ export function buildFactorRows(rows, confidence, denominator, horizonDays = 1) 
     valuesByFactor.get(factorId).push(value);
   }
 
-  console.log('[MVaR buildFactorRows DEBUG] input/distribution', {
-    inputRows: safeRows.length,
-    confidence,
-    horizonDays,
-    denominator,
+  // console.log('[MVaR buildFactorRows DEBUG] input/distribution', {
+  //   inputRows: safeRows.length,
+  //   confidence,
+  //   horizonDays,
+  //   denominator,
 
-    factorDateKeys: factorByKey.size,
-    factors: valuesByFactor.size,
+  //   factorDateKeys: factorByKey.size,
+  //   factors: valuesByFactor.size,
 
-    obsByFactor: Array.from(valuesByFactor.entries()).map(([factorId, values]) => ({
-      factorId,
-      valuesCount: values.length,
-      min: values.length ? Math.min(...values) : null,
-      max: values.length ? Math.max(...values) : null,
-      first10Sorted: values
-        .slice()
-        .sort((a, b) => a - b)
-        .slice(0, 10),
-    })),
-  });
+  //   obsByFactor: Array.from(valuesByFactor.entries()).map(([factorId, values]) => ({
+  //     factorId,
+  //     valuesCount: values.length,
+  //     min: values.length ? Math.min(...values) : null,
+  //     max: values.length ? Math.max(...values) : null,
+  //     first10Sorted: values
+  //       .slice()
+  //       .sort((a, b) => a - b)
+  //       .slice(0, 10),
+  //   })),
+  // });
 
   return Array.from(valuesByFactor.entries())
     .map(([factorId, values]) => {
@@ -370,11 +370,11 @@ export function buildFactorRows(rows, confidence, denominator, horizonDays = 1) 
         scale: stats.scale,
       };
 
-      console.log('[MVaR buildFactorRows RESULT]', {
-        factorId,
-        riskType: meta.risk_type,
-        result,
-      });
+      // console.log('[MVaR buildFactorRows RESULT]', {
+      //   factorId,
+      //   riskType: meta.risk_type,
+      //   result,
+      // });
 
       return result;
     })

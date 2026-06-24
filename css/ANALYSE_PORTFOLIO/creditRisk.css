@@ -213,6 +213,29 @@
   width:26px;
   height:26px;
 }
+
+/* Credit Risk: CVaR / TSI / MSD Kennzahlen-Tabellen als gleich große Kacheln
+   nebeneinander – alle so breit wie die erste (CVaR). */
+#panel-credit .cvar-pair{
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+#panel-credit .cvar-col{
+  flex: 0 0 240px;
+  width: 240px;
+  max-width: 240px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+#panel-credit .cvar-col .data-container{
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1 1 auto;            /* Karten gleich hoch */
+}
+#panel-credit .cvar-col table.CVaRTable{
+  width: 100%;
+}
 @media (max-width:900px){
   .cvar-pair{
     gap:12px;
@@ -313,10 +336,10 @@
    Credit: CVaR_allRelativeContainer0 – Spalten schmäler, gleiche Schrift
    =========================== */
 
-/* Tabelle in diesem Container soll NICHT auf 100% Breite gezogen werden */
+/* Tabelle füllt ihre Kachel (gleich groß wie TSI/MSD). */
 #panel-credit #CVaR_allRelativeContainer0 table{
-  width: auto;
-  table-layout: fixed;
+  width: 100%;
+  table-layout: auto;
   border-collapse: collapse;
 }
 

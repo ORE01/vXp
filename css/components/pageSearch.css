@@ -3,6 +3,13 @@
   align-items: center;
   gap: 6px;
 
+  /* Schwebende Suchbox (in den <body> injiziert): aus dem Fluss nehmen, sonst
+     addiert sie ihre Höhe zu #app-root und erzeugt einen äußeren Scrollbar. */
+  position: fixed;
+  top: 110px;          /* direkt unter der fixen Topbar */
+  left: 0;
+  z-index: 9999;
+
   width: 210px;
   max-width: 210px;
 

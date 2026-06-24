@@ -15,8 +15,10 @@ let LGDChart = null;
 let filteredEADMainData = [];
 
 
-export function handleEADData(receivedData) {
-  const port_name = appState.getSelectedPortTableName(); 
+export function handleEADData(receivedData, index = 0, port_nameArg) {
+  const port_name = String(
+    port_nameArg ?? appState.getSelectedPortTableName?.() ?? ''
+  ).trim();
 
   // âœ… If no portfolio selected: do nothing (no DOM, no chart, no warnings)
   if (!port_name) return;
@@ -38,8 +40,10 @@ export function handleEADData(receivedData) {
   }
 
   // Filter: current portfolio + PD-Flag RATING
-  const filtered = receivedData.filter(
-    row => row && row.port_name === port_name && row.pd_flag === 'RATING'
+  const filtered = receivedData.filter(row =>
+    row &&
+    String(row.port_name ?? '').trim() === port_name &&
+    String(row.pd_flag ?? '').trim().toUpperCase() === 'RATING'
   );
 
   if (filtered.length === 0) {
@@ -99,24 +103,8 @@ export function renderLGDChart() {
     return;
   }
 
-  // Labels = Issuer
-  const labels = filteredEADMainData.map(row => row.ISSUER);
-
-  // EAD (NOTIONAL) â†’ Zahl
-  const EADValues = filteredEADMainData.map(row => {
-    const raw = (row.NOTIONAL || '').toString().replace(/\s/g, '');
-    const v = parseFloat(raw);
-    return isNaN(v) ? 0 : v;
-  });
-
-  // LGD â†’ Zahl
-  const LGDValues = filteredEADMainData.map(row => {
-    const raw = (row.LGD || '').toString().replace(/\s/g, '');
-    const v = parseFloat(raw);
-    return isNaN(v) ? 0 : v;
-  });
-
-  // alten Chart zerstÃ¶ren
+  // Alten Chart VOR dem Resize zerstören.
+  // Wichtig beim Wechsel von wenigen -> vielen Einträgen.
   if (LGDChart) {
     try {
       LGDChart.destroy();
@@ -126,6 +114,64 @@ export function renderLGDChart() {
     LGDChart = null;
   }
 
+  const labels = filteredEADMainData.map(row => String(row.ISSUER ?? '').trim());
+  const rowCount = labels.length;
+
+  /*
+    Ziel:
+    - wenige Emittenten: kompakt
+    - viele Emittenten: wächst nach unten
+    - Balkendicke bleibt stabil
+  */
+  const minChartHeight = 180;
+  const rowSlotHeight = 24;
+  const chartPadding = 90;
+  const dynamicHeight = Math.max(
+    minChartHeight,
+    rowCount * rowSlotHeight + chartPadding
+  );
+
+  // Canvas hart resetten, damit kein altes Chart.js-Layout hängen bleibt
+  canvas.removeAttribute('height');
+  canvas.style.height = '';
+  canvas.style.maxHeight = '';
+  canvas.style.minHeight = '';
+
+  if (canvas.parentElement) {
+    canvas.parentElement.style.height = '';
+    canvas.parentElement.style.maxHeight = '';
+    canvas.parentElement.style.minHeight = '';
+    canvas.parentElement.style.overflow = 'visible';
+  }
+
+  // Neue Höhe setzen
+  canvas.height = dynamicHeight;
+  canvas.style.height = `${dynamicHeight}px`;
+  canvas.style.display = 'block';
+
+  if (canvas.parentElement) {
+    canvas.parentElement.style.height = `${dynamicHeight}px`;
+    canvas.parentElement.style.minHeight = `${dynamicHeight}px`;
+  }
+
+  const EADValues = filteredEADMainData.map(row => {
+    const raw = (row.NOTIONAL || '').toString().replace(/\s/g, '');
+    const v = parseFloat(raw);
+    return Number.isFinite(v) ? v : 0;
+  });
+
+  const LGDValues = filteredEADMainData.map(row => {
+    const raw = (row.LGD || '').toString().replace(/\s/g, '');
+    const v = parseFloat(raw);
+    return Number.isFinite(v) ? v : 0;
+  });
+
+  const commonBarOptions = {
+    maxBarThickness: 12,
+    categoryPercentage: 0.65,
+    barPercentage: 0.75,
+  };
+
   const datasets = [
     {
       label: 'EAD',
@@ -133,6 +179,7 @@ export function renderLGDChart() {
       backgroundColor: 'rgba(70, 192, 230, 0.7)',
       borderColor: 'rgba(70, 192, 230, 0.7)',
       borderWidth: 1,
+      ...commonBarOptions,
     },
     {
       label: 'LGD',
@@ -140,59 +187,27 @@ export function renderLGDChart() {
       backgroundColor: 'rgba(255, 0, 0, 0.7)',
       borderColor: 'rgba(255, 0, 0, 1)',
       borderWidth: 1,
+      ...commonBarOptions,
     },
   ];
 
-  LGDChart = createBarChart(
-    { labels, datasets },
-    canvasId,
-    'bar',
-    'y'
-  );
+  // Einen Frame warten, damit Browser die neue Canvas-Höhe wirklich übernimmt.
+  requestAnimationFrame(() => {
+    LGDChart = createBarChart(
+      { labels, datasets },
+      canvasId,
+      'bar',
+      'y'
+    );
+
+    try {
+      LGDChart?.resize?.();
+      LGDChart?.update?.();
+    } catch {}
+  });
 }
 
-// export function handleCVaRData(receivedData, index) {
-//   const port_name = appState.getSelectedPortTableName();
 
-//   // âœ… If no portfolio selected: do nothing (no state write, no DOM changes)
-//   if (!port_name) return;
-
-//   const filteredByPort = Array.isArray(receivedData)
-//     ? receivedData.filter(item => item && item.port_name === port_name)
-//     : [];
-
-//   appState.setCvarData(filteredByPort);
-
-//   const containerMapping = {
-//     rating: 'CVaR_ratingDataContainer',
-//     market: 'CVaR_marketDataContainer',
-//     norm: 'CVaR_normDataContainer',
-//   };
-
-//   const combinedRelData = {};
-
-//   Object.keys(containerMapping).forEach(pd_flag => {
-//     const filteredData = filteredByPort.filter(
-//       item => item.pd_flag && item.pd_flag.toLowerCase() === pd_flag
-//     );
-
-//     const containerId = containerMapping[pd_flag];
-//     const container = document.getElementById(containerId);
-
-//     if (!container) return;
-
-//     if (filteredData.length > 0) {
-//       populateCVaRTable(container, filteredData, port_name);
-//       combinedRelData[pd_flag] = filteredData;
-//     } else {
-//       // âœ… keep UI quiet; just clear (no "No data available" noise during normal startup)
-//       container.innerHTML = '';
-//     }
-//   });
-
-//   // Combined overview (VaR_rel)
-//   renderCombinedCVaRRelTable(combinedRelData, index);
-// }
 export function handleCVaRData(receivedData, index, port_nameArg) {
   const safeIndex = Number.isFinite(index) ? index : 0;
 
@@ -208,7 +223,10 @@ export function handleCVaRData(receivedData, index, port_nameArg) {
   if (current && current !== port_name) return;
 
   const filteredByPort = Array.isArray(receivedData)
-    ? receivedData.filter(item => item && String(item.port_name) === port_name)
+    ? receivedData.filter(item =>
+        item &&
+        String(item.port_name ?? '').trim() === port_name
+      )
     : [];
 
   appState.setCvarData?.(filteredByPort);
@@ -278,7 +296,178 @@ function formatPercentage(value) {
   return (Number(value) * 100).toFixed(2) + '%';
 }
 
+// Cached inputs of the last credit-risk traffic-light render, so the ampel can be
+// re-computed when the customer thresholds change (without new CVaR data).
+let __lastCvarAmpelData = null;
+let __lastCvarAmpelIndex = null;
+
+// Re-render the credit-risk traffic lights from the last CVaR data using the
+// CURRENT customer thresholds. No-op if nothing was rendered yet / panel hidden.
+export function refreshCreditRiskTrafficLights() {
+  if (__lastCvarAmpelData == null) return;
+  renderCombinedCVaRRelTable(__lastCvarAmpelData, __lastCvarAmpelIndex);
+}
+
+// Core: append a small coloured status dot AFTER the value cell of a table row.
+// Same colours/look as Market Risk. Removes any previous dot first.
+function appendCreditStatusDot(row, state) {
+  const valueCell = row && row.cells ? row.cells[1] : null;
+  if (!valueCell) return;
+
+  const existingDot = valueCell.querySelector('.credit-status-dot');
+  if (existingDot) existingDot.remove();
+
+  const colorMap = {
+    green: 'var(--accent)',
+    yellow: 'yellow',
+    red: 'red',
+  };
+  const color = colorMap[state] || null;
+  if (!color) return;
+
+  const dot = document.createElement('span');
+  dot.className = 'credit-status-dot';
+  dot.style.display = 'inline-block';
+  dot.style.width = '10px';
+  dot.style.height = '10px';
+  dot.style.borderRadius = '50%';
+  dot.style.backgroundColor = color;
+  dot.style.marginLeft = '8px';
+  dot.style.verticalAlign = 'middle';
+
+  valueCell.appendChild(dot);
+}
+
+// CVaR: dot on the matching row of the existing VaR table (data-metric = pd_flag).
+function applyCreditDotToTable(index, state, metric) {
+  const container = document.getElementById(`CVaR_allRelativeContainer${index}`);
+  if (!container) return;
+
+  const row = container.querySelector(`tr[data-metric="${metric}"]`);
+  appendCreditStatusDot(row, state);
+}
+
+// Extract the rating-row values used for TSI: ES_rel, VaR_rel and TSI = ES - VaR.
+// Mirrors the field handling in trafficLightStateForTsi.
+function getTsiRatingValues(allFilteredDataByPdFlag) {
+  const ratingArr = allFilteredDataByPdFlag && allFilteredDataByPdFlag['rating'];
+  if (!Array.isArray(ratingArr) || !ratingArr.length) return null;
+
+  const row = ratingArr[0];
+  if (!row || typeof row !== 'object') return null;
+
+  const esKey = ['ES_rel', 'es_rel'].find(k => k in row);
+  const varKey = ['VaR_rel', 'var_rel'].find(k => k in row);
+  if (!esKey || !varKey) return null;
+
+  const esVal = Number(row[esKey]);
+  const varVal = Number(row[varKey]);
+  if (!Number.isFinite(esVal) || !Number.isFinite(varVal)) return null;
+
+  return { esVal, varVal, tsiDiff: esVal - varVal };
+}
+
+// Build the TSI table (ES / VaR / TSI stacked) and put the traffic-light dot on the
+// TSI row. Unlike CVaR, TSI has no pre-existing table, so we generate it here first.
+function renderTsiTable(allFilteredDataByPdFlag, index, state) {
+  const container = document.getElementById(`creditTsiTableContainer${index}`);
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const vals = getTsiRatingValues(allFilteredDataByPdFlag);
+  if (!vals) return;
+
+  const table = document.createElement('table');
+  table.classList.add('CVaRTable');
+
+  const headerRow = table.insertRow();
+  ['label', 'value'].forEach(text => {
+    headerRow.insertCell().textContent = text;
+  });
+
+  const tsiRows = [
+    { metric: 'es', label: 'ES', value: formatPercentage(vals.esVal) },
+    { metric: 'var', label: 'VaR', value: formatPercentage(vals.varVal) },
+    { metric: 'tsi', label: 'TSI', value: formatPercentage(vals.tsiDiff) },
+  ];
+
+  tsiRows.forEach(({ metric, label, value }) => {
+    const r = table.insertRow();
+    r.dataset.metric = metric;
+    r.insertCell(0).textContent = label;
+    r.insertCell(1).textContent = value;
+  });
+
+  container.appendChild(table);
+
+  // Dot only on the TSI row.
+  const tsiRow = container.querySelector('tr[data-metric="tsi"]');
+  appendCreditStatusDot(tsiRow, state);
+}
+
+// Extract the ES values used for MSD: Historic ES (rating), Adjusted ES (norm) and
+// MSD = Adjusted ES - Historic ES. Mirrors the field handling in trafficLightStateForMsd.
+function getMsdValues(allFilteredDataByPdFlag) {
+  const ratingArr = allFilteredDataByPdFlag && allFilteredDataByPdFlag['rating'];
+  const normArr   = allFilteredDataByPdFlag && allFilteredDataByPdFlag['norm'];
+  if (!Array.isArray(ratingArr) || !ratingArr.length) return null;
+  if (!Array.isArray(normArr)   || !normArr.length)   return null;
+
+  const ratingRow = ratingArr[0];
+  const normRow   = normArr[0];
+  if (!ratingRow || !normRow) return null;
+  if (!('ES_rel' in ratingRow) || !('ES_rel' in normRow)) return null;
+
+  const esRating = Number(ratingRow.ES_rel); // Historic ES
+  const esNorm   = Number(normRow.ES_rel);   // Adjusted ES
+  if (!Number.isFinite(esRating) || !Number.isFinite(esNorm)) return null;
+
+  return { esRating, esNorm, msdDiff: esNorm - esRating };
+}
+
+// Build the MSD table (Adjusted ES / Historic ES / MSD) and put the dot on the MSD row.
+function renderMsdTable(allFilteredDataByPdFlag, index, state) {
+  const container = document.getElementById(`creditMsdTableContainer${index}`);
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const vals = getMsdValues(allFilteredDataByPdFlag);
+  if (!vals) return;
+
+  const table = document.createElement('table');
+  table.classList.add('CVaRTable');
+
+  const headerRow = table.insertRow();
+  ['label', 'value'].forEach(text => {
+    headerRow.insertCell().textContent = text;
+  });
+
+  const msdRows = [
+    { metric: 'adjEs',  label: 'Adjusted ES', value: formatPercentage(vals.esNorm) },
+    { metric: 'histEs', label: 'Historic ES', value: formatPercentage(vals.esRating) },
+    { metric: 'msd',    label: 'MSD',         value: formatPercentage(vals.msdDiff) },
+  ];
+
+  msdRows.forEach(({ metric, label, value }) => {
+    const r = table.insertRow();
+    r.dataset.metric = metric;
+    r.insertCell(0).textContent = label;
+    r.insertCell(1).textContent = value;
+  });
+
+  container.appendChild(table);
+
+  // Dot only on the MSD row.
+  const msdRow = container.querySelector('tr[data-metric="msd"]');
+  appendCreditStatusDot(msdRow, state);
+}
+
 function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
+  __lastCvarAmpelData = allFilteredDataByPdFlag;
+  __lastCvarAmpelIndex = index;
+
   const containerId = `CVaR_allRelativeContainer${index}`;
   const container   = document.getElementById(containerId);
   if (!container) return;
@@ -341,6 +530,9 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
         : formatPercentage(rawVal);
 
     const r = table.insertRow();
+    // Tag the row with its pd_flag so the matching traffic-light state can place a
+    // coloured status dot here (rating = Historic VaR -> CVaR ampel).
+    r.dataset.metric = pd_flag;
     r.insertCell(0).textContent = label;
     r.insertCell(1).textContent = value;
   });
@@ -349,12 +541,24 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
 
 
 
+  // Credit-risk thresholds now come from the customer store
+  // (CustomerCreditRiskThresholdSetting), not the legacy CreditVaRInputThreshold.
+  console.log('[CREDIT RISK SETTING THRESHOLDS USED]', {
+    source: 'CustomerCreditRiskThresholdSetting/appState',
+    CVAR: appState.getCustomerCreditRiskThreshold?.('CVAR'),
+    TSI: appState.getCustomerCreditRiskThreshold?.('TSI'),
+    MSD: appState.getCustomerCreditRiskThreshold?.('MSD'),
+  });
+
   // CVaR
   const stateCvar = trafficLightStateForCvar(allFilteredDataByPdFlag, 'Historic');
   if (stateCvar) {
     const el = document.getElementById('traffic-credit-cvar');
     if (el) el.dataset.status = stateCvar;
     updateTrafficLight('#traffic-credit-cvar', stateCvar);
+    // Same as Market Risk: show the CVaR state as a coloured dot after the value in
+    // the FIRST table row (Historic VaR / pd_flag 'rating').
+    applyCreditDotToTable(index, stateCvar, 'rating');
   }
 
   // MSD
@@ -364,6 +568,8 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
     if (el) el.dataset.status = stateMsd;
     updateTrafficLight('#traffic-credit-msd', stateMsd);
   }
+  // Generate the MSD table (Adjusted ES / Historic ES / MSD) and put the dot on MSD.
+  renderMsdTable(allFilteredDataByPdFlag, index, stateMsd);
 
   // TSI
   const stateTsi = trafficLightStateForTsi(allFilteredDataByPdFlag, allowedPdFlags);
@@ -372,6 +578,8 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
     if (el) el.dataset.status = stateTsi;
     updateTrafficLight('#traffic-credit-tsi', stateTsi);
   }
+  // Generate the TSI table (ES / VaR / TSI) and put the dot on the TSI row.
+  renderTsiTable(allFilteredDataByPdFlag, index, stateTsi);
 }
 
 
@@ -383,8 +591,8 @@ function trafficLightStateForCvar(allFilteredDataByPdFlag, flag) {
   }
 
   // 1) Thresholds aus appState holen (kann Array oder Objekt sein)
-  const thrRaw = appState.getCvarInputThreshold
-    ? appState.getCvarInputThreshold('CVaR')
+  const thrRaw = appState.getCustomerCreditRiskThreshold
+    ? appState.getCustomerCreditRiskThreshold('CVAR')
     : null;
 
   //console.log('getCvarInputThreshold("CVaR") â†’', thrRaw);
@@ -468,11 +676,14 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
   }
 
   // 1) Thresholds aus appState holen (kann Array oder Objekt sein)
-  const thrRaw = appState.getCvarInputThreshold
-    ? appState.getCvarInputThreshold('MSD')
+  const thrRaw = appState.getCustomerCreditRiskThreshold
+    ? appState.getCustomerCreditRiskThreshold('MSD')
     : null;
 
-  //console.log('getCvarInputThreshold("MSD") â†’', thrRaw);
+  console.warn('[MSD THRESHOLD USED IN TRAFFIC LIGHT]', {
+    threshold: appState.getCustomerCreditRiskThreshold?.('MSD'),
+    red: appState.getCustomerCreditRiskThreshold?.('MSD')?.red_threshold,
+  });
 
   if (!thrRaw) {
     console.warn('âš ï¸ MSD-Thresholds: getCvarInputThreshold gibt null/undefined zurÃ¼ck');
@@ -580,8 +791,8 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
   }
 
   // 1) Thresholds aus appState holen (kann Array oder Objekt sein)
-  const thrRaw = appState.getCvarInputThreshold
-    ? appState.getCvarInputThreshold('TSI')
+  const thrRaw = appState.getCustomerCreditRiskThreshold
+    ? appState.getCustomerCreditRiskThreshold('TSI')
     : null;
 
   //console.log('getCvarInputThreshold("TSI") â†’', thrRaw);

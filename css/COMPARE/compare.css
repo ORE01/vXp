@@ -1,19 +1,13 @@
-/* ───────────────── COMPARE PORTFOLIOS – Layout & Look ───────────────── */
+/* ───────────────── COMPARE PORTFOLIOS – Layout & Look ─────────────────
+   Die Compare-Panels werden zur Laufzeit nach #ANALYSE_Modal verschoben
+   (Auswahl über den RISK-Tree ▸ "Risk Comparison", wie die anderen RISK-
+   Punkte). Daher sind die Panel-Regeln auf die PANEL-IDs gescopet (nicht
+   mehr auf #COMP_Modal), damit das Styling den Panels in jeden Modal folgt.
+   ──────────────────────────────────────────────────────────────────────── */
 
-/* --panel-surface global in themes.css definiert */
+/* Panel-Scope: gilt für alle drei Compare-Panels, unabhängig vom Eltern-Modal. */
 
-/* table-content bleibt wie bei den anderen Modals:
-   triggers links, Panels sliden von rechts rein.
-   (Grund-Layout kommt aus deinem globalen .table CSS) */
-#COMP_Modal .table-content{
-  position: relative;
-  overflow: hidden;   /* Panels scrollen intern */
-  min-height: 100vh;
-}
-
-
-
-#COMP_Modal .small-section-header{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .small-section-header{
   font-size: 16px;
   font-weight: 600;
   margin: 14px 0 8px;
@@ -21,7 +15,7 @@
 }
 
 /* Sub-Panel-Body: Spacings für alle COMP-Panels */
-#COMP_Modal .sub-panel-body{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .sub-panel-body{
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -29,8 +23,8 @@
   min-height: 0;
 }
 
-/* Dropdowns im Compare-Modal */
-#COMP_Modal .deals-dropdown{
+/* Dropdowns */
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .deals-dropdown{
   appearance: none;
   -webkit-appearance: none;
   background: var(--surface-card);
@@ -41,13 +35,13 @@
   min-width: 220px;
   outline: none;
 }
-#COMP_Modal .deals-dropdown:focus{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .deals-dropdown:focus{
   border-color: var(--link);
   box-shadow: 0 0 0 3px rgba(138,163,255,.18);
 }
 
 /* Haupt-Grid je Portfolio: links „Details", rechts „Tabelle" */
-#COMP_Modal .portfolio-comparison-container{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .portfolio-comparison-container{
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(420px, 2fr);
   gap: 16px;
@@ -56,18 +50,18 @@
 }
 
 /* Linke Spalte – Details als Card-Stack */
-#COMP_Modal .portfolio-details-container{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .portfolio-details-container{
   display: grid;
   gap: 10px;
 }
 
 /* Rechte Spalte – große Tabelle */
-#COMP_Modal .data-wrapper{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .data-wrapper{
   display: block;
 }
 
 /* Einheitliche Card-Optik für alle Data-Container */
-#COMP_Modal .data-container{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .data-container{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
@@ -75,48 +69,55 @@
   box-sizing: border-box;
   overflow: auto;
 }
-#COMP_Modal .data-container table{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .data-container table{
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
-#COMP_Modal .data-container th,
-#COMP_Modal .data-container td{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .data-container th,
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .data-container td{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* Info-Labels („Market VaR", „Credit VaR") */
-#COMP_Modal .portfolio-details-container > p{
+:is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .portfolio-details-container > p{
   margin: 6px 0 4px;
   color: var(--text-primary);
   font-weight: 600;
 }
 
 /* Chart-Groups: Karten im gleichen Stil wie Reports */
-#COMP_Modal .chart-group{
+/* Immer Platz für 4 Charts pro Reihe; bei weniger bleiben die hinteren
+   Spalten leer (feste 4 Spuren statt auto-fit). */
+#panel-comp-charts .chart-group{
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin: 16px 0;
 }
-/* Gruppe 1: 2 Spalten, sonst 3 Spalten */
-#COMP_Modal .chart-group:nth-of-type(1){
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+/* Gruppentitel (Sensitivities / Market Risk / Credit Risk) — volle Reihe. */
+#panel-comp-charts .comp-chart-group-title{
+  grid-column: 1 / -1;
+  margin: 8px 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: var(--text-bright);
 }
-#COMP_Modal .chart-group:nth-of-type(n+2){
-  grid-template-columns: repeat(3, minmax(240px, 1fr));
-}
-#COMP_Modal .comp-chart-container{
+/* Kachel-Optik + Größe wie Breakdown (.pie-pair-row / .pieChart 240px → 200px). */
+#panel-comp-charts .comp-chart-container{
   position: relative;
-  background: var(--panel-surface, #0f0f10);
+  background: var(--surface-card);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px;
-  height: 360px;
+  height: 200px;
   box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
-#COMP_Modal .comp-chart-container canvas{
+#panel-comp-charts .comp-chart-container canvas{
   position: absolute;
   inset: 12px;
   width: calc(100% - 24px);
@@ -124,44 +125,34 @@
   background: transparent !important;
 }
 
-/* Responsive Breakpoints */
-@media (max-width: 1200px){
-  #COMP_Modal .chart-group:nth-of-type(n){
-    grid-template-columns: repeat(2, minmax(240px,1fr));
+/* Responsive Breakpoints — 4 Spalten so lange wie möglich halten. */
+@media (max-width: 1100px){
+  #panel-comp-charts .chart-group:nth-of-type(n){
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 900px){
-  #COMP_Modal .portfolio-comparison-container{
-    grid-template-columns: 1fr;
-  }
-  #COMP_Modal .chart-group{
+@media (max-width: 640px){
+  #panel-comp-charts .chart-group{
     grid-template-columns: 1fr !important;
   }
 }
-
-/* Close-Icon optisch angleichen */
-#COMP_Modal > .table-content > .close{
-  position: absolute;
-  right: 12px;
-  top: 8px;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--text-muted);
-  cursor: pointer;
+@media (max-width: 900px){
+  :is(#panel-comp-port1, #panel-comp-port2, #panel-comp-charts) .portfolio-comparison-container{
+    grid-template-columns: 1fr;
+  }
 }
-#COMP_Modal > .table-content > .close:hover{ color: var(--text-bright); }
 
-
-/* Nur die großen Tabellen im Compare: natürliche Breite + Wrap */
-#COMP_Modal #portDataContainer1 table,
-#COMP_Modal #portDataContainer2 table{
+/* Große Tabellen im Compare: natürliche Breite + Wrap (Container aktuell
+   ausgeblendet, Regel bleibt für späteres Wieder-Einblenden). */
+:is(#panel-comp-port1, #panel-comp-port2) #portDataContainer1 table,
+:is(#panel-comp-port1, #panel-comp-port2) #portDataContainer2 table{
   table-layout: auto !important;
   width: 100%;
 }
-#COMP_Modal #portDataContainer1 th,
-#COMP_Modal #portDataContainer1 td,
-#COMP_Modal #portDataContainer2 th,
-#COMP_Modal #portDataContainer2 td{
+:is(#panel-comp-port1, #panel-comp-port2) #portDataContainer1 th,
+:is(#panel-comp-port1, #panel-comp-port2) #portDataContainer1 td,
+:is(#panel-comp-port1, #panel-comp-port2) #portDataContainer2 th,
+:is(#panel-comp-port1, #panel-comp-port2) #portDataContainer2 td{
   white-space: normal !important;
   overflow: visible !important;
   text-overflow: clip !important;

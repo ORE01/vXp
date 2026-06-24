@@ -61,6 +61,8 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
 
   <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
+
+  <link href="./css/CUSTOMER_SETUP/customerMarketRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/marketRisk.css" rel="stylesheet">
   <link href="./css/ANALYSE_PORTFOLIO/marketRiskSensitivities.css" rel="stylesheet">
 
@@ -232,15 +234,16 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <div class="tab">
       <button class="tablinks" id="CREATE_PORTFOLIO_Tab">PORTFOLIO</button>
-      <button class="tablinks" id="ANALYSE_Tab">ANALYSE PORTFOLIO</button>
+      <button class="tablinks" id="ANALYSE_Tab">VALUATION</button>
       <button class="tablinks" id="RISK_Tab">RISK</button>
-      <button class="tablinks" id="COMP_Tab">COMPARE PORTFOLIOS</button>
-      <button class="tablinks" id="REPORTS_Tab">REPORTS</button>
+      <!-- COMPARE PORTFOLIOS → verschoben nach RISK ▸ "Risk Comparison" -->
+      <button class="tablinks" id="REPORTS_Tab">REPORTING</button>
       <button class="tablinks" id="ISSUER_Tab">ISSUER</button>
       <button class="tablinks" id="products_Tab">PRODUCTS</button>
       <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button>
       <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
       <button class="tablinks" id="DATA_Tab">UPDATES</button>
+      <button class="tablinks" id="CUSTOMER_SETUP_Tab">CUSTOMER SETUP</button>
     </div>
 
 
@@ -258,21 +261,34 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="panel-title view-analyse-only">ANALYSE PORTFOLIO</h2>
+      <h2 class="panel-title view-analyse-only">VALUATION</h2>
       <h2 class="panel-title view-risk-only">RISK</h2>
       <p class="risk-view-note view-risk-only" style="margin:4px 0 8px; color: var(--text-muted); font-size: 13px;">
-        Market &amp; Credit Risk for the selected portfolio &mdash; whole portfolio,
-        not affected by the table filter.
+        Risk is not affected by the table filter.
       </p>
+      <!-- Portfolio-Dropdown ist in die "Portfolio"-Trigger-Gruppe unten gewandert. -->
     </div>
 
     <!-- ===== Trigger-Reihen statt Inhalt ===== -->
 
-<!-- Select Portfolio Trigger (erster Einstieg: Portfolio wählen, dann Auswertungen) -->
-<div class="chart-section">
-  <button class="section-trigger" data-panel="panel-selectPort" aria-controls="panel-selectPort" aria-expanded="false">
-    <span class="section-header">Select Portfolio</span><span class="chev"></span>
+<!-- Select Portfolio (VALUATION + RISK IDENTISCH): aufklappbare Gruppe mit
+     Inline-Portfolio-Dropdown + "Portfolio"-Sub-Trigger (öffnet das SELECT-PORTFOLIO-
+     Panel). KEIN .risk-section → in beiden Views sichtbar, ganz oben. -->
+<div class="risk-acc is-expanded">
+  <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="true">
+    <span class="section-header">Select Portfolio</span>
+    <span class="chev"></span>
   </button>
+  <div class="risk-acc-body">
+    <div class="risk-select-inline">
+      <select id="createdPortDropdownRisk" class="deals-dropdown"></select>
+    </div>
+    <button class="section-trigger section-trigger--sub" type="button"
+            data-panel="panel-selectPort" aria-controls="panel-selectPort" aria-expanded="false">
+      <span class="section-header">Portfolio</span>
+      <span class="chev"></span>
+    </button>
+  </div>
 </div>
 
 <!-- Portfolio Breakdown Trigger -->
@@ -343,121 +359,177 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
-    <!-- Market Risk & Credit Risk triggers — shown only in the RISK view
-         (modal class view-risk); hidden in the ANALYSE view. -->
-    <!--   Risk Metrics Input   (Haupt-Trigger) + Sub-Trigger -->
-    <div class="chart-section risk-section">
-      <button class="section-trigger" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
-        <span class="section-header">Risk Metrics Input</span>
+    <!-- ===== RISK-view Trigger-Gruppen (nur in view-risk sichtbar) ===== -->
+
+    <!-- "Select Portfolio" wurde nach oben verschoben und ist jetzt für VALUATION
+         UND RISK identisch (siehe oben, .risk-acc ohne .risk-section). -->
+
+    <!--   Risk Configuration — verschachteltes Accordion: Gruppen-Trigger
+           klappen die nächste Ebene auf (kein Slide-In, kein data-panel),
+           nur die Blätter (Model Selection / Factor Mapping / Credit Risk)
+           öffnen ein Slide-In. -->
+    <div class="risk-acc risk-section">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Risk Configuration</span>
         <span class="chev"></span>
       </button>
+
+      <div class="risk-acc-body">
+
+        <!-- Input Market Risk (Gruppe) -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+            <span class="section-header">Market Risk</span>
+            <span class="chev"></span>
+          </button>
+
+          <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
+              <span class="section-header">Model Selection</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-factor-series-map" aria-controls="panel-mvar-factor-series-map" aria-expanded="false">
+              <span class="section-header">Factor Mapping</span>
+              <span class="chev"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Credit Risk (Blatt) -->
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
+          <span class="section-header">Credit Risk</span>
+          <span class="chev"></span>
+        </button>
+
+      </div>
     </div>
 
-        <!-- Input Market Risk (sub-trigger) + Select Model + Factor Mapping -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
-            <span class="section-header">Input Market Risk</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <div class="chart-section chart-section--sub risk-section risk-deep">
-          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
-            <span class="section-header">Select Model</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <div class="chart-section chart-section--sub risk-section risk-deep">
-          <button class="section-trigger section-trigger--sub" data-panel="panel-mvar-factor-series-map" aria-controls="panel-mvar-factor-series-map" aria-expanded="false">
-            <span class="section-header">Factor Mapping</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
-            <span class="section-header">Input Credit Risk</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub" data-panel="panel-risk-select" aria-controls="panel-risk-select" aria-expanded="false">
-            <span class="section-header">Select Portfolio</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-    <!--   Market Risk   Trigger (Hauptpunkt) -->
-    <div class="chart-section risk-section">
-      <button class="section-trigger" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
-        <span class="section-header">Market Risk</span>
+    <!--   Risk Calculation (Gruppe) → Run / Calculate Risk -->
+    <div class="risk-acc risk-section">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Risk Calculation</span>
         <span class="chev"></span>
       </button>
+      <div class="risk-acc-body">
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-risk-calc" aria-controls="panel-risk-calc" aria-expanded="false">
+          <span class="section-header">Run / Calculate Risk</span>
+          <span class="chev"></span>
+        </button>
+        <button id="historicMetricsAddButton" type="button" class="edit-button">
+          <span class="button-label">Save to Historic Metrics</span>
+        </button>
+      </div>
     </div>
 
-        <!-- Factor Mapping moved under Risk Metrics Input → Input Market Risk -->
-
-        <!-- Market Factor VaR   Unterpunkt -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub"
-                  data-panel="panel-mvar"
-                  aria-controls="panel-mvar"
-                  aria-expanded="false">
-            <span class="section-header">Factors</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <!-- Market Product VaR   Unterpunkt -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub"
-                  data-panel="panel-mvar-products"
-                  aria-controls="panel-mvar-products"
-                  aria-expanded="false">
-            <span class="section-header">Products</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <!--   Market Sensitivities   Unterpunkt von Market Risk -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
-            <span class="section-header">Sensitivities</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-    <!--   Credit Risk   Trigger -->
-    <div class="chart-section no-after-divider risk-section">
-      <button class="section-trigger" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
-        <span class="section-header">Credit Risk</span>
+    <!--   Risk Results (Gruppe) → Market Risk + Credit Risk — gleiches
+           .risk-acc-System wie Risk Configuration (Haupt → Sub → Sub-Sub). -->
+    <div class="risk-acc risk-section">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Risk Results</span>
         <span class="chev"></span>
       </button>
+      <div class="risk-acc-body">
+
+        <!-- Market Risk (Gruppe) -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+            <span class="section-header">Market Risk</span>
+            <span class="chev"></span>
+          </button>
+          <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
+              <span class="section-header">Overview</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
+              <span class="section-header">Sensitivities</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar" aria-controls="panel-mvar" aria-expanded="false">
+              <span class="section-header">Factors</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
+              <span class="section-header">Products</span>
+              <span class="chev"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Credit Risk (Gruppe) -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+            <span class="section-header">Credit Risk</span>
+            <span class="chev"></span>
+          </button>
+          <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
+              <span class="section-header">Overview</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-EAD" aria-controls="panel-EAD" aria-expanded="false">
+              <span class="section-header">EAD/LGD/PD</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-cvar" aria-controls="panel-cvar" aria-expanded="false">
+              <span class="section-header">VaR/ES</span>
+              <span class="chev"></span>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /.risk-acc-body Risk Results -->
+    </div><!-- /.risk-acc Risk Results -->
+
+    <!--   Risk Comparison (Gruppe) → Sub-Trigger öffnen je ein Panel im
+           COMPARE-PORTFOLIOS-Modal (vom oberen Tab hierher verschoben). -->
+    <div class="risk-acc risk-section">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Risk Comparison</span>
+        <span class="chev"></span>
+      </button>
+      <div class="risk-acc-body">
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-comp-port1" aria-controls="panel-comp-port1" aria-expanded="false">
+          <span class="section-header">Portfolio 1</span><span class="chev"></span>
+        </button>
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-comp-port2" aria-controls="panel-comp-port2" aria-expanded="false">
+          <span class="section-header">Portfolio 2</span><span class="chev"></span>
+        </button>
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-comp-charts" aria-controls="panel-comp-charts" aria-expanded="false">
+          <span class="section-header">Charts</span><span class="chev"></span>
+        </button>
+      </div>
     </div>
 
-        <!--   EAD   Sub-Trigger -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub"
-                  data-panel="panel-EAD"
-                  aria-controls="panel-EAD"
-                  aria-expanded="false">
-            <span class="section-header">EAD/LGD/PD</span>
-            <span class="chev"></span>
-          </button>
-        </div>
-
-        <!--   CVaR   Sub-Trigger -->
-        <div class="chart-section chart-section--sub risk-section">
-          <button class="section-trigger section-trigger--sub"
-                  data-panel="panel-cvar"
-                  aria-controls="panel-cvar"
-                  aria-expanded="false">
-            <span class="section-header">VaR/ES</span>
-            <span class="chev"></span>
-          </button>
-        </div>
+    <!--   Risk History (Gruppe) → historische Risk-Ansichten -->
+    <div class="risk-acc risk-section">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Risk History</span>
+        <span class="chev"></span>
+      </button>
+      <div class="risk-acc-body">
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="PORTFOLIO_HISTORY_Modal" aria-controls="PORTFOLIO_HISTORY_Modal" aria-expanded="false">
+          <span class="section-header">Overview</span>
+          <span class="chev"></span>
+        </button>
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-portfolio-value" aria-controls="panel-portfolio-value" aria-expanded="false">
+          <span class="section-header">Portfolio Value</span>
+          <span class="chev"></span>
+        </button>
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-hist-sensitivities" aria-controls="panel-hist-sensitivities" aria-expanded="false">
+          <span class="section-header">Sensitivities</span>
+          <span class="chev"></span>
+        </button>
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-market-risk" aria-controls="panel-market-risk" aria-expanded="false">
+          <span class="section-header">Market Risk</span>
+          <span class="chev"></span>
+        </button>
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-credit-risk" aria-controls="panel-credit-risk" aria-expanded="false">
+          <span class="section-header">Credit Risk</span>
+          <span class="chev"></span>
+        </button>
+      </div>
+    </div>
 
     <!--   Liquidity   Trigger -->
     <div class="chart-section">
@@ -468,77 +540,8 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
 
-<div class="chart-section">
-  <button
-    id="historicMetricsAddButton"
-    type="button"
-    class="edit-button"
-  >
-    <span class="button-label">Save to Historic Metrics</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-
-<!--   Historic Performance   Trigger (Hauptpunkt) -->
-<div class="chart-section">
-  <button
-    class="section-trigger"
-    data-panel="PORTFOLIO_HISTORY_Modal"
-    aria-controls="PORTFOLIO_HISTORY_Modal"
-    aria-expanded="false">
-    <span class="section-header">Performance History</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<!--   Historic Portfolio Value   Unterpunkt -->
-<div class="chart-section chart-section--sub">
-  <button
-    class="section-trigger section-trigger--sub"
-    data-panel="panel-portfolio-value"
-    aria-controls="panel-portfolio-value"
-    aria-expanded="false">
-    <span class="section-header">Portfolio Value</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<!--   Historic Sensitivities   Unterpunkt -->
-<div class="chart-section chart-section--sub">
-  <button
-    class="section-trigger section-trigger--sub"
-    data-panel="panel-hist-sensitivities"
-    aria-controls="panel-hist-sensitivities"
-    aria-expanded="false">
-    <span class="section-header">Sensitivities</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<!--   Historic Market Risk   Unterpunkt -->
-<div class="chart-section chart-section--sub">
-  <button
-    class="section-trigger section-trigger--sub"
-    data-panel="panel-market-risk"
-    aria-controls="panel-market-risk"
-    aria-expanded="false">
-    <span class="section-header">Market Risk</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<!--   Historic Credit Risk   Unterpunkt -->
-<div class="chart-section chart-section--sub">
-  <button
-    class="section-trigger section-trigger--sub"
-    data-panel="panel-credit-risk"
-    aria-controls="panel-credit-risk"
-    aria-expanded="false">
-    <span class="section-header">Credit Risk</span>
-    <span class="chev"></span>
-  </button>
-</div>
+<!-- "Save to Historic Metrics" → verschoben nach RISK ▸ Risk Calculation. -->
+<!-- "Performance History" → verschoben nach RISK ▸ Risk History. -->
 
 
 
@@ -556,19 +559,19 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 
   <div class="sub-panel-body">
-    <div class="portfolio-info">
-      <div class="created-tables-dropdown portfolio-select-spacing" style="display:flex; margin-bottom:10px;">
-        <select id="createdPortDropdown0" class="deals-dropdown"></select>
+    <!-- Obere Reihe: links Dropdown + Button, rechts die zwei Summen-Karten -->
+    <div class="select-port-top">
+      <div class="portfolio-info">
+        <div class="created-tables-dropdown portfolio-select-spacing" style="display:flex; margin-bottom:10px;">
+          <select id="createdPortDropdown0" class="deals-dropdown"></select>
+        </div>
+
+        <div class="button-wrapper">
+          <button id="fairValueButton" class="edit-button">Recalculate Portfolio</button>
+        </div>
       </div>
 
-      <div class="button-wrapper">
-        <button id="fairValueButton" class="edit-button">Recalculate Portfolio</button>
-      </div>
-    </div>
-
-    <!-- Layout: Summen-Karten oben nebeneinander, Toolbar, Tabelle in voller Breite -->
-    <div class="port-layout">
-      <!-- Summen-Karten nebeneinander -->
+      <!-- Summen-Karten rechts neben Dropdown/Button -->
       <div class="port-summary">
         <div class="port-agg-card">
           <p class="port-agg-title">Portfolio Total</p>
@@ -579,7 +582,10 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="data-container" id="portAggDataContainer0"></div>
         </div>
       </div>
+    </div>
 
+    <!-- Toolbar + Tabelle in voller Breite -->
+    <div class="port-layout">
       <!-- Toolbar: Columns + Reset rechtsbündig (Filter leben in den Headern) -->
       <div class="port-toolbar">
         <button id="portColumnsBtn" type="button" class="edit-button">Columns</button>
@@ -663,10 +669,17 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
 
       <div class="sub-panel-body">
+        <!-- Auswahl der historischen Vergleichskurve (Monate/Jahre zurück). -->
+        <div class="yield-controls" style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:14px;">
+          <label for="yieldYearsBackSelect" style="font-size:13px;">Historical curve:</label>
+          <select id="yieldYearsBackSelect" class="deals-dropdown" style="width:130px; min-width:0; box-sizing:border-box;"></select>
+        </div>
         <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
           <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
+            <h3 class="yield-group-title">Riskmeasure: Maturity</h3>
             <div class="chart-box"><canvas id="euswapPortfolioYieldChart"></canvas></div>
             <div class="chart-box"><canvas id="euswapProductYieldChart"></canvas></div>
+            <h3 class="yield-group-title">Riskmeasure: Duration (interest rate risk)</h3>
             <div class="chart-box"><canvas id="durationSwapChart"></canvas></div>
             <div class="chart-box"><canvas id="durationProductYieldChart"></canvas></div>
           </div>
@@ -681,7 +694,7 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Panel: RISK Input Market (inputMvarContainer is moved here at runtime) -->
 <div id="panel-risk-input-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-input-market-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-risk-input-market-title" class="sub-panel-title">SELECT MODEL</div>
+    <div id="panel-risk-input-market-title" class="sub-panel-title">MODEL SELECTION</div>
     <button class="sub-panel-close" data-close="panel-risk-input-market" aria-label="close">&times;</button>
   </div>
   <div class="sub-panel-body" id="riskInputMarketHost"></div>
@@ -690,24 +703,20 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Panel: RISK Input Credit (config + threshold sections moved here at runtime) -->
 <div id="panel-risk-input-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-input-credit-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-risk-input-credit-title" class="sub-panel-title">INPUT CREDIT RISK</div>
+    <div id="panel-risk-input-credit-title" class="sub-panel-title">CREDIT RISK</div>
     <button class="sub-panel-close" data-close="panel-risk-input-credit" aria-label="close">&times;</button>
   </div>
   <div class="sub-panel-body" id="riskInputCreditHost"></div>
 </div>
 
-<!-- Panel: RISK Select Portfolio (Portfolio-Auswahl + Calculate-Buttons; RISK-View) -->
-<div id="panel-risk-select" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-select-title" hidden>
+<!-- Panel: RISK Metrics Calculate (3 Calculate-Buttons mit Status-Punkten) -->
+<div id="panel-risk-calc" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-calc-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-risk-select-title" class="sub-panel-title">SELECT PORTFOLIO</div>
-    <button class="sub-panel-close" data-close="panel-risk-select" aria-label="close">&times;</button>
+    <div id="panel-risk-calc-title" class="sub-panel-title">RUN / CALCULATE RISK</div>
+    <button class="sub-panel-close" data-close="panel-risk-calc" aria-label="close">&times;</button>
   </div>
   <div class="sub-panel-body">
     <div class="risk-select-form">
-      <div class="risk-port-select">
-        <label for="createdPortDropdownRisk">Portfolio:</label>
-        <select id="createdPortDropdownRisk" class="deals-dropdown"></select>
-      </div>
       <div class="risk-calc-row">
         <button type="button" id="riskCalcPortfolio" class="edit-button">Calculate Portfolio</button>
         <span class="risk-calc-dot" id="riskDotPortfolio" title="not calculated"></span>
@@ -752,12 +761,13 @@ Feature:    Wenn es nur in einem Panel gilt
       <div class="mvar-summary-row">
         <div class="data-container" id="MVaRDataContainer0"></div>
 
-        <!-- Market Traffic Light   analog zum Credit-Bereich -->
+        <!-- Market Traffic Light hidden: the Total VaR state is now shown by colouring
+             the Total VaR row in the table (see applyMvarTrafficStateToTable). -->
         <div
           class="traffic-light-wrapper small preview-traffic-light"
           id="traffic-mvar"
           data-metric="MVaR"
-          style="margin-top: 0;"
+          style="margin-top: 0; display: none;"
         >
           <div class="traffic-light">
             <div class="light red"    data-role="red"></div>
@@ -1188,18 +1198,14 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!--   BLOCK 3: CVaR/TSI/MSD Ampeln + Output-Tabelle -->
     <div class="cvar-pair" style="margin-top: 4px;">
-      <!-- Linke Spalte: CVaR Kennzahlen-Tabelle -->
-      <div class="cvar-col">
-        <div class="data-container" id="CVaR_allRelativeContainer0"></div>
-      </div>
-
-      <!-- CVAR + Ampel -->
+      <!-- CVaR: Kennzahlen-Tabelle (Punkt auf Historic VaR). Ampel ausgeblendet. -->
       <div class="cvar-col">
         <p>Credit Value at Risk (CVaR):</p>
+        <div class="data-container" id="CVaR_allRelativeContainer0"></div>
         <div class="traffic-light-wrapper small preview-traffic-light"
             id="traffic-credit-cvar"
             data-metric="CVaR"
-            style="margin-top: 0;">
+            style="margin-top: 0; display: none;">
           <div class="traffic-light">
             <div class="light red"    data-role="red"></div>
             <div class="light yellow" data-role="yellow"></div>
@@ -1208,13 +1214,14 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
       </div>
 
-      <!-- TSI + Ampel -->
+      <!-- TSI: Tabelle (ES / VaR / TSI), Punkt auf TSI. Ampel ausgeblendet. -->
       <div class="cvar-col">
         <p>Tail Severity Index (TSI):</p>
+        <div class="data-container" id="creditTsiTableContainer0"></div>
         <div class="traffic-light-wrapper small preview-traffic-light"
             id="traffic-credit-tsi"
             data-metric="TSI"
-            style="margin-top: 0;">
+            style="margin-top: 0; display: none;">
           <div class="traffic-light">
             <div class="light red"    data-role="red"></div>
             <div class="light yellow" data-role="yellow"></div>
@@ -1223,13 +1230,14 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
       </div>
 
-      <!-- MSD + Ampel -->
+      <!-- MSD: Tabelle (Adjusted ES / Historic ES / MSD), Punkt auf MSD. Ampel ausgeblendet. -->
       <div class="cvar-col">
         <p>Market Stress Divergence (MSD):</p>
+        <div class="data-container" id="creditMsdTableContainer0"></div>
         <div class="traffic-light-wrapper small preview-traffic-light"
             id="traffic-credit-msd"
             data-metric="MSD"
-            style="margin-top: 0;">
+            style="margin-top: 0; display: none;">
           <div class="traffic-light">
             <div class="light red"    data-role="red"></div>
             <div class="light yellow" data-role="yellow"></div>
@@ -1368,10 +1376,18 @@ Feature:    Wenn es nur in einem Panel gilt
 </p>
         </div>
 
+        <!-- Chart (oben, groß) -->
+        <section class="liqu-chart-card">
+          <h4 class="table-title">Maturity Profile</h4>
+          <div class="liqu-chart-container">
+            <canvas id="liquChart"></canvas>
+          </div>
+        </section>
+
         <!-- Tabellen -->
         <div class="liqu-flex-row">
           <section class="table-card">
-            <h4 class="table-title">Maturity— Category</h4>
+            <h4 class="table-title">Maturity — Category</h4>
             <div id="liquDataContainer" class="data-container"></div>
           </section>
 
@@ -1379,11 +1395,6 @@ Feature:    Wenn es nur in einem Panel gilt
             <h4 class="table-title">Issuer</h4>
             <div id="issuerDataContainerLiqu" class="data-container"></div>
           </section>
-        </div>
-
-        <!-- Chart -->
-        <div class="liqu-chart-container" style="margin-top:18px;">
-          <canvas id="liquChart"></canvas>
         </div>
       </div><!-- /.sub-panel-body -->
     </div>
@@ -2006,9 +2017,9 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="swaption-layout-wrapper">
               <section class="swaption-charts-wrapper" style="flex:1; display:flex; flex-direction:column;">
                 <div class="table-card chart-card" style="flex:1; min-height:320px;">
-                  <h4 class="table-title">ATM Surface (3D)</h4>
+                  <h4 class="table-title">ATM Surface</h4>
                   <div class="chart-container" style="height:100%;">
-                    <div id="swaption-atm-surface-3d" style="width:100%; height:100%;"></div>
+                    <div id="swaption-atm-surface-3d" data-label="ATM Surface" style="width:100%; height:100%;"></div>
                   </div>
                 </div>
               </section>
@@ -2052,7 +2063,7 @@ Feature:    Wenn es nur in einem Panel gilt
                 <div class="table-card chart-card" style="flex:1;">
                   <h4 class="table-title">Smile / Skew</h4>
                   <div class="chart-container" style="height:260px; max-height:260px;">
-                    <canvas id="swaption-smile-chart" style="width:100%; height:100%;"></canvas>
+                    <canvas id="swaption-smile-chart" data-label="Smile / Skew" style="width:100%; height:100%;"></canvas>
                   </div>
                 </div>
               </section>
@@ -2107,7 +2118,7 @@ Feature:    Wenn es nur in einem Panel gilt
                 <div class="table-card chart-card" style="flex:1;">
                   <h4 class="table-title">SABR Vol Cube Surface</h4>
                   <div class="chart-container" style="height:260px; max-height:260px;">
-                    <div id="swaption-cube-surface-3d" style="width:100%; height:100%;"></div>
+                    <div id="swaption-cube-surface-3d" data-label="Vol Cube Surface" style="width:100%; height:100%;"></div>
                   </div>
                 </div>
               </section>
@@ -2725,6 +2736,232 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
 <!-- Modal: ISSUER -->
+<div id="CUSTOMER_SETUP_Modal" class="table">
+  <div class="table-content">
+    <div class="portfolio-info">
+      <h2 class="panel-title">CUSTOMER SETUP</h2>
+    </div>
+
+    <!-- Products group (main trigger): expands/collapses its sub-items via the
+         existing breakdown-style nesting (global .table CSS:
+         .chart-section.is-open + .chart-section--sub). data-panel points to a
+         non-existent panel on purpose, so this trigger only toggles the group and
+         openPanel() is a no-op (resolvePanelContext returns null). -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-customer-products"
+              aria-controls="panel-customer-products"
+              aria-expanded="false">
+        <span class="section-header">Products</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <!-- Category subtrigger: opens the existing #panel-customer-category slide-in -->
+    <div class="chart-section chart-section--sub">
+      <button class="section-trigger section-trigger--sub"
+              data-panel="panel-customer-category"
+              aria-controls="panel-customer-category"
+              aria-expanded="false">
+        <span class="section-header">Category</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="sub-panel-backdrop" hidden></div>
+
+    <div id="panel-customer-category" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-customer-category-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-customer-category-title" class="sub-panel-title">Category Setup</div>
+        <button class="sub-panel-close" data-close="panel-customer-category" aria-label="close">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="cp-card">
+          <p>Customer-specific category labels, fixed-value categories and category rules will be configured here.</p>
+        </div>
+
+        <section class="cp-card">
+          <h2 class="small-section-header">Categories</h2>
+          <div class="button-wrapper" style="margin-bottom:10px;">
+            <button type="button" id="customerCategoryAddButton" class="edit-button">Add Category</button>
+          </div>
+          <!-- Rendered by the app table framework (processData) with Edit column;
+               Add/Edit go through the generic CRUD modal (handleModalAction). -->
+          <div id="customerCategoryTableContainer" class="data-container"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Risk group (main trigger): toggle only. data-panel points to a
+         non-existent panel on purpose, so openPanel() is a no-op and this only
+         expands/collapses its sub-items (same pattern as Products). -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-customer-risk"
+              aria-controls="panel-customer-risk"
+              aria-expanded="false">
+        <span class="section-header">Risk</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <!-- Market Risk subtrigger: opens the Market Risk Interval setup slide-in -->
+    <div class="chart-section chart-section--sub">
+      <button class="section-trigger section-trigger--sub"
+              data-panel="panel-customer-market-risk-interval"
+              aria-controls="panel-customer-market-risk-interval"
+              aria-expanded="false">
+        <span class="section-header">Market Risk</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <!-- Credit Risk subtrigger: opens the Credit Risk general settings slide-in -->
+    <div class="chart-section chart-section--sub">
+      <button class="section-trigger section-trigger--sub"
+              data-panel="panel-customer-credit-risk"
+              aria-controls="panel-customer-credit-risk"
+              aria-expanded="false">
+        <span class="section-header">Credit Risk</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div id="panel-customer-market-risk-interval" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-customer-mri-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-customer-mri-title" class="sub-panel-title">Market Risk Interval</div>
+        <button class="sub-panel-close" data-close="panel-customer-market-risk-interval" aria-label="close">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="customer-mr-page">
+          <h3 class="customer-mr-title">Market Risk Setup</h3>
+
+          <!-- Card 1: Model Defaults -->
+          <section class="customer-mr-card">
+            <h4 class="customer-mr-card-title">Model Defaults</h4>
+
+            <div class="customer-mr-field">
+              <label for="customerMarketRiskIntervalSelect">Default Market Risk Interval</label>
+              <select id="customerMarketRiskIntervalSelect" class="customer-mr-select"></select>
+            </div>
+
+            <div class="customer-mr-field">
+              <label for="customerVarDaysInput">VaR Horizon Days</label>
+              <input type="text" id="customerVarDaysInput" class="customer-mr-input-num">
+            </div>
+
+            <div class="customer-mr-field">
+              <label for="customerConfidenceInput">Confidence Level</label>
+              <span class="customer-mr-input-unit">
+                <input type="text" id="customerConfidenceInput" class="customer-mr-input-num">
+                <span class="customer-mr-unit">%</span>
+              </span>
+            </div>
+          </section>
+
+          <!-- Card 2: Risk Warning Profile -->
+          <section class="customer-mr-card">
+            <h4 class="customer-mr-card-title">Risk Warning Profile</h4>
+
+            <div class="customer-mr-field">
+              <label for="customerRiskWarningProfileSelect">Risk Warning Profile</label>
+              <select id="customerRiskWarningProfileSelect" class="customer-mr-select">
+                <option value="CONSERVATIVE">Conservative</option>
+                <option value="BALANCED">Balanced</option>
+                <option value="AGGRESSIVE">Aggressive</option>
+                <!-- CUSTOM prepared for later; not selectable yet. -->
+              </select>
+            </div>
+
+            <ul class="customer-mr-profile-hint">
+              <li><strong>Conservative</strong> = early warnings</li>
+              <li><strong>Balanced</strong> = standard warning levels</li>
+              <li><strong>Aggressive</strong> = later warnings</li>
+            </ul>
+          </section>
+
+          <!-- Card 3: Warning Limits (table rendered by the panel JS) -->
+          <section class="customer-mr-card">
+            <h4 class="customer-mr-card-title">Warning Limits</h4>
+            <div id="customerWarningLimitsDisplay" class="customer-mr-limits"></div>
+            <p class="customer-mr-limits-hint">Limits use the selected VaR horizon and confidence level.</p>
+          </section>
+
+          <!-- Shared Save: stores Interval + Profile + Warning Limits + Risk Calc Settings together -->
+          <div class="customer-mr-actions">
+            <button type="button" id="customerMarketRiskIntervalSaveButton" class="edit-button">Save</button>
+            <span id="customerMarketRiskIntervalStatus" class="customer-mr-status"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-customer-credit-risk" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-customer-cr-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-customer-cr-title" class="sub-panel-title">Credit Risk</div>
+        <button class="sub-panel-close" data-close="panel-customer-credit-risk" aria-label="close">&times;</button>
+      </div>
+
+      <div class="sub-panel-body">
+        <div class="customer-mr-page">
+          <h3 class="customer-mr-title">Credit Risk Setup</h3>
+
+          <section class="customer-mr-card">
+            <h4 class="customer-mr-card-title">Credit Risk General Settings</h4>
+
+            <div class="customer-mr-field">
+              <label for="customerCrConfigNameInput">Default Credit Config</label>
+              <input type="text" id="customerCrConfigNameInput" class="customer-mr-select">
+            </div>
+
+            <div class="customer-mr-field">
+              <label for="customerCrModelSelect">Credit Risk Model</label>
+              <select id="customerCrModelSelect" class="customer-mr-select">
+                <option value="ASRF">ASRF</option>
+                <option value="MF_GC">MF_GC</option>
+              </select>
+            </div>
+
+            <div class="customer-mr-field">
+              <label for="customerCrDescriptionInput">Description</label>
+              <input type="text" id="customerCrDescriptionInput" class="customer-mr-select">
+            </div>
+          </section>
+
+          <section class="customer-mr-card">
+            <h4 class="customer-mr-card-title">Model Parameters</h4>
+
+            <div class="customer-mr-field">
+              <label for="customerCrConfLevelInput">Confidence Level</label>
+              <span class="customer-mr-input-unit">
+                <input type="text" id="customerCrConfLevelInput" class="customer-mr-input-num">
+                <span class="customer-mr-unit">%</span>
+              </span>
+            </div>
+
+            <!-- Correlation, Recovery Rate and Number of Simulations are intentionally
+                 NOT rendered in Customer Setup: they belong to Risk Configuration /
+                 effective run settings, not to customer default/policy. -->
+
+            <div class="customer-mr-field">
+              <label for="customerCrHorizonInput">Horizon Days</label>
+              <input type="text" id="customerCrHorizonInput" class="customer-mr-input-num">
+            </div>
+          </section>
+
+          <section class="customer-mr-card">
+            <h4 class="customer-mr-card-title">Threshold Settings</h4>
+            <div id="customerCrThresholdsDisplay" class="customer-mr-limits"></div>
+          </section>
+
+          <!-- Shared Save: stores General Settings + Thresholds together -->
+          <div class="customer-mr-actions">
+            <button type="button" id="customerCrSaveButton" class="edit-button">Save</button>
+            <span id="customerCrStatus" class="customer-mr-status"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="issuer_Modal" class="table">
   <div class="table-content">
     <div class="portfolio-info">
@@ -3003,7 +3240,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- <span class="close" data-off-close="1">&times;</span> -->
 
     <div class="portfolio-info">
-      <h2 class="panel-title">REPORTS</h2>
+      <h2 class="panel-title">REPORTING</h2>
     </div>
 
     <!-- Triggers -->
@@ -3107,29 +3344,49 @@ Feature:    Wenn es nur in einem Panel gilt
         <section class="table-card">
           <h4 class="table-title">Risk Preview</h4>
 
+          <!-- Portfolio-Auswahl für den Report (spiegelt createdPortDropdown0).
+               Daten werden NICHT automatisch geladen — erst auf "Get Risk Data". -->
+          <div class="report-select-inline">
+            <div class="report-select-heading">Select Portfolio</div>
+            <select id="createdPortDropdownReport" class="deals-dropdown"></select>
+            <div class="report-getdata-row" style="display:flex; align-items:center; gap:10px;">
+              <button
+                id="refreshThumbnailsBtn"
+                class="edit-button"
+                type="button"
+                title="Risk-Daten laden / Vorschau aktualisieren">
+                Get Risk Data
+              </button>
+              <span class="risk-calc-dot" id="riskDotGetData" title="not executed"></span>
+            </div>
+          </div>
+
           <!-- Risk Presets: CustomerReports -->
           <div class="mvar-summary" style="margin-bottom:12px;">
-            <div class="mvar-summary-header" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-              <div style="min-width:260px;">
-                <p class="mvar-caption" style="margin:0;">Report Preset:</p>
-                <select id="customerReportsDropdown"
-                        style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
-                </select>
-              </div>
-
-              <div style="min-width:260px;">
-                <p class="mvar-caption" style="margin:0;">Preset Name:</p>
-                <input id="customerReportsNameInput"
-                      type="text"
-                      placeholder="e.g. Board Pack"
-                      style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
-              </div>
-
-              <div class="mvar-input-buttons" style="display:flex; gap:10px; margin-left:auto;">
+            <div class="mvar-summary-header" style="display:flex; flex-direction:row; gap:18px; align-items:flex-end; flex-wrap:wrap;">
+              <!-- Vorhandenen Report wählen + Load/Delete -->
+              <div style="display:flex; gap:10px; align-items:flex-end;">
+                <div style="width:220px;">
+                  <p class="mvar-caption" style="margin:0;">Saved Reports:</p>
+                  <select id="customerReportsDropdown"
+                          style="width:220px; box-sizing:border-box; padding:2px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+                  </select>
+                </div>
                 <button id="customerReportsLoadButton"   class="edit-button">Load</button>
+                <button id="customerReportsDeleteButton" class="edit-button">Delete</button>
+              </div>
+
+              <!-- Neuen Report anlegen + Save/Add (rechts) -->
+              <div style="display:flex; gap:10px; align-items:flex-end; margin-left:auto;">
+                <div style="width:220px;">
+                  <p class="mvar-caption" style="margin:0;">Create New Report:</p>
+                  <input id="customerReportsNameInput"
+                        type="text"
+                        placeholder="e.g. Board Pack"
+                        style="width:220px; box-sizing:border-box; padding:2px 10px; border-radius:8px; border:1px solid #444; background:#1a1a1a; color:#ddd;">
+                </div>
                 <button id="customerReportsSaveButton"   class="edit-button">Save</button>
                 <button id="customerReportsAddButton"    class="edit-button">Add</button>
-                <button id="customerReportsDeleteButton" class="edit-button">Delete</button>
               </div>
             </div>
           </div>
@@ -3191,19 +3448,6 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <!-- Buttons unter der Preview -->
           <div class="button-wrapper buttons-row" style="margin-top:10px;">
-            <!-- Get Risk Data -->
-            <div class="btn-block">
-              <div class="btn-label" id="title-refreshRisk">Get Risk Data</div>
-              <button
-                id="refreshThumbnailsBtn"
-                class="edit-button"
-                type="button"
-                aria-describedby="title-refreshRisk"
-                title="Reload risk thumbnails">
-                Get Risk Data
-              </button>
-            </div>
-
             <!-- Generate Risk PDF -->
             <div class="btn-block">
               <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>
@@ -3452,7 +3696,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="portfolio-details-container">
             <div class="created-tables-dropdown portfolio-select-spacing"
                  style="display:flex; margin-bottom:10px;">
-              <select id="createdPortDropdown1" class="deals-dropdown" style="color:#f9f9f9;"></select>
+              <select id="createdPortDropdown1" class="deals-dropdown"></select>
             </div>
             <div class="data-container" id="portAggDataContainer1"></div>
             <p>Market VaR:</p>
@@ -3461,9 +3705,11 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="data-container" id="CVaR_allRelativeContainer1"></div>
           </div>
 
+          <!-- portData-Container ausgeblendet (nicht gelöscht):
           <div class="data-wrapper">
             <div class="data-container" id="portDataContainer1"></div>
           </div>
+          -->
         </div>
       </div>
     </div>
@@ -3482,7 +3728,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="portfolio-details-container">
             <div class="created-tables-dropdown portfolio-select-spacing"
                  style="display:flex; margin-bottom:10px;">
-              <select id="createdPortDropdown2" class="deals-dropdown" style="color:#f9f9f9;"></select>
+              <select id="createdPortDropdown2" class="deals-dropdown"></select>
             </div>
             <div class="data-container" id="portAggDataContainer2"></div>
             <p>Market VaR:</p>
@@ -3491,9 +3737,11 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="data-container" id="CVaR_allRelativeContainer2"></div>
           </div>
 
+          <!-- portData-Container ausgeblendet (nicht gelöscht):
           <div class="data-wrapper">
             <div class="data-container" id="portDataContainer2"></div>
           </div>
+          -->
         </div>
       </div>
     </div>
@@ -3507,21 +3755,24 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
 
       <div class="sub-panel-body">
-        <!-- Group 1 Charts -->
+        <!-- Group 1: Sensitivities -->
         <div class="chart-group">
+          <h3 class="comp-chart-group-title">Sensitivities</h3>
           <div id="compChartContainer1" class="comp-chart-container"></div>
           <div id="compChartContainer2" class="comp-chart-container"></div>
         </div>
 
-        <!-- Group 2 Charts -->
+        <!-- Group 2: Market Risk -->
         <div class="chart-group">
+          <h3 class="comp-chart-group-title">Market Risk</h3>
           <div id="compChartContainer3" class="comp-chart-container"></div>
           <div id="compChartContainer4" class="comp-chart-container"></div>
           <div id="compChartContainer5" class="comp-chart-container"></div>
         </div>
 
-        <!-- Group 3 Charts -->
+        <!-- Group 3: Credit Risk -->
         <div class="chart-group">
+          <h3 class="comp-chart-group-title">Credit Risk</h3>
           <div id="compChartContainer6" class="comp-chart-container"></div>
           <div id="compChartContainer7" class="comp-chart-container"></div>
           <div id="compChartContainer8" class="comp-chart-container"></div>

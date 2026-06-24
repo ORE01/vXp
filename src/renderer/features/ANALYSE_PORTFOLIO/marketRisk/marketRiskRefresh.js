@@ -18,6 +18,7 @@ import { initMarketRiskSensitivityTabs } from './sensitivities/marketRiskSensiti
 
 let sensitivitiesListenerInstalled = false;
 let sensitivityTabsInitialized = false;
+let marketRiskBackingTablesFetchRequested = false;
 
 function normalizePortfolioName(portName) {
   return String(portName ?? '')
@@ -94,16 +95,40 @@ export function createMarketRiskRefresh({ appState } = {}) {
   function refreshMarketRiskUI(index = 0) {
     const port = appState.getSelectedPortTableName?.();
 
+    // Diagnostic only: capture whether existing store data + chart containers are
+    // present at (re)open time, BEFORE the port guard, so the empty-tile-on-open
+    // case is observable even when no portfolio is selected yet.
+    {
+      const factorRows = appState.getMvarFactorPLData?.() || [];
+      const productRows = appState.getMvarProductData?.() || [];
+
+      console.log('[MVAR CHART REHYDRATE CHECK]', {
+        selectedPort: appState.getSelectedPortTableName?.(),
+        selectedScenario: appState.selectedMvarInterval,
+        factorRows: factorRows?.length,
+        productRows: productRows?.length,
+        factorContainerExists: !!document.getElementById('MVaRFactorPLContainer'),
+        productContainerExists: !!document.getElementById('mvarProductTableContainer'),
+        productChartCanvasExists: !!document.getElementById('mvarProdIdVarContribChart'),
+      });
+    }
+
     if (!port) {
       console.warn('[marketRiskRefresh] market risk UI skipped: no selected portfolio');
       return;
     }
 
-    // Load backing tables from DB.
-    // Existing store data renders immediately below.
-    // Async fetch response will render again through dataRouter/handlers.
-    window.api?.send?.('fetch-table-data', 'MarketVaR_FactorPL');
-    window.api?.send?.('fetch-table-data', 'MarketVaR_Product');
+    // Load backing tables from DB only once per renderer session.
+    // Important: refreshMarketRiskUI is a render function. If it fetches on every render,
+    // the async data response can trigger another render and create a render/fetch loop.
+    if (!marketRiskBackingTablesFetchRequested) {
+      marketRiskBackingTablesFetchRequested = true;
+
+      window.api?.send?.('fetch-table-data', 'MarketVaR_FactorPL');
+      window.api?.send?.('fetch-table-data', 'MarketVaR_Product');
+
+      console.log('[marketRiskRefresh] backing table fetch requested once');
+    }
 
     const allMvar = appState.getAllMvarData?.() || [];
     const factorRows = appState.getMvarFactorPLData?.() || [];
@@ -145,6 +170,49 @@ export function createMarketRiskRefresh({ appState } = {}) {
       port,
       scenario,
     });
+
+    // Decisive one-shot: report the REAL final DOM state of every MVaR container a
+    // few frames after render, so we can tell "never rendered" vs "rendered then
+    // cleared" vs "wrong tile" vs "drawn but empty". Diagnostic only.
+    setTimeout(() => {
+      const snap = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return { exists: false };
+        const r = el.getBoundingClientRect?.() || {};
+        return {
+          exists: true,
+          childCount: el.childElementCount,
+          htmlLen: el.innerHTML.length,
+          w: Math.round(r.width || 0),
+          h: Math.round(r.height || 0),
+          visible: !!(el.offsetParent || (r.width && r.height)),
+        };
+      };
+
+      const mvarChartEl = document.getElementById('MVaRChart');
+      const prodCanvas = document.getElementById('mvarProdIdVarContribChart');
+      const prodBox = prodCanvas?.parentElement || null;
+      const prodBoxRect = prodBox?.getBoundingClientRect?.() || {};
+
+      console.log('[MVAR FINAL DOM SNAPSHOT]', {
+        panelMvarHidden: document.getElementById('panel-mvar')?.hidden ?? null,
+        panelProductsHidden: document.getElementById('panel-mvar-products')?.hidden ?? null,
+
+        MVaRRiskTypePLContainer: snap('MVaRRiskTypePLContainer'),
+        MVaRFactorPLContainer: snap('MVaRFactorPLContainer'),
+
+        MVaRChart: snap('MVaRChart'),
+        MVaRChartHasChartInstance: !!(window.Chart?.getChart && mvarChartEl && window.Chart.getChart(mvarChartEl)),
+
+        mvarProductTableContainer: snap('mvarProductTableContainer'),
+        mvarProdDomChartWrapperCount: prodBox
+          ? prodBox.querySelectorAll('.mvar-product-dom-chart').length
+          : null,
+        mvarProdBoxSize: prodBox
+          ? { w: Math.round(prodBoxRect.width || 0), h: Math.round(prodBoxRect.height || 0) }
+          : null,
+      });
+    }, 300);
   }
 
   function refreshMarketRiskSensitivitiesUI(reason = 'manual') {
@@ -216,22 +284,27 @@ export function createMarketRiskRefresh({ appState } = {}) {
       refreshMarketRiskSensitivitiesUI('portfolio-risk-sensitivities-data-refreshed');
     });
 
-    document.addEventListener('portfolio-context-changed', (event) => {
-      const riskRows = getRiskRows(appState);
-      const availablePorts = getAvailablePorts(riskRows);
-      const availableRiskTypes = getAvailableRiskTypes(riskRows);
+document.addEventListener('portfolio-context-changed', (event) => {
+  const riskRows = getRiskRows(appState);
+  const availablePorts = getAvailablePorts(riskRows);
+  const availableRiskTypes = getAvailableRiskTypes(riskRows);
 
-      console.log('[marketRiskRefresh] portfolio-context-changed received', {
-        detail: event?.detail,
-        selectedPort: appState.getSelectedPortTableName?.(),
-        storeRows: riskRows.length,
-        availablePorts,
-        availableRiskTypes,
-      });
+  console.log('[marketRiskRefresh] portfolio-context-changed received', {
+    detail: event?.detail,
+    selectedPort: appState.getSelectedPortTableName?.(),
+    selectedScenario: appState.selectedMvarInterval,
+    storeRows: riskRows.length,
+    availablePorts,
+    availableRiskTypes,
+  });
 
-      refreshMarketRiskSensitivitiesUI('portfolio-context-changed');
-    });
+  // MVaR Overview / Factor P&L / Product P&L must also re-render
+  // when the selected portfolio changes.
+  refreshMarketRiskUI(0);
 
+  // Sensitivities use their own Risk rows and handlers.
+  refreshMarketRiskSensitivitiesUI('portfolio-context-changed');
+});
     console.log('[marketRiskRefresh] sensitivity refresh listener installed');
   }
 

@@ -1,143 +1,136 @@
+// =============================================================================
+// Zentrale Chart-Farben — theme-aware (Light/Dark).
+//
+// Konzept: EINE Palette aus Basis-Farbtönen (HSL). Pro Theme ändert sich nur die
+// INTENSITÄT (Lightness/Sättigung), nicht der Farbton:
+//   • Light-Theme (auf Weiß): Basiswerte → satter/dunkler, guter Kontrast.
+//   • Dark-Theme  (auf Dunkel): aufgehellt + leicht entsättigt → klar, nicht neon.
+//
+// Alle Charts holen ihre Farben über die Funktionen unten → zentrale Steuerung.
+// Bei Theme-Wechsel ein 'theme:changed'-Event feuern, dann zeichnen die Charts neu.
+// =============================================================================
+
+// Moderne, harmonische Qualitativ-Palette als Basis-Farbtöne: [hue, sat%, light%]
+const PALETTE_HSL = [
+  [212, 65, 48],  // Blue
+  [ 24, 80, 52],  // Orange   [174, 58, 40],  // Teal 
+  [142, 50, 42],  // Green
+  [ 40, 85, 50],  // Amber
+  [174, 58, 40],  // Teal     [ 24, 80, 52],  // Orange
+  [  4, 70, 53],  // Red
+  [262, 48, 56],  // Purple
+  [330, 62, 56],  // Pink
+  [196, 65, 45],  // Sky
+  [ 88, 48, 44],  // Olive
+  [238, 50, 60],  // Indigo
+  [ 18, 42, 46],  // Brown
+  [210, 14, 50],  // Slate
+  [300, 45, 50],  // Magenta
+];
+
+// Legacy-Export (RGB) — nur Kompatibilität, intern nicht mehr genutzt.
 export const BASE_COLORS = [
-  [255,   0,   0],  // True Red
-  [255, 255,   0],  // Bright Yellow
-  [  0, 255, 255],  // Bright Cyan
-  [173, 255,  47],  // Bright Green
-  [255, 105, 180],  // Hot Pink
-  [ 75,   0, 130],  // Indigo
-  [255, 140,   0],  // Dark Orange
-  [  0, 191, 255],  // Deep Sky Blue
-  [ 50, 205,  50],  // Lime Green
-  [255,  51, 153],  // Neon Pink
-  [  0, 255, 127],  // Spring Green
-  [  0, 128, 255],  // Vivid Azure
-  [255,   0, 255],  // Magenta
-  [255, 165,   0],  // Vibrant Orange
-  [  0, 255,  64],  // Neon Green
-  [102,  51, 255],  // Electric Purple
-  [255,  99,  71],  // Tomato
-  [127, 255,   0],  // Chartreuse
-  [ 30, 144, 255],  // Dodger Blue
-  [255,  20, 147],  // Deep Pink
-  [  0, 206, 209],  // Dark Turquoise
-  [124, 252,   0],  // Lawn Green
-  [255, 215,   0],  // Gold
-  [ 65, 105, 225],  // Royal Blue
-  [  0, 250, 154],  // Medium Spring Green
-  [186,  85, 211],  // Medium Orchid
-  [255, 160, 122],  // Light Salmon
-  [ 60, 179, 113],  // Medium Sea Green
-  [ 72,  61, 139],  // Dark Slate Blue
-  [135, 206, 250],  // Light Sky Blue
-  [250, 128, 114],  // Salmon
+  [255, 0, 0], [255, 255, 0], [0, 255, 255], [173, 255, 47], [255, 105, 180],
 ];
 
 // ==============================
-// Hilfsfunktionen auf Basis der Palette
+// Theme-Helfer
 // ==============================
-
-// 1) Einfacher Farbstring (z.B. für Lines, Bars, Punkte)
-export function getColorFromPalette(index, alpha = 1) {
-  const [r, g, b] = BASE_COLORS[index % BASE_COLORS.length];
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+function isLightTheme() {
+  return typeof document !== 'undefined'
+    && !!document.body
+    && document.body.classList.contains('light-theme');
 }
 
-// Alias, falls du bereits getColor() irgendwo verwendest
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// Basis-HSL → theme-angepasste HSL.
+function themed(h, s, l) {
+  if (isLightTheme()) {
+    return { h, s, l };
+  }
+  // Dark-Theme: aufhellen + leicht entsättigen (gleicher Farbton).
+  return { h, s: clamp(s - 6, 30, 100), l: clamp(l + 14, 0, 74) };
+}
+
+function hsla(h, s, l, alpha = 1) {
+  return `hsla(${h}, ${s}%, ${l}%, ${alpha})`;
+}
+
+// Palette-Eintrag (theme-aware) als {h,s,l}.
+function paletteHsl(index) {
+  const [h, s, l] = PALETTE_HSL[((index % PALETTE_HSL.length) + PALETTE_HSL.length) % PALETTE_HSL.length];
+  return themed(h, s, l);
+}
+
+// Aus Basis-HSL ein {backgroundColor, borderColor}-Objekt (Border etwas dunkler).
+function colorObjFromHsl({ h, s, l }, alpha = 1) {
+  return {
+    backgroundColor: hsla(h, s, l, alpha),
+    borderColor:     hsla(h, s, clamp(l - 8, 0, 100), 1),
+  };
+}
+
+// ==============================
+// Palette-Funktionen (gleiche Signaturen/Rückgaben wie bisher)
+// ==============================
+
+// 1) Einfacher Farbstring (Lines, Bars, Punkte)
+export function getColorFromPalette(index, alpha = 1) {
+  const { h, s, l } = paletteHsl(index);
+  return hsla(h, s, l, alpha);
+}
+
 export function getColor(index, alpha = 1) {
   return getColorFromPalette(index, alpha);
 }
 
 // 2) Objekt für PieCharts / Legenden (background + border)
 export function getColorForPieChart(index, alpha = 1) {
-  const [r, g, b] = BASE_COLORS[index % BASE_COLORS.length];
-  return {
-    backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})`, // kräftig
-    borderColor:     `rgba(${r}, ${g}, ${b}, 1)`,
-  };
+  return colorObjFromHsl(paletteHsl(index), alpha);
 }
 
-// Alias, falls du bereits getColorObject() verwendest
 export function getColorObject(index, alpha = 1) {
   return getColorForPieChart(index, alpha);
 }
 
+// ==============================
+// Semantische Farben (fester Farbton, theme-aware Intensität)
+// ==============================
+
+// Portfolio-Markierung (Pink)
 export function getPortfolioColor(alpha = 1) {
-  return {
-    backgroundColor: `rgba(255, 20, 147, ${alpha})`,
-    borderColor:     `rgba(255, 20, 147, 1)`,
-  };
+  return colorObjFromHsl(themed(330, 72, 52), alpha);
 }
 
+// EU-Swap/Yield-Kurve (Blau)
 export function getEuswCurveColor(alpha = 1) {
-  return {
-    backgroundColor: `rgba(54, 162, 235, ${alpha})`, // klares Chart-Blau
-    borderColor:     `rgba(54, 162, 235, 1)`,
-  };
+  return colorObjFromHsl(themed(205, 68, 50), alpha);
 }
 
+// MVaR-Komponenten
 export function getMarketMvarColors(type = 'TOTAL', alpha = 0.25) {
   switch (type) {
-    case 'TOTAL':
-      return {
-        backgroundColor: `rgba(220, 53, 69, ${alpha})`,   // Rot / Credit
-        borderColor:     `rgba(220, 53, 69, 1)`,
-      };
-
-    case 'IR':
-      return {
-        backgroundColor: `rgba(54, 162, 235, ${alpha})`, // klares Chart-Blau
-        borderColor:     `rgba(54, 162, 235, 1)`,
-      };
-
-    case 'CS':
-      return {
-        backgroundColor: `rgba(255, 193, 7, ${alpha})`,   // Gelb
-        borderColor:     `rgba(255, 193, 7, 1)`,
-      };
-
-    default:
-      return {
-        backgroundColor: `rgba(200, 200, 200, ${alpha})`,
-        borderColor:     `rgba(200, 200, 200, 1)`,
-      };
+    case 'TOTAL': return colorObjFromHsl(themed(354, 68, 50), alpha); // Rot
+    case 'IR':    return colorObjFromHsl(themed(205, 68, 50), alpha); // Blau
+    case 'CS':    return colorObjFromHsl(themed( 40, 85, 50), alpha); // Amber
+    default:      return colorObjFromHsl(themed(210, 10, 60), alpha); // Grau
   }
 }
 
+// Sensitivitäten
 export function getIrSensitivityColor(alpha = 0.7) {
-  return {
-    backgroundColor: `rgba(54, 162, 235, ${alpha})`, // klares Chart-Blau
-    borderColor:     `rgba(54, 162, 235, 1)`,
-  };
+  return colorObjFromHsl(themed(205, 68, 50), alpha); // Blau
 }
 
 export function getCreditSensitivityColor(alpha = 0.7) {
-  return {
-        backgroundColor: `rgba(255, 193, 7, ${alpha})`,   // Gelb
-        borderColor:     `rgba(255, 193, 7, 1)`,
-  };
+  return colorObjFromHsl(themed(40, 85, 50), alpha);  // Amber
 }
 
+// Credit-Spread-Serien: index 0 IMMER Rot, sonst aus der Palette.
 export function getCSColors(index = 0, alpha = 0.6) {
-  // index 0 soll IMMER True Red sein
-  const baseIndex = index === 0 ? 0 : (index % (BASE_COLORS.length - 1)) + 1;
-  const [r, g, b] = BASE_COLORS[baseIndex];
-
-  return {
-    backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})`,
-    borderColor:     `rgba(${r}, ${g}, ${b}, 1)`,
-  };
+  if (index === 0) {
+    return colorObjFromHsl(themed(4, 70, 53), alpha); // Rot
+  }
+  return colorObjFromHsl(paletteHsl(index), alpha);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

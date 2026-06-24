@@ -82,7 +82,7 @@ function bindMvarFactorSeriesMapSaveButton() {
     btn.addEventListener('click', () => {
     const rows = readMvarFactorSeriesMapRowsFromDom();
 
-    console.log('[MVAR FACTOR MAP SAVE PAYLOAD]', rows);
+    // console.log('[MVAR FACTOR MAP SAVE PAYLOAD]', rows);
     window.__mvarFactorSeriesMapSavePayload = rows;
 
     if (!window.api?.send) {
@@ -203,7 +203,7 @@ export function renderMvarFactorSeriesMapPanel(appState) {
 
   bindMvarFactorSeriesMapSaveButton();
 
-  console.log('[MVAR FACTOR MAP] rendered', rows.length);
+  // console.log('[MVAR FACTOR MAP] rendered', rows.length);
 }
 
 export function handleMarketVarFactorSeriesMapData(rows, appState) {

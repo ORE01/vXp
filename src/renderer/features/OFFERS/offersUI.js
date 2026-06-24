@@ -99,7 +99,11 @@ export function renderOffersPanel(appState) {
 
   // RAW source (DealsMain precalc)
   const allRaw = appState.getOffersData?.() || [];
-  fillOffersDropdown(allRaw);
+
+  // Dropdown soll ALLE Portfolios listen (nicht nur OFFERS_-Zeilen aus DealsMain).
+  // Die rechte Tabelle/Preview arbeitet ohnehin schon mit getAllPortfolioData().
+  const allPortsForDropdown = appState.getAllPortfolioData?.() || [];
+  fillOffersDropdown([...allPortsForDropdown, ...allRaw]);
 
   // Selected offer name
   const dd = document.getElementById('createdOffersDropdown');
@@ -126,6 +130,7 @@ export function renderOffersPanel(appState) {
 
   // If portfolio not calculated yet → show nothing
   if (!portfolioRows.length) {
+    appState.offersReportRows = [];
     fillOffersFilters(appState, []);
     renderOffersPortfolio([], offerName);
     return;
@@ -139,6 +144,11 @@ export function renderOffersPanel(appState) {
 
   // Filters reflect visible preview
   fillOffersFilters(appState, previewRows);
+
+  // Approach A: Offer-Vorschau-Zeilen als echte Objekte für den Offers-Report
+  // bereitstellen (richtige DB-Keys: PROD_ID/ISSUER/PRICE_BUY/ytm/...), damit der
+  // Report NICHT die gerenderte (configurable) Tabelle scrapen muss.
+  appState.offersReportRows = portfolioFiltered;
 
   // Render portfolio preview
   renderOffersPortfolio(portfolioFiltered, offerName);

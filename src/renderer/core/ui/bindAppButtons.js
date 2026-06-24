@@ -1,5 +1,8 @@
 // FRONT_END/UI/bindAppButtons.js
 
+import { bindTradeButtons } from '../../features/portfolio/trades/bindTradeButtons.js';
+import { showMessageBox } from './dialogs/confirm.js';
+
 /**
  * Central UI button bindings for the app.
  * Renderer should only call: bindAppButtons({ ...deps })
@@ -84,47 +87,9 @@ export function bindAppButtons({
     }, false);
   }
 
-  // ---------- Deals / Portfolio ----------
-  document.getElementById('savePortfolioButton')
-    ?.addEventListener('click', dealsActions.handleSaveNewPortfolio);
-
-  document.getElementById('saveSelectionButton')
-    ?.addEventListener('click', dealsActions.handleSaveSelection);
-
-  document.getElementById('deleteTableButton')
-    ?.addEventListener('click', dealsActions.handleDeleteSelection);
-
-  document.getElementById('deletePortfolioButton')
-    ?.addEventListener('click', dealsActions.handleDeleteSelection);
-
-  document.getElementById('addProductsButtonCreate')
-    ?.addEventListener('click', dealsActions.handleAddProductsCreate);
-
-  document.getElementById('addProductsButtonChange')
-    ?.addEventListener('click', dealsActions.handleAddProductsChange);
-
-  document.getElementById('fillDetailsButtonCreate')
-    ?.addEventListener('click', dealsActions.handleFillDetailsCreate);
-
-  document.getElementById('fillDetailsButtonChange')
-    ?.addEventListener('click', dealsActions.handleFillDetailsChange);
-
-  // Calculate Portfolio from the Create panel: same flow as the Change-panel
-  // Calculate button (source 'deals' -> auto-switch to SELECT PORTFOLIO tab).
-  document.getElementById('fairValueButtonCreate')
-    ?.addEventListener('click', (e) => {
-      const port = dealsActions.prepareCalculateCreate?.();
-      if (!port) return;
-
-      if (!py || typeof py.handleProjectButtonClick !== 'function') {
-        console.warn('[bindAppButtons] py missing or invalid');
-        return;
-      }
-      py.handleProjectButtonClick(e.currentTarget, 'py-fairValue');
-    });
-
-  document.getElementById('portfolioDealsAddButton')
-    ?.addEventListener('click', dealsActions.handleAddTradeToNewPortfolio);
+  // ---------- Trade-Editor (Create / Change Portfolio) ----------
+  // Button-Verdrahtung liegt jetzt beim Feature (portfolio/tradeEditor).
+  bindTradeButtons({ dealsActions, py });
 
   // ---------- Column selector drawers (SELECT PORTFOLIO, ISSUER, ...) ----------
   const wireColumnDrawer = (btnId, drawerId) => {
@@ -227,13 +192,15 @@ export function bindAppButtons({
     button.addEventListener('click', (event) => {
       const selectedRadio = document.querySelector(`${radioSelector}:checked`);
       if (!selectedRadio) {
-        alert(emptyMessage || 'Please select an option!');
+        const msg = emptyMessage || 'Please select an option!';
+        if (typeof showMessageBox === 'function') showMessageBox(msg);
+        else console.warn('[bindAppButtons]', msg);
         return;
       }
 
       const value = selectedRadio.getAttribute(valueAttr);
       if (!value) {
-        alert(`Selected row has no ${valueAttr} attribute.`);
+        console.warn('[bindAppButtons]', `Selected row has no ${valueAttr} attribute.`);
         return;
       }
 
@@ -279,6 +246,11 @@ export function bindAppButtons({
   // ---------- Theme toggle ----------
   document.getElementById('themeToggle')?.addEventListener('click', () => {
     document.body.classList.toggle('light-theme');
+    // Charts holen ihre Farben theme-aware aus colors.js → bei Wechsel neu zeichnen.
+    try {
+      const light = document.body.classList.contains('light-theme');
+      document.dispatchEvent(new CustomEvent('theme:changed', { detail: { light } }));
+    } catch {}
   });
 }
 

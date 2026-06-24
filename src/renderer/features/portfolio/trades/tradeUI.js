@@ -1,9 +1,9 @@
 'use strict';
 
-import processData from '../../core/ui/modal/modalData.js';
-import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../utils/tooltips.js';
-import { attachIdLinks } from '../../utils/linksToTables.js';
-import { handleModalAction } from '../../core/ui/modal/modalActions.js';
+import processData from '../../../core/ui/modal/modalData.js';
+import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../../utils/tooltips.js';
+import { attachIdLinks } from '../../../utils/linksToTables.js';
+import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 
 let _bound = false;
 let _t = null;

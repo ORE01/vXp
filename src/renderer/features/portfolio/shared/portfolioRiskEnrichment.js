@@ -1,4 +1,4 @@
-import * as portfolioRiskSensitivitiesStoreModule from '../../core/state/stores/portfolioRiskSensitivitiesStore.js';
+import * as portfolioRiskSensitivitiesStoreModule from '../../../core/state/stores/portfolioRiskSensitivitiesStore.js';
 
 const portfolioRiskSensitivitiesStore =
   portfolioRiskSensitivitiesStoreModule.portfolioRiskSensitivitiesStore ||

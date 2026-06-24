@@ -65,17 +65,70 @@ export function createPythonExecutionRouter(ctx) {
     const selectedTableName = appState.getSelectedPortTableName?.();
     if (!selectedTableName) throw new Error('No table selected for MVaR processing.');
 
-    const interval = extraParam?.selectedInterval;
-    if (!interval) throw new Error('No scenario selected. Bitte wähle ein Szenario mit dem Radio-Button aus.');
+    // Interval priority: an explicit user selection this session wins; otherwise
+    // the customer default (CustomerMarketRiskSetting), otherwise the fallback.
+    const customerDefaultIntervalFromStore =
+      appState.getCustomerMarketRiskSetting?.()?.default_market_risk_interval_code || null;
+    const sessionSelectedInterval = appState.sessionSelectedMvarInterval || null;
+    const marketRiskIntervalTouched = !!appState.marketRiskIntervalTouched;
+    const fallbackInterval = appState.mvarFallbackInterval || null;
 
-    appState.selectedMvarInterval = interval;
+    const finalIntervalUsed = marketRiskIntervalTouched
+      ? sessionSelectedInterval
+      : (customerDefaultIntervalFromStore || fallbackInterval);
+
+    const source = marketRiskIntervalTouched
+      ? 'USER_SELECTION'
+      : (customerDefaultIntervalFromStore ? 'CUSTOMER_SETTING' : 'FALLBACK');
+
+    if (!finalIntervalUsed) {
+      throw new Error('No scenario selected. Bitte wähle ein Market-Risk-Intervall aus.');
+    }
+
+    // VaR horizon (var_days) and confidence are customer settings now, NOT taken
+    // silently from MVaRInput. Fallback 10 / 0.95 if no customer setting.
+    const setting = appState.getCustomerMarketRiskSetting?.() || null;
+
+    let varDays = Math.trunc(Number(setting?.var_days));
+    const varDaysFromSetting = Number.isFinite(varDays) && varDays > 0;
+    if (!varDaysFromSetting) varDays = 10;
+    const varDaysSource = varDaysFromSetting ? 'CUSTOMER_SETTING' : 'FALLBACK';
+
+    let confidence = Number(setting?.confidence);
+    const confidenceFromSetting = Number.isFinite(confidence) && confidence > 0 && confidence < 1;
+    if (!confidenceFromSetting) confidence = 0.95;
+    const confidenceSource = confidenceFromSetting ? 'CUSTOMER_SETTING' : 'FALLBACK';
+
+    // START/END come from the read model row of the chosen interval.
+    const viewRows = appState.getMvarModelSelectionAppRows?.() || [];
+    const intervalRow = viewRows.find((r) => String(r.INTERVAL_NAME) === String(finalIntervalUsed)) || null;
+    const start = intervalRow ? (intervalRow.START ?? null) : null;
+    const end = intervalRow ? (intervalRow.END ?? null) : null;
+
+    console.log('[MVAR RUN CONFIG - BEFORE SPAWN]', {
+      finalIntervalUsed,
+      start,
+      end,
+      varDaysSource,
+      varDays,
+      confidenceSource,
+      confidence,
+      intervalSource: source,
+    });
+
+    appState.selectedMvarInterval = finalIntervalUsed;
 
     const checked = document.querySelector('.scenario-radio:checked');
     const idAttr = checked?.getAttribute('data-id');
     const selectedId = idAttr != null ? parseInt(idAttr, 10) : null;
     if (!Number.isNaN(selectedId) && selectedId != null) appState.selectedMvarId = selectedId;
 
-    const payload = { tableName: selectedTableName, selectedInterval: interval };
+    const payload = {
+      tableName: selectedTableName,
+      selectedInterval: finalIntervalUsed,
+      var_days: varDays,
+      confidence,
+    };
     window.api.send('start-py-MVaR', payload);
   }
 

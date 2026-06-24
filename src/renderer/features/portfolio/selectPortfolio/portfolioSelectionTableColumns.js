@@ -94,13 +94,21 @@ export const SELECTABLE_PORT_COLUMN_KEYS = SELECTABLE_PORT_COLUMNS.map(col => co
 export const DEFAULT_VISIBLE_PORT_COLUMN_KEYS = [
   'CATEGORY',  
   'PROD_ID',
-  'DESCRIPTION',
   'Depotbank',
   'ISSUER',
   'MATURITY',
   'RATINGres',
   'NOTIONAL',
   'NAV',  
+];
+
+export const LOCKED_PORT_COLUMN_KEYS = [
+  'TRADE_ID',
+  'PROD_ID',
+  'clean_price',
+  'C_SPREAD',
+  'NOTIONAL',
+  'NAV',
 ];
 
 export function getPortColumnLabel(columnKey) {

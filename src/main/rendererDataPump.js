@@ -21,6 +21,7 @@ module.exports = function createRendererDataPump({ app, getMainWindow, mainFct }
   let tableNames = [];
   let tableNamesReady = false;
   let tableNamesLoading = false;
+  let rendererReady = false;
 
 const excluded = new Set([
   'sqlite_sequence',
@@ -43,6 +44,9 @@ function isExcludedTable(tableName) {
     if (channel === 'CustomerTableLayoutsData') {
   console.log('[DATAPUMP] SEND CustomerTableLayoutsData', payload);
 }
+    if (channel === 'CustomerCreditRiskThresholdSettingData' || channel === 'CustomerCreditRiskSettingData') {
+      console.log(`[DATAPUMP] ${channel} rows=${Array.isArray(payload) ? payload.length : '?'}`);
+    }
     try {
       const win = getMainWindow();
 
@@ -259,15 +263,42 @@ function resolveTableName(tableName) {
     loadTableNames();
   }
 
+  // Force a fresh getAllTableNames() on the next loadTableNames(). Needed because
+  // ensureAppSchema() may create tables/views AFTER the first enumeration; without
+  // invalidating, those (e.g. CustomerCreditRiskThresholdSetting) would never be
+  // sent.
+  function invalidateTableNamesCache() {
+    tableNamesReady = false;
+    tableNamesLoading = false;
+    tableNames = [];
+  }
+
+  function reloadAndSendAll() {
+    invalidateTableNamesCache();
+    loadTableNames((err) => {
+      if (err) return;
+      sendAllTablesToRenderer();
+    });
+  }
+
+  // Called once ensureAppSchema() has finished (all tables/views exist). Invalidate
+  // the cached list; re-send immediately if the renderer is already up, otherwise
+  // the next did-finish-load re-enumerates fresh.
+  function onSchemaReady() {
+    log('[DATAPUMP] onSchemaReady -> invalidate table-name cache');
+    invalidateTableNamesCache();
+    if (rendererReady) reloadAndSendAll();
+  }
+
   function installWindowDidFinishLoadSend() {
     app.on('browser-window-created', (_event, window) => {
       window.webContents.on('did-finish-load', () => {
         log('[DATAPUMP] did-finish-load');
+        rendererReady = true;
 
-        loadTableNames((err) => {
-          if (err) return;
-          sendAllTablesToRenderer();
-        });
+        // Always re-enumerate fresh on (re)load so newly created tables/views are
+        // picked up (e.g. after a schema migration).
+        reloadAndSendAll();
       });
     });
   }
@@ -278,6 +309,8 @@ function resolveTableName(tableName) {
     fetchDataAndSendEvent,
     refreshTable,
     sendAllTablesToRenderer,
+    invalidateTableNamesCache,
+    onSchemaReady,
     emitToRenderer: safeSend,
   };
 };

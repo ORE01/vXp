@@ -160,9 +160,23 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
   };
 
 
-  const updateEADDataTable = (receivedData) => {
-    appState.setAllEADData?.(receivedData);
-  };
+const updateEADDataTable = (receivedData, index, port_name) => {
+  const rows = Array.isArray(receivedData) ? receivedData : [];
+
+  if (rows.length > 0) {
+    appState.setAllEADData?.(rows);
+  }
+
+  const sourceRows = rows.length > 0
+    ? rows
+    : (appState.getAllEADData?.() || []);
+
+  try {
+    (window.handleEADData || appState.handleEADData)?.(sourceRows, index, port_name);
+  } catch (err) {
+    console.warn('[dataUpdatePipeline] updateEADDataTable render failed:', err);
+  }
+};
 
   // -----------------------------
   // Expose on appState

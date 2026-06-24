@@ -9,6 +9,7 @@ import { handleVegaSensData } from './sensitivities/portfolioVegaHandler.js';
 import {
   handleMVaRData,
   handleMvarInputData,
+  handleMvarModelSelectionAppData,
   handleMVaRFactorPLData,
   handleMVaRProductPLData,
   handleMarketVarFactorSeriesMapData,
@@ -23,6 +24,7 @@ export const marketRiskHandlers = {
 
   handleMVaRData,
   handleMvarInputData,
+  handleMvarModelSelectionAppData,
   handleMVaRFactorPLData,
   handleMVaRProductPLData,
   handleMarketVarFactorSeriesMapData,
