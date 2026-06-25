@@ -117,12 +117,49 @@ function bindMvarFactorSeriesMapSaveButton() {
     });
 }
 
+let __factorsReady = false;   // true, sobald einmal mit Faktor-Optionen gerendert
+let __tbltsBound = false;     // tblts:ready-Listener nur einmal binden
+
+// Risikofaktoren = Spalten der historischen Zeitreihe (tblTS), wie im Factor-Chart.
+function getFactorOptions(appState) {
+  const rows = appState?.getTblTSData?.() || [];
+  if (!rows.length) return [];
+  const keys = Object.keys(rows[0]);
+  const dateKey = keys.find((k) => /date|datum/i.test(k)) || keys[0];
+  return keys.filter((k) => k !== dateKey);
+}
+
+// <select> für "Linked Time Series": Faktoren + aktueller Wert (auch wenn tblTS
+// noch nicht geladen ist). Save bleibt kompatibel, da .value gelesen wird.
+function buildLinkedSelect(current, factorOpts) {
+  const cur = String(current ?? '').trim();
+  const opts = ['', ...factorOpts];
+  if (cur && !opts.includes(cur)) opts.push(cur);
+  return '<select class="mvar-factor-map-input" data-field="linked_ts_col">'
+    + opts
+      .map((o) => `<option value="${escapeHtml(o)}"${o === cur ? ' selected' : ''}>${escapeHtml(o || '—')}</option>`)
+      .join('')
+    + '</select>';
+}
+
 export function renderMvarFactorSeriesMapPanel(appState) {
   const tbody = document.getElementById('mvarFactorSeriesMapTableBody');
 
   if (!tbody) {
     console.warn('[MVAR FACTOR MAP] tbody missing: mvarFactorSeriesMapTableBody');
     return;
+  }
+
+  // tblTS-Ready einmalig binden: wird die Faktorliste erst NACH dem ersten Render
+  // geladen, einmal neu rendern, damit die Dropdowns die Faktoren bekommen.
+  // Guard __factorsReady verhindert spätere Re-Renders (keine Edit-Überschreibung).
+  if (!__tbltsBound) {
+    __tbltsBound = true;
+    document.addEventListener('tblts:ready', () => {
+      if (__factorsReady) return;
+      if (!document.getElementById('mvarFactorSeriesMapTableBody')) return;
+      if (getFactorOptions(appState).length > 0) renderMvarFactorSeriesMapPanel(appState);
+    });
   }
 
   const rows =
@@ -141,6 +178,9 @@ export function renderMvarFactorSeriesMapPanel(appState) {
     return;
   }
 
+    const factorOpts = getFactorOptions(appState);
+    if (factorOpts.length > 0) __factorsReady = true;
+
     tbody.innerHTML = rows.map((row) => {
     const status = getMappingStatus(row);
     const statusLabel = getMappingStatusLabel(status);
@@ -158,11 +198,7 @@ export function renderMvarFactorSeriesMapPanel(appState) {
         </td>
 
         <td>
-          <input
-            class="mvar-factor-map-input"
-            data-field="linked_ts_col"
-            value="${escapeHtml(row.linked_ts_col)}"
-          />
+          ${buildLinkedSelect(row.linked_ts_col, factorOpts)}
         </td>
 
         <td>

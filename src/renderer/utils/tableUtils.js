@@ -46,6 +46,11 @@ export function getUniqueIdentifier(newData, selectedTableName) {
         uniqueIdentifierColumn = 'id';
         break;
 
+      case 'MVaRInput':
+        // PK ist 'id'; newData enthält id ({...row, ...form} in modalEditAction).
+        uniqueIdentifierColumn = 'id';
+        break;
+
       default:
         console.error('Unknown table:', selectedTableName);
         return null;

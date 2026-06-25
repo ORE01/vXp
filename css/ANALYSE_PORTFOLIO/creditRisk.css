@@ -83,6 +83,16 @@
   background:transparent !important;
 }
 
+/* Combined Losses-Chart MUSS die Karte füllen. chart.css setzt global
+   .chart-container-inner canvas { height:auto !important } -> Canvas wird nur
+   aspect-ratio-hoch (~80px) statt 460/520px. ID-Regel + !important sticht das. */
+:is(#panel-cvar, #panel-EAD) #LossIssuerChartCombinedTop{
+  position:absolute;
+  inset:0;
+  width:100% !important;
+  height:100% !important;
+}
+
 /* Tabellen-Card (oben links) */
 :is(#panel-cvar, #panel-EAD) .table-card{
   --cvar-card-width: 560px;

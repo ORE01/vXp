@@ -127,11 +127,10 @@
                 'prodRankDropdown': { dataKey: 'RANK', selection: ['ALL'] },
             },
             deals: {
+                // Deals-Filter laufen jetzt über die Spaltenköpfe der Tabelle
+                // (renderConfigurableTable, mode 'header'). Nur die TRADE_ID-Auswahl
+                // für den Edit-Drawer bleibt hier.
                 'tradeDropdown': { dataKey: 'TRADE_ID', selection: ['ALL'] },
-                'dealsProdIdDropdown': { dataKey: 'PROD_ID', selection: ['ALL'] },
-                'dealsCategoryDropdown': { dataKey: 'CATEGORY', selection: ['ALL'] },
-                'dealsNotionalDropdown': { dataKey: 'NOTIONAL', selection: ['ALL'] },
-                'dealsDepotbankDropdown': { dataKey: 'Depotbank', selection: ['ALL'] },
             },
               offers: {
                 'offersIssuerDropdown':     { dataKey: 'ISSUER',        selection: ['ALL'] },

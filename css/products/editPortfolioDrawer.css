@@ -1,0 +1,121 @@
+/* electron_app/css/products/editPortfolioDrawer.css */
+
+/* =====================================================
+   EDIT PORTFOLIO DRAWER
+   Spiegelt addProductsDrawer.css (Token-basiert, gleiche Optik).
+   Fährt von rechts ein, ~720px, Toggle via .is-open.
+===================================================== */
+
+.edit-portfolio-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(720px, 96vw);
+  height: 100vh;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+
+  z-index: 9999;
+  transform: translateX(105%);
+  transition: transform 180ms ease-out;
+}
+
+.edit-portfolio-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* ---------- Header ---------- */
+.epd-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.epd-eyebrow {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.epd-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--text-bright);
+}
+
+.epd-close {
+  flex-shrink: 0;
+  padding: 6px 10px;
+
+  background: transparent;
+  color: var(--text-bright);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.epd-close:hover {
+  background: var(--hover-bg);
+}
+
+/* ---------- Body ---------- */
+.epd-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  margin-top: 18px;
+}
+
+/* ---------- Formular (aus newPortfolio.css übernommen, hier scoped) ---------- */
+.edit-portfolio-drawer .cp-form-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr);
+  column-gap: 12px;
+  row-gap: 10px;
+  width: 100%;
+  align-items: center;
+}
+
+.edit-portfolio-drawer label {
+  color: var(--text-bright);
+}
+
+.edit-portfolio-drawer .cp-field .input-field,
+.edit-portfolio-drawer .cp-field select {
+  width: 100%;
+  box-sizing: border-box;
+
+  color: var(--text-bright) !important;
+  background: var(--surface-header) !important;
+  caret-color: var(--text-bright) !important;
+  -webkit-text-fill-color: var(--text-bright) !important;
+
+  border: 1px solid var(--border) !important;
+  border-radius: 3px;
+  padding: 4px 8px;
+  min-height: 28px;
+  line-height: 1.4;
+  font-size: 13px;
+}
+
+.edit-portfolio-drawer .cp-field select[multiple] {
+  min-height: 120px;
+}
+
+.edit-portfolio-drawer .cp-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}

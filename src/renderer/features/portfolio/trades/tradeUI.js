@@ -57,22 +57,10 @@ export function bindDealsUIOnce(appState) {
     scheduleRecomputeDeals(appState);
   });
 
-  // Filter dropdowns
-  [
-    'dealsProdIdDropdown',
-    'dealsCategoryDropdown',
-    'dealsNotionalDropdown',
-    'dealsDepotbankDropdown',
-    'tradeDropdown',
-  ].forEach((id) => {
-    document.getElementById(id)?.addEventListener('change', () => {
-      scheduleRecomputeDeals(appState);
-    });
-  });
-
-  // Reset -> set UI values to ALL then recompute
-  document.getElementById('dealsResetFiltersButton')?.addEventListener('click', () => {
-    resetDealsFiltersUIOnly();
+  // TRADE_ID-Auswahl (Edit-Drawer) -> Deals neu berechnen.
+  // Die früheren Filter-Dropdowns sind entfernt; gefiltert wird jetzt über die
+  // Spaltenköpfe der Deals-Tabelle (renderConfigurableTable, mode 'header').
+  document.getElementById('tradeDropdown')?.addEventListener('change', () => {
     scheduleRecomputeDeals(appState);
   });
 
@@ -134,32 +122,6 @@ export function renderDealsTable(rows, tableName = DEALS_TABLE_NAME) {
   addTooltipsForTruncatedText(container);
   addProdIdTooltips(container);
   attachIdLinks(container);
-}
-
-/* -------------------------
-   UI-only reset helper
-   ------------------------- */
-function resetDealsFiltersUIOnly() {
-  const ids = [
-    'dealsProdIdDropdown',
-    'dealsCategoryDropdown',
-    'dealsNotionalDropdown',
-    'dealsDepotbankDropdown',
-    'tradeDropdown',
-  ];
-
-  ids.forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    // Set ALL selected (works for single/multi select)
-    Array.from(el.options || []).forEach((o) => {
-      o.selected = (String(o.value) === ALL);
-    });
-
-    // Fire change so engine notices
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  });
 }
 
 /* -------------------------

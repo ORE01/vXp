@@ -59,12 +59,8 @@ export function installDropdownFilterEngine({ appState, root = document } = {}) 
       'issuerIssuerDropdown': 'issuer',
       'issuerRatingDropdown': 'issuer',
 
-      // deals
+      // deals (Filter laufen jetzt über die Spaltenköpfe; nur TRADE_ID-Auswahl bleibt)
       'tradeDropdown': 'deals',
-      'dealsProdIdDropdown': 'deals',
-      'dealsCategoryDropdown': 'deals',
-      'dealsNotionalDropdown': 'deals',
-      'dealsDepotbankDropdown': 'deals',
 
       // port
       'portIssuerDropdown': 'port',

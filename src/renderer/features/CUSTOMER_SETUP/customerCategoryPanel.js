@@ -71,6 +71,15 @@ export function renderCustomerCategoryPanel(rows) {
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       const rowIndex = parseInt(button.getAttribute('data-row'), 10);
+      const row = currentRows[rowIndex];
+
+      // Fallback-Zeile (DEFAULT_ROWS, id=null): DB ist noch nicht geladen. Ein Edit
+      // würde ins Leere laufen (Update WHERE id=null). Stattdessen echte Daten holen.
+      if (!row || row.id == null) {
+        window.api?.send?.('fetch-table-data', TABLE_NAME);
+        return;
+      }
+
       handleModalAction(event, currentRows, rowIndex, TABLE_NAME, 'edit');
     });
   });

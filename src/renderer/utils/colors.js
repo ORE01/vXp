@@ -127,6 +127,16 @@ export function getCreditSensitivityColor(alpha = 0.7) {
   return colorObjFromHsl(themed(40, 85, 50), alpha);  // Amber
 }
 
+// Generisches Amber (z.B. Difference-Balken in Vergleichs-Charts), theme-aware.
+export function getAmberColor(alpha = 1) {
+  return colorObjFromHsl(themed(40, 85, 50), alpha);
+}
+
+// Generisches Rot (z.B. Difference-Balken in Vergleichs-Charts), theme-aware.
+export function getRedColor(alpha = 1) {
+  return colorObjFromHsl(themed(4, 70, 53), alpha);
+}
+
 // Credit-Spread-Serien: index 0 IMMER Rot, sonst aus der Palette.
 export function getCSColors(index = 0, alpha = 0.6) {
   if (index === 0) {

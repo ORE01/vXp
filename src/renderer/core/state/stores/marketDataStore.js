@@ -265,6 +265,13 @@ export function installMarketDataStore({ appState } = {}) {
 
   function setTblTSData(data) {
     appState.tblTSData = Array.isArray(data) ? data : [];
+    // Signal: tblTS-Faktoren sind (neu) verfügbar — Panels mit Faktor-Dropdowns/
+    // -Charts (z.B. MVaR Factor Series Mapping) können sich nachladen.
+    try {
+      if (appState.tblTSData.length && typeof document !== 'undefined') {
+        document.dispatchEvent(new Event('tblts:ready'));
+      }
+    } catch {}
   }
 
   function getTblTSData() {

@@ -3,8 +3,13 @@ import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../../utils/tooltips.js';
 import { attachIdLinks } from '../../../utils/linksToTables.js';
 import { enhanceIncludeCheckboxes } from '../../../core/ui/enhancers/includeToggleEnhancer.js';
+import { renderConfigurableTable } from '../../../core/ui/tables/configurableTable.js';
+import { clearColumnFilters } from '../../CUSTOMER/tableLayouts/tableColumnFilters.js';
+
+const DEALS_TABLE_ID = 'dealsMainTable';
 
 let filteredDealsData;
+let lastDealsRender = null; // { container, rows, tableName } für Filter-Reset
 
 /**
  * Deals table display columns only.
@@ -127,11 +132,8 @@ export function handleDealsData(receivedData, dealsTableName, opts = {}) {
   // Keep full rows for Add/Edit logic.
   filteredDealsData = receivedData;
 
+  // 3) Render (inkl. UI-Enhancements: INCLUDE-Checkbox, ID-Links, Tooltips)
   renderDealsTableIntoContainer(targetContainer, filteredDealsData, tableName);
-
-  // 3) UI Enhancements
-  applyDealsUIEnhancements(targetContainer);
-  enhanceIncludeCheckboxes(targetContainer);
 
   // 4) Mirror only when explicitly requested.
   if (!isOffer && opts.mirrorToNewPortfolio === true) {
@@ -175,11 +177,41 @@ function resolveDealsContext(opts = {}) {
 function renderDealsTableIntoContainer(container, rows, tableName) {
   const displayRows = filterDealsColumnsForDisplay(rows);
 
+  // Deals-Haupttabelle: Configurable-Table mit Filter-/Sortier-Dropdowns direkt
+  // im Spaltenkopf (genau wie VALUATION / portDataContainer0). INCLUDE-Checkbox,
+  // Trade-/Product-ID-Links und Tooltips laufen über afterRender (vor dem Anhängen
+  // der Header-Funnel, damit attachIdLinks saubere Header sieht).
+  if (container.id === 'dealsDataContainer') {
+    lastDealsRender = { container, rows, tableName };
+    bindDealsResetFiltersOnce();
+
+    renderConfigurableTable({
+      tableId: DEALS_TABLE_ID,
+      rows: displayRows,
+      tableContainerId: container.id,
+      selectedTableName: tableName,
+      columnLabelMap: DEALS_COLUMN_LABELS,
+      sorting: { enabled: true },
+      filtering: { enabled: true, mode: 'header' },
+      afterRender: (c) => {
+        applyDealsUIEnhancements(c);
+        enhanceIncludeCheckboxes(c);
+      },
+      // Header-Filter ändert sich -> mit denselben Zeilen neu rendern, damit der
+      // Filter (applyColumnFilters) greift.
+      onFilterChange: () => renderDealsTableIntoContainer(container, rows, tableName),
+    });
+    return;
+  }
+
+  // Offers / New-Portfolio-Mirror: unveränderter processData-Pfad.
   container.innerHTML = processData(
     displayRows,
     tableName,
     DEALS_COLUMN_LABELS
   );
+  applyDealsUIEnhancements(container);
+  enhanceIncludeCheckboxes(container);
 }
 
 /* =========================================================
@@ -189,6 +221,24 @@ function applyDealsUIEnhancements(container) {
   addTooltipsForTruncatedText(container);
   addProdIdTooltips(container);
   attachIdLinks(container);
+}
+
+// "Reset all filters": leert die Spaltenkopf-Filter der Deals-Tabelle und rendert neu.
+function bindDealsResetFiltersOnce() {
+  const btn = document.getElementById('dealsResetFiltersButton');
+  if (!btn || btn.dataset.tcfResetBound === '1') return;
+  btn.dataset.tcfResetBound = '1';
+
+  btn.addEventListener('click', () => {
+    clearColumnFilters(DEALS_TABLE_ID);
+    if (lastDealsRender) {
+      renderDealsTableIntoContainer(
+        lastDealsRender.container,
+        lastDealsRender.rows,
+        lastDealsRender.tableName
+      );
+    }
+  });
 }
 
 /* =========================================================

@@ -18,6 +18,13 @@
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
+/* Light-Theme: schwarzer Ring, damit die Ampel auf hellem Grund deutlich sichtbar
+   ist. Zentral hier -> gilt für ALLE Ampeln (auch .traffic-light-wrapper.small,
+   die nur die Border-Breite überschreibt). Dark-Theme bleibt unverändert. */
+.light-theme .traffic-light {
+    border-color: #000;
+}
+
 .light {
     width: 40px;
     height: 40px;

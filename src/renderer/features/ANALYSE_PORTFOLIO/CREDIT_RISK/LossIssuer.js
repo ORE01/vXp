@@ -55,22 +55,24 @@ export function handleLossIssuerMainData(receivedData) {
         allRows[10].classList.add('highlight');
       }
 
-      // Speichern 
+      // Speichern (die 3 Einzelcharts sind zu EINER Chart mit 3 Serien zusammengefasst,
+      // siehe createCombinedLossesChart unten -> 'LossIssuerChartCombinedTop').
       if (pdFlag === 'RATING') {
         ratingData = sortedData;
-        createLossIssuerChart(ratingData, chartId, 'rating');
       } else if (pdFlag === 'MARKET') {
         marketData = sortedData;
-        createLossIssuerChart(marketData, chartId, 'market');
       } else if (pdFlag === 'NORM') {
         marketNormData = sortedData;
-        createLossIssuerChart(marketNormData, chartId, 'norm');
       }
     }
   });
 
   // Kombinierte Charts nur erstellen, wenn alle drei da sind
   if (ratingData.length > 0 && marketData.length > 0 && marketNormData.length > 0) {
+    // Rating/Market/Norm Losses in EINER horizontalen Balkenchart (gleicher Stil
+    // wie die früheren Einzelcharts), als 3 farbige Serien.
+    createCombinedLossesChart(ratingData, marketData, marketNormData, 'LossIssuerChartCombinedTop');
+
     createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
     createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart');
 
@@ -122,9 +124,8 @@ export function setupLossIssuerUI() {
   [
     // 'EADChartContainer',
     'LGDChartContainer',
-    'LossIssuerChartContainerRating',
-    'LossIssuerChartContainerMarket',
-    'LossIssuerChartContainerMarketNorm',
+    // Rating/Market/Norm Losses zusammengefasst in einer Chart
+    'LossIssuerChartContainerCombined',
     // kombinierte Charts (falls eigene Container vorhanden sind)
     'LossIssuerCombinedChartContainer',
     'LossIssuerCombinedESChartContainer',
@@ -177,8 +178,106 @@ export function setupLossIssuerUI() {
           data: values, 
           backgroundColor: barColors, 
           borderColor: barColors 
-        }] 
+        }]
       }, chartId, 'bar', 'y');
+    }
+
+    // Rating + Market + Norm Losses in EINER horizontalen Balkenchart (3 Serien).
+    // Gleicher Stil/Helper wie createLossIssuerChart (createBarChart, indexAxis 'y').
+    // Achse = QUANTIL (bei allen pd_flags identisch); erste 15 Zeilen.
+    //
+    // createBarChart ist responsive:false und snapshottet die Canvas-Größe beim
+    // Erstellen. Wird die Chart gezeichnet, bevor der Container seine endgültige
+    // Höhe hat (Panel-Open/Layout), bleibt sie zu klein. Daher: per ResizeObserver
+    // neu zeichnen, sobald der Container seine Maße ändert -> füllt die Karte.
+    function createCombinedLossesChart(ratingData, marketData, marketNormData, chartId) {
+      const canvas = document.getElementById(chartId);
+      if (!canvas) return;
+      const host = canvas.parentNode;
+
+      const render = () => {
+        if (window[chartId] && typeof window[chartId].destroy === 'function') {
+          try { window[chartId].destroy(); } catch (e) {}
+        }
+
+        const base = (ratingData.length ? ratingData : marketData).slice(0, 15);
+        const labels = base.map(d => d.QUANTIL);
+
+        const lossByQuantil = (rows) => {
+          const m = new Map((rows || []).map(r => [r.QUANTIL, r.LOSS]));
+          return labels.map(q => m.get(q) ?? 0);
+        };
+
+        // Direkt mit new Chart() (statt createBarChart), damit die Legende klickbar
+        // ist: createBarChart setzt events:[] -> Serien ließen sich nicht aus-/
+        // einblenden. Sonst identische Optionen (responsive:false, indexAxis 'y').
+        const cv = document.getElementById(chartId);
+        if (!cv || !cv.isConnected || !cv.parentNode) return;
+
+        const existing = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : null;
+        if (existing) { try { existing.destroy(); } catch (e) {} }
+
+        // Canvas-Größe aus dem Container (responsive:false braucht feste Maße).
+        const hostRect = cv.parentNode.getBoundingClientRect();
+        const selfRect = cv.getBoundingClientRect();
+        cv.width = Math.floor(selfRect.width || hostRect.width || 800);
+        cv.height = Math.floor(selfRect.height || hostRect.height || 300);
+
+        const mkDs = (label, data, color) => ({
+          label, data,
+          backgroundColor: color,
+          borderColor: color,
+          maxBarThickness: 64,
+        });
+
+        window[chartId] = new Chart(cv.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              mkDs('Rating Losses', lossByQuantil(ratingData), 'rgba(70, 192, 230, 0.7)'),
+              mkDs('Market Losses', lossByQuantil(marketData), 'rgba(255, 165, 0, 0.7)'),
+              mkDs('Norm Losses', lossByQuantil(marketNormData), 'rgba(144, 238, 144, 0.7)'),
+            ],
+          },
+          options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            animation: false,
+            normalized: true,
+            // 'click' aktiviert das Aus-/Einblenden der Serien über die Legende.
+            events: ['click'],
+            plugins: {
+              legend: { display: true },
+              annotation: false,
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { autoSkip: false } },
+            },
+          },
+        });
+      };
+
+      // Immer die aktuelle Render-Funktion (frische Daten) am Container hinterlegen.
+      if (host) host.__lossComboRender = render;
+
+      render();
+
+      // Einmaliger ResizeObserver pro Container: bei Größenänderung neu zeichnen,
+      // damit die Chart die Karte korrekt ausfüllt (auch nach Panel-Open).
+      if (host && !host.__lossComboRO && typeof ResizeObserver !== 'undefined') {
+        host.__lossComboRO = true;
+        let lastH = 0;
+        const ro = new ResizeObserver(() => {
+          const h = host.getBoundingClientRect().height;
+          if (h > 5 && Math.abs(h - lastH) > 8) {
+            lastH = h;
+            host.__lossComboRender?.();
+          }
+        });
+        ro.observe(host);
+      }
     }
     //VaR
     function createCombinedLossIssuerChart(ratingData, marketData, marketNormData, chartId) {
@@ -253,17 +352,19 @@ export function setupLossIssuerUI() {
               backgroundColor: ratingBarColors, 
               borderColor: ratingBarColors, 
             },
-            { 
+            {
               label: 'Market Implied Loss',
-              data: marketValues, 
-              backgroundColor: marketBarColors, 
-              borderColor: marketBarColors, 
+              data: marketValues,
+              backgroundColor: marketBarColors,
+              borderColor: marketBarColors,
+              hidden: true,   // initial ausgeblendet (per Legende einblendbar)
             },
-            { 
+            {
               label: 'Risk Adjusted Loss',
-              data: marketNormValues, 
-              backgroundColor: marketNormBarColors, 
-              borderColor: marketNormBarColors, 
+              data: marketNormValues,
+              backgroundColor: marketNormBarColors,
+              borderColor: marketNormBarColors,
+              hidden: true,   // initial ausgeblendet (per Legende einblendbar)
             }
           ] 
         }, 
@@ -452,19 +553,21 @@ export function setupLossIssuerUI() {
             },
             { 
               label: 'VaR Market',
-              data: marketValues, 
-              backgroundColor: marketBarColors, 
-              borderColor: marketBarColors, 
+              data: marketValues,
+              backgroundColor: marketBarColors,
+              borderColor: marketBarColors,
               borderWidth: 1,
               borderDash: [10, 5],
+              hidden: true,
             },
             { 
               label: 'VaR Market Norm',
-              data: marketNormValues, 
-              backgroundColor: marketNormBarColors, 
-              borderColor: marketNormBarColors, 
+              data: marketNormValues,
+              backgroundColor: marketNormBarColors,
+              borderColor: marketNormBarColors,
               borderWidth: 1,
               borderDash: [2, 2],
+              hidden: true,
             },
             {
               label: 'ES Rating',
@@ -483,6 +586,7 @@ export function setupLossIssuerUI() {
               borderDash: [5, 5],
               borderWidth: 2,
               fill: false,
+              hidden: true,
             },
             {
               label: 'ES Market Norm',
@@ -492,6 +596,7 @@ export function setupLossIssuerUI() {
               borderDash: [5, 5],
               borderWidth: 2,
               fill: false,
+              hidden: true,
             }
           ] 
         }, 

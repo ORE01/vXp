@@ -80,6 +80,7 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/products/rankDrawer.css" rel="stylesheet">
   <link href="./css/products/addProductsDrawer.css" rel="stylesheet">
   <link href="./css/products/fillTradeDetailsDrawer.css" rel="stylesheet">
+  <link href="./css/products/editPortfolioDrawer.css" rel="stylesheet">
   
   <link href="./css/MARKET_DATA/creditSpreads.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
@@ -749,6 +750,9 @@ Feature:    Wenn es nur in einem Panel gilt
         <!-- <button id="inputMVaRSave-button" class="edit-button">Save Changes</button> -->
         <button id="mvarAddButton" class="edit-button">Add Entry</button>
       </div>
+
+      <!-- Risk-Factor-Viewer (Checklist + Multi-Line-Chart aus tblTS) -->
+      <div id="mvarFactorChartHost"></div>
     </div>
 
     <!-- 2) MVaR/ES: Caption + Profit/Loss Dist oben, darunter Tabelle + Ampel nebeneinander -->
@@ -1252,11 +1256,11 @@ Feature:    Wenn es nur in einem Panel gilt
     <!--   BLOCK 4: Charts -->
     <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 20px;">
       <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-        <p style="text-align: center;">Value at Risk:</p>
+        <p style="text-align: center;">Total Loss Distribution</p>
         <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
       </div>
       <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-        <p style="text-align: center;">Expected Shortfall:</p>
+        <p style="text-align: center;">Tail Loss Distribution</p>
         <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
       </div>
     </div>
@@ -1330,16 +1334,9 @@ Feature:    Wenn es nur in einem Panel gilt
                   <canvas id="LGDChart"></canvas>
                 </div> -->
 
-                <div class="chart-container-inner" id="LossIssuerChartContainerRating">
-                  <canvas id="LossIssuerChartRating"></canvas>
-                </div>
-
-                <div class="chart-container-inner" id="LossIssuerChartContainerMarket">
-                  <canvas id="LossIssuerChartMarket"></canvas>
-                </div>
-
-                <div class="chart-container-inner" id="LossIssuerChartContainerMarketNorm">
-                  <canvas id="LossIssuerChartMarketNorm"></canvas>
+                <!-- Rating/Market/Norm Losses zusammengefasst in EINER Chart (3 Serien) -->
+                <div class="chart-container-inner" id="LossIssuerChartContainerCombined">
+                  <canvas id="LossIssuerChartCombinedTop"></canvas>
                 </div>
               </section>
 
@@ -1635,80 +1632,70 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </section>
 
-        <!-- Card 2: Filter-Dropdowns -->
+        <!-- Card 2: Aktionen (Filter laufen jetzt über die Spaltenköpfe der Tabelle) -->
         <section class="cp-card">
-          <h2 class="small-section-header">Filter Deals</h2>
-
-          <div class="dropdown-wrapper">
-            <div>
-              <p>Select Products:</p>
-              <select id="dealsProdIdDropdown" multiple class="select-dropdown"></select>
-            </div>
-
-            <div>
-              <p>Select Category:</p>
-              <select id="dealsCategoryDropdown" multiple class="select-dropdown"></select>
-            </div>
-
-            <div>
-              <p>Select Notional:</p>
-              <select id="dealsNotionalDropdown" multiple class="select-dropdown"></select>
-            </div>
-
-            <div>
-              <p>Select Depotbank:</p>
-              <select id="dealsDepotbankDropdown" multiple class="select-dropdown"></select>
-            </div>
-          </div>
-
-          <p style="margin:10px 0;">
-            <button id="dealsResetFiltersButton"
-                    class="reset-FiltersButton"
-                    type="button"
-                    title="Reset filters"
-                    aria-label="Reset filters"></button>
-          </p>
-
           <div class="button-wrapper">
             <button id="addProductsButtonChange" class="edit-button">Add Products</button>
             <button id="fillDetailsButtonChange" class="edit-button">Fill Trade Details</button>
           </div>
         </section>
 
-        <!-- Card 3: Edit / Save Portfolio -->
-        <section class="cp-card cp-card--edit">
-          <h2 class="small-section-header">Edit Portfolio</h2>
+        <!-- Eigene Zeile: Trigger für den Edit-Portfolio-Drawer -->
+        <div class="button-wrapper">
+          <button id="editPortfolioButton" class="edit-button">Edit Portfolio</button>
+        </div>
 
-          <div class="cp-form-grid">
-            <!-- Trade IDs -->
-            <label for="tradeDropdown">Select TRADE_ID:</label>
-            <div class="cp-field">
-              <select id="tradeDropdown" multiple class="select-dropdown"></select>
+        <!-- Drawer: Edit / Save Portfolio (fährt von rechts ein, wie Add Products) -->
+        <aside id="editPortfolioDrawer" class="edit-portfolio-drawer">
+          <div class="epd-header">
+            <div class="epd-header-text">
+              <div class="epd-eyebrow">Edit Portfolio</div>
+              <h2 class="epd-title">Edit / Save Portfolio</h2>
             </div>
+            <button type="button" class="epd-close" data-epd-close aria-label="close">&times;</button>
+          </div>
 
-            <!-- New Name -->
-            <label for="nameInput">New Portfolio Name:</label>
-            <div class="cp-field">
-              <input type="text" id="nameInput" class="input-field" />
-            </div>
+          <div class="epd-body">
+            <div class="cp-form-grid">
+              <!-- Trade IDs -->
+              <label for="tradeDropdown">Select TRADE_ID:</label>
+              <div class="cp-field">
+                <select id="tradeDropdown" multiple class="select-dropdown"></select>
+              </div>
 
-            <!-- Tags -->
-            <label for="tagInputField">Tag selection:</label>
-            <div class="cp-field">
-              <input type="text" id="tagInputField" class="input-field" />
-            </div>
+              <!-- New Name -->
+              <label for="nameInput">New Portfolio Name:</label>
+              <div class="cp-field">
+                <input type="text" id="nameInput" class="input-field" />
+              </div>
 
-            <!-- Actions -->
-            <div class="cp-actions" style="grid-column: 1/-1;">
-              <button id="saveSelectionButton" class="edit-button">Save Selection</button>
-              <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
+              <!-- Tags -->
+              <label for="tagInputField">Tag selection:</label>
+              <div class="cp-field">
+                <input type="text" id="tagInputField" class="input-field" />
+              </div>
+
+              <!-- Actions -->
+              <div class="cp-actions" style="grid-column: 1/-1;">
+                <button id="saveSelectionButton" class="edit-button">Save Selection</button>
+                <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
+              </div>
             </div>
           </div>
-        </section>
+        </aside>
 
         <!-- Calculate & Tabelle -->
         <div class="button-wrapper">
           <button id="fairValueButton1" class="edit-button">Calculate Portfolio</button>
+        </div>
+
+        <!-- Reset aller Spaltenkopf-Filter der Deals-Tabelle -->
+        <div class="deals-table-toolbar" style="display:flex; justify-content:flex-end; margin:0 0 8px;">
+          <button id="dealsResetFiltersButton"
+                  class="reset-FiltersButton"
+                  type="button"
+                  title="Reset all filters"
+                  aria-label="Reset all filters"></button>
         </div>
 
         <!-- Ergebnis-Tabelle -->

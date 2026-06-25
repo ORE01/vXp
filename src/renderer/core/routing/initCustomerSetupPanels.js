@@ -28,7 +28,13 @@ function safe(label, fn) {
 export function getCustomerSetupPanelRenderers() {
   return {
     'panel-customer-category': () =>
-      safe('category', () => renderCustomerCategoryPanel()),
+      safe('category', () => {
+        // Echte DB-Zeilen laden (mit IDs), sonst rendert das Panel den Fallback
+        // DEFAULT_ROWS (nur "No valuation", id=null -> Edits greifen nicht).
+        // refreshTable pusht CUSTOMER_PRODUCT_CATEGORY_SETUPData -> Re-Render.
+        window.api?.send?.('fetch-table-data', 'CUSTOMER_PRODUCT_CATEGORY_SETUP');
+        renderCustomerCategoryPanel();
+      }),
 
     'panel-customer-market-risk-interval': () =>
       safe('market-risk-interval', () => {

@@ -2,6 +2,8 @@
 // DOM-Button-Verdrahtung für den Trade-Editor (Create / Change Portfolio).
 // Aus der globalen bindAppButtons.js herausgelöst – Verhalten unverändert.
 
+import { openEditPortfolioDrawer } from '../tradeEntry/editPortfolioDrawer.js';
+
 export function bindTradeButtons({ dealsActions, py } = {}) {
   if (!dealsActions) {
     console.warn('[bindTradeButtons] dealsActions missing');
@@ -45,4 +47,8 @@ export function bindTradeButtons({ dealsActions, py } = {}) {
 
   document.getElementById('portfolioDealsAddButton')
     ?.addEventListener('click', dealsActions.handleAddTradeToNewPortfolio);
+
+  // Edit Portfolio: öffnet den Drawer (Formular bleibt im DOM, Handler unverändert).
+  document.getElementById('editPortfolioButton')
+    ?.addEventListener('click', openEditPortfolioDrawer);
 }

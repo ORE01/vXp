@@ -3,6 +3,7 @@
 import { handleModalAction } from '../../../../core/ui/modal/modalActions.js';
 import { appState } from '../../../../renderer.js';
 import { ensureRendered } from '../../../../utils/domHelpers.js';
+import { renderMvarFactorChart } from './mvarFactorChartPanel.js';
 
 const TABLE_MVAR = 'MVaRInput';
 const CONTAINER_ID = 'inputMvarContainer';
@@ -56,6 +57,7 @@ export function renderModelSelectionTable() {
     console.log('[MVAR MODEL SELECTION UI] no view rows available');
     container.innerHTML =
       '<table id="dataTable"><thead><tr><th>No data available</th></tr></thead><tbody></tbody></table>';
+    try { renderMvarFactorChart(); } catch (e) { console.warn('[mvarFactorChart] render failed', e); }
     return;
   }
 
@@ -98,6 +100,9 @@ export function renderModelSelectionTable() {
 
   wireSelection(container);
   wireEditButtons(container);
+
+  // Risk-Factor-Viewer (Checklist + Multi-Line-Chart aus tblTS) unter der Tabelle.
+  try { renderMvarFactorChart(); } catch (e) { console.warn('[mvarFactorChart] render failed', e); }
 
   console.log('[MVAR MODEL SELECTION UI]', {
     source: 'v_MVAR_MODEL_SELECTION_APP',

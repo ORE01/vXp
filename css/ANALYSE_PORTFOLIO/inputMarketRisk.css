@@ -218,3 +218,90 @@
   vertical-align: middle;
   white-space: nowrap;
 }
+
+/* ===========================
+   Risk-Factor-Viewer (mvarFactorChartPanel.js)
+   =========================== */
+#mvarFactorChartHost .mvar-factor-panel {
+  margin-top: 16px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+#mvarFactorChartHost .mvar-factor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+  flex-wrap: wrap;
+}
+#mvarFactorChartHost .mvar-factor-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-bright);
+}
+#mvarFactorChartHost .mvar-factor-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+#mvarFactorChartHost .mvar-factor-toolbar button {
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+#mvarFactorChartHost .mvar-factor-toolbar button:hover {
+  border-color: var(--accent);
+}
+#mvarFactorChartHost .mvar-factor-range.is-active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+#mvarFactorChartHost .mvar-factor-resetzoom {
+  margin-left: 6px;
+}
+#mvarFactorChartHost .mvar-factor-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+#mvarFactorChartHost .mvar-factor-cols {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+#mvarFactorChartHost .mvar-factor-list {
+  flex: 0 0 180px;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-base);
+}
+#mvarFactorChartHost .mvar-factor-item {
+  display: block;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+/* Fester Wrapper -> responsive Chart.js stabil (kein Resize-Loop). */
+#mvarFactorChartHost .mvar-factor-chart-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 320px;
+}
+
+/* Factor-Series-Mapping-Tabelle nach unten verlängern (statt generisch 300px). */
+#panel-mvar-factor-series-map .table-wrapper {
+  max-height: 70vh;
+}

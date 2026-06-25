@@ -1,7 +1,33 @@
 ﻿import createBarChart from '../../charts/BarChart.js';
+import { getColorForPieChart } from '../../utils/colors.js';
+
+// Interner Key -> lesbarer Anzeige-Name (Legenden-Label im Chart).
+const CHART_DISPLAY_NAMES = {
+  PV01:       'PV01',
+  CPV01:      'CPV01',
+  MvarTOT:    'MVaR Total',
+  MvarIR:     'MVaR IR',
+  MvarCS:     'MVaR Credit Spread',
+  CvarRating: 'CVaR Rating',
+  CvarMarket: 'CVaR Market',
+  CvarNorm:   'CVaR Norm',
+};
+
+// Theme-Wechsel: Vergleichs-Charts mit den neuen (theme-aware) Farben neu zeichnen.
+let __compThemeBound = false;
+function bindCompThemeRerender() {
+  if (__compThemeBound) return;
+  __compThemeBound = true;
+  document.addEventListener('theme:changed', () => {
+    const map = window.appState?.portDataMap;
+    if (map) createComparisonCharts(map, true);
+  });
+}
 
 
 export function createComparisonCharts(portDataMap, destroyPrevious = false) {
+
+  bindCompThemeRerender();
 
   if (portDataMap.portDataContainer1 && portDataMap.portDataContainer2) {
 
@@ -33,6 +59,14 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
         const chartData = extractChartDataFromSavedValues(portDataMap);
         // console.log('portDataMap2:', portDataMap)
 
+        // Theme-aware Serienfarben (Portfolio 1 / Portfolio 2 / Difference) aus der
+        // zentralen Palette -> passt sich automatisch an Light/Dark an.
+        // Standard-Palette (Blau/Orange/Grün), voll deckend wie die Breakdown-Pies
+        // -> gleiche Farben und gleiche Durchsichtigkeit überall.
+        const seriesColors = [0, 1, 2].map((i) => getColorForPieChart(i));
+        const seriesBg = seriesColors.map((c) => c.backgroundColor);
+        const seriesBorder = seriesColors.map((c) => c.borderColor);
+
   containerIds.forEach((containerId, index) => {
     const chartName = chartNames[index];
     const chartValues = chartData[chartName];
@@ -59,18 +93,10 @@ export function createComparisonCharts(portDataMap, destroyPrevious = false) {
     const chartConfig = {
       labels: chartLabels[index],
       datasets: [{
-        label: chartName,
+        label: CHART_DISPLAY_NAMES[chartName] || chartName,
         data: chartValues,
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.2)', // Portfolio 1
-          'rgba(54, 162, 235, 0.2)', // Portfolio 2
-          'rgba(255, 206, 86, 0.2)'  // Difference
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)'
-        ],
+        backgroundColor: seriesBg,
+        borderColor: seriesBorder,
         borderWidth: 1
       }]
     };
