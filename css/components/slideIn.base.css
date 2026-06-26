@@ -276,7 +276,9 @@
 }
 
 
-.table .sub-panel-close {
+/* Close-"x" in ALLEN Slide-in-Panels ausblenden.
+   Schließen weiterhin per Backdrop-Klick und Escape (siehe utils/slideIn.js). */
+.sub-panel-close {
   display: none !important;
 }
 

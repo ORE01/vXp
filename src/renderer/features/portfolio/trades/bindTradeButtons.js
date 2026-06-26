@@ -31,6 +31,11 @@ export function bindTradeButtons({ dealsActions, py } = {}) {
   document.getElementById('fillDetailsButtonChange')
     ?.addEventListener('click', dealsActions.handleFillDetailsChange);
 
+  // Edit Trade: nutzt denselben Fill-Trade-Details-Drawer (dient als Edit-Drawer
+  // für die Trade-Felder bestehender Trades).
+  document.getElementById('editDetailsButton')
+    ?.addEventListener('click', dealsActions.handleFillDetailsChange);
+
   // Calculate Portfolio from the Create panel: same flow as the Change-panel
   // Calculate button (source 'deals' -> auto-switch to SELECT PORTFOLIO tab).
   document.getElementById('fairValueButtonCreate')

@@ -110,6 +110,7 @@ export function bindAppButtons({
   wireColumnDrawer('portColumnsBtn', 'portColumnDrawer');
   wireColumnDrawer('issuerColumnsBtn', 'issuerColumnDrawer');
   wireColumnDrawer('prodColumnsBtn', 'prodColumnDrawer');
+  wireColumnDrawer('dealsColumnsBtn', 'dealsColumnDrawer');
 
   // ---------- Historic Metrics ----------
   document.getElementById('historicMetricsAddButton')

@@ -1575,6 +1575,7 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
 
       <div class="sub-panel-body">
+        <!-- Kachel 1: Create Portfolio -->
         <section class="cp-card">
           <h2 class="small-section-header">Create Portfolio</h2>
 
@@ -1590,23 +1591,30 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
 
             <div class="cp-actions" style="grid-column: 1/-1;">
-              <!-- <button id="savePortfolioButton" class="edit-button">Save Portfolio</button> -->
-
               <div class="button-wrapper">
                 <button id="portfolioDealsAddButton" class="edit-button">Create Portfolio</button>
-                <button id="addProductsButtonCreate" class="edit-button">Add Products</button>
-                <button id="fillDetailsButtonCreate" class="edit-button">Fill Trade Details</button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- Kachel 2: Add Trade (Buttons untereinander) -->
+        <section class="cp-card cp-card--compact">
+          <h2 class="small-section-header">Add Trade</h2>
+          <div class="button-wrapper button-wrapper--stack">
+            <button id="addProductsButtonCreate" class="edit-button">Add Product</button>
+            <button id="fillDetailsButtonCreate" class="edit-button">Add Trades</button>
           </div>
         </section>
 
           <!-- ðŸ†• Hier: Deals-Preview fÃ¼r das aktuelle Portfolio -->
           <div class="data-container cp-table" id="newPortfolioDealsDataContainer"></div>
 
+          <!-- Calculate-Portfolio-Button vorerst ausdokumentiert (nicht gelöscht).
           <div class="button-wrapper">
             <button id="fairValueButtonCreate" class="edit-button">Calculate Portfolio</button>
           </div>
+          -->
 
       </div>
     </div>
@@ -1632,17 +1640,32 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </section>
 
-        <!-- Card 2: Aktionen (Filter laufen jetzt über die Spaltenköpfe der Tabelle) -->
-        <section class="cp-card">
-          <div class="button-wrapper">
-            <button id="addProductsButtonChange" class="edit-button">Add Products</button>
-            <button id="fillDetailsButtonChange" class="edit-button">Fill Trade Details</button>
-          </div>
-        </section>
+        <!-- Aktions-Cards nebeneinander -->
+        <div class="cp-card-row">
+          <!-- Card 1: Edit Trade (öffnet den Fill-Trade-Details-Drawer im Edit-Modus) -->
+          <section class="cp-card cp-card--compact">
+            <h2 class="small-section-header">Edit Trade</h2>
+            <div class="button-wrapper">
+              <button id="editDetailsButton" class="edit-button">Edit Details</button>
+            </div>
+          </section>
 
-        <!-- Eigene Zeile: Trigger für den Edit-Portfolio-Drawer -->
-        <div class="button-wrapper">
-          <button id="editPortfolioButton" class="edit-button">Edit Portfolio</button>
+          <!-- Card 2: Add Trade (Buttons untereinander) -->
+          <section class="cp-card cp-card--compact">
+            <h2 class="small-section-header">Add Trade</h2>
+            <div class="button-wrapper button-wrapper--stack">
+              <button id="addProductsButtonChange" class="edit-button">Add Products</button>
+              <button id="fillDetailsButtonChange" class="edit-button">Add Trades</button>
+            </div>
+          </section>
+
+          <!-- Card 3: Save Selection -->
+          <section class="cp-card cp-card--compact">
+            <h2 class="small-section-header">Save Selection</h2>
+            <div class="button-wrapper">
+              <button id="editPortfolioButton" class="edit-button">Add Portfolio</button>
+            </div>
+          </section>
         </div>
 
         <!-- Drawer: Edit / Save Portfolio (fährt von rechts ein, wie Add Products) -->
@@ -1650,7 +1673,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="epd-header">
             <div class="epd-header-text">
               <div class="epd-eyebrow">Edit Portfolio</div>
-              <h2 class="epd-title">Edit / Save Portfolio</h2>
+              <h2 class="epd-title">Save Selection</h2>
             </div>
             <button type="button" class="epd-close" data-epd-close aria-label="close">&times;</button>
           </div>
@@ -1678,25 +1701,40 @@ Feature:    Wenn es nur in einem Panel gilt
               <!-- Actions -->
               <div class="cp-actions" style="grid-column: 1/-1;">
                 <button id="saveSelectionButton" class="edit-button">Save Selection</button>
-                <button id="deleteTableButton" class="edit-button delete-button">Delete Selection</button>
               </div>
             </div>
           </div>
         </aside>
 
         <!-- Calculate & Tabelle -->
+        <!-- Calculate-Portfolio-Button vorerst ausdokumentiert (nicht gelöscht).
         <div class="button-wrapper">
           <button id="fairValueButton1" class="edit-button">Calculate Portfolio</button>
         </div>
+        -->
 
-        <!-- Reset aller Spaltenkopf-Filter der Deals-Tabelle -->
-        <div class="deals-table-toolbar" style="display:flex; justify-content:flex-end; margin:0 0 8px;">
+
+        <!-- Toolbar: Columns + Reset (Filter leben in den Spaltenköpfen) -->
+        <div class="deals-table-toolbar" style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin:0 0 8px;">
+          <button id="dealsColumnsBtn" type="button" class="edit-button">Columns</button>
           <button id="dealsResetFiltersButton"
                   class="reset-FiltersButton"
                   type="button"
                   title="Reset all filters"
                   aria-label="Reset all filters"></button>
         </div>
+
+        <!-- Drawer: Spaltenauswahl der Change-Portfolio-Tabelle (Container wird vom Configurable-Table befüllt) -->
+        <aside id="dealsColumnDrawer" class="column-drawer">
+          <div class="column-drawer-header">
+            <div class="column-drawer-header-text">
+              <div class="column-drawer-eyebrow">Column Selection</div>
+              <h2 class="column-drawer-title">Change Portfolio Table</h2>
+            </div>
+            <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+          </div>
+          <div id="dealsColumnSelector" class="column-drawer-body"></div>
+        </aside>
 
         <!-- Ergebnis-Tabelle -->
         <div

@@ -1,3 +1,4 @@
+import { applyColumnFilters } from '../../features/CUSTOMER/tableLayouts/tableColumnFilters.js';
 
 export function installDropdownFilterEngine({ appState, root = document } = {}) {
   if (!appState) throw new Error('[dropdownFilterEngine] appState fehlt');
@@ -186,9 +187,16 @@ export function installDropdownFilterEngine({ appState, root = document } = {}) 
     const config = appState.tableConfigs?.[tableType];
     if (!config?.dropdownConfig) return;
 
+    // Deals: Dropdown-Optionen (z.B. #tradeDropdown im Edit-Drawer) sollen den
+    // Spaltenkopf-Filtern der Deals-Tabelle folgen. Ohne aktiven Spaltenfilter
+    // gibt applyColumnFilters die Daten unverändert zurück (No-op).
+    const data = (tableType === 'deals')
+      ? applyColumnFilters(filteredData, 'dealsMainTable')
+      : filteredData;
+
     Object.keys(config.dropdownConfig).forEach(dropdownId => {
       const key = config.dropdownConfig[dropdownId].dataKey;
-      populateDropdown(dropdownId, filteredData, `ALL ${String(key || '').toUpperCase()}`, tableType);
+      populateDropdown(dropdownId, data, `ALL ${String(key || '').toUpperCase()}`, tableType);
     });
   };
 

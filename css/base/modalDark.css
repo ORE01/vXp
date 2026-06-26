@@ -180,6 +180,12 @@ textarea:focus {
   color: var(--text-bright);
 }
 
+/* Tab-"x" (schließt das ganze Tab-Modal: PORTFOLIO, VALUATION/RISK, ...) entfernen.
+   Nur Tab-Modals (.table) betroffen; Popup-Modals (#modal, #pdfTextModal) behalten ihr x. */
+.table .close {
+  display: none !important;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;

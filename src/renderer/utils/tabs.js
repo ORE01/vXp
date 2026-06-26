@@ -221,7 +221,10 @@ export function initializeTabs() {
 
   if (analyseTab) {
     analyseTab.addEventListener('click', () => {
-      closeOpenSubPanels();
+      // Panels nur beim echten View-Wechsel RISK -> VALUATION schließen, NICHT
+      // beim Zurückkommen aus einem anderen Tab (dann bleibt das Panel offen).
+      const modal = document.getElementById(ANALYSE_MODAL_ID);
+      if (modal?.classList.contains('view-risk')) closeOpenSubPanels();
       setAnalyseView('analyse');
       showModal(ANALYSE_MODAL_ID, tables);
       // VALUATION uses the same inline "Select Portfolio" picker as RISK -> keep it
@@ -231,7 +234,9 @@ export function initializeTabs() {
   }
   if (riskTab) {
     riskTab.addEventListener('click', () => {
-      closeOpenSubPanels();
+      // Panels nur beim echten View-Wechsel VALUATION -> RISK schließen.
+      const modal = document.getElementById(ANALYSE_MODAL_ID);
+      if (!modal?.classList.contains('view-risk')) closeOpenSubPanels();
       setAnalyseView('risk');
       showModal(ANALYSE_MODAL_ID, tables);
       syncRiskDropdownFromPort();

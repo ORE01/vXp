@@ -114,6 +114,26 @@
   min-height: 120px;
 }
 
+/* Ausgewählte TRADE_IDs dauerhaft blau markieren – auch wenn die Liste den Fokus
+   verliert (z.B. beim Klick ins Namensfeld). Die ALL-Option bleibt ausgenommen,
+   damit die Markierung verschwindet, sobald man auf ALL zurücksetzt.
+   Chromium/Electron blendet die Markierung sonst bei Fokusverlust aus; der
+   Gradient erzwingt die Hintergrundfarbe. */
+.edit-portfolio-drawer #tradeDropdown option:checked:not([value="ALL"]) {
+  background: #2563eb linear-gradient(0deg, #2563eb 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* ALL-Option: kein Blau, Schrift theme-abhängig (dunkles Theme = hell,
+   Light-Theme = schwarz) statt vom Browser erzwungenem Schwarz bei
+   selektiert+unfokussiert. Hintergrund = Listenhintergrund. */
+.edit-portfolio-drawer #tradeDropdown option:checked[value="ALL"] {
+  background: var(--surface-header) linear-gradient(0deg, var(--surface-header) 0%, var(--surface-header) 100%) !important;
+  color: var(--text-bright) !important;
+  -webkit-text-fill-color: var(--text-bright) !important;
+}
+
 .edit-portfolio-drawer .cp-actions {
   display: flex;
   gap: 10px;

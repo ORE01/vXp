@@ -5,15 +5,61 @@
 // HINWEIS: Channel-Namen ('*-deals-*', 'createdDealsDropdown', …) sind noch im
 // alten "deals"-Schema – das ist Absicht (externer Vertrag bleibt vorerst).
 
+import { openFillTradeDetailsDrawer } from '../tradeEntry/fillTradeDetailsDrawer.js';
+
 export function bindTradeIpcFeedbackOnce({ api, showMessageBox } = {}) {
   if (!api) return;
   if (window.__dealsDeleteEverywhereListenersBound) return;
   window.__dealsDeleteEverywhereListenersBound = true;
 
-  api.receive?.('delete-portfolio-everywhere-success', ({ port, deleted } = {}) => {
-    console.log('[UI] delete-portfolio-everywhere-success', { port, deleted });
+  api.receive?.('delete-portfolio-everywhere-success', ({ port, deleted, total, scannedTables } = {}) => {
+    console.log('[UI] delete-portfolio-everywhere-success', { port, deleted, total, scannedTables });
 
-    showMessageBox?.(`Portfolio "${port}" deleted.`, () => {});
+    // Transparenzfenster: tabellenartige Auflistung (Tabelle | Zeilen).
+    const entries = Object.entries(deleted || {});
+    const totalRows = (typeof total === 'number')
+      ? total
+      : entries.reduce((sum, [, n]) => sum + (Number(n) || 0), 0);
+
+    const box = document.createElement('div');
+    box.classList.add('confirmation-message');
+
+    const title = document.createElement('p');
+    title.style.margin = '0 0 12px';
+    title.textContent =
+      `Portfolio "${port}" gelöscht — ${totalRows} Zeilen aus ${entries.length} Tabelle(n).`;
+    box.appendChild(title);
+
+    if (entries.length) {
+      const wrap = document.createElement('div');
+      wrap.className = 'delete-summary-wrap';
+
+      const table = document.createElement('table');
+      table.className = 'delete-summary-table';
+
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Tabelle</th><th>Zeilen</th></tr>';
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      entries
+        .slice()
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([t, n]) => {
+          const tr = document.createElement('tr');
+          const tdName = document.createElement('td');
+          tdName.textContent = t;
+          const tdCount = document.createElement('td');
+          tdCount.textContent = String(n);
+          tr.append(tdName, tdCount);
+          tbody.appendChild(tr);
+        });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      box.appendChild(wrap);
+    }
+
+    showMessageBox?.(box, () => {});
 
     // reset deals dropdown to NONE
     const dd = document.getElementById('createdDealsDropdown');
@@ -41,7 +87,19 @@ export function bindTradeIpcFeedbackOnce({ api, showMessageBox } = {}) {
 
   api.receive?.('add-products-to-portfolio-success', ({ port, inserted } = {}) => {
     console.log('[UI] add-products-to-portfolio-success', { port, inserted });
-    showMessageBox?.(`${inserted ?? 0} product(s) added to "${port}".`, () => {});
+
+    // Nach dem Bestätigen direkt weiter zum Ausfüllen der Trade-Details für die
+    // gerade hinzugefügten Produkte. Deals sind hier bereits refresht (refreshTable
+    // läuft im Main vor dem Success-Event), daher zeigt der Drawer die neuen Zeilen.
+    const proceedToFillDetails = () => {
+      openFillTradeDetailsDrawer({ appState: window.appState, api, portName: port });
+    };
+
+    if (typeof showMessageBox === 'function') {
+      showMessageBox(`${inserted ?? 0} product(s) added to "${port}".`, proceedToFillDetails);
+    } else {
+      proceedToFillDetails();
+    }
   });
 
   api.receive?.('add-products-to-portfolio-error', ({ message } = {}) => {

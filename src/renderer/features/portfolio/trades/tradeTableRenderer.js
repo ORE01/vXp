@@ -20,11 +20,11 @@ let lastDealsRender = null; // { container, rows, tableName } für Filter-Reset
  * - Internal keys remain unchanged; labels are only UI names.
  */
 const DEALS_VISIBLE_COLUMNS = [
-  'TRADE_ID',
   'INCLUDE',
+  'TRADE_ID',
+  'PROD_ID',
   'PORT_NAME',
   'DEPOT_BANK',
-  'PROD_ID',
   'TRADE_DATE',
   'CATEGORY',
   'NOTIONAL',
@@ -37,6 +37,9 @@ const DEALS_VISIBLE_COLUMNS = [
   'PRODUCT_EXISTS',
   'VALIDATION_STATUS',
 ];
+
+// Immer zuerst und nicht abwählbar (nicht im Columns-Selector angeboten).
+const DEALS_LOCKED_COLUMNS = ['INCLUDE', 'TRADE_ID', 'PROD_ID'];
 
 const DEALS_COLUMN_LABELS = {
   TRADE_ID: 'Trade ID',
@@ -193,6 +196,18 @@ function renderDealsTableIntoContainer(container, rows, tableName) {
       columnLabelMap: DEALS_COLUMN_LABELS,
       sorting: { enabled: true },
       filtering: { enabled: true, mode: 'header' },
+      // Spaltenauswahl ("Columns"-Button -> #dealsColumnDrawer). INCLUDE/TRADE_ID/
+      // PROD_ID sind gesperrt (immer zuerst, nicht abwählbar), Rest wählbar.
+      lockedColumns: DEALS_LOCKED_COLUMNS,
+      columns: {
+        enabled: true,
+        selectorContainerId: 'dealsColumnSelector',
+        defaultVisibleColumns: DEALS_VISIBLE_COLUMNS.filter(
+          (k) => !DEALS_LOCKED_COLUMNS.includes(k)
+        ),
+        columnLabelMap: DEALS_COLUMN_LABELS,
+        onChange: () => renderDealsTableIntoContainer(container, rows, tableName),
+      },
       afterRender: (c) => {
         applyDealsUIEnhancements(c);
         enhanceIncludeCheckboxes(c);
@@ -201,6 +216,13 @@ function renderDealsTableIntoContainer(container, rows, tableName) {
       // Filter (applyColumnFilters) greift.
       onFilterChange: () => renderDealsTableIntoContainer(container, rows, tableName),
     });
+
+    // #tradeDropdown (Edit-Drawer) an den aktuellen Spaltenkopf-Filter angleichen.
+    // Deckt alle Pfade ab: Erst-Render, onFilterChange und "Reset all filters".
+    window.appState?.repopulateDropdownsForTableType?.(
+      'deals',
+      window.appState?.filteredData?.deals ?? rows
+    );
     return;
   }
 

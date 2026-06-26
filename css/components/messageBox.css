@@ -31,6 +31,36 @@
     font-size: 14px;
 }
 
+/* Tabellenartige Auflistung (z.B. Lösch-Transparenzfenster) */
+.delete-summary-wrap {
+    max-height: 320px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+.delete-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+.delete-summary-table th,
+.delete-summary-table td {
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+.delete-summary-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-deep);
+    color: var(--text-bright);
+}
+.delete-summary-table td:last-child,
+.delete-summary-table th:last-child {
+    text-align: right;   /* Zeilenanzahl rechtsbündig */
+}
+
 /* Button container */
 .confirmation-button-container {
     display: flex;

@@ -12,10 +12,16 @@ export function showMessageBox(message, onClose) {
   const modal = document.createElement('div');
   modal.classList.add('confirmation-modal', 'confirmation-success');
 
-  const messageElement = document.createElement('p');
-  messageElement.textContent = message;
-  messageElement.classList.add('confirmation-message');
-  modal.appendChild(messageElement);
+  // message darf ein String (textContent, sicher) ODER ein DOM-Element sein
+  // (für reichere Inhalte wie eine tabellenartige Auflistung).
+  if (message instanceof Node) {
+    modal.appendChild(message);
+  } else {
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    messageElement.classList.add('confirmation-message');
+    modal.appendChild(messageElement);
+  }
 
   const okButton = document.createElement('button');
   okButton.textContent = 'OK';
