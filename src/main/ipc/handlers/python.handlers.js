@@ -13,6 +13,78 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
 
 
+  // ===================== GET MARKET DATA (Erste) =====================
+  // Holt den Erste-Swap-Snapshot und schreibt ihn als Sheet "ERSTE_snapshot"
+  // in MARKET_DATA.xlsm. Läuft als EIGENER Subprozess (xlwings/Excel-COM), NICHT
+  // im Dauer-Worker. Danach drückt der User separat "EUSW + ATM + Smile".
+  ipcMain.on('start-py-erste', (event, args = {}) => {
+    const cp = require('child_process');
+    const envName = (process.env.NODE_ENV || '').trim().toLowerCase();
+
+    const finish = (success, message) => {
+      event.reply('py-erste-complete', { success, projectName: 'py-erste', message });
+      event.reply('project-finished', { success, projectName: 'py-erste' });
+    };
+
+    // Subprozess setzt ein echtes python.exe voraus -> nur Dev.
+    if (envName !== 'development') {
+      finish(false, 'Get Market Data is currently only available in dev mode.');
+      return;
+    }
+
+    // venv-Python (hat requests/pandas/xlwings) + das Standalone-Skript.
+    const pythonExe = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
+    const script = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\HistData\\ALL_DATA\\ALL_Erste\\erste_to_excel.py';
+
+    // Drawer-Auswahl: angehakte Konventionen (market_data_type) als CSV durchreichen.
+    const spawnArgs = [script];
+    const types = Array.isArray(args.types) ? args.types.filter(Boolean) : [];
+    if (types.length) {
+      spawnArgs.push('--types', types.join(','));
+    }
+
+    let stdout = '';
+    let stderrErr = '';   // nur Nicht-Progress-stderr (für Fehlermeldung)
+    let stderrBuf = '';
+    let child;
+    try {
+      child = cp.spawn(pythonExe, spawnArgs, { windowsHide: true });
+    } catch (e) {
+      finish(false, `Start failed: ${e.message}`);
+      return;
+    }
+
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+
+    // stderr zeilenweise: Progress-JSON -> py-erste-progress, Rest -> Fehlertext.
+    child.stderr.on('data', (d) => {
+      stderrBuf += d.toString();
+      const lines = stderrBuf.split(/\r?\n/);
+      stderrBuf = lines.pop();
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t) continue;
+        try {
+          const parsed = JSON.parse(t);
+          if (parsed && typeof parsed.progress !== 'undefined') {
+            event.reply('py-erste-progress', parsed);
+            continue;
+          }
+        } catch (_) { /* kein JSON -> Fehlertext */ }
+        stderrErr += t + '\n';
+      }
+    });
+
+    child.on('error', (err) => finish(false, `Error: ${err.message}`));
+    child.on('close', (code) => {
+      const ok = code === 0;
+      const out = stdout.trim();
+      const err = stderrErr.trim();
+      finish(ok, ok ? (out || 'Market data fetched.')
+                    : (err || out || `Error (exit code ${code}).`));
+    });
+  });
+
   // ===================== FAIR VALUE =====================
   ipcMain.on('start-py-fairValue', async (event, args) => {
     const {

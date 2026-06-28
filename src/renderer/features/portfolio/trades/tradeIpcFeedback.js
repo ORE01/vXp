@@ -27,7 +27,7 @@ export function bindTradeIpcFeedbackOnce({ api, showMessageBox } = {}) {
     const title = document.createElement('p');
     title.style.margin = '0 0 12px';
     title.textContent =
-      `Portfolio "${port}" gelöscht — ${totalRows} Zeilen aus ${entries.length} Tabelle(n).`;
+      `Portfolio "${port}" deleted — ${totalRows} rows from ${entries.length} table(s).`;
     box.appendChild(title);
 
     if (entries.length) {
@@ -38,7 +38,7 @@ export function bindTradeIpcFeedbackOnce({ api, showMessageBox } = {}) {
       table.className = 'delete-summary-table';
 
       const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>Tabelle</th><th>Zeilen</th></tr>';
+      thead.innerHTML = '<tr><th>Table</th><th>Rows</th></tr>';
       table.appendChild(thead);
 
       const tbody = document.createElement('tbody');

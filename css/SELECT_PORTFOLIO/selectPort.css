@@ -317,3 +317,30 @@ body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-thumb:
   min-height: 0;
   overflow-y: auto;
 }
+
+/* Market-Data-Drawer: Währungs-Gruppen mit Konventions-Checkboxen */
+#marketDataSelector .md-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px 12px;
+  margin: 0 0 12px;
+}
+#marketDataSelector .md-ccy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+#marketDataSelector .md-conv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 4px 18px;   /* eingerückt unter der Währung */
+  color: var(--text-primary);
+  cursor: pointer;
+}
+#marketDataSelector input[type="checkbox"] {
+  cursor: pointer;
+}

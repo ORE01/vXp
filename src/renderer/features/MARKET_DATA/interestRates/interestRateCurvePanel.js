@@ -140,6 +140,21 @@ export function renderInterestRateCurvePanel() {
 
       console.log('[IR CCY CHANGE] selectedCurrency:', selectedCurrency);
 
+      // appState mit-syncen wie im Curve-Handler -> Forwards/Credit-Spreads lesen
+      // zuerst appState.selectedCurrency; ohne das bliebe es stale (alte Währung).
+      appState.selectedCurrency = selectedCurrency;
+      appState?.setSelectedCurrency?.(selectedCurrency);
+
+      // Zuerst neu rendern: Curve-Dropdown wird für die neue ccy neu befüllt,
+      // selectedCurveId auf die erste Kurve der neuen ccy gesetzt.
+      renderInterestRateCurvePanel();
+
+      // Jetzt steht die aktive Kurve fest -> appState/Setter aktualisieren,
+      // sonst mischt Forwards neue ccy mit alter curve_id (keine Treffer).
+      appState.selectedCurveId = selectedCurveId;
+      appState?.setSelectedCurve?.(selectedCurveId);
+
+      // Erst danach informieren -> konsistenter Stand (neue ccy + passende Kurve).
       document.dispatchEvent(new CustomEvent('interest-rates:currency-changed', {
         detail: {
           selectedCurrency,
@@ -148,8 +163,6 @@ export function renderInterestRateCurvePanel() {
       }));
 
       console.log('[IR CCY CHANGE] dispatched interest-rates:currency-changed');
-
-      renderInterestRateCurvePanel();
     };
   }
 

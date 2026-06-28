@@ -1949,22 +1949,23 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 
   <div class="sub-panel-body">
-    <label for="currencySelector" style="display:block; font-weight:600; margin-bottom:6px;">
-      Select Currency:
-    </label>
-    <select id="currencySelector" class="ir-select"></select>
+    <div class="ir-controls">
+      <div class="ir-row">
+        <label for="currencySelector">Selected Currency:</label>
+        <select id="currencySelector" class="ir-select"></select>
+      </div>
+      <div class="ir-row">
+        <label for="ratesSelector">Select Curve:</label>
+        <select id="ratesSelector" class="ir-select"></select>
+      </div>
+    </div>
 
-    <label for="ratesSelector" style="display:block; font-weight:600; margin-top:12px; margin-bottom:6px;">
-      Select Curve:
-    </label>
-    <select id="ratesSelector" class="ir-select"></select>
-
-    <section class="table-card" style="margin-top:12px;">
+    <section class="table-card">
       <h4 class="table-title">Rates Table</h4>
       <div id="IRDataContainer" class="data-container"></div>
     </section>
 
-    <div class="chart-container" style="margin-top:16px;">
+    <div class="chart-container">
       <canvas id="IRLineChart"></canvas>
     </div>
   </div>
@@ -3512,6 +3513,16 @@ Feature:    Wenn es nur in einem Panel gilt
     <div class="chart-section">
       <button class="section-trigger"
               type="button"
+              data-panel="panel-upd-market"
+              aria-controls="panel-upd-market"
+              aria-expanded="false">
+        <span class="section-header">Market Data</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
               data-panel="panel-upd-excel"
               aria-controls="panel-upd-excel"
               aria-expanded="false">
@@ -3544,8 +3555,67 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- ===== PANELS ===== -->
 
+<!-- Panel: Market Data -->
+<div id="panel-upd-market" class="sub-panel upd-import-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-market-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-upd-market-title" class="sub-panel-title">MARKET DATA</div>
+    <button class="sub-panel-close" data-close="panel-upd-market" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <div class="upd-card-row">
+
+      <section class="cp-card upd-tile">
+        <h2 class="small-section-header">Market Data</h2>
+        <div class="upd-tile-body">
+          <div class="upd-btns">
+            <button id="getMarketDataButton" class="edit-button" type="button">Get Market Data</button>
+            <button id="marketDataSelectBtn" class="edit-button" type="button">Select Data</button>
+          </div>
+          <div class="upd-progress" id="marketProgress_get"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Globaler Market-Status -->
+    <div id="progressText_MARKET" class="progress-text global-text" style="margin-top:8px;"></div>
+
+    <!-- Drawer: steuert, welche ERSTE-Kurven geholt werden (Filter nach market_data_type) -->
+    <aside id="marketDataDrawer" class="column-drawer">
+      <div class="column-drawer-header">
+        <div class="column-drawer-header-text">
+          <div class="column-drawer-eyebrow">Selection</div>
+          <h2 class="column-drawer-title">Market Data</h2>
+        </div>
+        <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+      </div>
+      <div id="marketDataSelector" class="column-drawer-body">
+
+        <fieldset class="md-group">
+          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="EUR" checked> EUR</label>
+          <label class="md-conv"><input type="checkbox" value="swap_rate"     data-ccy="EUR" checked> Ann/6M</label>
+          <label class="md-conv"><input type="checkbox" value="swap_rate_3m"  data-ccy="EUR" checked> Ann/3Mo</label>
+        </fieldset>
+
+        <fieldset class="md-group">
+          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="USD" checked> USD</label>
+          <label class="md-conv"><input type="checkbox" value="swap_usd_ann6m"  data-ccy="USD" checked> Ann/6M</label>
+          <label class="md-conv"><input type="checkbox" value="swap_usd_ann3m"  data-ccy="USD" checked> Ann/3Mo</label>
+          <label class="md-conv"><input type="checkbox" value="swap_usd_semi3m" data-ccy="USD" checked> Semi/3Mo</label>
+        </fieldset>
+
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+
+
 <!-- Panel: Excel Import -->
-<div id="panel-upd-excel" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
+<div id="panel-upd-excel" class="sub-panel upd-import-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-upd-excel-title" class="sub-panel-title">EXCEL IMPORT</div>
     <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="close">&times;</button>
@@ -3553,49 +3623,45 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <div class="sub-panel-body">
 
-    <!-- Full Import -->
-    <section class="cp-card" style="margin-top:12px;">
-      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <span class="button-label">Vollimport (alle Tabellen)</span>
-        <button id="updateExcelAllButton" class="edit-button" type="button">
-          Import: ALL
-        </button>
-      </div>
-    </section>
+    <!-- Import-Kacheln im Change-Portfolio-Stil (zentrierte Überschrift + Buttons) -->
+    <div class="upd-card-row">
 
-    <!-- Core Portfoliodaten -->
-    <section class="cp-card" style="margin-top:12px;">
-      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <span class="button-label">Stammdaten & Portfoliodaten</span>
-        <button id="updateExcelIssuerButton" class="edit-button" type="button">
-          Issuer + Rank
-        </button>
-        <button id="updateExcelProductsButton" class="edit-button" type="button">
-          Products (Bonds)
-        </button>
-        <button id="updateExcelDealsButton" class="edit-button" type="button">
-          Deals (DealsMain)
-        </button>
-      </div>
-    </section>
+      <section class="cp-card upd-tile">
+        <h2 class="small-section-header">Full Import</h2>
+        <div class="upd-tile-body">
+          <div class="upd-btns">
+            <button id="updateExcelAllButton" class="edit-button" type="button">Import: ALL</button>
+          </div>
+          <div class="upd-progress" id="excelProgress_full"></div>
+        </div>
+      </section>
 
-    <!-- Curves & Swaptions -->
-    <section class="cp-card" style="margin-top:12px;">
-      <div class="button-container" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-        <span class="button-label">Zinskurven & Swaptions</span>
-        <button id="updateExcelMarketButton" class="edit-button" type="button">
-          EUSW + ATM + Smile
-        </button>
-      </div>
-    </section>
+      <section class="cp-card upd-tile">
+        <h2 class="small-section-header">Master &amp; Portfolio Data</h2>
+        <div class="upd-tile-body">
+          <div class="upd-btns">
+            <button id="updateExcelIssuerButton" class="edit-button" type="button">Issuer</button>
+            <button id="updateExcelProductsButton" class="edit-button" type="button">Products</button>
+            <button id="updateExcelDealsButton" class="edit-button" type="button">Portfolio Trades</button>
+          </div>
+          <div class="upd-progress" id="excelProgress_master"></div>
+        </div>
+      </section>
 
-    <!-- Progress-Bar fÃ¼r Excel, fÃ¼r setupPythonProgressBars -->
-    <section class="cp-card" style="margin-top:12px;">
-      <div class="hist-row">
-        <div id="excelProgressBarsContainer" class="hist-progress-wrap"></div>
-        <div id="progressText_EXCEL" class="progress-text global-text"></div>
-      </div>
-    </section>
+      <section class="cp-card upd-tile">
+        <h2 class="small-section-header">Market Data</h2>
+        <div class="upd-tile-body">
+          <div class="upd-btns">
+            <button id="updateExcelMarketButton" class="edit-button" type="button">Import Market Data</button>
+          </div>
+          <div class="upd-progress" id="excelProgress_market"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Globaler Excel-Status -->
+    <div id="progressText_EXCEL" class="progress-text global-text" style="margin-top:8px;"></div>
 
 <!-- Produkt-Konflikte Modal -->
 <div id="prod-conflict-overlay" class="modal-overlay" style="display:none;"></div>

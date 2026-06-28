@@ -13,39 +13,63 @@
 
 #MARKETDATA_Modal #panel-rates .sub-panel-body{
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.25fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);   /* beide Kacheln gleich breit */
   gap: 16px;
   align-items: start;
 }
 
-/* Controls */
-#MARKETDATA_Modal #panel-rates .sub-panel-body > label[for="ratesSelector"]{
-  grid-column: 1;
+/* ===== Controls: gestapelte "Label: [Dropdown]"-Zeilen, oben über volle Breite =====
+   Zeile 1 = Selected Currency, Zeile 2 = Select Curve. */
+#MARKETDATA_Modal #panel-rates .sub-panel-body > .ir-controls{
+  grid-column: 1 / -1;
   grid-row: 1;
-  justify-self: start;
-  margin: 0 0 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;                 /* Abstand zwischen den Zeilen */
 }
-
-#MARKETDATA_Modal #panel-rates .sub-panel-body > #ratesSelector.ir-select{
-  grid-column: 1;
-  grid-row: 2;
-  justify-self: start;
-  width: 180px;
+#MARKETDATA_Modal #panel-rates .ir-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#MARKETDATA_Modal #panel-rates .ir-row > label{
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  width: 150px;              /* feste Label-Breite -> beide Dropdowns exakt untereinander */
+  flex: 0 0 150px;
+}
+/* Breite/Look der Dropdowns kommt zentral aus dropdown.css (#ratesSelector,
+   #currencySelector identisch, 150px). Hier nur Margin neutralisieren. */
+#MARKETDATA_Modal #panel-rates .ir-row > select.ir-select{
   margin: 0;
 }
 
-/* Placement */
+/* ===== Kacheln: gleich breit (Grid 1fr/1fr) UND gleich hoch (446px) ===== */
+/* Chart-Kachel führt: Canvas 420 + Padding 12·2 + Border 1·2 = 446px. */
 #MARKETDATA_Modal #panel-rates .sub-panel-body > section.table-card{
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 2;
+  height: 446px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Tabellen-Inhalt füllt die Kachel und scrollt intern (Titel bleibt oben) */
+#MARKETDATA_Modal #panel-rates .sub-panel-body > section.table-card > #IRDataContainer{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 #MARKETDATA_Modal #panel-rates .sub-panel-body > .chart-container{
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 2;
+  height: 446px;
+  box-sizing: border-box;
 }
 
-/* Optional: nur die Höhe bleibt panel-spezifisch */
 #MARKETDATA_Modal #panel-rates .chart-container canvas{
   height: 420px !important;
 }

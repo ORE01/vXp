@@ -21,6 +21,7 @@ module.exports = {
     'start-py-swaption',
     'start-py-volcube',
     'start-py-ml',
+    'start-py-erste',
     'price-product',
 
     // UI / bulk ops
@@ -172,6 +173,8 @@ module.exports = {
     'py-ml-complete',
     'py-MVaR-complete',
     'py-CVaR-complete',
+    'py-erste-complete',
+    'py-erste-progress',
 
     'price-product-success',
     'price-product-error',

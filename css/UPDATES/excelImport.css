@@ -1,3 +1,111 @@
 /* ===== Excel Import (nur Panel-spezifisches) ===== */
-#panel-upd-excel .cp-card{ margin-top: 8px; }
-/* hier ggf. eigene Abstände/Anmerkungen für Excel-spezifische UI */
+.upd-import-panel .cp-card{ margin-top: 8px; }
+
+/* ===== Import-Kacheln im Change-Portfolio-Stil — untereinander ===== */
+.upd-import-panel .upd-card-row{
+  display: flex;
+  flex-direction: column;   /* Kacheln untereinander */
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* Kachel: Karte mit Rahmen, nach rechts erweitert (für den Progress-Bereich) */
+.upd-import-panel .upd-tile{
+  width: 100%;
+  max-width: 720px;
+  box-sizing: border-box;
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 0;
+}
+
+/* Überschrift zentriert */
+.upd-import-panel .upd-tile .small-section-header{
+  text-align: center;
+  font-size: 15px;
+  margin: 0 0 8px 0;
+  color: var(--text-bright);
+}
+
+/* Body: Buttons links, Fortschrittsbalken rechts */
+.upd-import-panel .upd-tile .upd-tile-body{
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* Button-Spalte links (feste Breite), untereinander, gleich breit */
+.upd-import-panel .upd-tile .upd-btns{
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.upd-import-panel .upd-tile .upd-btns .edit-button{
+  text-align: center;
+}
+
+/* Fortschritts-Bereich rechts, füllt den Rest */
+.upd-import-panel .upd-tile .upd-progress{
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;            /* = Abstand der Buttons -> Zeilen fluchten */
+}
+
+/* Provider-Label weg (redundant zum Button) */
+.upd-import-panel .upd-tile .provider-label{
+  display: none;
+}
+
+/* Buttons auf feste Höhe -> in einer Flucht mit den Balken */
+.upd-import-panel .upd-tile .upd-btns .edit-button{
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+/* Jede Balken-Zeile: einzeilig, Button-Höhe, Bar füllt, Status inline rechts */
+.upd-import-panel .upd-tile .provider-progress{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  margin: 0;
+}
+.upd-import-panel .upd-tile .provider-progress > progress{
+  flex: 1 1 auto;
+  height: 14px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  border-radius: 999px;                      /* runde Ecken (Pill) */
+  background-color: var(--border-subtle);    /* leere Spur */
+  overflow: hidden;
+}
+/* gefüllter Teil: einfärbig wie die Buttons (KEIN Verlauf) */
+.upd-import-panel .upd-tile .provider-progress > progress::-webkit-progress-bar{
+  background-color: var(--border-subtle);
+  border-radius: 999px;
+}
+.upd-import-panel .upd-tile .provider-progress > progress::-webkit-progress-value{
+  background-color: var(--accent);
+  background-image: none;                     /* überschreibt den globalen Verlauf */
+  border-radius: 999px;
+}
+.upd-import-panel .upd-tile .provider-progress .progress-text{
+  flex: 0 0 auto;
+  max-width: 45%;
+  margin: 0;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

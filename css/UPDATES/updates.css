@@ -41,18 +41,18 @@
   margin-bottom: 2px;
 }
 
-/* Zeile mit Button + Progress – Historic & Excel */
-#panel-upd-historic .hist-row,
-#panel-upd-excel    .hist-row{
+/* Zeile mit Button + Progress – nur Historic.
+   (Excel/Market-Import-Tiles werden ZENTRAL in excelImport.css gestylt –
+    .upd-import-panel .upd-tile … ist die einzige Quelle für deren Balken.) */
+#panel-upd-historic .hist-row{
   display: flex;
   flex-direction: column;   /* Button oben, Bars darunter */
   align-items: flex-start;
   gap: 10px;
 }
 
-/* Progressblock selbst – Historic & Excel */
-#panel-upd-historic .hist-progress-wrap,
-#panel-upd-excel    .hist-progress-wrap{
+/* Progressblock selbst – nur Historic */
+#panel-upd-historic .hist-progress-wrap{
   display: flex;
   flex-direction: column;   /* Bars untereinander */
   gap: 10px;
@@ -62,12 +62,11 @@
 }
 
 /* =========================
-   PROGRESS BARS – ECB/FED & Excel-Modes
+   PROGRESS BARS – nur ECB/FED (Historic)
    ========================= */
 
 /* Jede Provider-Zeile: Label links, Bar + Text rechts */
-#panel-upd-historic .provider-progress,
-#panel-upd-excel    .provider-progress{
+#panel-upd-historic .provider-progress{
   display: grid;
   grid-template-columns: 60px 1fr;
   grid-template-rows: auto auto;
@@ -78,16 +77,14 @@
 }
 
 /* Label links */
-#panel-upd-historic .provider-label,
-#panel-upd-excel    .provider-label{
+#panel-upd-historic .provider-label{
   grid-row: span 2;
   font-weight: 600;
   opacity: 0.9;
 }
 
 /* === Progress-Elemente: alle IDs die mit progressBar_ starten === */
-#panel-upd-historic progress[id^="progressBar_"],
-#panel-upd-excel    progress[id^="progressBar_"]{
+#panel-upd-historic progress[id^="progressBar_"]{
   width: 100%;
   height: 16px;
   margin-top: 2px;
@@ -99,14 +96,12 @@
 }
 
 /* WebKit (Chromium/Electron) */
-#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-bar,
-#panel-upd-excel    progress[id^="progressBar_"]::-webkit-progress-bar{
+#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-bar{
   background-color: var(--surface-header);
   border-radius: 999px;
 }
 
-#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-value,
-#panel-upd-excel    progress[id^="progressBar_"]::-webkit-progress-value{
+#panel-upd-historic progress[id^="progressBar_"]::-webkit-progress-value{
   background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
   border-radius: 999px;
   box-shadow: 0 0 8px rgba(76, 175, 80, .55);
@@ -114,16 +109,14 @@
 }
 
 /* Firefox */
-#panel-upd-historic progress[id^="progressBar_"]::-moz-progress-bar,
-#panel-upd-excel    progress[id^="progressBar_"]::-moz-progress-bar{
+#panel-upd-historic progress[id^="progressBar_"]::-moz-progress-bar{
   background: linear-gradient(90deg, #4CAF50 0%, #65C768 60%, #B9E7BA 100%);
   border-radius: 999px;
   box-shadow: 0 0 8px rgba(76, 175, 80, .55);
 }
 
 /* === Texte unter den Bars: alle IDs die mit progressText_ starten === */
-#panel-upd-historic div[id^="progressText_"],
-#panel-upd-excel    div[id^="progressText_"]{
+#panel-upd-historic div[id^="progressText_"]{
   grid-column: 2;
   margin-top: 4px;
   font-size: 12.5px;

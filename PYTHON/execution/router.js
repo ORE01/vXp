@@ -220,6 +220,7 @@ export function createPythonExecutionRouter(ctx) {
       'py-matchColumns': 'Match Columns',
       'py-historicData': 'Historic Data',
       'py-hist':         'Historical Update',
+      'py-erste':        'Get Market Data',
     };
 
     if (response && response.sent) return;
@@ -306,6 +307,20 @@ export function createPythonExecutionRouter(ctx) {
         case 'py-swaption':
           handleSwaptionProject(buttonElement, extraParam);
           break;
+
+        case 'py-erste': {
+          // Get Market Data: Erste-Snapshot -> MARKET_DATA.xlsm (kein table-Arg).
+          // Drawer-Auswahl lesen: angehakte Konventionen (= market_data_type).
+          const mdSel = document.getElementById('marketDataSelector');
+          if (mdSel) {
+            const types = Array.from(
+              mdSel.querySelectorAll('input[type="checkbox"][value]:checked')
+            ).map((cb) => cb.value);
+            extraParam.types = types;
+          }
+          sendPayloadToAPI('py-erste', '', extraParam);
+          break;
+        }
 
         default: {
           const selectedTableName = appState.getSelectedDealsTableName?.() || 'DealsMain';

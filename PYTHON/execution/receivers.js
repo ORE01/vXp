@@ -1,5 +1,7 @@
 // PYTHON/execution/receivers.js
 
+import { showMessageBox } from '../../src/renderer/core/ui/dialogs/confirm.js';
+
 export function createPythonExecutionReceivers(ctx) {
   const {
     appState,
@@ -341,6 +343,13 @@ export function createPythonExecutionReceivers(ctx) {
     console.log('[AIColumnComplete]', data);
   }
 
+  function handleErsteComplete(data) {
+    if (data?.projectName !== 'py-erste') return;
+    const msg = data?.message
+      || (data?.success ? 'Market data fetched.' : 'Fetching market data failed.');
+    try { showMessageBox?.(msg, () => {}); } catch (e) { console.warn('[py-erste]', e); }
+  }
+
   function handleProjectFinished(data) {
     const projectButtonMap = {
       'py-MVaR': 'mvaRDistButton',
@@ -417,6 +426,7 @@ export function createPythonExecutionReceivers(ctx) {
     on('py-cvar-complete', handleCVaRComplete);
     on('py-historicData-complete', handleHistComplete);
     on('py-swaption-complete', handleSwaptionComplete);
+    on('py-erste-complete', handleErsteComplete);
 
     if (typeof onAIColumnComplete === 'function') {
       on('py-matchColumns-complete', onAIColumnComplete);

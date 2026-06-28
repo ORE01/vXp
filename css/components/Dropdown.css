@@ -136,8 +136,9 @@
   outline: none;
 }
 
-/* Mini-Dropdown NUR im RATES-Panel */
-#panel-rates #ratesSelector{
+/* Mini-Dropdown NUR im RATES-Panel — Curve UND Currency identisch */
+#panel-rates #ratesSelector,
+#panel-rates #currencySelector{
   appearance:none; -webkit-appearance:none; -moz-appearance:none;
   box-sizing:border-box;
   display:inline-block;
@@ -169,18 +170,14 @@
   transition:border-color .15s ease, box-shadow .15s ease, color .15s ease;
 }
 
-#panel-rates #ratesSelector:hover{
+#panel-rates #ratesSelector:hover,
+#panel-rates #currencySelector:hover{
   color: var(--text-bright);
   border-color: var(--accent);
 }
-#panel-rates #ratesSelector:focus{
+#panel-rates #ratesSelector:focus,
+#panel-rates #currencySelector:focus{
   outline:none;
   border-color: var(--accent);
   box-shadow:0 0 0 2px rgba(76,175,80,.20);
-}
-
-/* Label minimal kleiner & enger */
-#panel-rates label[for="ratesSelector"]{
-  font-size:12px;
-  margin-bottom:4px !important;
 }

@@ -111,6 +111,20 @@ export function bindAppButtons({
   wireColumnDrawer('issuerColumnsBtn', 'issuerColumnDrawer');
   wireColumnDrawer('prodColumnsBtn', 'prodColumnDrawer');
   wireColumnDrawer('dealsColumnsBtn', 'dealsColumnDrawer');
+  wireColumnDrawer('marketDataSelectBtn', 'marketDataDrawer');
+
+  // Market-Data-Drawer: Währungs-Checkbox (EUR/USD) hakt ihre Konventions-Kinder an/ab.
+  const mdSelector = document.getElementById('marketDataSelector');
+  if (mdSelector) {
+    mdSelector.addEventListener('change', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || !t.classList.contains('md-ccy-toggle')) return;
+      const ccy = t.dataset.ccy;
+      mdSelector
+        .querySelectorAll(`input[type="checkbox"][value][data-ccy="${ccy}"]`)
+        .forEach((cb) => { cb.checked = t.checked; });
+    });
+  }
 
   // ---------- Historic Metrics ----------
   document.getElementById('historicMetricsAddButton')
@@ -158,6 +172,9 @@ export function bindAppButtons({
     { buttonId: 'updateExcelProductsButton', projectName: 'py-excel' },
     { buttonId: 'updateExcelDealsButton', projectName: 'py-excel' },
     { buttonId: 'updateExcelMarketButton', projectName: 'py-excel' },
+
+    // Get Market Data (Erste -> MARKET_DATA.xlsm), separater Schritt vor dem Import
+    { buttonId: 'getMarketDataButton', projectName: 'py-erste' },
 
     // Hist
     { buttonId: 'histEcbButton', projectName: 'py-hist' },

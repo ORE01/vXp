@@ -112,7 +112,7 @@ function prepareForwardData(receivedData) {
         r.EUSWAP;
 
       return {
-        EUSWAP: "swap",
+        instrument: "swap",   // Instrument-Typ (swap / bund), nicht währungsspezifisch
         YEAR: year,
         RATES: normalizeRateValue(rateValue)
       };
@@ -141,7 +141,12 @@ function readCmsLengths() {
 
 function renderForwardBaseTable(container, dataToUse) {
   container.innerHTML = '';
-  const FWDDataHTML = processData(dataToUse);
+  // Nur die Anzeige-Header umbenennen (Keys bleiben YEAR/RATES für CMS-Logik).
+  const FWDDataHTML = processData(dataToUse, undefined, {
+    instrument: 'Instrument',
+    YEAR: 'Maturity',
+    RATES: 'Rates',
+  });
   container.innerHTML = FWDDataHTML;
 
   const table = container.querySelector('#dataTable');
@@ -162,8 +167,10 @@ function extractSwapCurveFromTable(table) {
   const rows = Array.from(table.rows);
   const headers = Array.from(rows[0].cells).map(cell => cell.textContent.trim());
 
-  const ratesIndex = headers.indexOf('RATES');
-  const yearIndex = headers.indexOf('YEAR');
+  // Header-Anzeige ist jetzt "Rates"/"Maturity" (Keys intern weiter RATES/YEAR);
+  // beide Schreibweisen akzeptieren, damit die Kurvenextraktion robust bleibt.
+  const ratesIndex = headers.findIndex(h => h === 'Rates' || h === 'RATES');
+  const yearIndex  = headers.findIndex(h => h === 'Maturity' || h === 'YEAR');
 
   if (ratesIndex === -1 || yearIndex === -1) {
     console.error("Column 'RATES' or 'YEAR' not found in the table!");
