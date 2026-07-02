@@ -6,6 +6,7 @@ import { initLazyPanels, refreshOpenPanels as refreshCore } from "./panelOrchest
 
 import { renderInterestRateCurvePanel} from "../../features/MARKET_DATA/interestRates/interestRateCurvePanel.js";
 import { handleFWDData, handleSwapForwardCurve } from "../../features/MARKET_DATA/forwards/forwardCurvePanel.js";
+import { renderCurveConstructionPanel } from "../../features/MARKET_DATA/curveConstruction/curveConstructionPanel.js";
 
 // Swaption Vols: ATM-Surface (HTML-Heatmap) + Smile (Chart.js) + Cube (Heatmap).
 // Direkte Renderer (ohne Open-Guard), damit sie auch beim Report-Warm-up greifen.
@@ -67,6 +68,13 @@ export function getMarketDataPanelRenderers() {
       initForwardPanelGlobalOnce();
       handleFWDData();
       handleSwapForwardCurve();
+    },
+
+    // ======================================================
+    // CURVE CONSTRUCTION (curve_spreads editor -> OIS/3M/6M/12M)
+    // ======================================================
+    "panel-curve-construction": () => {
+      renderCurveConstructionPanel();
     },
 
     // ======================================================

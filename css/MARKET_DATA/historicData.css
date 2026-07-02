@@ -16,12 +16,19 @@
   padding: 0;
 }
 
-/* Main 2-column layout lives in .ts-layout */
+/* Chart volle Breite; die Tools sind ein rechter Overlay-Drawer (.column-drawer),
+   also NICHT mehr im Flow -> einspaltiges Layout. */
 #panel-ts .ts-layout{
-  display: grid;
-  grid-template-columns: minmax(280px, 380px) 1fr; /* Tools | Chart */
-  gap: 16px;
-  align-items: start;
+  display: block;
+}
+
+/* Chart-Toolbar: 🔑-Button links (Tools-Drawer), Zoom-Buttons rechts (im Chart) */
+#panel-ts .ts-chart-toolbar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 /* Tools column (SURFACE global) */
@@ -46,6 +53,7 @@
 }
 
 #panel-ts .ts-tools-toggle,
+#panel-ts .ts-enlarge-toggle,
 #panel-ts .filter-wrapper .tools-toggle,
 #panel-ts .filter-wrapper #tsToolsToggle{
   border: 1px solid var(--border-subtle);
@@ -57,11 +65,19 @@
 }
 
 #panel-ts .ts-tools-toggle:hover,
+#panel-ts .ts-enlarge-toggle:hover,
 #panel-ts .filter-wrapper .tools-toggle:hover,
 #panel-ts .filter-wrapper #tsToolsToggle:hover{
   background: var(--surface-header);
   color: var(--text-bright);
   border-color: var(--border);
+}
+
+/* Linke Tool-Gruppe in der Chart-Toolbar (🔑 + Vergrößern) */
+#panel-ts .ts-left-tools{
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Tools content stack */
@@ -74,11 +90,18 @@
 #panel-ts .filter-wrapper .table-wrapper,
 #panel-ts .moving-average-container,
 #panel-ts .normalization-container,
+#panel-ts .axis-scale-container,
 #panel-ts .load-and-toggle-container{
   background: var(--surface-deep);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   padding: 12px;
+}
+
+/* Y-Achsen-Skala (Log/Linear) */
+#panel-ts .axis-scale-container{
+  display: grid;
+  gap: 8px;
 }
 
 /* Checkboxes grid */
@@ -194,23 +217,35 @@
 }
 
 /* Time-range buttons */
+/* Zoom-/Zeitbereichs-Pills — identischer Stil wie im Risk-Factors-Chart */
 #panel-ts .time-range-buttons{
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  align-items: center;
 }
 
 #panel-ts .time-range-buttons button{
-  background: var(--surface-deep);
-  color: var(--text-bright);
+  font-size: 11px;
+  padding: 3px 10px;
   border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--surface-base);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
 #panel-ts .time-range-buttons button:hover{
-  filter: brightness(1.1);
+  border-color: var(--accent);
+}
+
+#panel-ts .time-range-buttons button.is-active{
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+
+#panel-ts .time-range-buttons .ts-resetzoom{
+  margin-left: 6px;
 }
 
 /* Data area under chart (SURFACE global) + TS overflow/max-height stays here */
@@ -299,11 +334,36 @@
   }
 }
 
-/* Optional: reduce spacing between TS templates if you really need it
-   (Ich würde es entfernen, wenn du global sauberes Spacing willst) */
-#panel-ts #modal-content-container > .table-content{
-  margin: 8px 0 !important;
-  padding: 6px 0 !important;
+/* ===== 2 Charts nebeneinander (4 Charts = 2×2) ===== */
+#panel-ts #modal-content-container{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
 }
-#panel-ts #modal-content-container > .table-content:first-child{ margin-top: 0 !important; }
-#panel-ts #modal-content-container > .table-content:last-child{  margin-bottom: 0 !important; }
+#panel-ts #modal-content-container > .table-content{
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 0;   /* im Grid schrumpfen erlauben (sonst Overflow) */
+}
+
+/* Vollbild (⛶): NUR dieser Chart über den gesamten Bildschirm (Overlay). */
+#panel-ts #modal-content-container > .table-content.is-enlarged{
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  margin: 0 !important;
+  padding: 16px !important;
+  background: var(--surface-raised, #16171a);
+  overflow: auto;
+}
+#panel-ts #modal-content-container > .table-content.is-enlarged .TSChart-container .chart-container{
+  height: calc(100vh - 130px);   /* Toolbar + Ränder abziehen */
+}
+
+/* Schmale Fenster: einspaltig */
+@media (max-width: 1100px){
+  #panel-ts #modal-content-container{
+    grid-template-columns: 1fr;
+  }
+}

@@ -11,6 +11,7 @@ export function wireMarketProviders({ api, handleProviderData } = {}) {
     ['ecbData', 'ecb'],
     ['fedData', 'fed'],
     ['yahooData', 'yahoo'],
+    ['ersteData', 'erste'],
   ];
 
   mapping.forEach(([eventName, type]) => {

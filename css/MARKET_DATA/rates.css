@@ -68,11 +68,164 @@
   grid-row: 2;
   height: 446px;
   box-sizing: border-box;
+  position: relative;        /* Anker für den "Curves"-Button */
 }
+
+/* "Curves"-Button: oben rechts in der Chart-Kachel, öffnet den Kurven-Drawer */
+#MARKETDATA_Modal #panel-rates .chart-container .ir-curves-btn{
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-base);
+  color: var(--text-bright);
+  cursor: pointer;
+}
+#MARKETDATA_Modal #panel-rates .chart-container .ir-curves-btn:hover{
+  border-color: var(--accent);
+}
+
+/* Checkbox-Zeilen im Kurven-Drawer */
+#irCurvesSelector .ir-curve-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+#irCurvesSelector input[type="checkbox"]{ cursor: pointer; }
 
 #MARKETDATA_Modal #panel-rates .chart-container canvas{
   height: 420px !important;
 }
+
+/* ===== CURVE CONSTRUCTION (curve_spreads editor) ===== */
+#MARKETDATA_Modal #panel-curve-construction .cc-body{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-card{
+  flex: 0 0 auto;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+/* Vergleichs-Chart: konstruierte Kurven vs. Benchmark */
+#MARKETDATA_Modal #panel-curve-construction .cc-chart-card{
+  flex: 1 1 480px;
+  min-width: 360px;
+  height: 446px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-chart-wrap{
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-chart-wrap canvas{
+  height: 100% !important;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-row > label{
+  margin: 0;
+  font-weight: 600;
+  font-size: 13px;
+  width: 90px;
+  flex: 0 0 90px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-select{
+  width: 160px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-hint{
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary, #a1a0a0);
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-hint code{
+  background: var(--surface-overlay, rgba(255,255,255,0.06));
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-spreads{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-spread-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-spread-row > label{
+  margin: 0;
+  width: 90px;
+  flex: 0 0 90px;
+  font-size: 13px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-spread-row > label em{
+  opacity: 0.65;
+  font-style: italic;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-spread-row > input{
+  width: 110px;
+  text-align: right;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-unit{
+  font-size: 12px;
+  color: var(--text-secondary, #a1a0a0);
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-actions{
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-btn{
+  padding: 6px 14px;
+  font-size: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-base);
+  color: var(--text-bright);
+  cursor: pointer;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-btn:hover{
+  border-color: var(--accent);
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-btn--primary{
+  background: var(--accent, #2d6cdf);
+  border-color: var(--accent, #2d6cdf);
+  color: #fff;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-btn:disabled{
+  opacity: 0.55;
+  cursor: default;
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-status{
+  min-height: 18px;
+  font-size: 12px;
+  color: var(--text-secondary, #a1a0a0);
+}
+#MARKETDATA_Modal #panel-curve-construction .cc-status--ok{ color: #3fbf6f; }
+#MARKETDATA_Modal #panel-curve-construction .cc-status--error{ color: #ff5d5d; }
+#MARKETDATA_Modal #panel-curve-construction .cc-status--info{ color: var(--text-bright, #ddd); }
 
 
 

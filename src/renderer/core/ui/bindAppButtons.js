@@ -113,18 +113,71 @@ export function bindAppButtons({
   wireColumnDrawer('dealsColumnsBtn', 'dealsColumnDrawer');
   wireColumnDrawer('marketDataSelectBtn', 'marketDataDrawer');
 
-  // Market-Data-Drawer: Währungs-Checkbox (EUR/USD) hakt ihre Konventions-Kinder an/ab.
+  // Market-Data-Drawer: Auswahl merken (localStorage) + Währungs-Checkbox schaltet Kinder.
   const mdSelector = document.getElementById('marketDataSelector');
   if (mdSelector) {
+    const MD_KEY = 'marketDataSelection';
+
+    // Angehakte Konventionen persistieren.
+    const persistMdSelection = () => {
+      const checked = Array.from(
+        mdSelector.querySelectorAll('input[type="checkbox"][value]:checked')
+      ).map((cb) => cb.value);
+      try { localStorage.setItem(MD_KEY, JSON.stringify(checked)); } catch (_) {}
+    };
+
+    // Währungs-Häkchen (Header) = angehakt, wenn mind. ein Kind angehakt ist.
+    const syncCcyToggles = () => {
+      mdSelector.querySelectorAll('input.md-ccy-toggle[data-ccy]').forEach((toggle) => {
+        const ccy = toggle.dataset.ccy;
+        const kids = mdSelector.querySelectorAll(`input[type="checkbox"][value][data-ccy="${ccy}"]`);
+        toggle.checked = Array.from(kids).some((cb) => cb.checked);
+      });
+    };
+
+    // Gespeicherte Auswahl wiederherstellen (nur falls vorhanden, sonst HTML-Defaults).
+    const restoreMdSelection = () => {
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem(MD_KEY)); } catch (_) { stored = null; }
+      if (!Array.isArray(stored)) return;
+      const set = new Set(stored);
+      mdSelector.querySelectorAll('input[type="checkbox"][value]').forEach((cb) => {
+        cb.checked = set.has(cb.value);
+      });
+      syncCcyToggles();
+    };
+
+    restoreMdSelection();
+
     mdSelector.addEventListener('change', (e) => {
       const t = e.target;
-      if (!(t instanceof HTMLInputElement) || !t.classList.contains('md-ccy-toggle')) return;
-      const ccy = t.dataset.ccy;
-      mdSelector
-        .querySelectorAll(`input[type="checkbox"][value][data-ccy="${ccy}"]`)
-        .forEach((cb) => { cb.checked = t.checked; });
+      if (t instanceof HTMLInputElement && t.classList.contains('md-ccy-toggle')) {
+        const ccy = t.dataset.ccy;
+        mdSelector
+          .querySelectorAll(`input[type="checkbox"][value][data-ccy="${ccy}"]`)
+          .forEach((cb) => { cb.checked = t.checked; });
+      }
+      persistMdSelection();
     });
   }
+
+  // ---------- ERSTE Zielmappe (Browse) ----------
+  // Zeigt die aktuelle Zieldatei; "Target Workbook…" öffnet den Datei-Dialog.
+  const ersteTargetLabel = document.getElementById('ersteTargetLabel');
+  const setErsteTargetLabel = (info) => {
+    if (!ersteTargetLabel || !info || !info.name) return;
+    ersteTargetLabel.textContent = info.name;
+    ersteTargetLabel.title = info.path || '';
+  };
+  window.api?.invoke?.('erste:get-target').then(setErsteTargetLabel).catch(() => {});
+  document.getElementById('ersteTargetBrowseBtn')?.addEventListener('click', async () => {
+    try {
+      const res = await window.api.invoke('erste:select-target');
+      if (res && !res.canceled) setErsteTargetLabel(res);
+    } catch (e) {
+      console.warn('[erste target] select failed', e);
+    }
+  });
 
   // ---------- Historic Metrics ----------
   document.getElementById('historicMetricsAddButton')

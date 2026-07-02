@@ -241,12 +241,17 @@ export async function handleTSData(receivedData, modalIndex) {
 
   const persistNow = () => saveTSSelectionToDB(modalIndex, headers, checkboxes);
 
+  // Änderungen werden NUR gespeichert (kein sofortiges Neuzeichnen).
+  // Der Chart aktualisiert sich erst beim Klick auf "Load Data".
   checkboxes.forEach(cb => cb.addEventListener('change', persistNow));
   if (selNormalization) selNormalization.addEventListener('change', persistNow);
   if (chkVolatility)    chkVolatility.addEventListener('change', persistNow);
 
   [chkSMA1, chkSMA2, chkSMA3].forEach(el => el && el.addEventListener('change', persistNow));
   [perSMA1, perSMA2, perSMA3].forEach(el => el && el.addEventListener('input', persistNow));
+
+  // Y-Achse Log/Linear: kein Live-Update mehr -> wirkt erst bei "Load Data".
+  // (createLineChart liest #logScale_<modalIndex> beim Zeichnen aus.)
 
   loadButton.replaceWith(loadButton.cloneNode(true));
   const newLoadButton = document.getElementById(`loadButton_${modalIndex}`);
@@ -574,6 +579,10 @@ export function createTSModals(data) {
   for (let i = 1; i <= sectionCount; i++) {
     insertModal(i, perModal[i]); // âœ… nicht mehr "data" Ã¼berall
   }
+
+  // Wenn die Daten (spät) ankommen während das Panel offen ist: Charts direkt
+  // zeichnen. (Bei geschlossenem Panel passiert nichts; das übernimmt der Open-Hook.)
+  scheduleTsAutoDraw();
 }
 
 /** Liefert ein Objekt: {1: rows[], 2: rows[], 3: rows[], 4: rows[]} */
@@ -757,8 +766,9 @@ function insertModal(modalIndex, receivedData) {
   const elementsToUpdate = [
     { selector: '.table-content', id: `tsRoot_${modalIndex}` },
 
-    { selector: '#tsTools',       id: `tsTools_${modalIndex}` },
-    { selector: '#tsToolsToggle', id: `tsToolsToggle_${modalIndex}` },
+    { selector: '#tsTools',         id: `tsTools_${modalIndex}` },
+    { selector: '#tsToolsToggle',   id: `tsToolsToggle_${modalIndex}` },
+    { selector: '#tsEnlargeToggle', id: `tsEnlargeToggle_${modalIndex}` },
 
     { selector: '#checkboxContainer', id: `checkboxContainer_${modalIndex}` },
     { selector: '#loadButton',        id: `loadButton_${modalIndex}` },
@@ -769,8 +779,10 @@ function insertModal(modalIndex, receivedData) {
     { selector: '#fiveYearButton',    id: `fiveYearButton_${modalIndex}` },
     { selector: '#tenYearButton',     id: `tenYearButton_${modalIndex}` },
     { selector: '#maxButton',         id: `maxButton_${modalIndex}` },
+    { selector: '#resetZoomButton',   id: `resetZoomButton_${modalIndex}` },
 
     { selector: '#normalizationTypeSelector', id: `normalizationTypeSelector_${modalIndex}` },
+    { selector: '#logScale',                  id: `logScale_${modalIndex}` },
 
     { selector: '#applySMA1',           id: `applySMA1_${modalIndex}` },
     { selector: '#movingAveragePeriod1', id: `movingAveragePeriod1_${modalIndex}` },
@@ -838,18 +850,64 @@ function wireTsToggle() {
   if (!root || root.__tsToggleWired) return;
   root.__tsToggleWired = true;
 
+  const closeAllTsDrawers = () => {
+    root.querySelectorAll('.ts-tools.column-drawer.is-open')
+      .forEach(d => d.classList.remove('is-open'));
+  };
+
   root.addEventListener('click', (e) => {
-    // Matcht Buttons wie #tsToolsToggle_1, _2, ...
+    // Öffnen: 🔑-Button einer Section öffnet DEREN Tools-Drawer (rechts, Overlay).
     const btn = e.target.closest('[id^="tsToolsToggle_"]');
-    if (!btn) return;
+    if (btn) {
+      const instanceRoot = btn.closest('.table-content');
+      const drawer = instanceRoot?.querySelector('.ts-tools.column-drawer');
+      if (drawer) {
+        const wasOpen = drawer.classList.contains('is-open');
+        closeAllTsDrawers();            // fixed rechts -> immer nur einer offen
+        if (!wasOpen) drawer.classList.add('is-open');
+      }
+      return;
+    }
+    // Vergrößern: ⛶-Button zieht seine Section auf volle Breite (Toggle).
+    const enlargeBtn = e.target.closest('[id^="tsEnlargeToggle_"]');
+    if (enlargeBtn) {
+      const instanceRoot = enlargeBtn.closest('.table-content');
+      if (instanceRoot) {
+        instanceRoot.classList.toggle('is-enlarged');
+        const idx = enlargeBtn.id.replace('tsEnlargeToggle_', '');
+        // Chart nach der Layout-Änderung neu vermessen.
+        requestAnimationFrame(() => { try { chartInstances[idx]?.resize(); } catch {} });
+      }
+      return;
+    }
+    // Schließen: Close-Button (×) im Drawer.
+    if (e.target.closest('[data-col-drawer-close]')) {
+      const drawer = e.target.closest('.ts-tools.column-drawer');
+      if (drawer) drawer.classList.remove('is-open');
+    }
+  });
 
-    const current = !!window.localStorage.getItem(TS_TOOLS_STATE_KEY);
-    const next = !current;
-    window.localStorage.setItem(TS_TOOLS_STATE_KEY, next ? '1' : '');
+  // Escape schließt offene TS-Drawer.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAllTsDrawers();
+  });
+}
 
-    // Nur die betroffene Instanz kollabieren/expandieren:
-    const instanceRoot = btn.closest('.table-content');
-    applyTsToolsState(next, instanceRoot);
+// Zeichnet die TS-Charts automatisch, sobald das Panel SICHTBAR ist (nur dann
+// hat der Canvas korrekte Maße). Gestaffelt (blockiert das Öffnen nicht);
+// bereits gezeichnete Sections werden übersprungen (Zoom/Zustand bleibt).
+function scheduleTsAutoDraw() {
+  const panel = document.getElementById('panel-ts');
+  if (!panel || panel.hidden) return;
+  requestAnimationFrame(() => {
+    const btns = document.querySelectorAll('#panel-ts [id^="loadButton_"]');
+    btns.forEach((btn, i) => {
+      const idx = btn.id.replace('loadButton_', '');
+      const canvas = document.getElementById(`TSlineChart_${idx}`);
+      const alreadyDrawn = typeof Chart !== 'undefined' && canvas && Chart.getChart(canvas);
+      if (alreadyDrawn) return;
+      setTimeout(() => { try { btn.click(); } catch (_) {} }, i * 80);
+    });
   });
 }
 
@@ -860,11 +918,11 @@ export function observePanelTsOpen() {
   const run = () => {
     ensureTsToolsHeader();
     wireTsToggle();
-    const collapsed = !!window.localStorage.getItem(TS_TOOLS_STATE_KEY);
-    // Beim Ã–ffnen den gespeicherten State auf alle Instanzen anwenden
-    document.querySelectorAll('#panel-ts .table-content').forEach(rootEl => {
-      applyTsToolsState(collapsed, rootEl);
-    });
+    // Tools sind jetzt ein rechter Overlay-Drawer -> beim Öffnen des Panels
+    // sind alle Drawer standardmäßig geschlossen (kein .is-open).
+
+    // Initiale Anzeige: Charts automatisch zeichnen (sichtbares Panel).
+    scheduleTsAutoDraw();
   };
 
   // Einmal direkt probieren (falls schon offen/gebaut)

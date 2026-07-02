@@ -1,6 +1,31 @@
 // src/main/ipc/handlers/python.handlers.js
 'use strict';
 
+const fs = require('fs');
+const pathMod = require('path');
+const { dialog } = require('electron');
+const { getFilesBaseDir, getExcelPath } = require('../../main.path');
+
+// ---- ERSTE-Zieldatei (vom User per "Browse" wählbar, persistiert) ----
+function _ersteTargetFile() {
+  return pathMod.join(getFilesBaseDir(), 'erste_target.json');
+}
+function _defaultErsteTarget() {
+  return getExcelPath('ERSTE_RATES.xlsx');
+}
+function readErsteTarget() {
+  try {
+    const obj = JSON.parse(fs.readFileSync(_ersteTargetFile(), 'utf-8'));
+    if (obj && typeof obj.target === 'string' && obj.target) return obj.target;
+  } catch (_) { /* keine/ungültige Datei -> Default */ }
+  return _defaultErsteTarget();
+}
+function writeErsteTarget(p) {
+  try {
+    fs.writeFileSync(_ersteTargetFile(), JSON.stringify({ target: p }, null, 2), 'utf-8');
+  } catch (e) { /* nicht fatal */ }
+}
+
 module.exports = function registerPythonHandlers({
   ipcMain,
   startPythonScriptWithEvent,
@@ -11,7 +36,34 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
   if (typeof startPythonScriptWithEvent !== 'function') throw new Error('[python.handlers] startPythonScriptWithEvent missing');
   if (typeof refreshTable !== 'function') throw new Error('[python.handlers] refreshTable missing');
 
+  // ===================== ERSTE TARGET WORKBOOK (Browse) =====================
+  // Aktuelle Zieldatei zurückgeben (Default ERSTE_RATES.xlsx, falls nie gewählt).
+  ipcMain.handle('erste:get-target', async () => {
+    const p = readErsteTarget();
+    return { path: p, name: pathMod.basename(p) };
+  });
 
+  // Datei-Dialog: Zielmappe für den Scrape wählen (vorbelegt auf files/).
+  ipcMain.handle('erste:select-target', async () => {
+    try {
+      const res = await dialog.showOpenDialog({
+        title: 'Select target workbook for market data',
+        defaultPath: getFilesBaseDir(),
+        properties: ['openFile'],
+        filters: [{ name: 'Excel Workbook', extensions: ['xlsx', 'xlsm'] }],
+      });
+      if (res.canceled || !res.filePaths || !res.filePaths.length) {
+        return { canceled: true };
+      }
+      const target = res.filePaths[0];
+      writeErsteTarget(target);
+      // Zielwechsel -> Cache verwerfen, damit der nächste Abruf SICHER neu schreibt.
+      try { fs.unlinkSync(pathMod.join(getFilesBaseDir(), 'erste_cache.json')); } catch (_) {}
+      return { canceled: false, path: target, name: pathMod.basename(target) };
+    } catch (e) {
+      return { canceled: true, error: e.message };
+    }
+  });
 
   // ===================== GET MARKET DATA (Erste) =====================
   // Holt den Erste-Swap-Snapshot und schreibt ihn als Sheet "ERSTE_snapshot"
@@ -42,6 +94,8 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     if (types.length) {
       spawnArgs.push('--types', types.join(','));
     }
+    // Zielmappe (vom User per "Browse" gewählt, sonst Default ERSTE_RATES.xlsx).
+    spawnArgs.push('--target', readErsteTarget());
 
     let stdout = '';
     let stderrErr = '';   // nur Nicht-Progress-stderr (für Fehlermeldung)
@@ -80,7 +134,178 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       const ok = code === 0;
       const out = stdout.trim();
       const err = stderrErr.trim();
+      if (ok) {
+        // Der Scrape baut zusätzlich die Kurven OIS/3M/6M/12M in RATES_BASE ->
+        // Panel aktualisieren, damit sie sofort sichtbar sind.
+        try { refreshTable('RATES_BASE'); } catch (_) {}
+      }
       finish(ok, ok ? (out || 'Market data fetched.')
+                    : (err || out || `Error (exit code ${code}).`));
+    });
+  });
+
+  // ===================== CURVE CONSTRUCTION (curve_spreads) =====================
+  // Kleiner Editor für die flachen bp-Spreads, aus denen die Kurven
+  // OIS/3M/6M/12M gebaut werden (6M-Basis + spread_bp/10000).
+
+  // Währungen für das Dropdown: alle aktiven aus dem ERSTE-Mapping (INCLUDE=1).
+  ipcMain.handle('curve-spreads:currencies', async () => {
+    try {
+      const rows = await dbApi.selectAll(
+        'SELECT DISTINCT ccy FROM erste WHERE INCLUDE = 1 AND ccy IS NOT NULL ORDER BY ccy'
+      );
+      const ccys = (rows || []).map(r => r.ccy).filter(Boolean);
+      return ccys.length ? ccys : ['EUR'];
+    } catch (e) {
+      return ['EUR'];
+    }
+  });
+
+  // Gespeicherte Spreads + Basis-Konvention einer Währung lesen.
+  // base_options = eindeutige Konventionen (market_data_type) mit Label + index_tenor.
+  ipcMain.handle('curve-spreads:get', async (_evt, args = {}) => {
+    const ccy = String(args.ccy || '').trim();
+    if (!ccy) return { spreads: [], base_mdt: '', base_options: [] };
+
+    const spreads = await dbApi.selectAll(
+      'SELECT ccy, index_tenor, spread_bp FROM curve_spreads WHERE ccy = ? ORDER BY index_tenor',
+      [ccy]
+    );
+
+    // Wählbare Basis-Konventionen: gemappte Roh-Konventionen der ccy.
+    // Label z.B. "Ann/3M", "Semi/3M", "Ann/6M"; value = market_data_type (eindeutig).
+    let base_options = [];
+    try {
+      const rows = await dbApi.selectAll(
+        'SELECT DISTINCT market_data_type, index_tenor, fixed_freq FROM erste ' +
+        'WHERE ccy = ? AND INCLUDE = 1 AND market_data_type IS NOT NULL ' +
+        'ORDER BY index_tenor, fixed_freq',
+        [ccy]
+      );
+      base_options = (rows || [])
+        .filter(r => r.market_data_type)
+        .map(r => {
+          const it = String(r.index_tenor || '').toUpperCase();
+          const ff = String(r.fixed_freq || '').trim();
+          return {
+            value: String(r.market_data_type),
+            index_tenor: it,
+            label: (ff ? `${ff}/` : '') + it,
+          };
+        });
+    } catch (_) { base_options = []; }
+
+    // Gespeicherte Basis-Konvention (Fallback: Ann/6M falls vorhanden, sonst erste Option).
+    let base_mdt = '';
+    try {
+      const rows = await dbApi.selectAll(
+        'SELECT base_mdt FROM curve_base WHERE ccy = ? LIMIT 1', [ccy]
+      );
+      base_mdt = rows && rows[0] ? String(rows[0].base_mdt) : '';
+    } catch (_) { base_mdt = ''; }
+    if (!base_mdt || !base_options.some(o => o.value === base_mdt)) {
+      const ann6m = base_options.find(o => o.index_tenor === '6M' && /ann/i.test(o.label));
+      base_mdt = (ann6m && ann6m.value) || (base_options[0] && base_options[0].value) || '';
+    }
+
+    return { spreads, base_mdt, base_options };
+  });
+
+  // Spreads + Basis einer Währung speichern (DELETE + INSERT, da keine PKs).
+  ipcMain.handle('curve-spreads:save', async (_evt, args = {}) => {
+    const ccy = String(args.ccy || '').trim();
+    const spreads = Array.isArray(args.spreads) ? args.spreads : [];
+    const baseMdt = String(args.base_mdt || '').trim();
+    if (!ccy) return { success: false, message: 'Currency missing.' };
+    try {
+      await dbApi.runSQL('DELETE FROM curve_spreads WHERE ccy = ?', [ccy]);
+      for (const s of spreads) {
+        const tenor = String(s.index_tenor || '').trim().toUpperCase();
+        const bp = Number(s.spread_bp);
+        if (!tenor || !Number.isFinite(bp)) continue;
+        await dbApi.runSQL(
+          'INSERT INTO curve_spreads (ccy, index_tenor, spread_bp) VALUES (?, ?, ?)',
+          [ccy, tenor, bp]
+        );
+      }
+
+      // Basis-Konvention je ccy (curve_base) upserten.
+      if (baseMdt) {
+        try {
+          await dbApi.runSQL('CREATE TABLE IF NOT EXISTS curve_base (ccy TEXT, base_mdt TEXT)');
+          await dbApi.runSQL('DELETE FROM curve_base WHERE ccy = ?', [ccy]);
+          await dbApi.runSQL('INSERT INTO curve_base (ccy, base_mdt) VALUES (?, ?)', [ccy, baseMdt]);
+        } catch (_) { /* Basis nicht fatal */ }
+      }
+
+      return { success: true, count: spreads.length };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  });
+
+  // ===================== REBUILD CURVES (kein Scrape) =====================
+  // Baut OIS/3M/6M/12M aus dem letzten ERSTE-Snapshot neu (erste_to_excel.py
+  // --rebuild). Kein Netzwerk. Danach RATES_BASE refreshen.
+  ipcMain.on('start-py-erste-rebuild', (event) => {
+    const cp = require('child_process');
+    const envName = (process.env.NODE_ENV || '').trim().toLowerCase();
+
+    const finish = (success, message) => {
+      event.reply('py-erste-rebuild-complete', { success, projectName: 'py-erste-rebuild', message });
+      event.reply('project-finished', { success, projectName: 'py-erste-rebuild' });
+    };
+
+    if (envName !== 'development') {
+      finish(false, 'Rebuild is currently only available in dev mode.');
+      return;
+    }
+
+    const pythonExe = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
+    const script = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\HistData\\ALL_DATA\\ALL_Erste\\erste_to_excel.py';
+
+    // Aus derselben Zielmappe lesen, in die "Get Market Data" schreibt.
+    const spawnArgs = [script, '--rebuild', '--target', readErsteTarget()];
+
+    let stdout = '';
+    let stderrErr = '';
+    let stderrBuf = '';
+    let child;
+    try {
+      child = cp.spawn(pythonExe, spawnArgs, { windowsHide: true });
+    } catch (e) {
+      finish(false, `Start failed: ${e.message}`);
+      return;
+    }
+
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+    child.stderr.on('data', (d) => {
+      stderrBuf += d.toString();
+      const lines = stderrBuf.split(/\r?\n/);
+      stderrBuf = lines.pop();
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t) continue;
+        try {
+          const parsed = JSON.parse(t);
+          if (parsed && typeof parsed.progress !== 'undefined') {
+            event.reply('py-erste-rebuild-progress', parsed);
+            continue;
+          }
+        } catch (_) { /* kein JSON -> Fehlertext */ }
+        stderrErr += t + '\n';
+      }
+    });
+
+    child.on('error', (err) => finish(false, `Error: ${err.message}`));
+    child.on('close', (code) => {
+      const ok = code === 0;
+      const out = stdout.trim();
+      const err = stderrErr.trim();
+      if (ok) {
+        try { refreshTable('RATES_BASE'); } catch (_) {}
+      }
+      finish(ok, ok ? (out || 'Curves rebuilt.')
                     : (err || out || `Error (exit code ${code}).`));
     });
   });
@@ -391,6 +616,27 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
   });
 
+  // Benchmark-Kurven (RATES_BASE) aus dem frischen tblTS neu bauen — als leiser
+  // Hintergrund-Schritt nach dem Historic-Update. Dev-only (venv-Python).
+  function rebuildBenchmarkCurves() {
+    const envName = (process.env.NODE_ENV || '').trim().toLowerCase();
+    if (envName !== 'development') return;
+
+    const cp = require('child_process');
+    const pythonExe = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
+    const script = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\HistData\\ALL_DATA\\ALL_Erste\\erste_to_excel.py';
+
+    let child;
+    try {
+      child = cp.spawn(pythonExe, [script, '--benchmark'], { windowsHide: true });
+    } catch (_) { return; }
+
+    child.on('error', () => {});
+    child.on('close', (code) => {
+      if (code === 0) { try { refreshTable('RATES_BASE'); } catch (_) {} }
+    });
+  }
+
   // ===================== HISTORIC =====================
   ipcMain.on('start-py-historicData', async (event, args = {}) => {
     const api = args.api || '';
@@ -401,6 +647,9 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       const result = await startPythonScriptWithEvent(event, 'hist', 'py-historicData', scriptArgs);
 
       try { refreshTable('tblTS'); } catch {}
+
+      // tblTS ist frisch -> Benchmark-Renditekurven in RATES_BASE nachziehen.
+      try { rebuildBenchmarkCurves(); } catch {}
 
       event.reply('py-historicData-complete', { success: true, projectName: 'py-historicData', api, result });
       event.reply('project-finished', { success: true, projectName: 'py-hist', buttonId: args.buttonId || 'histButton' });

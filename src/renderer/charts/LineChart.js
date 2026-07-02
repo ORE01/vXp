@@ -3,17 +3,59 @@ import { saveTrendlines, loadTrendlines } from '../features/MARKET_DATA/HISTORIC
 //import { saveTrendlines, loadTrendlines } from '../renderer/MARKET_DATA/HISTORIC_DATA/TS.js';
 
 
-const chartsByCanvasId = new Map(); 
+const chartsByCanvasId = new Map();
+// Gewählter Zeitbereich je TS-Modal (1/5/10/'max'), damit ein Live-Redraw
+// (SMA/Normalization/Select Data) den aktuellen Zoombereich NICHT auf 5Y zurücksetzt.
+const tsRangeByModal = {};
 let chartInstance = null;
 let futurePredictionsChartInstance = null;
 let FWDlineChartInstance;
 let isDrawing = false; // Variable to track if the mouse is being pressed
 let debounceTimeout;
 
+// Fadenkreuz am Cursor (gestrichelte Linien über die Chart-Fläche) — für den
+// TS-Chart. Wird lokal in createLineChart eingehängt (nicht global).
+const tsCrosshairPlugin = {
+  id: 'tsCrosshair',
+  afterEvent(chart, args) {
+    const e = args.event;
+    if (!e) return;
+    if (e.type === 'mousemove') {
+      chart.$crosshair = { x: e.x, y: e.y };
+      args.changed = true;
+    } else if (e.type === 'mouseout') {
+      if (chart.$crosshair) { chart.$crosshair = null; args.changed = true; }
+    }
+  },
+  afterDraw(chart) {
+    const c = chart.$crosshair;
+    const area = chart.chartArea;
+    if (!c || !area) return;
+    if (c.x < area.left || c.x > area.right || c.y < area.top || c.y > area.bottom) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(160, 160, 160, 0.75)';
+    ctx.beginPath(); ctx.moveTo(c.x, area.top); ctx.lineTo(c.x, area.bottom); ctx.stroke();  // vertikal
+    ctx.beginPath(); ctx.moveTo(area.left, c.y); ctx.lineTo(area.right, c.y); ctx.stroke();  // horizontal
+    ctx.restore();
+  }
+};
+
 
 export default function createLineChart(datasets, chartName, chartTitle, pointRadius, modalIndex, smaPeriods) {
   const canvasElement = document.getElementById(chartName);
   if (!canvasElement) { console.error(`Canvas element with ID "${chartName}" not found.`); return null; }
+
+  // Tooltip-Positioner: fixiert das Tooltip-Fenster oben links in der Chart-Fläche
+  // (statt am Datenpunkt zu kleben). Einmalig registrieren.
+  if (typeof Chart !== 'undefined' && Chart.Tooltip && !Chart.Tooltip.positioners.tsFixed) {
+    Chart.Tooltip.positioners.tsFixed = function () {
+      const area = this.chart.chartArea;
+      return { x: area.left + 12, y: area.top + 12 };
+    };
+  }
 
 
   // âœ… Immer den alten Chart dieser Canvas-ID zerstÃ¶ren
@@ -123,11 +165,18 @@ const trendlinePlugin = {
       interaction: { mode: 'nearest', axis: 'x', intersect: false },
       scales: {
         x: { display: true, title: { display: true, text: "Year" } },
-        y: { display: true, title: { display: true, text: "Value" } }
+        y: {
+          display: true,
+          // Log/Linear per Drawer-Toggle (#logScale_<modalIndex>).
+          type: document.getElementById(`logScale_${modalIndex}`)?.checked ? 'logarithmic' : 'linear',
+          title: { display: true, text: "Value" }
+        }
       },
       plugins: {
         tooltip: {
           enabled: true,
+          position: 'tsFixed',   // festes Fenster oben links (klebt nicht am Punkt)
+          caretSize: 0,          // kein Zeiger-Dreieck
           callbacks: {
             label: (ctx) => {
               if (ctx.dataset.label.includes('SMA')) {
@@ -151,7 +200,7 @@ const trendlinePlugin = {
         trendlineDrawer: { color: '#ffaa33', dash: [] }
       }
     },
-    plugins: [trendlinePlugin]
+    plugins: [trendlinePlugin, tsCrosshairPlugin]
   });
 
   // --- gespeicherte Trendlinien nach Init laden ---
@@ -470,6 +519,26 @@ function clampXLabelToView(chart, xLabelOrNum) {
 function setupChartButtons(chartInstance, datasets, modalIndex) {
   const filteredDatasetsCopy = JSON.parse(JSON.stringify(datasets));
 
+  // Zurückgefüllten flachen Anfangslauf JE Serie ausblenden (y -> null = Lücke,
+  // keine Linie). Nötig, damit kürzere Serien keinen waagrechten Strich zeigen,
+  // wenn eine ANDERE Serie länger ist und die Achse weiter zurückreicht.
+  filteredDatasetsCopy.forEach((dataset) => {
+    const data = dataset?.data;
+    if (!Array.isArray(data) || data.length < 2) return;
+    const first = data[0]?.y;
+    if (first == null) return;
+    const changeIdx = data.findIndex((p) => p && p.y !== first);  // erster abweichender Wert
+    // <=1: normale Serie (variiert sofort) ODER komplett konstant (-1) -> nicht anfassen.
+    // Nur echte flache Anlaufstrecken (langer identischer Back-fill-Lauf) ausblenden.
+    if (changeIdx <= 1) return;
+    for (let i = 0; i < changeIdx; i++) {
+      if (data[i]) data[i].y = null;
+      ['smaData1', 'smaData2', 'smaData3'].forEach((k) => {
+        if (Array.isArray(dataset[k]) && dataset[k][i]) dataset[k][i].y = null;
+      });
+    }
+  });
+
   function getMaxYearsAvailable() {
     let maxYearsAvailable = 0;
     filteredDatasetsCopy.forEach((dataset) => {
@@ -490,14 +559,33 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
     return maxYearsAvailable;
   }
 
+  // "Max": ab dem ersten Datum, an dem eine geplottete Serie echte (variierende)
+  // Werte hat -> schneidet den flach zurückgefüllten Prefix ab (kein waagrechter
+  // Strich am Anfang). Nimmt das früheste solche Datum über alle Serien.
+  function computeMaxStartDate() {
+    let earliest = null;
+    (filteredDatasetsCopy || []).forEach((ds) => {
+      const data = ds?.data || [];
+      if (!data.length) return;
+      const first = data[0]?.y;
+      let idx = data.findIndex((p) => p && p.y !== first);
+      if (idx < 0) idx = 0;                 // komplett konstant -> ab Start
+      const d = parseDateString(data[idx].x);
+      if (d && (earliest == null || d < earliest)) earliest = d;
+    });
+    return earliest || new Date(0);
+  }
+
   function filterDataByTimeRange(yearsBack) {
-    const maxYearsAvailable = getMaxYearsAvailable();
-    const actualYearsBack = Math.min(yearsBack, maxYearsAvailable);
-
-    const today = new Date();
-    const targetDate = new Date(today.setFullYear(today.getFullYear() - actualYearsBack));
-
-    console.log(`Target date for ${actualYearsBack} years back:`, targetDate);
+    let targetDate;
+    if (yearsBack === 'max') {
+      targetDate = computeMaxStartDate();
+    } else {
+      const maxYearsAvailable = getMaxYearsAvailable();
+      const actualYearsBack = Math.min(yearsBack, maxYearsAvailable);
+      const today = new Date();
+      targetDate = new Date(today.setFullYear(today.getFullYear() - actualYearsBack));
+    }
 
     const filteredDatasets = JSON.parse(JSON.stringify(filteredDatasetsCopy));
 
@@ -519,6 +607,26 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
         }
       });
     });
+
+    // ---- Downsampling fürs Zeichnen ---------------------------------------
+    // Lange Reihen (z.B. Max) auf ~1500 Punkte reduzieren -> deutlich schnelleres
+    // Rendern der 4 Charts. WICHTIG: für ALLE Serien (+ SMA) dieselben Indizes,
+    // sonst zerfällt die gemeinsame Kategorie-Achse. Kurze Bereiche (< Ziel)
+    // bleiben voll aufgelöst (1Y/5Y unverändert).
+    const TARGET_POINTS = 1500;
+    const srcLen = filteredDatasets[0]?.data?.length || 0;
+    if (srcLen > TARGET_POINTS) {
+      const stride = Math.ceil(srcLen / TARGET_POINTS);
+      const keep = (arr) => (Array.isArray(arr)
+        ? arr.filter((_, idx) => idx % stride === 0 || idx === arr.length - 1)
+        : arr);
+      filteredDatasets.forEach((ds) => {
+        if (Array.isArray(ds.data)) ds.data = keep(ds.data);
+        ds.smaData1 = keep(ds.smaData1);
+        ds.smaData2 = keep(ds.smaData2);
+        ds.smaData3 = keep(ds.smaData3);
+      });
+    }
 
     // Check which SMA is selected
     const applySMA1 = document.getElementById(`applySMA1_${modalIndex}`).checked;
@@ -583,6 +691,16 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
     chartInstance.update();
   }
 
+  // Aktiven Range-Button hervorheben (wie im Risk-Factors-Chart).
+  function markActiveRange(buttonId) {
+    const active = document.getElementById(buttonId);
+    if (!active) return;
+    const group = active.closest('.time-range-buttons');
+    if (!group) return;
+    group.querySelectorAll('button').forEach((b) => b.classList.remove('is-active'));
+    active.classList.add('is-active');
+  }
+
   function bindButton(buttonId, yearsBack) {
     const button = document.getElementById(buttonId);
     if (!button) {
@@ -593,7 +711,9 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
     const newButton = document.getElementById(buttonId);
     newButton.addEventListener('click', () => {
       chartInstance.resetZoom();
+      tsRangeByModal[modalIndex] = yearsBack;   // Auswahl merken (überlebt Live-Redraw)
       filterDataByTimeRange(yearsBack);
+      markActiveRange(buttonId);
     });
   }
 
@@ -601,10 +721,28 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
   bindButton(`oneYearButton_${modalIndex}`, 1);
   bindButton(`fiveYearButton_${modalIndex}`, 5);
   bindButton(`tenYearButton_${modalIndex}`, 10);
-  bindButton(`maxButton_${modalIndex}`, 50);
+  bindButton(`maxButton_${modalIndex}`, 'max');
 
-  // Default to a 5-year view
-  filterDataByTimeRange(5);
+  // Reset-Zoom-Button (separat; setzt nur den Zoom zurück, ändert nicht den Range).
+  const resetBtnId = `resetZoomButton_${modalIndex}`;
+  const resetBtn = document.getElementById(resetBtnId);
+  if (resetBtn) {
+    resetBtn.replaceWith(resetBtn.cloneNode(true));
+    document.getElementById(resetBtnId)?.addEventListener('click', () => {
+      try { chartInstance.resetZoom(); } catch {}
+    });
+  }
+
+  // Zuletzt gewählten Zeitbereich beibehalten (Default 5Y), damit ein
+  // Live-Redraw den Zoombereich nicht zurücksetzt.
+  const savedRange = (modalIndex in tsRangeByModal) ? tsRangeByModal[modalIndex] : 5;
+  const rangeBtnId =
+    savedRange === 'max' ? `maxButton_${modalIndex}` :
+    savedRange === 1     ? `oneYearButton_${modalIndex}` :
+    savedRange === 10    ? `tenYearButton_${modalIndex}` :
+                           `fiveYearButton_${modalIndex}`;
+  filterDataByTimeRange(savedRange);
+  markActiveRange(rangeBtnId);
 }
 
 
@@ -662,7 +800,9 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
   Chart.defaults.font.color = "rgb(161, 160, 160)";
 
   const euswColor = getEuswCurveColor(1);
-  let paletteIndex = 0;
+  // Start bei 1: Palette-Index 0 ist Blau und kollidiert mit der blauen
+  // Original-Kurve (euswColor). So werden CMS-Kurven Orange/Grün -> klar getrennt.
+  let paletteIndex = 1;
 
   const xValues = datasets?.[0]?.data?.map(dp => dp.x) ?? [];
 
@@ -840,7 +980,9 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
   Chart.defaults.font.color = "rgb(161, 160, 160)";
 
   const euswColor = getEuswCurveColor(1);
-  let paletteIndex = 0;
+  // Start bei 1: Palette-Index 0 (Blau) kollidiert sonst mit der blauen
+  // Original-Kurve (euswColor).
+  let paletteIndex = 1;
 
   window.forwardSwapChartInstance = new Chart(ctx, {
     type: "line",
@@ -992,6 +1134,7 @@ try {
           tension: 0.1,
           pointRadius: pointRadius,
           borderWidth: 1,
+          spanGaps: true,   // über fehlende Laufzeiten hinweg durchzeichnen
         };
       }),
     },

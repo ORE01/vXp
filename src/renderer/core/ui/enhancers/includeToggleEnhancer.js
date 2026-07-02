@@ -405,5 +405,63 @@ export function teardownIncludeCheckboxes(container) {
 // ✅ Backward compatibility (old name still works)
 export const enhanceDealsIncludeCheckboxes = enhanceIncludeCheckboxes;
 
+/**
+ * INCLUDE-Checkboxen für Provider-Mapping-Tabellen (ecb/fed/yahoo/erste).
+ *
+ * Anders als der Deals-Enhancer:
+ *  - persistiert in die ÜBERGEBENE Tabelle (nicht DealsMain),
+ *  - keyt per rowid (aus rows[i].__rowid) statt aus DOM-Zellen -> robust,
+ *    auch bei leeren ID/SERIES_ID.
+ *
+ * @param {HTMLElement} container  Container mit der gerenderten Tabelle
+ * @param {Array<Object>} rows     Datenzeilen (inkl. __rowid), gleiche Reihenfolge wie im DOM
+ * @param {string} tableName       Zieltabelle (ecb/fed/yahoo/erste)
+ */
+export function enhanceProviderIncludeCheckboxes(container, rows, tableName) {
+  if (!container || !Array.isArray(rows) || !tableName) return;
+
+  const table = container.querySelector('#dataTable') || container.querySelector('table');
+  if (!table) return;
+
+  const headerCells = Array.from(table.querySelectorAll('thead th'));
+  const includeIdx = headerCells.findIndex(
+    (th) => String(th.textContent || '').trim().toUpperCase() === 'INCLUDE'
+  );
+  if (includeIdx < 0) return;
+
+  const bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+
+  bodyRows.forEach((tr, i) => {
+    const cell = tr.cells ? tr.cells[includeIdx] : null;
+    const rowData = rows[i];
+    if (!cell || !rowData) return;
+    if (cell.querySelector('input[type="checkbox"]')) return; // schon enhanced
+
+    const current = String(cell.textContent || '').trim() === '1';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = current;
+    cb.title = 'Toggle INCLUDE';
+    cb.style.cursor = 'pointer';
+    cb.style.transform = 'scale(1.05)';
+
+    cell.textContent = '';
+    cell.appendChild(cb);
+
+    cb.addEventListener('change', () => {
+      const newVal = cb.checked ? 1 : 0;
+      cb.disabled = true;
+      // Persistieren; der ausgelöste Table-Refresh rendert die Zeile frisch.
+      window.api.send('update-data', {
+        cleanTableName: tableName,
+        rowIndex: i,
+        newData: { INCLUDE: newVal },
+        uniqueIdentifier: { column: 'rowid', value: rowData.__rowid },
+      });
+    });
+  });
+}
+
 
 

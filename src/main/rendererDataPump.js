@@ -93,6 +93,19 @@ function resolveTableName(tableName) {
     return 'v_ISSUER_RANK_RATING';
   }
 
+  // Provider-Mappings: rowid als __rowid mitliefern -> stabiler Edit/Delete-
+  // Schlüssel, damit ALLE sichtbaren Spalten (auch ID/SERIES_ID) editierbar
+  // sind und leere Werte kein Problem darstellen. (erste ist reines Mapping;
+  // Edit/Delete ja, aber KEINE tblTS-Kaskade — siehe crud.handlers.)
+  if (
+    tableName === 'ecb' ||
+    tableName === 'fed' ||
+    tableName === 'yahoo' ||
+    tableName === 'erste'
+  ) {
+    return `(SELECT rowid AS __rowid, * FROM ${tableName})`;
+  }
+
   return tableName;
 }
   function fetchDataAndSendEvent(queryOrTable, eventName, cb) {

@@ -61,6 +61,7 @@ module.exports = function registerCrudHandlers({
     ecb:                 ['ecb'],
     fed:                 ['fed'],
     yahoo:               ['yahoo'],
+    erste:               ['erste'],
 
     // MARKET DATA
     RATES_SCENARIO_DATA: ['RATES'],
@@ -345,6 +346,7 @@ module.exports = function registerCrudHandlers({
   ipcMain.on('erase-data', async (event, {
     cleanTableName,
     uniqueIdentifier,
+    dropTsColumn,
   } = {}) => {
     try {
       const tableName = String(cleanTableName || '');
@@ -377,6 +379,33 @@ module.exports = function registerCrudHandlers({
 
       await eraseRowFromDB(cleanTableName, uniqueIdentifier);
 
+      // Provider-Kaskade: zugehörige tblTS-Spalte (Name = ID) mitlöschen.
+      // Sicher gegen Injection: nur droppen, wenn der Name EXAKT einer real
+      // existierenden tblTS-Spalte entspricht (Whitelist aus der DB selbst).
+      const PROVIDER_TABLES = ['ecb', 'fed', 'yahoo'];
+      let tsColDropped = null;
+      const dropCol = String(dropTsColumn || '').trim();
+      if (
+        dropCol &&
+        PROVIDER_TABLES.includes(tableName) &&
+        typeof dbApi.selectAll === 'function' &&
+        typeof dbApi.runSQL === 'function'
+      ) {
+        try {
+          const cols = await dbApi.selectAll('PRAGMA table_info(tblTS)');
+          const exists = (cols || []).some((c) => String(c.name) === dropCol);
+          if (exists) {
+            const safe = dropCol.replace(/"/g, '""');
+            await dbApi.runSQL(`ALTER TABLE tblTS DROP COLUMN "${safe}"`);
+            tsColDropped = dropCol;
+            try { refreshTable('tblTS'); } catch (_) {}
+          }
+        } catch (e) {
+          // Spaltenlöschung darf den Row-Delete nicht scheitern lassen.
+          console.warn('[erase-data] tblTS column drop failed:', e?.message || e);
+        }
+      }
+
       const refreshList = computeRefreshList(cleanTableName, uniqueIdentifier || {});
 
       await refreshWithOptionalLock(refreshList);
@@ -385,6 +414,7 @@ module.exports = function registerCrudHandlers({
         cleanTableName,
         uniqueIdentifier,
         refreshList,
+        tsColDropped,
       });
     } catch (error) {
       event.reply(

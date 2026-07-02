@@ -313,8 +313,11 @@ export function createPythonExecutionRouter(ctx) {
           // Drawer-Auswahl lesen: angehakte Konventionen (= market_data_type).
           const mdSel = document.getElementById('marketDataSelector');
           if (mdSel) {
+            // Nur sichtbare (nicht-hidden) Währungsgruppe -> Curve Construction
+            // filtert den Drawer auf die gewählte ccy. Ohne Filter (Drawer nie
+            // eingegrenzt) sind alle fieldsets sichtbar -> altes Verhalten (alle).
             const types = Array.from(
-              mdSel.querySelectorAll('input[type="checkbox"][value]:checked')
+              mdSel.querySelectorAll('fieldset:not([hidden]) input[type="checkbox"][value]:checked')
             ).map((cb) => cb.value);
             extraParam.types = types;
           }

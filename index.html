@@ -1672,7 +1672,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <aside id="editPortfolioDrawer" class="edit-portfolio-drawer">
           <div class="epd-header">
             <div class="epd-header-text">
-              <div class="epd-eyebrow">Edit Portfolio</div>
+              <div class="epd-eyebrow">Add Portfolio</div>
               <h2 class="epd-title">Save Selection</h2>
             </div>
             <button type="button" class="epd-close" data-epd-close aria-label="close">&times;</button>
@@ -1784,6 +1784,18 @@ Feature:    Wenn es nur in einem Panel gilt
             aria-controls="panel-forward"
             aria-expanded="false">
             <span class="section-header">Forward</span>
+            <span class="chev"></span>
+          </button>
+        </div>
+
+        <!--   Curve Construction   Unterpunkt von Interest Rates -->
+        <div class="chart-section chart-section--sub">
+          <button
+            class="section-trigger section-trigger--sub"
+            data-panel="panel-curve-construction"
+            aria-controls="panel-curve-construction"
+            aria-expanded="false">
+            <span class="section-header">Curve Construction</span>
             <span class="chev"></span>
           </button>
         </div>
@@ -1966,8 +1978,21 @@ Feature:    Wenn es nur in einem Panel gilt
     </section>
 
     <div class="chart-container">
+      <button id="irCurvesBtn" type="button" class="ir-curves-btn">Curves</button>
       <canvas id="IRLineChart"></canvas>
     </div>
+
+    <!-- Drawer: mehrere Kurven für den Chart anhaken (Tabelle bleibt einkurvig) -->
+    <aside id="irCurvesDrawer" class="column-drawer">
+      <div class="column-drawer-header">
+        <div class="column-drawer-header-text">
+          <div class="column-drawer-eyebrow">Chart</div>
+          <h2 class="column-drawer-title">Curves</h2>
+        </div>
+        <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+      </div>
+      <div id="irCurvesSelector" class="column-drawer-body"></div>
+    </aside>
   </div>
 </div>
 
@@ -1980,6 +2005,17 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <div class="sub-panel-body">
     <div class="forward-layout-wrapper">
+      <div class="fwd-controls">
+        <div class="fwd-row">
+          <label for="fwdCurrencySelector">Selected Currency:</label>
+          <select id="fwdCurrencySelector" class="fwd-select"></select>
+        </div>
+        <div class="fwd-row">
+          <label for="fwdCurveSelector">Select Curve:</label>
+          <select id="fwdCurveSelector" class="fwd-select"></select>
+        </div>
+      </div>
+
       <div class="data-container" id="FWDDataContainer"></div>
 
       <div class="forward-charts-wrapper">
@@ -2010,6 +2046,101 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+
+<!-- ================= CURVE CONSTRUCTION ================= -->
+<div id="panel-curve-construction" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-curve-construction-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-curve-construction-title" class="sub-panel-title">CURVE CONSTRUCTION</div>
+    <button class="sub-panel-close" data-close="panel-curve-construction" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body cc-body">
+    <section class="table-card cc-card">
+      <div class="cc-row">
+        <label for="ccCurrencySelector">Currency:</label>
+        <select id="ccCurrencySelector" class="cc-select"></select>
+      </div>
+
+      <div class="cc-row">
+        <label for="ccBaseSelector">Base tenor:</label>
+        <select id="ccBaseSelector" class="cc-select"></select>
+      </div>
+
+      <div class="cc-row">
+        <label>Fetch data:</label>
+        <button id="marketDataSelectBtn" class="cc-btn" type="button">Select Data…</button>
+      </div>
+
+      <p class="cc-hint" id="ccHint">
+        Curves are built from the base swap rates:
+        <code>value = base + spread(bp) / 10000</code>.
+        The spread is flat across all maturities (base spread = 0).
+      </p>
+
+      <div class="cc-spreads">
+        <div class="cc-spread-row">
+          <label for="ccSpreadOIS">OIS</label>
+          <input type="number" id="ccSpreadOIS" step="0.1" /><span class="cc-unit">bp</span>
+        </div>
+        <div class="cc-spread-row">
+          <label for="ccSpread3M">3M</label>
+          <input type="number" id="ccSpread3M" step="0.1" /><span class="cc-unit">bp</span>
+        </div>
+        <div class="cc-spread-row">
+          <label for="ccSpread6M">6M <em>(base)</em></label>
+          <input type="number" id="ccSpread6M" step="0.1" /><span class="cc-unit">bp</span>
+        </div>
+        <div class="cc-spread-row">
+          <label for="ccSpread12M">12M</label>
+          <input type="number" id="ccSpread12M" step="0.1" /><span class="cc-unit">bp</span>
+        </div>
+      </div>
+
+      <div class="cc-actions">
+        <button id="ccSaveBtn" class="cc-btn">Save</button>
+        <button id="ccRebuildBtn" class="cc-btn cc-btn--primary">Rebuild curves</button>
+      </div>
+
+      <div id="ccStatus" class="cc-status"></div>
+    </section>
+
+    <!-- Vergleich: konstruierte Kurven (OIS/3M/6M/12M) vs. Benchmark, je ccy. -->
+    <section class="table-card cc-chart-card">
+      <h4 class="table-title">Constructed vs Benchmark</h4>
+      <div class="cc-chart-wrap"><canvas id="ccCompareChart"></canvas></div>
+    </section>
+
+    <!-- Drawer: steuert, welche ERSTE-Konventionen geholt werden (Filter nach market_data_type).
+         "Get Market Data" (in UPDATES) liest #marketDataSelector global per ID. -->
+    <aside id="marketDataDrawer" class="column-drawer">
+      <div class="column-drawer-header">
+        <div class="column-drawer-header-text">
+          <div class="column-drawer-eyebrow">Selection</div>
+          <h2 class="column-drawer-title">Market Data</h2>
+        </div>
+        <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+      </div>
+      <div id="marketDataSelector" class="column-drawer-body">
+
+        <fieldset class="md-group" data-ccy="EUR">
+          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="EUR" checked> EUR</label>
+          <label class="md-conv"><input type="checkbox" value="swap_rate"     data-ccy="EUR" checked> Ann/6M</label>
+          <label class="md-conv"><input type="checkbox" value="swap_rate_3m"  data-ccy="EUR" checked> Ann/3Mo</label>
+        </fieldset>
+
+        <fieldset class="md-group" data-ccy="USD">
+          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="USD" checked> USD</label>
+          <label class="md-conv"><input type="checkbox" value="swap_usd_ann6m"  data-ccy="USD" checked> Ann/6M</label>
+          <label class="md-conv"><input type="checkbox" value="swap_usd_ann3m"  data-ccy="USD" checked> Ann/3Mo</label>
+          <label class="md-conv"><input type="checkbox" value="swap_usd_semi3m" data-ccy="USD" checked> Semi/3Mo</label>
+        </fieldset>
+
+      </div>
+    </aside>
+
   </div>
 </div>
 
@@ -2213,78 +2344,28 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="table-content">
             <div class="ts-layout">
 
-              <!-- TOOLS-LEISTE LINKS -->
-              <aside class="ts-tools" id="tsTools">
-                <div class="ts-tools-header">
-                  <h4 class="ts-tools-title">Tools</h4>
-                  <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Toggle tools">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
-                      <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <div class="filter-wrapper">
-                  <label>Select Data:</label>
-
-                  <div id="checkboxContainer" class="table-wrapper"></div>
-
-                  <div class="table-wrapper">
-                    <div class="moving-average-container">
-                      <label class="section-label">Apply Moving Averages:</label>
-
-                      <div class="sma-row">
-                        <label class="sma-toggle" for="applySMA1">
-                          <input type="checkbox" id="applySMA1" />
-                          <span>SMA 1</span>
-                        </label>
-                        <input type="number" id="movingAveragePeriod1" value="20" min="1" />
-                      </div>
-
-                      <div class="sma-row">
-                        <label class="sma-toggle" for="applySMA2">
-                          <input type="checkbox" id="applySMA2" />
-                          <span>SMA 2</span>
-                        </label>
-                        <input type="number" id="movingAveragePeriod2" value="50" min="1" />
-                      </div>
-
-                      <div class="sma-row">
-                        <label class="sma-toggle" for="applySMA3">
-                          <input type="checkbox" id="applySMA3" />
-                          <span>SMA 3</span>
-                        </label>
-                        <input type="number" id="movingAveragePeriod3" value="200" min="1" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="table-wrapper">
-                    <div class="normalization-container">
-                      <label for="normalizationTypeSelector">Normalization Type:</label>
-                      <select id="normalizationTypeSelector">
-                        <option value="none">None</option>
-                        <option value="dynamic">Dynamic</option>
-                        <option value="firstValue">First Value</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="load-and-toggle-container">
-                    <button id="loadButton" class="edit-button">Load Data</button>
-                  </div>
-                </div>
-              </aside>
-
-              <!-- CHART RECHTS -->
+              <!-- CHART (volle Breite); Tools sind ein rechter Overlay-Drawer -->
               <section class="ts-chart">
                 <div class="ts-chart-toolbar">
+                  <div class="ts-left-tools">
+                    <button class="ts-tools-toggle" id="tsToolsToggle" aria-label="Open tools" title="Tools">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M22 19l-6.4-6.4a5.5 5.5 0 1 0-2.1 2.1L19 22l3-3Z" stroke="currentColor" stroke-width="1.6"/>
+                        <circle cx="10" cy="10" r="1.8" fill="currentColor"/>
+                      </svg>
+                    </button>
+                    <button class="ts-enlarge-toggle" id="tsEnlargeToggle" aria-label="Enlarge chart" title="Enlarge">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
                   <div class="time-range-buttons">
                     <button id="oneYearButton">1Y</button>
                     <button id="fiveYearButton">5Y</button>
                     <button id="tenYearButton">10Y</button>
                     <button id="maxButton">Max</button>
+                    <button id="resetZoomButton" class="ts-resetzoom" title="Reset zoom">Reset Zoom</button>
                   </div>
                 </div>
 
@@ -2298,6 +2379,80 @@ Feature:    Wenn es nur in einem Panel gilt
                   <div class="data-container" id="TSDataContainer"></div>
                 </div>
               </section>
+
+              <!-- TOOLS als rechter Slide-in-Drawer (wie andere Panels) -->
+              <aside class="ts-tools column-drawer" id="tsTools">
+                <div class="column-drawer-header">
+                  <div class="column-drawer-header-text">
+                    <div class="column-drawer-eyebrow">Tools</div>
+                    <h2 class="column-drawer-title">Historic Data</h2>
+                  </div>
+                  <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
+                </div>
+
+                <div class="column-drawer-body">
+                  <div class="filter-wrapper">
+                    <label>Select Data:</label>
+
+                    <div id="checkboxContainer" class="table-wrapper"></div>
+
+                    <div class="table-wrapper">
+                      <div class="moving-average-container">
+                        <label class="section-label">Apply Moving Averages:</label>
+
+                        <div class="sma-row">
+                          <label class="sma-toggle" for="applySMA1">
+                            <input type="checkbox" id="applySMA1" />
+                            <span>SMA 1</span>
+                          </label>
+                          <input type="number" id="movingAveragePeriod1" value="20" min="1" />
+                        </div>
+
+                        <div class="sma-row">
+                          <label class="sma-toggle" for="applySMA2">
+                            <input type="checkbox" id="applySMA2" />
+                            <span>SMA 2</span>
+                          </label>
+                          <input type="number" id="movingAveragePeriod2" value="50" min="1" />
+                        </div>
+
+                        <div class="sma-row">
+                          <label class="sma-toggle" for="applySMA3">
+                            <input type="checkbox" id="applySMA3" />
+                            <span>SMA 3</span>
+                          </label>
+                          <input type="number" id="movingAveragePeriod3" value="200" min="1" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                      <div class="normalization-container">
+                        <label for="normalizationTypeSelector">Normalization Type:</label>
+                        <select id="normalizationTypeSelector">
+                          <option value="none">None</option>
+                          <option value="dynamic">Dynamic</option>
+                          <option value="firstValue">First Value</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                      <div class="axis-scale-container">
+                        <label class="section-label">Y-Axis Scale:</label>
+                        <label class="sma-toggle" for="logScale">
+                          <input type="checkbox" id="logScale" />
+                          <span>Logarithmic</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="load-and-toggle-container">
+                      <button id="loadButton" class="edit-button">Load Data</button>
+                    </div>
+                  </div>
+                </div>
+              </aside>
 
             </div>
           </div>
@@ -2674,7 +2829,11 @@ Feature:    Wenn es nur in einem Panel gilt
           </button>
         </div>
 
-
+        <div class="chart-section">
+          <button class="section-trigger" data-panel="panel-erste" aria-controls="panel-erste" aria-expanded="false">
+            <span class="section-header">Erste</span><span class="chev"></span>
+          </button>
+        </div>
 
 
 
@@ -2754,6 +2913,29 @@ Feature:    Wenn es nur in einem Panel gilt
         </section>
         <div class="button-wrapper" style="margin-top:10px;">
           <button id="yahooAddButton" class="edit-button">Add Yahoo Row</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Erste -->
+    <div id="panel-erste" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-erste-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-erste-title" class="sub-panel-title">Erste / Sparkasse</div>
+
+        <div class="sub-panel-actions">
+          <a href="https://www.sparkasse.at/investments/maerkte/maerkte-im-ueberblick/geld-und-kapitalmarkt" target="_blank" rel="noopener" class="provider-link" aria-label="Open Sparkasse market page in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg>
+            Sparkasse
+          </a>
+        </div>
+        <button class="sub-panel-close" data-close="panel-erste" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="table-card">
+          <div class="data-container" id="inputErste-container"></div>
+        </section>
+        <div class="button-wrapper" style="margin-top:10px;">
+          <button id="ersteAddButton" class="edit-button">Add Erste Row</button>
         </div>
       </div>
     </div>
@@ -3571,43 +3753,17 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="upd-tile-body">
           <div class="upd-btns">
             <button id="getMarketDataButton" class="edit-button" type="button">Get Market Data</button>
-            <button id="marketDataSelectBtn" class="edit-button" type="button">Select Data</button>
+            <button id="ersteTargetBrowseBtn" class="edit-button" type="button">Target Workbook…</button>
           </div>
           <div class="upd-progress" id="marketProgress_get"></div>
         </div>
+        <div class="upd-tile-target">Target: <span id="ersteTargetLabel" title="">…</span></div>
       </section>
 
     </div>
 
     <!-- Globaler Market-Status -->
     <div id="progressText_MARKET" class="progress-text global-text" style="margin-top:8px;"></div>
-
-    <!-- Drawer: steuert, welche ERSTE-Kurven geholt werden (Filter nach market_data_type) -->
-    <aside id="marketDataDrawer" class="column-drawer">
-      <div class="column-drawer-header">
-        <div class="column-drawer-header-text">
-          <div class="column-drawer-eyebrow">Selection</div>
-          <h2 class="column-drawer-title">Market Data</h2>
-        </div>
-        <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
-      </div>
-      <div id="marketDataSelector" class="column-drawer-body">
-
-        <fieldset class="md-group">
-          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="EUR" checked> EUR</label>
-          <label class="md-conv"><input type="checkbox" value="swap_rate"     data-ccy="EUR" checked> Ann/6M</label>
-          <label class="md-conv"><input type="checkbox" value="swap_rate_3m"  data-ccy="EUR" checked> Ann/3Mo</label>
-        </fieldset>
-
-        <fieldset class="md-group">
-          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="USD" checked> USD</label>
-          <label class="md-conv"><input type="checkbox" value="swap_usd_ann6m"  data-ccy="USD" checked> Ann/6M</label>
-          <label class="md-conv"><input type="checkbox" value="swap_usd_ann3m"  data-ccy="USD" checked> Ann/3Mo</label>
-          <label class="md-conv"><input type="checkbox" value="swap_usd_semi3m" data-ccy="USD" checked> Semi/3Mo</label>
-        </fieldset>
-
-      </div>
-    </aside>
 
   </div>
 </div>

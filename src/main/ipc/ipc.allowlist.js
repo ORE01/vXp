@@ -22,6 +22,7 @@ module.exports = {
     'start-py-volcube',
     'start-py-ml',
     'start-py-erste',
+    'start-py-erste-rebuild',
     'price-product',
 
     // UI / bulk ops
@@ -87,6 +88,15 @@ module.exports = {
     // -------------------------------------------------
     'import-excel-dialog',
     'select-excel-file',
+
+    // ERSTE market-data target workbook (Browse)
+    'erste:get-target',
+    'erste:select-target',
+
+    // Curve Construction (curve_spreads editor)
+    'curve-spreads:currencies',
+    'curve-spreads:get',
+    'curve-spreads:save',
     'import-excel-offer-sheet',
     'import-excel-offer-sheet-quick',
 
@@ -175,6 +185,8 @@ module.exports = {
     'py-CVaR-complete',
     'py-erste-complete',
     'py-erste-progress',
+    'py-erste-rebuild-complete',
+    'py-erste-rebuild-progress',
 
     'price-product-success',
     'price-product-error',

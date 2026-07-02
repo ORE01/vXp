@@ -6,6 +6,51 @@ import { getInterestRateCurveData } from '../interestRates/interestRateCurveData
 let FWDlineChart;
 let forwardSwapChart;
 
+// Forwards hat eine EIGENE Auswahl, unabhängig von Interest Rates.
+let fwdSelectedCurrency = 'EUR';
+let fwdSelectedCurveId = null;
+
+// CCY- und Curve-Dropdowns des Forwards-Panels aus dem Rates-Cache befüllen.
+// Auswahl wird bewahrt; onchange rendert die Forwards neu.
+function populateForwardSelectors() {
+  const ccySel = document.getElementById('fwdCurrencySelector');
+  const curveSel = document.getElementById('fwdCurveSelector');
+  if (!ccySel || !curveSel) return;
+
+  const cache = appState?._RATESDataCacheByCcy || {};
+  const currencies = Object.keys(cache);
+  if (!currencies.length) return;
+
+  if (!currencies.includes(fwdSelectedCurrency)) {
+    fwdSelectedCurrency = currencies[0];
+  }
+
+  ccySel.innerHTML = currencies
+    .map(ccy => `<option value="${ccy}">${ccy}</option>`)
+    .join('');
+  ccySel.value = fwdSelectedCurrency;
+
+  const curves = [...new Set((cache[fwdSelectedCurrency] || []).map(r => r.curve_id))];
+  if (!curves.includes(fwdSelectedCurveId)) {
+    fwdSelectedCurveId = curves[0] || null;
+  }
+
+  curveSel.innerHTML = curves
+    .map(id => `<option value="${id}">${id}</option>`)
+    .join('');
+  if (fwdSelectedCurveId) curveSel.value = fwdSelectedCurveId;
+
+  ccySel.onchange = (e) => {
+    fwdSelectedCurrency = e.target.value;
+    fwdSelectedCurveId = null;   // -> erste Kurve der neuen CCY
+    handleFWDData();
+  };
+  curveSel.onchange = (e) => {
+    fwdSelectedCurveId = e.target.value;
+    handleFWDData();
+  };
+}
+
 
 
 // -----------------------------------------------------
@@ -46,20 +91,17 @@ function getActiveScenarioForCurve(appState, selectedCurrency, selectedCurveId) 
 function prepareForwardData(receivedData) {
   console.log("========== [FWD prepareForwardData] ==========");
 
+  // Eigene Forwards-Auswahl (unabhängig von Interest Rates).
   const selectedCurrency =
-    appState?.selectedCurrency ||
-    appState?.getSelectedCurrency?.() ||
-    document.getElementById("currencySelector")?.value ||
+    document.getElementById("fwdCurrencySelector")?.value ||
+    fwdSelectedCurrency ||
     "EUR";
 
   const selectedCurveId =
-    appState?.selectedCurveId ||
-    appState?.getSelectedCurve?.() ||
-    document.getElementById("ratesSelector")?.value;
+    document.getElementById("fwdCurveSelector")?.value ||
+    fwdSelectedCurveId;
 
-  const domSelectedCurve =
-    document.getElementById("ratesSelector")?.value ||
-    selectedCurveId;
+  const domSelectedCurve = selectedCurveId;
 
   console.log("[FWD] selectedCurrency:", selectedCurrency);
   console.log("[FWD] selectedCurveId:", selectedCurveId);
@@ -460,6 +502,9 @@ export function handleFWDData(receivedData, applyCubicSpline) {
     console.error('FWDDataContainer element is not found.');
     return;
   }
+
+  // 0) Eigene CCY/Curve-Dropdowns befüllen (unabhängig von Interest Rates)
+  populateForwardSelectors();
 
   // 1) Daten vorbereiten (Cache + selectedCurve)
   const dataToUse = prepareForwardData(receivedData);

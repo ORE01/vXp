@@ -86,17 +86,21 @@ export function getInterestRateCurveData(appState, selectedCurrency, selectedCur
     return { IRData: [], curve: selectedCurve };
   }
 
-  const latestDate = scenarioRows.reduce((max, r) => {
-    const rowDate = r.asof_date || r.updated_at;
-    if (!rowDate) return max;
+  // asof_date kann ein voller Zeitstempel sein (pro Instrument leicht anders,
+  // z. B. ...10:47:37.407Z vs ...10:47:32.391Z). Ein EXAKTER Vergleich wäre zu
+  // streng und würde fast die ganze Kurve wegfiltern -> daher nach TAG
+  // (YYYY-MM-DD) gruppieren. Stringvergleich reicht (ISO-Datum sortiert korrekt,
+  // kein Zeitzonen-Shift durch new Date()).
+  const dayOf = (r) => String(r.asof_date || r.updated_at || '').slice(0, 10);
 
-    return (!max || new Date(rowDate) > new Date(max))
-      ? rowDate
-      : max;
-  }, null);
+  let latestDay = '';
+  for (const r of scenarioRows) {
+    const day = dayOf(r);
+    if (day && (!latestDay || day > latestDay)) latestDay = day;
+  }
 
-  const finalRows = latestDate
-    ? scenarioRows.filter(r => (r.asof_date || r.updated_at) === latestDate)
+  const finalRows = latestDay
+    ? scenarioRows.filter(r => dayOf(r) === latestDay)
     : scenarioRows;
 
   const normalizedRows = finalRows.map(normalizeRateRow);

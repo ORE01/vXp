@@ -1,5 +1,6 @@
 import processData from '../../core/ui/modal/modalData.js';
 import { handleModalAction } from '../../core/ui/modal/modalActions.js';
+import { enhanceProviderIncludeCheckboxes } from '../../core/ui/enhancers/includeToggleEnhancer.js';
 
 
 // Universal function to handle both ECB and Fed data and display in a table
@@ -19,7 +20,10 @@ export function handleProviderData(receivedData, tableName) {
       includeEditButton: true 
     });
     container.innerHTML = tableHTML; // Set innerHTML instead of appendChild
-  
+
+    // ** INCLUDE-Spalte als Checkbox (statt 0/1), keyt per rowid **
+    enhanceProviderIncludeCheckboxes(container, receivedData, tableName);
+
     // ** Attach event listeners for the edit buttons **
     const editButtons = container.querySelectorAll('.edit-button');
     editButtons.forEach((button) => {

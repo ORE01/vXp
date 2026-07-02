@@ -62,6 +62,20 @@
   display: none;
 }
 
+/* ERSTE-Zielmappe: kleine Zeile unter dem Tile-Body */
+.upd-import-panel .upd-tile .upd-tile-target{
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted, #9aa0a6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.upd-import-panel .upd-tile .upd-tile-target #ersteTargetLabel{
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
 /* Buttons auf feste Höhe -> in einer Flucht mit den Balken */
 .upd-import-panel .upd-tile .upd-btns .edit-button{
   height: 28px;

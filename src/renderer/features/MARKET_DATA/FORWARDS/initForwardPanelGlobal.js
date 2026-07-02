@@ -59,16 +59,8 @@ export function initForwardPanelGlobalOnce() {
     handleSwapForwardCurve();
   });
 
-  // Wenn Interest Rates die Kurve ändert und Forward offen ist:
-  document.addEventListener("interest-rates:curve-changed", (event) => {
-    console.log("[FORWARDS] heard interest-rates:curve-changed", event.detail);
-    renderForwardPanelNow("interest-rates:curve-changed");
-  });
-
-  document.addEventListener("interest-rates:currency-changed", (event) => {
-    console.log("[FORWARDS] heard interest-rates:currency-changed", event.detail);
-    renderForwardPanelNow("interest-rates:currency-changed");
-  });
+  // Forwards ist von Interest Rates entkoppelt: eigene CCY/Curve-Auswahl im
+  // Panel. Daher KEIN Re-Render mehr bei interest-rates:*-Events.
 
   // Wichtigster Fix:
   // Beim Öffnen des lazy Panels sofort mit aktueller Kurve neu rendern.

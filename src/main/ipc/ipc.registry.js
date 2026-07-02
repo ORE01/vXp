@@ -148,6 +148,7 @@ module.exports = [
       insertRowInTable: mainFct.insertRowInTable,
       eraseRowFromDB: mainFct.eraseRowFromDB,
       runSQL: mainFct.runSQL,
+      selectAll: mainFct.selectAll,
 
       syncProductScheduleToProductEvents:
         mainFct.syncProductScheduleToProductEvents,

@@ -73,6 +73,7 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
   let lastSectionName = null;
 
   Object.keys(rowData).forEach((fieldName) => {
+    if (String(fieldName).startsWith('__')) return;                // interne Felder (z.B. __rowid)
     if (hiddenFields && hiddenFields.has(fieldName)) return;        // generisches Hiding
 
     // MVaRInput edit drawer: allowlist of editable model parameters only.

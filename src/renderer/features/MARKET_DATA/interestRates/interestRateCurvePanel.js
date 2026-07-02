@@ -1,8 +1,77 @@
 ﻿import processData from '../../../core/ui/modal/modalData.js';
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 import { getInterestRateCurveData } from './interestRateCurveData.js';
-import { renderInterestRateCurveChart } from './renderInterestRateCurveChart.js';
+import { renderInterestRateCurveChart, renderInterestRateCurvesChart } from './renderInterestRateCurveChart.js';
 import { formatDisplayValue } from '../../../utils/tableCellFormats.js';
+
+// =====================================================
+// CHART: MEHRERE KURVEN (Checkbox-Drawer)
+// Tabelle bleibt einkurvig; der Chart zeigt alle angehakten Kurven.
+// =====================================================
+
+function irAllCurveIds() {
+  const cache = window.appState?._RATESDataCacheByCcy || {};
+  const ids = new Set();
+  for (const ccy of Object.keys(cache)) {
+    for (const r of (cache[ccy] || [])) {
+      if (r.curve_id) ids.add(r.curve_id);
+    }
+  }
+  return [...ids].sort();
+}
+
+// Checkboxen füllen. Beim ERSTEN Mal die aktuell gewählte Kurve anhaken,
+// danach die bisherige Nutzer-Auswahl bewahren (auch wenn neue Kurven dazukommen).
+function populateIRCurveChecklist(defaultCurveId) {
+  const box = document.getElementById('irCurvesSelector');
+  if (!box) return;
+
+  const ids = irAllCurveIds();
+  const firstTime = box.dataset.populated !== '1';
+  const prevChecked = new Set(
+    [...box.querySelectorAll('input[type="checkbox"]:checked')].map(c => c.value)
+  );
+
+  box.innerHTML = ids.map(id => {
+    const checked = firstTime ? (id === defaultCurveId) : prevChecked.has(id);
+    return `<label class="ir-curve-row"><input type="checkbox" value="${id}" ${checked ? 'checked' : ''}> ${id}</label>`;
+  }).join('');
+  box.dataset.populated = '1';
+}
+
+function renderIRChartFromChecks(fallbackCurveId) {
+  const box = document.getElementById('irCurvesSelector');
+  let ids = box
+    ? [...box.querySelectorAll('input[type="checkbox"]:checked')].map(c => c.value)
+    : [];
+  if (!ids.length && fallbackCurveId) ids = [fallbackCurveId];
+
+  const curves = ids.map(curveId => {
+    const ccy = String(curveId).split(':')[0];
+    const { IRData } = getInterestRateCurveData(window.appState, ccy, curveId, curveId);
+    return { label: curveId, rows: IRData };
+  }).filter(c => c.rows && c.rows.length);
+
+  renderInterestRateCurvesChart(curves);
+}
+
+// Button öffnet Drawer, Checkbox-Änderung zeichnet den Chart neu. Nur EINMAL binden.
+function wireIRCurvesDrawerOnce() {
+  if (window.__irCurvesDrawerBound) return;
+  window.__irCurvesDrawerBound = true;
+
+  const drawer = document.getElementById('irCurvesDrawer');
+  document.getElementById('irCurvesBtn')
+    ?.addEventListener('click', () => drawer?.classList.add('is-open'));
+  drawer?.querySelector('[data-col-drawer-close]')
+    ?.addEventListener('click', () => drawer.classList.remove('is-open'));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') drawer?.classList.remove('is-open');
+  });
+
+  document.getElementById('irCurvesSelector')
+    ?.addEventListener('change', () => renderIRChartFromChecks(selectedCurveId));
+}
 
 // =====================================================
 // INTERNAL
@@ -263,7 +332,10 @@ export function renderInterestRateCurvePanel() {
       const canvas = document.getElementById('IRLineChart');
       if (!canvas || !canvas.isConnected) return;
 
-      renderInterestRateCurveChart(IRData);
+      // Chart = alle im Drawer angehakten Kurven (Default: die Tabellen-Kurve).
+      wireIRCurvesDrawerOnce();
+      populateIRCurveChecklist(selectedCurveId);
+      renderIRChartFromChecks(selectedCurveId);
 
     }, 0);
   });

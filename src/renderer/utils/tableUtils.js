@@ -39,8 +39,12 @@ export function getUniqueIdentifier(newData, selectedTableName) {
       case 'ecb':
       case 'fed':
       case 'yahoo':
-        uniqueIdentifierColumn = 'ID';
-        break;
+      case 'erste':
+        // Auf die (unsichtbare) rowid keyen -> ALLE sichtbaren Spalten
+        // bleiben editierbar, leere Werte unkritisch. __rowid liefert der
+        // Data-Pump (siehe rendererDataPump). Hinweis: die tblTS-Kaskade beim
+        // Löschen gilt NUR für ecb/fed/yahoo, NICHT für erste (reines Mapping).
+        return { column: 'rowid', value: newData.__rowid };
 
       case 'CUSTOMER_PRODUCT_CATEGORY_SETUP':
         uniqueIdentifierColumn = 'id';

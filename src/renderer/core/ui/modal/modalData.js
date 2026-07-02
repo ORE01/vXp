@@ -52,7 +52,8 @@ const excludeEditColumnTables = [
     return html;
   }
 
-  let columnNames = Object.keys(data[0]);
+  // Interne Felder (z.B. __rowid als Edit-Schlüssel) nicht als Spalte anzeigen.
+  let columnNames = Object.keys(data[0]).filter((c) => !String(c).startsWith('__'));
 
   // EAD-Spezialfall: NOTIONAL als EAD labeln
   if (selectedTableName === 'EAD') {
