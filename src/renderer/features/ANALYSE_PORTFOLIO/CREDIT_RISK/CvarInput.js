@@ -53,31 +53,15 @@ export function handleCvarInput() {
 
   // Edit/Add modal flow stays untouched: keep the old CreditVaRInput store populated
   // so the (unchanged) Add/Edit modal below keeps working exactly as before.
-  const receivedData = appState.getCvarInput() || [];
-  appState.setCvarInput(receivedData);
+  // Anzeige-, Edit- und Engine-Quelle sind dieselbe Risk-Config-Tabelle:
+  // CreditVaRInput. Hier lebt u.a. n_simulations — bewusst NICHT im Customer Setup.
+  const rows = appState.getCvarInput() || [];
+  appState.setCvarInput(rows);
 
-  // DISPLAY SOURCE (only this changed): show the customer's General Settings from the
-  // store (CustomerCreditRiskSetting) — exactly the same pattern the Threshold table
-  // uses with appState.getCustomerCreditRiskThresholds(). Map the single setting into
-  // the table's column shape (default_credit_config_name -> name).
+  // Customer-Default-Kennzeichnung kommt weiterhin aus dem Customer Setup
+  // (default_credit_config_name); die editierbaren Config-Werte selbst stammen
+  // aus CreditVaRInput (Risk Config).
   const customerSetting = appState.getCustomerCreditRiskSetting?.() || null;
-
-  const rows = customerSetting
-    ? [{
-        id: customerSetting.id,
-        name: customerSetting.default_credit_config_name,
-        conf_level: customerSetting.conf_level,
-        corr: customerSetting.corr,
-        recovery_rate: customerSetting.recovery_rate,
-        horizon_days: customerSetting.horizon_days,
-        n_simulations: customerSetting.n_simulations,
-        description: customerSetting.description,
-        cr_model: customerSetting.cr_model,
-        is_active: 1,
-      }]
-    : [];
-
-  // Customer Default = config name from the same Customer Setup setting.
   const customerDefaultConfigName = customerSetting?.default_credit_config_name ?? null;
 
   // Default-selected config (kept from the previous radio behaviour): the active

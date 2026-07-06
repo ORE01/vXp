@@ -4,7 +4,8 @@
 const fs = require('fs');
 const pathMod = require('path');
 const { dialog } = require('electron');
-const { getFilesBaseDir, getExcelPath } = require('../../main.path');
+const { getFilesBaseDir, getExcelPath, getDatabasePath } = require('../../main.path');
+const { resolveOneShotCommand } = require('../../services/python.service');
 
 // ---- ERSTE-Zieldatei (vom User per "Browse" wählbar, persistiert) ----
 function _ersteTargetFile() {
@@ -24,6 +25,20 @@ function writeErsteTarget(p) {
   try {
     fs.writeFileSync(_ersteTargetFile(), JSON.stringify({ target: p }, null, 2), 'utf-8');
   } catch (e) { /* nicht fatal */ }
+}
+
+// main.py/main.exe schreibt "___RESULT___{json}" auf stdout. Extrahiert das JSON
+// (letzte Fundstelle). Rückgabe: geparstes Objekt oder null.
+function _parseWorkerResult(stdout) {
+  const marker = '___RESULT___';
+  const lines = String(stdout || '').split(/\r?\n/);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const idx = lines[i].indexOf(marker);
+    if (idx !== -1) {
+      try { return JSON.parse(lines[i].slice(idx + marker.length)); } catch (_) { return null; }
+    }
+  }
+  return null;
 }
 
 module.exports = function registerPythonHandlers({
@@ -78,31 +93,29 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       event.reply('project-finished', { success, projectName: 'py-erste' });
     };
 
-    // Subprozess setzt ein echtes python.exe voraus -> nur Dev.
-    if (envName !== 'development') {
-      finish(false, 'Get Market Data is currently only available in dev mode.');
+    // ERSTE-Fetch über den Worker-Dispatch (main.py 'erste') als Einmal-Prozess.
+    // Systemkonform je Modus (dev: python main.py; thomasdev/prod: main.exe) —
+    // KEIN Dev-Gate, KEINE hartkodierten Pfade.
+    const types = Array.isArray(args.types) ? args.types.filter(Boolean) : [];
+    const flags = [];
+    if (types.length) flags.push('--types', types.join(','));
+    // Zielmappe: vom User per "Browse" gewählt (readErsteTarget), sonst Default.
+    flags.push('--target', readErsteTarget());
+
+    let exe, spawnArgs, cwd;
+    try {
+      ({ exe, args: spawnArgs, cwd } = resolveOneShotCommand('erste', flags));
+    } catch (e) {
+      finish(false, `Start failed: ${e.message}`);
       return;
     }
-
-    // venv-Python (hat requests/pandas/xlwings) + das Standalone-Skript.
-    const pythonExe = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
-    const script = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\HistData\\ALL_DATA\\ALL_Erste\\erste_to_excel.py';
-
-    // Drawer-Auswahl: angehakte Konventionen (market_data_type) als CSV durchreichen.
-    const spawnArgs = [script];
-    const types = Array.isArray(args.types) ? args.types.filter(Boolean) : [];
-    if (types.length) {
-      spawnArgs.push('--types', types.join(','));
-    }
-    // Zielmappe (vom User per "Browse" gewählt, sonst Default ERSTE_RATES.xlsx).
-    spawnArgs.push('--target', readErsteTarget());
 
     let stdout = '';
     let stderrErr = '';   // nur Nicht-Progress-stderr (für Fehlermeldung)
     let stderrBuf = '';
     let child;
     try {
-      child = cp.spawn(pythonExe, spawnArgs, { windowsHide: true });
+      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath() } });
     } catch (e) {
       finish(false, `Start failed: ${e.message}`);
       return;
@@ -131,16 +144,17 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
     child.on('error', (err) => finish(false, `Error: ${err.message}`));
     child.on('close', (code) => {
-      const ok = code === 0;
-      const out = stdout.trim();
-      const err = stderrErr.trim();
+      // main.py schreibt ___RESULT___{json} auf stdout -> status/message lesen.
+      const res = _parseWorkerResult(stdout);
+      const ok = res ? res.status === 'ok' : code === 0;
       if (ok) {
-        // Der Scrape baut zusätzlich die Kurven OIS/3M/6M/12M in RATES_BASE ->
-        // Panel aktualisieren, damit sie sofort sichtbar sind.
+        // Baut zusätzlich die Kurven in RATES_BASE -> Panel aktualisieren.
         try { refreshTable('RATES_BASE'); } catch (_) {}
       }
-      finish(ok, ok ? (out || 'Market data fetched.')
-                    : (err || out || `Error (exit code ${code}).`));
+      const msg = res
+        ? (res.message || res.error || (ok ? 'Market data fetched.' : `Error (exit code ${code}).`))
+        : (ok ? (stdout.trim() || 'Market data fetched.') : (stderrErr.trim() || `Error (exit code ${code}).`));
+      finish(ok, msg);
     });
   });
 
@@ -165,7 +179,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
   // base_options = eindeutige Konventionen (market_data_type) mit Label + index_tenor.
   ipcMain.handle('curve-spreads:get', async (_evt, args = {}) => {
     const ccy = String(args.ccy || '').trim();
-    if (!ccy) return { spreads: [], base_mdt: '', base_options: [] };
+    if (!ccy) return { spreads: [], base_mdt: '', base_options: [], tenors: [], base_points: [] };
 
     const spreads = await dbApi.selectAll(
       'SELECT ccy, index_tenor, spread_bp FROM curve_spreads WHERE ccy = ? ORDER BY index_tenor',
@@ -208,7 +222,32 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       base_mdt = (ann6m && ann6m.value) || (base_options[0] && base_options[0].value) || '';
     }
 
-    return { spreads, base_mdt, base_options };
+    // Verfuegbare Tenoren (aus den konstruierten SWAP-Kurven) fuer das per-Tenor-Raster.
+    let tenors = [];
+    try {
+      const rows = await dbApi.selectAll(
+        "SELECT DISTINCT tenor FROM RATES_BASE WHERE ccy = ? AND curve_id LIKE '%:SWAP:%' " +
+        "ORDER BY CASE WHEN tenor LIKE '%Y' THEN CAST(REPLACE(tenor,'Y','') AS INTEGER)*12 " +
+        "WHEN tenor LIKE '%M' THEN CAST(REPLACE(tenor,'M','') AS INTEGER) ELSE 0 END",
+        [ccy]
+      );
+      tenors = (rows || []).map(r => String(r.tenor).toUpperCase()).filter(Boolean);
+    } catch (_) { tenors = []; }
+
+    // Gespeicherte per-Tenor-Basis-Auswahl (leer -> Fallback auf Default-Basis).
+    let base_points = [];
+    try {
+      const rows = await dbApi.selectAll(
+        'SELECT tenor, market_data_type FROM RATES_CURVE_BASE_POINT WHERE ccy = ? AND enabled = 1',
+        [ccy]
+      );
+      base_points = (rows || []).map(r => ({
+        tenor: String(r.tenor).toUpperCase(),
+        market_data_type: String(r.market_data_type),
+      }));
+    } catch (_) { base_points = []; }
+
+    return { spreads, base_mdt, base_options, tenors, base_points };
   });
 
   // Spreads + Basis einer Währung speichern (DELETE + INSERT, da keine PKs).
@@ -238,6 +277,27 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
         } catch (_) { /* Basis nicht fatal */ }
       }
 
+      // Per-Tenor-Basis-Auswahl (RATES_CURVE_BASE_POINT) upserten (vollstaendiges Set je ccy).
+      if (Array.isArray(args.base_points)) {
+        try {
+          await dbApi.runSQL(
+            'CREATE TABLE IF NOT EXISTS RATES_CURVE_BASE_POINT (' +
+            'ccy TEXT NOT NULL, tenor TEXT NOT NULL, market_data_type TEXT NOT NULL, ' +
+            'enabled INTEGER NOT NULL DEFAULT 1, PRIMARY KEY (ccy, tenor))'
+          );
+          await dbApi.runSQL('DELETE FROM RATES_CURVE_BASE_POINT WHERE ccy = ?', [ccy]);
+          for (const p of args.base_points) {
+            const tenor = String(p.tenor || '').trim().toUpperCase();
+            const mdt = String(p.market_data_type || '').trim();
+            if (!tenor || !mdt) continue;
+            await dbApi.runSQL(
+              'INSERT INTO RATES_CURVE_BASE_POINT (ccy, tenor, market_data_type, enabled) VALUES (?, ?, ?, 1)',
+              [ccy, tenor, mdt]
+            );
+          }
+        } catch (_) { /* per-Tenor nicht fatal */ }
+      }
+
       return { success: true, count: spreads.length };
     } catch (e) {
       return { success: false, message: e.message };
@@ -256,23 +316,22 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       event.reply('project-finished', { success, projectName: 'py-erste-rebuild' });
     };
 
-    if (envName !== 'development') {
-      finish(false, 'Rebuild is currently only available in dev mode.');
+    // Rebuild über den Worker-Dispatch (main.py 'erste-rebuild') als Einmal-Prozess.
+    // Zielmappe = dieselbe wie "Get Market Data" (readErsteTarget). Kein Dev-Gate.
+    let exe, spawnArgs, cwd;
+    try {
+      ({ exe, args: spawnArgs, cwd } = resolveOneShotCommand('erste-rebuild', ['--target', readErsteTarget()]));
+    } catch (e) {
+      finish(false, `Start failed: ${e.message}`);
       return;
     }
-
-    const pythonExe = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
-    const script = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\HistData\\ALL_DATA\\ALL_Erste\\erste_to_excel.py';
-
-    // Aus derselben Zielmappe lesen, in die "Get Market Data" schreibt.
-    const spawnArgs = [script, '--rebuild', '--target', readErsteTarget()];
 
     let stdout = '';
     let stderrErr = '';
     let stderrBuf = '';
     let child;
     try {
-      child = cp.spawn(pythonExe, spawnArgs, { windowsHide: true });
+      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath() } });
     } catch (e) {
       finish(false, `Start failed: ${e.message}`);
       return;
@@ -299,14 +358,15 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
     child.on('error', (err) => finish(false, `Error: ${err.message}`));
     child.on('close', (code) => {
-      const ok = code === 0;
-      const out = stdout.trim();
-      const err = stderrErr.trim();
+      const res = _parseWorkerResult(stdout);
+      const ok = res ? res.status === 'ok' : code === 0;
       if (ok) {
         try { refreshTable('RATES_BASE'); } catch (_) {}
       }
-      finish(ok, ok ? (out || 'Curves rebuilt.')
-                    : (err || out || `Error (exit code ${code}).`));
+      const msg = res
+        ? (res.message || res.error || (ok ? 'Curves rebuilt.' : `Error (exit code ${code}).`))
+        : (ok ? (stdout.trim() || 'Curves rebuilt.') : (stderrErr.trim() || `Error (exit code ${code}).`));
+      finish(ok, msg);
     });
   });
 
@@ -522,7 +582,8 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       'CreditVaR',
       'sortedLossesMain',
       'sortedLossesIssuerMain',
-      'sortedLossesIndicesMain'
+      'sortedLossesIndicesMain',
+      'lossHistogramMain'
     ];
 
     if (!tableName || !CSSzenario || !cvarName) {
@@ -617,18 +678,18 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
   });
 
   // Benchmark-Kurven (RATES_BASE) aus dem frischen tblTS neu bauen — als leiser
-  // Hintergrund-Schritt nach dem Historic-Update. Dev-only (venv-Python).
+  // Hintergrund-Schritt nach dem Historic-Update. Über den Worker-Dispatch
+  // (main.py 'erste-benchmark'), systemkonform in jedem Modus.
   function rebuildBenchmarkCurves() {
-    const envName = (process.env.NODE_ENV || '').trim().toLowerCase();
-    if (envName !== 'development') return;
-
     const cp = require('child_process');
-    const pythonExe = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\venv\\Scripts\\python.exe';
-    const script = 'C:\\Users\\Ronald\\riskApp\\PycharmProjects\\Risk\\HistData\\ALL_DATA\\ALL_Erste\\erste_to_excel.py';
+    let exe, spawnArgs, cwd;
+    try {
+      ({ exe, args: spawnArgs, cwd } = resolveOneShotCommand('erste-benchmark', []));
+    } catch (_) { return; }
 
     let child;
     try {
-      child = cp.spawn(pythonExe, [script, '--benchmark'], { windowsHide: true });
+      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath() } });
     } catch (_) { return; }
 
     child.on('error', () => {});

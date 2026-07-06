@@ -21,6 +21,7 @@ import { renderIRScenarioBuilder } from "../../features/MARKET_DATA/scenarios/IR
 
 import { renderCSScenarioPanel } from "../../features/MARKET_DATA/scenarios/CS/CSScenarioPanel.js";
 import { renderCSScenarioBuilder } from "../../features/MARKET_DATA/scenarios/CS/CSScenarioBuilder.js";
+import { renderPDHistScenarioBuilder, renderPDHistScenarioSetPanel } from "../../features/MARKET_DATA/scenarios/PD/PDHistScenarioBuilder.js";
 import { renderCreditSpreadCurveChart } from "../../features/MARKET_DATA/CREDIT_SPREADS/renderCreditSpreadCurveChart.js";
 
 import { renderVolScenarioPanel } from "../../features/MARKET_DATA/scenarios/VOLS/VolScenarioPanel.js";
@@ -47,6 +48,7 @@ export function getMarketDataPanelRenderers() {
         renderIRScenarioPanel();
         renderCSScenarioPanel();
         renderVolScenarioPanel();
+        renderPDHistScenarioSetPanel();
     },
 
     "panel-create-scenario": () => {
@@ -59,6 +61,10 @@ export function getMarketDataPanelRenderers() {
 
     "panel-create-vol-scenario": () => {
         renderVolScenarioBuilder();
+    },
+
+    "panel-create-pd-scenario": () => {
+        renderPDHistScenarioBuilder();
     },
 
     // ======================================================

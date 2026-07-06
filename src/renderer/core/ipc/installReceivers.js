@@ -294,6 +294,14 @@ api.receive(channel, (data) => {
   route('CS_BASEData');
   route('CS_SCENARIO_DATAData');
   route('CS_ACTIVEData');
+
+  // PD HISTORICAL (Track A)
+  route('PD_RATING_HISTORICALData');
+  route('PD_HIST_SCENARIO_DATAData');
+  route('PD_HIST_ACTIVEData');
+
+  // PD_M_norm normalization settings
+  route('PD_NORM_SETTINGSData');
   
   route('CSParameterData');
 
@@ -348,6 +356,7 @@ api.receive(channel, (data) => {
 
   // LOSSES
   route('sortedLossesIssuerMainData');
+  route('lossHistogramMainData');
 
   // ML
   route('ML_FuturePredictionsData');

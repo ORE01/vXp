@@ -90,11 +90,61 @@ function ccUpdateHint(baseValue) {
     `spreads are flat across all maturities.`;
 }
 
+// Zwischenspeicher der aktuell angezeigten Tenoren (für den Save).
+let ccTenors = [];
+
+// Base-per-Tenor-MATRIX in den Drawer rendern: Zeilen = Tenoren, Spalten =
+// Konventionen. Pro Zeile genau EINE Auswahl (Basisquelle des Tenors); eine
+// Spalte mit >=1 Auswahl wird spaeter auch geholt. Vorbelegt aus base_points,
+// sonst mit der Default-Basis.
+function ccRenderDrawerMatrix(ccy, tenors, baseOptions, basePoints, defaultMdt) {
+  const box = document.getElementById('marketDataSelector');
+  ccTenors = Array.isArray(tenors) ? tenors : [];
+  if (!box) return;
+
+  const opts = Array.isArray(baseOptions) ? baseOptions : [];
+  const saved = new Map(
+    (Array.isArray(basePoints) ? basePoints : [])
+      .map(p => [String(p.tenor).toUpperCase(), String(p.market_data_type)])
+  );
+
+  if (!ccTenors.length || !opts.length) {
+    box.innerHTML = `<p class="cc-matrix-empty">No tenors / conventions available for ${ccy}.</p>`;
+    return;
+  }
+
+  const head = opts.map(o => `<th>${o.label}</th>`).join('');
+  const body = ccTenors.map((t) => {
+    const sel = saved.get(t) || defaultMdt || (opts[0] && opts[0].value) || '';
+    const cells = opts.map(o =>
+      `<td><input type="checkbox" value="${o.value}" data-ccy="${ccy}" data-tenor="${t}"` +
+      `${o.value === sel ? ' checked' : ''}></td>`
+    ).join('');
+    return `<tr data-tenor="${t}"><th class="cc-matrix-tenor">${t}</th>${cells}</tr>`;
+  }).join('');
+
+  box.innerHTML =
+    `<table class="cc-matrix"><thead><tr><th>Tenor</th>${head}</tr></thead>` +
+    `<tbody>${body}</tbody></table>`;
+
+  // 1 Auswahl je Zeile erzwingen: Haken setzen -> Geschwister der Zeile aus.
+  box.querySelectorAll('table.cc-matrix input[type="checkbox"]').forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      const row = e.target.closest('tr');
+      if (!row) return;
+      row.querySelectorAll('input[type="checkbox"]').forEach((other) => {
+        if (other !== e.target) other.checked = false;
+      });
+    });
+  });
+}
+
 // Spreads + Basis einer Währung in die Inputs laden.
 async function ccLoadSpreadsForCcy(ccy) {
   ccFilterDrawerByCcy(ccy);
 
-  let data = { spreads: [], base_mdt: '', base_options: [] };
+  let data = { spreads: [], base_mdt: '', base_options: [], tenors: [], base_points: [] };
   try {
     data = await window.api.invoke('curve-spreads:get', { ccy }) || data;
   } catch (e) {
@@ -107,6 +157,7 @@ async function ccLoadSpreadsForCcy(ccy) {
 
   ccPopulateBaseSelector(baseOptions, baseMdt);
   ccUpdateHint(baseMdt);
+  ccRenderDrawerMatrix(ccy, data.tenors, baseOptions, data.base_points, baseMdt);
 
   // index_tenor der Basis-Konvention -> deren Zielkurve wird 0 vorbelegt.
   const baseIt = (ccBaseOption(baseMdt) || {}).index_tenor || '';
@@ -164,8 +215,16 @@ async function ccSave() {
     spreads.push({ index_tenor: t, spread_bp: bp });
   }
 
+  // Per-Tenor-Basis-Auswahl aus der Drawer-Matrix einsammeln (1 Haken je Zeile).
+  const base_points = [];
+  document.querySelectorAll('#marketDataSelector input[type="checkbox"][data-tenor]:checked').forEach((cb) => {
+    const tenor = String(cb.dataset.tenor || '').toUpperCase();
+    const mdt = String(cb.value || '');
+    if (tenor && mdt) base_points.push({ tenor, market_data_type: mdt });
+  });
+
   try {
-    const res = await window.api.invoke('curve-spreads:save', { ccy, spreads, base_mdt: baseMdt });
+    const res = await window.api.invoke('curve-spreads:save', { ccy, spreads, base_mdt: baseMdt, base_points });
     if (res && res.success === false) {
       ccSetStatus(`Save failed: ${res.message || 'unknown error'}`, 'error');
       return false;

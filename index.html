@@ -28,7 +28,8 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/base/tableDark.css" rel="stylesheet">
   <link href="./css/base/modalDark.css" rel="stylesheet">
   <link href="./css/base/tables.css" rel="stylesheet">
-  
+  <link href="./css/base/cards.css" rel="stylesheet">
+
 
  
   <link href="./css/components/toolbar.css" rel="stylesheet">
@@ -230,6 +231,18 @@ Feature:    Wenn es nur in einem Panel gilt
       <div id="volWarning" class="warning-light"></div>
     </div>
 
+    <!-- MVaR Factor Mapping Scenario Warning -->
+    <div id="factorMapWarningContainer" class="warning-container">
+      <span id="factorMapWarningText" class="warning-text">Factor Mapping Scenario Set</span>
+      <div id="factorMapWarning" class="warning-light"></div>
+    </div>
+
+    <!-- Historical PD Scenario Warning -->
+    <div id="pdHistWarningContainer" class="warning-container">
+      <span id="pdHistWarningText" class="warning-text">PD Scenario Set</span>
+      <div id="pdHistWarning" class="warning-light"></div>
+    </div>
+
   </div>
 </div>
 
@@ -386,7 +399,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
           <div class="risk-acc-body">
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
-              <span class="section-header">Model Selection</span>
+              <span class="section-header">Scenario Period</span>
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-factor-series-map" aria-controls="panel-mvar-factor-series-map" aria-expanded="false">
@@ -695,7 +708,7 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Panel: RISK Input Market (inputMvarContainer is moved here at runtime) -->
 <div id="panel-risk-input-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-input-market-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-risk-input-market-title" class="sub-panel-title">MODEL SELECTION</div>
+    <div id="panel-risk-input-market-title" class="sub-panel-title">SCENARIO PERIOD</div>
     <button class="sub-panel-close" data-close="panel-risk-input-market" aria-label="close">&times;</button>
   </div>
   <div class="sub-panel-body" id="riskInputMarketHost"></div>
@@ -824,17 +837,34 @@ Feature:    Wenn es nur in einem Panel gilt
   <div class="sub-panel-body">
     <div class="table-content">
 
-      <div class="table-toolbar">
-        <div>
-          <strong>Factor → Historical Time Series</strong>
-          <div class="muted">
-            Controls which historical tblTS column is used for each MVaR factor.
-          </div>
-        </div>
+      <div class="muted" style="margin-bottom:10px;">
+        <strong>Factor → Historical Time Series</strong> — controls which historical
+        tblTS column is used for each MVaR factor.
+      </div>
 
-        <button id="saveMvarFactorSeriesMapButton" class="edit-button">
-          Save Mapping
-        </button>
+      <div class="cp-card-row">
+        <!-- Card: Szenario -->
+        <section class="cp-card">
+          <h2 class="small-section-header">Scenario (used for MVaR)</h2>
+          <div class="cp-field" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <select id="factorMapScenario" class="cc-select"></select>
+            <button id="saveMvarFactorSeriesMapButton" class="edit-button">Save Mapping</button>
+            <input id="factorMapNewScenarioName" type="text" placeholder="new scenario name" />
+            <button id="saveMvarFactorSeriesMapAsButton" class="edit-button">Save as new</button>
+            <button id="deleteMvarFactorSeriesMapScenarioButton" class="edit-button delete-button">Delete scenario</button>
+          </div>
+        </section>
+
+        <!-- Card: Filter -->
+        <section class="cp-card cp-card--compact">
+          <h2 class="small-section-header">Filter</h2>
+          <div class="cp-field" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <label for="factorMapFilterType">Type:</label>
+            <select id="factorMapFilterType" class="cc-select"><option value="">All</option></select>
+            <label for="factorMapFilterCcy">CCY:</label>
+            <select id="factorMapFilterCcy" class="cc-select"><option value="">All</option></select>
+          </div>
+        </section>
       </div>
 
       <div class="table-wrapper">
@@ -1179,6 +1209,15 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
     <!--   ENDE BLOCK 1 -->
 
+    <!--   BLOCK 1.5: PD-Market-Implied Normalisierung (PD_M_norm = PD_M / factor) -->
+    <div class="pd-norm-section">
+      <div class="sub-panel-subtitle" style="margin-top: 16px; margin-bottom: 6px;">
+        PD Normalization (Market Implied)
+      </div>
+      <div class="data-container" id="inputPdNormContainer"></div>
+    </div>
+    <!--   ENDE BLOCK 1.5 -->
+
     <!--   BLOCK 2: Threshold-Input fÃ¼r CVaR / TSI / MSD -->
     <div class="threshold-section">
       <div class="sub-panel-subtitle" style="margin-top: 16px; margin-bottom: 6px;">
@@ -1202,8 +1241,9 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!--   BLOCK 3: CVaR/TSI/MSD Ampeln + Output-Tabelle -->
     <div class="cvar-pair" style="margin-top: 4px;">
-      <!-- CVaR: Kennzahlen-Tabelle (Punkt auf Historic VaR). Ampel ausgeblendet. -->
-      <div class="cvar-col">
+      <!-- CVaR: Kennzahlen-Tabelle (Punkt auf Historic VaR). Ampel ausgeblendet.
+           Breitere Kachel (3 Spalten label/VaR/ES) via cvar-col--cvar. -->
+      <div class="cvar-col cvar-col--cvar">
         <p>Credit Value at Risk (CVaR):</p>
         <div class="data-container" id="CVaR_allRelativeContainer0"></div>
         <div class="traffic-light-wrapper small preview-traffic-light"
@@ -1265,6 +1305,15 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
     </div>
     <!--   ENDE BLOCK 4 -->
+
+    <!--   BLOCK 5: Loss-Histogramm (Dichte-Sicht: Verlust vs. Haeufigkeit) -->
+    <div class="chart-2x1-row" style="display:flex; margin-top: 20px;">
+      <div class="chart-box" style="flex:1 1 100%; min-width:320px;">
+        <p style="text-align: center;">Loss Frequency Distribution (Histogram)</p>
+        <canvas id="lossHistogramChart" width="1400" height="420"></canvas>
+      </div>
+    </div>
+    <!--   ENDE BLOCK 5 -->
   </div>
 </div>
 
@@ -1946,6 +1995,18 @@ Feature:    Wenn es nur in einem Panel gilt
   </button>
 </div>
 
+<!--   Create PD Scenario   Unterpunkt -->
+<div class="chart-section chart-section--sub">
+  <button
+    class="section-trigger section-trigger--sub"
+    data-panel="panel-create-pd-scenario"
+    aria-controls="panel-create-pd-scenario"
+    aria-expanded="false">
+    <span class="section-header">Create PD Scenario</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
     <!-- Backdrop nur fuer dieses Modal -->
     <div class="sub-panel-backdrop" hidden></div>
 
@@ -2124,20 +2185,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <button type="button" class="column-drawer-close" data-col-drawer-close aria-label="close">&times;</button>
       </div>
       <div id="marketDataSelector" class="column-drawer-body">
-
-        <fieldset class="md-group" data-ccy="EUR">
-          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="EUR" checked> EUR</label>
-          <label class="md-conv"><input type="checkbox" value="swap_rate"     data-ccy="EUR" checked> Ann/6M</label>
-          <label class="md-conv"><input type="checkbox" value="swap_rate_3m"  data-ccy="EUR" checked> Ann/3Mo</label>
-        </fieldset>
-
-        <fieldset class="md-group" data-ccy="USD">
-          <label class="md-ccy"><input type="checkbox" class="md-ccy-toggle" data-ccy="USD" checked> USD</label>
-          <label class="md-conv"><input type="checkbox" value="swap_usd_ann6m"  data-ccy="USD" checked> Ann/6M</label>
-          <label class="md-conv"><input type="checkbox" value="swap_usd_ann3m"  data-ccy="USD" checked> Ann/3Mo</label>
-          <label class="md-conv"><input type="checkbox" value="swap_usd_semi3m" data-ccy="USD" checked> Semi/3Mo</label>
-        </fieldset>
-
+        <!-- Dynamisch befuellt: Base-per-Tenor-Matrix (curveConstructionPanel.js). -->
       </div>
     </aside>
 
@@ -2597,6 +2645,17 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </section>
 
+    <!-- ================= PD (historical) ================= -->
+    <section class="table-card" style="margin-top:24px;">
+      <h4 class="table-title">Historical PD Scenario</h4>
+      <div id="pdHistScenarioSetContainer" class="data-container"></div>
+    </section>
+
+    <div style="margin-top:16px;">
+      <button id="applyPdHistScenarioChanges" class="edit-button">
+        Apply PD Scenario
+      </button>
+    </div>
 
   </div>
 </div>
@@ -2722,6 +2781,44 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 </div>
 
+
+<!-- Panel: CREATE PD SCENARIO (historical PD by rating) -->
+<div id="panel-create-pd-scenario" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-create-pd-scenario-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-create-pd-scenario-title" class="sub-panel-title">CREATE PD SCENARIO</div>
+    <button class="sub-panel-close" data-close="panel-create-pd-scenario" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+
+    <section class="table-card">
+      <h4 class="table-title">Scenario Setup</h4>
+
+      <div style="margin-bottom:12px;">
+        <label>Edit Existing Scenario</label><br>
+        <select id="pdHistScenarioSelect">
+          <option value="">-- New Scenario --</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label>Scenario Name</label><br>
+        <input id="pdHistScenarioName" placeholder="new PD scenario name" />
+      </div>
+    </section>
+
+    <section class="table-card">
+      <h4 class="table-title">Historical PD by Rating</h4>
+      <div id="pdHistScenarioTableData" class="data-container"></div>
+    </section>
+
+    <div style="margin-top:16px;">
+      <button id="pdHistSaveScenarioBtn" class="edit-button">Save PD Scenario</button>
+      <button id="pdHistDeleteScenarioBtn" class="edit-button delete-button">Delete PD Scenario</button>
+    </div>
+
+  </div>
+</div>
 
 
 <!-- Panel: BUILD VOL SCENARIO -->

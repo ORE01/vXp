@@ -259,11 +259,16 @@
 #mvarFactorChartHost .mvar-factor-toolbar button:hover {
   border-color: var(--accent);
 }
-#mvarFactorChartHost .mvar-factor-range.is-active {
+#mvarFactorChartHost .mvar-factor-range.is-active,
+#mvarFactorChartHost .mvar-factor-norm.is-active {
   background: var(--accent);
   color: var(--text-on-accent);
   border-color: var(--accent);
 }
+
+/* Card-Layout im Factor-Mapping-Panel: kommt jetzt vom globalen Baustein
+   css/base/cards.css (.cp-card / .cp-card-row). Header + Delete-Button sind
+   ebenfalls global -> hier keine panel-eigenen Card-Regeln mehr noetig. */
 #mvarFactorChartHost .mvar-factor-resetzoom {
   margin-left: 6px;
 }

@@ -260,6 +260,30 @@ export function installMarketDataStore({ appState } = {}) {
   }
 
   // -----------------------------
+  // PD HISTORICAL (Track A: BASE = PD_RATING_HISTORICAL, Szenarien, Active)
+  // -----------------------------
+  function setPDHistBaseData(data) {
+    appState._PD_RATING_HISTORICAL = Array.isArray(data) ? data : [];
+  }
+  function getPDHistBaseData() {
+    return appState._PD_RATING_HISTORICAL || [];
+  }
+
+  function setPDHistScenarioData(data) {
+    appState._PD_HIST_SCENARIO_DATA = Array.isArray(data) ? data : [];
+  }
+  function getPDHistScenarioData() {
+    return appState._PD_HIST_SCENARIO_DATA || [];
+  }
+
+  function setPDHistActive(data) {
+    appState._PD_HIST_ACTIVE = Array.isArray(data) ? data : [];
+  }
+  function getPDHistActive() {
+    return appState._PD_HIST_ACTIVE || [];
+  }
+
+  // -----------------------------
   // TS Data
   // -----------------------------
 
@@ -396,6 +420,13 @@ function getSwaptionCubeSurface() {
   appState.setCSScenarioData = setCSScenarioData;
   appState.getCSScenarioData = getCSScenarioData;
 
+  appState.setPDHistBaseData = setPDHistBaseData;
+  appState.getPDHistBaseData = getPDHistBaseData;
+  appState.setPDHistScenarioData = setPDHistScenarioData;
+  appState.getPDHistScenarioData = getPDHistScenarioData;
+  appState.setPDHistActive = setPDHistActive;
+  appState.getPDHistActive = getPDHistActive;
+
 
 
 
@@ -452,6 +483,13 @@ function getSwaptionCubeSurface() {
     getCSBaseData,
     setCSScenarioData,
     getCSScenarioData,
+
+    setPDHistBaseData,
+    getPDHistBaseData,
+    setPDHistScenarioData,
+    getPDHistScenarioData,
+    setPDHistActive,
+    getPDHistActive,
 
     setTblTSData,
     getTblTSData,

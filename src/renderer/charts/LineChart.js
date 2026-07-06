@@ -613,7 +613,7 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
     // Rendern der 4 Charts. WICHTIG: für ALLE Serien (+ SMA) dieselben Indizes,
     // sonst zerfällt die gemeinsame Kategorie-Achse. Kurze Bereiche (< Ziel)
     // bleiben voll aufgelöst (1Y/5Y unverändert).
-    const TARGET_POINTS = 1500;
+    const TARGET_POINTS = 800;
     const srcLen = filteredDatasets[0]?.data?.length || 0;
     if (srcLen > TARGET_POINTS) {
       const stride = Math.ceil(srcLen / TARGET_POINTS);

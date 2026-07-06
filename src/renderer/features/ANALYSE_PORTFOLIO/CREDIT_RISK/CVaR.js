@@ -327,6 +327,7 @@ function appendCreditStatusDot(row, state) {
 
   const dot = document.createElement('span');
   dot.className = 'credit-status-dot';
+  dot.dataset.status = state;   // green|yellow|red -> vom PDF-Export gelesen (dotStatusFromCell)
   dot.style.display = 'inline-block';
   dot.style.width = '10px';
   dot.style.height = '10px';
@@ -387,9 +388,9 @@ function renderTsiTable(allFilteredDataByPdFlag, index, state) {
   });
 
   const tsiRows = [
-    { metric: 'es', label: 'ES', value: formatPercentage(vals.esVal) },
-    { metric: 'var', label: 'VaR', value: formatPercentage(vals.varVal) },
-    { metric: 'tsi', label: 'TSI', value: formatPercentage(vals.tsiDiff) },
+    { metric: 'tsi', label: 'TSI',          value: formatPercentage(vals.tsiDiff) },
+    { metric: 'es',  label: 'Historic ES',  value: formatPercentage(vals.esVal) },
+    { metric: 'var', label: 'Historic VaR', value: formatPercentage(vals.varVal) },
   ];
 
   tsiRows.forEach(({ metric, label, value }) => {
@@ -445,9 +446,9 @@ function renderMsdTable(allFilteredDataByPdFlag, index, state) {
   });
 
   const msdRows = [
-    { metric: 'adjEs',  label: 'Adjusted ES', value: formatPercentage(vals.esNorm) },
-    { metric: 'histEs', label: 'Historic ES', value: formatPercentage(vals.esRating) },
-    { metric: 'msd',    label: 'MSD',         value: formatPercentage(vals.msdDiff) },
+    { metric: 'msd',    label: 'MSD',                 value: formatPercentage(vals.msdDiff) },
+    { metric: 'adjEs',  label: 'Market adjusted ES', value: formatPercentage(vals.esNorm) },
+    { metric: 'histEs', label: 'Historic ES',         value: formatPercentage(vals.esRating) },
   ];
 
   msdRows.forEach(({ metric, label, value }) => {
@@ -498,9 +499,10 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
   // Tabelle neu anlegen
   const table = document.createElement('table');
   table.classList.add('CVaRTable');
+  table.classList.add('CVaRTable--3col');   // 3 Spalten: label / VaR / ES
 
   const headerRow = table.insertRow();
-  ['label', 'value'].forEach(text => {
+  ['label', 'VaR', 'ES'].forEach(text => {
     const cell = headerRow.insertCell();
     cell.textContent = text;
   });
@@ -510,8 +512,8 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
 
   const labelMap = {
     rating: 'Historic',
-    market: 'Market Implied',
-    norm:   'Risk Adjusted',
+    market: 'Market',
+    norm:   'Market adjusted',
   };
 
   Object.entries(allFilteredDataByPdFlag).forEach(([pd_flag, data]) => {
@@ -521,20 +523,17 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
     const row = data[0];
     if (!row || !('VaR_rel' in row)) return;
 
-    const label  = `${labelMap[pd_flag] || pd_flag} VaR`;
-    const rawVal = row.VaR_rel;
-
-    const value =
-      typeof rawVal === 'string'
-        ? rawVal
-        : formatPercentage(rawVal);
+    // Label ohne " VaR" -> Historic / Market Implied / Risk Adjusted
+    const label = labelMap[pd_flag] || pd_flag;
+    const fmt = (raw) => (typeof raw === 'string' ? raw : formatPercentage(raw));
 
     const r = table.insertRow();
     // Tag the row with its pd_flag so the matching traffic-light state can place a
-    // coloured status dot here (rating = Historic VaR -> CVaR ampel).
+    // coloured status dot here (rating -> CVaR ampel, auf der VaR-Zelle = cells[1]).
     r.dataset.metric = pd_flag;
     r.insertCell(0).textContent = label;
-    r.insertCell(1).textContent = value;
+    r.insertCell(1).textContent = fmt(row.VaR_rel);   // VaR
+    r.insertCell(2).textContent = fmt(row.ES_rel);    // ES
   });
 
   container.appendChild(table);

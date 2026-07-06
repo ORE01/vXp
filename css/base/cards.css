@@ -1,0 +1,33 @@
+/* =========================================================================
+   Globaler Card-Baustein — konsistentes Panel-Card-Layout im gesamten vxp.
+   Verwendung im Markup:
+     <div class="cp-card-row">
+       <section class="cp-card"> <h2 class="small-section-header">…</h2> … </section>
+       …
+     </div>
+   Hinweis:
+   - .small-section-header ist bereits global (base/tableDark.css, 18px).
+   - .delete-button (rot) ist global (components/button.css).
+   - Panel-/Modal-gescopte Regeln (höhere Spezifität, z.B. #CREATE_PORTFOLIO_Modal)
+     überschreiben diese Defaults bei Bedarf -> bestehende Panels bleiben unverändert.
+   ========================================================================= */
+
+.cp-card {
+  background: var(--panel-surface, #fff);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.cp-card-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* Titel-Abstand innerhalb einer Card (ohne die globale Header-Größe zu ändern). */
+.cp-card .small-section-header {
+  margin-bottom: 8px;
+}

@@ -11,6 +11,14 @@ export function installCreditRiskStore({ appState } = {}) {
   function setCvarInputThreshold(data) { appState.cvarInputThresholdData = data; }
   function getCvarInputThreshold() { return appState.cvarInputThresholdData; }
 
+  // PD_M_norm-Normalisierung (PD_NORM_SETTINGS, eine Zeile)
+  function setPdNormSettings(data) { appState.pdNormSettingsData = Array.isArray(data) ? data : []; }
+  function getPdNormSettings() { return Array.isArray(appState.pdNormSettingsData) ? appState.pdNormSettingsData : []; }
+
+  // Loss-Histogramm (volle Verlustverteilung, lossHistogramMain)
+  function setLossHistogram(data) { appState.lossHistogramData = Array.isArray(data) ? data : []; }
+  function getLossHistogram() { return Array.isArray(appState.lossHistogramData) ? appState.lossHistogramData : []; }
+
   // Aggregates
   function setCvarData(data) { appState.cvarData = data; }
   function getCvarData() { return appState.cvarData; }
@@ -32,6 +40,12 @@ export function installCreditRiskStore({ appState } = {}) {
 
   appState.setCvarInputThreshold = setCvarInputThreshold;
   appState.getCvarInputThreshold = getCvarInputThreshold;
+
+  appState.setPdNormSettings = setPdNormSettings;
+  appState.getPdNormSettings = getPdNormSettings;
+
+  appState.setLossHistogram = setLossHistogram;
+  appState.getLossHistogram = getLossHistogram;
 
   appState.setCvarData = setCvarData;
   appState.getCvarData = getCvarData;

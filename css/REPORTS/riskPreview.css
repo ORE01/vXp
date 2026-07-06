@@ -449,3 +449,25 @@
   border-radius: 6px;
   box-shadow: inset 3px 0 0 var(--accent);
 }
+
+/* Notiz-Textboxen (Tabellen & Charts) – zentral & theme-korrekt. Analog zu
+   .offers-textarea: heller Input-Hintergrund + dunkler Input-Text, mit !important,
+   damit die globale dunkle ".modal-content textarea"-Regel geschlagen wird (sonst
+   schwarze Schrift auf dunklem Feld im Dark-Theme). */
+.rr-note-input,
+.rr-note-input:focus {
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  -webkit-text-fill-color: var(--input-text) !important;
+  caret-color: var(--input-text);
+  border: 1px solid var(--border) !important;
+}
+.rr-note-input::placeholder { color: var(--text-muted); opacity: 1; }
+.rr-note-input:focus {
+  outline: none;
+  border-color: var(--input-focus-border, var(--border-accent)) !important;
+}
+.rr-note-input:-webkit-autofill {
+  -webkit-text-fill-color: var(--input-text) !important;
+  box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+}

@@ -55,6 +55,12 @@ export function getUniqueIdentifier(newData, selectedTableName) {
         uniqueIdentifierColumn = 'id';
         break;
 
+      case 'CreditVaRInput':
+        // CVaR General Settings: PK ist 'id' (INTEGER). Ohne diesen case landete
+        // der Edit im default -> "Unknown table" -> null -> Zeile nicht speicherbar.
+        uniqueIdentifierColumn = 'id';
+        break;
+
       default:
         console.error('Unknown table:', selectedTableName);
         return null;

@@ -462,6 +462,17 @@ export const RISK_CONFIG = {
     'TSDataContainer_3',
     'TSDataContainer_4',
     'portAggDataContainer5',
+    // Credit-Kennzahlen: erscheinen bereits als "CVaR / TSI / MSD Ampeln"-Block
+    // (creditTraffic) und werden fuers PDF ueber die CVaR/TSI/MSD-Checkboxen als
+    // Tabellen ergaenzt (siehe getActiveRiskSectionsForPdf). Hier ausblenden, damit
+    // sie NICHT zusaetzlich als doppelte, schmucklose "Tables:"-Checkboxen auftauchen.
+    'CVaR_allRelativeContainer0',
+    'creditTsiTableContainer0',
+    'creditMsdTableContainer0',
+    // Market-Kennzahlen: erscheinen als "Market VaR / ES – Traffic Light"-Block und
+    // werden fuers PDF ueber die Ampel-Checkbox (tbl-mvar-es) als Tabelle ergaenzt.
+    // Hier ausblenden, damit kein doppelter "Tables:"-Eintrag entsteht.
+    'MVaRDataContainer0',
   ],
 
   // -------------------------------------------------------------------
@@ -767,14 +778,14 @@ function buildPreviewSections(chartState) {
       // Charts
       chartItems = buildDynamicChartItems(sec.key, sec.charts, chartState);
       chartThumbs = (sec.enabledCharts || [])
-        .map(ch => smartThumb(ch.id, ch.label))
+        .map(ch => { const th = smartThumb(ch.id, ch.label); return th ? thumbWithNoteHtml(ch.id, th) : ''; })
         .filter(Boolean);
 
       // Tables
       tableItems = buildDynamicTableItems(sec.key, sec.tables, chartState);
       tableThumbs = (sec.enabledTables || [])
         .filter(t => !IGNORED_TABLE_IDS.includes(t.id))
-        .map(t => miniTbl(t.id))
+        .map(t => { const th = miniTbl(t.id); return th ? thumbWithNoteHtml(t.id, th) : ''; })
         .filter(Boolean);
     }
 
@@ -1096,6 +1107,53 @@ function buildBreakdownControlsWithThumbs(sectionKey, charts, enabledCharts, cha
 
 // === Chart-Toggle-State (pro Chart) ==========================================
 const CHART_STATE_KEY = 'rr-chart-state';
+
+// === Tabellen-Notizen (pro Tabellen-Container-Id) ============================
+// Freitext, der im PDF rechts neben der jeweiligen Tabelle gedruckt wird. Eigener
+// localStorage-Key, damit saveChartToggleStateFromDOM() (baut rr-chart-state neu
+// auf) sie NICHT ueberschreibt. Beim Report-Save werden sie mit ins Preset gebuendelt.
+const TABLE_NOTES_KEY = 'rr-table-notes';
+function loadTableNotes() {
+  try { return JSON.parse(localStorage.getItem(TABLE_NOTES_KEY) || '{}'); } catch { return {}; }
+}
+function saveTableNote(tableId, text) {
+  if (!tableId) return;
+  const n = loadTableNotes();
+  if (text && String(text).trim()) n[tableId] = String(text); else delete n[tableId];
+  try { localStorage.setItem(TABLE_NOTES_KEY, JSON.stringify(n)); } catch {}
+}
+// Vom PDF-Export gelesen (RiskPDF.js).
+export function getTableNote(tableId) {
+  return String(loadTableNotes()[tableId] || '');
+}
+// Notiz-Textarea (Preview) fuer eine Tabelle; Wert vorbefuellt.
+function noteTextareaHtml(tableId) {
+  const val = String(loadTableNotes()[tableId] || '');
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<textarea class="rr-note-input" data-note-for="${tableId}" placeholder="Notiz…" rows="3"
+      style="width:100%;box-sizing:border-box;font-size:11px;padding:4px;border:1px solid var(--border);border-radius:4px;resize:vertical;">${esc(val)}</textarea>`;
+}
+// Tabellen-Thumbnail links + Notiz-Textbox rechts (spiegelt das PDF-Layout).
+function thumbWithNoteHtml(tableId, thumbHtml) {
+  return `<div class="rr-thumb-with-note" style="display:flex;gap:8px;align-items:flex-start;flex:1 1 100%;">
+      <div style="flex:0 0 auto;">${thumbHtml}</div>
+      <div style="flex:1 1 40%;min-width:140px;">${noteTextareaHtml(tableId)}</div>
+    </div>`;
+}
+// Delegierter input-Listener (einmalig): speichert Notizen OHNE Re-Render, damit
+// beim Tippen kein Fokus verloren geht.
+let __tableNotesBound = false;
+function wireTableNotesOnce() {
+  if (__tableNotesBound) return;
+  const root = document.getElementById('reportsRiskPreview') || document;
+  root.addEventListener('input', (e) => {
+    const ta = e.target;
+    if (ta && ta.classList && ta.classList.contains('rr-note-input')) {
+      saveTableNote(ta.dataset.noteFor, ta.value);
+    }
+  });
+  __tableNotesBound = true;
+}
 
 // State aus localStorage laden
 function loadChartToggleState() {
@@ -1582,6 +1640,10 @@ const sectionControls = buildSectionControlsHTML('market', chartState);
           Market VaR / ES – Traffic Light
         </div>
         ${tableHtml}
+        ${tableOn ? `<div style="margin-top:8px;">
+          <div style="font-size:10px;opacity:.7;margin-bottom:2px;">Notiz (im PDF neben der Tabelle)</div>
+          ${noteTextareaHtml('MVaRDataContainer0')}
+        </div>` : ''}
       </div>
 
       <div style="
@@ -1677,12 +1739,31 @@ function buildCreditTrafficLightsSection(chartState = {}) {
     createChartCheckboxLabel('creditTraffic', 'traffic-credit-msd',  'MSD',  chartState),
   ].filter(Boolean);
 
+  // Notiz-Textboxen fuer die 3 Credit-Tabellen (kommen ueber den Ampel-Block, nicht
+  // ueber die generischen Tabellen-Thumbnails -> hier separat). Gleiche Keys wie die
+  // Container-Ids, damit der PDF-Export sie neben der Tabelle druckt.
+  // Nur fuer die aktuell angehakten Kennzahlen eine Notizbox (gleiche Gate wie die
+  // Tabellen-Sichtbarkeit); Key = Container-Id -> vom PDF neben der Tabelle gedruckt.
+  const creditNoteBoxes = [
+    ['CVaR_allRelativeContainer0', 'CVaR', 'traffic-credit-cvar'],
+    ['creditTsiTableContainer0',   'TSI',  'traffic-credit-tsi'],
+    ['creditMsdTableContainer0',   'MSD',  'traffic-credit-msd'],
+  ]
+    .filter(([, , ck]) => isChartEnabled('creditTraffic', ck, chartState))
+    .map(([id, lbl]) =>
+      `<div style="flex:1;min-width:140px;">
+         <div style="font-size:10px;opacity:.7;margin-bottom:2px;">${lbl} – Notiz (im PDF neben der Tabelle)</div>
+         ${noteTextareaHtml(id)}
+       </div>`
+    ).join('');
+
   const trafficHtml = `
     <div class="risk-credit-trafficlights" style="margin-top:8px;">
       <div style="font-size:12px;opacity:.75;margin-bottom:6px;">
         CVaR / TSI / MSD Ampeln (Credit Risk)
       </div>
       ${clone.outerHTML}
+      ${creditNoteBoxes ? `<div style="display:flex;gap:8px;margin-top:8px;">${creditNoteBoxes}</div>` : ''}
     </div>
   `;
 
@@ -2374,6 +2455,7 @@ function renderRiskPreview() {
     `;
 
     wireChartControlsOnce?.();
+    wireTableNotesOnce?.();
     bindRiskNavOnce();
 
     // Scroll-Position von Tree/Content wiederherstellen (Re-Render-sicher).
@@ -2486,6 +2568,10 @@ export function wireRiskPreview({ appRoot, force = false } = {}) {
 __riskDocDelegatedHandler = (ev) => {
   if (__riskRendering) return;
   const t = ev.target;
+
+  // Notiz-Textboxen: KEIN Re-Render (sonst wird die Textarea bei jedem Tastendruck
+  // neu gebaut -> Fokus/Eingabe verloren). Gespeichert wird ueber wireTableNotesOnce().
+  if (t && t.classList && t.classList.contains('rr-note-input')) return;
 
   // ✅ Global Buttons
   if (t && t.id === 'rr-all-on')  { setAllRRCheckboxes(true);  return; }
@@ -2987,17 +3073,31 @@ export function getActiveRiskSectionsForPdf() {
     tgt.enabledCharts = [...(tgt.enabledCharts || []), ...charts];
   };
 
-  if (hasCreditTrafficDom() && isSectionOn('creditTraffic')) {
-    const c = [];
-    if (isChartEnabled('creditTraffic', 'traffic-credit-cvar', chartState)) c.push({ id: 'traffic-credit-cvar', label: 'CVaR' });
-    if (isChartEnabled('creditTraffic', 'traffic-credit-tsi',  chartState)) c.push({ id: 'traffic-credit-tsi',  label: 'TSI'  });
-    if (isChartEnabled('creditTraffic', 'traffic-credit-msd',  chartState)) c.push({ id: 'traffic-credit-msd',  label: 'MSD'  });
-    foldTraffic('credit', c);
+  // Credit-Ampeln (CVaR/TSI/MSD): die Traffic-DIVs sind display:none und lassen sich
+  // NICHT als Bild rastern -> nicht als "Charts" einfalten. Stattdessen die zugehoerigen
+  // Kennzahlen-Tabellen als enabledTables ergaenzen; der Tabellen-Loop in RiskPDF zeichnet
+  // sie inkl. Ampelpunkt. Gate: 'credit' (es gibt keinen eigenen creditTraffic-Toggle in
+  // der UI), pro Kennzahl ueber die vorhandene CVaR/TSI/MSD-Checkbox.
+  if (hasCreditTrafficDom() && isSectionOn('credit')) {
+    let tgt = sections.find(s => s.key === 'credit');
+    if (!tgt) { tgt = { key: 'credit', title: sectionTitleFromKey('credit'), enabledCharts: [], enabledTables: [] }; sections.push(tgt); }
+    const tbls = tgt.enabledTables || (tgt.enabledTables = []);
+    const addTbl = (on, id, label) => { if (on && !tbls.some(x => x.id === id)) tbls.push({ id, label }); };
+    addTbl(isChartEnabled('creditTraffic', 'traffic-credit-cvar', chartState), 'CVaR_allRelativeContainer0', 'Credit Value at Risk (CVaR)');
+    addTbl(isChartEnabled('creditTraffic', 'traffic-credit-tsi',  chartState), 'creditTsiTableContainer0',   'Tail Severity Index (TSI)');
+    addTbl(isChartEnabled('creditTraffic', 'traffic-credit-msd',  chartState), 'creditMsdTableContainer0',   'Market Stress Divergence (MSD)');
   }
-  if (hasMarketTrafficDom() && isSectionOn('marketTraffic')) {
-    const c = [];
-    if (isChartEnabled('marketTraffic', 'traffic-mvar', chartState)) c.push({ id: 'traffic-mvar', label: 'Market VaR/ES' });
-    foldTraffic('market', c);
+  // Market-Ampel: analog zu Credit — nicht das display:none-Traffic-Light als "Chart"
+  // einfalten, sondern die echte VaR/ES-Tabelle (MVaRDataContainer0) als enabledTable
+  // ergaenzen. Der Tabellen-Loop zeichnet sie inkl. Ampelpunkt. Gate: 'market',
+  // ueber die Tabellen-Checkbox 'tbl-mvar-es'.
+  if (hasMarketTrafficDom() && isSectionOn('market')) {
+    let tgt = sections.find(s => s.key === 'market');
+    if (!tgt) { tgt = { key: 'market', title: sectionTitleFromKey('market'), enabledCharts: [], enabledTables: [] }; sections.push(tgt); }
+    const tbls = tgt.enabledTables || (tgt.enabledTables = []);
+    if (isChartEnabled('marketTraffic', 'tbl-mvar-es', chartState) && !tbls.some(x => x.id === 'MVaRDataContainer0')) {
+      tbls.push({ id: 'MVaRDataContainer0', label: 'Market VaR / ES' });
+    }
   }
 
   // 3) Nur Sektionen mit Inhalt behalten.
@@ -3018,7 +3118,15 @@ export function getActiveRiskSectionsForPdf() {
 
 export function applyRiskPresetState(state = {}, { forceRender = false } = {}) {
   try {
-    const st = (state && typeof state === 'object') ? state : {};
+    const st = (state && typeof state === 'object') ? { ...state } : {};
+
+    // Tabellen-Notizen aus dem Preset herausloesen und separat wiederherstellen,
+    // damit sie nicht in rr-chart-state landen (dort wuerde saveChartToggleStateFromDOM
+    // sie ohnehin verwerfen).
+    if (st.__tableNotes && typeof st.__tableNotes === 'object') {
+      try { localStorage.setItem(TABLE_NOTES_KEY, JSON.stringify(st.__tableNotes)); } catch {}
+    }
+    delete st.__tableNotes;
 
     // 1) Single Source of Truth
     try { localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st)); } catch {}

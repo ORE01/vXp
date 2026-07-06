@@ -67,6 +67,34 @@ function resolvePythonExecutableAndArgs() {
 
 }
 
+// Einmal-Kommando (kein persistenter Worker) für Skripte wie ERSTE. Nutzt
+// resolvePythonExecutableAndArgs() als EINZIGE Quelle der Exe-Pfade je Modus
+// -> kein zusätzlicher hartkodierter Pfad.
+//   dev            -> C:\Python312\python.exe -u main.py <script> <args>
+//   thomasdev/prod -> <main.exe> <script> <args>   (KEIN --worker, kein -u)
+function resolveOneShotCommand(scriptIdentifier, extraArgs = []) {
+  const { pythonExecutable, pythonArgs } = resolvePythonExecutableAndArgs();
+  const env = process.env.NODE_ENV
+    ? process.env.NODE_ENV.trim().toLowerCase()
+    : 'production';
+
+  if (env === 'development') {
+    const scriptPath = pythonArgs[0]; // main.py (von resolvePython... vorn eingefügt)
+    return {
+      exe: pythonExecutable,
+      args: ['-u', scriptPath, scriptIdentifier, ...extraArgs],
+      cwd: path.dirname(scriptPath),
+    };
+  }
+
+  // Gefrorene main.exe: main.exe <script> <args>
+  return {
+    exe: pythonExecutable,
+    args: [scriptIdentifier, ...extraArgs],
+    cwd: path.dirname(pythonExecutable),
+  };
+}
+
 /**
  * Start python/exe and stream:
  * - progress JSON -> onProgress(msg)
@@ -241,5 +269,5 @@ for (const line of lines) {
 
 }
 
-module.exports = { startPythonScript };
+module.exports = { startPythonScript, resolveOneShotCommand };
 

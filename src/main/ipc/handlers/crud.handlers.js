@@ -57,7 +57,11 @@ module.exports = function registerCrudHandlers({
     Portfolios:          ['Portfolios'],
     MVaRInput:           ['MVaRInput', 'v_MVAR_MODEL_SELECTION_APP'],
     MarketVaR_FactorSeriesMap: ['MarketVaR_FactorSeriesMap'],
-    
+    PD_RATING_HISTORICAL:  ['PD_RATING_HISTORICAL'],
+    PD_HIST_SCENARIO_DATA: ['PD_HIST_SCENARIO_DATA'],
+    PD_HIST_ACTIVE:        ['PD_HIST_ACTIVE'],
+    PD_NORM_SETTINGS:      ['PD_NORM_SETTINGS'],
+
     ecb:                 ['ecb'],
     fed:                 ['fed'],
     yahoo:               ['yahoo'],

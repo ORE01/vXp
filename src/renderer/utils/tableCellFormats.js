@@ -24,7 +24,7 @@ const FIELD_FORMAT_CONFIG = {
   ytm_BUY:    { decimals: 3, isPercentage: true, multiplyBy100: true },
   ytmPort:    { decimals: 3, isPercentage: true, multiplyBy100: true },
 
-  QUANTIL:    { decimals: 2, isPercentage: true, multiplyBy100: false },
+  QUANTIL:    { decimals: 4, isPercentage: true, multiplyBy100: false },
 
   Confidence: { decimals: 2, isPercentage: true, multiplyBy100: true },
   conf_level: { decimals: 2, isPercentage: true, multiplyBy100: true },

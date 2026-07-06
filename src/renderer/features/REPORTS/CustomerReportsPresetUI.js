@@ -105,6 +105,9 @@ export function setupCustomerReportsPresetUI() {
         } catch (_) {
           state = {};
         }
+        // Tabellen-Notizen mit ins Preset buendeln (eigener Key; wird beim Laden via
+        // applyRiskPresetState wieder nach rr-table-notes geschrieben).
+        try { state.__tableNotes = JSON.parse(localStorage.getItem('rr-table-notes') || '{}'); } catch (_) {}
 
         const ok = await saveCustomerReport(name, state, 'risk');
 

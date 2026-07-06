@@ -231,20 +231,55 @@
   flex-wrap: wrap;
 }
 #panel-credit .cvar-col{
-  flex: 0 0 240px;
-  width: 240px;
-  max-width: 240px;
+  flex: 0 0 300px;
+  width: 300px;
+  max-width: 300px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
+/* CVaR-Kachel etwas breiter als TSI/MSD (3 Spalten label/VaR/ES). */
+#panel-credit .cvar-col.cvar-col--cvar{
+  flex: 0 0 360px;
+  width: 360px;
+  max-width: 360px;
+}
 #panel-credit .cvar-col .data-container{
   width: 100%;
   box-sizing: border-box;
-  flex: 1 1 auto;            /* Karten gleich hoch */
+  flex: 0 0 auto;           /* Karte umschliesst ihren Inhalt (kein dicker Rand
+                              unten durch das Strecken auf gleiche Hoehe) */
 }
 #panel-credit .cvar-col table.CVaRTable{
   width: 100%;
+  /* Gleiche Spaltenaufteilung in ALLEN drei Tabellen (unabhaengig von der
+     Labellaenge: CVaR hat lange Labels, TSI/MSD kurze). */
+  table-layout: fixed;
+}
+#panel-credit .cvar-col table.CVaRTable th:nth-child(1),
+#panel-credit .cvar-col table.CVaRTable td:nth-child(1){
+  width: 60%;                /* Label-Spalte: fasst "Market Implied VaR" */
+  white-space: nowrap;
+}
+#panel-credit .cvar-col table.CVaRTable th:nth-child(2),
+#panel-credit .cvar-col table.CVaRTable td:nth-child(2){
+  white-space: nowrap;      /* Value-Spalte = Rest */
+  text-align: right;        /* Werte in ALLEN drei Tabellen rechtsbuendig */
+}
+/* CVaR-Kachel: 3 Spalten (label / VaR / ES) — ueberschreibt die 2-Spalten-Breiten
+   oben (gleiche Spezifitaet, daher bewusst SPAETER im File). */
+#panel-credit .cvar-col table.CVaRTable--3col th:nth-child(1),
+#panel-credit .cvar-col table.CVaRTable--3col td:nth-child(1){
+  width: 42%;
+  white-space: nowrap;
+}
+#panel-credit .cvar-col table.CVaRTable--3col th:nth-child(2),
+#panel-credit .cvar-col table.CVaRTable--3col td:nth-child(2),
+#panel-credit .cvar-col table.CVaRTable--3col th:nth-child(3),
+#panel-credit .cvar-col table.CVaRTable--3col td:nth-child(3){
+  width: 29%;
+  text-align: right;
+  white-space: nowrap;
 }
 @media (max-width:900px){
   .cvar-pair{
@@ -346,34 +381,10 @@
    Credit: CVaR_allRelativeContainer0 – Spalten schmäler, gleiche Schrift
    =========================== */
 
-/* Tabelle füllt ihre Kachel (gleich groß wie TSI/MSD). */
-#panel-credit #CVaR_allRelativeContainer0 table{
-  width: 100%;
-  table-layout: auto;
-  border-collapse: collapse;
-}
-
-/* Zellen: gleiche Schrift wie sonst, nur begrenzte Breite */
-#panel-credit #CVaR_allRelativeContainer0 th,
-#panel-credit #CVaR_allRelativeContainer0 td{
-  padding: 4px 6px;          /* kannst du lassen wie global, wenn du willst */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Erste Spalte (Label) etwas schmäler begrenzen */
-#panel-credit #CVaR_allRelativeContainer0 th:first-child,
-#panel-credit #CVaR_allRelativeContainer0 td:first-child{
-  max-width: 160px;          /* 👉 hier stellst du die Breite der Label-Spalte ein */
-}
-
-/* Zweite Spalte (Wert) noch schmäler */
-#panel-credit #CVaR_allRelativeContainer0 th:last-child,
-#panel-credit #CVaR_allRelativeContainer0 td:last-child{
-  max-width: 80px;           /* 👉 und hier die Breite der Value-Spalte */
-  text-align: right;         /* optional: Zahlen rechtsbündig */
-}
+/* Frueher stand hier ein CVaR-spezifischer Override (2 IDs -> hoehere Spezifitaet),
+   der NUR diese Tabelle auf table-layout:auto + max-width-Spalten setzte -> die
+   CVaR-Tabelle wich von TSI/MSD ab. Entfernt: alle drei nutzen jetzt einheitlich
+   die .CVaRTable-Regel (table-layout:fixed, feste Spaltenbreiten, Werte rechts). */
 
 
 

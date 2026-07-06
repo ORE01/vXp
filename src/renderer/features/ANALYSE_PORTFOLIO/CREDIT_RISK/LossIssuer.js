@@ -2,6 +2,8 @@
 import processData from '../../../core/ui/modal/modalData.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../../renderer.js';
+import { renderLossHistogram } from './lossHistogramChart.js';
+import { getColorFromPalette } from '../../../utils/colors.js';
 // import {handleTrafficLight} from './trafficLight.js';
 
 // Global scope â€” this runs as soon as the file is loaded
@@ -11,6 +13,61 @@ if (!window.charts) window.charts = {};
 let ratingData = [];
 let marketData = [];
 let marketNormData = [];
+
+// var_index der gelaufenen CVaR-Config: spiegelt das Backend
+// (var_index = floor((1 - conf_level) * n_simulations)). Werte kommen aus
+// CreditVaRInput (die gewaehlte/aktive Config), damit die markierte VaR-Zeile
+// mit n_simulations mitskaliert. Fallback = 10 (bisheriges Verhalten).
+function getRunVarIndex() {
+  const configs = appState.getCvarInput?.() || [];
+  const selName = document.querySelector('.cvar-radio:checked')?.dataset?.name;
+  const cfg =
+    (selName && configs.find(c => String(c.name) === String(selName))) ||
+    configs.find(c => Number(c.is_active) === 1) ||
+    configs[configs.length - 1] ||
+    null;
+  const conf = Number(cfg?.conf_level);
+  const nSim = Number(cfg?.n_simulations);
+  if (Number.isFinite(conf) && Number.isFinite(nSim) && nSim > 0) {
+    return Math.floor((1 - conf) * nSim);
+  }
+  return 10;
+}
+
+// Ziel-Quantil des VaR in Prozent (= conf_level * 100, Default 99.9). Der VaR-Balken
+// in den Charts liegt am Quantil, das dem Konfidenzniveau am naechsten ist.
+function getRunConfQuantil() {
+  const configs = appState.getCvarInput?.() || [];
+  const selName = document.querySelector('.cvar-radio:checked')?.dataset?.name;
+  const cfg =
+    (selName && configs.find(c => String(c.name) === String(selName))) ||
+    configs.find(c => Number(c.is_active) === 1) ||
+    configs[configs.length - 1] ||
+    null;
+  const conf = Number(cfg?.conf_level);
+  return (Number.isFinite(conf) && conf > 0 && conf < 1) ? conf * 100 : 99.9;
+}
+
+// Index des Wertes in values, der target am naechsten ist (fuer die Balken-Markierung).
+function closestIndex(values, target) {
+  let idx = -1;
+  let best = Infinity;
+  values.forEach((v, i) => {
+    const d = Math.abs(Number(v) - target);
+    if (d < best) { best = d; idx = i; }
+  });
+  return idx;
+}
+
+// Summe der NAV eines Portfolios aus dem EAD-Store (pro pd_flag dupliziert ->
+// auf ein Flag filtern). Fuer die Umrechnung der Verluste in % vom NAV. Fallback 1.
+function sumNavForPort(port) {
+  const rows = (appState.getAllEADData?.() || []).filter(
+    (r) => String(r.port_name) === String(port) && String(r.pd_flag).toUpperCase() === 'RATING'
+  );
+  const s = rows.reduce((acc, r) => acc + Number(r.NAV || 0), 0);
+  return s > 0 ? s : 1;
+}
 
 export function handleLossIssuerMainData(receivedData) {
   //console.log('LossIssuer receivedData:', receivedData);
@@ -50,9 +107,12 @@ export function handleLossIssuerMainData(receivedData) {
       const LossIssuerDataHTML = processData(sortedData, tableName);
       LossIssuerDataContainer.innerHTML = LossIssuerDataHTML;
 
-      const allRows = LossIssuerDataContainer.querySelectorAll('tr');
-      if (allRows.length > 10) {
-        allRows[10].classList.add('highlight');
+      // VaR-Zeile markieren = Backend CVaR = df.iloc[var_index]. tbody-Datenzeilen
+      // direkt indizieren (0-basiert), damit Header-Offset und Skalierung stimmen.
+      const varIndex = getRunVarIndex();
+      const dataRows = LossIssuerDataContainer.querySelectorAll('tbody tr');
+      if (dataRows.length > varIndex) {
+        dataRows[varIndex].classList.add('highlight');
       }
 
       // Speichern (die 3 Einzelcharts sind zu EINER Chart mit 3 Serien zusammengefasst,
@@ -75,6 +135,11 @@ export function handleLossIssuerMainData(receivedData) {
 
     createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
     createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart');
+
+    // Loss-Histogramm mit-rendern: hier ist der Port garantiert gesetzt (die Loss-
+    // Charts wurden gerade fuer diesen Port gerendert) -> loest das Timing-Problem
+    // beim Reload (Histogramm-Daten da, aber port_name noch nicht gesetzt).
+    try { renderLossHistogram(); } catch (_) {}
 
     const fetchRatingData = () => new Promise(resolve => {
       setTimeout(() => resolve(ratingData), 1000);
@@ -174,7 +239,7 @@ export function setupLossIssuerUI() {
       window[chartId] = createBarChart({ 
         labels: labels, 
         datasets: [{ 
-          label: type === 'market' ? 'Market Losses' : type === 'norm' ? 'Norm Losses' : 'Rating Losses',
+          label: type === 'market' ? 'Market Losses' : type === 'norm' ? 'Market adjusted Losses' : 'Historic Losses',
           data: values, 
           backgroundColor: barColors, 
           borderColor: barColors 
@@ -235,9 +300,9 @@ export function setupLossIssuerUI() {
           data: {
             labels,
             datasets: [
-              mkDs('Rating Losses', lossByQuantil(ratingData), 'rgba(70, 192, 230, 0.7)'),
-              mkDs('Market Losses', lossByQuantil(marketData), 'rgba(255, 165, 0, 0.7)'),
-              mkDs('Norm Losses', lossByQuantil(marketNormData), 'rgba(144, 238, 144, 0.7)'),
+              mkDs('Historic Losses', lossByQuantil(ratingData), getColorFromPalette(0, 0.7)),
+              mkDs('Market Losses', lossByQuantil(marketData), getColorFromPalette(1, 0.7)),
+              mkDs('Market adjusted Losses', lossByQuantil(marketNormData), getColorFromPalette(2, 0.7)),
             ],
           },
           options: {
@@ -300,19 +365,20 @@ export function setupLossIssuerUI() {
       ])).sort((a, b) => a - b);
 
       // Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
+      const sumNav = sumNavForPort(appState.getSelectedPortTableName?.());
       const ratingValues = allConvIValues.map(convI => {
         const found = ratingData.find(d => d.QUANTIL === convI);
-        return found ? found.LOSS : 0; 
+        return found ? (Number(found.LOSS) / sumNav) * 100 : 0; 
       });
 
       const marketValues = allConvIValues.map(convI => {
         const found = marketData.find(d => d.QUANTIL === convI);
-        return found ? found.LOSS : 0; 
+        return found ? (Number(found.LOSS) / sumNav) * 100 : 0; 
       });
 
       const marketNormValues = allConvIValues.map(convI => {
         const found = marketNormData.find(d => d.QUANTIL === convI);
-        return found ? found.LOSS : 0; 
+        return found ? (Number(found.LOSS) / sumNav) * 100 : 0; 
       });
 
       const issuerRanksRating = allConvIValues.map(convI => {
@@ -332,19 +398,22 @@ export function setupLossIssuerUI() {
 
       // Colors for the chart bars
       const highlightColor = 'rgba(255, 0, 0, 0.9)'; // Red for highlight
-      const defaultRatingColor = 'rgba(0, 191, 255, 1)'; // Bright Blue for Rating 
-      const defaultMarketColor = 'rgba(255, 165, 0, 0.7)'; // Light Orange (semi-transparent)
-      const defaultMarketNormColor = 'rgba(144, 238, 144, 0.7)'; // Light Green (semi-transparent)
+      const defaultRatingColor = getColorFromPalette(0, 0.7); // Historic (Palette-Blau)
+      const defaultMarketColor = getColorFromPalette(1, 0.7); // Market (Palette-Orange)
+      const defaultMarketNormColor = getColorFromPalette(2, 0.7); // Market adjusted (Palette-Grün)
 
-      const ratingBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor : defaultRatingColor);
-      const marketBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor : defaultMarketColor);
-      const marketNormBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor : defaultMarketNormColor);
+      // VaR-Balken = Quantil am naechsten zum Konfidenzniveau (statt exaktem ===99.9,
+      // das seit der 6-stelligen QUANTIL-Praezision nie mehr traf).
+      const varIdx = closestIndex(allConvIValues, getRunConfQuantil());
+      const ratingBarColors = allConvIValues.map((_, i) => i === varIdx ? highlightColor : defaultRatingColor);
+      const marketBarColors = allConvIValues.map((_, i) => i === varIdx ? highlightColor : defaultMarketColor);
+      const marketNormBarColors = allConvIValues.map((_, i) => i === varIdx ? highlightColor : defaultMarketNormColor);
 
       // Create the new chart with 3 datasets
       window.charts[chartId] = new Chart(chartElement.getContext('2d'), {
         type: 'bar',
         data: { 
-          labels: allConvIValues, 
+          labels: allConvIValues.map(v => Number(v).toFixed(2)),
           datasets: [
             { 
               label: 'Historic Loss',
@@ -353,23 +422,23 @@ export function setupLossIssuerUI() {
               borderColor: ratingBarColors, 
             },
             {
-              label: 'Market Implied Loss',
+              label: 'Market Loss',
               data: marketValues,
               backgroundColor: marketBarColors,
               borderColor: marketBarColors,
               hidden: true,   // initial ausgeblendet (per Legende einblendbar)
             },
             {
-              label: 'Risk Adjusted Loss',
+              label: 'Market adjusted Loss',
               data: marketNormValues,
               backgroundColor: marketNormBarColors,
               borderColor: marketNormBarColors,
               hidden: true,   // initial ausgeblendet (per Legende einblendbar)
             }
-          ] 
-        }, 
+          ]
+        },
         options: {
-          responsive: false,            // â¬…ï¸ deaktiviert automatisches Anpassen
+          responsive: true,            // â¬…ï¸ deaktiviert automatisches Anpassen
           maintainAspectRatio: false,   // â¬…ï¸ erlaubt, Breite/HÃ¶he frei zu setzen
           indexAxis: 'x', 
           scales: {
@@ -383,27 +452,43 @@ export function setupLossIssuerUI() {
             y: {
               title: {
                 display: true,
-                text: 'Loss Amount'
+                text: 'Loss (% of NAV)'
               }
             }
           },
           plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                boxWidth: 12, padding: 8, font: { size: 12 },
+                // Zusatz-Eintrag "VaR" (rot) unter den 3 Serien-Labels.
+                generateLabels: (chart) => {
+                  const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                  items.push({ text: 'VaR', fillStyle: 'rgba(255,0,0,0.9)', strokeStyle: 'rgba(255,0,0,0.9)', lineWidth: 0, hidden: false, datasetIndex: -1 });
+                  return items;
+                },
+              },
+              onClick: (e, item, legend) => {
+                if (item.datasetIndex == null || item.datasetIndex < 0) return; // Pseudo-Eintrag "VaR"
+                Chart.defaults.plugins.legend.onClick(e, item, legend);
+              },
+            },
             zoom: {
               pan: {
-                enabled: true, 
-                mode: 'x', 
+                enabled: true,
+                mode: 'x',
               },
               zoom: {
                 drag: {
-                  enabled: true 
+                  enabled: true
                 },
                 wheel: {
-                  enabled: true, 
+                  enabled: true,
                 },
                 pinch: {
-                  enabled: true, 
+                  enabled: true,
                 },
-                mode: 'x', 
+                mode: 'x',
                 onZoomComplete: ({chart}) => {
                   const minIndex = chart.scales.x.min;
                   const maxIndex = chart.scales.x.max;
@@ -443,7 +528,7 @@ export function setupLossIssuerUI() {
                   const index = context.dataIndex;
                   const datasetLabel = context.dataset.label;
 
-                  const lossValue = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(context.raw); 
+                  const lossValue = `${Number(context.raw).toFixed(2)} %`;
 
                   let issuerRank = 'N/A';
                   if (context.datasetIndex === 0) {
@@ -475,27 +560,30 @@ export function setupLossIssuerUI() {
         return; 
       }
 
-      // Filter QUANTIL values to only include those from 99.9 to 99.89
+      // Detail-Tail = ab dem VaR-Quantil (99.90) bis zum Maximum (schlimmster Verlust).
+      // Frueher zusaetzlich `<= 99.99` -> schnitt bei >10k Sims die obersten Zeilen
+      // (Quantil 99.99x, hoechster Balken) ab. Obere Grenze daher entfernt.
       const allConvIValues = Array.from(new Set([
-        ...ratingData.map(d => d.QUANTIL), 
+        ...ratingData.map(d => d.QUANTIL),
         ...marketData.map(d => d.QUANTIL),
         ...marketNormData.map(d => d.QUANTIL)
-      ])).filter(convI => convI <= 99.99 && convI >= 99.90).sort((a, b) => a - b);
+      ])).filter(convI => convI >= 99.90).sort((a, b) => a - b);
 
       // Map the LOSS and ISSUER_RANK for each QUANTIL in all datasets
+      const sumNav = sumNavForPort(appState.getSelectedPortTableName?.());
       const ratingValues = allConvIValues.map(convI => {
         const found = ratingData.find(d => d.QUANTIL === convI);
-        return found ? found.LOSS : 0; 
+        return found ? (Number(found.LOSS) / sumNav) * 100 : 0; 
       });
 
       const marketValues = allConvIValues.map(convI => {
         const found = marketData.find(d => d.QUANTIL === convI);
-        return found ? found.LOSS : 0; 
+        return found ? (Number(found.LOSS) / sumNav) * 100 : 0; 
       });
 
       const marketNormValues = allConvIValues.map(convI => {
         const found = marketNormData.find(d => d.QUANTIL === convI);
-        return found ? found.LOSS : 0; 
+        return found ? (Number(found.LOSS) / sumNav) * 100 : 0; 
       });
 
       const issuerRanksRating = allConvIValues.map(convI => {
@@ -513,12 +601,14 @@ export function setupLossIssuerUI() {
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
-      // Calculate averages for the first 10 entries in each dataset
+      // Expected Shortfall = Mittelwert des GESAMTEN dargestellten Tails
+      // (= schlechteste var_index Szenarien, quantil >= VaR-Quantil) — dieselbe
+      // Datenbasis, aus der das Backend den ES bildet. Frueher slice(0,10) -> die
+      // KLEINSTEN Tail-Verluste (nahe VaR) -> Linie ~2x zu tief und n-abhaengig.
       const calculateAverage = (values) => {
-        const firstTenValues = values.slice(0, 10);
-        // console.log('Values used to calculate average:', firstTenValues);
-        const sum = firstTenValues.reduce((acc, val) => acc + val, 0);
-        return firstTenValues.length > 0 ? sum / firstTenValues.length : 0;
+        const tail = values.filter(v => Number.isFinite(Number(v)) && Number(v) > 0);
+        if (!tail.length) return 0;
+        return tail.reduce((acc, v) => acc + Number(v), 0) / tail.length;
       };
 
       const averageRating = calculateAverage(ratingValues);
@@ -529,22 +619,25 @@ export function setupLossIssuerUI() {
       const highlightColor1 = 'rgba(255, 0, 0, 0.9)'; // Red for highlight 1
       const highlightColor2 = 'rgba(200, 0, 0, 0.9)'; // Darker Red for highlight 2
       const highlightColor3 = 'rgba(150, 0, 0, 0.9)'; // Even Darker Red for highlight 3
-      const defaultRatingColor = 'rgba(0, 191, 255, 1)'; // Bright Blue for Rating 
-      const defaultMarketColor = 'rgba(255, 165, 0, 0.7)'; // Light Orange (semi-transparent)
-      const defaultMarketNormColor = 'rgba(144, 238, 144, 0.7)'; // Light Green (semi-transparent)
+      const defaultRatingColor = getColorFromPalette(0, 0.7); // Historic (Palette-Blau)
+      const defaultMarketColor = getColorFromPalette(1, 0.7); // Market (Palette-Orange)
+      const defaultMarketNormColor = getColorFromPalette(2, 0.7); // Market adjusted (Palette-Grün)
 
-      const ratingBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor1 : defaultRatingColor);
-      const marketBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor2 : defaultMarketColor);
-      const marketNormBarColors = allConvIValues.map(convI => convI === 99.9 ? highlightColor3 : defaultMarketNormColor);
+      // VaR-Balken = Quantil am naechsten zum Konfidenzniveau (robust gegen die
+      // 6-stellige QUANTIL-Praezision und beliebiges n_simulations).
+      const varIdx = closestIndex(allConvIValues, getRunConfQuantil());
+      const ratingBarColors = allConvIValues.map((_, i) => i === varIdx ? highlightColor1 : defaultRatingColor);
+      const marketBarColors = allConvIValues.map((_, i) => i === varIdx ? highlightColor2 : defaultMarketColor);
+      const marketNormBarColors = allConvIValues.map((_, i) => i === varIdx ? highlightColor3 : defaultMarketNormColor);
 
       // Create the new chart with 3 datasets
       window.charts[chartId] = new Chart(chartElement.getContext('2d'), {
         type: 'bar',
         data: { 
-          labels: allConvIValues, 
+          labels: allConvIValues.map(v => Number(v).toFixed(2)),
           datasets: [
             { 
-              label: 'VaR Rating',
+              label: 'Historic VaR',
               data: ratingValues, 
               backgroundColor: ratingBarColors, 
               borderColor: ratingBarColors, 
@@ -552,7 +645,7 @@ export function setupLossIssuerUI() {
               borderDash: [5, 5],
             },
             { 
-              label: 'VaR Market',
+              label: 'Market VaR',
               data: marketValues,
               backgroundColor: marketBarColors,
               borderColor: marketBarColors,
@@ -561,7 +654,7 @@ export function setupLossIssuerUI() {
               hidden: true,
             },
             { 
-              label: 'VaR Market Norm',
+              label: 'Market adjusted VaR',
               data: marketNormValues,
               backgroundColor: marketNormBarColors,
               borderColor: marketNormBarColors,
@@ -570,29 +663,29 @@ export function setupLossIssuerUI() {
               hidden: true,
             },
             {
-              label: 'ES Rating',
+              label: 'Historic ES',
               data: Array(allConvIValues.length).fill(averageRating),
               type: 'line',
-              borderColor: 'rgba(0, 191, 255, 1)',
+              borderColor: defaultRatingColor,
               borderDash: [5, 5],
               borderWidth: 2,
               fill: false,
             },
             {
-              label: 'ES Market',
+              label: 'Market ES',
               data: Array(allConvIValues.length).fill(averageMarket),
               type: 'line',
-              borderColor: 'rgba(255, 165, 0, 0.7)',
+              borderColor: defaultMarketColor,
               borderDash: [5, 5],
               borderWidth: 2,
               fill: false,
               hidden: true,
             },
             {
-              label: 'ES Market Norm',
+              label: 'Market adjusted ES',
               data: Array(allConvIValues.length).fill(averageMarketNorm),
               type: 'line',
-              borderColor: 'rgba(144, 238, 144, 0.7)',
+              borderColor: defaultMarketNormColor,
               borderDash: [5, 5],
               borderWidth: 2,
               fill: false,
@@ -601,7 +694,9 @@ export function setupLossIssuerUI() {
           ] 
         }, 
         options: {
-          indexAxis: 'x', 
+          responsive: true,
+          maintainAspectRatio: false,   // CSS fixiert die Canvas-Hoehe -> kein Seitenverhaeltnis, sonst Klick-Versatz in der Legende
+          indexAxis: 'x',
           scales: {
             x: {
               reverse: true, 
@@ -613,11 +708,15 @@ export function setupLossIssuerUI() {
             y: {
               title: {
                 display: true,
-                text: 'Loss Amount'
+                text: 'Loss (% of NAV)'
               }
             }
           },
           plugins: {
+            legend: {
+              position: 'right',
+              labels: { boxWidth: 12, padding: 8, font: { size: 12 } },
+            },
             zoom: {
               pan: {
                 enabled: true, 
@@ -647,7 +746,8 @@ export function setupLossIssuerUI() {
             },
             tooltip: {
               callbacks: {
-                title: (context) => `QUANTIL: ${allConvIValues[context[0].dataIndex]}`
+                title: (context) => `QUANTIL: ${allConvIValues[context[0].dataIndex]}`,
+                label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)} %`,
               }
             }
           }

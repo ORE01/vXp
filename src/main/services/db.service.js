@@ -32,6 +32,68 @@ function resolveDbPath() {
   return getDatabasePath();
 }
 
+// Additive Schema-Anlage für den PD-Historical-Szenario-Stack (Track A).
+// BASE bleibt PD_RATING_HISTORICAL; benannte Szenarien in PD_HIST_SCENARIO_DATA,
+// aktives Szenario in PD_HIST_ACTIVE (eine Zeile). Idempotent (IF NOT EXISTS /
+// INSERT OR IGNORE) -> läuft gefahrlos bei jedem App-Start. Alle Zeilen-Ops
+// laufen anschließend über die generischen CRUD-Kanäle.
+function ensurePdHistoricalScenarioSchema(db) {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS PD_HIST_SCENARIO_DATA (
+        scenario_id   TEXT NOT NULL,
+        rating        TEXT NOT NULL,
+        pd_historical REAL,
+        updated_at    TEXT,
+        PRIMARY KEY (scenario_id, rating)
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure PD_HIST_SCENARIO_DATA failed', err);
+    });
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS PD_HIST_ACTIVE (
+        id          INTEGER PRIMARY KEY CHECK (id = 1),
+        scenario_id TEXT NOT NULL DEFAULT 'BASE'
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure PD_HIST_ACTIVE failed', err);
+    });
+
+    db.run(
+      `INSERT OR IGNORE INTO PD_HIST_ACTIVE (id, scenario_id) VALUES (1, 'BASE')`,
+      (err) => {
+        if (err) logger.error('DB', 'seed PD_HIST_ACTIVE failed', err);
+      }
+    );
+
+    // PD_M_norm-Normalisierung (Frontend-editierbar). Spiegelt die Python-Defaults
+    // in implied_pd_from_spread.resolve_norm_factor. Idempotent.
+    db.run(`
+      CREATE TABLE IF NOT EXISTS PD_NORM_SETTINGS (
+        id           INTEGER PRIMARY KEY CHECK (id = 1),
+        mode         TEXT    NOT NULL DEFAULT 'FIXED',
+        fixed_factor REAL    NOT NULL DEFAULT 10.0,
+        calib_series TEXT    NOT NULL DEFAULT 'US_AA',
+        calib_rating TEXT    NOT NULL DEFAULT 'AA',
+        window_days  INTEGER NOT NULL DEFAULT 365,
+        series_scale REAL    NOT NULL DEFAULT 100.0
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure PD_NORM_SETTINGS failed', err);
+    });
+
+    db.run(
+      "INSERT OR IGNORE INTO PD_NORM_SETTINGS "
+      + "(id, mode, fixed_factor, calib_series, calib_rating, window_days, series_scale) "
+      + "VALUES (1, 'FIXED', 10.0, 'US_AA', 'AA', 365, 100.0)",
+      (err) => {
+        if (err) logger.error('DB', 'seed PD_NORM_SETTINGS failed', err);
+      }
+    );
+  });
+}
+
 function initDb() {
   if (_db) return _db;
 
@@ -57,6 +119,7 @@ function initDb() {
       } else {
         logToFile('Connected to the database.');
         logger.info('DB', 'connected');
+        ensurePdHistoricalScenarioSchema(_db);
       }
     }
   );

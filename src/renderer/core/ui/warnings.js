@@ -98,6 +98,48 @@ export function updateProductCSWarningUI(filteredProdData) {
   warningText.title = showWarning ? affected.join("\n") : "";
 }
 
+export function updateFactorMapScenarioWarningUI() {
+  const warningContainer = document.getElementById("factorMapWarningContainer");
+  const warningLight = document.getElementById("factorMapWarning");
+  const warningText = document.getElementById("factorMapWarningText");
+
+  if (!warningContainer || !warningLight || !warningText) return;
+
+  // Aktives Factor-Mapping-Szenario (vom Factor-Mapping-Panel gesetzt).
+  let active = "default";
+  try { active = localStorage.getItem("mvarFactorMapActiveScenario") || "default"; }
+  catch (_) {}
+  active = String(active).trim() || "default";
+
+  const showWarning = active !== "default";
+
+  warningContainer.style.display = showWarning ? "flex" : "none";
+  warningLight.style.backgroundColor = showWarning ? "red" : "transparent";
+
+  warningText.textContent = "Factor Mapping Scenario Set";
+  warningText.title = showWarning ? active : "";
+}
+
+export function updatePdHistScenarioWarningUI() {
+  const warningContainer = document.getElementById("pdHistWarningContainer");
+  const warningLight = document.getElementById("pdHistWarning");
+  const warningText = document.getElementById("pdHistWarningText");
+
+  if (!warningContainer || !warningLight || !warningText) return;
+
+  // Aktives Historical-PD-Szenario aus PD_HIST_ACTIVE (eine Zeile).
+  const activeRows = window.appState?.getPDHistActive?.() || [];
+  const active = String(activeRows[0]?.scenario_id || "BASE").trim() || "BASE";
+
+  const showWarning = active !== "BASE";
+
+  warningContainer.style.display = showWarning ? "flex" : "none";
+  warningLight.style.backgroundColor = showWarning ? "red" : "transparent";
+
+  warningText.textContent = "PD Scenario Set";
+  warningText.title = showWarning ? active : "";
+}
+
 export function updateVolScenarioWarningUI() {
   const warningContainer = document.getElementById("volWarningContainer");
   const warningLight = document.getElementById("volWarning");

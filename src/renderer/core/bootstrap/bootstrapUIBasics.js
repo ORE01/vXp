@@ -7,6 +7,18 @@ import { createMarketRiskRefresh } from '../../features/ANALYSE_PORTFOLIO/market
 // ✅ central UI enhancer (INCLUDE checkbox)
 import { enhanceIncludeCheckboxes } from '../ui/enhancers/includeToggleEnhancer.js';
 
+// Leisten-Badges für aktive Szenarien (Factor Mapping, Historical PD).
+import {
+  updateFactorMapScenarioWarningUI,
+  updatePdHistScenarioWarningUI,
+} from '../ui/warnings.js';
+
+// PD-Market-Implied Normalisierungs-Panel (CREDIT RISK).
+import { renderPdNormPanel } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/pdNormPanel.js';
+
+// Loss-Histogramm (Dichte-Sicht der Verlustverteilung).
+import { renderLossHistogram } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/lossHistogramChart.js';
+
 export function bootstrapUIBasics(appState) {
   const portfolioUI = createPortfolioUIOrchestrator({ appState });
 
@@ -45,6 +57,23 @@ export function bootstrapUIBasics(appState) {
   document.addEventListener('dealsData:ready', () => {
     enhanceIncludeCheckboxes('#dealsDataContainer');
   });
+
+  // Factor-Mapping-Szenario-Badge: initial anzeigen (aus localStorage) und bei
+  // jedem Szenariowechsel / Map-Update aktualisieren (Event feuert Panel + Store).
+  updateFactorMapScenarioWarningUI();
+  document.addEventListener('mvar:factor-map-changed', updateFactorMapScenarioWarningUI);
+
+  // PD-Historical-Szenario-Badge: initial + bei Änderung von PD_HIST_ACTIVE.
+  updatePdHistScenarioWarningUI();
+  document.addEventListener('pdhist:active:ready', updatePdHistScenarioWarningUI);
+
+  // PD-Normalisierungs-Panel: initial rendern (installiert 'pdnorm:ready'-Listener;
+  // re-rendert bei Datenankunft/Save selbst).
+  renderPdNormPanel();
+
+  // Loss-Histogramm: initial rendern (installiert 'losshist:ready'-Listener;
+  // zeichnet sich nach dem CVaR-Lauf selbst neu).
+  renderLossHistogram();
 
   return { portfolioUI, portfolioDropdownUI, marketRiskRefresh };
 }

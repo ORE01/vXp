@@ -135,9 +135,13 @@ export function createPythonExecutionRouter(ctx) {
   function handleCVaRProject(buttonElement, extraParam = {}) {
     const port_name = appState.getSelectedPortTableName?.();
 
-    const CSSzenario = String(appState.getCSSzenarioData?.() || 'default').trim();
-
-
+    // Aktives CS-Szenario aus CS_ACTIVE (Set CS Scenario) statt der statischen
+    // 'default'. Der Credit-Implied-Rebuild laeuft mit ccy='EUR' -> EUR-Aktivzeile.
+    const activeCsRows = appState.getCSActive?.() || [];
+    const eurActive = activeCsRows.find(
+      (r) => String(r?.ccy || '').trim().toUpperCase() === 'EUR'
+    );
+    const CSSzenario = String(eurActive?.scenario_id || 'BASE').trim() || 'BASE';
 
     if (!extraParam.cvarName) throw new Error('No CVaR configuration name (cvarName) provided.');
 
@@ -313,12 +317,15 @@ export function createPythonExecutionRouter(ctx) {
           // Drawer-Auswahl lesen: angehakte Konventionen (= market_data_type).
           const mdSel = document.getElementById('marketDataSelector');
           if (mdSel) {
-            // Nur sichtbare (nicht-hidden) Währungsgruppe -> Curve Construction
-            // filtert den Drawer auf die gewählte ccy. Ohne Filter (Drawer nie
-            // eingegrenzt) sind alle fieldsets sichtbar -> altes Verhalten (alle).
-            const types = Array.from(
-              mdSel.querySelectorAll('fieldset:not([hidden]) input[type="checkbox"][value]:checked')
-            ).map((cb) => cb.value);
+            // Base-per-Tenor-Matrix: alle angehakten Zellen -> genutzte Konventionen
+            // (dedupliziert). Eine Spalte mit >=1 Haken wird geholt. Leerer Drawer
+            // (Curve-Construction-Panel noch nicht geöffnet) -> keine types ->
+            // der Handler holt dann alle INCLUDE=1-Konventionen (altes Default).
+            const types = Array.from(new Set(
+              Array.from(
+                mdSel.querySelectorAll('input[type="checkbox"][value]:checked')
+              ).map((cb) => cb.value)
+            ));
             extraParam.types = types;
           }
           sendPayloadToAPI('py-erste', '', extraParam);

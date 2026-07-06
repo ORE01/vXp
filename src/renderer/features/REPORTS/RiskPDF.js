@@ -12,7 +12,7 @@
 
 const { jsPDF } = window.jspdf;
 
-import { getActiveRiskSectionsForPdf, RISK_CONFIG } from './RiskPDFPreview.js';
+import { getActiveRiskSectionsForPdf, RISK_CONFIG, getTableNote } from './RiskPDFPreview.js';
 // Cross-module element lookups (chart/container ids from the source modules)
 // go through the capture adapter — see captureAdapter.js for the rationale.
 import { getInAppById } from './captureAdapter.js';
@@ -821,9 +821,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
 
-  const chartWidth = (layout.contentWidth - gutter) / 2;
-  let colInRow = 0;
-  let rowHeight = 0;
+  // Graphiken 1-spaltig (~60% Breite links), damit rechts die Notiz danebenpasst
+  // (analog zu den Tabellen).
+  const chartWidth = layout.contentWidth * 0.60;
+  const noteGapC = 6;
+  const noteXC = marginX + chartWidth + noteGapC;
+  const noteWC = Math.max(0, layout.contentWidth - chartWidth - noteGapC);
 
   for (const ch of chartsAll) {
     const el = ctx.getById(ch.id);
@@ -838,28 +841,34 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const srcW = imgData.width || 900;
     const srcH = imgData.height || 520;
 
-    const maxW = chartWidth;
     const maxH = 90;
-
-    const scale = Math.min(maxW / srcW, maxH / srcH, 1);
+    const scale = Math.min(chartWidth / srcW, maxH / srcH, 1);
     const targetWidth = srcW * scale;
     const targetHeight = srcH * scale;
 
-    const blockHeight = targetHeight + 22;
+    // Notiz zur Graphik (gleicher Store wie Tabellen, Key = chart-id).
+    const noteTxt = (typeof getTableNote === 'function' ? getTableNote(ch.id) : '') || '';
+    let noteLines = [];
+    if (noteTxt.trim() && noteWC > 10) {
+      doc.setFontSize(9);
+      noteLines = doc.splitTextToSize(noteTxt, noteWC);
+    }
+    const noteHeight = noteLines.length * 4;
+
+    const blockHeight = Math.max(targetHeight, noteHeight) + 22;
     ensurePageSpace(blockHeight + 10, `${sectionTitle} (cont.)`);
 
-    const cellX = marginX + colInRow * (chartWidth + gutter);
     const boxY = y;
     const labelY = boxY + 7;
     const imgY = boxY + 11;
-    const imgX = cellX + (chartWidth - targetWidth) / 2;
+    const imgX = marginX + (chartWidth - targetWidth) / 2;
 
     doc.setFillColor(245);
-    doc.rect(cellX - 2, boxY, chartWidth + 4, blockHeight - 4, 'F');
+    doc.rect(marginX - 2, boxY, chartWidth + 4, blockHeight - 4, 'F');
 
     doc.setFontSize(9);
     doc.setTextColor(0);
-    doc.text(ch.label || ch.id, cellX + chartWidth / 2, labelY, { align: 'center' });
+    doc.text(ch.label || ch.id, marginX + chartWidth / 2, labelY, { align: 'center' });
 
     try {
       doc.addImage(imgData.dataUrl, 'PNG', imgX, imgY, targetWidth, targetHeight);
@@ -867,18 +876,15 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       console.warn('[PDF] addImage failed for', ch.id, e);
     }
 
-    rowHeight = Math.max(rowHeight, blockHeight);
-    colInRow++;
-
-    if (colInRow >= 2) {
-      colInRow = 0;
-      y += rowHeight + 4;
-      rowHeight = 0;
+    // Notiz rechts neben der Graphik.
+    if (noteLines.length) {
+      doc.setFontSize(9);
+      doc.setTextColor(90);
+      doc.text(noteLines, noteXC, imgY + 3);
+      doc.setTextColor(0);
     }
-  }
 
-  if (colInRow !== 0) {
-    y += rowHeight + 4;
+    y += blockHeight + 4;
   }
 
   for (const t of tablesAll) {
@@ -894,15 +900,24 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
     const cellStatus = tbl.cellStatus || [];
 
+    // Tabelle immer schmaler (~60%), damit rechts Platz fuer die Notiz-Spalte bleibt.
+    const noteGap = 6;
+    const tableW  = layout.contentWidth * 0.60;
+    const noteX   = marginX + tableW + noteGap;
+    const noteW   = Math.max(0, layout.contentWidth - tableW - noteGap);
+    const noteTxt = (typeof getTableNote === 'function' ? getTableNote(t.id) : '') || '';
+    const tableTopY = y + 6;
+
     safeAutoTable(doc, layout, {
-      startY: y + 6,
+      startY: tableTopY,
       head,
       body: tbl.body,
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
       alternateRowStyles: { fillColor: [245, 245, 245] },
-      tableWidth: layout.contentWidth,
+      tableWidth: tableW,
+      margin: { left: marginX },
       // Ampelpunkt: kleiner gefüllter Kreis am rechten Zellenrand, wo die Live-
       // Tabelle einen Traffic-Light-Dot hat (Text geht via textContent verloren).
       didDrawCell: (data) => {
@@ -921,7 +936,20 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       },
     });
 
-    y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 60;
+    const tableFinalY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY : (tableTopY + 40);
+
+    // Notiz rechts neben der Tabelle (umgebrochen, kleine graue Schrift).
+    let noteBottomY = tableTopY;
+    if (noteTxt.trim() && noteW > 10) {
+      doc.setFontSize(9);
+      doc.setTextColor(90);
+      const lines = doc.splitTextToSize(noteTxt, noteW);
+      doc.text(lines, noteX, tableTopY + 3);
+      noteBottomY = tableTopY + 3 + lines.length * 4;
+      doc.setTextColor(0);
+    }
+
+    y = Math.max(tableFinalY, noteBottomY) + cfg.blockGap;
   }
 }
 
@@ -1040,9 +1068,9 @@ function extractProductRiskData(filteredData) {
 // textContent loses it, so we read it separately to draw a coloured circle in the PDF.
 function dotStatusFromCell(td) {
   if (!td || typeof td.querySelector !== 'function') return null;
-  const el = td.querySelector('[data-risk-status], .risk-dot, .mvar-status-dot');
+  const el = td.querySelector('[data-risk-status], .risk-dot, .mvar-status-dot, .credit-status-dot');
   if (!el) return null;
-  let s = ((el.getAttribute && el.getAttribute('data-risk-status')) || '').toLowerCase();
+  let s = ((el.getAttribute && (el.getAttribute('data-risk-status') || el.getAttribute('data-status'))) || '').toLowerCase();
   if (s !== 'green' && s !== 'yellow' && s !== 'red') {
     const m = /risk-dot--(green|yellow|red)/.exec(String(el.className || ''));
     s = m ? m[1] : '';
@@ -1101,18 +1129,15 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20, 
   let head = headCells.map((th) => (th.textContent || '').trim());
 
   let rows = Array.from(table.querySelectorAll('tbody tr'));
+  if (!rows.length) rows = Array.from(table.querySelectorAll('tr'));
 
-  if (!rows.length) {
-    const allRows = Array.from(table.querySelectorAll('tr'));
-    if (allRows.length) {
-      if (!head.length) {
-        const first = Array.from(allRows[0].children).slice(0, maxCols);
-        head = first.map((c) => (c.textContent || '').trim());
-        rows = allRows.slice(1);
-      } else {
-        rows = allRows;
-      }
-    }
+  // Kein <thead> -> erste Zeile als Kopfzeile nehmen (identisch zur Preview/miniTbl).
+  // Ohne das erscheint generisch "COL 1/2/3" und die echte Kopfzeile (z.B. label/VaR/ES)
+  // landet als Datenzeile. Betrifft u.a. die Credit-Tabellen (insertRow/insertCell -> nur <td>).
+  if (!head.length && rows.length) {
+    const first = Array.from(rows[0].children).slice(0, maxCols);
+    head = first.map((c) => (c.textContent || '').trim());
+    rows = rows.slice(1);
   }
 
   rows = rows.slice(0, maxRows);

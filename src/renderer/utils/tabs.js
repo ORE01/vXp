@@ -94,6 +94,7 @@ function bindRiskCalcProxies() {
 function relocateRiskInputs() {
   const mvarInput = document.getElementById('inputMvarContainer')?.closest('.mvar-input');
   const cfgSec    = document.getElementById('inputCreditVaRConfigContainer')?.closest('.cvar-config-section');
+  const normSec   = document.getElementById('inputPdNormContainer')?.closest('.pd-norm-section');
   const thrSec    = document.getElementById('inputCreditVaRThresholdContainer')?.closest('.threshold-section');
 
   const marketHost = document.getElementById('riskInputMarketHost');
@@ -101,6 +102,7 @@ function relocateRiskInputs() {
 
   if (marketHost && mvarInput) marketHost.appendChild(mvarInput);
   if (creditHost && cfgSec)    creditHost.appendChild(cfgSec);
+  if (creditHost && normSec)   creditHost.appendChild(normSec);
   if (creditHost && thrSec)    creditHost.appendChild(thrSec);
 }
 

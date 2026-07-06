@@ -99,6 +99,27 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CS_SCENARIO_DATAData':
       return handlers.handleCSScenarioData?.(rows);
 
+    // PD HISTORICAL (Track A) — direkt in den Store + Ready-Event für den Builder.
+    case 'PD_RATING_HISTORICALData':
+      appState?.setPDHistBaseData?.(rows);
+      document.dispatchEvent(new Event('pdhist:base:ready'));
+      return;
+
+    case 'PD_HIST_SCENARIO_DATAData':
+      appState?.setPDHistScenarioData?.(rows);
+      document.dispatchEvent(new Event('pdhist:scenario:ready'));
+      return;
+
+    case 'PD_HIST_ACTIVEData':
+      appState?.setPDHistActive?.(rows);
+      document.dispatchEvent(new Event('pdhist:active:ready'));
+      return;
+
+    case 'PD_NORM_SETTINGSData':
+      appState?.setPdNormSettings?.(rows);
+      document.dispatchEvent(new Event('pdnorm:ready'));
+      return;
+
     case 'CSParameterData':
       return handlers.handleCSParameterData?.(rows);
 
@@ -217,6 +238,11 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
       return handlers.handleAllEADData?.(data);
 
     // CVaR
+    case 'lossHistogramMainData':
+      appState?.setLossHistogram?.(rows);
+      document.dispatchEvent(new Event('losshist:ready'));
+      return;
+
     case 'CreditVaRInputData':
       return handlers.initHandleCvarInput?.(data);
 

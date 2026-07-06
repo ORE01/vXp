@@ -365,6 +365,9 @@ function setIRSensData(rows) {
       rows: appState.marketVarFactorSeriesMap.length,
       sample: appState.marketVarFactorSeriesMap[0],
     });
+
+    // Risk-Factor-Chart (Scenario Period) auf die neue Map re-rendern lassen.
+    try { document.dispatchEvent(new Event('mvar:factor-map-changed')); } catch (_) {}
   }
 
   function getMarketVarFactorSeriesMap() {
