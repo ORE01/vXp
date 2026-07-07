@@ -24,6 +24,9 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CUSTOMER_PRODUCT_CATEGORY_SETUPData':
       return handlers.handleCustomerProductCategorySetupData?.(rows);
 
+    case 'CustomerDefaultPortfolioData':
+      return handlers.handleCustomerDefaultPortfolioData?.(rows);
+
     case 'CustomerMarketRiskSettingData':
       return handlers.handleCustomerMarketRiskSettingData?.(rows);
 

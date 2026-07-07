@@ -3,13 +3,13 @@
    ============================================================ */
 
 /* Root-Layout wie bei den anderen Modals */
-#CREATE_PORTFOLIO_Modal .table-content{
+:is(#panel-newDeals, #panel-deals) .table-content{
   display: block;
 }
 
 
 /* Card-Look für Gruppen */
-#CREATE_PORTFOLIO_Modal .cp-card{
+:is(#panel-newDeals, #panel-deals) .cp-card{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
@@ -18,19 +18,19 @@
 }
 
 /* Zwei Dropdowns nebeneinander, wrap bei kleiner Breite */
-#CREATE_PORTFOLIO_Modal .dropdown-wrapper{
+:is(#panel-newDeals, #panel-deals) .dropdown-wrapper{
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-#CREATE_PORTFOLIO_Modal .dropdown-wrapper > div{
+:is(#panel-newDeals, #panel-deals) .dropdown-wrapper > div{
   min-width: 240px;
   flex: 1 1 280px;
 }
 
 /* Ergebnisliste mit eigenem Scrollbereich */
-#CREATE_PORTFOLIO_Modal .cp-table{
+:is(#panel-newDeals, #panel-deals) .cp-table{
   max-height: 48vh;
   overflow: auto;
 
@@ -43,7 +43,7 @@
 /* =========================
    CREATE_PORTFOLIO ▸ DEALS
    ========================= */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-card{
+#panel-deals .cp-card{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
@@ -53,12 +53,12 @@
 
 /* Single source of truth: einheitliche Breite der Aktions-Kacheln
    (Edit Trade / Add Trade / Save Selection) in BEIDEN Panels. */
-#CREATE_PORTFOLIO_Modal{
+:is(#panel-newDeals, #panel-deals){
   --cp-tile-w: 150px;
 }
 
 /* Aktions-Cards nebeneinander (Change Portfolio); Reihe darf bei Bedarf umbrechen. */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-card-row{
+#panel-deals .cp-card-row{
   display: flex;
   gap: 12px;
   align-items: stretch;
@@ -67,7 +67,7 @@
 }
 
 /* Kachelbreite – gilt in Create UND Change Portfolio (gleich breit überall). */
-#CREATE_PORTFOLIO_Modal .cp-card.cp-card--compact{
+:is(#panel-newDeals, #panel-deals) .cp-card.cp-card--compact{
   width: var(--cp-tile-w);
   max-width: var(--cp-tile-w);
   min-width: 0;
@@ -75,33 +75,33 @@
 }
 
 /* In der Change-Portfolio-Reihe: feste Breite, kein Grow/Shrink. */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-card-row .cp-card.cp-card--compact{
+#panel-deals .cp-card-row .cp-card.cp-card--compact{
   flex: 0 0 var(--cp-tile-w);
   margin-bottom: 0;
 }
 
 /* Aktions-Kacheln: Überschrift + Buttons zentrieren (beide Panels). */
-#CREATE_PORTFOLIO_Modal .cp-card--compact .small-section-header{
+:is(#panel-newDeals, #panel-deals) .cp-card--compact .small-section-header{
   text-align: center;
 }
-#CREATE_PORTFOLIO_Modal .cp-card--compact .button-wrapper{
+:is(#panel-newDeals, #panel-deals) .cp-card--compact .button-wrapper{
   text-align: center;   /* zentriert einzelne (inline-block) Buttons */
 }
-#CREATE_PORTFOLIO_Modal .cp-card--compact .button-wrapper--stack{
+:is(#panel-newDeals, #panel-deals) .cp-card--compact .button-wrapper--stack{
   margin-left: auto;
   margin-right: auto;   /* zentriert den gestapelten Button-Block */
 }
 
 /* "Select Portfolio"-Karte schmaler (statt 780px). Trifft nur die erste Karte
    im Panel; die kompakten Aktions-Kacheln behalten ihre 150px (höhere Spezifität). */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-card:first-of-type{
+#panel-deals .cp-card:first-of-type{
   max-width: 450px;
 }
 
 /* "Add Trade": die beiden Buttons untereinander, gleich breit (= breiterer Button)
    und schmal – der Wrapper schrumpft auf die Breite des breitesten Buttons.
    Gilt in beiden Panels (Create + Change Portfolio). */
-#CREATE_PORTFOLIO_Modal .button-wrapper--stack{
+:is(#panel-newDeals, #panel-deals) .button-wrapper--stack{
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -112,7 +112,7 @@
 /* Hinweis "Click Trade ID" als button-großer Kasten (gleiche Maße wie
    .edit-button: padding 4px 12px, font-size 12px). Rahmen theme-abhängig:
    Light-Theme schwarz, Dark-Theme hell/weiß (über --text-bright). */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-card-row .cp-card-hint{
+#panel-deals .cp-card-row .cp-card-hint{
   margin: 0;
   display: inline-block;
   padding: 4px 12px;
@@ -126,20 +126,20 @@
 /* ===== Change-Portfolio-Deals-Tabelle: erste 3 Spalten beim horizontalen
    Scrollen fixieren (Include, Trade ID, Product ID). Feste Breiten, da sticky
    die Links-Offsets der folgenden Spalten kennen muss. ===== */
-#CREATE_PORTFOLIO_Modal #dealsDataContainer{
+#dealsDataContainer{
   --dcol1w: 80px;    /* Include  */
   --dcol2w: 100px;   /* Trade ID */
   --dcol3w: 150px;   /* Product ID */
   overflow: auto;
   position: relative;
 }
-#CREATE_PORTFOLIO_Modal #dealsDataContainer table{
+#dealsDataContainer table{
   border-collapse: separate;
   border-spacing: 0;
   width: max-content;
 }
-#CREATE_PORTFOLIO_Modal #dealsDataContainer th,
-#CREATE_PORTFOLIO_Modal #dealsDataContainer td{
+#dealsDataContainer th,
+#dealsDataContainer td{
   white-space: nowrap;
   /* border-collapse:separate würde angrenzende Ränder verdoppeln (dickere
      Linien). Daher pro Zelle nur rechts/unten zeichnen -> wieder einzelne
@@ -148,36 +148,36 @@
   border-left: 0;
 }
 /* Spalte 1 – Include */
-#CREATE_PORTFOLIO_Modal #dealsDataContainer thead th:nth-child(1),
-#CREATE_PORTFOLIO_Modal #dealsDataContainer tbody td:nth-child(1){
+#dealsDataContainer thead th:nth-child(1),
+#dealsDataContainer tbody td:nth-child(1){
   position: sticky; left: 0;
   min-width: var(--dcol1w); max-width: var(--dcol1w);
   z-index: 3; background: inherit; border-right: 1px solid var(--border);
 }
 /* Spalte 2 – Trade ID */
-#CREATE_PORTFOLIO_Modal #dealsDataContainer thead th:nth-child(2),
-#CREATE_PORTFOLIO_Modal #dealsDataContainer tbody td:nth-child(2){
+#dealsDataContainer thead th:nth-child(2),
+#dealsDataContainer tbody td:nth-child(2){
   position: sticky; left: var(--dcol1w);
   min-width: var(--dcol2w); max-width: var(--dcol2w);
   z-index: 3; background: inherit; border-right: 1px solid var(--border);
 }
 /* Spalte 3 – Product ID */
-#CREATE_PORTFOLIO_Modal #dealsDataContainer thead th:nth-child(3),
-#CREATE_PORTFOLIO_Modal #dealsDataContainer tbody td:nth-child(3){
+#dealsDataContainer thead th:nth-child(3),
+#dealsDataContainer tbody td:nth-child(3){
   position: sticky; left: calc(var(--dcol1w) + var(--dcol2w));
   min-width: var(--dcol3w); max-width: var(--dcol3w);
   z-index: 3; background: inherit; border-right: 1px solid var(--border);
 }
 /* Header-Ecken (sticky top UND left) über den Body-Zellen halten */
-#CREATE_PORTFOLIO_Modal #dealsDataContainer thead th:nth-child(1),
-#CREATE_PORTFOLIO_Modal #dealsDataContainer thead th:nth-child(2),
-#CREATE_PORTFOLIO_Modal #dealsDataContainer thead th:nth-child(3){
+#dealsDataContainer thead th:nth-child(1),
+#dealsDataContainer thead th:nth-child(2),
+#dealsDataContainer thead th:nth-child(3){
   z-index: 6;
   background: var(--surface-header);
 }
 
 /* Grid für Label/Fields – clean & responsive */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid{
+#panel-deals .cp-form-grid{
   display: grid;
   grid-template-columns: 220px 1fr;  /* Label | Field */
   gap: 10px 14px;
@@ -185,27 +185,27 @@
 }
 
 @media (max-width: 900px){
-  #CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid{
+  #panel-deals .cp-form-grid{
     grid-template-columns: 1fr;      /* Stack */
   }
-  #CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid > label{
+  #panel-deals .cp-form-grid > label{
     margin-top: 8px;
   }
 }
 
 /* Label/Field Basics */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-form-grid > label{
+#panel-deals .cp-form-grid > label{
   font-weight: 600;
   color: var(--text-primary);
 }
 
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-field > select,
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-field > input{
+#panel-deals .cp-field > select,
+#panel-deals .cp-field > input{
   width: 100%;
 }
 
 /* Inputs im Dark-Theme gut lesbar */
-#CREATE_PORTFOLIO_Modal #panel-deals .input-field{
+#panel-deals .input-field{
   background: var(--surface-card);
   color: var(--text-bright);
   caret-color: var(--text-bright);
@@ -215,26 +215,26 @@
 }
 
 /* Actions */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-actions{
+#panel-deals .cp-actions{
   display: flex;
   gap: 10px;
   justify-content: flex-end;
 }
 
 /* Dropdown-Zeile */
-#CREATE_PORTFOLIO_Modal #panel-deals .dropdown-wrapper{
+#panel-deals .dropdown-wrapper{
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
 }
 
-#CREATE_PORTFOLIO_Modal #panel-deals .dropdown-wrapper > div{
+#panel-deals .dropdown-wrapper > div{
   min-width: 240px;
   flex: 1 1 260px;
 }
 
 /* Ergebnistabelle */
-#CREATE_PORTFOLIO_Modal #panel-deals .cp-table{
+#panel-deals .cp-table{
   max-height: 48vh;
   overflow: auto;
 
@@ -246,18 +246,18 @@
 
 /* Kleine Headline-Stufe – single source of truth für BEIDE Panels
    (Create + Change Portfolio), damit die Kachel-Überschriften gleich groß sind. */
-#CREATE_PORTFOLIO_Modal .small-section-header{
+:is(#panel-newDeals, #panel-deals) .small-section-header{
   font-size: 15px;
   margin: 0 0 6px 0;
   color: var(--text-bright);
 }
 
 /* Danger-Style für Delete, falls nicht global vorhanden */
-#CREATE_PORTFOLIO_Modal #panel-deals .delete-button{
+#panel-deals .delete-button{
   background: #7a1f1f;
 }
 
-#CREATE_PORTFOLIO_Modal #panel-deals .delete-button:hover{
+#panel-deals .delete-button:hover{
   background: #962626;
 }
 

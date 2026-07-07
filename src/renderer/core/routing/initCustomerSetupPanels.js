@@ -16,6 +16,7 @@ import {
   renderCreditRiskSettings,
   renderCreditRiskThresholds,
 } from '../../features/CUSTOMER_SETUP/customerCreditRiskPanel.js';
+import { initCustomerDefaultPortfolioPanel } from '../../features/CUSTOMER_SETUP/customerDefaultPortfolioPanel.js';
 
 function safe(label, fn) {
   try {
@@ -46,6 +47,13 @@ export function getCustomerSetupPanelRenderers() {
       safe('credit-risk', () => {
         renderCreditRiskSettings();
         renderCreditRiskThresholds();
+      }),
+
+    'panel-customer-portfolio': () =>
+      safe('default-portfolio', () => {
+        // Frische DB-Zeile holen (Pump pusht sonst nur beim Start); dann rendern + Save binden.
+        window.api?.send?.('fetch-table-data', 'CustomerDefaultPortfolio');
+        initCustomerDefaultPortfolioPanel();
       }),
   };
 }

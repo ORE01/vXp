@@ -94,6 +94,28 @@ function ensurePdHistoricalScenarioSchema(db) {
   });
 }
 
+// Kundenweites Default-Portfolio (eine Zeile). Idempotent; Zeilen-Ops laufen über
+// die generischen CRUD-Kanaele (update-data). port_name = NULL -> kein Default.
+function ensureCustomerDefaultPortfolioSchema(db) {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS CustomerDefaultPortfolio (
+        id        INTEGER PRIMARY KEY CHECK (id = 1),
+        port_name TEXT
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure CustomerDefaultPortfolio failed', err);
+    });
+
+    db.run(
+      `INSERT OR IGNORE INTO CustomerDefaultPortfolio (id, port_name) VALUES (1, NULL)`,
+      (err) => {
+        if (err) logger.error('DB', 'seed CustomerDefaultPortfolio failed', err);
+      }
+    );
+  });
+}
+
 function initDb() {
   if (_db) return _db;
 
@@ -120,6 +142,7 @@ function initDb() {
         logToFile('Connected to the database.');
         logger.info('DB', 'connected');
         ensurePdHistoricalScenarioSchema(_db);
+        ensureCustomerDefaultPortfolioSchema(_db);
       }
     }
   );

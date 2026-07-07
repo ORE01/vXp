@@ -1,6 +1,7 @@
 ﻿import { getColorForPieChart} from '../../utils/colors.js';
 import { setupHiDPICanvas } from './SummaryYield.js';
 import { getFormatRules } from '../../utils/tableCellFormats.js';
+import { attachIdLinks } from '../../utils/linksToTables.js';
 
 const { jsPDF } = window.jspdf;
 
@@ -103,6 +104,11 @@ const BREAKDOWN_CONFIG = [
 // (Pie-Farben sind theme-aware aus colors.js).
 let _lastBreakdownArgs = null;
 let _breakdownThemeBound = false;
+let _concHookBound = false;
+let _concDimension = 'ISSUER';   // aktuell im Konzentrations-Dashboard gezeigte Spalte
+let _concMenuHideT = 0;          // Timeout-Handle fuer das Hover-Menue
+let _concStack = [];             // Drill-Pfad als Stack von Views { path:[{colKey,value,label}], by }
+let _concMenuCtx = null;         // prospektiver Pfad, auf den sich das offene Menue bezieht
 
 export function handleSummaryNotionalData(filteredData, index, port_name) {
   _lastBreakdownArgs = { filteredData, index, port_name };
@@ -248,6 +254,31 @@ container.appendChild(row);
     notifyRiskPreview('breakdown:init');
   } catch {}
 
+  // Emittenten-Konzentrations-Dashboard (eigenes Panel #panel-concentration).
+  // Cards/KPIs werden immer aktualisiert; die Charts erst, wenn das Panel sichtbar
+  // ist -> dafuer der Panel-Open-Hook (einmalig registriert).
+  try { renderConcentrationDashboard(filteredData, { dataField: _concDimension }); } catch (e) { console.warn('[conc] render failed', e); }
+  // Versteckte Report-Panels je Dimension (fuer das PDF) anlegen + mit dem aktuellen
+  // Portfolio fuellen — ALLE Dimensionen, unabhaengig von der live gewaehlten.
+  try { ensureConcReportPanels(); fillConcReportPanels(filteredData); } catch (e) { console.warn('[conc] report panels failed', e); }
+  if (!_concHookBound) {
+    _concHookBound = true;
+    try {
+      window.registerPanelOpenHook?.('panel-concentration', () => {
+        // RAF: erst nach dem Sichtbarwerden zeichnen, damit Chart.js das Canvas misst.
+        requestAnimationFrame(() => {
+          try { renderConcentrationDashboard(_lastBreakdownArgs?.filteredData, { dataField: _concDimension }); } catch {}
+        });
+      });
+    } catch {}
+    // Sub-Trigger-Klick -> gewuenschte Dimension merken (capture: laeuft VOR dem
+    // Panel-Open-Hook, damit dieser die richtige Dimension zeichnet).
+    document.addEventListener('click', (e) => {
+      const btn = e.target?.closest?.('button.section-trigger[data-panel="panel-concentration"]');
+      if (btn && btn.dataset.dimension) _concDimension = btn.dataset.dimension;
+    }, true);
+  }
+
   // ==== Value-Selector (NAV / Notional) ====
   // Bei JEDEM Render neu binden, damit der Handler das filteredData GENAU dieses
   // Renders nutzt (das auch gerade angezeigt wird). Vorher 1x gebunden → er fror
@@ -259,6 +290,8 @@ container.appendChild(row);
     }
     const handler = () => {
       columnsToChart.forEach(column => drawPieChartByColumn(filteredData, column));
+      try { renderConcentrationDashboard(filteredData, { dataField: 'ISSUER' }); } catch {}
+      try { fillConcReportPanels(filteredData); } catch {}
       try { notifyRiskPreview('breakdown:valueSelector'); } catch {}
     };
     valueSel.addEventListener('change', handler);
@@ -439,5 +472,470 @@ function getValuesByColumn(data, columnName, valueType = 'NAV', excludeEmpty = f
     labels: sorted.map(([k]) => k),
     values: sorted.map(([, v]) => v),
   };
+}
+
+
+// ===== Emittenten-Konzentrations-Dashboard ====================================
+// Generisch ueber eine Dimension (opts.dataField, Default 'ISSUER'). Nutzt dieselbe
+// Aggregation wie die Pies (getValuesByColumn) und folgt dem NAV/Notional-Selector.
+// Cards/KPIs werden immer aktualisiert; die Charts nur, wenn das Panel sichtbar ist
+// (ein Canvas in einem display:none-Panel hat Groesse 0).
+let __concCharts = { top10: null, donut: null };
+
+function __concMedian(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function __concEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+const __concPct = (x) => `${(x * 100).toFixed(x < 0.1 ? 2 : 1)}%`;
+
+// Dimensions-Dropdown im Concentration-Panel einmalig fuellen (alle Breakdown-Spalten)
+// + Change-Handler binden; Wert mit der aktuellen Dimension synchronisieren.
+function ensureConcDimensionUI() {
+  const sel = document.getElementById('concDimensionSelect');
+  if (!sel) return;
+  if (!sel.dataset.filled) {
+    sel.innerHTML = BREAKDOWN_CONFIG
+      .flatMap(g => g.columns)
+      .map(c => `<option value="${c.key}">${c.label}</option>`)
+      .join('');
+    sel.dataset.filled = '1';
+    sel.addEventListener('change', () => {
+      _concDimension = sel.value;
+      try { renderConcentrationDashboard(_lastBreakdownArgs?.filteredData, { dataField: _concDimension }); } catch {}
+    });
+  }
+  if (sel.value !== _concDimension) sel.value = _concDimension;
+}
+
+// Reine Konzentrations-Kennzahlen fuer EINE Dimension. Eine Quelle der Wahrheit
+// fuer das Live-Dashboard UND die versteckten Report-Panels je Dimension.
+function computeConcentration(filteredData, dimKey, valueType) {
+  if (!Array.isArray(filteredData) || !filteredData.length) return null;
+  const key = dimKey || 'ISSUER';
+  const field = COLUMN_DATA_FIELD[key] || key;
+  const excludeEmpty = COLUMN_EXCLUDE_EMPTY.has(key);
+  const dimLabel = (BREAKDOWN_CONFIG.flatMap(g => g.columns).find(c => c.key === key)?.label) || key;
+
+  let agg;
+  try { agg = getValuesByColumn(filteredData, field, valueType, excludeEmpty); }
+  catch (e) { console.warn('[conc] getValuesByColumn failed', key, e); return null; }
+
+  const items = agg.labels
+    .map((name, i) => ({ name, value: Number(agg.values[i]) || 0 }))
+    .filter(it => it.value > 0);
+  if (!items.length) return null;
+
+  const total = items.reduce((s, it) => s + it.value, 0) || 1;
+  items.forEach(it => { it.share = it.value / total; });   // bereits absteigend sortiert
+  const count = items.length;
+  const top = items.slice(0, 10);
+  const top10Share = top.reduce((s, it) => s + it.share, 0);
+  const restShare = Math.max(0, 1 - top10Share);
+  const meanShare = count ? 1 / count : 0;
+  const medianShare = __concMedian(items.map(it => it.share));
+
+  return { key, dimLabel, valueType, items, total, count, top, top10Share, restShare, meanShare, medianShare };
+}
+
+// Report-Quellen (Key Figures + Top) als .data-container-Tabellen fuellen.
+// Die Risk-Report-Vorschau/das PDF erfasst .data-container-Tabellen nativ (die
+// visuellen Kacheln/Karten dagegen nicht). Genutzt vom Live-Panel UND den
+// versteckten Report-Panels je Dimension.
+function renderConcReportTables(kfEl, tiEl, m) {
+  if (!m) { if (kfEl) kfEl.innerHTML = ''; if (tiEl) tiEl.innerHTML = ''; return; }
+  if (kfEl) {
+    const rows = [
+      ['Number of entries', String(m.count)],
+      ['Top 10 share', __concPct(m.top10Share)],
+      ['Others share', __concPct(m.restShare)],
+      ['Avg share', __concPct(m.meanShare)],
+      ['Median share', __concPct(m.medianShare)],
+    ];
+    kfEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+      rows.map(([k, v]) => `<tr><td>${__concEsc(k)}</td><td>${__concEsc(v)}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
+  if (tiEl) {
+    tiEl.dataset.label = `Top ${m.dimLabel}`;
+    tiEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>${__concEsc(m.dimLabel)}</th><th>Share (${__concEsc(m.valueType)})</th></tr></thead><tbody>${
+      m.items.slice(0, 10).map(it => `<tr><td>${__concEsc(it.name)}</td><td>${__concPct(it.share)}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
+}
+
+// Alle Dimensionen (wie das Panel-Dropdown), config-getrieben.
+function __concAllDims() {
+  return BREAKDOWN_CONFIG.flatMap(g => g.columns);   // {key,label}[]
+}
+
+// Versteckte Report-Panels je Dimension: erlauben, im PDF ALLE Konzentrations-
+// Dashboards einzeln zu waehlen — unabhaengig von der live gewaehlten Dimension.
+// Die Preview erfasst .sub-panel > .data-container[id] generisch; die Panels liegen
+// in #ANALYSE_Modal (→ Report-Baum unter dem PORTFOLIO/ANALYSE-Tab). Idempotent.
+function ensureConcReportPanels() {
+  const modal = document.getElementById('ANALYSE_Modal');
+  if (!modal) return;
+  const host = modal.querySelector('.table-content') || modal;
+  __concAllDims().forEach(({ key, label }) => {
+    const panelId = `panel-concentration-${key}`;
+    if (document.getElementById(panelId)) return;
+    const panel = document.createElement('div');
+    panel.id = panelId;
+    panel.className = 'sub-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'false');
+    panel.hidden = true;
+    panel.dataset.title = `Concentration — ${label}`;
+    panel.innerHTML =
+      `<div class="sub-panel-header"><div class="sub-panel-title">Concentration — ${__concEsc(label)}</div></div>` +
+      `<div class="sub-panel-body">` +
+        `<div class="data-container" id="concKeyFiguresTable__${key}" data-label="${__concEsc(label)} — Key Figures"></div>` +
+        `<div class="data-container" id="concTopIssuersTable__${key}" data-label="Top ${__concEsc(label)}"></div>` +
+      `</div>`;
+    host.appendChild(panel);
+  });
+}
+
+// Report-Panels je Dimension mit dem aktuellen Portfolio fuellen (alle Dimensionen,
+// unabhaengig von der live gewaehlten). Folgt dem NAV/Notional-Selector.
+function fillConcReportPanels(filteredData) {
+  if (!Array.isArray(filteredData) || !filteredData.length) return;
+  const valueSel  = document.getElementById('valueSelector');
+  const valueType = valueSel ? valueSel.value : 'NAV';
+  __concAllDims().forEach(({ key }) => {
+    const kfEl = document.getElementById(`concKeyFiguresTable__${key}`);
+    const tiEl = document.getElementById(`concTopIssuersTable__${key}`);
+    if (!kfEl && !tiEl) return;
+    renderConcReportTables(kfEl, tiEl, computeConcentration(filteredData, key, valueType));
+  });
+}
+
+export function renderConcentrationDashboard(filteredData, opts = {}) {
+  const host = document.getElementById('issuerConcentrationDashboard');
+  if (!host || !Array.isArray(filteredData) || !filteredData.length) return;
+
+  // Dimension aufloesen + Kennzahlen ueber den gemeinsamen Helfer (identische
+  // Logik wie die Report-Panels).
+  const dimKey = opts.dataField || _concDimension || 'ISSUER';
+  _concDimension = dimKey;
+
+  ensureConcDimensionUI();
+  ensureConcDetailBound(host);
+  const detailEl0 = document.getElementById('concDetail');
+  if (detailEl0) detailEl0.style.display = 'none';   // Drill-down bei (Re-)Render / Dimensionswechsel schliessen
+  _concStack = [];
+  try { __concMenuHide(); } catch {}
+
+  const valueSel  = document.getElementById('valueSelector');
+  const valueType = valueSel ? valueSel.value : 'NAV';
+
+  const m = computeConcentration(filteredData, dimKey, valueType);
+  if (!m) return;
+  const { dimLabel, items, total, count, top, top10Share, restShare, meanShare, medianShare } = m;
+
+  const titleEl = host.querySelector('.conc-dash__title');
+  if (titleEl) titleEl.textContent = dimLabel;
+  const sub = document.getElementById('concHeadSub');
+  if (sub) sub.textContent = `${count} entries · basis: ${valueType}`;
+
+  // Top-Emittenten-Karten
+  const cardsEl = document.getElementById('concCards');
+  if (cardsEl) {
+    cardsEl.innerHTML = items.slice(0, 8).map((it, i) => `
+      <div class="conc-card conc-card--click ${i < 3 ? 'conc-card--lg' : ''}" data-conc-value="${__concEsc(it.name)}">
+        <div class="conc-card__name" title="${__concEsc(it.name)}">${__concEsc(it.name)}</div>
+        <div class="conc-card__pct">${__concPct(it.share)}</div>
+      </div>`).join('');
+  }
+
+  // Kennzahlen-Kacheln
+  const kpiEl = document.getElementById('concKpiTiles');
+  if (kpiEl) {
+    const tiles = [
+      { v: String(count),          l: 'Number of entries' },
+      { v: __concPct(top10Share),  l: 'Top 10 share' },
+      { v: __concPct(restShare),   l: 'Others share' },
+      { v: __concPct(meanShare),   l: 'Avg share' },
+      { v: __concPct(medianShare), l: 'Median share' },
+    ];
+    kpiEl.innerHTML = tiles.map(t =>
+      `<div class="conc-kpi"><div class="conc-kpi__val">${t.v}</div><div class="conc-kpi__lbl">${t.l}</div></div>`
+    ).join('');
+  }
+
+  // Report-Quellen (Key Figures + Top) fuer die Live-Ansicht ueber den gemeinsamen
+  // Helfer fuellen. Die versteckten Report-Panels je Dimension werden separat in
+  // renderSummaryBreakdown/valueSelector befuellt (unabhaengig von der live
+  // gewaehlten Dimension). Immer befuellen (reines HTML, visibility-unabhaengig).
+  renderConcReportTables(
+    document.getElementById('concKeyFiguresTable'),
+    document.getElementById('concTopIssuersTable'),
+    m,
+  );
+
+  // Charts nur wenn das Panel sichtbar ist (sonst Canvas-Groesse 0).
+  const visible = host.offsetParent !== null;
+  if (!visible || !window.Chart) return;
+
+  const c0 = getColorForPieChart(0);
+  const c4 = getColorForPieChart(4);
+
+  // App-Font + Theme-Textfarbe fuer die Canvas-Beschriftung (Chart.js-Default
+  // wirkte sonst "eigenartig" und im Dark-Theme schlecht lesbar).
+  const bodyCss    = getComputedStyle(document.body);
+  const chartFont  = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
+  const chartColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
+
+  const barCanvas = document.getElementById('concTop10Chart');
+  if (barCanvas) {
+    if (__concCharts.top10) { try { __concCharts.top10.destroy(); } catch {} }
+    __concCharts.top10 = new window.Chart(barCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: top.map(it => it.name),
+        datasets: [{
+          data: top.map(it => +(it.share * 100).toFixed(2)),
+          backgroundColor: c0.backgroundColor, borderColor: c0.borderColor, borderWidth: 1,
+          maxBarThickness: 18, borderRadius: 3,
+        }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        color: chartColor,
+        onClick: (evt, els) => {
+          if (els && els.length) {
+            const name = top[els[0].index]?.name;
+            if (name != null) concDrillTo({ path: [__concStep(_concDimension, String(name))], by: null });
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => `${Number(ctx.parsed.x).toFixed(2)} %` } },
+        },
+        scales: {
+          x: { ticks: { callback: (v) => `${v}%`, color: chartColor, font: { family: chartFont } }, grid: { display: false } },
+          y: { ticks: { color: chartColor, font: { family: chartFont, size: 11 } }, grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  const donutCanvas = document.getElementById('concDonutChart');
+  if (donutCanvas) {
+    if (__concCharts.donut) { try { __concCharts.donut.destroy(); } catch {} }
+    __concCharts.donut = new window.Chart(donutCanvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Top 10', 'Others'],
+        datasets: [{
+          data: [+(top10Share * 100).toFixed(2), +(restShare * 100).toFixed(2)],
+          backgroundColor: [c0.backgroundColor, c4.backgroundColor],
+          borderColor: [c0.borderColor, c4.borderColor], borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        color: chartColor,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, color: chartColor, font: { family: chartFont, size: 11 } } },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${Number(ctx.parsed).toFixed(1)} %` } },
+        },
+      },
+    });
+  }
+}
+
+// ===== Drill-down: Menue-Auswahl + rekursive Aufschluesselung =================
+// Zustand = Stack von Views. View { path:[{colKey,value,label}], by }:
+//   by = Spalten-Key -> Tabelle nach dieser Dimension gruppiert (Zeilen weiter
+//        aufklappbar, data-drill-value). by = null -> flache Positionsliste (Blatt).
+// Menue (Karte ODER gruppierte Zeile): Positions / By <noch nicht genutzte Dimension>.
+function ensureConcDetailBound(host) {
+  if (!host || host.dataset.detailBound) return;
+  host.dataset.detailBound = '1';
+
+  // Karte: Hover -> Menue; Klick -> direkt Positionen (Schnellweg).
+  host.addEventListener('mouseover', (e) => {
+    const card = e.target?.closest?.('[data-conc-value]');
+    if (card) { __concMenuCancelHide(); __concShowMenu(card, [__concStep(_concDimension, card.dataset.concValue)]); }
+    else __concMenuScheduleHide();
+  });
+  host.addEventListener('mouseleave', __concMenuScheduleHide);
+  host.addEventListener('click', (e) => {
+    const card = e.target?.closest?.('[data-conc-value]');
+    if (card) concDrillTo({ path: [__concStep(_concDimension, card.dataset.concValue)], by: null });
+  });
+
+  // Detail-Tabelle: Hover ueber eine gruppierte Zeile -> Menue (weiter drillen).
+  const dtable = document.getElementById('concDetailTable');
+  if (dtable) {
+    dtable.addEventListener('mouseover', (e) => {
+      const row = e.target?.closest?.('[data-drill-value]');
+      const cur = _concStack[_concStack.length - 1];
+      if (row && cur && cur.by) { __concMenuCancelHide(); __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)]); }
+      else __concMenuScheduleHide();
+    });
+    dtable.addEventListener('mouseleave', __concMenuScheduleHide);
+    // Klick auf gruppierte Zeile = Schnellweg -> Positionen dieser Ebene.
+    dtable.addEventListener('click', (e) => {
+      const row = e.target?.closest?.('[data-drill-value]');
+      const cur = _concStack[_concStack.length - 1];
+      if (row && cur && cur.by) concDrillTo({ path: [...cur.path, __concStep(cur.by, row.dataset.drillValue)], by: null });
+    });
+  }
+
+  // Breadcrumb-Klick -> zu dieser Ebene zurueck.
+  document.getElementById('concDetailTitle')?.addEventListener('click', (e) => {
+    const crumb = e.target?.closest?.('[data-crumb]');
+    if (crumb) concGotoStackIndex(Number(crumb.dataset.crumb));
+  });
+
+  document.getElementById('concDetailClose')?.addEventListener('click', () => {
+    _concStack = [];
+    const d = document.getElementById('concDetail');
+    if (d) d.style.display = 'none';
+  });
+
+  const menu = document.getElementById('concCardMenu');
+  if (menu) {
+    menu.addEventListener('mouseenter', __concMenuCancelHide);
+    menu.addEventListener('mouseleave', __concMenuScheduleHide);
+    menu.addEventListener('click', (e) => {
+      const btn = e.target?.closest?.('.conc-menu__item');
+      if (!btn || !_concMenuCtx) return;
+      const by = btn.dataset.mode === 'group' ? btn.dataset.by : null;
+      concDrillTo({ path: _concMenuCtx.slice(), by });
+      __concMenuHide();
+    });
+  }
+}
+
+function __concStep(colKey, value) {
+  const label = (BREAKDOWN_CONFIG.flatMap(g => g.columns).find(c => c.key === colKey)?.label) || colKey;
+  return { colKey, value: String(value ?? ''), label };
+}
+function __concFieldOf(colKey) { return COLUMN_DATA_FIELD[colKey] || colKey; }
+function __concColLabel(colKey) {
+  return (BREAKDOWN_CONFIG.flatMap(g => g.columns).find(c => c.key === colKey)?.label) || colKey;
+}
+function __concNorm(raw) {
+  const isEmpty = raw === undefined || raw === null || String(raw).trim() === '';
+  return isEmpty ? 'Unknown' : String(raw).trim();
+}
+
+function __concMenuHide() { const m = document.getElementById('concCardMenu'); if (m) { m.style.display = 'none'; m.dataset.open = ''; } _concMenuCtx = null; }
+function __concMenuScheduleHide() { clearTimeout(_concMenuHideT); _concMenuHideT = setTimeout(__concMenuHide, 200); }
+function __concMenuCancelHide() { clearTimeout(_concMenuHideT); }
+
+function __concBuildMenuHtml(prospectivePath) {
+  const used = new Set(prospectivePath.map(s => s.colKey));
+  const others = BREAKDOWN_CONFIG.flatMap(g => g.columns).filter(c => !used.has(c.key));
+  const head = prospectivePath.map(s => s.value).join(' › ');
+  const items = [`<button class="conc-menu__item" data-mode="positions">Positions</button>`]
+    .concat(others.map(c => `<button class="conc-menu__item" data-mode="group" data-by="${c.key}">By ${__concEsc(c.label)}</button>`));
+  return `<div class="conc-menu__hdr" title="${__concEsc(head)}">${__concEsc(head)}</div>${items.join('')}`;
+}
+
+function __concShowMenu(anchorEl, prospectivePath) {
+  const menu = document.getElementById('concCardMenu');
+  if (!menu || !anchorEl) return;
+  const sig = prospectivePath.map(s => s.colKey + '=' + s.value).join('|');
+  if (menu.dataset.open === sig && menu.style.display !== 'none') return;
+  _concMenuCtx = prospectivePath;
+  menu.dataset.open = sig;
+  menu.innerHTML = __concBuildMenuHtml(prospectivePath);
+  menu.style.display = 'block';
+  const r = anchorEl.getBoundingClientRect();
+  const mw = menu.offsetWidth || 180;
+  const mh = menu.offsetHeight || 200;
+  let left = r.right + 6;
+  if (left + mw > window.innerWidth - 8) left = r.left - mw - 6;
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.style.top = Math.max(8, Math.min(r.top, window.innerHeight - mh - 8)) + 'px';
+}
+
+// Zu einer View navigieren. Stack-Tiefe ergibt sich aus der Pfadlaenge -> Back via
+// Breadcrumb funktioniert automatisch (jede tiefere Ebene ersetzt/ergaenzt).
+function concDrillTo(view) {
+  _concStack.length = Math.max(0, (view.path?.length || 1) - 1);
+  _concStack.push(view);
+  renderConcView(view);
+}
+function concGotoStackIndex(i) {
+  if (i < 0 || i >= _concStack.length) return;
+  _concStack.length = i + 1;
+  renderConcView(_concStack[i]);
+}
+
+// View rendern: nach Pfad filtern, dann gruppieren (by) oder Positionen (Blatt).
+function renderConcView(view) {
+  const detail  = document.getElementById('concDetail');
+  const titleEl = document.getElementById('concDetailTitle');
+  const tableEl = document.getElementById('concDetailTable');
+  const data = _lastBreakdownArgs?.filteredData;
+  if (!detail || !titleEl || !tableEl || !Array.isArray(data)) return;
+
+  const valueSel = document.getElementById('valueSelector');
+  const valueType = valueSel ? valueSel.value : 'NAV';
+  const fmtVal = (v) => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 });
+
+  // Zeilen nach gesamtem Pfad filtern.
+  const rowsAll = data.filter(r => view.path.every(s => __concNorm(r[__concFieldOf(s.colKey)]) === s.value));
+
+  // Breadcrumb (klickbare Pfadwerte) + aktueller Modus.
+  const crumbs = view.path
+    .map((s, i) => `<span class="conc-crumb" data-crumb="${i}" title="${__concEsc(s.label)}: ${__concEsc(s.value)}">${__concEsc(s.value)}</span>`)
+    .join('<span class="conc-crumb-sep">›</span>');
+  const modeLabel = view.by ? `by ${__concEsc(__concColLabel(view.by))}` : 'Positions';
+  titleEl.innerHTML = `${crumbs}<span class="conc-crumb-mode"> · ${modeLabel}</span>`;
+
+  if (view.by) {
+    const byField = __concFieldOf(view.by);
+    const map = {};
+    rowsAll.forEach(r => { const k = __concNorm(r[byField]); map[k] = (map[k] || 0) + (Number(r[valueType]) || 0); });
+    const sub = Object.entries(map).map(([name, val]) => ({ name, val })).sort((a, b) => b.val - a.val);
+    const tot = sub.reduce((s, x) => s + x.val, 0) || 1;
+    tableEl.innerHTML = `
+      <table class="conc-detail-tbl">
+        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">${__concEsc(valueType)}</th><th style="text-align:right;">Share</th></tr></thead>
+        <tbody>
+          ${sub.map(x => `<tr class="conc-drill-row" data-drill-value="${__concEsc(x.name)}">
+            <td>${__concEsc(x.name)} <span class="conc-drill-hint">›</span></td>
+            <td style="text-align:right;">${fmtVal(x.val)}</td>
+            <td style="text-align:right;">${__concPct(x.val / tot)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } else {
+    const rows = rowsAll.map(r => ({
+      id:   r.PROD_ID != null ? String(r.PROD_ID) : '',
+      desc: (r.DESCRIPTION || '').toString(),
+      val:  Number(r[valueType]) || 0,
+    })).sort((a, b) => b.val - a.val);
+    const tot = rows.reduce((s, r) => s + r.val, 0) || 1;
+    tableEl.innerHTML = `
+      <table class="conc-detail-tbl">
+        <thead><tr><th>Product ID</th><th>Description</th><th style="text-align:right;">${__concEsc(valueType)}</th><th style="text-align:right;">Share</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td>${__concEsc(r.id)}</td>
+            <td>${__concEsc(r.desc)}</td>
+            <td style="text-align:right;">${fmtVal(r.val)}</td>
+            <td style="text-align:right;">${__concPct(r.val / tot)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    // Product-ID-Spalte anklickbar machen -> oeffnet den Product-Drawer
+    // (openProdEditorByProdId), gleiche Mechanik wie in den Portfolio-Tabellen.
+    try { attachIdLinks(tableEl); } catch (e) { console.warn('[conc] attachIdLinks failed', e); }
+  }
+
+  detail.style.display = '';
+  try { detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}
 }
 

@@ -247,8 +247,7 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
     <div class="tab">
-      <button class="tablinks" id="CREATE_PORTFOLIO_Tab">PORTFOLIO</button>
-      <button class="tablinks" id="ANALYSE_Tab">VALUATION</button>
+      <button class="tablinks" id="ANALYSE_Tab">PORTFOLIO</button>
       <button class="tablinks" id="RISK_Tab">RISK</button>
       <!-- COMPARE PORTFOLIOS → verschoben nach RISK ▸ "Risk Comparison" -->
       <button class="tablinks" id="REPORTS_Tab">REPORTING</button>
@@ -275,7 +274,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="panel-title view-analyse-only">VALUATION</h2>
+      <h2 class="panel-title view-analyse-only">PORTFOLIO</h2>
       <h2 class="panel-title view-risk-only">RISK</h2>
       <p class="risk-view-note view-risk-only" style="margin:4px 0 8px; color: var(--text-muted); font-size: 13px;">
         Risk is not affected by the table filter.
@@ -305,7 +304,25 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 </div>
 
-<!-- Portfolio Breakdown Trigger -->
+<!-- Portfolio-Verwaltung (aus dem alten PORTFOLIO-Tab): eigene Top-Level-Trigger
+     auf gleicher Ebene wie "Select Portfolio", nur im PORTFOLIO-View sichtbar. -->
+<div class="chart-section view-analyse-only">
+  <button class="section-trigger" type="button"
+          data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
+    <span class="section-header">Create Portfolio</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
+<div class="chart-section view-analyse-only">
+  <button class="section-trigger" type="button"
+          data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
+    <span class="section-header">Change Portfolio</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
+<!-- Portfolio Breakdown Trigger (alle Pie-Charts) -->
 <div class="chart-section">
   <button class="section-trigger"
           data-panel="panel-breakdown"
@@ -316,53 +333,19 @@ Feature:    Wenn es nur in einem Panel gilt
   </button>
 </div>
 
-      <!--   Breakdown Sub-Trigger: Issuer -->
-      <div class="chart-section chart-section--sub">
-        <button class="section-trigger section-trigger--sub"
-                data-panel="panel-breakdown"
-                data-breakdown-group="Issuer"
-                aria-controls="panel-breakdown"
-                aria-expanded="false">
-          <span class="section-header">Issuer</span>
-          <span class="chev"></span>
-        </button>
-      </div>
+<!-- Dashboard: Konzentrations-Dashboard (Dimension per Dropdown im Panel).
+     Alle Dimensionen sind im PDF ueber versteckte Report-Panels einzeln waehlbar
+     (ensureConcReportPanels in SummaryBreakdown.js). -->
+<div class="chart-section">
+  <button class="section-trigger"
+          data-panel="panel-concentration"
+          aria-controls="panel-concentration"
+          aria-expanded="false">
+    <span class="section-header">Dashboard</span>
+    <span class="chev"></span>
+  </button>
+</div>
 
-      <!--   Breakdown Sub-Trigger: Product -->
-      <div class="chart-section chart-section--sub">
-        <button class="section-trigger section-trigger--sub"
-                data-panel="panel-breakdown"
-                data-breakdown-group="Product"
-                aria-controls="panel-breakdown"
-                aria-expanded="false">
-          <span class="section-header">Product</span>
-          <span class="chev"></span>
-        </button>
-      </div>
-
-      <!--   Breakdown Sub-Trigger: General -->
-      <div class="chart-section chart-section--sub">
-        <button class="section-trigger section-trigger--sub"
-                data-panel="panel-breakdown"
-                data-breakdown-group="General"
-                aria-controls="panel-breakdown"
-                aria-expanded="false">
-          <span class="section-header">General</span>
-          <span class="chev"></span>
-        </button>
-      </div>
-
-      <!--    Breakdown Sub-Trigger: Geography -->
-      <div class="chart-section chart-section--sub">
-        <button class="section-trigger section-trigger--sub"
-                data-panel="panel-breakdown"
-                data-breakdown-group="Geography"
-                aria-controls="panel-breakdown"
-                aria-expanded="false">
-          <span class="section-header">Geography</span>
-          <span class="chev"></span>
-        </button>
-      </div>
 
 
     <!--   Performance   Trigger -->
@@ -675,6 +658,61 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
 
+    <!-- Panel: Emittenten-Konzentration (eigener Trigger, zusaetzlich zum Breakdown) -->
+    <div id="panel-concentration" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-concentration-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-concentration-title" class="sub-panel-title">Concentration</div>
+        <button class="sub-panel-close" data-close="panel-concentration" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <div class="conc-dim-bar" style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <label for="concDimensionSelect" class="select-label">Dimension</label>
+          <select id="concDimensionSelect" class="deals-dropdown" style="width:220px; min-width:0;"></select>
+        </div>
+        <div id="issuerConcentrationDashboard" class="conc-dash">
+          <div class="conc-dash__head">
+            <span class="conc-dash__title">All Issuers</span>
+            <span id="concHeadSub" class="conc-dash__sub"></span>
+          </div>
+          <div class="conc-dash__grid">
+            <div class="conc-card-box">
+              <div id="concCards" class="conc-cards"></div>
+            </div>
+            <div class="conc-panel">
+              <div class="conc-panel__title">Top 10</div>
+              <canvas id="concTop10Chart" class="conc-canvas"></canvas>
+            </div>
+            <div class="conc-panel conc-panel--donut">
+              <div class="conc-panel__title">Concentration Overview</div>
+              <canvas id="concDonutChart" class="conc-canvas"></canvas>
+            </div>
+            <div class="conc-panel">
+              <div class="conc-panel__title">Key Figures</div>
+              <div id="concKpiTiles" class="conc-kpi-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drill-down: Positionen zum angeklickten Wert (Karte/Balken). Interaktiv-only. -->
+        <div id="concDetail" class="conc-detail" style="display:none;">
+          <div class="conc-detail__head">
+            <span id="concDetailTitle" class="conc-detail__title"></span>
+            <button id="concDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+          </div>
+          <div id="concDetailTable" class="conc-detail__table"></div>
+        </div>
+
+        <!-- Hover-Menue fuer Karten (Drill-down-Auswahl: Positions / By <Dimension>). position:fixed. -->
+        <div id="concCardMenu" class="conc-menu" style="display:none;"></div>
+
+        <!-- Report-Quellen fuer die Risk-Report-Vorschau/PDF: die visuellen Kacheln/
+             Karten sind nicht direkt erfassbar -> parallel als kompakte Tabellen, die
+             der Report nativ aufnimmt. Im Live-Panel versteckt. -->
+        <div class="data-container" id="concKeyFiguresTable" data-label="Key Figures" style="display:none;"></div>
+        <div class="data-container" id="concTopIssuersTable" data-label="Top Issuers" style="display:none;"></div>
+      </div>
+    </div>
+
     <!-- Panel: Performance -->
     <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
       <div class="sub-panel-header">
@@ -687,6 +725,11 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="yield-controls" style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:14px;">
           <label for="yieldYearsBackSelect" style="font-size:13px;">Historical curve:</label>
           <select id="yieldYearsBackSelect" class="deals-dropdown" style="width:130px; min-width:0; box-sizing:border-box;"></select>
+          <label for="yieldBasisSelect" style="font-size:13px; margin-top:8px;">Yield basis:</label>
+          <select id="yieldBasisSelect" class="deals-dropdown" style="width:150px; min-width:0; box-sizing:border-box;">
+            <option value="buy">Purchase price</option>
+            <option value="act">Current</option>
+          </select>
         </div>
         <div id="yieldChartSection" class="yield-chart-wrapper" style="display: flex; justify-content: center;">
           <div id="yieldChartGrid" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; max-width: 1200px;">
@@ -1599,17 +1642,10 @@ Feature:    Wenn es nur in einem Panel gilt
       <h2 class="panel-title">CREATE PORTFOLIO</h2>
     </div>
 
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
-        <span class="section-header">Create Portfolio</span><span class="chev"></span>
-      </button>
-    </div> 
-
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
-        <span class="section-header">Change Portfolio</span><span class="chev"></span>
-      </button>
-    </div>
+    <!-- Trigger "Create Portfolio"/"Change Portfolio" wandern in den PORTFOLIO-View
+         (#ANALYSE_Modal, "Select Portfolio"-Gruppe). Die Panels unten werden zur
+         Laufzeit nach #ANALYSE_Modal verschoben (relocatePortfolioPanels), analog
+         zu den Compare-Panels. Dieses Modal ist nur noch ihr Definitions-Shell. -->
 
     <!-- Backdrop nur fuer dieses Modal -->
     <div class="sub-panel-backdrop" hidden></div>
@@ -3092,6 +3128,34 @@ Feature:    Wenn es nur in einem Panel gilt
           <!-- Rendered by the app table framework (processData) with Edit column;
                Add/Edit go through the generic CRUD modal (handleModalAction). -->
           <div id="customerCategoryTableContainer" class="data-container"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Portfolio (Default-Portfolio-Auswahl): oeffnet #panel-customer-portfolio -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-customer-portfolio"
+              aria-controls="panel-customer-portfolio"
+              aria-expanded="false">
+        <span class="section-header">Portfolio</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div id="panel-customer-portfolio" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-customer-portfolio-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-customer-portfolio-title" class="sub-panel-title">Default Portfolio</div>
+        <button class="sub-panel-close" data-close="panel-customer-portfolio" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <section class="cp-card">
+          <p>Choose a default portfolio. It is preselected in the "Select Portfolio" dropdowns (Analysis, Risk, Report). Leave empty (&mdash; none &mdash;) to keep the current behaviour.</p>
+          <div class="data-wrapper" style="display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <label for="customerDefaultPortfolioSelect" class="select-label">Default portfolio:</label>
+            <select id="customerDefaultPortfolioSelect" class="deals-dropdown" style="min-width:200px;"></select>
+            <button type="button" id="customerDefaultPortfolioSaveBtn" class="edit-button">Save</button>
+            <span id="customerDefaultPortfolioStatus" style="font-size:12px; color: var(--text-muted);"></span>
+          </div>
         </section>
       </div>
     </div>

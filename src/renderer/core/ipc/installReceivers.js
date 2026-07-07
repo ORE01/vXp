@@ -21,6 +21,7 @@ export function installReceivers(deps = {}) {
 
     handleCustomerData,
     handleCustomerTSData,
+    handleCustomerDefaultPortfolioData,
     handleCustomerTableLayoutsData,
     handleCustomerProductCategorySetupData,
     handleCustomerMarketRiskSettingData,
@@ -203,6 +204,7 @@ api.receive(channel, (data) => {
 
     handleCustomerData,
     handleCustomerTSData,
+    handleCustomerDefaultPortfolioData,
     handleCustomerTableLayoutsData,
     handleCustomerProductCategorySetupData,
     handleCustomerMarketRiskSettingData,
@@ -278,6 +280,7 @@ api.receive(channel, (data) => {
   route('CustomerTSSelectionData');
   route('CustomerTableLayoutsData');
   route('CUSTOMER_PRODUCT_CATEGORY_SETUPData');
+  route('CustomerDefaultPortfolioData');
   route('CustomerMarketRiskSettingData');
   route('CustomerMarketRiskThresholdSettingData');
   route('CustomerCreditRiskSettingData');

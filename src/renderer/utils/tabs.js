@@ -120,6 +120,21 @@ function relocateCompPanels() {
   });
 }
 
+// Create/Change-Portfolio-Panels aus dem alten #CREATE_PORTFOLIO_Modal in das
+// #ANALYSE_Modal verschieben. Die zugehoerigen Trigger leben jetzt in der
+// "Select Portfolio"-Gruppe (PORTFOLIO-View). Gleiches Muster wie relocateCompPanels:
+// als Slide-In sichtbar werden Panels nur im aktuell angezeigten Modal. IDs bleiben
+// → Bindings/Render/CSS (panel-ID-gescoped) greifen weiter.
+function relocatePortfolioPanels() {
+  const analyseModal = document.getElementById(ANALYSE_MODAL_ID);
+  if (!analyseModal) return;
+  const content = analyseModal.querySelector('.table-content') || analyseModal;
+  ['panel-newDeals', 'panel-deals'].forEach((id) => {
+    const panel = document.getElementById(id);
+    if (panel && panel.parentElement !== content) content.appendChild(panel);
+  });
+}
+
 // Status dot next to each RISK Calculate button: gray (idle) -> red (running)
 // -> green (done). Driven by the original button's `disabled` state, which the
 // project router sets true while running and false on completion.
@@ -191,7 +206,6 @@ export function initializeTabs() {
   const map = {
     'DATA_Tab': 'DATA_Modal',
     'DataProvider_Tab': 'DataProvider_Modal',
-    'CREATE_PORTFOLIO_Tab': 'CREATE_PORTFOLIO_Modal',
     'MARKETDATA_Tab': 'MARKETDATA_Modal',
     'products_Tab': 'products_Modal',
     'ISSUER_Tab': 'issuer_Modal',
@@ -216,6 +230,7 @@ export function initializeTabs() {
   // — wie alle anderen RISK-Punkte — als Slide-In im RISK-View öffnet (RISK-Tree
   // bleibt links sichtbar). Die Sub-Trigger nutzen normales data-panel.
   relocateCompPanels();
+  relocatePortfolioPanels();
 
   // ANALYSE + RISK both open #ANALYSE_Modal, only differing by the view class.
   const analyseTab = document.getElementById('ANALYSE_Tab');

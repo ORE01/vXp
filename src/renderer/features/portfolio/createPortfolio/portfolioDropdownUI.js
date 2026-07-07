@@ -148,8 +148,25 @@ function updateDropdownOptions({
     dropdownElement.appendChild(option);
   });
 
-  // Selection priority: explicit arg > state > previous DOM > first option
+  // Default-Portfolio (Customer Setup): beim ERSTEN Aufbau der Haupt-Auswahl
+  // (createdPortDropdown0) einmalig vorwaehlen — unabhaengig von der Ladereihenfolge
+  // (PortfoliosData vs. CustomerDefaultPortfolioData). Danach kann der User frei
+  // wechseln; das Flag verhindert Ueberschreiben bei spaeteren Rebuilds/Filtern.
+  // Risk/Report-Dropdowns SPIEGELN dropdown0 (tabs.js / RiskPDFPreview.js), muessen
+  // also nicht separat behandelt werden. Kein Default / nicht in der Liste ->
+  // alles bleibt wie bisher (faellt auf erste Option).
+  let forcedDefault = '';
+  if (dropdownElementId === 'createdPortDropdown0' && !appState.__defaultPortfolioAppliedOnce) {
+    const dp = String(appState.getDefaultPortfolio?.() ?? '').trim();
+    if (dp && [...dropdownElement.options].some(opt => opt.value === dp)) {
+      forcedDefault = dp;
+      appState.__defaultPortfolioAppliedOnce = true;
+    }
+  }
+
+  // Selection priority: default (initial, once) > explicit arg > state > previous DOM > first option
   const wanted =
+    forcedDefault ||
     String(selectedTableName ?? '').trim() ||
     (isPortfolio ? String(appState.getSelectedPortTableName?.() ?? '').trim()
      : '') ||

@@ -437,6 +437,79 @@ function renderCashflowTable(cashflows = []) {
   `;
 }
 
+// Cashflow-Sektion: bei Swap-Replication (result.cashflows_by_leg) ein Toggle
+// Fix/Floating; sonst die normale Einzeltabelle.
+function renderCashflowSection(result) {
+  const byLeg = result?.cashflows_by_leg;
+  const fix = Array.isArray(byLeg?.FIX) ? byLeg.FIX : [];
+  const flt = Array.isArray(byLeg?.FLOAT) ? byLeg.FLOAT : [];
+
+  if (!fix.length && !flt.length) {
+    return renderCashflowTable(result?.cashflows || []);
+  }
+
+  return `
+    <div class="structure-cashflow-legs">
+      <div class="structure-cashflow-header">
+        <h4>Cashflows</h4>
+        <div class="cf-leg-toggle" role="tablist">
+          <button type="button" class="cf-leg-btn is-active" data-leg="FIX">Fix leg</button>
+          <button type="button" class="cf-leg-btn" data-leg="FLOAT">Floating leg</button>
+        </div>
+      </div>
+      <div class="cf-leg-panel" data-leg-panel="FIX">${renderLegTable(fix, 'FIX')}</div>
+      <div class="cf-leg-panel" data-leg-panel="FLOAT" style="display:none;">${renderLegTable(flt, 'FLOAT')}</div>
+    </div>
+  `;
+}
+
+// Eine Leg-Tabelle. FLOAT zeigt zusaetzlich Forward-Projektion, Spread (bp) und
+// die daraus resultierende All-in-Rate.
+function renderLegTable(cashflows, leg) {
+  if (!Array.isArray(cashflows) || cashflows.length === 0) {
+    return `<div class="structure-cashflow-empty" style="opacity:.7; padding:8px 2px;">No cashflows.</div>`;
+  }
+
+  const isFloat = leg === 'FLOAT';
+  const head = isFloat
+    ? ['#', 'Start', 'End', 'Period', 'Forward', 'Spread (bp)', 'All-in', 'Coupon CF', 'DF', 'PV']
+    : ['#', 'Start', 'End', 'Period', 'Rate', 'Coupon CF', 'DF', 'PV'];
+
+  const rows = cashflows.map((cf, i) => {
+    const lead = [
+      escapeHtml(formatValue(cf.cashflow_no ?? i)),
+      escapeHtml(fmtCfDate(cf.start_date)),
+      escapeHtml(fmtCfDate(cf.end_date ?? cf.pay_date)),
+      escapeHtml(formatOptionalNumber(cf.period, 6)),
+    ];
+    const mid = isFloat
+      ? [
+          escapeHtml(cf.forward == null ? '-' : formatPercent(cf.forward, 4)),
+          escapeHtml(cf.spread == null ? '-' : (Number(cf.spread) * 10000).toFixed(1)),
+          escapeHtml(cf.rate == null ? '-' : formatPercent(cf.rate, 4)),
+        ]
+      : [
+          escapeHtml(formatOptionalNumber(cf.rate, 6)),
+        ];
+    const tail = [
+      escapeHtml(formatOptionalNumber(cf.coupon_cf ?? cf.amount, 4)),
+      escapeHtml(formatOptionalNumber(cf.df, 6)),
+      escapeHtml(formatOptionalNumber(cf.pv, 4)),
+    ];
+    const cells = [...lead, ...mid, ...tail];
+    return `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
+  }).join('');
+
+  return `
+    <div class="structure-cashflow-table-wrap">
+      <table class="structure-cashflow-table">
+        <thead><tr>${head.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderCurveInfo(curveInfo = {}) {
   const discountCurve = curveInfo.discount_curve_id || '—';
   const discountScenario = curveInfo.discount_scenario_id || '—';
@@ -548,7 +621,7 @@ function renderResult(container, payload, prodId) {
       </div>
 
        ${renderCurveInfo(curveInfo)}
-       ${renderCashflowTable(cashflows)}
+       ${renderCashflowSection(result)}
 
       <details class="structure-valuation-raw">
         <summary>Technical raw result</summary>
@@ -628,6 +701,23 @@ function bindValuationEvents(container, prodId) {
   if (saveSpreadButton) {
     saveSpreadButton.addEventListener('click', async () => {
       await saveCsSpreadOverride(container, prodId);
+    });
+  }
+
+  // Leg-Toggle (Swap-Replication: Fix / Floating). Delegiert + einmalig, da die
+  // Buttons erst nach der Bewertung ins Result-Panel gerendert werden.
+  if (!container.dataset.cfLegBound) {
+    container.dataset.cfLegBound = '1';
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('.cf-leg-btn');
+      if (!btn) return;
+      const wrap = btn.closest('.structure-cashflow-legs');
+      if (!wrap) return;
+      const leg = btn.dataset.leg;
+      wrap.querySelectorAll('.cf-leg-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+      wrap.querySelectorAll('[data-leg-panel]').forEach((p) => {
+        p.style.display = (p.dataset.legPanel === leg) ? '' : 'none';
+      });
     });
   }
 

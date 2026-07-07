@@ -33,6 +33,10 @@ import {
   handleCustomerCreditRiskThresholdSettingData,
 } from './features/CUSTOMER_SETUP/customerCreditRiskSettingHandler.js';
 import { initCustomerCreditRiskSave } from './features/CUSTOMER_SETUP/customerCreditRiskPanel.js';
+import {
+  handleCustomerDefaultPortfolioData,
+  initCustomerDefaultPortfolioPanel,
+} from './features/CUSTOMER_SETUP/customerDefaultPortfolioPanel.js';
 
 import { openPanel } from './core/ui/panels/index.js';
 import { showMessageBox, showConfirmationBox } from './core/ui/dialogs/confirm.js';
@@ -239,6 +243,7 @@ const {
     handleCSScenarioData,
     handleCustomerTableLayoutsData,
     handleCustomerProductCategorySetupData: renderCustomerCategoryPanel,
+    handleCustomerDefaultPortfolioData,
     handleCustomerMarketRiskIntervalOptions,
     handleCustomerMarketRiskSettingData,
     handleCustomerMarketRiskThresholdSettingData,

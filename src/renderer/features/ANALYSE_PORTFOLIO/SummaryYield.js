@@ -15,8 +15,24 @@ let summaryYieldRefreshTimer = null;
 let _yieldSel = 'y5';            // Default: 5 Years Back
 let _yieldYearsBackBound = false;
 
+let _yieldBasis = 'buy';         // Yield-Basis: 'buy' = Kaufpreis (Default), 'act' = aktuell
+let _yieldBasisBound = false;
+
 // Mögliche Vergleichszeiträume (Monate + Jahre) als Handelstage zurück
 // (~21 Tage/Monat, 252 Tage/Jahr), gefiltert nach verfügbarer Historie.
+// Zahl aus "€"/"%"/"," bereinigt parsen. Modul-Ebene, damit sie ueberall
+// (auch in chosenYtmPct ausserhalb des Chart-if-Blocks) im Scope ist.
+function parseNumberLike(value) {
+  if (typeof value === 'number') return value;
+  return parseFloat(
+    String(value ?? '')
+      .replace(/€/g, '')
+      .replace(/,/g, '')
+      .replace(/%/g, '')
+      .trim()
+  );
+}
+
 function buildYieldHistoryOptions(tsLen) {
   const opts = [
     { value: 'm1', days: 21,  label: '1 Month Back'  },
@@ -59,6 +75,28 @@ function setupYieldYearsBackDropdown(options) {
     _yieldYearsBackBound = true;
     sel.addEventListener('change', () => {
       _yieldSel = sel.value;
+      if (lastSummaryYieldArgs) {
+        handleSummaryYieldData(
+          lastSummaryYieldArgs.filteredData,
+          lastSummaryYieldArgs.index,
+          lastSummaryYieldArgs.port_name
+        );
+      }
+    });
+  }
+}
+
+function setupYieldBasisDropdown() {
+  const sel = document.getElementById('yieldBasisSelect');
+  if (!sel) return;
+
+  // Wert mit dem Modul-State synchronisieren (Default: 'buy' = Kaufpreis).
+  if (sel.value !== _yieldBasis) sel.value = _yieldBasis;
+
+  if (!_yieldBasisBound) {
+    _yieldBasisBound = true;
+    sel.addEventListener('change', () => {
+      _yieldBasis = sel.value === 'act' ? 'act' : 'buy';
       if (lastSummaryYieldArgs) {
         handleSummaryYieldData(
           lastSummaryYieldArgs.filteredData,
@@ -232,6 +270,18 @@ console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
   // Historische Kurve: wählbar über das Dropdown (Monate/Jahre zurück).
   const histOptions = buildYieldHistoryOptions(TSData.length);
   setupYieldYearsBackDropdown(histOptions);
+  setupYieldBasisDropdown();
+
+  // Yield-Basis-abhaengiger Wert je Produkt: 'buy' = Kaufpreis (ytm_BUY, Fallback ytm),
+  // 'act' = aktueller Yield (ytm). Rueckgabe in % (×100 falls dezimal).
+  const chosenYtmPct = (entry) => {
+    const raw = (_yieldBasis === 'act')
+      ? (entry?.ytm ?? entry?.YTM)
+      : (entry?.ytm_BUY ?? entry?.YTM_BUY ?? entry?.ytm ?? entry?.YTM);
+    let v = parseNumberLike(raw);
+    if (Number.isFinite(v) && Math.abs(v) <= 1) v = v * 100;
+    return v;
+  };
   const selOpt =
     histOptions.find(o => o.value === _yieldSel) ||
     histOptions[histOptions.length - 1] ||
@@ -250,7 +300,9 @@ console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
   // =========================
   // PORTFOLIO
   // =========================
-  const portfolioYield = portfolioData.formPortYield;
+  const portfolioYield = (_yieldBasis === 'act')
+    ? (portfolioData.formPortYieldA ?? portfolioData.formPortYield)
+    : portfolioData.formPortYield;
   const portTtM = parseFloat(portfolioData.formPortTtM);
 
   console.log('[YIELD CHART GATE]', {
@@ -280,7 +332,7 @@ console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
     // =========================
     // 1) Portfolio vs Maturity
     // =========================
-drawYieldVsTimeChart({
+const sharedXMax = drawYieldVsTimeChart({
   targetId: 'euswapPortfolioYieldChart',
   heading: 'Portfolio Yield vs Maturity',
   yieldCurve: EUSWData,
@@ -293,6 +345,12 @@ drawYieldVsTimeChart({
     // =========================
     // 2) Products vs Maturity
     // =========================
+const productMaturityPoints = (filteredData || []).map(e => ({
+  x: parseNumberLike(e.TtM),
+  y: chosenYtmPct(e),
+  PROD_ID: e.PROD_ID,
+})).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+
 drawYieldVsTimeChart({
   targetId: 'euswapProductYieldChart',
   heading: 'Product Yields vs Maturity',
@@ -300,7 +358,8 @@ drawYieldVsTimeChart({
   pastYieldCurve,
   pastLabel,
   euswDataOriginal: [],
-  points: filteredData
+  points: productMaturityPoints,
+  xMaxOverride: sharedXMax
 });
 
     // =========================
@@ -338,33 +397,15 @@ const durationEUSWData = [];
       pastYieldCurve: durationCurvePast,
       pastLabel,
       euswDataOriginal: durationEUSWData,
-      points: durationPoints
+      points: durationPoints,
+      xMaxOverride: sharedXMax
     });
 
     // =========================
     // Product Duration Points
     // =========================
-function parseNumberLike(value) {
-  if (typeof value === 'number') return value;
-
-  return parseFloat(
-    String(value ?? '')
-      .replace(/€/g, '')
-      .replace(/,/g, '')
-      .replace(/%/g, '')
-      .trim()
-  );
-}
-
 const productDurationPoints = filteredData.map(entry => {
-  const rawYtm = entry.ytm ?? entry.YTM;
-
-  let ytm = parseNumberLike(rawYtm);
-
-  // Falls ytm als Dezimal kommt, z. B. 0.021 statt 2.1
-  if (Number.isFinite(ytm) && Math.abs(ytm) <= 1) {
-    ytm = ytm * 100;
-  }
+  let ytm = chosenYtmPct(entry);
 
 let duration = parseNumberLike(entry.IR_DURATION);
 
@@ -430,6 +471,7 @@ console.log('[PRODUCT DURATION POINTS CHECK]', {
       yieldCurve: durationCurve,
       pastYieldCurve: durationCurvePast,
       pastLabel,
+      xMaxOverride: sharedXMax,
       euswDataOriginal: durationEUSWData,
       points: productDurationPoints
     });
@@ -444,6 +486,7 @@ export function drawYieldVsTimeChart({
   pastLabel = 'EU Yield Curve 5 Years Back', // Label der historischen Kurve (wählbar)
   euswDataOriginal = [],
   points = [], // entweder Array {x,y} ODER EintrÃ¤ge mit .TtM/.ytm
+  xMaxOverride = null, // gemeinsame x-Achsen-Skalierung (von Chart 1 vorgegeben)
 }) {
   let canvas = document.getElementById(targetId);
 
@@ -678,7 +721,7 @@ export function drawYieldVsTimeChart({
           title: { display: true, text: 'Years', align: 'end', font: { size: 11 } },
           ticks: { font: { size: 11 } },
           min: 0,
-          max: xMax + 1
+          max: (Number.isFinite(xMaxOverride) ? xMaxOverride : xMax + 1)
         },
         y: {
           title: { display: true, text: 'Yield (%)', font: { size: 11 } },
@@ -732,6 +775,10 @@ export function drawYieldVsTimeChart({
       }
     }
   });
+
+  // Effektiver x-Achsen-Max zurueckgeben, damit alle Charts dieselbe Skalierung
+  // (die von Chart 1) uebernehmen koennen.
+  return Number.isFinite(xMaxOverride) ? xMaxOverride : (xMax + 1);
 }
 
 

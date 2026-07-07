@@ -26,6 +26,15 @@ export function installCustomerDataStore({ appState } = {}) {
     return appState.customerTSData;
   }
 
+  // ---- Default portfolio (customer-wide; treibt die Select-Portfolio-Dropdowns) ----
+  function setDefaultPortfolio(name) {
+    const v = String(name ?? '').trim();
+    appState.customerDefaultPortfolio = v || null;
+  }
+  function getDefaultPortfolio() {
+    return appState.customerDefaultPortfolio || null;
+  }
+
   // ---- Market Risk setting (default interval + warning profile) ----
   function setCustomerMarketRiskSetting(setting) {
     appState.customerMarketRiskSetting = setting || null;
@@ -97,6 +106,9 @@ export function installCustomerDataStore({ appState } = {}) {
   appState.setCustomerTSData = setCustomerTSData;
   appState.getCustomerTSData = getCustomerTSData;
 
+  appState.setDefaultPortfolio = setDefaultPortfolio;
+  appState.getDefaultPortfolio = getDefaultPortfolio;
+
   appState.setCustomerMarketRiskSetting = setCustomerMarketRiskSetting;
   appState.getCustomerMarketRiskSetting = getCustomerMarketRiskSetting;
 
@@ -120,6 +132,8 @@ export function installCustomerDataStore({ appState } = {}) {
     getCustomerData,
     setCustomerTSData,
     getCustomerTSData,
+    setDefaultPortfolio,
+    getDefaultPortfolio,
     setCustomerMarketRiskSetting,
     getCustomerMarketRiskSetting,
     setCustomerMarketRiskThresholds,
