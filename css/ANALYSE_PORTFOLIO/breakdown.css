@@ -256,6 +256,18 @@
   border-radius: 10px;
   padding: 12px 14px;
 }
+/* Key Figures als Band ueber die volle Breite (unter Treemap + Top-10-Balken). */
+.conc-panel--band { grid-column: 1 / -1; }
+
+/* Structure-Panel: Ratingstruktur | Laenderallokation | Assetklassen nebeneinander. */
+.struct-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap:14px;
+}
+/* Struktur-Charts: fester Canvas-Buffer (responsive:false) -> width:100% + height:auto
+   skaliert die Anzeige seitenverhaeltnistreu (kein KEIN !important wie .conc-canvas). */
+.struct-canvas { width:100%; height:auto; display:block; }
 .conc-panel__title {
   font-size:11px; text-transform:uppercase; letter-spacing:.06em;
   color: var(--text-muted); margin-bottom:8px;

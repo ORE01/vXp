@@ -28,6 +28,35 @@ const PALETTE_HSL = [
   [300, 45, 50],  // Magenta
 ];
 
+// Gedeckte, professionelle Palette aus dem Report-Screenshot (Navy → Blau → Teal →
+// Gruen → Olive/Gold), auf hellem Grund. ZUSAETZLICH zur Classic-Palette oben —
+// die classic bleibt erhalten. Die systemweit aktive Palette steht in ACTIVE_PALETTE.
+// Reihenfolge = nach Groesse (Gradient): groesste Kachel/Slice bekommt Index 0
+// (navy), dann absteigend blue-dark, blue-steel, ... — genau deine Original-Liste.
+const PALETTE_HSL_MUTED = [
+  // Original (deine kuratierte vxp-Palette) — UNVERAENDERT, Blautoene bleiben.
+  [213, 83, 14],  // navy        #062141
+  [212, 46, 32],  // blue-dark   #2C4F77
+  [206, 40, 41],  // blue-steel  #3E6D91
+  [212, 29, 49],  // blue-muted  #5879A0
+  [211, 35, 54],  // blue-soft   #6088B2
+  [187, 29, 50],  // teal        #5A9AA3
+  [113, 17, 50],  // green       #70956B
+  [108, 19, 54],  // green-soft  #7DA174
+  [ 64, 32, 60],  // olive       #B5B977
+  [194, 14, 57],  // blue-grey   #839AA1
+  // NUR ANGEHAENGT: Gold -> Amber -> Orange -> Terracotta -> Rot (nichts ersetzt).
+  [ 45, 54, 65],  // gold        #D6BF77
+  [ 37, 62, 60],  // amber       #D9A95B
+  [ 29, 59, 55],  // orange      #D18B4A
+  [ 21, 50, 51],  // burnt       #C06E42
+  [ 12, 46, 46],  // terracotta  #AC5540
+  [359, 44, 41],  // rot         #973A3C
+];
+
+// Systemweit aktive Chart-Palette. Fuer die Classic-Palette: ACTIVE_PALETTE = PALETTE_HSL.
+const ACTIVE_PALETTE = PALETTE_HSL_MUTED;
+
 // Legacy-Export (RGB) — nur Kompatibilität, intern nicht mehr genutzt.
 export const BASE_COLORS = [
   [255, 0, 0], [255, 255, 0], [0, 255, 255], [173, 255, 47], [255, 105, 180],
@@ -57,9 +86,10 @@ function hsla(h, s, l, alpha = 1) {
   return `hsla(${h}, ${s}%, ${l}%, ${alpha})`;
 }
 
-// Palette-Eintrag (theme-aware) als {h,s,l}.
+// Palette-Eintrag (theme-aware) als {h,s,l}. Nutzt die aktive Palette (ACTIVE_PALETTE).
 function paletteHsl(index) {
-  const [h, s, l] = PALETTE_HSL[((index % PALETTE_HSL.length) + PALETTE_HSL.length) % PALETTE_HSL.length];
+  const p = ACTIVE_PALETTE;
+  const [h, s, l] = p[((index % p.length) + p.length) % p.length];
   return themed(h, s, l);
 }
 
@@ -92,6 +122,26 @@ export function getColorForPieChart(index, alpha = 1) {
 
 export function getColorObject(index, alpha = 1) {
   return getColorForPieChart(index, alpha);
+}
+
+// ==============================
+// Kontrast-Palette (klassische, gut unterscheidbare Farbtoene) — fuer KATEGORIALE
+// Charts (z.B. Asset Classes), wo Unterscheidbarkeit wichtiger ist als ein
+// Groessen-Gradient. Nutzt IMMER PALETTE_HSL (classic), unabhaengig von ACTIVE_PALETTE.
+// ==============================
+function classicPaletteHsl(index) {
+  const p = PALETTE_HSL;
+  const [h, s, l] = p[((index % p.length) + p.length) % p.length];
+  return themed(h, s, l);
+}
+
+export function getContrastColorForPieChart(index, alpha = 1) {
+  return colorObjFromHsl(classicPaletteHsl(index), alpha);
+}
+
+export function getContrastColor(index, alpha = 1) {
+  const { h, s, l } = classicPaletteHsl(index);
+  return hsla(h, s, l, alpha);
 }
 
 // ==============================

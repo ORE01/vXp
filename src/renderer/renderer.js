@@ -37,6 +37,7 @@ import {
   handleCustomerDefaultPortfolioData,
   initCustomerDefaultPortfolioPanel,
 } from './features/CUSTOMER_SETUP/customerDefaultPortfolioPanel.js';
+import { handleScenarioDefinitionData } from './features/ANALYSE_PORTFOLIO/marketRisk/mvar/mvarScenarioPanel.js';
 
 import { openPanel } from './core/ui/panels/index.js';
 import { showMessageBox, showConfirmationBox } from './core/ui/dialogs/confirm.js';
@@ -244,6 +245,7 @@ const {
     handleCustomerTableLayoutsData,
     handleCustomerProductCategorySetupData: renderCustomerCategoryPanel,
     handleCustomerDefaultPortfolioData,
+    handleScenarioDefinitionData,
     handleCustomerMarketRiskIntervalOptions,
     handleCustomerMarketRiskSettingData,
     handleCustomerMarketRiskThresholdSettingData,

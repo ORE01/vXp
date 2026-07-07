@@ -17,6 +17,9 @@ import {
   toNumber,
 } from './mvarTransforms.js';
 
+import { renderMvarIssuerPLPanel } from './mvarIssuerPLPanel.js';
+import { renderMvarScenarioPanel } from './mvarScenarioPanel.js';
+
 
 let mvarProdIdVarContribChart = null;
 
@@ -539,6 +542,17 @@ function renderMvarProductChart(productRows) {
 
   chartBox.appendChild(wrapper);
 
+  // Zusaetzlich einen VERSTECKTEN Chart.js-Balken auf den (display:none) Canvas
+  // zeichnen, damit der PDF-Export (canvas.toDataURL) ein Bild bekommt. Die Live-
+  // Ansicht zeigt weiter den DOM-Chart oben; responsive:false + feste Groesse malt
+  // das Bitmap auch bei verstecktem Canvas.
+  try {
+    renderProductPdfCanvas(
+      chartRows.map(r => r.prod_id || '-'),
+      values,
+    );
+  } catch (e) { console.warn('[MVaR ProductPL] hidden PDF canvas failed', e); }
+
   // console.log('[MVaR ProductPL] DOM chart rendered', {
   //   rows: chartRows.length,
   //   labels: chartRows.map(row => row.prod_id),
@@ -546,6 +560,32 @@ function renderMvarProductChart(productRows) {
   //   maxAbs,
   //   productRows: safeRows.length,
   // });
+}
+
+// Versteckter Chart.js-Balken auf dem mvarProdIdVarContribChart-Canvas — nur fuer
+// den PDF-Export. responsive:false + feste Canvas-Groesse -> malt auch bei
+// display:none. Instanz in mvarProdIdVarContribChart -> wird beim naechsten Render
+// via destroyMvarProdIdVarContribChart() sauber zerstoert.
+function renderProductPdfCanvas(labels, values) {
+  const canvas = document.getElementById('mvarProdIdVarContribChart');
+  if (!canvas || !window.Chart || !labels.length) return;
+  canvas.width = 760;
+  canvas.height = 380;
+  const bodyCss = getComputedStyle(document.body);
+  const chartColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
+  const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
+  mvarProdIdVarContribChart = new window.Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 16 }] },
+    options: {
+      indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: chartColor, font: { family: chartFont } }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { ticks: { color: chartColor, font: { family: chartFont, size: 10 } }, grid: { display: false } },
+      },
+    },
+  });
 }
 
 // Deferred product-chart render: only draw once the chart CONTAINER has a real width.
@@ -605,6 +645,12 @@ export function renderMvarProductPLPanel() {
     });
     return;
   }
+
+  // Issuer-Beitrags-Panel (aggregiert dieselben Produktbeitraege pro Emittent) im
+  // selben Zug rendern -> immer synchron mit dem Produkt-Panel (Daten/Portfolio/Szenario).
+  try { renderMvarIssuerPLPanel(); } catch (e) { console.warn('[MVaR IssuerPL] render failed', e); }
+  // Scenario-Sensitivities ebenfalls mitziehen (zuverlaessiger Portfolio-Wechsel-Hook).
+  try { renderMvarScenarioPanel(); } catch (e) { console.warn('[MVaR ScenarioPL] render failed', e); }
 
   const { portName, scenarioName } = getCurrentMvarContext(appState);
   const filteredRows = getStoredProductRowsForCurrentContext();

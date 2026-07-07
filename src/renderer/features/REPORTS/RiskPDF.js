@@ -673,6 +673,87 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     }
   }
 
+  // ── Sonderlayout: Concentration/Overview als Dashboard-Blatt ──
+  // Treemap (concCards, Plotly) links + Top-10-Balken (concTop10Chart) rechts,
+  // darunter ein KPI-Band aus concKeyFiguresTable. Statt lineare Einzel-Charts.
+  if (sec.key === 'concentration') {
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
+    y += cfg.sectionTitleSpacing;
+
+    // Untertitel unter dem Sektionstitel.
+    doc.setFontSize(9); doc.setTextColor(110);
+    doc.text('Share of total portfolio by market value.', marginX, y);
+    y += 6;
+
+    const contentW = layout.contentWidth;
+    const gap = 6;
+    const leftW = contentW * 0.55 - gap / 2;
+    const rightW = contentW * 0.45 - gap / 2;
+    const chartsH = 78;
+    const rightX = marginX + leftW + gap;
+
+    const drawImg = (imgData, x, boxW, boxH) => {
+      doc.setFillColor(247);
+      doc.rect(x, y, boxW, boxH, 'F');
+      if (!imgData?.dataUrl) return;
+      const srcW = imgData.width || 900;
+      const srcH = imgData.height || 520;
+      const scale = Math.min(boxW / srcW, (boxH - 2) / srcH, 1);
+      const w = srcW * scale;
+      const h = srcH * scale;
+      const ix = x + (boxW - w) / 2;
+      const iy = y + (boxH - h) / 2;
+      try { doc.addImage(imgData.dataUrl, 'PNG', ix, iy, w, h); } catch (e) { console.warn('[PDF] dashboard image failed', e); }
+    };
+
+    const treemapEl = ctx.getById('concCards');
+    const barEl = ctx.getById('concTop10Chart');
+    const treemapImg = treemapEl
+      ? (treemapEl.tagName === 'CANVAS' ? canvasToPngData(treemapEl) : await plotlyToPngData(treemapEl))
+      : null;
+    const barImg = (barEl && barEl.tagName === 'CANVAS') ? canvasToPngData(barEl) : null;
+
+    ensurePageSpace(chartsH + 52, `${sectionTitle} (cont.)`);
+    // Chart-Ueberschriften: linke ueber der Treemap, rechte (Top 10) ueber dem Balken.
+    doc.setFontSize(10); doc.setTextColor(0);
+    doc.text('All issuers', marginX, y);
+    doc.text('Top 10 issuers', rightX, y);
+    y += 3;
+    drawImg(treemapImg, marginX, leftW, chartsH);
+    drawImg(barImg, rightX, rightW, chartsH);
+    y += chartsH + 10;
+
+    // KPI-Band (Key Figures: Number of entries / Top 10 / Others / Avg / Median).
+    const kfEl = ctx.getById('concKeyFiguresTable');
+    const kpis = [];
+    if (kfEl) {
+      kfEl.querySelectorAll('tbody tr').forEach((tr) => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length >= 2) kpis.push({ label: (tds[0].textContent || '').trim(), value: (tds[1].textContent || '').trim() });
+      });
+    }
+    if (kpis.length) {
+      const n = kpis.length;
+      const tileGap = 4;
+      const tileW = (contentW - tileGap * (n - 1)) / n;
+      const tileH = 20;
+      ensurePageSpace(tileH + 6);
+      kpis.forEach((k, idx) => {
+        const x = marginX + idx * (tileW + tileGap);
+        doc.setFillColor(245);
+        doc.rect(x, y, tileW, tileH, 'F');
+        doc.setFontSize(14); doc.setTextColor(0);
+        doc.text(k.value, x + tileW / 2, y + 9, { align: 'center' });
+        doc.setFontSize(7); doc.setTextColor(110);
+        doc.text(k.label, x + tileW / 2, y + 15, { align: 'center' });
+      });
+      y += tileH + 8;
+    }
+    return;
+  }
+
   const chartsAll = sec.enabledCharts || [];
   const tablesAll = sec.enabledTables || [];
   const isBreakdown = sec.key === 'breakdown';
@@ -821,14 +902,54 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
 
+  // ── Komponiertes Layout: Charts NEBENEINANDER in einer Zeile (Dashboard-Stil)
+  //    fuer Structure + Market-Risk-Seiten; Tabellen laufen danach im Standard-
+  //    Tabellen-Loop full-width darunter. Andere Sektionen bleiben linear. ──
+  const COMPOSED_ROW_KEYS = new Set(['structure', 'market', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios']);
+  const composedRow = COMPOSED_ROW_KEYS.has(sec.key) && (sec.enabledCharts || []).length > 0;
+  if (composedRow) {
+    const rowCharts = sec.enabledCharts || [];
+    const perRow = Math.min(rowCharts.length, 3);
+    const cgap = 6;
+    const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
+    const cellH = rowCharts.length >= 3 ? 70 : 84;
+    let col = 0;
+    let rowY = y;
+    for (const ch of rowCharts) {
+      const el = ctx.getById(ch.id);
+      let imgData = null;
+      if (el) imgData = (el.tagName === 'CANVAS') ? canvasToPngData(el) : await plotlyToPngData(el);
+      if (col === 0) { ensurePageSpace(cellH + 16, `${sectionTitle} (cont.)`); rowY = y; }
+      const x = marginX + col * (cellW + cgap);
+      doc.setFillColor(245);
+      doc.rect(x, rowY, cellW, cellH + 8, 'F');
+      doc.setFontSize(8); doc.setTextColor(90);
+      doc.text(ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
+      if (imgData?.dataUrl) {
+        const srcW = imgData.width || 900;
+        const srcH = imgData.height || 520;
+        const availH = cellH - 2;
+        const scale = Math.min(cellW / srcW, availH / srcH, 1);
+        const w = srcW * scale;
+        const h = srcH * scale;
+        const ix = x + (cellW - w) / 2;
+        const iy = rowY + 7 + (availH - h) / 2;
+        try { doc.addImage(imgData.dataUrl, 'PNG', ix, iy, w, h); } catch (e) { console.warn('[PDF] composed chart failed', ch.id, e); }
+      }
+      col++;
+      if (col >= perRow) { col = 0; y = rowY + cellH + 16; }
+    }
+    if (col > 0) y = rowY + cellH + 16;
+  }
+
   // Graphiken 1-spaltig (~60% Breite links), damit rechts die Notiz danebenpasst
-  // (analog zu den Tabellen).
+  // (analog zu den Tabellen). Bei composedRow uebersprungen (Charts stehen bereits).
   const chartWidth = layout.contentWidth * 0.60;
   const noteGapC = 6;
   const noteXC = marginX + chartWidth + noteGapC;
   const noteWC = Math.max(0, layout.contentWidth - chartWidth - noteGapC);
 
-  for (const ch of chartsAll) {
+  for (const ch of (composedRow ? [] : chartsAll)) {
     const el = ctx.getById(ch.id);
     if (!el) continue;
 

@@ -333,7 +333,7 @@ Feature:    Wenn es nur in einem Panel gilt
   </button>
 </div>
 
-<!-- Dashboard: Konzentrations-Dashboard (Dimension per Dropdown im Panel).
+<!-- Overview: Konzentrations-Dashboard (Dimension per Dropdown im Panel).
      Alle Dimensionen sind im PDF ueber versteckte Report-Panels einzeln waehlbar
      (ensureConcReportPanels in SummaryBreakdown.js). -->
 <div class="chart-section">
@@ -341,7 +341,19 @@ Feature:    Wenn es nur in einem Panel gilt
           data-panel="panel-concentration"
           aria-controls="panel-concentration"
           aria-expanded="false">
-    <span class="section-header">Dashboard</span>
+    <span class="section-header">Overview</span>
+    <span class="chev"></span>
+  </button>
+</div>
+
+<!-- Structure: Portfolio-Structure-Ansicht (Ratingstruktur, Laenderallokation,
+     Assetklassen). Charts in SummaryBreakdown.js (renderPortfolioStructure). -->
+<div class="chart-section">
+  <button class="section-trigger"
+          data-panel="panel-structure"
+          aria-controls="panel-structure"
+          aria-expanded="false">
+    <span class="section-header">Structure</span>
     <span class="chev"></span>
   </button>
 </div>
@@ -448,6 +460,14 @@ Feature:    Wenn es nur in einem Panel gilt
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
               <span class="section-header">Products</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-issuers" aria-controls="panel-mvar-issuers" aria-expanded="false">
+              <span class="section-header">Issuers</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-scenarios" aria-controls="panel-mvar-scenarios" aria-expanded="false">
+              <span class="section-header">Scenarios</span>
               <span class="chev"></span>
             </button>
           </div>
@@ -682,11 +702,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="conc-panel__title">Top 10</div>
               <canvas id="concTop10Chart" class="conc-canvas"></canvas>
             </div>
-            <div class="conc-panel conc-panel--donut">
-              <div class="conc-panel__title">Concentration Overview</div>
-              <canvas id="concDonutChart" class="conc-canvas"></canvas>
-            </div>
-            <div class="conc-panel">
+            <div class="conc-panel conc-panel--band">
               <div class="conc-panel__title">Key Figures</div>
               <div id="concKpiTiles" class="conc-kpi-grid"></div>
             </div>
@@ -710,6 +726,43 @@ Feature:    Wenn es nur in einem Panel gilt
              der Report nativ aufnimmt. Im Live-Panel versteckt. -->
         <div class="data-container" id="concKeyFiguresTable" data-label="Key Figures" style="display:none;"></div>
         <div class="data-container" id="concTopIssuersTable" data-label="Top Issuers" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Panel: Structure (Portfolio Structure: Rating / Country / Asset classes) -->
+    <div id="panel-structure" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-structure-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-structure-title" class="sub-panel-title">Portfolio Structure</div>
+        <button class="sub-panel-close" data-close="panel-structure" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <div class="struct-grid">
+          <div class="conc-panel">
+            <div class="conc-panel__title">Rating Structure</div>
+            <canvas id="structRatingChart" class="struct-canvas" data-label="Rating Structure"></canvas>
+          </div>
+          <div class="conc-panel">
+            <div class="conc-panel__title">Country Allocation</div>
+            <canvas id="structCountryChart" class="struct-canvas" data-label="Country Allocation"></canvas>
+          </div>
+          <div class="conc-panel">
+            <div class="conc-panel__title">Asset Classes</div>
+            <canvas id="structCategoryChart" class="struct-canvas" data-label="Asset Classes"></canvas>
+          </div>
+        </div>
+
+        <!-- Drill-down detail (same engine as Overview), full-width band below the charts. -->
+        <div id="structDetail" class="conc-detail" style="display:none; margin-top:14px;">
+          <div class="conc-detail__head">
+            <span id="structDetailTitle" class="conc-detail__title"></span>
+            <button id="structDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+          </div>
+          <div id="structDetailTable" class="conc-detail__table"></div>
+        </div>
+
+        <!-- Eigenes Hover-Menue fuer Structure (im eigenen Panel -> korrektes Stacking,
+             unabhaengig von Overview). -->
+        <div id="structCardMenu" class="conc-menu" style="display:none;"></div>
       </div>
     </div>
 
@@ -1003,6 +1056,73 @@ Feature:    Wenn es nur in einem Panel gilt
 
       <div class="mvar-prod-table chart-box">
         <div id="mvarProdIdVarContribTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel: MARKET Issuer VaR (Beitrag zum MVaR pro Emittent, aggregiert aus den
+     Produktbeitraegen ueber prod_id -> ISSUER). Rendering: mvarIssuerPLPanel.js. -->
+<div id="panel-mvar-issuers" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-issuers-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-mvar-issuers-title" class="sub-panel-title">MARKET Issuer VaR</div>
+    <button class="sub-panel-close" data-close="panel-mvar-issuers" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="mvar-summary-header" style="margin-bottom: 10px;">
+      <p class="mvar-caption">Issuer contributions (VaR / ES) for selected Portfolio &amp; Scenario</p>
+    </div>
+
+    <div class="data-container" id="mvarIssuerTableContainer"></div>
+
+    <div class="mvar-prod-split" style="margin-top: 14px;">
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="mvarIssuerVarContribChart"></canvas>
+      </div>
+
+      <div class="mvar-prod-table chart-box">
+        <div id="mvarIssuerVarContribTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel: Scenario Sensitivities (Delta-Approximation aus PV01/CPV01/VEGA).
+     Nutzer legt eigene Szenarien an (Faktor + Shift); jeder Eintrag = rauf/runter.
+     Rendering + CRUD: mvarScenarioPanel.js. -->
+<div id="panel-mvar-scenarios" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-scenarios-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-mvar-scenarios-title" class="sub-panel-title">MARKET Scenario Sensitivities</div>
+    <button class="sub-panel-close" data-close="panel-mvar-scenarios" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="mvar-summary-header" style="margin-bottom: 10px;">
+      <p class="mvar-caption">First-order valuation impact per scenario (sensitivity &times; shift) for the selected Portfolio</p>
+    </div>
+
+    <!-- Builder: eigene Szenarien anlegen -->
+    <section class="cp-card" style="margin-bottom:14px;">
+      <h2 class="small-section-header">Add scenario</h2>
+      <div class="data-wrapper" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <label for="scenarioFactorSelect" class="select-label">Factor</label>
+        <select id="scenarioFactorSelect" class="deals-dropdown" style="min-width:180px;"></select>
+        <label for="scenarioShiftInput" class="select-label">Shift</label>
+        <input type="number" id="scenarioShiftInput" class="input-field" value="100" step="10" style="width:110px;" />
+        <span id="scenarioShiftUnit" style="color:var(--text-muted); font-size:12px;">bp</span>
+        <button type="button" id="scenarioAddBtn" class="edit-button">Add (± up/down)</button>
+      </div>
+      <div id="scenarioListContainer" class="data-container" style="margin-top:10px;"></div>
+    </section>
+
+    <!-- Tornado + KPI -->
+    <div class="mvar-prod-split" style="margin-top: 14px;">
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="scenarioTornadoChart"></canvas>
+      </div>
+      <div class="mvar-prod-table chart-box">
+        <div id="scenarioKpiContainer"></div>
       </div>
     </div>
   </div>
@@ -3816,7 +3936,15 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <!-- Buttons unter der Preview -->
-          <div class="button-wrapper buttons-row" style="margin-top:10px;">
+          <div class="button-wrapper buttons-row" style="margin-top:10px; display:flex; align-items:flex-end; gap:14px;">
+            <!-- Seitenformat des PDF -->
+            <div class="btn-block">
+              <div class="btn-label">Orientation</div>
+              <select id="riskPdfOrientation" class="deals-dropdown" style="min-width:130px;">
+                <option value="p" selected>Portrait</option>
+                <option value="l">Landscape</option>
+              </select>
+            </div>
             <!-- Generate Risk PDF -->
             <div class="btn-block">
               <div class="btn-label" id="title-riskPDFButton">Generate Risk PDF</div>

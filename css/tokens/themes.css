@@ -14,6 +14,23 @@
      eine dunkle (weiß-transluzente) Default-Scrollbar -> "weiß auf weiß". */
   color-scheme: dark;
 
+  /* --- vxp Report-Palette (kuratiert aus dem Report-Screenshot). Systemweit als
+     var(--vxp-*) verfuegbar; die Chart-Serienfarben kommen aus colors.js
+     (PALETTE_HSL_MUTED = aktive Palette, gleiche Toene). Classic-Toene bleiben
+     erhalten. --- */
+  --vxp-navy:        #062141;
+  --vxp-blue-dark:   #2C4F77;
+  --vxp-blue-steel:  #3E6D91;
+  --vxp-blue-muted:  #5879A0;
+  --vxp-blue-soft:   #6088B2;
+  --vxp-teal:        #5A9AA3;
+  --vxp-green:       #70956B;
+  --vxp-green-soft:  #7DA174;
+  --vxp-olive:       #B5B977;
+  --vxp-blue-grey:   #839AA1;
+  --vxp-grid-grey:   #E2E2E2;
+  --vxp-background:  #FFFFFF;
+
   /* --- Surfaces: Hintergrund-Ebenen (dunkel → heller) --- */
   --surface-base:      rgb(70, 69, 69);   /* Seitenhintergrund */
   --surface-raised:    #444;              /* Cards, Panel-Inhalt */

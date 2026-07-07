@@ -116,6 +116,35 @@ function ensureCustomerDefaultPortfolioSchema(db) {
   });
 }
 
+// Benutzerdefinierte Sensitivitaets-Szenarien (Faktor + Shift-Betrag). Ein Eintrag
+// erzeugt im UI ein Rauf-/Runter-Paar (±shift). Zeilen-Ops laufen ueber die
+// generischen CRUD-Kanaele (add-new-row / erase-data). Beim ersten Anlegen mit ein
+// paar sinnvollen Defaults geseedet (Zinsen ±100/±200, Spread ±100).
+function ensureScenarioDefinitionSchema(db) {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS ScenarioDefinition (
+        id     INTEGER PRIMARY KEY AUTOINCREMENT,
+        factor TEXT NOT NULL,
+        shift  REAL NOT NULL
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure ScenarioDefinition failed', err);
+    });
+
+    // Nur seeden, wenn die Tabelle leer ist (nicht bei jedem Start).
+    db.get(`SELECT COUNT(*) AS n FROM ScenarioDefinition`, (err, row) => {
+      if (err) { logger.error('DB', 'count ScenarioDefinition failed', err); return; }
+      if (row && Number(row.n) > 0) return;
+      const seed = [['PV01', 100], ['PV01', 200], ['CPV01', 100]];
+      seed.forEach(([factor, shift]) => {
+        db.run(`INSERT INTO ScenarioDefinition (factor, shift) VALUES (?, ?)`, [factor, shift],
+          (e) => { if (e) logger.error('DB', 'seed ScenarioDefinition failed', e); });
+      });
+    });
+  });
+}
+
 function initDb() {
   if (_db) return _db;
 
@@ -143,6 +172,7 @@ function initDb() {
         logger.info('DB', 'connected');
         ensurePdHistoricalScenarioSchema(_db);
         ensureCustomerDefaultPortfolioSchema(_db);
+        ensureScenarioDefinitionSchema(_db);
       }
     }
   );
