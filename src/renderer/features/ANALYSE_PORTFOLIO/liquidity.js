@@ -1,5 +1,6 @@
 ﻿import createBarChart from '../../charts/BarChart.js';
 import { getColorFromPalette } from '../../utils/colors.js';
+import { renderLiquidityDashboard } from './liquidityDashboard.js';
 
 
 let liquChart;
@@ -39,6 +40,9 @@ export function handleLiquidityData(filteredData, { appState } = {}) {
   }
 
   const data = Array.isArray(filteredData) ? filteredData : [];
+
+  // Neues Liquidity-Dashboard (eigenes Panel) im selben Zug rendern.
+  try { renderLiquidityDashboard(data); } catch (e) { console.warn('[Liquidity] dashboard render failed', e); }
 
   const liquDataContainer  = $('#liquDataContainer');
   const issuerContainer    = $('#issuerDataContainerLiqu');

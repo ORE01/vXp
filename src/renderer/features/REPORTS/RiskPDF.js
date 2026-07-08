@@ -24,7 +24,7 @@ export const REPORT_DEFAULTS = {
   includeTOC: true,
   fileName: 'Risk.pdf',
   paper: 'a4',
-  orientation: 'p',
+  orientation: 'l',
 };
 
 // =====================================================================

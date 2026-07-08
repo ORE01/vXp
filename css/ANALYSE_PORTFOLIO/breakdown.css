@@ -379,3 +379,26 @@
 .conc-detail__title .conc-crumb:hover { text-decoration: underline; }
 .conc-detail__title .conc-crumb-sep { color: var(--text-muted); margin: 0 5px; }
 .conc-detail__title .conc-crumb-mode { color: var(--text-muted); font-weight: 400; }
+
+/* Produkt-Stammdaten-Tooltip (Hover ueber eine Kennnummer in den Drill-Tabellen) */
+/* Gleiche Farbgebung wie das Drilldown-Hover-Menue (.conc-menu). */
+.prod-stamm-tip {
+  max-width: 340px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.prod-stamm-tip .pst-hdr {
+  font-weight: 600; font-size: 11px; color: var(--text-bright);
+  padding: 4px 4px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+.prod-stamm-tip .pst-tbl { border-collapse: collapse; }
+.prod-stamm-tip .pst-k { color: var(--text-muted); padding: 1px 10px 1px 4px; white-space: nowrap; vertical-align: top; }
+.prod-stamm-tip .pst-v { color: var(--text-primary); padding: 1px 4px; }

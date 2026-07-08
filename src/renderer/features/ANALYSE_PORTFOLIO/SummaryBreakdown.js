@@ -2,6 +2,7 @@
 import { setupHiDPICanvas } from './SummaryYield.js';
 import { getFormatRules } from '../../utils/tableCellFormats.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
+import { appState } from '../../renderer.js';
 
 const { jsPDF } = window.jspdf;
 
@@ -792,20 +793,31 @@ function __ratingBucket(raw) {
 // Gemeinsame Config fuer die horizontalen Struktur-Balken (% auf der x-Achse).
 // colors = Farbe je Balken (Heatmap nach Wert). steps[index] = Drill-Schritt.
 function __structBarCfg(labels, vals, colors, chartColor, chartFont, steps) {
+  const maxV = Math.max(...vals, 0);
   return {
     type: 'bar',
-    data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderColor: colors, borderWidth: 1, maxBarThickness: 22, borderRadius: 3 }] },
+    // Wert-Labels pro Balken (rechts) wie bei Overview -> datalabels nur fuer diesen Chart.
+    plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+    data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderColor: colors, borderWidth: 0, maxBarThickness: 22, borderRadius: 3 }] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
+      layout: { padding: { right: 6 } },
       onHover: (evt, els) => __structChartHover(evt, els, steps),
       onClick: (evt, els) => __structChartClick(els, steps),
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => `${Number(ctx.parsed.x).toFixed(2)} %` } },
+        tooltip: { enabled: false },
+        datalabels: window.ChartDataLabels ? {
+          anchor: 'end', align: 'end', clamp: true, offset: 2,
+          color: chartColor,
+          font: { family: chartFont, size: 12, weight: '700' },
+          formatter: (v) => `${Number(v).toFixed(1)}%`,
+        } : undefined,
       },
       scales: {
-        x: { ticks: { callback: (v) => `${v}%`, color: chartColor, font: { family: chartFont } }, grid: { display: false } },
-        y: { ticks: { color: chartColor, font: { family: chartFont, size: 11 } }, grid: { display: false } },
+        // Achse aus (wie Overview); Wert steht am Balkenende. Headroom rechts.
+        x: { display: false, beginAtZero: true, max: maxV * 1.22, grid: { display: false } },
+        y: { ticks: { color: chartColor, font: { family: chartFont, size: 12 }, crossAlign: 'far' }, grid: { display: false }, border: { display: false } },
       },
     },
   };
@@ -879,35 +891,78 @@ function renderPortfolioStructure(filteredData) {
     }
   } catch (e) { console.warn('[struct] country failed', e); }
 
-  // --- Asset Classes (CATEGORY = Product Categories, Donut) ---
+  // --- Asset Classes (CATEGORY = Product Categories) als Balken (wie Rating/Country) ---
   try {
     const agg = getValuesByColumn(filteredData, 'CATEGORY', valueType, false);
     const items = agg.labels.map((l, i) => ({ name: l, value: Number(agg.values[i]) || 0 })).filter(it => it.value > 0);
-    const labels = items.map(it => it.name);
+    const labels = items.map(it => it.name);   // schon nach Wert sortiert (getValuesByColumn)
     const vals = pctOf(items.map(it => it.value));
-    // Asset Classes = kategorial -> Kontrast-Palette (gut unterscheidbar), NICHT Heatmap.
-    const colors = labels.map((_, i) => getContrastColorForPieChart(i));
     const steps = labels.map(name => __concStep('CATEGORY', name));
+    const barColors = vals.map((_, i) => __concGradAt(i));   // Rang: dunkler = groesser
     const el = document.getElementById('structCategoryChart');
     if (el) {
       if (__structCharts.category) { try { __structCharts.category.destroy(); } catch {} }
-      el.width = 460; el.height = 300;
-      __structCharts.category = new window.Chart(el.getContext('2d'), {
-        type: 'doughnut',
-        data: { labels, datasets: [{ data: vals, backgroundColor: colors.map(c => c.backgroundColor), borderColor: colors.map(c => c.borderColor), borderWidth: 1 }] },
-        options: {
-          responsive: false, maintainAspectRatio: false, animation: false, cutout: '58%', color: chartColor,
-          onHover: (evt, els) => __structChartHover(evt, els, steps),
-          onClick: (evt, els) => __structChartClick(els, steps),
-          plugins: {
-            legend: { position: 'right', labels: { boxWidth: 12, color: chartColor, font: { family: chartFont, size: 11 } } },
-            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${Number(ctx.parsed).toFixed(1)} %` } },
-          },
-        },
-      });
+      el.width = 460; el.height = Math.max(180, labels.length * 30 + 60);
+      __structCharts.category = new window.Chart(el.getContext('2d'), __structBarCfg(labels, vals, barColors, chartColor, chartFont, steps));
       bindLeave(el);
     }
   } catch (e) { console.warn('[struct] category failed', e); }
+
+  // KPI-Band (groesste Anteile) unter den Charts.
+  try { __renderStructKpis(filteredData, valueType); } catch (e) { console.warn('[struct] kpis failed', e); }
+}
+
+// KPI-Band fuer Structure: Investment Grade, AAA/AA-Anteil, groesstes Land,
+// Staatsanleihen (Sovereign-Kategorie). Investment Grade = AAA+AA+A+BBB (alles ueber
+// dem Non-IG-Bucket "< BBB") -> 100% wenn kein Produkt unter BBB liegt.
+function __renderStructKpis(filteredData, valueType) {
+  const el = document.getElementById('structKpiContainer');
+  if (!el) return;
+  const tiles = [];
+
+  try {
+    const row0 = filteredData[0] || {};
+    const ratingField = ['RATINGres', 'adjusted_rating', 'RATING_PROD', 'RATING', 'rating']
+      .find(f => Object.prototype.hasOwnProperty.call(row0, f)) || 'RATINGres';
+    const agg = getValuesByColumn(filteredData, ratingField, valueType, false);
+    const bucket = {};
+    agg.labels.forEach((lbl, i) => { const b = __ratingBucket(lbl); bucket[b] = (bucket[b] || 0) + (Number(agg.values[i]) || 0); });
+    const tot = Object.values(bucket).reduce((s, v) => s + v, 0) || 1;
+    const ig = ((bucket.AAA || 0) + (bucket.AA || 0) + (bucket.A || 0) + (bucket.BBB || 0)) / tot;
+    const aaAA = ((bucket.AAA || 0) + (bucket.AA || 0)) / tot;
+    tiles.push({ v: `${(ig * 100).toFixed(1)}%`, l: 'Investment Grade' });
+    tiles.push({ v: `${(aaAA * 100).toFixed(1)}%`, l: 'AAA/AA share' });
+  } catch (e) { console.warn('[struct] kpi rating failed', e); }
+
+  try {
+    const agg = getValuesByColumn(filteredData, 'IssuerCountryName', valueType, false);
+    const tot = agg.values.reduce((s, v) => s + (Number(v) || 0), 0) || 1;
+    if (agg.labels.length) {   // getValuesByColumn sortiert desc -> [0] = groesstes Land
+      tiles.push({ v: `${((Number(agg.values[0]) || 0) / tot * 100).toFixed(1)}%`, l: `Largest country (${agg.labels[0]})` });
+    }
+  } catch (e) { console.warn('[struct] kpi country failed', e); }
+
+  try {
+    const agg = getValuesByColumn(filteredData, 'CATEGORY', valueType, false);
+    const tot = agg.values.reduce((s, v) => s + (Number(v) || 0), 0) || 1;
+    const idx = agg.labels.findIndex(l => /sovereign|staat|govern/i.test(String(l)));
+    if (idx >= 0) tiles.push({ v: `${((Number(agg.values[idx]) || 0) / tot * 100).toFixed(1)}%`, l: 'Government bonds' });
+  } catch (e) { console.warn('[struct] kpi category failed', e); }
+
+  el.innerHTML = tiles.map(t =>
+    `<div class="conc-kpi"><div class="conc-kpi__val">${t.v}</div><div class="conc-kpi__lbl">${t.l}</div></div>`
+  ).join('');
+
+  // KPI-Leiste zusaetzlich als versteckte Tabelle spiegeln, damit die Report-Erfassung
+  // sie (wie #concKeyFiguresTable) in Preview + PDF uebernimmt.
+  const tblEl = document.getElementById('structKpiTable');
+  if (tblEl) {
+    tblEl.innerHTML = tiles.length
+      ? `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+          tiles.map(t => `<tr><td>${__concEsc(t.l)}</td><td>${__concEsc(t.v)}</td></tr>`).join('')
+        }</tbody></table>`
+      : '';
+  }
 }
 
 // Aktuelle "Others"-Aggregat-Kachel der Treemap (Label + Namensmenge des Rests),
@@ -1250,7 +1305,7 @@ function __concNorm(raw) {
 }
 
 function __concMenuHide() {
-  ['concCardMenu', 'structCardMenu'].forEach(id => {
+  ['concCardMenu', 'structCardMenu', 'liqDashCardMenu'].forEach(id => {
     const m = document.getElementById(id);
     if (m) { m.style.display = 'none'; m.dataset.open = ''; }
   });
@@ -1384,6 +1439,189 @@ function __structChartClick(els, steps) {
   if (step) structDrillTo({ path: [step], by: null });
 }
 
+// ---- Liquidity-Dashboard: eigener Drill-Kontext (gleiche Engine, eigenes Ziel) ----
+// Wie STRUCT_CTX, aber eigenes Detail-Panel + Menue. Die Daten kommen NICHT aus
+// _lastBreakdownArgs (Breakdown-Modul), sondern werden vom Liquidity-Dashboard per
+// setLiqDrillData() gesetzt. valueType fest auf NOTIONAL, passend zu den Balken.
+let _liqStack = [];
+const LIQ_CTX = {
+  detailId: 'liqDashDetail', titleId: 'liqDashDetailTitle', tableId: 'liqDashDetailTable',
+  data: null, valueType: 'NOTIONAL',
+};
+
+export function setLiqDrillData(rows) {
+  LIQ_CTX.data = Array.isArray(rows) ? rows : [];
+}
+
+function liqDrillTo(view) {
+  _liqStack.length = Math.max(0, (view.path?.length || 1) - 1);
+  _liqStack.push(view);
+  renderConcView(view, LIQ_CTX);
+}
+function liqGotoStackIndex(i) {
+  if (i < 0 || i >= _liqStack.length) return;
+  _liqStack.length = i + 1;
+  renderConcView(_liqStack[i], LIQ_CTX);
+}
+
+// Detail-Tabelle + Menue + Breadcrumb + Close des Liquidity-Panels binden (einmalig).
+export function ensureLiqDrillBound() {
+  const panel = document.getElementById('panel-liquidity-dash');
+  if (!panel || panel.dataset.liqBound) return;
+  panel.dataset.liqBound = '1';
+
+  const dtable = document.getElementById('liqDashDetailTable');
+  if (dtable) {
+    dtable.addEventListener('mouseover', (e) => {
+      const row = e.target?.closest?.('[data-drill-value]');
+      const cur = _liqStack[_liqStack.length - 1];
+      if (row && cur && cur.by) { __concMenuCancelHide(); __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)], liqDrillTo, 'liqDashCardMenu'); }
+      else __concMenuScheduleHide();
+    });
+    dtable.addEventListener('mouseleave', __concMenuScheduleHide);
+    dtable.addEventListener('click', (e) => {
+      const row = e.target?.closest?.('[data-drill-value]');
+      const cur = _liqStack[_liqStack.length - 1];
+      if (row && cur && cur.by) liqDrillTo({ path: [...cur.path, __concStep(cur.by, row.dataset.drillValue)], by: null });
+    });
+  }
+
+  const lmenu = document.getElementById('liqDashCardMenu');
+  if (lmenu && !lmenu.dataset.menuBound) {
+    lmenu.dataset.menuBound = '1';
+    lmenu.addEventListener('mouseenter', __concMenuCancelHide);
+    lmenu.addEventListener('mouseleave', __concMenuScheduleHide);
+    lmenu.addEventListener('click', (e) => {
+      const btn = e.target?.closest?.('.conc-menu__item');
+      if (!btn || !_concMenuCtx) return;
+      const by = btn.dataset.mode === 'group' ? btn.dataset.by : null;
+      (_concMenuDrill || concDrillTo)({ path: _concMenuCtx.slice(), by });
+      __concMenuHide();
+      // Balken im Dashboard entsprechend segmentieren: Positions -> je Position,
+      // sonst nach dem gewaehlten Datenfeld.
+      try {
+        const field = by ? __concFieldOf(by) : '__POSITIONS';
+        document.dispatchEvent(new CustomEvent('liq:chart-group', { detail: { field } }));
+      } catch {}
+    });
+  }
+
+  document.getElementById('liqDashDetailTitle')?.addEventListener('click', (e) => {
+    const crumb = e.target?.closest?.('[data-crumb]');
+    if (crumb) liqGotoStackIndex(Number(crumb.dataset.crumb));
+  });
+  document.getElementById('liqDashDetailClose')?.addEventListener('click', () => {
+    _liqStack = [];
+    const d = document.getElementById('liqDashDetail');
+    if (d) d.style.display = 'none';
+    // Segmentierung aufheben -> Balken zurueck auf Total.
+    try { document.dispatchEvent(new CustomEvent('liq:chart-group', { detail: { field: null } })); } catch {}
+  });
+}
+
+// Hover ueber einen Faelligkeits-Balken -> Floating-Menue (Positions / By <Dim>) am
+// Cursor. steps[index] = Bucket-Schritt (mit match-Praedikat). Klick -> direkt drillen.
+export function liqChartHoverMenu(evt, els, steps) {
+  ensureLiqDrillBound();
+  if (!els || !els.length) return;
+  const step = steps[els[0].index];
+  if (!step) { __concMenuScheduleHide(); return; }
+  __concMenuCancelHide();
+  const me = evt?.native;
+  const x = me && typeof me.clientX === 'number' ? me.clientX : null;
+  const y = me && typeof me.clientY === 'number' ? me.clientY : null;
+  const anchor = (x != null && y != null)
+    ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
+    : (evt?.chart?.canvas || document.body);
+  __concShowMenu(anchor, [step], liqDrillTo, 'liqDashCardMenu');
+}
+export function liqChartClickDrill(els, steps) {
+  ensureLiqDrillBound();
+  if (!els || !els.length) return;
+  const step = steps[els[0].index];
+  if (step) liqDrillTo({ path: [step], by: null });
+}
+
+// Menue verstecken (z.B. beim Verlassen des Canvas), fuer externe Module.
+export function scheduleHideConcMenu() { __concMenuScheduleHide(); }
+
+// ===== Produkt-Stammdaten-Tooltip: Hover ueber eine Kennnummer (.prod-id-link) =====
+// Zeigt die Stammdaten des Produkts (aus appState.getProdById) in einer schwebenden
+// Karte am Cursor. Wird an jede Detail-Tabelle einmal gebunden.
+const PROD_STAMM_FIELDS = [
+  ['Description', ['DESCRIPTION', 'description']],
+  ['Issuer',      ['ISSUER', 'issuer']],
+  ['Coupon type', ['CouponType', 'coupon_type', 'COUPON_TYPE']],
+  ['Schedule',    ['SCHEDULE', 'schedule']],
+  ['Maturity',    ['MATURITY', 'maturity', 'MATURITY_DATE']],
+  ['Rank',        ['RANK', 'rank']],
+  ['Rating',      ['RATING_PROD', 'RATING', 'rating']],
+  ['Model',       ['MODEL', 'model']],
+  ['Method',      ['METHODE', 'METHOD', 'method']],
+];
+
+function __prodTipEl() {
+  let el = document.getElementById('prodStammdatenTip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'prodStammdatenTip';
+    el.className = 'prod-stamm-tip';
+    el.style.cssText = 'position:fixed; z-index:2000; display:none; pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function __prodStammHtml(prodId) {
+  const p = (typeof appState?.getProdById === 'function') ? appState.getProdById(prodId) : null;
+  if (!p) return null;
+  const pick = (keys) => {
+    for (const k of keys) { const v = p[k]; if (v !== undefined && v !== null && String(v).trim() !== '') return String(v); }
+    return null;
+  };
+  const rows = PROD_STAMM_FIELDS.map(([lbl, keys]) => {
+    const v = pick(keys);
+    return v == null ? '' : `<tr><td class="pst-k">${__concEsc(lbl)}</td><td class="pst-v">${__concEsc(v)}</td></tr>`;
+  }).join('');
+  return `<div class="pst-hdr">${__concEsc(prodId)}</div><table class="pst-tbl">${rows}</table>`;
+}
+function __prodTipMove(x, y) {
+  const el = __prodTipEl();
+  if (el.style.display === 'none') return;
+  const w = el.offsetWidth || 280, h = el.offsetHeight || 160;
+  let left = x + 14, top = y + 14;
+  if (left + w > window.innerWidth - 8) left = x - w - 14;
+  if (top + h > window.innerHeight - 8) top = window.innerHeight - h - 8;
+  el.style.left = Math.max(8, left) + 'px';
+  el.style.top = Math.max(8, top) + 'px';
+}
+function __prodTipShow(prodId, x, y) {
+  const html = __prodStammHtml(prodId);
+  const el = __prodTipEl();
+  if (!html) { el.style.display = 'none'; return; }
+  el.innerHTML = html;
+  el.style.display = 'block';
+  __prodTipMove(x, y);
+}
+function __prodTipHide() { const el = document.getElementById('prodStammdatenTip'); if (el) el.style.display = 'none'; }
+
+function ensureProdHoverBound(tableEl) {
+  if (!tableEl || tableEl.dataset.prodHoverBound) return;
+  tableEl.dataset.prodHoverBound = '1';
+  tableEl.addEventListener('mouseover', (e) => {
+    const link = e.target?.closest?.('.prod-id-link');
+    if (!link) return;
+    const id = (link.dataset.prodId || link.textContent || '').trim();
+    if (id) __prodTipShow(id, e.clientX, e.clientY);
+  });
+  tableEl.addEventListener('mousemove', (e) => {
+    if (e.target?.closest?.('.prod-id-link')) __prodTipMove(e.clientX, e.clientY);
+  });
+  tableEl.addEventListener('mouseout', (e) => {
+    const link = e.target?.closest?.('.prod-id-link');
+    if (link && !link.contains(e.relatedTarget)) __prodTipHide();
+  });
+}
+
 // View rendern: nach Pfad filtern, dann gruppieren (by) oder Positionen (Blatt).
 // ctx bestimmt die Ziel-Detail-Elemente (Default = Overview). Pfad-Schritte koennen
 // optional s.match(r) tragen (z.B. Rating-Buckets) statt exaktem Feldvergleich.
@@ -1392,11 +1630,11 @@ function renderConcView(view, ctx) {
   const detail  = document.getElementById(c.detailId);
   const titleEl = document.getElementById(c.titleId);
   const tableEl = document.getElementById(c.tableId);
-  const data = _lastBreakdownArgs?.filteredData;
+  const data = c.data || _lastBreakdownArgs?.filteredData;
   if (!detail || !titleEl || !tableEl || !Array.isArray(data)) return;
 
   const valueSel = document.getElementById('valueSelector');
-  const valueType = valueSel ? valueSel.value : 'NAV';
+  const valueType = c.valueType || (valueSel ? valueSel.value : 'NAV');
   const fmtVal = (v) => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 });
 
   // Zeilen nach gesamtem Pfad filtern (s.match hat Vorrang, z.B. Rating-Buckets).
@@ -1448,6 +1686,8 @@ function renderConcView(view, ctx) {
     // Product-ID-Spalte anklickbar machen -> oeffnet den Product-Drawer
     // (openProdEditorByProdId), gleiche Mechanik wie in den Portfolio-Tabellen.
     try { attachIdLinks(tableEl); } catch (e) { console.warn('[conc] attachIdLinks failed', e); }
+    // Hover ueber die Kennnummer -> Produkt-Stammdaten als schwebende Karte.
+    try { ensureProdHoverBound(tableEl); } catch {}
   }
 
   detail.style.display = '';

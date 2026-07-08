@@ -556,6 +556,14 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
+    <!--   Liquidity Dashboard   Trigger (vorerst hier, spaeter einordnen) -->
+    <div class="chart-section">
+      <button class="section-trigger" data-panel="panel-liquidity-dash" aria-controls="panel-liquidity-dash" aria-expanded="false">
+        <span class="section-header">Liquidity Dashboard</span>
+        <span class="chev"></span>
+      </button>
+    </div>
+
 
 <!-- "Save to Historic Metrics" → verschoben nach RISK ▸ Risk Calculation. -->
 <!-- "Performance History" → verschoben nach RISK ▸ Risk History. -->
@@ -750,6 +758,12 @@ Feature:    Wenn es nur in einem Panel gilt
             <canvas id="structCategoryChart" class="struct-canvas" data-label="Asset Classes"></canvas>
           </div>
         </div>
+
+        <!-- KPI-Band: groesste Anteile (Investment Grade / AAA-AA / groesstes Land /
+             Staatsanleihen). Gefuellt in renderPortfolioStructure. -->
+        <div id="structKpiContainer" class="conc-kpi-grid" style="margin-top:14px;"></div>
+        <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
+        <div class="data-container" id="structKpiTable" data-label="Key Figures" style="display:none;"></div>
 
         <!-- Drill-down detail (same engine as Overview), full-width band below the charts. -->
         <div id="structDetail" class="conc-detail" style="display:none; margin-top:14px;">
@@ -1606,6 +1620,37 @@ Feature:    Wenn es nur in einem Panel gilt
           </section>
         </div>
       </div><!-- /.sub-panel-body -->
+    </div>
+
+    <!-- Panel: Liquidity Dashboard (Faelligkeiten-Balken + KPI-Band). Rendering:
+         liquidityDashboard.js. Cashflows/Kupons + Reserve/Limit folgen spaeter. -->
+    <div id="panel-liquidity-dash" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-dash-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-liquidity-dash-title" class="sub-panel-title">Liquidity Dashboard</div>
+        <button class="sub-panel-close" data-close="panel-liquidity-dash" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <div class="mvar-summary-header" style="margin-bottom: 10px;">
+          <p class="mvar-caption">Maturities by bucket (notional, EUR mn) for the selected Portfolio</p>
+        </div>
+        <div class="conc-panel">
+          <div class="conc-panel__title">Maturities</div>
+          <canvas id="liqDashMaturityChart" class="struct-canvas" data-label="Maturities"></canvas>
+        </div>
+        <div id="liqDashKpi" class="conc-kpi-grid" style="margin-top:14px;"></div>
+        <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
+        <div class="data-container" id="liqDashKpiTable" data-label="Key Figures" style="display:none;"></div>
+
+        <!-- Drill-down (Klick auf Balken -> Positionen/Gruppierung), gleiche Engine wie Overview -->
+        <div id="liqDashDetail" class="conc-detail" style="display:none; margin-top:16px;">
+          <div class="conc-detail__head">
+            <span id="liqDashDetailTitle" class="conc-detail__title"></span>
+            <button id="liqDashDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+          </div>
+          <div id="liqDashDetailTable" class="conc-detail__table"></div>
+        </div>
+      </div>
+      <div id="liqDashCardMenu" class="conc-menu" style="display:none;"></div>
     </div>
 
 <!-- Panel: Historic Performance -->
@@ -3941,8 +3986,8 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="btn-block">
               <div class="btn-label">Orientation</div>
               <select id="riskPdfOrientation" class="deals-dropdown" style="min-width:130px;">
-                <option value="p" selected>Portrait</option>
-                <option value="l">Landscape</option>
+                <option value="p">Portrait</option>
+                <option value="l" selected>Landscape</option>
               </select>
             </div>
             <!-- Generate Risk PDF -->
