@@ -402,3 +402,60 @@
 .prod-stamm-tip .pst-tbl { border-collapse: collapse; }
 .prod-stamm-tip .pst-k { color: var(--text-muted); padding: 1px 10px 1px 4px; white-space: nowrap; vertical-align: top; }
 .prod-stamm-tip .pst-v { color: var(--text-primary); padding: 1px 4px; }
+
+/* Market-Risk-Dashboard: KPI-Karten (Current Risk Overview, Vorlage-Stil) */
+.mr-dash-intro {
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--surface-raised); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 10px 12px; margin-top: 6px;
+}
+.mr-kpi-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.mr-kpi-card {
+  flex: 1 1 200px; min-width: 190px; position: relative;
+  background: var(--surface-card); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 14px 16px;
+}
+.mr-kpi-card__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.mr-kpi-card__value { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-top: 8px; }
+.mr-kpi-card__value .mr-amp-dot { width: 11px; height: 11px; margin-left: 8px; vertical-align: middle; }
+.mr-kpi-card__sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+.mr-kpi-card__rel { font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+.mr-kpi-card__desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.mr-kpi-card__sq { position: absolute; top: 14px; right: 14px; width: 11px; height: 11px; border-radius: 3px; background: var(--text-muted); }
+.mr-amp-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--text-muted); }
+.mr-amp--green  { background: #4CAF50; }
+.mr-amp--yellow { background: #E0B000; }
+.mr-amp--red    { background: #D32F2F; }
+.mr-amp--neutral { background: var(--text-muted); }
+/* Ampel-FARBE fuer Text (Auslastungswert) statt Hintergrund */
+.mr-limit__util.mr-amp--green  { background: none; color: #4CAF50; }
+.mr-limit__util.mr-amp--yellow { background: none; color: #E0B000; }
+.mr-limit__util.mr-amp--red    { background: none; color: #D32F2F; }
+.mr-limit__util.mr-amp--neutral{ background: none; color: var(--text-muted); }
+
+/* Delta (Veraenderung ggue. letztem History-Eintrag) — gold, wie Vorlage */
+.mr-kpi-card__delta { font-size: 12px; font-weight: 600; color: #C8A23A; margin-top: 3px; }
+.mr-kpi-card__delta--sub { font-size: 11px; }
+
+/* Limit-Auslastungsleiste */
+.mr-limit-wrap { margin-top: 20px; }
+.mr-limit__head { display: flex; align-items: baseline; justify-content: space-between; }
+.mr-limit__title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.mr-limit__util { font-size: 15px; font-weight: 700; }
+.mr-limit__bar {
+  position: relative; height: 22px; margin-top: 8px; border-radius: 5px; overflow: hidden;
+  background: var(--surface-raised);
+}
+.mr-limit__zone { position: absolute; top: 0; bottom: 0; }
+.mr-limit__zone--green { background: rgba(76, 175, 80, .22); }
+.mr-limit__zone--amber { background: rgba(224, 176, 0, .22); }
+.mr-limit__fill { position: absolute; top: 0; bottom: 0; left: 0; background: #0B1F3A; border-right: 2px solid #fff; }
+.mr-limit__scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+.mr-limit__cards { display: flex; gap: 12px; margin-top: 14px; }
+.mr-limit-card {
+  flex: 0 1 200px; background: var(--surface-card); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 12px 14px;
+}
+.mr-limit-card__lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.mr-limit-card__val { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 6px; }
+.mr-limit-card__sub { font-size: 10px; color: var(--text-muted); margin-top: 3px; }

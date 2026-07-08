@@ -679,7 +679,7 @@ function ensureConcReportPanels() {
           `<canvas id="concTop10Chart__${key}" width="320" height="200" data-label="Top 10 — ${__concEsc(label)}"></canvas>` +
           `<canvas id="concDonutChart__${key}" width="220" height="200" data-label="Overview — ${__concEsc(label)}"></canvas>` +
         `</div>` +
-        `<div class="data-container" id="concKeyFiguresTable__${key}" data-label="${__concEsc(label)} — Key Figures"></div>` +
+        `<div class="data-container" id="concKeyFiguresTable__${key}" data-label="${__concEsc(label)} — Key Figures" data-kpi-band="1"></div>` +
         `<div class="data-container" id="concTopIssuersTable__${key}" data-label="Top ${__concEsc(label)}"></div>` +
       `</div>`;
     host.appendChild(panel);
@@ -1305,7 +1305,7 @@ function __concNorm(raw) {
 }
 
 function __concMenuHide() {
-  ['concCardMenu', 'structCardMenu', 'liqDashCardMenu'].forEach(id => {
+  ['concCardMenu', 'structCardMenu', 'liqDashCardMenu', 'mrIssuerVarCardMenu', 'mrIssuerEsCardMenu'].forEach(id => {
     const m = document.getElementById(id);
     if (m) { m.style.display = 'none'; m.dataset.open = ''; }
   });
@@ -1314,16 +1314,18 @@ function __concMenuHide() {
 function __concMenuScheduleHide() { clearTimeout(_concMenuHideT); _concMenuHideT = setTimeout(__concMenuHide, 200); }
 function __concMenuCancelHide() { clearTimeout(_concMenuHideT); }
 
-function __concBuildMenuHtml(prospectivePath) {
+function __concBuildMenuHtml(prospectivePath, showLabels) {
   const used = new Set(prospectivePath.map(s => s.colKey));
   const others = BREAKDOWN_CONFIG.flatMap(g => g.columns).filter(c => !used.has(c.key));
-  const head = prospectivePath.map(s => s.value).join(' › ');
+  // showLabels: Kopf zeigt "Dimension: Wert" (z.B. "Issuer: UniCredit Bank"), damit
+  // klar ist, dass nach der Dimension gedrillt wird — nicht nach einem Balken/Metrik.
+  const head = prospectivePath.map(s => (showLabels && s.label) ? `${s.label}: ${s.value}` : s.value).join(' › ');
   const items = [`<button class="conc-menu__item" data-mode="positions">Positions</button>`]
     .concat(others.map(c => `<button class="conc-menu__item" data-mode="group" data-by="${c.key}">By ${__concEsc(c.label)}</button>`));
   return `<div class="conc-menu__hdr" title="${__concEsc(head)}">${__concEsc(head)}</div>${items.join('')}`;
 }
 
-function __concShowMenu(anchorEl, prospectivePath, drillFn, menuId) {
+function __concShowMenu(anchorEl, prospectivePath, drillFn, menuId, showLabels) {
   const menu = document.getElementById(menuId || 'concCardMenu');
   if (!menu || !anchorEl) return;
   _concMenuDrill = drillFn || concDrillTo;   // welcher Kontext beim Klick drillt
@@ -1331,7 +1333,7 @@ function __concShowMenu(anchorEl, prospectivePath, drillFn, menuId) {
   if (menu.dataset.open === sig && menu.style.display !== 'none') return;
   _concMenuCtx = prospectivePath;
   menu.dataset.open = sig;
-  menu.innerHTML = __concBuildMenuHtml(prospectivePath);
+  menu.innerHTML = __concBuildMenuHtml(prospectivePath, showLabels);
   menu.style.display = 'block';
   const r = anchorEl.getBoundingClientRect();
   const mw = menu.offsetWidth || 180;
@@ -1545,6 +1547,106 @@ export function liqChartClickDrill(els, steps) {
 // Menue verstecken (z.B. beim Verlassen des Canvas), fuer externe Module.
 export function scheduleHideConcMenu() { __concMenuScheduleHide(); }
 
+// ---- Market-Risk Issuers: getrennte Drill-Kontexte je Metrik (VaR / ES) ----
+// Beide nutzen dieselbe Engine, aber unterschiedliche Wertspalten: VaR -> Beitrag
+// zum VaR (__VAR_CONTRIB), ES -> Beitrag zum ES (__ES_CONTRIB) je Position. Die
+// Drill-Rows (Produkte mit Beitrag + Portfolio-Feldern) werden per setIssuerDrillData
+// gesetzt; jede Metrik hat eigenes Detail-Panel + Menue.
+const MRISS = {
+  var: { stack: [], bound: false, menuId: 'mrIssuerVarCardMenu', closeId: 'mrIssuerVarDetailClose',
+    ctx: { detailId: 'mrIssuerVarDetail', titleId: 'mrIssuerVarDetailTitle', tableId: 'mrIssuerVarDetailTable', data: null, valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' } },
+  es:  { stack: [], bound: false, menuId: 'mrIssuerEsCardMenu', closeId: 'mrIssuerEsDetailClose',
+    ctx: { detailId: 'mrIssuerEsDetail', titleId: 'mrIssuerEsDetailTitle', tableId: 'mrIssuerEsDetailTable', data: null, valueType: '__ES_CONTRIB', valueLabel: 'ES contrib' } },
+};
+
+// Enrichte Drill-Rows (Produkte + Beitraege + Portfolio-Felder) fuer beide Metriken.
+export function setIssuerDrillData(rows) {
+  const arr = Array.isArray(rows) ? rows : [];
+  MRISS.var.ctx.data = arr;
+  MRISS.es.ctx.data = arr;
+}
+
+function issuerDrillTo(kind, view) {
+  const m = MRISS[kind]; if (!m) return;
+  m.stack.length = Math.max(0, (view.path?.length || 1) - 1);
+  m.stack.push(view);
+  renderConcView(view, m.ctx);
+}
+function issuerGoto(kind, i) {
+  const m = MRISS[kind]; if (!m || i < 0 || i >= m.stack.length) return;
+  m.stack.length = i + 1;
+  renderConcView(m.stack[i], m.ctx);
+}
+
+function ensureIssuerBound(kind) {
+  const m = MRISS[kind];
+  if (!m || m.bound) return;
+  m.bound = true;
+
+  const dtable = document.getElementById(m.ctx.tableId);
+  if (dtable) {
+    dtable.addEventListener('mouseover', (e) => {
+      const row = e.target?.closest?.('[data-drill-value]');
+      const cur = m.stack[m.stack.length - 1];
+      if (row && cur && cur.by) { __concMenuCancelHide(); __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)], (v) => issuerDrillTo(kind, v), m.menuId, true); }
+      else __concMenuScheduleHide();
+    });
+    dtable.addEventListener('mouseleave', __concMenuScheduleHide);
+    dtable.addEventListener('click', (e) => {
+      const row = e.target?.closest?.('[data-drill-value]');
+      const cur = m.stack[m.stack.length - 1];
+      if (row && cur && cur.by) issuerDrillTo(kind, { path: [...cur.path, __concStep(cur.by, row.dataset.drillValue)], by: null });
+    });
+  }
+
+  const menu = document.getElementById(m.menuId);
+  if (menu && !menu.dataset.menuBound) {
+    menu.dataset.menuBound = '1';
+    menu.addEventListener('mouseenter', __concMenuCancelHide);
+    menu.addEventListener('mouseleave', __concMenuScheduleHide);
+    menu.addEventListener('click', (e) => {
+      const btn = e.target?.closest?.('.conc-menu__item');
+      if (!btn || !_concMenuCtx) return;
+      const by = btn.dataset.mode === 'group' ? btn.dataset.by : null;
+      (_concMenuDrill || concDrillTo)({ path: _concMenuCtx.slice(), by });
+      __concMenuHide();
+    });
+  }
+
+  document.getElementById(m.ctx.titleId)?.addEventListener('click', (e) => {
+    const crumb = e.target?.closest?.('[data-crumb]');
+    if (crumb) issuerGoto(kind, Number(crumb.dataset.crumb));
+  });
+  document.getElementById(m.closeId)?.addEventListener('click', () => {
+    m.stack = [];
+    const d = document.getElementById(m.ctx.detailId);
+    if (d) d.style.display = 'none';
+  });
+}
+
+// Hover ueber einen Balken/Punkt -> Floating-Menue am Cursor; Klick -> direkt drillen.
+// kind = 'var' | 'es' (welches Detail-Panel/Wertspalte).
+export function issuerChartHoverMenu(kind, evt, els, steps) {
+  ensureIssuerBound(kind);
+  if (!els || !els.length) return;
+  const step = steps[els[0].index];
+  if (!step) { __concMenuScheduleHide(); return; }
+  __concMenuCancelHide();
+  const me = evt?.native;
+  const x = me && typeof me.clientX === 'number' ? me.clientX : null;
+  const y = me && typeof me.clientY === 'number' ? me.clientY : null;
+  const anchor = (x != null && y != null)
+    ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
+    : (evt?.chart?.canvas || document.body);
+  __concShowMenu(anchor, [step], (v) => issuerDrillTo(kind, v), MRISS[kind].menuId, true);
+}
+export function issuerChartClickDrill(kind, els, steps) {
+  ensureIssuerBound(kind);
+  if (!els || !els.length) return;
+  const step = steps[els[0].index];
+  if (step) issuerDrillTo(kind, { path: [step], by: null });
+}
+
 // ===== Produkt-Stammdaten-Tooltip: Hover ueber eine Kennnummer (.prod-id-link) =====
 // Zeigt die Stammdaten des Produkts (aus appState.getProdById) in einer schwebenden
 // Karte am Cursor. Wird an jede Detail-Tabelle einmal gebunden.
@@ -1635,6 +1737,7 @@ function renderConcView(view, ctx) {
 
   const valueSel = document.getElementById('valueSelector');
   const valueType = c.valueType || (valueSel ? valueSel.value : 'NAV');
+  const valueLabel = c.valueLabel || valueType;   // Spaltenueberschrift (z.B. "VaR contrib")
   const fmtVal = (v) => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 });
 
   // Zeilen nach gesamtem Pfad filtern (s.match hat Vorrang, z.B. Rating-Buckets).
@@ -1655,7 +1758,7 @@ function renderConcView(view, ctx) {
     const tot = sub.reduce((s, x) => s + x.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">${__concEsc(valueType)}</th><th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">${__concEsc(valueLabel)}</th><th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${sub.map(x => `<tr class="conc-drill-row" data-drill-value="${__concEsc(x.name)}">
             <td>${__concEsc(x.name)} <span class="conc-drill-hint">›</span></td>
@@ -1673,7 +1776,7 @@ function renderConcView(view, ctx) {
     const tot = rows.reduce((s, r) => s + r.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>Product ID</th><th>Description</th><th style="text-align:right;">${__concEsc(valueType)}</th><th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>Product ID</th><th>Description</th><th style="text-align:right;">${__concEsc(valueLabel)}</th><th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${rows.map(r => `<tr>
             <td>${__concEsc(r.id)}</td>

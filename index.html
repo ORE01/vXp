@@ -446,6 +446,10 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market-dashboard" aria-controls="panel-market-dashboard" aria-expanded="false">
+              <span class="section-header">Dashboard</span>
+              <span class="chev"></span>
+            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
               <span class="section-header">Overview</span>
               <span class="chev"></span>
@@ -763,7 +767,7 @@ Feature:    Wenn es nur in einem Panel gilt
              Staatsanleihen). Gefuellt in renderPortfolioStructure. -->
         <div id="structKpiContainer" class="conc-kpi-grid" style="margin-top:14px;"></div>
         <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
-        <div class="data-container" id="structKpiTable" data-label="Key Figures" style="display:none;"></div>
+        <div class="data-container" id="structKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
         <!-- Drill-down detail (same engine as Overview), full-width band below the charts. -->
         <div id="structDetail" class="conc-detail" style="display:none; margin-top:14px;">
@@ -854,6 +858,22 @@ Feature:    Wenn es nur in einem Panel gilt
         <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Panel: Market Risk Dashboard (Current Risk Overview) -->
+<div id="panel-market-dashboard" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-dashboard-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-market-dashboard-title" class="sub-panel-title">Dashboard</div>
+    <button class="sub-panel-close" data-close="panel-market-dashboard" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body">
+    <div id="mrDashIntro" class="mr-dash-intro"></div>
+    <div id="mrDashKpi" class="mr-kpi-row"></div>
+    <!-- Limit-Auslastungsleiste (CONSERVATIVE) -->
+    <div id="mrDashLimit" class="mr-limit-wrap"></div>
+    <!-- Nur fuer die Report-Preview (Thumbnail). Das PDF zeichnet das Dashboard nativ. -->
+    <div class="data-container" id="mrDashKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
   </div>
 </div>
 
@@ -1088,18 +1108,48 @@ Feature:    Wenn es nur in einem Panel gilt
       <p class="mvar-caption">Issuer contributions (VaR / ES) for selected Portfolio &amp; Scenario</p>
     </div>
 
-    <div class="data-container" id="mvarIssuerTableContainer"></div>
-
-    <div class="mvar-prod-split" style="margin-top: 14px;">
+    <p class="mvar-caption" style="margin-top: 14px; font-weight: 600;">Value at Risk (VaR)</p>
+    <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
       <div class="mvar-prod-chart chart-box">
         <canvas id="mvarIssuerVarContribChart"></canvas>
       </div>
-
-      <div class="mvar-prod-table chart-box">
-        <div id="mvarIssuerVarContribTable"></div>
+      <!-- Andere Darstellung derselben Daten: Streudiagramm Portfolioanteil vs. Risikobeitrag. -->
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="mvarIssuerScatterChart"></canvas>
       </div>
     </div>
+    <!-- Drill-down VaR: Positionen des Emittenten mit VaR-Beitrag. -->
+    <div id="mrIssuerVarDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="mrIssuerVarDetailTitle" class="conc-detail__title"></span>
+        <button id="mrIssuerVarDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="mrIssuerVarDetailTable" class="conc-detail__table"></div>
+    </div>
+
+    <p class="mvar-caption" style="margin-top: 18px; font-weight: 600;">Expected Shortfall (ES)</p>
+    <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="mvarIssuerEsContribChart"></canvas>
+      </div>
+      <div class="mvar-prod-chart chart-box">
+        <canvas id="mvarIssuerEsScatterChart"></canvas>
+      </div>
+    </div>
+    <!-- Drill-down ES: Positionen des Emittenten mit ES-Beitrag. -->
+    <div id="mrIssuerEsDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="mrIssuerEsDetailTitle" class="conc-detail__title"></span>
+        <button id="mrIssuerEsDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="mrIssuerEsDetailTable" class="conc-detail__table"></div>
+    </div>
+
+    <!-- Volle Emittenten-Tabelle ganz unten (nach den Drilldowns). -->
+    <div class="data-container" id="mvarIssuerTableContainer" style="margin-top: 18px;"></div>
   </div>
+  <div id="mrIssuerVarCardMenu" class="conc-menu" style="display:none;"></div>
+  <div id="mrIssuerEsCardMenu" class="conc-menu" style="display:none;"></div>
 </div>
 
 <!-- Panel: Scenario Sensitivities (Delta-Approximation aus PV01/CPV01/VEGA).
@@ -1639,7 +1689,7 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
         <div id="liqDashKpi" class="conc-kpi-grid" style="margin-top:14px;"></div>
         <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
-        <div class="data-container" id="liqDashKpiTable" data-label="Key Figures" style="display:none;"></div>
+        <div class="data-container" id="liqDashKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
         <!-- Drill-down (Klick auf Balken -> Positionen/Gruppierung), gleiche Engine wie Overview -->
         <div id="liqDashDetail" class="conc-detail" style="display:none; margin-top:16px;">

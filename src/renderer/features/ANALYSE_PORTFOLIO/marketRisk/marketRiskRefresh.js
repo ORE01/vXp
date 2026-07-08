@@ -15,6 +15,7 @@ import { handleCSSensData } from './sensitivities/portfolioCPV01Handler.js';
 import { handleVegaSensData } from './sensitivities/portfolioVegaHandler.js';
 
 import { initMarketRiskSensitivityTabs } from './sensitivities/marketRiskSensitivityTabs.js';
+import { renderMarketRiskDashboard } from './marketRiskDashboard.js';
 
 let sensitivitiesListenerInstalled = false;
 let sensitivityTabsInitialized = false;
@@ -165,6 +166,9 @@ export function createMarketRiskRefresh({ appState } = {}) {
     handleMVaRProductPLData(
       Array.isArray(productRows) ? productRows : []
     );
+
+    // Market-Risk-Dashboard (KPI-Karten) aus derselben Aggregat-Zeile aktualisieren.
+    try { renderMarketRiskDashboard(); } catch (e) { console.warn('[marketRiskRefresh] dashboard render failed', e); }
 
     console.log('[marketRiskRefresh] refreshMarketRiskUI DONE', {
       port,

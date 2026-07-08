@@ -265,7 +265,7 @@ function applyMvarTrafficStateToTable(index, state, metric = 'totalVar') {
   valueCell.appendChild(dot);
 }
 
-function getMVaRThresholdsFromInputUsingState() {
+export function getMVaRThresholdsFromInputUsingState() {
   // Source switched to the Customer / Risk Config model-selection rows
   // (v_MVAR_MODEL_SELECTION_APP) instead of the old MVaRInput red/yellow_threshold.
   const modelSelectionRows =
@@ -342,7 +342,7 @@ function getMVaRThresholdsFromInputUsingState() {
   };
 }
 
-function trafficLightStateForMVaR(data, redThreshold = -3, yellowThreshold = -1, valueKey = 'VaR_T_rel') {
+export function trafficLightStateForMVaR(data, redThreshold = -3, yellowThreshold = -1, valueKey = 'VaR_T_rel') {
   const value = Number(data?.[valueKey]);
 
   if (!Number.isFinite(value)) {
