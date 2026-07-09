@@ -4,10 +4,129 @@ import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../../renderer.js';
 import { renderLossHistogram } from './lossHistogramChart.js';
 import { getColorFromPalette } from '../../../utils/colors.js';
+import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
 // import {handleTrafficLight} from './trafficLight.js';
 
 // Global scope â€” this runs as soon as the file is loaded
-if (!window.charts) window.charts = {}; 
+if (!window.charts) window.charts = {};
+
+// Drill-down fuer die kombinierte Loss-Chart (Balken = Quantil -> ausfallender
+// Emittent aus ISSUER_RANK). Dieselbe Engine wie die Market-Risk-Beitragspanels.
+// Nur eine Metrik-Schiene noetig ('var'); die 'es'-Config zeigt auf dieselben IDs
+// und bleibt ungenutzt.
+const _clossIssuerDrillCfg = {
+  detailId: 'clossIssuerDetail', titleId: 'clossIssuerDetailTitle',
+  tableId: 'clossIssuerDetailTable', closeId: 'clossIssuerDetailClose',
+  menuId: 'clossIssuerCardMenu', valueType: 'NAV', valueLabel: 'NAV',
+  // Zusatzspalte Loss (Verlust bei Ausfall) je Position, aus __LOSS (unten befuellt).
+  extraCol: { key: '__LOSS', label: 'Loss' },
+  // Text-Info-Spalte Rating (aus RATINGres der enriched-View), nur Positions-Sicht.
+  infoCol: { key: 'RATINGres', label: 'Rating' },
+};
+const lossIssuerDrill = createContribDrill({ var: _clossIssuerDrillCfg, es: _clossIssuerDrillCfg });
+
+// ISSUER_RANK = kommagetrennte Liste ALLER in diesem Szenario ausfallenden Emittenten,
+// je "<Emittent>_<Seniority>" (z.B. "DZ HYP AG_senior_secured, Hypo Wohnbaubank AG_
+// senior_unsecured"). Emittentennamen enthalten keine Unterstriche -> Teil vor dem
+// ersten "_". Liefert alle Ausfaelle (dedupliziert), nicht nur den ersten.
+function issuersFromRank(rank) {
+  const s = (rank == null ? '' : String(rank)).trim();
+  if (!s) return [];
+  const out = [];
+  const seen = new Set();
+  for (const part of s.split(',')) {
+    const p = part.trim();
+    if (!p) continue;
+    const i = p.indexOf('_');
+    const name = (i > 0 ? p.slice(0, i) : p).trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out;
+}
+
+// Drill-Schritt fuer ein Ausfall-Szenario (Balken): matcht die Positionen ALLER
+// ausfallenden Emittenten via match-Praedikat (nicht nur Einzelwert-Gleichheit).
+// Bei mehreren Defaults synthetischer colKey '__DEFAULTS' (keine echte Dimension),
+// damit im Hover-Menue "By Issuer" erscheint -> Nutzer kann nach einzelnem Emittenten
+// aufsplitten und genau einen auswaehlen. Bei einem Default direkt ISSUER (kein
+// redundantes "By Issuer").
+function lossDefaultStep(issuers) {
+  if (!issuers || !issuers.length) return null;
+  const set = new Set(issuers.map(n => String(n).trim().toLowerCase()));
+  const multi = issuers.length > 1;
+  return {
+    colKey: multi ? '__DEFAULTS' : 'ISSUER',
+    value: issuers.join(', '),
+    label: multi ? 'Defaults' : 'Issuer',
+    match: (r) => set.has(String(r?.ISSUER ?? '').trim().toLowerCase()),
+  };
+}
+function bindLossCanvasLeaveHide(canvas) {
+  if (!canvas || canvas.dataset.clossLeaveBound) return;
+  canvas.dataset.clossLeaveBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+}
+
+// Kompakte Zahl fuer die Balken-Beschriftung (z.B. 6.3M) — haelt das Label kurz.
+export const _fmtLossCompact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+
+// Eigene HTML-Legende (sticky, bleibt beim Scrollen sichtbar). Klick blendet die
+// Serie aus/ein wie die Chart.js-Legende. legendEl.__chart haelt die aktuelle Chart.
+export function renderChartLegend(chart, legendEl) {
+  if (!legendEl || !chart) return;
+  legendEl.__chart = chart;
+  legendEl.innerHTML = chart.data.datasets.map((ds, i) => {
+    const hidden = !chart.isDatasetVisible(i);
+    const col = ds._legendColor
+      || (Array.isArray(ds.borderColor) ? ds.borderColor.find(c => c) : ds.borderColor)
+      || '#888';
+    const label = String(ds.label ?? '').replace(/[<>&]/g, '');
+    return `<span class="closs-leg-item${hidden ? ' is-hidden' : ''}" data-ds="${i}">`
+      + `<span class="closs-leg-swatch" style="background:${col}"></span>${label}</span>`;
+  }).join('');
+  if (!legendEl.dataset.bound) {
+    legendEl.dataset.bound = '1';
+    legendEl.addEventListener('click', (e) => {
+      const item = e.target?.closest?.('.closs-leg-item');
+      if (!item) return;
+      const ch = legendEl.__chart;
+      const i = Number(item.dataset.ds);
+      if (!ch || !Number.isInteger(i)) return;
+      ch.setDatasetVisibility(i, !ch.isDatasetVisible(i));
+      ch.update();
+      renderChartLegend(ch, legendEl);
+    });
+  }
+}
+
+// Verlust bei Ausfall je Position = NOTIONAL x LGD-Rate(Emittent, Rang). Die LGD-Rate
+// stammt aus der EAD-Tabelle (LGD ist dort ein Betrag je Emittent/Rang; Rate =
+// LGD/NOTIONAL) und ist ueber alle pd_flags identisch -> pd_flag='RATING' reicht.
+// Summe der Positions-Losses eines Emittent/Rangs = dessen Szenario-Loss.
+export function buildPositionLoss(portRows, port) {
+  const rate = new Map(); // "ISSUER||RANK" -> LGD-Rate
+  const ead = appState.getAllEADData?.() || [];
+  for (const e of ead) {
+    if (String(e?.port_name ?? '') !== String(port)) continue;
+    if (String(e?.pd_flag ?? '').toUpperCase() !== 'RATING') continue;
+    const notion = Number(e?.NOTIONAL);
+    const lgd = Number(e?.LGD);
+    if (!Number.isFinite(notion) || notion <= 0 || !Number.isFinite(lgd)) continue;
+    const key = `${String(e?.ISSUER ?? '').trim().toLowerCase()}||${String(e?.RANK ?? '').trim().toLowerCase()}`;
+    rate.set(key, lgd / notion);
+  }
+  return (portRows || []).map((r) => {
+    const key = `${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
+    const rt = rate.get(key);
+    const notion = Number(r?.NOTIONAL);
+    const loss = (Number.isFinite(rt) && Number.isFinite(notion)) ? notion * rt : 0;
+    return { ...r, __LOSS: loss };
+  });
+}
 
 // Global objects to store datasets
 let ratingData = [];
@@ -61,7 +180,7 @@ function closestIndex(values, target) {
 
 // Summe der NAV eines Portfolios aus dem EAD-Store (pro pd_flag dupliziert ->
 // auf ein Flag filtern). Fuer die Umrechnung der Verluste in % vom NAV. Fallback 1.
-function sumNavForPort(port) {
+export function sumNavForPort(port) {
   const rows = (appState.getAllEADData?.() || []).filter(
     (r) => String(r.port_name) === String(port) && String(r.pd_flag).toUpperCase() === 'RATING'
   );
@@ -95,34 +214,35 @@ export function handleLossIssuerMainData(receivedData) {
 
   // Schleife Ã¼ber alle Typen
   Object.entries(typeMap).forEach(([pdFlag, config]) => {
-    const { dataContainerId, chartId, tableName } = config;
+    const { dataContainerId, tableName } = config;
 
-    const LossIssuerDataContainer = document.getElementById(dataContainerId);
     const filteredData = receivedData.filter(
       row => row.port_name === port_name && row.pd_flag === pdFlag
     );
+    if (filteredData.length === 0) return;
 
-    if (LossIssuerDataContainer && filteredData.length > 0) {
-      let sortedData = processAndSortLossIssuerData(filteredData);
-      const LossIssuerDataHTML = processData(sortedData, tableName);
-      LossIssuerDataContainer.innerHTML = LossIssuerDataHTML;
+    const sortedData = processAndSortLossIssuerData(filteredData);
 
-      // VaR-Zeile markieren = Backend CVaR = df.iloc[var_index]. tbody-Datenzeilen
-      // direkt indizieren (0-basiert), damit Header-Offset und Skalierung stimmen.
+    // Chart-Daten IMMER setzen (die 3 Serien der kombinierten Chart, siehe
+    // createCombinedLossesChart -> 'LossIssuerChartCombinedTop'). Unabhaengig davon,
+    // ob die (inzwischen entfernten) Roh-Tabellen im DOM existieren.
+    if (pdFlag === 'RATING') {
+      ratingData = sortedData;
+    } else if (pdFlag === 'MARKET') {
+      marketData = sortedData;
+    } else if (pdFlag === 'NORM') {
+      marketNormData = sortedData;
+    }
+
+    // Optionale Tabellen-Anzeige: nur, falls der Container (noch) existiert.
+    const LossIssuerDataContainer = document.getElementById(dataContainerId);
+    if (LossIssuerDataContainer) {
+      LossIssuerDataContainer.innerHTML = processData(sortedData, tableName);
+      // VaR-Zeile markieren = Backend CVaR = df.iloc[var_index].
       const varIndex = getRunVarIndex();
       const dataRows = LossIssuerDataContainer.querySelectorAll('tbody tr');
       if (dataRows.length > varIndex) {
         dataRows[varIndex].classList.add('highlight');
-      }
-
-      // Speichern (die 3 Einzelcharts sind zu EINER Chart mit 3 Serien zusammengefasst,
-      // siehe createCombinedLossesChart unten -> 'LossIssuerChartCombinedTop').
-      if (pdFlag === 'RATING') {
-        ratingData = sortedData;
-      } else if (pdFlag === 'MARKET') {
-        marketData = sortedData;
-      } else if (pdFlag === 'NORM') {
-        marketNormData = sortedData;
       }
     }
   });
@@ -177,12 +297,6 @@ export function setupLossIssuerUI() {
   // LEFT (Tabellen)
   [
     'EADDataContainer',
-    'LossIssuerDataContainerRating',
-    'LossIssuerDataContainerMarket',
-    'LossIssuerDataContainerMarketNorm',
-    'CVaR_ratingDataContainer',
-    'CVaR_marketDataContainer',
-    'CVaR_normDataContainer',
   ].forEach(show);
 
   // RIGHT (Charts)
@@ -265,13 +379,48 @@ export function setupLossIssuerUI() {
           try { window[chartId].destroy(); } catch (e) {}
         }
 
-        const base = (ratingData.length ? ratingData : marketData).slice(0, 15);
-        const labels = base.map(d => d.QUANTIL);
+        // Alle Zeilen (nicht nur 15) -> Chart scrollt (feste Kartenhoehe via CSS,
+        // Canvas-Hoehe unten je Zeile). baseQuantils = Lookup-Schluessel; labels =
+        // Anzeige mit Zeilennummer VORNE, per " | " von der Wahrscheinlichkeit getrennt.
+        const base = (ratingData.length ? ratingData : marketData);
+        const baseQuantils = base.map(d => d.QUANTIL);
+        const labels = base.map((d, i) => `${i + 1}  |  ${Number(d.QUANTIL).toFixed(2)}`);
 
         const lossByQuantil = (rows) => {
           const m = new Map((rows || []).map(r => [r.QUANTIL, r.LOSS]));
-          return labels.map(q => m.get(q) ?? 0);
+          return baseQuantils.map(q => m.get(q) ?? 0);
         };
+
+        // Drill-Schritte je Serie (Historic/Market/Norm): pro Balken (Quantil) der
+        // ausfallende Emittent aus ISSUER_RANK. Beim Hover/Klick wird die zur Serie
+        // passende Steps-Liste ueber els[0].datasetIndex gewaehlt.
+        const stepsFor = (rows) => {
+          const m = new Map((rows || []).map(r => [r.QUANTIL, r.ISSUER_RANK]));
+          return baseQuantils.map(q => lossDefaultStep(issuersFromRank(m.get(q))));
+        };
+        const stepsByDs = [stepsFor(ratingData), stepsFor(marketData), stepsFor(marketNormData)];
+
+        // Anzahl Defaults je Serie/Balken (DEFAULTS), fuer die Beschriftung im Balken.
+        const defaultsFor = (rows) => {
+          const m = new Map((rows || []).map(r => [r.QUANTIL, r.DEFAULTS]));
+          return baseQuantils.map(q => m.get(q));
+        };
+        const defaultsByDs = [defaultsFor(ratingData), defaultsFor(marketData), defaultsFor(marketNormData)];
+
+        // VaR-Balken (Quantil am naechsten zum Konfidenzniveau) rot einfaerben.
+        const varIdx = closestIndex(baseQuantils, getRunConfQuantil());
+        const VAR_RED = 'rgba(255, 0, 0, 0.9)';
+        const colorsFor = (col) => baseQuantils.map((_, i) => (i === varIdx ? VAR_RED : col));
+        try {
+          // Nur Positionen des aktuell gewaehlten Portfolios: getAllPortfolioData()
+          // enthaelt ALLE Portfolios, die Drill-Engine filtert aber nur nach ISSUER.
+          // Ohne Port-Filter wuerde dasselbe Papier je haltendem Portfolio erscheinen.
+          const selPort = String(appState.getSelectedPortTableName?.() ?? '').trim();
+          const portRows = (appState.getAllPortfolioData?.() || [])
+            .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selPort);
+          lossIssuerDrill.setData(buildPositionLoss(portRows, selPort));
+        } catch (e) { console.warn('[CVaR LossIssuer] drill data failed', e); }
+        bindLossCanvasLeaveHide(canvas);
 
         // Direkt mit new Chart() (statt createBarChart), damit die Legende klickbar
         // ist: createBarChart setzt events:[] -> Serien ließen sich nicht aus-/
@@ -282,27 +431,40 @@ export function setupLossIssuerUI() {
         const existing = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : null;
         if (existing) { try { existing.destroy(); } catch (e) {} }
 
-        // Canvas-Größe aus dem Container (responsive:false braucht feste Maße).
-        const hostRect = cv.parentNode.getBoundingClientRect();
-        const selfRect = cv.getBoundingClientRect();
-        cv.width = Math.floor(selfRect.width || hostRect.width || 800);
-        cv.height = Math.floor(selfRect.height || hostRect.height || 300);
+        // Canvas-Groesse (responsive:false): Breite = Container-Innenbreite; Hoehe =
+        // je Zeile ein fester Betrag -> bei vielen Zeilen wird das Canvas hoeher als
+        // die Karte, die Karte scrollt (overflow-y in CSS). Chart wird NICHT groesser.
+        const PER_ROW = 40;
+        const padX = 24; // .chart-container-inner padding links+rechts
+        const contentW = Math.max(320, Math.floor((cv.parentNode.clientWidth || 800) - padX));
+        cv.width = contentW;
+        cv.height = Math.max(200, base.length * PER_ROW + 50);
 
-        const mkDs = (label, data, color) => ({
+        // colors = Balkenfarben-Array (VaR-Balken rot); legendColor = Basis-Serienfarbe
+        // fuer die HTML-Legende (Balken-Array taugt dort nicht).
+        const mkDs = (label, data, colors, legendColor) => ({
           label, data,
-          backgroundColor: color,
-          borderColor: color,
+          backgroundColor: colors,
+          borderColor: colors,
           maxBarThickness: 64,
+          _legendColor: legendColor,
         });
+
+        // Fuer die relative Beschriftung (Loss in % vom NAV) — gleiche Basis wie die
+        // uebrigen CVaR-Charts.
+        const sumNav = sumNavForPort(appState.getSelectedPortTableName?.());
+        const bodyCss = getComputedStyle(document.body);
+        const labelColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#ddd';
 
         window[chartId] = new Chart(cv.getContext('2d'), {
           type: 'bar',
+          plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
           data: {
             labels,
             datasets: [
-              mkDs('Historic Losses', lossByQuantil(ratingData), getColorFromPalette(0, 0.7)),
-              mkDs('Market Losses', lossByQuantil(marketData), getColorFromPalette(1, 0.7)),
-              mkDs('Market adjusted Losses', lossByQuantil(marketNormData), getColorFromPalette(2, 0.7)),
+              mkDs('Historic Losses', lossByQuantil(ratingData), colorsFor(getColorFromPalette(0, 0.7)), getColorFromPalette(0, 0.7)),
+              mkDs('Market Losses', lossByQuantil(marketData), colorsFor(getColorFromPalette(1, 0.7)), getColorFromPalette(1, 0.7)),
+              mkDs('Market adjusted Losses', lossByQuantil(marketNormData), colorsFor(getColorFromPalette(2, 0.7)), getColorFromPalette(2, 0.7)),
             ],
           },
           options: {
@@ -311,17 +473,66 @@ export function setupLossIssuerUI() {
             indexAxis: 'y',
             animation: false,
             normalized: true,
-            // 'click' aktiviert das Aus-/Einblenden der Serien über die Legende.
-            events: ['click'],
+            // Platz rechts fuer die Wert-Labels neben den Balken.
+            layout: { padding: { right: 96 } },
+            // 'click' -> Legende (Serien aus-/einblenden) + Balken-Drill; 'mousemove'/
+            // 'mouseout' -> Hover-Menue. Steps je Serie ueber datasetIndex waehlen.
+            events: ['mousemove', 'mouseout', 'click'],
+            onHover: (evt, els) => {
+              try {
+                const ds = els && els.length ? (els[0].datasetIndex ?? 0) : 0;
+                lossIssuerDrill.hover('var', evt, els, stepsByDs[ds] || stepsByDs[0]);
+              } catch {}
+            },
+            onClick: (evt, els) => {
+              try {
+                const ds = els && els.length ? (els[0].datasetIndex ?? 0) : 0;
+                lossIssuerDrill.click('var', els, stepsByDs[ds] || stepsByDs[0]);
+              } catch {}
+            },
             plugins: {
-              legend: { display: true },
+              // Canvas-Legende aus: eine sticky HTML-Legende (renderChartLegend) bleibt
+              // beim Scrollen sichtbar (die Canvas-Legende wuerde mit wegscrollen).
+              legend: { display: false },
               annotation: false,
+              // Zwei Beschriftungen je Balken: Wert (abs kompakt + rel % NAV) rechts
+              // aussen, Anzahl Defaults mittig im Balken.
+              datalabels: window.ChartDataLabels ? {
+                labels: {
+                  value: {
+                    anchor: 'end', align: 'right', clamp: true,
+                    color: labelColor,
+                    font: { size: 10 },
+                    formatter: (value) => {
+                      const v = Number(value) || 0;
+                      if (!v) return '';
+                      const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
+                      return `${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
+                    },
+                  },
+                  defaults: {
+                    // Am Balkenanfang (x=0) -> alle Zahlen in einer Flucht, links.
+                    anchor: 'start', align: 'right', offset: 2, clamp: true,
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' },
+                    formatter: (value, ctx) => {
+                      if (!(Number(value) > 0)) return '';
+                      const n = Number(defaultsByDs[ctx.datasetIndex]?.[ctx.dataIndex]);
+                      return Number.isFinite(n) && n > 0 ? String(n) : '';
+                    },
+                  },
+                },
+              } : undefined,
             },
             scales: {
               y: { beginAtZero: true, ticks: { autoSkip: false } },
+              x: { beginAtZero: true, grace: '5%' },
             },
           },
         });
+
+        // Sticky HTML-Legende (bleibt beim Scrollen sichtbar) aus den Serien aufbauen.
+        try { renderChartLegend(window[chartId], document.getElementById('clossChartLegend')); } catch {}
       };
 
       // Immer die aktuelle Render-Funktion (frische Daten) am Container hinterlegen.

@@ -5,6 +5,100 @@ import createBarChart from '../../../charts/BarChart.js';
 
 import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../utils/trafficLight.js';
+import { renderCreditRiskDashboard } from './creditRiskDashboard.js';
+import { appState } from '../../../renderer.js';
+import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
+import { renderChartLegend, sumNavForPort, _fmtLossCompact } from './LossIssuer.js';
+
+// Drill-down fuer den EAD/LGD-Chart (Balken = Emittent -> dessen Positionen).
+// Dieselbe Engine wie die Loss-/Market-Risk-Panels. Nur die 'var'-Schiene noetig;
+// 'es' zeigt auf dieselben IDs und bleibt ungenutzt.
+const _eadDrillCfg = {
+  detailId: 'eadIssuerDetail', titleId: 'eadIssuerDetailTitle',
+  tableId: 'eadIssuerDetailTable', closeId: 'eadIssuerDetailClose',
+  menuId: 'eadIssuerCardMenu', valueType: 'NAV', valueLabel: 'NAV',
+  // Positions-Tabelle wie der EAD-Data-Container: Rank/Rating/Notional/LGD/PD.
+  columns: [
+    { key: 'PROD_ID', label: 'Product ID' },
+    { key: 'RANK', label: 'Rank' },
+    { key: 'RATINGres', label: 'Rating' },
+    { key: 'NOTIONAL', label: 'Notional', align: 'right', fmt: 'num' },
+    { key: '__LGD', label: 'LGD', align: 'right', fmt: 'num' },
+    { key: '__PD', label: 'PD-Historic', align: 'right', fmt: 'pct' },
+    { key: '__PD_M', label: 'PD-MARKET', align: 'right', fmt: 'pct' },
+    { key: '__PD_M_norm', label: 'PD-MARKET ADJUSTED', align: 'right', fmt: 'pct' },
+  ],
+};
+const eadDrill = createContribDrill({ var: _eadDrillCfg, es: _eadDrillCfg });
+function eadIssuerStep(name) {
+  const s = String(name ?? '').trim();
+  return s ? { colKey: 'ISSUER', value: s, label: 'Issuer' } : null;
+}
+
+// Positionen des Emittenten mit EAD-Feldern anreichern (je Emittent+Rang aus der
+// EAD-Tabelle, pd_flag=RATING): LGD-Betrag je Position = NOTIONAL x LGD-Rate; PD/
+// PD_M/PD_M_norm direkt uebernommen. Fuer die Drill-Spalten wie im EAD-Container.
+function enrichEadDrillRows(portRows, port) {
+  const info = new Map(); // "ISSUER||RANK" -> { rate, PD, PD_M, PD_M_norm }
+  for (const e of (appState.getAllEADData?.() || [])) {
+    if (String(e?.port_name ?? '') !== String(port)) continue;
+    if (String(e?.pd_flag ?? '').toUpperCase() !== 'RATING') continue;
+    const notion = Number(e?.NOTIONAL);
+    const lgd = Number(e?.LGD);
+    const key = `${String(e?.ISSUER ?? '').trim().toLowerCase()}||${String(e?.RANK ?? '').trim().toLowerCase()}`;
+    info.set(key, {
+      rate: (Number.isFinite(notion) && notion > 0 && Number.isFinite(lgd)) ? lgd / notion : null,
+      PD: e?.PD, PD_M: e?.PD_M, PD_M_norm: e?.PD_M_norm,
+    });
+  }
+  return (portRows || []).map((r) => {
+    const key = `${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
+    const inf = info.get(key) || {};
+    const notion = Number(r?.NOTIONAL);
+    const lgdAmt = (Number.isFinite(inf.rate) && Number.isFinite(notion)) ? notion * inf.rate : null;
+    return { ...r, __LGD: lgdAmt, __PD: inf.PD, __PD_M: inf.PD_M, __PD_M_norm: inf.PD_M_norm };
+  });
+}
+function bindEadCanvasLeaveHide(canvas) {
+  if (!canvas || canvas.dataset.eadLeaveBound) return;
+  canvas.dataset.eadLeaveBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+}
+
+// "All issuers": rendert die EAD-Daten (filteredEADMainData, je Emittent+Rang) in das
+// Drill-Fenster -> gleiche Tabelle wie der EAD-Container (erste Spalte ISSUER).
+function renderEadAllIssuers() {
+  const detail = document.getElementById('eadIssuerDetail');
+  const titleEl = document.getElementById('eadIssuerDetailTitle');
+  const tableEl = document.getElementById('eadIssuerDetailTable');
+  if (!detail || !tableEl) return;
+  const rows = Array.isArray(filteredEADMainData) ? filteredEADMainData : [];
+  const cols = [
+    { key: 'ISSUER', label: 'Issuer' },
+    { key: 'RANK', label: 'Rank' },
+    { key: 'RATING', label: 'Rating' },
+    { key: 'NOTIONAL', label: 'Notional', align: 'right', fmt: 'num' },
+    { key: 'LGD', label: 'LGD', align: 'right', fmt: 'num' },
+    { key: 'PD', label: 'PD-Historic', align: 'right', fmt: 'pct' },
+    { key: 'PD_M', label: 'PD-MARKET', align: 'right', fmt: 'pct' },
+    { key: 'PD_M_norm', label: 'PD-MARKET ADJUSTED', align: 'right', fmt: 'pct' },
+  ];
+  const esc = (s) => String(s ?? '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const fmtCell = (r, col) => {
+    const v = r[col.key];
+    if (col.fmt === 'num') return Number.isFinite(Number(v)) ? Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 }) : '';
+    if (col.fmt === 'pct') return Number.isFinite(Number(v)) ? `${(Number(v) * 100).toLocaleString('de-DE', { maximumFractionDigits: 4 })} %` : '';
+    return v == null ? '' : String(v);
+  };
+  if (titleEl) titleEl.textContent = 'All issuers';
+  tableEl.innerHTML = `
+    <table class="conc-detail-tbl">
+      <thead><tr>${cols.map(c => `<th${c.align === 'right' ? ' style="text-align:right;"' : ''}>${esc(c.label)}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${cols.map(c => `<td${c.align === 'right' ? ' style="text-align:right;"' : ''}>${esc(fmtCell(r, c))}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+  detail.style.display = '';
+  try { detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}
+}
 
 
 
@@ -86,6 +180,10 @@ export function handleEADData(receivedData, index = 0, port_nameArg) {
 
   // Render chart after update
   renderLGDChart();
+
+  // Standardansicht: beim Laden/Oeffnen der Seite direkt die "All issuers"-Tabelle
+  // (= EAD-Daten) im Drill-Fenster zeigen.
+  try { renderEadAllIssuers(); } catch (e) { console.warn('[EAD] All-issuers default failed', e); }
 }
 
 
@@ -131,27 +229,18 @@ export function renderLGDChart() {
     rowCount * rowSlotHeight + chartPadding
   );
 
-  // Canvas hart resetten, damit kein altes Chart.js-Layout hängen bleibt
+  // Container hat feste Hoehe + overflow-y:auto (CSS). Das Canvas bekommt die volle
+  // dynamicHeight (im raf) -> bei vielen Emittenten hoeher als die Karte, die Karte
+  // scrollt. Frueheres Aufblasen der Container-Hoehe (inline) entfaellt.
   canvas.removeAttribute('height');
   canvas.style.height = '';
   canvas.style.maxHeight = '';
   canvas.style.minHeight = '';
-
+  canvas.style.display = 'block';
   if (canvas.parentElement) {
     canvas.parentElement.style.height = '';
     canvas.parentElement.style.maxHeight = '';
     canvas.parentElement.style.minHeight = '';
-    canvas.parentElement.style.overflow = 'visible';
-  }
-
-  // Neue Höhe setzen
-  canvas.height = dynamicHeight;
-  canvas.style.height = `${dynamicHeight}px`;
-  canvas.style.display = 'block';
-
-  if (canvas.parentElement) {
-    canvas.parentElement.style.height = `${dynamicHeight}px`;
-    canvas.parentElement.style.minHeight = `${dynamicHeight}px`;
   }
 
   const EADValues = filteredEADMainData.map(row => {
@@ -191,19 +280,98 @@ export function renderLGDChart() {
     },
   ];
 
-  // Einen Frame warten, damit Browser die neue Canvas-Höhe wirklich übernimmt.
-  requestAnimationFrame(() => {
-    LGDChart = createBarChart(
-      { labels, datasets },
-      canvasId,
-      'bar',
-      'y'
-    );
+  // Drill-Schritte je Balken (Emittent) + Drill-Datenquelle (Positionen des gewaehlten
+  // Portfolios, angereichert mit __LOSS). Balken = Emittent -> dessen Positionen.
+  const steps = labels.map(iss => eadIssuerStep(iss));
+  try {
+    const selPort = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selPort);
+    eadDrill.setData(enrichEadDrillRows(portRows, selPort));
+  } catch (e) { console.warn('[EAD] drill data failed', e); }
+  bindEadCanvasLeaveHide(canvas);
 
-    try {
-      LGDChart?.resize?.();
-      LGDChart?.update?.();
-    } catch {}
+  // "All issuers"-Button im Drill-Fenster: rendert die EAD-Daten (je Emittent+Rang)
+  // -> genau die EAD-Container-Tabelle, erste Spalte ISSUER. Einmalig binden.
+  const showAllBtn = document.getElementById('eadShowAllBtn');
+  if (showAllBtn && !showAllBtn.dataset.bound) {
+    showAllBtn.dataset.bound = '1';
+    showAllBtn.addEventListener('click', () => { try { renderEadAllIssuers(); } catch {} });
+  }
+
+  // Bei Breitenaenderung des Containers neu zeichnen (z.B. Panel-Open: Chart wurde
+  // evtl. mit Fallback-Breite gerendert, solange das Panel versteckt war). Nur Breite
+  // beruecksichtigen -> die von uns gesetzte Hoehe loest keine Endlosschleife aus.
+  const eadContainer = canvas.parentElement;
+  if (eadContainer && !eadContainer.__eadRO && typeof ResizeObserver !== 'undefined') {
+    eadContainer.__eadRO = true;
+    let lastW = 0;
+    const ro = new ResizeObserver(() => {
+      const w = eadContainer.getBoundingClientRect().width;
+      if (w > 5 && Math.abs(w - lastW) > 8) { lastW = w; try { renderLGDChart(); } catch {} }
+    });
+    ro.observe(eadContainer);
+  }
+
+  // Einen Frame warten, damit Browser die neue Canvas-Höhe wirklich übernimmt.
+  // Direkt mit new Chart() (statt createBarChart), damit Hover/Klick fuer den Drill
+  // funktionieren (createBarChart setzt events:[]).
+  requestAnimationFrame(() => {
+    const cv = document.getElementById(canvasId);
+    if (!cv || !cv.isConnected || !cv.parentNode) return;
+    const existing = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : null;
+    if (existing) { try { existing.destroy(); } catch {} }
+
+    // Breite = Container-Innenbreite; Höhe = dynamicHeight -> bei vielen Emittenten
+    // hoeher als die (fixe) Karte, die Karte scrollt (overflow-y in CSS).
+    const padX = 24; // .chart-container-inner padding links+rechts
+    cv.width = Math.max(320, Math.floor((cv.parentNode.clientWidth || 800) - padX));
+    cv.height = dynamicHeight;
+
+    // Fuer die Balken-Labels (Wert kompakt + rel % vom NAV, wie beim Loss-Chart).
+    const sumNav = sumNavForPort(appState.getSelectedPortTableName?.());
+    const bodyCss = getComputedStyle(document.body);
+    const labelColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#ddd';
+
+    LGDChart = new Chart(cv.getContext('2d'), {
+      type: 'bar',
+      plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+      data: { labels, datasets },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        animation: false,
+        normalized: true,
+        // Platz rechts fuer die Wert-Labels neben den Balken.
+        layout: { padding: { right: 96 } },
+        // 'mousemove'/'mouseout' -> Hover-Menue, 'click' -> Balken-Drill.
+        events: ['mousemove', 'mouseout', 'click'],
+        onHover: (evt, els) => { try { eadDrill.hover('var', evt, els, steps); } catch {} },
+        onClick: (evt, els) => { try { eadDrill.click('var', els, steps); } catch {} },
+        plugins: {
+          // Canvas-Legende aus: sticky HTML-Legende (renderChartLegend) bleibt beim
+          // Scrollen sichtbar, gleiches Styling wie beim Loss-Chart.
+          legend: { display: false },
+          annotation: false,
+          // Wert (kompakt) + rel % vom NAV rechts neben jedem Balken.
+          datalabels: window.ChartDataLabels ? {
+            anchor: 'end', align: 'right', clamp: true,
+            color: labelColor,
+            font: { size: 10 },
+            formatter: (value) => {
+              const v = Number(value) || 0;
+              if (!v) return '';
+              const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
+              return `${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
+            },
+          } : undefined,
+        },
+        scales: { y: { beginAtZero: true, ticks: { autoSkip: false } }, x: { beginAtZero: true, grace: '5%' } },
+      },
+    });
+
+    try { renderChartLegend(LGDChart, document.getElementById('eadChartLegend')); } catch {}
   });
 }
 
@@ -241,6 +409,9 @@ export function handleCVaRData(receivedData, index, port_nameArg) {
   console.log('combinedRelData:', combinedRelData)
 
   renderCombinedCVaRRelTable(combinedRelData, safeIndex);
+
+  // Credit-Risk-Dashboard (KPI-Karten) aus denselben CVaR-Daten aktualisieren.
+  try { renderCreditRiskDashboard(); } catch (e) { console.warn('[CVaR] credit dashboard render failed', e); }
 }
 
 

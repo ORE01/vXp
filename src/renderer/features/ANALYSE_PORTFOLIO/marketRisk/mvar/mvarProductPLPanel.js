@@ -19,6 +19,7 @@ import {
 
 import { renderMvarIssuerPLPanel } from './mvarIssuerPLPanel.js';
 import { renderMvarScenarioPanel } from './mvarScenarioPanel.js';
+import { createContribDrill, scheduleHideConcMenu } from '../../SummaryBreakdown.js';
 
 
 let mvarProdIdVarContribChart = null;
@@ -632,6 +633,165 @@ function renderProductChartWhenReady(productRows, attempt = 0) {
   renderMvarProductChart(productRows);
 }
 
+// ===== Products: Balken+Scatter (VaR/ES) + metrik-getrennter Drill (wie Issuers) =====
+// Getrennte Drill-Kontexte je Metrik; Drill nach PROD_ID (ein Produkt -> seine Position).
+const productDrill = createContribDrill({
+  var: { detailId: 'mrProductVarDetail', titleId: 'mrProductVarDetailTitle', tableId: 'mrProductVarDetailTable', closeId: 'mrProductVarDetailClose', menuId: 'mrProductVarCardMenu', valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' },
+  es:  { detailId: 'mrProductEsDetail',  titleId: 'mrProductEsDetailTitle',  tableId: 'mrProductEsDetailTable',  closeId: 'mrProductEsDetailClose',  menuId: 'mrProductEsCardMenu',  valueType: '__ES_CONTRIB',  valueLabel: 'ES contrib' },
+});
+function productStep(prodId) { return { colKey: 'PROD_ID', value: String(prodId || ''), label: 'Product' }; }
+
+const _prodContribCharts = new Map();
+function destroyProdContribChart(id) { const c = _prodContribCharts.get(id); if (c) { try { c.destroy(); } catch {} _prodContribCharts.delete(id); } }
+function bindProdCanvasLeave(canvas) { if (!canvas || canvas.dataset.prodLeaveBound) return; canvas.dataset.prodLeaveBound = '1'; canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} }); }
+
+// prod_id -> Portfolio-Basiszeile (fuer NAV/ISSUER/CATEGORY/... im Chart + Drill).
+function buildProdBaseMap() {
+  const m = new Map();
+  for (const r of (appState.getAllPortfolioData?.() || [])) {
+    const pid = firstValue(r, ['PROD_ID', 'prod_id', 'product_id', 'PRODUCT_ID'], null);
+    if (pid == null) continue;
+    const k = String(pid);
+    if (!m.has(k)) m.set(k, r);
+  }
+  return m;
+}
+
+// Chart-Entities je Produkt: NAV-/VaR-/ES-Anteil (Share of total, Magnitude).
+function buildProductChartRows(productRows, baseMap) {
+  const rows = (Array.isArray(productRows) ? productRows : []).map(r => {
+    const pid = String(r.prod_id || '');
+    const base = baseMap.get(pid) || {};
+    return {
+      prod_id: pid,
+      label: (r.description || pid || '-'),
+      nav: toNumber(firstValue(base, ['NAV', 'nav'], 0), 0),
+      var_abs: toNumber(r.var_abs, 0),
+      es_abs: toNumber(r.es_abs, 0),
+    };
+  });
+  const totVar = rows.reduce((s, x) => s + Math.abs(x.var_abs), 0);
+  const totEs = rows.reduce((s, x) => s + Math.abs(x.es_abs), 0);
+  const totNav = rows.reduce((s, x) => s + x.nav, 0);
+  rows.forEach(x => {
+    x.var_rel = totVar ? Math.abs(x.var_abs) / totVar : null;
+    x.es_rel = totEs ? Math.abs(x.es_abs) / totEs : null;
+    x.nav_rel = totNav ? x.nav / totNav : null;
+  });
+  return rows;
+}
+
+// Enrichte Drill-Rows: Produkte + Portfolio-Felder + Beitraege (Magnitude).
+function buildProductDrillRows(filteredRows, baseMap) {
+  const out = [];
+  for (const row of (Array.isArray(filteredRows) ? filteredRows : [])) {
+    const pid = String(firstValue(row, ['prod_id', 'PROD_ID', 'product_id', 'PRODUCT_ID'], ''));
+    const b = baseMap.get(pid) || {};
+    out.push({
+      ...b, PROD_ID: pid,
+      __VAR_CONTRIB: Math.abs(toNumber(firstValue(row, ['var_contrib_total', 'VAR_CONTRIB_TOTAL', 'var_contrib_abs', 'var_abs', 'VaR_abs'], 0), 0)),
+      __ES_CONTRIB:  Math.abs(toNumber(firstValue(row, ['es_contrib_total', 'ES_CONTRIB_TOTAL', 'es_contrib_abs', 'es_abs', 'ES_abs'], 0), 0)),
+    });
+  }
+  return out;
+}
+
+const PROD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarProductVarContribChart', scatterId: 'mvarProductVarScatterChart' };
+const PROD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarProductEsContribChart',  scatterId: 'mvarProductEsScatterChart' };
+
+// Gruppierter horizontaler Balken je Produkt (Top 15): NAV-Anteil vs. Risikobeitrag %.
+function renderProductContribChart(rows, cfg) {
+  const canvas = document.getElementById(cfg.barId);
+  destroyProdContribChart(cfg.barId);
+  if (!canvas || !window.Chart) return;
+  const chartRows = (Array.isArray(rows) ? rows : [])
+    .filter(r => Math.abs(toNumber(r[cfg.absKey], 0)) > 0 || Math.abs(toNumber(r.nav, 0)) > 0)
+    .slice().sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)))
+    .slice(0, 15);
+  if (!chartRows.length) { canvas.style.display = 'none'; return; }
+  canvas.style.display = 'block';
+  bindProdCanvasLeave(canvas);
+  const labels = chartRows.map(r => r.label || '-');
+  const steps = chartRows.map(r => productStep(r.prod_id));
+  const navPct = chartRows.map(r => (r.nav_rel != null ? +(r.nav_rel * 100).toFixed(2) : 0));
+  const contribPct = chartRows.map(r => (r[cfg.relKey] != null ? +(r[cfg.relKey] * 100).toFixed(2) : 0));
+  canvas.width = 760; canvas.height = Math.max(300, chartRows.length * 26 + 70);
+  const bodyCss = getComputedStyle(document.body);
+  const chartColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
+  const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
+  const chart = new window.Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(88,121,160,0.85)', borderColor: 'rgba(88,121,160,0.85)', borderWidth: 1, maxBarThickness: 10 },
+      { label: `Risk contribution (${cfg.metric})`, data: contribPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 10 },
+    ] },
+    options: {
+      indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
+      onHover: (evt, els) => { try { productDrill.hover(cfg.kind, evt, els, steps); } catch {} },
+      onClick: (evt, els) => { try { productDrill.click(cfg.kind, els, steps); } catch {} },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% of NAV  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } } },
+        y: { ticks: { color: chartColor, font: { family: chartFont, size: 10 } }, grid: { display: false } },
+      },
+    },
+  });
+  _prodContribCharts.set(cfg.barId, chart);
+}
+
+// Streudiagramm je Produkt: x = NAV-Anteil %, y = Risikobeitrag %, 45°-Diagonale.
+function renderProductScatter(rows, cfg) {
+  const canvas = document.getElementById(cfg.scatterId);
+  destroyProdContribChart(cfg.scatterId);
+  if (!canvas || !window.Chart) return;
+  const pts = (Array.isArray(rows) ? rows : [])
+    .filter(r => r.nav_rel != null && r[cfg.relKey] != null)
+    .map(r => ({ x: +(r.nav_rel * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.label || '-', prod_id: r.prod_id }));
+  if (!pts.length) { canvas.style.display = 'none'; return; }
+  canvas.style.display = 'block';
+  bindProdCanvasLeave(canvas);
+  const scatterSteps = pts.map(p => productStep(p.prod_id));
+  const labelSet = new Set([...pts].sort((a, b) => b.y - a.y).slice(0, 8).map(p => p.issuer));
+  const axMax = Math.ceil(Math.max(2, ...pts.map(p => Math.max(p.x, p.y))) * 1.1);
+  canvas.width = 520; canvas.height = 400;
+  const bodyCss = getComputedStyle(document.body);
+  const chartColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
+  const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
+  const chart = new window.Chart(canvas.getContext('2d'), {
+    type: 'scatter',
+    plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+    data: { datasets: [
+      { type: 'line', label: 'proportional', data: [{ x: 0, y: 0 }, { x: axMax, y: axMax }], borderColor: 'rgba(150,165,185,0.7)', borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false, order: 2 },
+      { label: 'Products', data: pts, backgroundColor: 'rgba(46,88,130,0.75)', borderColor: 'rgba(46,88,130,0.9)', pointRadius: 6, pointHoverRadius: 7, order: 1 },
+    ] },
+    options: {
+      responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
+      onHover: (evt, els) => { try { productDrill.hover(cfg.kind, evt, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
+      onClick: (evt, els) => { try { productDrill.click(cfg.kind, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: NAV ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
+        datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: chartColor, font: { family: chartFont, size: 10 }, formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : '') } : undefined,
+      },
+      scales: {
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+      },
+    },
+  });
+  _prodContribCharts.set(cfg.scatterId, chart);
+}
+
+function renderProductContribCharts(productRows) {
+  const baseMap = buildProdBaseMap();
+  const chartRows = buildProductChartRows(productRows, baseMap);
+  renderProductContribChart(chartRows, PROD_VAR_CFG); renderProductScatter(chartRows, PROD_VAR_CFG);
+  renderProductContribChart(chartRows, PROD_ES_CFG);  renderProductScatter(chartRows, PROD_ES_CFG);
+}
+
 export function renderMvarProductPLPanel() {
   const productTableContainer = document.getElementById('mvarProductTableContainer');
   const topProductTableContainer = document.getElementById('mvarProdIdVarContribTable');
@@ -676,7 +836,8 @@ export function renderMvarProductPLPanel() {
       );
     }
 
-    showChartMessage('No MVaR product chart data.');
+    try { productDrill.setData([]); } catch {}
+    renderProductContribCharts([]);
 
     console.warn('[MVaR ProductPL] no rows for current context', {
       portName,
@@ -694,6 +855,10 @@ export function renderMvarProductPLPanel() {
   }
 
   const productRows = buildProductRows(filteredRows);
+
+  // Drill-Datenquelle (Produkte + Portfolio-Felder + Beitraege) fuer beide Metriken.
+  try { productDrill.setData(buildProductDrillRows(filteredRows, buildProdBaseMap())); }
+  catch (e) { console.warn('[MVaR ProductPL] drill data failed', e); }
 
   if (productTableContainer) {
     renderTable(
@@ -773,7 +938,7 @@ export function renderMvarProductPLPanel() {
   // Initial-open fix: the product canvas can still be 0x0 while the layout settles,
   // so a direct render draws into a zero-size canvas and stays blank. Defer until the
   // canvas has a real size (max 3 retries; no interval / no endless loop).
-  renderProductChartWhenReady(productRows);
+  renderProductContribCharts(productRows);
 
   // console.log('[MVaR ProductPL] rendered', {
   //   portName,

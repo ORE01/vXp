@@ -16,6 +16,9 @@ let _listenerBound = false;
 // eine Schicht je Position; sonst ein Datenfeld (ISSUER/CATEGORY/...) -> Schicht je Wert.
 // Wird durch die Menue-Wahl im Floating-Menue gesetzt ('liq:chart-group'-Event).
 let _chartField = null;
+// Pivot-Tabelle (Category x alle Laufzeiten) NUR sichtbar, wenn der "By Category"-
+// Button gedrueckt wurde. Unabhaengig von der Chart-Segmentierung (_chartField).
+let _showCategoryPivot = false;
 
 // Ein Bucket je tatsaechlich vorhandenem Faelligkeitsjahr (aufsteigend, kein "+"-Sammel-
 // bucket) -> alle Maturities werden einzeln angefuehrt.
@@ -142,19 +145,72 @@ function renderKpis(rows, labels, sums) {
   }
 }
 
+// Pivot-Tabelle: Zeilen = CATEGORY, Spalten = Faelligkeitsjahre (labels) + "Summ"
+// (Zeilensumme); letzte Zeile "Gesamtergebnis" = Spaltensummen + Gesamtsumme. Werte
+// = summiertes NOTIONAL. Wie im Screenshot; nur sichtbar bei Gruppierung "By Category".
+function renderLiqCategoryPivot(rows, labels, show) {
+  const panel = document.getElementById('liqDashCategoryPivot');
+  const tblEl = document.getElementById('liqDashCategoryPivotTable');
+  if (!panel || !tblEl) return;
+  // Nur wenn by-category aktiv: Tabelle als report-erfassbaren .data-container
+  // markieren (sonst wandert keine leere Tabelle in Preview/PDF).
+  if (!show) {
+    panel.style.display = 'none';
+    tblEl.classList.remove('data-container');
+    tblEl.innerHTML = '';
+    return;
+  }
+  panel.style.display = '';
+
+  const cats = [...new Set((rows || []).map(r => normVal(r?.CATEGORY)))].sort((a, b) => String(a).localeCompare(String(b)));
+  const yearIdx = new Map(labels.map((l, i) => [l, i]));
+  const matrix = new Map(cats.map(c => [c, new Array(labels.length).fill(0)]));
+  const colTot = new Array(labels.length).fill(0);
+  let grand = 0;
+  for (const r of (rows || [])) {
+    const c = normVal(r?.CATEGORY);
+    const y = String(parseInt(r?.MATURITY_YEAR, 10));
+    const ci = yearIdx.has(y) ? yearIdx.get(y) : -1;
+    if (ci < 0 || !matrix.has(c)) continue;
+    const v = Number.parseFloat(r?.NOTIONAL) || 0;
+    matrix.get(c)[ci] += v;
+    colTot[ci] += v;
+    grand += v;
+  }
+  const fmt = (v) => (Number(v) || 0).toLocaleString('de-DE', { maximumFractionDigits: 2 });
+  const esc = (s) => String(s ?? '').replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]));
+  const head = `<tr><th>Maturity/Category</th>${labels.map(l => `<th style="text-align:right;">${esc(l)}</th>`).join('')}<th style="text-align:right;">Summ</th></tr>`;
+  const bodyRows = cats.map(c => {
+    const arr = matrix.get(c);
+    const rowSum = arr.reduce((s, v) => s + v, 0);
+    return `<tr><td>${esc(c)}</td>${arr.map(v => `<td style="text-align:right;">${fmt(v)}</td>`).join('')}<td class="liq-pivot-sum" style="text-align:right;">${fmt(rowSum)}</td></tr>`;
+  }).join('');
+  const totalRow = `<tr class="liq-pivot-total"><td>Gesamtergebnis</td>${colTot.map(v => `<td style="text-align:right;">${fmt(v)}</td>`).join('')}<td style="text-align:right;">${fmt(grand)}</td></tr>`;
+  tblEl.innerHTML = `<table class="conc-detail-tbl liq-pivot-tbl"><thead>${head}</thead><tbody>${bodyRows}${totalRow}</tbody></table>`;
+  // Fuer die Report-Erfassung (discoverTablesFromPanel liest .data-container[id]).
+  // maxCols hoch, damit die breite Pivot-Tabelle (viele Jahre) in der Preview nicht
+  // auf 8 Spalten gekappt wird.
+  tblEl.classList.add('data-container');
+  tblEl.dataset.label = 'Maturity — Category (annual cash flows)';
+  tblEl.dataset.maxCols = String(labels.length + 2);
+}
+
 export function renderLiquidityDashboard(filteredData, opts = {}) {
   const rows = Array.isArray(filteredData) ? filteredData : _lastRows;
   _lastRows = rows;
   bindOpenListener();
-  // Bei datengetriebenem Render (Portfolio-Wechsel/Panel-Open) zurueck auf Total-Balken;
-  // nur der Menue-getriebene Re-Render (keepGroup) haelt die Segmentierung.
-  if (!opts.keepGroup) _chartField = null;
+  // Bei datengetriebenem Render (Portfolio-Wechsel/Panel-Open) zurueck auf Total-Balken
+  // und Pivot-Tabelle aus (wie zuvor). Nur der Menue-/Button-getriebene Re-Render
+  // (keepGroup) haelt Segmentierung bzw. Pivot-Anzeige.
+  if (!opts.keepGroup) { _chartField = null; _showCategoryPivot = false; }
 
   // Drill-Engine (in SummaryBreakdown) die aktuellen Portfolio-Rows geben.
   try { setLiqDrillData(rows); } catch {}
 
   const { labels, sums, steps, idxOf } = bucketMaturities(rows);
   renderKpis(rows, labels, sums);
+  // Pivot-Tabelle Category x Jahr NUR wenn per "By Category"-Button angefordert.
+  renderLiqCategoryPivot(rows, labels, _showCategoryPivot);
 
   const canvas = document.getElementById('liqDashMaturityChart');
   if (!canvas || !window.Chart) return;
@@ -217,14 +273,31 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
 function bindOpenListener() {
   if (_listenerBound) return;
   _listenerBound = true;
+
+  // "By Category"-Button (oben rechts in der Maturities-Karte): stellt die Kategorie-
+  // Segmentierung + Pivot-Tabelle jederzeit wieder her.
+  const catBtn = document.getElementById('liqCategoryBtn');
+  if (catBtn) {
+    catBtn.addEventListener('click', () => {
+      _chartField = 'CATEGORY';
+      _showCategoryPivot = true;   // Pivot NUR ueber diesen Button anzeigen
+      renderLiquidityDashboard(_lastRows, { keepGroup: true });
+    });
+  }
+
   document.addEventListener('panel:opened', (e) => {
     if (e?.detail?.panelId === 'panel-liquidity-dash') {
-      requestAnimationFrame(() => renderLiquidityDashboard(_lastRows));
+      // Beim Oeffnen die "By Category"-Ansicht (Chart nach Kategorie + Pivot-Tabelle)
+      // voreinstellen, wie sie der Button liefert. keepGroup haelt den Zustand.
+      _chartField = 'CATEGORY';
+      _showCategoryPivot = true;
+      requestAnimationFrame(() => renderLiquidityDashboard(_lastRows, { keepGroup: true }));
     }
   });
   // Menue-Wahl im Floating-Menue (SummaryBreakdown) -> Balken entsprechend segmentieren.
   document.addEventListener('liq:chart-group', (e) => {
     _chartField = e?.detail?.field || null;
+    _showCategoryPivot = false;   // Menue-Wahl -> im Chart zeigen, Pivot-Tabelle aus
     renderLiquidityDashboard(_lastRows, { keepGroup: true });
   });
 }

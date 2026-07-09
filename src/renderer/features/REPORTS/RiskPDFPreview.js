@@ -785,7 +785,14 @@ function buildPreviewSections(chartState) {
       tableItems = buildDynamicTableItems(sec.key, sec.tables, chartState);
       tableThumbs = (sec.enabledTables || [])
         .filter(t => !IGNORED_TABLE_IDS.includes(t.id))
-        .map(t => { const th = miniTbl(t.id); return th ? thumbWithNoteHtml(t.id, th) : ''; })
+        .map(t => {
+          // Per-Tabelle-Override: data-max-cols am Element (z.B. breite Pivot-Tabellen).
+          const el = document.getElementById(t.id);
+          const mc = Number(el?.dataset?.maxCols);
+          const ov = (Number.isFinite(mc) && mc > 0) ? { maxCols: mc } : {};
+          const th = miniTbl(t.id, ov);
+          return th ? thumbWithNoteHtml(t.id, th) : '';
+        })
         .filter(Boolean);
     }
 

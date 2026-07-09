@@ -17,6 +17,8 @@ import { getActiveRiskSectionsForPdf, RISK_CONFIG, getTableNote } from './RiskPD
 // go through the capture adapter — see captureAdapter.js for the rationale.
 import { getInAppById } from './captureAdapter.js';
 import { getMarketDashboardModel } from '../ANALYSE_PORTFOLIO/marketRisk/marketRiskDashboard.js';
+import { getFactorKpiModel } from '../ANALYSE_PORTFOLIO/marketRisk/mvar/mvarFactorPLPanel.js';
+import { getCreditDashboardModel } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
 
 // =====================================================================
 // REPORT DEFAULTS
@@ -753,16 +755,17 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   // KPI-Karten (rel. Wert + Ampel + Deltas, abs. Wert + Delta) + Limit-Auslastungs-
   // leiste (Zonen/Fuellung, Skala) + Risk-limit/Buffer-Karten. Daten aus dem Store
   // via getMarketDashboardModel().
-  if (sec.key === 'market-dashboard') {
+  if (sec.key === 'market-dashboard' || sec.key === 'credit-dashboard') {
+    const isCredit = sec.key === 'credit-dashboard';
     doc.setFontSize(14); doc.setTextColor(0);
     doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
     y += cfg.sectionTitleSpacing;
     doc.setFontSize(9); doc.setTextColor(110);
-    doc.text('Current market risk position for the selected portfolio.', marginX, y);
+    doc.text(isCredit ? 'Current credit risk position for the selected portfolio.' : 'Current market risk position for the selected portfolio.', marginX, y);
     y += 6;
 
     let model = null;
-    try { model = getMarketDashboardModel(); } catch (e) { console.warn('[PDF] market dashboard model failed', e); }
+    try { model = isCredit ? getCreditDashboardModel() : getMarketDashboardModel(); } catch (e) { console.warn('[PDF] dashboard model failed', e); }
     const dcards = model?.cards || [];
     const contentW = layout.contentWidth;
 
@@ -786,55 +789,62 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       const relW = doc.getTextWidth(relTxt);
       const a = ampRgb(c.state); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + relW + 3, y + 13.5, 1.4, 'F');
       if (Number.isFinite(c.dRel)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...GOLD); doc.text(String(c.relDeltaStr), tx, y + 21); }
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...SUB); doc.text(String(c.abs), tx, y + 27);
+      if (c.abs) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...SUB); doc.text(String(c.abs), tx, y + 27); }
       if (Number.isFinite(c.dAbs)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GOLD); doc.text(String(c.absDeltaStr), tx, y + 32); }
     });
     y += cardH + 10;
 
-    // Limitleiste
-    const lim = model?.limit;
-    ensurePageSpace(44);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...TEXT);
-    doc.text('Limit utilization', marginX, y);
-    if (!lim) {
-      y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
-      doc.text('No market risk data for the selected portfolio yet.', marginX, y);
-      y += cfg.blockGap; return;
-    }
-    const a = ampRgb(lim.state);
-    doc.setTextColor(a[0], a[1], a[2]); doc.setFontSize(11);
-    doc.text(String(lim.utilStr), marginX + contentW, y, { align: 'right' });
+    // Limitleiste(n): Market = eine (MVaR); Credit = eine je Kennzahl (untereinander).
+    const drawLimitBar = (lim, titleLabel, limitSub, noDataMsg) => {
+      ensurePageSpace(46);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...TEXT);
+      doc.text(titleLabel ? `Limit utilization — ${titleLabel}` : 'Limit utilization', marginX, y);
+      if (!lim) {
+        y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+        doc.text(noDataMsg || 'No limit data.', marginX, y);
+        y += cfg.blockGap; return;
+      }
+      const a = ampRgb(lim.state);
+      doc.setTextColor(a[0], a[1], a[2]); doc.setFontSize(11);
+      doc.text(String(lim.utilStr), marginX + contentW, y, { align: 'right' });
 
-    const by = y + 3, bh = 6;
-    doc.setFillColor(...TRACK); doc.rect(marginX, by, contentW, bh, 'F');
-    const yellowW = contentW * (lim.yellowRatio / 100);
-    doc.setFillColor(205, 227, 205); doc.rect(marginX, by, yellowW, bh, 'F');
-    doc.setFillColor(245, 233, 197); doc.rect(marginX + yellowW, by, contentW - yellowW, bh, 'F');
-    doc.setFillColor(...NAVY); doc.rect(marginX, by, contentW * Math.min(1, lim.util), bh, 'F');
+      const by = y + 3, bh = 6;
+      doc.setFillColor(...TRACK); doc.rect(marginX, by, contentW, bh, 'F');
+      const yellowW = contentW * (lim.yellowRatio / 100);
+      doc.setFillColor(205, 227, 205); doc.rect(marginX, by, yellowW, bh, 'F');
+      doc.setFillColor(245, 233, 197); doc.rect(marginX + yellowW, by, contentW - yellowW, bh, 'F');
+      doc.setFillColor(...NAVY); doc.rect(marginX, by, contentW * Math.min(1, lim.util), bh, 'F');
 
-    const sy = by + bh + 4;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
-    doc.text('0%', marginX, sy);
-    doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, marginX + contentW / 2, sy, { align: 'center' });
-    doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, marginX + contentW, sy, { align: 'right' });
-
-    const ly = sy + 5, lcW = 72, lcH = 20, lcGap = 6;
-    const lcards = [
-      { lbl: 'RISK LIMIT', val: String(lim.limitRelStr), sub: 'CONSERVATIVE' },
-      { lbl: 'BUFFER', val: String(lim.bufferRelStr), sub: 'remaining to limit' },
-    ];
-    lcards.forEach((lc, i) => {
-      const x = marginX + i * (lcW + lcGap);
-      doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-      doc.roundedRect(x, ly, lcW, lcH, 2, 2, 'FD');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
-      doc.text(lc.lbl, x + 5, ly + 6);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...TEXT);
-      doc.text(lc.val, x + 5, ly + 13);
+      const sy = by + bh + 4;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
-      doc.text(lc.sub, x + 5, ly + 17.5);
-    });
-    y = ly + lcH + cfg.blockGap;
+      doc.text('0%', marginX, sy);
+      doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, marginX + contentW / 2, sy, { align: 'center' });
+      doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, marginX + contentW, sy, { align: 'right' });
+
+      const ly = sy + 5, lcW = 72, lcH = 20, lcGap = 6;
+      const lcards = [
+        { lbl: 'RISK LIMIT', val: String(lim.limitRelStr), sub: limitSub || 'THRESHOLD' },
+        { lbl: 'BUFFER', val: String(lim.bufferRelStr), sub: 'remaining to limit' },
+      ];
+      lcards.forEach((lc, i) => {
+        const x = marginX + i * (lcW + lcGap);
+        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+        doc.roundedRect(x, ly, lcW, lcH, 2, 2, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+        doc.text(lc.lbl, x + 5, ly + 6);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...TEXT);
+        doc.text(lc.val, x + 5, ly + 13);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+        doc.text(lc.sub, x + 5, ly + 17.5);
+      });
+      y = ly + lcH + cfg.blockGap;
+    };
+
+    if (isCredit) {
+      dcards.forEach((c) => { if (c.limit) drawLimitBar(c.limit, c.label, 'THRESHOLD', null); });
+    } else {
+      drawLimitBar(model?.limit, null, 'CONSERVATIVE', 'No market risk data for the selected portfolio yet.');
+    }
     return;
   }
 
@@ -1050,12 +1060,41 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   // ── Komponiertes Layout: Charts NEBENEINANDER in einer Zeile (Dashboard-Stil)
   //    fuer Structure + Market-Risk-Seiten; Tabellen laufen danach im Standard-
   //    Tabellen-Loop full-width darunter. Andere Sektionen bleiben linear. ──
+  // Factors-Sektion: KPI-Karten (MVaR / ES MVaR mit IR/CS/Vega) wie im Dashboard,
+  // ueber den Charts (die HTML-Karten werden sonst nicht erfasst).
+  if (sec.key === 'mvar') {
+    const km = (() => { try { return getFactorKpiModel(); } catch { return null; } })();
+    if (km) {
+      const gap = 6, cardW = (layout.contentWidth - gap) / 2, cardH = 30;
+      ensurePageSpace(cardH + 8, `${sectionTitle} (cont.)`);
+      const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41], SUB = [58, 65, 80];
+      [['MVaR', km.var], ['ES MVaR', km.es]].forEach(([label, m], i) => {
+        const x = marginX + i * (cardW + gap);
+        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+        doc.roundedRect(x, y, cardW, cardH, 2, 2, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text(String(label).toUpperCase(), x + 6, y + 6.5);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...TEXT);
+        doc.text(String(m.total), x + 6, y + 15);
+        let ry = y + 21;
+        (m.rows || []).forEach((rr) => {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+          doc.text(String(rr.nm), x + 6, ry);
+          doc.setTextColor(...SUB);
+          doc.text(String(rr.v), x + cardW - 6, ry, { align: 'right' });
+          ry += 4;
+        });
+      });
+      y += cardH + 8;
+    }
+  }
+
   const COMPOSED_ROW_KEYS = new Set(['structure', 'market', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios']);
   const composedRow = COMPOSED_ROW_KEYS.has(sec.key) && (sec.enabledCharts || []).length > 0;
   if (composedRow) {
     const rowCharts = sec.enabledCharts || [];
-    // Issuers: festes 2x2-Raster (VaR-Zeile: Balken+Scatter, ES-Zeile: Balken+Scatter).
-    const perRow = (sec.key === 'mvar-issuers') ? 2 : Math.min(rowCharts.length, 3);
+    // Issuers/Products/Factors: 2 pro Reihe (Balken+Scatter je Metrik untereinander).
+    const perRow = (sec.key === 'mvar-issuers' || sec.key === 'mvar-products' || sec.key === 'mvar') ? 2 : Math.min(rowCharts.length, 3);
     const cgap = 6;
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
     const cellH = perRow >= 3 ? 70 : 84;

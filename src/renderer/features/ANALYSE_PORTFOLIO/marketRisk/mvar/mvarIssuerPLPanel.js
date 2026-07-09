@@ -10,7 +10,13 @@ import { formatNumber } from '../../../../utils/tableCellFormats.js';
 
 import { getCurrentMvarContext, rowMatchesMvarContext } from './mvarSelectors.js';
 import { toNumber } from './mvarTransforms.js';
-import { issuerChartHoverMenu, issuerChartClickDrill, scheduleHideConcMenu, setIssuerDrillData } from '../../SummaryBreakdown.js';
+import { createContribDrill, scheduleHideConcMenu } from '../../SummaryBreakdown.js';
+
+// Getrennte Drill-Kontexte je Metrik (VaR/ES) fuer das Issuers-Panel.
+const issuerDrill = createContribDrill({
+  var: { detailId: 'mrIssuerVarDetail', titleId: 'mrIssuerVarDetailTitle', tableId: 'mrIssuerVarDetailTable', closeId: 'mrIssuerVarDetailClose', menuId: 'mrIssuerVarCardMenu', valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' },
+  es:  { detailId: 'mrIssuerEsDetail',  titleId: 'mrIssuerEsDetailTitle',  tableId: 'mrIssuerEsDetailTable',  closeId: 'mrIssuerEsDetailClose',  menuId: 'mrIssuerEsCardMenu',  valueType: '__ES_CONTRIB',  valueLabel: 'ES contrib' },
+});
 
 // Drill-Schritt je Emittent (Dimension ISSUER). renderConcView filtert dann die
 // Portfolio-Rows nach diesem Emittenten (Match ueber das ISSUER-Feld).
@@ -181,8 +187,8 @@ function renderIssuerChart(rows, cfg) {
     },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { issuerChartHoverMenu(cfg.kind, evt, els, barSteps); } catch {} },
-      onClick: (evt, els) => { try { issuerChartClickDrill(cfg.kind, els, barSteps); } catch {} },
+      onHover: (evt, els) => { try { issuerDrill.hover(cfg.kind, evt, els, barSteps); } catch {} },
+      onClick: (evt, els) => { try { issuerDrill.click(cfg.kind, els, barSteps); } catch {} },
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
@@ -238,8 +244,8 @@ function renderIssuerScatter(rows, cfg) {
     },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { issuerChartHoverMenu(cfg.kind, evt, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
-      onClick: (evt, els) => { try { issuerChartClickDrill(cfg.kind, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
+      onHover: (evt, els) => { try { issuerDrill.hover(cfg.kind, evt, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
+      onClick: (evt, els) => { try { issuerDrill.click(cfg.kind, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: NAV ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
@@ -294,14 +300,14 @@ export function renderMvarIssuerPLPanel() {
 
   if (!rows.length) {
     if (tableContainer) renderTable(tableContainer, [], [], 'No MVaR issuer data.');
-    try { setIssuerDrillData([]); } catch {}
+    try { issuerDrill.setData([]); } catch {}
     renderIssuerChart([], VAR_CFG); renderIssuerScatter([], VAR_CFG);
     renderIssuerChart([], ES_CFG);  renderIssuerScatter([], ES_CFG);
     return;
   }
 
   // Drill-Datenquelle (Produkte + Beitraege) fuer beide Metriken setzen.
-  try { setIssuerDrillData(buildIssuerDrillRows(rows)); } catch (e) { console.warn('[MVaR IssuerPL] drill data failed', e); }
+  try { issuerDrill.setData(buildIssuerDrillRows(rows)); } catch (e) { console.warn('[MVaR IssuerPL] drill data failed', e); }
 
   const issuerRows = aggregateByIssuer(rows, buildProdInfoMap());
 

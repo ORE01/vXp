@@ -224,14 +224,24 @@
 #panel-mvar-products .mvar-prod-chart{ flex: 2 1 520px; min-width: 320px; }
 #panel-mvar-products .mvar-prod-table{ flex: 1 1 320px; min-width: 260px; overflow:auto; }
 
-/* Issuers-Panel: Balken links + Streudiagramm rechts, nebeneinander. */
-#panel-mvar-issuers .mvar-issuer-split{
+/* Factors-Panel: die beiden KPI-Karten (MVaR/ES MVaR) fest nebeneinander;
+   der Faktor-Balkenchart in Bitmap-Groesse (nicht gestreckt/verzerrt). */
+#panel-mvar #mvarFactorKpi{ flex-wrap: nowrap; gap: 12px; }
+#panel-mvar #mvarFactorKpi .mr-kpi-card{ flex: 0 0 220px !important; width: 220px; min-width: 0 !important; }
+#panel-mvar #MVaRChart{ width: 520px !important; height: 240px !important; max-width: 100%; }
+
+/* Issuers-/Products-/Factors-Panel: Balken links + Streudiagramm rechts, nebeneinander. */
+#panel-mvar-issuers .mvar-issuer-split,
+#panel-mvar-products .mvar-issuer-split,
+#panel-mvar .mvar-issuer-split{
   display:flex;
   gap:20px;
   flex-wrap:wrap;
   align-items:flex-start;
 }
-#panel-mvar-issuers .mvar-issuer-split .mvar-prod-chart{ flex: 1 1 460px; min-width: 320px; }
+#panel-mvar-issuers .mvar-issuer-split .mvar-prod-chart,
+#panel-mvar-products .mvar-issuer-split .mvar-prod-chart,
+#panel-mvar .mvar-issuer-split .mvar-prod-chart{ flex: 1 1 460px; min-width: 320px; }
 
 #panel-mvar-products .mvar-mini-table{
   width:100%;

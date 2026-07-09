@@ -1299,16 +1299,18 @@ function __concFieldOf(colKey) { return COLUMN_DATA_FIELD[colKey] || colKey; }
 function __concColLabel(colKey) {
   return (BREAKDOWN_CONFIG.flatMap(g => g.columns).find(c => c.key === colKey)?.label) || colKey;
 }
+function __concNotional(r) {
+  const n = Number(r?.NOTIONAL ?? r?.notional ?? r?.Notional ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
 function __concNorm(raw) {
   const isEmpty = raw === undefined || raw === null || String(raw).trim() === '';
   return isEmpty ? 'Unknown' : String(raw).trim();
 }
 
 function __concMenuHide() {
-  ['concCardMenu', 'structCardMenu', 'liqDashCardMenu', 'mrIssuerVarCardMenu', 'mrIssuerEsCardMenu'].forEach(id => {
-    const m = document.getElementById(id);
-    if (m) { m.style.display = 'none'; m.dataset.open = ''; }
-  });
+  // Alle Drill-Menues (auch dynamische je Panel) ausblenden.
+  document.querySelectorAll('.conc-menu').forEach(m => { m.style.display = 'none'; m.dataset.open = ''; });
   _concMenuCtx = null;
 }
 function __concMenuScheduleHide() { clearTimeout(_concMenuHideT); _concMenuHideT = setTimeout(__concMenuHide, 200); }
@@ -1547,104 +1549,98 @@ export function liqChartClickDrill(els, steps) {
 // Menue verstecken (z.B. beim Verlassen des Canvas), fuer externe Module.
 export function scheduleHideConcMenu() { __concMenuScheduleHide(); }
 
-// ---- Market-Risk Issuers: getrennte Drill-Kontexte je Metrik (VaR / ES) ----
-// Beide nutzen dieselbe Engine, aber unterschiedliche Wertspalten: VaR -> Beitrag
-// zum VaR (__VAR_CONTRIB), ES -> Beitrag zum ES (__ES_CONTRIB) je Position. Die
-// Drill-Rows (Produkte mit Beitrag + Portfolio-Feldern) werden per setIssuerDrillData
-// gesetzt; jede Metrik hat eigenes Detail-Panel + Menue.
-const MRISS = {
-  var: { stack: [], bound: false, menuId: 'mrIssuerVarCardMenu', closeId: 'mrIssuerVarDetailClose',
-    ctx: { detailId: 'mrIssuerVarDetail', titleId: 'mrIssuerVarDetailTitle', tableId: 'mrIssuerVarDetailTable', data: null, valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' } },
-  es:  { stack: [], bound: false, menuId: 'mrIssuerEsCardMenu', closeId: 'mrIssuerEsDetailClose',
-    ctx: { detailId: 'mrIssuerEsDetail', titleId: 'mrIssuerEsDetailTitle', tableId: 'mrIssuerEsDetailTable', data: null, valueType: '__ES_CONTRIB', valueLabel: 'ES contrib' } },
-};
+// ---- Factory fuer Market-Risk Beitrags-Drill (Issuers/Products/Factors) ----
+// Erzeugt pro Panel getrennte Drill-Kontexte je Metrik (VaR/ES) mit eigenen
+// Detail-/Menue-Elementen. Beide Metriken teilen dieselben (enrichten) Drill-Rows,
+// nur andere Wertspalte (valueType/valueLabel). Rueckgabe: { setData, hover, click }.
+// config.var / config.es = { detailId, titleId, tableId, closeId, menuId, valueType, valueLabel }.
+export function createContribDrill(config) {
+  const mk = (c) => ({ stack: [], bound: false, menuId: c.menuId, closeId: c.closeId,
+    ctx: { detailId: c.detailId, titleId: c.titleId, tableId: c.tableId, data: null, valueType: c.valueType, valueLabel: c.valueLabel, extraCol: c.extraCol, infoCol: c.infoCol, columns: c.columns } });
+  const M = { var: mk(config.var), es: mk(config.es) };
 
-// Enrichte Drill-Rows (Produkte + Beitraege + Portfolio-Felder) fuer beide Metriken.
-export function setIssuerDrillData(rows) {
-  const arr = Array.isArray(rows) ? rows : [];
-  MRISS.var.ctx.data = arr;
-  MRISS.es.ctx.data = arr;
-}
-
-function issuerDrillTo(kind, view) {
-  const m = MRISS[kind]; if (!m) return;
-  m.stack.length = Math.max(0, (view.path?.length || 1) - 1);
-  m.stack.push(view);
-  renderConcView(view, m.ctx);
-}
-function issuerGoto(kind, i) {
-  const m = MRISS[kind]; if (!m || i < 0 || i >= m.stack.length) return;
-  m.stack.length = i + 1;
-  renderConcView(m.stack[i], m.ctx);
-}
-
-function ensureIssuerBound(kind) {
-  const m = MRISS[kind];
-  if (!m || m.bound) return;
-  m.bound = true;
-
-  const dtable = document.getElementById(m.ctx.tableId);
-  if (dtable) {
-    dtable.addEventListener('mouseover', (e) => {
-      const row = e.target?.closest?.('[data-drill-value]');
-      const cur = m.stack[m.stack.length - 1];
-      if (row && cur && cur.by) { __concMenuCancelHide(); __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)], (v) => issuerDrillTo(kind, v), m.menuId, true); }
-      else __concMenuScheduleHide();
+  const drillTo = (kind, view) => {
+    const m = M[kind]; if (!m) return;
+    m.stack.length = Math.max(0, (view.path?.length || 1) - 1);
+    m.stack.push(view);
+    renderConcView(view, m.ctx);
+  };
+  const goto = (kind, i) => {
+    const m = M[kind]; if (!m || i < 0 || i >= m.stack.length) return;
+    m.stack.length = i + 1;
+    renderConcView(m.stack[i], m.ctx);
+  };
+  const ensureBound = (kind) => {
+    const m = M[kind]; if (!m || m.bound) return; m.bound = true;
+    const dtable = document.getElementById(m.ctx.tableId);
+    if (dtable) {
+      dtable.addEventListener('mouseover', (e) => {
+        const row = e.target?.closest?.('[data-drill-value]');
+        const cur = m.stack[m.stack.length - 1];
+        if (row && cur && cur.by) { __concMenuCancelHide(); __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)], (v) => drillTo(kind, v), m.menuId, true); }
+        else __concMenuScheduleHide();
+      });
+      dtable.addEventListener('mouseleave', __concMenuScheduleHide);
+      dtable.addEventListener('click', (e) => {
+        const row = e.target?.closest?.('[data-drill-value]');
+        const cur = m.stack[m.stack.length - 1];
+        if (row && cur && cur.by) drillTo(kind, { path: [...cur.path, __concStep(cur.by, row.dataset.drillValue)], by: null });
+      });
+    }
+    const menu = document.getElementById(m.menuId);
+    if (menu && !menu.dataset.menuBound) {
+      menu.dataset.menuBound = '1';
+      menu.addEventListener('mouseenter', __concMenuCancelHide);
+      menu.addEventListener('mouseleave', __concMenuScheduleHide);
+      menu.addEventListener('click', (e) => {
+        const btn = e.target?.closest?.('.conc-menu__item');
+        if (!btn || !_concMenuCtx) return;
+        const by = btn.dataset.mode === 'group' ? btn.dataset.by : null;
+        (_concMenuDrill || concDrillTo)({ path: _concMenuCtx.slice(), by });
+        __concMenuHide();
+      });
+    }
+    document.getElementById(m.ctx.titleId)?.addEventListener('click', (e) => {
+      const crumb = e.target?.closest?.('[data-crumb]');
+      if (crumb) goto(kind, Number(crumb.dataset.crumb));
     });
-    dtable.addEventListener('mouseleave', __concMenuScheduleHide);
-    dtable.addEventListener('click', (e) => {
-      const row = e.target?.closest?.('[data-drill-value]');
-      const cur = m.stack[m.stack.length - 1];
-      if (row && cur && cur.by) issuerDrillTo(kind, { path: [...cur.path, __concStep(cur.by, row.dataset.drillValue)], by: null });
+    document.getElementById(m.closeId)?.addEventListener('click', () => {
+      m.stack = [];
+      const d = document.getElementById(m.ctx.detailId);
+      if (d) d.style.display = 'none';
     });
-  }
+  };
 
-  const menu = document.getElementById(m.menuId);
-  if (menu && !menu.dataset.menuBound) {
-    menu.dataset.menuBound = '1';
-    menu.addEventListener('mouseenter', __concMenuCancelHide);
-    menu.addEventListener('mouseleave', __concMenuScheduleHide);
-    menu.addEventListener('click', (e) => {
-      const btn = e.target?.closest?.('.conc-menu__item');
-      if (!btn || !_concMenuCtx) return;
-      const by = btn.dataset.mode === 'group' ? btn.dataset.by : null;
-      (_concMenuDrill || concDrillTo)({ path: _concMenuCtx.slice(), by });
-      __concMenuHide();
-    });
-  }
-
-  document.getElementById(m.ctx.titleId)?.addEventListener('click', (e) => {
-    const crumb = e.target?.closest?.('[data-crumb]');
-    if (crumb) issuerGoto(kind, Number(crumb.dataset.crumb));
-  });
-  document.getElementById(m.closeId)?.addEventListener('click', () => {
-    m.stack = [];
-    const d = document.getElementById(m.ctx.detailId);
-    if (d) d.style.display = 'none';
-  });
-}
-
-// Hover ueber einen Balken/Punkt -> Floating-Menue am Cursor; Klick -> direkt drillen.
-// kind = 'var' | 'es' (welches Detail-Panel/Wertspalte).
-export function issuerChartHoverMenu(kind, evt, els, steps) {
-  ensureIssuerBound(kind);
-  if (!els || !els.length) return;
-  const step = steps[els[0].index];
-  if (!step) { __concMenuScheduleHide(); return; }
-  __concMenuCancelHide();
-  const me = evt?.native;
-  const x = me && typeof me.clientX === 'number' ? me.clientX : null;
-  const y = me && typeof me.clientY === 'number' ? me.clientY : null;
-  const anchor = (x != null && y != null)
-    ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
-    : (evt?.chart?.canvas || document.body);
-  __concShowMenu(anchor, [step], (v) => issuerDrillTo(kind, v), MRISS[kind].menuId, true);
-}
-export function issuerChartClickDrill(kind, els, steps) {
-  ensureIssuerBound(kind);
-  if (!els || !els.length) return;
-  const step = steps[els[0].index];
-  if (step) issuerDrillTo(kind, { path: [step], by: null });
+  return {
+    setData(rows) { const arr = Array.isArray(rows) ? rows : []; M.var.ctx.data = arr; M.es.ctx.data = arr; },
+    // Hover ueber Balken/Punkt -> Floating-Menue; Klick -> direkt drillen. kind='var'|'es'.
+    hover(kind, evt, els, steps) {
+      ensureBound(kind);
+      if (!els || !els.length) return;
+      const step = steps[els[0].index];
+      if (!step) { __concMenuScheduleHide(); return; }
+      __concMenuCancelHide();
+      const me = evt?.native;
+      const x = me && typeof me.clientX === 'number' ? me.clientX : null;
+      const y = me && typeof me.clientY === 'number' ? me.clientY : null;
+      const anchor = (x != null && y != null)
+        ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
+        : (evt?.chart?.canvas || document.body);
+      __concShowMenu(anchor, [step], (v) => drillTo(kind, v), M[kind].menuId, true);
+    },
+    click(kind, els, steps) {
+      ensureBound(kind);
+      if (!els || !els.length) return;
+      const step = steps[els[0].index];
+      if (step) drillTo(kind, { path: [step], by: null });
+    },
+    // Alle Zeilen anzeigen (kein Filter) -> volle Positions-/EAD-Tabelle. match:()=>true
+    // matcht jede Zeile; der Breadcrumb zeigt "All".
+    showAll(kind) {
+      ensureBound(kind);
+      drillTo(kind, { path: [{ colKey: '__ALL', value: 'All', label: 'All', match: () => true }], by: null });
+    },
+  };
 }
 
 // ===== Produkt-Stammdaten-Tooltip: Hover ueber eine Kennnummer (.prod-id-link) =====
@@ -1706,7 +1702,7 @@ function __prodTipShow(prodId, x, y) {
 }
 function __prodTipHide() { const el = document.getElementById('prodStammdatenTip'); if (el) el.style.display = 'none'; }
 
-function ensureProdHoverBound(tableEl) {
+export function ensureProdHoverBound(tableEl) {
   if (!tableEl || tableEl.dataset.prodHoverBound) return;
   tableEl.dataset.prodHoverBound = '1';
   tableEl.addEventListener('mouseover', (e) => {
@@ -1739,6 +1735,12 @@ function renderConcView(view, ctx) {
   const valueType = c.valueType || (valueSel ? valueSel.value : 'NAV');
   const valueLabel = c.valueLabel || valueType;   // Spaltenueberschrift (z.B. "VaR contrib")
   const fmtVal = (v) => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 });
+  // Optionale Zusatzspalte (z.B. Loss) — nur wenn der Aufrufer ctx.extraCol setzt.
+  // Werte aus row[extra.key]; in der Gruppen-Sicht summiert. Andere Panels unberuehrt.
+  const extra = (c.extraCol && c.extraCol.key) ? c.extraCol : null;
+  // Optionale Text-Info-Spalte (z.B. Rating) — nur in der Positions-Sicht, nicht
+  // summiert. Werte aus row[info.key].
+  const info = (c.infoCol && c.infoCol.key) ? c.infoCol : null;
 
   // Zeilen nach gesamtem Pfad filtern (s.match hat Vorrang, z.B. Rating-Buckets).
   const rowsAll = data.filter(r => view.path.every(s => s.match ? s.match(r) : __concNorm(r[__concFieldOf(s.colKey)]) === s.value));
@@ -1753,35 +1755,75 @@ function renderConcView(view, ctx) {
   if (view.by) {
     const byField = __concFieldOf(view.by);
     const map = {};
-    rowsAll.forEach(r => { const k = __concNorm(r[byField]); map[k] = (map[k] || 0) + (Number(r[valueType]) || 0); });
-    const sub = Object.entries(map).map(([name, val]) => ({ name, val })).sort((a, b) => b.val - a.val);
+    const nmap = {};   // summiertes Notional je Gruppe
+    const lmap = {};   // summierte Zusatzspalte (z.B. Loss) je Gruppe
+    rowsAll.forEach(r => {
+      const k = __concNorm(r[byField]);
+      map[k] = (map[k] || 0) + (Number(r[valueType]) || 0);
+      nmap[k] = (nmap[k] || 0) + __concNotional(r);
+      if (extra) lmap[k] = (lmap[k] || 0) + (Number(r[extra.key]) || 0);
+    });
+    const sub = Object.entries(map).map(([name, val]) => ({ name, val, notional: nmap[name] || 0, extra: lmap[name] || 0 })).sort((a, b) => b.val - a.val);
     const tot = sub.reduce((s, x) => s + x.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">${__concEsc(valueLabel)}</th><th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extra ? `<th style="text-align:right;">${__concEsc(extra.label)}</th>` : ''}<th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${sub.map(x => `<tr class="conc-drill-row" data-drill-value="${__concEsc(x.name)}">
             <td>${__concEsc(x.name)} <span class="conc-drill-hint">›</span></td>
+            <td style="text-align:right;">${fmtVal(x.notional)}</td>
             <td style="text-align:right;">${fmtVal(x.val)}</td>
+            ${extra ? `<td style="text-align:right;">${fmtVal(x.extra)}</td>` : ''}
             <td style="text-align:right;">${__concPct(x.val / tot)}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
+  } else if (Array.isArray(c.columns) && c.columns.length) {
+    // Custom-Spalten (z.B. EAD-Panel: Rank/Rating/Notional/LGD/PD wie die EAD-Tabelle).
+    // fmt: 'num' = Tausender ohne Nachkomma, 'dec' = bis 5 Nachkommastellen,
+    // 'pct' = Wert*100 mit % (z.B. 0.0004 -> 0,04 %), sonst Text.
+    const cols = c.columns;
+    const fmtCell = (r, col) => {
+      const v = r[col.key];
+      if (col.fmt === 'num') return Number.isFinite(Number(v)) ? fmtVal(v) : '';
+      if (col.fmt === 'dec') return Number.isFinite(Number(v)) ? Number(v).toLocaleString('de-DE', { maximumFractionDigits: 5 }) : '';
+      if (col.fmt === 'pct') return Number.isFinite(Number(v)) ? `${(Number(v) * 100).toLocaleString('de-DE', { maximumFractionDigits: 4 })} %` : '';
+      return v == null ? '' : String(v);
+    };
+    const sorted = rowsAll.slice().sort((a, b) => __concNotional(b) - __concNotional(a));
+    tableEl.innerHTML = `
+      <table class="conc-detail-tbl">
+        <thead><tr>${cols.map(col => `<th${col.align === 'right' ? ' style="text-align:right;"' : ''}>${__concEsc(col.label)}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${sorted.map(r => `<tr>${cols.map(col => `<td${col.align === 'right' ? ' style="text-align:right;"' : ''}>${__concEsc(fmtCell(r, col))}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>`;
+    try { attachIdLinks(tableEl); } catch (e) { console.warn('[conc] attachIdLinks failed', e); }
+    try { ensureProdHoverBound(tableEl); } catch {}
+    detail.style.display = '';
+    try { detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}
+    return;
   } else {
     const rows = rowsAll.map(r => ({
       id:   r.PROD_ID != null ? String(r.PROD_ID) : '',
       desc: (r.DESCRIPTION || '').toString(),
+      info: info ? String(r[info.key] ?? '') : '',
+      notional: __concNotional(r),
       val:  Number(r[valueType]) || 0,
+      extra: extra ? (Number(r[extra.key]) || 0) : 0,
     })).sort((a, b) => b.val - a.val);
     const tot = rows.reduce((s, r) => s + r.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>Product ID</th><th>Description</th><th style="text-align:right;">${__concEsc(valueLabel)}</th><th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>Product ID</th><th>Description</th>${info ? `<th>${__concEsc(info.label)}</th>` : ''}<th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extra ? `<th style="text-align:right;">${__concEsc(extra.label)}</th>` : ''}<th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${rows.map(r => `<tr>
             <td>${__concEsc(r.id)}</td>
             <td>${__concEsc(r.desc)}</td>
+            ${info ? `<td>${__concEsc(r.info)}</td>` : ''}
+            <td style="text-align:right;">${fmtVal(r.notional)}</td>
             <td style="text-align:right;">${fmtVal(r.val)}</td>
+            ${extra ? `<td style="text-align:right;">${fmtVal(r.extra)}</td>` : ''}
             <td style="text-align:right;">${__concPct(r.val / tot)}</td>
           </tr>`).join('')}
         </tbody>

@@ -484,6 +484,10 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit-dashboard" aria-controls="panel-credit-dashboard" aria-expanded="false">
+              <span class="section-header">Dashboard</span>
+              <span class="chev"></span>
+            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
               <span class="section-header">Overview</span>
               <span class="chev"></span>
@@ -862,6 +866,21 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
 <!-- Panel: Market Risk Dashboard (Current Risk Overview) -->
+<!-- Panel: Credit Risk Dashboard (analog zum Market-Risk-Dashboard) -->
+<div id="panel-credit-dashboard" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-dashboard-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-credit-dashboard-title" class="sub-panel-title">Dashboard</div>
+    <button class="sub-panel-close" data-close="panel-credit-dashboard" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body">
+    <div id="crDashIntro" class="mr-dash-intro"></div>
+    <!-- Pro Kennzahl eine Zeile: KPI-Karte + eigene Limit-Auslastungsleiste (untereinander) -->
+    <div id="crDashKpi" class="cr-metric-stack"></div>
+    <!-- Nur fuer die Report-Preview (Thumbnail). Das PDF zeichnet das Dashboard nativ. -->
+    <div class="data-container" id="crDashKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+  </div>
+</div>
+
 <div id="panel-market-dashboard" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-dashboard-title" hidden>
   <div class="sub-panel-header">
     <div id="panel-market-dashboard-title" class="sub-panel-title">Dashboard</div>
@@ -1033,33 +1052,55 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
 <div class="sub-panel-body">
-  <div class="mvar-grid">
-    
-    <!-- LINKER BEREICH: Total oben, IR & CS darunter -->
-    <section class="mvar-left">
+  <!-- MVaR-Uebersicht: KPI-Karten (Total + IR/CS/Vega) links, relative Grafik rechts.
+       Die Risk-Type-P/L-Tabelle ist an die vorletzte Stelle (vor Factor P/L) verschoben. -->
+  <section class="table-card" style="width:100%;">
+    <h4 class="table-title">Market VaR by risk type</h4>
+    <div id="mvarFactorKpi" class="mr-kpi-row"></div>
+  </section>
 
-
-      <!-- Risk Type und Factor P/L -->
-      <div class="mvar-pair">
-        <div class="MVaR-block">
-          <h3>MVaR Risk Type P/L</h3>
-          <div class="data-container" id="MVaRRiskTypePLContainer"></div>
-        </div>
-
-        <div class="MVaR-block">
-          <h3>MVaR Factor P/L</h3>
-          <div class="data-container" id="MVaRFactorPLContainer"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RECHTER BEREICH: Chart -->
-    <section class="mvar-right table-card">
-      <h4 class="table-title">Market VaR Chart</h4>
-      <canvas id="MVaRChart" height="360"></canvas>
-    </section>
-
+  <!-- Factor risk contribution: getrennte VaR-/ES-Bloecke; Klick auf Gruppe -> Produkte
+       mit echtem Risikobeitrag (Component-VaR/ES), gruppierbar (By Category/Rating/...). -->
+  <p class="mvar-caption" style="margin-top: 14px; font-weight: 600;">Value at Risk (VaR) — by risk type (left) &amp; diversification (right)</p>
+  <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+    <div class="mvar-prod-chart chart-box"><canvas id="mvarFactorVarContribChart"></canvas></div>
+    <div class="mvar-prod-chart chart-box"><canvas id="mvarFactorVarScatterChart"></canvas></div>
   </div>
+  <div id="mrFactorVarDetail" class="conc-detail" style="display:none; margin-top:12px;">
+    <div class="conc-detail__head">
+      <span id="mrFactorVarDetailTitle" class="conc-detail__title"></span>
+      <button id="mrFactorVarDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+    </div>
+    <div id="mrFactorVarDetailTable" class="conc-detail__table"></div>
+  </div>
+
+  <p class="mvar-caption" style="margin-top: 18px; font-weight: 600;">Expected Shortfall (ES) — by risk type (left) &amp; diversification (right)</p>
+  <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+    <div class="mvar-prod-chart chart-box"><canvas id="mvarFactorEsContribChart"></canvas></div>
+    <div class="mvar-prod-chart chart-box"><canvas id="mvarFactorEsScatterChart"></canvas></div>
+  </div>
+  <div id="mrFactorEsDetail" class="conc-detail" style="display:none; margin-top:12px;">
+    <div class="conc-detail__head">
+      <span id="mrFactorEsDetailTitle" class="conc-detail__title"></span>
+      <button id="mrFactorEsDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+    </div>
+    <div id="mrFactorEsDetailTable" class="conc-detail__table"></div>
+  </div>
+
+  <!-- MVaR Risk Type P/L an der vorletzten Stelle. -->
+  <div class="MVaR-block" style="margin-top:18px;">
+    <h3>MVaR Risk Type P/L</h3>
+    <div class="data-container" id="MVaRRiskTypePLContainer"></div>
+  </div>
+
+  <!-- Volle Faktor-P/L-Tabelle (alle Eintraege) ganz ans Ende. -->
+  <div class="MVaR-block" style="margin-top:18px;">
+    <h3>MVaR Factor P/L</h3>
+    <div class="data-container" id="MVaRFactorPLContainer"></div>
+  </div>
+
+  <div id="mrFactorVarCardMenu" class="conc-menu" style="display:none;"></div>
+  <div id="mrFactorEsCardMenu" class="conc-menu" style="display:none;"></div>
 </div>
 
 
@@ -1079,20 +1120,37 @@ Feature:    Wenn es nur in einem Panel gilt
       <!-- <button id="mvarProductRefreshButton" class="edit-button">Refresh</button> -->
     </div>
 
-    <!-- Haupttabelle -->
-    <div class="data-container" id="mvarProductTableContainer"></div>
-
-    <!-- Top-N VaR contrib: Chart + Rangliste -->
-    <div class="mvar-prod-split" style="margin-top: 14px;">
-      <div class="mvar-prod-chart chart-box">
-        <canvas id="mvarProdIdVarContribChart"></canvas>
-      </div>
-
-      <div class="mvar-prod-table chart-box">
-        <div id="mvarProdIdVarContribTable"></div>
-      </div>
+    <p class="mvar-caption" style="margin-top: 14px; font-weight: 600;">Value at Risk (VaR)</p>
+    <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarProductVarContribChart"></canvas></div>
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarProductVarScatterChart"></canvas></div>
     </div>
+    <div id="mrProductVarDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="mrProductVarDetailTitle" class="conc-detail__title"></span>
+        <button id="mrProductVarDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="mrProductVarDetailTable" class="conc-detail__table"></div>
+    </div>
+
+    <p class="mvar-caption" style="margin-top: 18px; font-weight: 600;">Expected Shortfall (ES)</p>
+    <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarProductEsContribChart"></canvas></div>
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarProductEsScatterChart"></canvas></div>
+    </div>
+    <div id="mrProductEsDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="mrProductEsDetailTitle" class="conc-detail__title"></span>
+        <button id="mrProductEsDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="mrProductEsDetailTable" class="conc-detail__table"></div>
+    </div>
+
+    <!-- Volle Produkt-Tabelle ganz unten. -->
+    <div class="data-container" id="mvarProductTableContainer" style="margin-top: 18px;"></div>
   </div>
+  <div id="mrProductVarCardMenu" class="conc-menu" style="display:none;"></div>
+  <div id="mrProductEsCardMenu" class="conc-menu" style="display:none;"></div>
 </div>
 
 <!-- Panel: MARKET Issuer VaR (Beitrag zum MVaR pro Emittent, aggregiert aus den
@@ -1554,20 +1612,32 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="sub-panel-body">
+            <!-- Ganz oben, volle Breite: EAD/LGD-Chart (Emittent je Balken). -->
+            <div class="chart-container-inner" id="LGDChartContainer">
+              <!-- Sticky HTML-Legende (gleiches Styling wie Loss-Chart), bleibt beim Scrollen sichtbar -->
+              <div id="eadChartLegend" class="closs-chart-legend"></div>
+              <canvas id="LGDChart"></canvas>
+            </div>
+
+            <!-- Drill-down: Klick auf einen Emittenten-Balken -> dessen Positionen.
+                 Gleiche Engine wie Loss-/Market-Risk-Panels (createContribDrill). -->
+            <div id="eadIssuerDetail" class="conc-detail" style="display:none; margin-top:12px; margin-bottom:16px;">
+              <div class="conc-detail__head">
+                <span id="eadIssuerDetailTitle" class="conc-detail__title"></span>
+                <button id="eadShowAllBtn" class="ead-showall-btn" type="button">All issuers</button>
+                <button id="eadIssuerDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+              </div>
+              <div id="eadIssuerDetailTable" class="conc-detail__table"></div>
+            </div>
+
+            <!-- EAD-Tabelle darunter -->
             <div class="cvar-grid">
               <aside class="cvar-left">
-                <!-- Data-Tabellen fÃ¼r die einzelnen Views -->
                 <div class="data-container" id="EADDataContainer"></div>
               </aside>
-
-              <section class="cvar-right">
-                <!-- Gleiche Klasse wie bei den anderen Panels -->
-                <div class="chart-container-inner" id="LGDChartContainer">
-                  <canvas id="LGDChart"></canvas>
-                </div>
-              </section>
-            </div><!-- /.cvar-grid -->
+            </div>
           </div><!-- /.sub-panel-body -->
+          <div id="eadIssuerCardMenu" class="conc-menu" style="display:none;"></div>
         </div><!-- /#panel-EAD -->
 
 
@@ -1579,45 +1649,26 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="sub-panel-body">
-            <!-- Oben: drei Metrik-Tabellen -->
-            <section class="table-card" style="margin-bottom:12px;">
-              <p>Historical Credit Metrics:</p>
-              <div class="data-container" id="CVaR_ratingDataContainer"></div>
+            <!-- Ganz oben, volle Breite: Loss-Chart (3 Serien) + Drill-down-Tabelle. -->
+            <!-- Rating/Market/Norm Losses zusammengefasst in EINER Chart (3 Serien) -->
+            <div class="chart-container-inner" id="LossIssuerChartContainerCombined">
+              <!-- Sticky HTML-Legende: bleibt beim Scrollen oben sichtbar (JS: renderChartLegend) -->
+              <div id="clossChartLegend" class="closs-chart-legend"></div>
+              <canvas id="LossIssuerChartCombinedTop"></canvas>
+            </div>
 
-              <p style="margin-top:10px;">Market Implied Credit Metrics:</p>
-              <div class="data-container" id="CVaR_marketDataContainer"></div>
+            <!-- Drill-down: Positionen des ausfallenden Emittenten (Balken = Quantil ->
+                 ISSUER_RANK). Gleiche Engine wie Market Risk (createContribDrill). -->
+            <div id="clossIssuerDetail" class="conc-detail" style="display:none; margin-top:12px; margin-bottom:16px;">
+              <div class="conc-detail__head">
+                <span id="clossIssuerDetailTitle" class="conc-detail__title"></span>
+                <button id="clossIssuerDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+              </div>
+              <div id="clossIssuerDetailTable" class="conc-detail__table"></div>
+            </div>
 
-              <p style="margin-top:10px;">Risk Adjusted Credit Metrics:</p>
-              <div class="data-container" id="CVaR_normDataContainer"></div>
-            </section>
-
-
-            <!-- 2-Spalten-Layout -->
-            <div class="cvar-grid"><!-- ðŸ‘ˆ WICHTIG: Ã¶ffnend, NICHT sofort schlieÃŸen -->
-
-              <aside class="cvar-left">
-                <!-- Data-Tabellen fÃ¼r die einzelnen Views -->
-                <!-- <div class="data-container" id="EADDataContainer"></div> -->
-                <div class="data-container" id="LossIssuerDataContainerRating"></div>
-                <div class="data-container" id="LossIssuerDataContainerMarket"></div>
-                <div class="data-container" id="LossIssuerDataContainerMarketNorm"></div>
-              </aside>
-
-              <section class="cvar-right">
-
-
-                <!-- <div class="chart-container-table" id="LGDChartContainer">
-                  <canvas id="LGDChart"></canvas>
-                </div> -->
-
-                <!-- Rating/Market/Norm Losses zusammengefasst in EINER Chart (3 Serien) -->
-                <div class="chart-container-inner" id="LossIssuerChartContainerCombined">
-                  <canvas id="LossIssuerChartCombinedTop"></canvas>
-                </div>
-              </section>
-
-            </div><!-- /.cvar-grid -->
           </div><!-- /.sub-panel-body -->
+          <div id="clossIssuerCardMenu" class="conc-menu" style="display:none;"></div>
         </div><!-- /#panel-cvar -->
 
     <!-- Panel: Liquidity (SAUBERES GESCHWISTER-ELEMENT, nicht verschachtelt) -->
@@ -1684,12 +1735,22 @@ Feature:    Wenn es nur in einem Panel gilt
           <p class="mvar-caption">Maturities by bucket (notional, EUR mn) for the selected Portfolio</p>
         </div>
         <div class="conc-panel">
-          <div class="conc-panel__title">Maturities</div>
+          <div class="conc-panel__title liq-panel-head">
+            <span>Maturities</span>
+            <!-- Setzt die Segmentierung/Tabelle jederzeit zurueck auf "By Category". -->
+            <button id="liqCategoryBtn" class="liq-cat-btn" type="button">By Category</button>
+          </div>
           <canvas id="liqDashMaturityChart" class="struct-canvas" data-label="Maturities"></canvas>
         </div>
         <div id="liqDashKpi" class="conc-kpi-grid" style="margin-top:14px;"></div>
         <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
         <div class="data-container" id="liqDashKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+
+        <!-- Pivot-Tabelle Category x Maturity-Jahr (nur bei Gruppierung "By Category"). -->
+        <div id="liqDashCategoryPivot" class="conc-panel" style="display:none; margin-top:16px;">
+          <div class="conc-panel__title">Maturity — Category</div>
+          <div id="liqDashCategoryPivotTable" style="overflow-x:auto;"></div>
+        </div>
 
         <!-- Drill-down (Klick auf Balken -> Positionen/Gruppierung), gleiche Engine wie Overview -->
         <div id="liqDashDetail" class="conc-detail" style="display:none; margin-top:16px;">

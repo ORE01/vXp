@@ -86,11 +86,60 @@
 /* Combined Losses-Chart MUSS die Karte füllen. chart.css setzt global
    .chart-container-inner canvas { height:auto !important } -> Canvas wird nur
    aspect-ratio-hoch (~80px) statt 460/520px. ID-Regel + !important sticht das. */
+/* Combined Losses-Chart: NICHT absolut/kartenfuellend, sondern im Fluss mit fester
+   Pixel-Hoehe (JS setzt das height-Attribut je Zeilenzahl). Ueberschreibt die
+   panelweite Regel :is(#panel-cvar) canvas{position:absolute;inset:0;height:100%}.
+   -> Bei vielen Zeilen wird das Canvas hoeher als die Karte und die Karte scrollt. */
 :is(#panel-cvar, #panel-EAD) #LossIssuerChartCombinedTop{
-  position:absolute;
-  inset:0;
+  position:static !important;
+  inset:auto !important;
   width:100% !important;
-  height:100% !important;
+  height:auto !important;
+}
+
+/* Combined Losses-Chart steht oben in voller Panel-Breite. Das globale
+   .chart-container-inner{max-width:280px} wuerde die Karte auf 280px kappen ->
+   per ID-Regel aufheben. overflow-y:auto -> scrollen bei vielen Zeilen (feste Hoehe
+   kommt aus der .chart-container-inner-Regel). */
+:is(#panel-cvar, #panel-EAD) #LossIssuerChartContainerCombined{
+  width:100%;
+  max-width:100%;
+  overflow-y:auto;
+  scrollbar-gutter:stable;   /* Scrollbar-Platz reservieren -> Breite bleibt stabil */
+}
+
+/* Sticky HTML-Legende: bleibt beim Scrollen oben rechts sichtbar. Hintergrund deckt
+   die darunter durchscrollenden Balken ab. */
+:is(#panel-cvar, #panel-EAD) .closs-chart-legend{
+  position:sticky;
+  top:0;
+  z-index:5;
+  display:flex;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:12px;
+  padding:2px 0 8px;
+  background: var(--panel-surface, #0f0f10);
+}
+:is(#panel-cvar, #panel-EAD) .closs-chart-legend .closs-leg-item{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  user-select:none;
+  font-size:12px;
+  color: var(--text-primary, #ddd);
+}
+:is(#panel-cvar, #panel-EAD) .closs-chart-legend .closs-leg-item.is-hidden{
+  opacity:.45;
+  text-decoration:line-through;
+}
+:is(#panel-cvar, #panel-EAD) .closs-chart-legend .closs-leg-swatch{
+  width:20px;
+  height:10px;
+  border-radius:2px;
+  display:inline-block;
+  flex:0 0 auto;
 }
 
 /* Tabellen-Card (oben links) */
@@ -139,6 +188,27 @@
   align-self:flex-start;
   margin-right:auto;
 }
+
+/* EAD/LGD-Chart steht jetzt oben in voller Panel-Breite (Drill wie die anderen).
+   Hebt die 780px-Begrenzung auf; feste Kartenhoehe (aus .chart-container-inner) +
+   overflow-y:auto -> bei vielen Emittenten scrollt die Karte. */
+:is(#panel-cvar, #panel-EAD) #LGDChartContainer{
+  max-width:100%;
+  overflow-y:auto;
+  scrollbar-gutter:stable;
+}
+/* Canvas im Fluss mit Pixel-Hoehe (JS) statt absolut/kartenfuellend -> scrollbar.
+   Ueberschreibt die panelweite Regel :is(#panel-EAD) canvas{position:absolute;...}. */
+:is(#panel-cvar, #panel-EAD) #LGDChart{
+  position:static !important;
+  inset:auto !important;
+  width:100% !important;
+  height:auto !important;
+}
+
+/* EAD-Tabelle ausgeblendet: die "All issuers"-Drilltabelle zeigt dieselben Daten.
+   Container bleibt im DOM (befuellt weiter filteredEADMainData fuer Chart/Drill). */
+#panel-EAD .cvar-grid{ display:none; }
 
 /* Toolbar-Reihe */
 :is(#panel-cvar, #panel-EAD) .cvar-toolbar-row{

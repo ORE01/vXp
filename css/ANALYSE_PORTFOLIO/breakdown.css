@@ -272,6 +272,15 @@
   font-size:11px; text-transform:uppercase; letter-spacing:.06em;
   color: var(--text-muted); margin-bottom:8px;
 }
+/* Maturities-Karte: Titel links, "By Category"-Button oben rechts. */
+.conc-panel__title.liq-panel-head { display:flex; align-items:center; justify-content:space-between; }
+.liq-cat-btn {
+  text-transform:none; letter-spacing:normal;
+  font-size:11px; padding:3px 10px;
+  border:1px solid var(--border-subtle); border-radius:6px;
+  background: var(--surface-card); color: var(--text-primary); cursor:pointer;
+}
+.liq-cat-btn:hover { background: var(--surface-overlay); color: var(--text-bright); }
 .conc-canvas { width:100% !important; height:210px !important; display:block; }
 /* Top-10-Balken: mehr Hoehe, damit die 10 Balken + Labels nicht gequetscht wirken. */
 #concTop10Chart { height:264px !important; }
@@ -331,6 +340,14 @@
   font-size: 18px; line-height: 1; cursor: pointer; padding: 0 6px; border-radius: 6px;
 }
 .conc-detail__close:hover { background: var(--surface-overlay); color: var(--text-bright); }
+/* "All issuers"-Button im EAD-Drill-Fenster: rechts neben den Close-Button. */
+.ead-showall-btn {
+  margin-left: auto; margin-right: 10px;
+  font-size: 12px; padding: 3px 10px;
+  border: 1px solid var(--border-subtle); border-radius: 6px;
+  background: var(--surface-card); color: var(--text-primary); cursor: pointer;
+}
+.ead-showall-btn:hover { background: var(--surface-overlay); color: var(--text-bright); }
 .conc-detail__table { max-height: 320px; overflow: auto; }
 .conc-detail-tbl { width:100%; border-collapse: collapse; font-size:12px; }
 .conc-detail-tbl th, .conc-detail-tbl td {
@@ -342,6 +359,14 @@
   text-transform: uppercase; font-size: 10px; letter-spacing: .04em;
 }
 .conc-detail-tbl td { color: var(--text-primary); }
+
+/* Liquidity Pivot (Category x Jahr): Summenspalte + Gesamtergebnis-Zeile hervorheben. */
+.liq-pivot-tbl th, .liq-pivot-tbl td { white-space: nowrap; }
+.liq-pivot-tbl .liq-pivot-sum { font-weight: 600; }
+.liq-pivot-tbl .liq-pivot-total td {
+  font-weight: 700; color: var(--text-bright);
+  border-top: 2px solid var(--border-subtle);
+}
 
 /* Kachel-Hover-Menue (Drill-down-Auswahl) */
 .conc-menu {
@@ -419,8 +444,16 @@
 .mr-kpi-card__value { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-top: 8px; }
 .mr-kpi-card__value .mr-amp-dot { width: 11px; height: 11px; margin-left: 8px; vertical-align: middle; }
 .mr-kpi-card__sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+/* Zusatz-Zeilen in einer KPI-Karte (z.B. IR/CS/Vega unter dem Total) */
+.mr-kpi-card__rows { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
+.mr-kpi-row-line { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+.mr-kpi-row-line span:first-child { color: var(--text-muted); }
 .mr-kpi-card__rel { font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
 .mr-kpi-card__desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+/* "Core reading"-Karte (Market VaR Decomposition): breiter, Fliesstext. */
+.mvar-core-card { flex: 1 1 320px; min-width: 280px; }
+.mvar-core-text { font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5; }
+.mvar-core-text b { color: var(--text-primary); }
 .mr-kpi-card__sq { position: absolute; top: 14px; right: 14px; width: 11px; height: 11px; border-radius: 3px; background: var(--text-muted); }
 .mr-amp-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--text-muted); }
 .mr-amp--green  { background: #4CAF50; }
@@ -436,6 +469,16 @@
 /* Delta (Veraenderung ggue. letztem History-Eintrag) — gold, wie Vorlage */
 .mr-kpi-card__delta { font-size: 12px; font-weight: 600; color: #C8A23A; margin-top: 3px; }
 .mr-kpi-card__delta--sub { font-size: 11px; }
+
+/* Credit-Dashboard: je Kennzahl eine Zeile (Karte + eigene Limitleiste), untereinander */
+.cr-metric-stack { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.cr-metric-row {
+  display: flex; gap: 16px; align-items: stretch;
+  border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;
+  background: var(--surface-subtle, transparent);
+}
+.cr-metric-row .mr-kpi-card { flex: 0 0 220px; min-width: 200px; }
+.cr-metric-limit { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
 
 /* Limit-Auslastungsleiste */
 .mr-limit-wrap { margin-top: 20px; }
