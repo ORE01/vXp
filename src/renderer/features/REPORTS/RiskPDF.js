@@ -764,7 +764,126 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           NAVY = [11, 31, 58], TRACK = [238, 242, 246];
     const ampRgb = (s) => ({ green: [76, 175, 80], yellow: [224, 176, 0], red: [211, 47, 47] }[s] || [154, 167, 180]);
 
-    // KPI-Karten
+    // Limitleiste(n): Market = eine (MVaR); Credit = eine je Kennzahl (untereinander).
+    // Zuerst definieren, damit beide Zweige sie nutzen.
+    const drawLimitBar = (lim, titleLabel, limitSub, noDataMsg) => {
+      ensurePageSpace(46);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...TEXT);
+      doc.text(titleLabel ? `Limit utilization — ${titleLabel}` : 'Limit utilization', marginX, y);
+      if (!lim) {
+        y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+        doc.text(noDataMsg || 'No limit data.', marginX, y);
+        y += cfg.blockGap; return;
+      }
+      // Balken ~halb so breit (wie im Screen).
+      const barW = contentW * 0.5;
+      const a = ampRgb(lim.state);
+      doc.setTextColor(a[0], a[1], a[2]); doc.setFontSize(11);
+      doc.text(String(lim.utilStr), marginX + barW, y, { align: 'right' });
+
+      const by = y + 3, bh = 6;
+      doc.setFillColor(...TRACK); doc.rect(marginX, by, barW, bh, 'F');
+      const yellowW = barW * (lim.yellowRatio / 100);
+      doc.setFillColor(205, 227, 205); doc.rect(marginX, by, yellowW, bh, 'F');
+      doc.setFillColor(245, 233, 197); doc.rect(marginX + yellowW, by, barW - yellowW, bh, 'F');
+      doc.setFillColor(...NAVY); doc.rect(marginX, by, barW * Math.min(1, lim.util), bh, 'F');
+
+      const sy = by + bh + 4;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+      doc.text('0%', marginX, sy);
+      doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, marginX + barW / 2, sy, { align: 'center' });
+      doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, marginX + barW, sy, { align: 'right' });
+
+      const ly = sy + 5, lcW = 72, lcH = 20, lcGap = 6;
+      const lcards = [
+        { lbl: 'RISK LIMIT', val: String(lim.limitRelStr), sub: (lim.limitAbsStr || limitSub || 'THRESHOLD') },
+        { lbl: 'BUFFER', val: String(lim.bufferRelStr), sub: (lim.bufferAbsStr || 'remaining to limit') },
+      ];
+      lcards.forEach((lc, i) => {
+        const x = marginX + i * (lcW + lcGap);
+        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+        doc.roundedRect(x, ly, lcW, lcH, 2, 2, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+        doc.text(lc.lbl, x + 5, ly + 6);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...TEXT);
+        doc.text(lc.val, x + 5, ly + 13);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+        doc.text(lc.sub, x + 5, ly + 17.5);
+      });
+      y = ly + lcH + cfg.blockGap;
+    };
+
+    // ── MARKET: Status-Box + 4 KPI-Karten (rel oben, abs darunter) + Risk development + Limit ──
+    if (!isCredit) {
+      const st = model?.status;
+      if (st) {
+        const boxH = 22;
+        ensurePageSpace(boxH + 6);
+        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+        doc.roundedRect(marginX, y, contentW, boxH, 2, 2, 'FD');
+        doc.setFillColor(...GOLD); doc.rect(marginX, y, 1.6, boxH, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+        doc.text('Market Risk Overview', marginX + 6, y + 6);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...SUB);
+        const lines = doc.splitTextToSize(String(st.text || ''), contentW - 55);
+        doc.text(lines.slice(0, 3), marginX + 6, y + 11);
+        const a = ampRgb(st.state);
+        const bx = marginX + contentW - 22;
+        doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx, y + 8, 2.6, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+        doc.text(String(st.label || ''), bx, y + 15, { align: 'center' });
+        y += boxH + 8;
+      }
+
+      const mcards = model?.cards || [];
+      const mN = Math.max(1, mcards.length);
+      const mGap = 6, mCardW = (contentW - mGap * (mN - 1)) / mN, mCardH = 30;
+      ensurePageSpace(mCardH + 6);
+      mcards.forEach((c, i) => {
+        const x = marginX + i * (mCardW + mGap), tx = x + 5;
+        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+        doc.roundedRect(x, y, mCardW, mCardH, 2, 2, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+        doc.text(String(c.label).toUpperCase(), tx, y + 6);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+        if (c.isDelta) doc.setTextColor(76, 175, 80); else doc.setTextColor(...TEXT);
+        const relTxt = String(c.rel); doc.text(relTxt, tx, y + 14);
+        if (!c.isDelta) { const relW = doc.getTextWidth(relTxt); const a = ampRgb(c.state); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + relW + 3, y + 12.6, 1.3, 'F'); }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SUB);
+        if (c.abs) doc.text(String(c.abs), tx, y + 20);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+        if (c.desc) doc.text(String(c.desc), tx, y + 25);
+      });
+      y += mCardH + 10;
+
+      const flow = model?.flow || [];
+      if (flow.length) {
+        ensurePageSpace(26);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...TEXT);
+        doc.text('Risk development', marginX, y); y += 3;
+        const fN = flow.length, arrowW = 8;
+        const fBoxW = (contentW - arrowW * (fN - 1)) / fN, fBoxH = 18;
+        let fx = marginX;
+        flow.forEach((f, i) => {
+          if (i > 0) { doc.setFont('helvetica', 'normal'); doc.setFontSize(13); doc.setTextColor(...MUTED); doc.text('>', fx + arrowW / 2, y + fBoxH / 2 + 2, { align: 'center' }); fx += arrowW; }
+          doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+          doc.roundedRect(fx, y, fBoxW, fBoxH, 2, 2, 'FD');
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+          doc.text(String(f.label).toUpperCase(), fx + 4, y + 5);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...TEXT);
+          doc.text(String(f.rel), fx + 4, y + 11);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...SUB);
+          doc.text(String(f.abs), fx + 4, y + 16);
+          fx += fBoxW;
+        });
+        y += fBoxH + cfg.blockGap;
+      }
+
+      drawLimitBar(model?.limit, null, 'CONSERVATIVE', 'No market risk data for the selected portfolio yet.');
+      return;
+    }
+
+    // ── CREDIT: KPI-Karten-Reihe + Limitleiste je Kennzahl ──
     const n = Math.max(1, dcards.length);
     const gap = 6, cardW = (contentW - gap * (n - 1)) / n, cardH = 34;
     ensurePageSpace(cardH + 6);
@@ -783,58 +902,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       if (Number.isFinite(c.dAbs)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GOLD); doc.text(String(c.absDeltaStr), tx, y + 32); }
     });
     y += cardH + 10;
-
-    // Limitleiste(n): Market = eine (MVaR); Credit = eine je Kennzahl (untereinander).
-    const drawLimitBar = (lim, titleLabel, limitSub, noDataMsg) => {
-      ensurePageSpace(46);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...TEXT);
-      doc.text(titleLabel ? `Limit utilization — ${titleLabel}` : 'Limit utilization', marginX, y);
-      if (!lim) {
-        y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
-        doc.text(noDataMsg || 'No limit data.', marginX, y);
-        y += cfg.blockGap; return;
-      }
-      const a = ampRgb(lim.state);
-      doc.setTextColor(a[0], a[1], a[2]); doc.setFontSize(11);
-      doc.text(String(lim.utilStr), marginX + contentW, y, { align: 'right' });
-
-      const by = y + 3, bh = 6;
-      doc.setFillColor(...TRACK); doc.rect(marginX, by, contentW, bh, 'F');
-      const yellowW = contentW * (lim.yellowRatio / 100);
-      doc.setFillColor(205, 227, 205); doc.rect(marginX, by, yellowW, bh, 'F');
-      doc.setFillColor(245, 233, 197); doc.rect(marginX + yellowW, by, contentW - yellowW, bh, 'F');
-      doc.setFillColor(...NAVY); doc.rect(marginX, by, contentW * Math.min(1, lim.util), bh, 'F');
-
-      const sy = by + bh + 4;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
-      doc.text('0%', marginX, sy);
-      doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, marginX + contentW / 2, sy, { align: 'center' });
-      doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, marginX + contentW, sy, { align: 'right' });
-
-      const ly = sy + 5, lcW = 72, lcH = 20, lcGap = 6;
-      const lcards = [
-        { lbl: 'RISK LIMIT', val: String(lim.limitRelStr), sub: limitSub || 'THRESHOLD' },
-        { lbl: 'BUFFER', val: String(lim.bufferRelStr), sub: 'remaining to limit' },
-      ];
-      lcards.forEach((lc, i) => {
-        const x = marginX + i * (lcW + lcGap);
-        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-        doc.roundedRect(x, ly, lcW, lcH, 2, 2, 'FD');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
-        doc.text(lc.lbl, x + 5, ly + 6);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...TEXT);
-        doc.text(lc.val, x + 5, ly + 13);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
-        doc.text(lc.sub, x + 5, ly + 17.5);
-      });
-      y = ly + lcH + cfg.blockGap;
-    };
-
-    if (isCredit) {
-      dcards.forEach((c) => { if (c.limit) drawLimitBar(c.limit, c.label, 'THRESHOLD', null); });
-    } else {
-      drawLimitBar(model?.limit, null, 'CONSERVATIVE', 'No market risk data for the selected portfolio yet.');
-    }
+    dcards.forEach((c) => { if (c.limit) drawLimitBar(c.limit, c.label, 'THRESHOLD', null); });
     return;
   }
 

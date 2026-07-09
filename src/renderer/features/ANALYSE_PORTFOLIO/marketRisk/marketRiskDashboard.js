@@ -124,56 +124,105 @@ export function getMarketDashboardModel() {
   const lastVarRelPct = num(hist?.M_VaR_ALL_PCT ?? hist?.M_VaR_All_PCT) * 100;
   const lastEsRelPct = num(hist?.M_ES_ALL_PCT ?? hist?.M_ES_All_PCT) * 100;
 
-  // Vorerst NUR Market Risk (kein Credit).
-  const cards = [
-    { label: 'MVaR', abs: fmtEur(row?.VaR_T_abs), rel: fmtPct(row?.VaR_T_rel),
-      dRel: magDelta(num(row?.VaR_T_rel), lastVarRelPct), dAbs: magDelta(num(row?.VaR_T_abs), lastVarAbs),
-      desc: interval || 'Total VaR', state: varState },
-    { label: 'ES MVaR', abs: fmtEur(row?.ES_T_abs), rel: fmtPct(row?.ES_T_rel),
-      dRel: magDelta(num(row?.ES_T_rel), lastEsRelPct), dAbs: magDelta(num(row?.ES_T_abs), lastEsAbs),
-      desc: 'beyond MVaR', state: esState },
-  ];
-  cards.forEach((c) => { c.relDeltaStr = fmtPpSigned(c.dRel); c.absDeltaStr = fmtEurSigned(c.dAbs); });
+  const dVarRel = magDelta(num(row?.VaR_T_rel), lastVarRelPct);
+  const dVarAbs = magDelta(num(row?.VaR_T_abs), lastVarAbs);
+  const limit = computeLimitModel(row, varState);
 
-  return { cards, limit: computeLimitModel(row, varState), hasRow: !!row };
+  // KPI-Karten (4): relativer Wert = Hauptzahl, absoluter Wert immer darunter.
+  const cards = [
+    { label: 'MVaR', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs), desc: interval || 'confidence · holding period',
+      state: varState, dRel: dVarRel, dAbs: dVarAbs, relDeltaStr: fmtPpSigned(dVarRel), absDeltaStr: fmtEurSigned(dVarAbs) },
+    { label: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs), desc: 'beyond MVaR', state: esState },
+    { label: 'Delta vs previous', rel: fmtPpSigned(dVarRel), abs: fmtEurSigned(dVarAbs), desc: 'vs previous period', state: 'neutral', isDelta: true },
+    { label: 'Limit buffer', rel: (limit ? limit.bufferRelStr : '–'), abs: (limit && limit.bufferAbs != null ? fmtEur(limit.bufferAbs) : '–'), desc: 'remaining to limit', state: varState },
+  ];
+
+  // Risk development: previous MVaR -> current MVaR -> Expected Shortfall (rel main, abs below).
+  const prevVarRel = Number.isFinite(lastVarRelPct) ? -Math.abs(lastVarRelPct) : NaN;
+  const flow = [
+    { label: 'MVaR previous', rel: fmtPct(prevVarRel), abs: (Number.isFinite(lastVarAbs) ? fmtEur(lastVarAbs) : '–') },
+    { label: 'MVaR current', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs) },
+    { label: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs) },
+  ];
+
+  // Status box (overall traffic light + short prose).
+  const state = varState || (limit ? limit.state : null) || 'neutral';
+  const label = { green: 'STATUS GREEN', yellow: 'STATUS YELLOW', red: 'STATUS RED' }[state] || 'STATUS';
+  const utilStr = limit ? limit.utilStr : '–';
+  const bufferAbsStr = (limit && limit.bufferAbs != null) ? fmtEur(limit.bufferAbs) : '–';
+  const text = row
+    ? `Market risk is within the defined risk framework. MVaR is ${fmtEur(row?.VaR_T_abs)} (${fmtPct(row?.VaR_T_rel)} of portfolio value) and Expected Shortfall is ${fmtEur(row?.ES_T_abs)}. Limit utilization is ${utilStr}, leaving a buffer of ${bufferAbsStr}.`
+    : 'No market risk data for the selected portfolio yet.';
+  const status = { state, label, text };
+
+  return { status, cards, flow, limit, hasRow: !!row };
 }
 
 export function renderMarketRiskDashboard() {
   bindListeners();
 
+  const statusEl = document.getElementById('mrDashStatus');
   const host = document.getElementById('mrDashKpi');
+  const flowEl = document.getElementById('mrDashFlow');
   const introEl = document.getElementById('mrDashIntro');
   const limitEl = document.getElementById('mrDashLimit');
   const tblEl = document.getElementById('mrDashKpiTable');
-  if (!host && !limitEl && !tblEl) return;
+  if (!host && !limitEl && !tblEl && !statusEl && !flowEl) return;
 
-  const { cards, limit } = getMarketDashboardModel();
+  const { status, cards, flow, limit } = getMarketDashboardModel();
 
   if (introEl) introEl.textContent = 'Current market risk position for the selected portfolio.';
 
+  // Status-/Beschreibungs-Box mit grosser Ampel.
+  if (statusEl) {
+    const amp = `mr-amp--${status.state || 'neutral'}`;
+    statusEl.innerHTML = `
+      <div class="mr-status">
+        <div class="mr-status__body">
+          <div class="mr-status__title">Market Risk Overview</div>
+          <div class="mr-status__text">${esc(status.text)}</div>
+        </div>
+        <div class="mr-status__badge">
+          <span class="mr-amp-dot ${amp} mr-status__dot"></span>
+          <span class="mr-status__badge-lbl">${esc(status.label)}</span>
+        </div>
+      </div>`;
+  }
+
+  // KPI-Karten: relativ = Hauptzahl, absolut immer darunter.
   if (host) {
     host.innerHTML = cards.map((c) => {
       const amp = `mr-amp--${c.state || 'neutral'}`;
-      const relDeltaHtml = Number.isFinite(c.dRel)
-        ? `<div class="mr-kpi-card__delta">${esc(c.relDeltaStr)}</div>` : '';
-      const absDeltaHtml = Number.isFinite(c.dAbs)
-        ? `<div class="mr-kpi-card__delta mr-kpi-card__delta--sub">${esc(c.absDeltaStr)}</div>` : '';
+      const dot = c.isDelta ? '' : `<span class="mr-amp-dot ${amp}"></span>`;
+      const valCls = c.isDelta ? 'mr-kpi-card__value mr-kpi-card__value--delta' : 'mr-kpi-card__value';
       return `
       <div class="mr-kpi-card">
         <div class="mr-kpi-card__label">${esc(c.label)}</div>
-        <div class="mr-kpi-card__value">${esc(c.rel)}<span class="mr-amp-dot ${amp}"></span></div>
-        ${relDeltaHtml}
+        <div class="${valCls}">${esc(c.rel)}${dot}</div>
         <div class="mr-kpi-card__sub">${esc(c.abs)}</div>
-        ${absDeltaHtml}
         <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
       </div>`;
     }).join('');
   }
 
+  // Risk development (3 Boxen mit Pfeilen): rel oben, abs darunter.
+  if (flowEl) {
+    flowEl.innerHTML = `
+      <div class="mr-flow__head">Risk development</div>
+      <div class="mr-flow">${
+        flow.map((f, i) => `${i > 0 ? '<div class="mr-flow__arrow">&#8594;</div>' : ''}
+          <div class="mr-flow__box">
+            <div class="mr-flow__lbl">${esc(f.label)}</div>
+            <div class="mr-flow__val">${esc(f.rel)}</div>
+            <div class="mr-flow__sub">${esc(f.abs)}</div>
+          </div>`).join('')
+      }</div>`;
+  }
+
   renderLimitHtml(limitEl, limit);
 
   // KPI-Band-Spiegelung nur fuer die PREVIEW (Thumbnail-Erfassung). Das PDF zeichnet
-  // das Dashboard nativ (RiskPDF, Composed) — daher hier keine PDF-Sonderlogik.
+  // das Dashboard nativ (RiskPDF, Composed).
   if (tblEl) {
     const rows = [];
     cards.forEach((c) => { rows.push([c.label, c.rel]); rows.push([`${c.label} (abs)`, c.abs]); });
@@ -205,6 +254,9 @@ function computeLimitModel(row, state) {
     // Relativ: Limit = Rot-Schwelle in %, Buffer = verbleibende Prozentpunkte bis Limit.
     limitRelStr: `${Number(redPct.toFixed(2))}%`,
     bufferRelStr: `${Number((redPct - curPct).toFixed(2))}%`,
+    // Absolut (fuer Screen + PDF): "EUR … mn".
+    limitAbsStr: (limitAbs != null ? fmtEur(limitAbs) : null),
+    bufferAbsStr: (bufferAbs != null ? fmtEur(bufferAbs) : null),
   };
 }
 
@@ -233,12 +285,12 @@ function renderLimitHtml(el, m) {
         <div class="mr-limit-card">
           <div class="mr-limit-card__lbl">Risk limit</div>
           <div class="mr-limit-card__val">${esc(m.limitRelStr)}</div>
-          <div class="mr-limit-card__sub">CONSERVATIVE</div>
+          <div class="mr-limit-card__sub">${m.limitAbsStr ? esc(m.limitAbsStr) : 'CONSERVATIVE'}</div>
         </div>
         <div class="mr-limit-card">
           <div class="mr-limit-card__lbl">Buffer</div>
           <div class="mr-limit-card__val">${esc(m.bufferRelStr)}</div>
-          <div class="mr-limit-card__sub">remaining to limit</div>
+          <div class="mr-limit-card__sub">${m.bufferAbsStr ? esc(m.bufferAbsStr) : 'remaining to limit'}</div>
         </div>
       </div>
     </div>`;

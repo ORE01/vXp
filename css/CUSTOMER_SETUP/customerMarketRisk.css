@@ -154,3 +154,17 @@
   font-weight: 600;
   font-size: 13px;
 }
+
+/* SETUP -> Data Sources: Speicherort der Input-Workbooks */
+.ds-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 0; border-bottom: 1px solid var(--border-subtle);
+}
+.ds-info { min-width: 0; flex: 1 1 auto; }
+.ds-label { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.ds-path {
+  font-size: 12px; color: var(--text-secondary); margin-top: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ds-path--override { color: #C8A23A; }
+.ds-actions { display: flex; gap: 8px; flex: 0 0 auto; }

@@ -341,7 +341,7 @@ export function renderCreditRiskDashboard() {
 
 // Loss-Charts (Histogramm + Tail, Tail-Zoom) — jetzt im Overview-Panel (panel-credit),
 // nicht im Dashboard. Rendert bei Overview-Open und wenn die Loss-Daten eintreffen.
-function renderCreditOverviewCharts() {
+export function renderCreditOverviewCharts() {
   try { renderCreditLossDist(); } catch (e) { console.warn('[CreditOverview] loss dist failed', e); }
   try { renderCreditTailZoom(); } catch (e) { console.warn('[CreditOverview] tail zoom failed', e); }
 }

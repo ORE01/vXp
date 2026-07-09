@@ -4,7 +4,7 @@
 const fs = require('fs');
 const pathMod = require('path');
 const { dialog } = require('electron');
-const { getFilesBaseDir, getExcelPath, getDatabasePath } = require('../../main.path');
+const { getFilesBaseDir, getExcelPath, getDatabasePath, getExcelEnvOverrides } = require('../../main.path');
 const { resolveOneShotCommand } = require('../../services/python.service');
 
 // ---- ERSTE-Zieldatei (vom User per "Browse" wählbar, persistiert) ----
@@ -115,7 +115,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     let stderrBuf = '';
     let child;
     try {
-      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath() } });
+      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath(), ...getExcelEnvOverrides() } });
     } catch (e) {
       finish(false, `Start failed: ${e.message}`);
       return;
@@ -331,7 +331,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     let stderrBuf = '';
     let child;
     try {
-      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath() } });
+      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath(), ...getExcelEnvOverrides() } });
     } catch (e) {
       finish(false, `Start failed: ${e.message}`);
       return;
@@ -689,7 +689,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
     let child;
     try {
-      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath() } });
+      child = cp.spawn(exe, spawnArgs, { windowsHide: true, cwd, env: { ...process.env, UNI_DB_PATH: getDatabasePath(), ...getExcelEnvOverrides() } });
     } catch (_) { return; }
 
     child.on('error', () => {});

@@ -33,6 +33,7 @@ import {
   handleCustomerCreditRiskThresholdSettingData,
 } from './features/CUSTOMER_SETUP/customerCreditRiskSettingHandler.js';
 import { initCustomerCreditRiskSave } from './features/CUSTOMER_SETUP/customerCreditRiskPanel.js';
+import { initDataSourcesPanel } from './features/CUSTOMER_SETUP/dataSourcesPanel.js';
 import {
   handleCustomerDefaultPortfolioData,
   initCustomerDefaultPortfolioPanel,
@@ -302,6 +303,9 @@ const {
 
   // Customer Setup -> Risk -> Credit Risk -> General Settings: wire the Save button.
   initCustomerCreditRiskSave();
+
+  // Customer Setup -> Data Sources: wire the Excel-input path pickers.
+  initDataSourcesPanel();
 
 });
 

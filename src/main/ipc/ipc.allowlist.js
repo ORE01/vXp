@@ -89,6 +89,11 @@ module.exports = {
     'import-excel-dialog',
     'select-excel-file',
 
+    // Data Sources (SETUP): Speicherort der Input-Workbooks
+    'data-inputs:get-paths',
+    'data-inputs:select',
+    'data-inputs:reset',
+
     // ERSTE market-data target workbook (Browse)
     'erste:get-target',
     'erste:select-target',

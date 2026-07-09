@@ -7,7 +7,7 @@ const { spawn } = require('child_process');
 const { app } = require('electron');
 
 // ✅ Source of truth für DB-Pfad kommt aus Electron (dev + productiontest = DEV-DB)
-const { getDatabasePath } = require('../main.path');
+const { getDatabasePath, getExcelEnvOverrides } = require('../main.path');
 
 let proc = null;
 let activeResolve = null;
@@ -157,6 +157,8 @@ function startPythonScript({
           env: {
             ...process.env,
             UNI_DB_PATH: dbPathForPython,
+            // Optionale Excel-Input-Overrides (SETUP: anderer Speicherort/Netzlaufwerk).
+            ...getExcelEnvOverrides(),
           },
         });
 
@@ -269,5 +271,14 @@ for (const line of lines) {
 
 }
 
-module.exports = { startPythonScript, resolveOneShotCommand };
+// Persistenten Worker beenden -> beim naechsten Aufruf spawnt er mit FRISCHER Env
+// (z.B. neue Excel-Input-Overrides). Ohne das wuerde ein bereits laufender Worker
+// seine beim Start eingefrorene Env behalten (nur in dev wird er ohnehin je Aufruf neu
+// gestartet; in prod/thomasdev NICHT — dort ist das noetig).
+function killPersistentWorker() {
+  try { if (proc) proc.kill(); } catch (_) {}
+  proc = null;
+}
+
+module.exports = { startPythonScript, resolveOneShotCommand, killPersistentWorker };
 

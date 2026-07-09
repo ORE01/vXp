@@ -888,7 +888,12 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
   <div class="sub-panel-body">
     <div id="mrDashIntro" class="mr-dash-intro"></div>
+    <!-- Status-/Beschreibungs-Box mit Ampel -->
+    <div id="mrDashStatus" class="mr-status-wrap"></div>
+    <!-- 4 KPI-Karten: relativ oben, absolut darunter -->
     <div id="mrDashKpi" class="mr-kpi-row"></div>
+    <!-- Risk development (3 Boxen mit Pfeilen) -->
+    <div id="mrDashFlow" class="mr-flow-wrap"></div>
     <!-- Limit-Auslastungsleiste (CONSERVATIVE) -->
     <div id="mrDashLimit" class="mr-limit-wrap"></div>
     <!-- Nur fuer die Report-Preview (Thumbnail). Das PDF zeichnet das Dashboard nativ. -->
@@ -3396,7 +3401,50 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
+    <!-- Data Sources subtrigger: opens the #panel-data-sources slide-in -->
+    <div class="chart-section">
+      <button class="section-trigger"
+              data-panel="panel-data-sources"
+              aria-controls="panel-data-sources"
+              aria-expanded="false">
+        <span class="section-header">Data Sources</span><span class="chev"></span>
+      </button>
+    </div>
+
     <div class="sub-panel-backdrop" hidden></div>
+
+    <!-- Data Sources: choose where the input workbooks are read from (e.g. shared folder) -->
+    <div id="panel-data-sources" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-data-sources-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-data-sources-title" class="sub-panel-title">Data Sources</div>
+        <button class="sub-panel-close" data-close="panel-data-sources" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <p class="mvar-caption">Choose where the input workbooks are read from. Point them to a shared network folder so multiple users can work from the same input data. Changes apply to the next data import / calculation.</p>
+
+        <div class="ds-row">
+          <div class="ds-info">
+            <div class="ds-label">Business data (UNI_DATA.xlsm)</div>
+            <div class="ds-path" id="dsPathBusiness">–</div>
+          </div>
+          <div class="ds-actions">
+            <button class="edit-button" id="dsChooseBusiness" type="button">Choose…</button>
+            <button class="edit-button" id="dsResetBusiness" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div class="ds-row">
+          <div class="ds-info">
+            <div class="ds-label">Market data (MARKET_DATA.xlsm)</div>
+            <div class="ds-path" id="dsPathMarket">–</div>
+          </div>
+          <div class="ds-actions">
+            <button class="edit-button" id="dsChooseMarket" type="button">Choose…</button>
+            <button class="edit-button" id="dsResetMarket" type="button">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div id="panel-customer-category" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-customer-category-title" hidden>
       <div class="sub-panel-header">
@@ -4248,6 +4296,8 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
           <div class="upd-progress" id="excelProgress_full"></div>
         </div>
+        <!-- Quelle (dauerhaft): woraus dieser Import liest -->
+        <div class="upd-src" data-src-key="both"></div>
       </section>
 
       <section class="cp-card upd-tile">
@@ -4260,6 +4310,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
           <div class="upd-progress" id="excelProgress_master"></div>
         </div>
+        <div class="upd-src" data-src-key="business"></div>
       </section>
 
       <section class="cp-card upd-tile">
@@ -4270,6 +4321,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
           <div class="upd-progress" id="excelProgress_market"></div>
         </div>
+        <div class="upd-src" data-src-key="market"></div>
       </section>
 
     </div>

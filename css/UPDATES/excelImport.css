@@ -123,3 +123,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Quelle je Import-Kachel (dauerhaft): aus welcher Datei der Import liest (effektiver Pfad). */
+.upd-import-panel .upd-tile .upd-src {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+  line-height: 1.4;
+}

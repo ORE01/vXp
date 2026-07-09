@@ -434,6 +434,33 @@
   background: var(--surface-raised); border: 1px solid var(--border-subtle);
   border-radius: 8px; padding: 10px 12px; margin-top: 6px;
 }
+/* Market-Dashboard: Status-/Beschreibungs-Box mit grosser Ampel */
+.mr-status-wrap { margin-top: 12px; }
+.mr-status {
+  display: flex; gap: 16px; align-items: center; justify-content: space-between;
+  background: var(--surface-card); border: 1px solid var(--border-subtle);
+  border-left: 4px solid #C8A23A; border-radius: 8px; padding: 14px 16px;
+}
+.mr-status__title { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.mr-status__text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; max-width: 900px; }
+.mr-status__badge { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+.mr-status__dot { width: 22px !important; height: 22px !important; }
+.mr-status__badge-lbl { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: .04em; white-space: nowrap; }
+
+/* Market-Dashboard: Risk development flow (3 Boxen mit Pfeilen) */
+.mr-flow-wrap { margin-top: 18px; }
+.mr-flow__head { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+.mr-flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mr-flow__box {
+  background: var(--surface-card); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 10px 14px; min-width: 150px; flex: 0 1 auto;
+}
+.mr-flow__lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.mr-flow__val { font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px; }
+.mr-flow__sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.mr-flow__arrow { font-size: 20px; color: var(--text-muted); flex: 0 0 auto; }
+.mr-kpi-card__value--delta { color: #4CAF50; }
+
 .mr-kpi-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
 .mr-kpi-card {
   flex: 1 1 200px; min-width: 190px; position: relative;
@@ -494,6 +521,8 @@
 .mr-limit__zone--amber { background: rgba(224, 176, 0, .22); }
 .mr-limit__fill { position: absolute; top: 0; bottom: 0; left: 0; background: #0B1F3A; border-right: 2px solid #fff; }
 .mr-limit__scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+/* Auslastungsleiste ~halb so breit (Kopf/Balken/Skala buendig). */
+.mr-limit__head, .mr-limit__bar, .mr-limit__scale { max-width: 50%; }
 .mr-limit__cards { display: flex; gap: 12px; margin-top: 14px; }
 .mr-limit-card {
   flex: 0 1 200px; background: var(--surface-card); border: 1px solid var(--border-subtle);
