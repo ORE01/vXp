@@ -13,6 +13,9 @@ import {
 // Lazy-Panels (Market Data, Analyse …) materialisieren, damit der Report ihren
 // Inhalt erfassen kann, ohne dass man die Tabs vorher manuell öffnet.
 import { renderAllRegisteredPanels } from '../../core/routing/panelOrchestrator.js';
+// Liquidity-Dashboard vor der Erfassung in den by-category-Zustand bringen (Chart
+// nach Kategorie + Cash-Flow-Pivot), damit es im Report immer so erscheint.
+import { prepareLiquidityDashboardForReport } from '../ANALYSE_PORTFOLIO/liquidityDashboard.js';
 
 // Materialisiert ALLE Report-Quellen aus dem Store, ohne dass Tabs/Panels offen
 // sein müssen. Durchgängig: Lazy-Panels (Registry) + RISK-Charts, die nicht an
@@ -2106,6 +2109,10 @@ function renderRiskPreview() {
   try {
     clearThumbCache?.();
 
+    // Liquidity-Dashboard vor der DOM-Erfassung nach Kategorie rendern (Chart + Pivot),
+    // damit Preview/PDF immer die by-category-Ansicht inkl. Cash-Flow-Tabelle zeigen.
+    try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPreview] liquidity dashboard prep failed', e); }
+
     const chartState = loadChartToggleState?.() || {};
     let sections     = buildPreviewSections(chartState) || [];
 
@@ -3012,6 +3019,9 @@ function setAllRRCheckboxes(checked) {
 // ─────────────────────────────────────────────
 
 export function getActiveRiskSectionsForPdf() {
+  // Auch fuer den PDF-Export sicherstellen, dass das Liquidity-Dashboard by-category
+  // (Chart + Cash-Flow-Pivot) im DOM steht, bevor die Sektionen erfasst werden.
+  try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPdf] liquidity dashboard prep failed', e); }
   const chartState = loadChartToggleState?.() || {};
   const layout     = computeRiskLayout(chartState) || [];
 

@@ -177,21 +177,23 @@ function renderLiqCategoryPivot(rows, labels, show) {
     colTot[ci] += v;
     grand += v;
   }
-  const fmt = (v) => (Number(v) || 0).toLocaleString('de-DE', { maximumFractionDigits: 2 });
+  // Werte in EUR mn (1 Nachkommastelle) — sonst brechen die vollen Betraege in den
+  // schmalen PDF-Spalten mitten in der Zahl um.
+  const fmt = (v) => ((Number(v) || 0) / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 });
   const esc = (s) => String(s ?? '').replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]));
-  const head = `<tr><th>Maturity/Category</th>${labels.map(l => `<th style="text-align:right;">${esc(l)}</th>`).join('')}<th style="text-align:right;">Summ</th></tr>`;
+  const head = `<tr><th>Maturity/Category (EUR mn)</th>${labels.map(l => `<th style="text-align:right;">${esc(l)}</th>`).join('')}<th style="text-align:right;">Sum</th></tr>`;
   const bodyRows = cats.map(c => {
     const arr = matrix.get(c);
     const rowSum = arr.reduce((s, v) => s + v, 0);
     return `<tr><td>${esc(c)}</td>${arr.map(v => `<td style="text-align:right;">${fmt(v)}</td>`).join('')}<td class="liq-pivot-sum" style="text-align:right;">${fmt(rowSum)}</td></tr>`;
   }).join('');
-  const totalRow = `<tr class="liq-pivot-total"><td>Gesamtergebnis</td>${colTot.map(v => `<td style="text-align:right;">${fmt(v)}</td>`).join('')}<td style="text-align:right;">${fmt(grand)}</td></tr>`;
+  const totalRow = `<tr class="liq-pivot-total"><td>Total</td>${colTot.map(v => `<td style="text-align:right;">${fmt(v)}</td>`).join('')}<td style="text-align:right;">${fmt(grand)}</td></tr>`;
   tblEl.innerHTML = `<table class="conc-detail-tbl liq-pivot-tbl"><thead>${head}</thead><tbody>${bodyRows}${totalRow}</tbody></table>`;
   // Fuer die Report-Erfassung (discoverTablesFromPanel liest .data-container[id]).
   // maxCols hoch, damit die breite Pivot-Tabelle (viele Jahre) in der Preview nicht
   // auf 8 Spalten gekappt wird.
   tblEl.classList.add('data-container');
-  tblEl.dataset.label = 'Maturity — Category (annual cash flows)';
+  tblEl.dataset.label = 'Maturity — Category (annual cash flows, EUR mn)';
   tblEl.dataset.maxCols = String(labels.length + 2);
 }
 
@@ -268,6 +270,15 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
       },
     },
   });
+}
+
+// Hook fuer die Report-Erzeugung: erzwingt den by-category-Zustand (Chart nach
+// Kategorie + Pivot-Tabelle), damit Preview/PDF das Dashboard immer so zeigen —
+// unabhaengig davon, ob der Nutzer es vorher aktiviert/geoeffnet hat.
+export function prepareLiquidityDashboardForReport() {
+  _chartField = 'CATEGORY';
+  _showCategoryPivot = true;
+  renderLiquidityDashboard(_lastRows, { keepGroup: true });
 }
 
 function bindOpenListener() {

@@ -535,7 +535,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     let estEntries = sections.length;
     const bn = breakdownSec?.breakdownNumbering;
     if (bn) estEntries += Object.keys(bn.groups || {}).length + Object.keys(bn.charts || {}).length;
-    if (Array.isArray(filteredData) && filteredData.length) estEntries += 1;
+    // Kein Appendix-Eintrag mehr (Produkttabelle entfernt).
 
     const tl = createPdfLayout(doc, layout.cfg);
     let tocPagesNeeded = 1, y = tl.startY() + 12;
@@ -609,17 +609,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     pendingGroupToc.length = 0;
   }
 
-  // Appendix: products
-  if (Array.isArray(filteredData) && filteredData.length) {
-    doc.addPage();
-    const pageIndex = doc.internal.getNumberOfPages();
-    // Nächste Top-Level-Nummer (zählt nur Ebene-1-Sektionen, nicht Untergruppen).
-    const topLevelCount = sections.filter((s) => (s.tocLevel || 1) === 1).length;
-    const appendixNo = String(topLevelCount + 1);
-
-    tocEntries.push({ title: `${appendixNo}. Appendix: Product Table`, page: pageIndex, level: 1 });
-    drawProductTableSection(doc, filteredData, layout, { appendixNo });
-  }
+  // Appendix (Produkttabelle) auf Wunsch entfernt — bewusst nicht mehr gezeichnet.
 
   // Write TOC (ab Seite 2; fließt über die vorab reservierten Seiten).
   if (includeTOC) {
