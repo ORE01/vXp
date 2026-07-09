@@ -1578,6 +1578,19 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
     <!--   ENDE BLOCK 3 -->
 
+    <!--   BLOCK 3.5: Loss distribution (Histogramm + Tail) und Tail-Zoom (Quantile) -->
+    <div id="crDashLossCharts" style="display:flex; gap:20px; flex-wrap:wrap; margin-top:20px;">
+      <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
+        <div class="conc-panel__title">Loss distribution with tail highlight</div>
+        <canvas id="crLossDistChart" width="560" height="300"></canvas>
+      </div>
+      <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
+        <div class="conc-panel__title">Tail zoom: quantiles, VaR and ES</div>
+        <canvas id="crTailZoomChart" width="560" height="300"></canvas>
+      </div>
+    </div>
+    <!--   ENDE BLOCK 3.5 -->
+
     <!--   BLOCK 4: Charts -->
     <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 20px;">
       <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
