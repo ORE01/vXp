@@ -67,6 +67,48 @@ function restoreCachedValuationResult(container, prodId) {
   `;
 }
 
+// Leere Bewertungs-Box: gleiche Raster-Optik, alle Werte "–". Bleibt beim Oeffnen UND
+// waehrend der Berechnung offen (nur Titel/Hinweis wechseln), bis "Calculate Product"
+// die echten Werte einsetzt.
+function renderEmptyResult(
+  container,
+  note = 'Click Calculate Product to run a standalone product valuation.',
+  title = 'Valuation'
+) {
+  const resultBox = container.querySelector('#productValuationResult');
+  if (!resultBox) return;
+  const d = '–';
+  resultBox.innerHTML = `
+    <div class="structure-valuation-result-card">
+      <h4 class="structure-valuation-result-title">${escapeHtml(title)}</h4>
+
+      <div class="structure-drawer-note" style="margin-bottom:12px;">
+        ${escapeHtml(note)}
+      </div>
+
+      <div class="structure-valuation-result-grid svr-row--main">
+        <div><span>Clean Price</span><strong>${d}</strong></div>
+        <div class="cs-spread-tile"><span>Credit Spread</span><strong>${d}</strong></div>
+        <div><span>Rating</span><strong>${d}</strong></div>
+        <div><span>Yield</span><strong>${d}</strong></div>
+        <div><span>Status</span><strong>${d}</strong></div>
+      </div>
+
+      <div class="structure-valuation-result-grid svr-row--3">
+        <div><span>IR PV01 (price bp)</span><strong>${d}</strong></div>
+        <div><span>CS PV01 (price bp)</span><strong>${d}</strong></div>
+        <div><span>Vega PV100 (price bp)</span><strong>${d}</strong></div>
+      </div>
+
+      <div class="structure-valuation-result-grid svr-row--3">
+        <div><span>Present Value (dirty)</span><strong>${d}</strong></div>
+        <div><span>Notional</span><strong>${d}</strong></div>
+        <div><span>As of Date</span><strong>${d}</strong></div>
+      </div>
+    </div>
+  `;
+}
+
 function getProductRow(prodId) {
   const prodDataArr = appState.getProdData?.() || [];
   const needle = String(prodId ?? '').trim();
@@ -306,14 +348,8 @@ function gatherValuationInput(container, prodId) {
 }
 
 function renderLoading(container) {
-  const resultBox = container.querySelector('#productValuationResult');
-  if (!resultBox) return;
-
-  resultBox.innerHTML = `
-    <div class="structure-valuation-status">
-      Calculating product valuation...
-    </div>
-  `;
+  // Box offen halten (Raster bleibt, "–"), nur Hinweis auf "calculating" — kein Zuklappen.
+  renderEmptyResult(container, '⏳ Calculating product valuation…', 'Valuation — calculating…');
 }
 
 function renderError(container, error) {
@@ -543,6 +579,14 @@ function renderResult(container, payload, prodId) {
   const cashflows = result?.cashflows || [];
   const curveInfo = result?.curve_info || {};
 
+  // Rating = AUFGELOESTES RATINGres (Produkt-Rating, sonst Issuer-Rating). Kommt aus der
+  // enriched portfolio_row des Valuation-Results (Python-aufgeloest); Fallback: Produktzeile.
+  const pfRow = result?.portfolio_row || {};
+  const prodRow = getProductRow(prodId) || {};
+  const ratingValue =
+    pfRow.RATINGres ?? pfRow.adjusted_rating ??
+    prodRow.RATINGres ?? prodRow.adjusted_rating ?? prodRow.RATING_PROD ?? prodRow.RATING;
+
   const yieldLabel =
     result?.yield_method === 'vxp_model_yield'
       ? 'Model Yield'
@@ -571,6 +615,11 @@ function renderResult(container, payload, prodId) {
         <div class="cs-spread-tile">
           <span>Credit Spread</span>
           <strong>${result.c_spread == null ? '–' : formatNumber(result.c_spread, 2)}</strong>
+        </div>
+
+        <div>
+          <span>Rating</span>
+          <strong>${escapeHtml(formatValue(ratingValue))}</strong>
         </div>
 
         <div>
@@ -840,6 +889,16 @@ console.log('[VALUATION HEADER ROW]', {
         </div>
 
         <div>
+          <span>Issuer</span>
+          <strong>${escapeHtml(formatValue(row?.ISSUER || row?.issuer))}</strong>
+        </div>
+
+        <div>
+          <span>Description</span>
+          <strong>${escapeHtml(formatValue(row?.DESCRIPTION || row?.description))}</strong>
+        </div>
+
+        <div>
           <span>Type</span>
           <strong>${escapeHtml(formatValue(row?.CouponType || row?.coupon_type))}</strong>
         </div>
@@ -918,6 +977,8 @@ console.log('[VALUATION HEADER ROW]', {
   `;
 
   bindValuationEvents(container, prodId);
+  // Bewertungsbox offen mit "–"; ein gecachtes Live-Ergebnis ueberschreibt es.
+  renderEmptyResult(container);
   restoreCachedValuationResult(container, prodId);
 
 

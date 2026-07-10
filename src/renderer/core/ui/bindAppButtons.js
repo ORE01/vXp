@@ -166,7 +166,10 @@ export function bindAppButtons({
   const ersteTargetLabel = document.getElementById('ersteTargetLabel');
   const setErsteTargetLabel = (info) => {
     if (!ersteTargetLabel || !info || !info.name) return;
-    ersteTargetLabel.textContent = info.name;
+    // Vollen Pfad anzeigen (wo die ERSTE-Daten hingeschrieben werden), Name als Fallback.
+    // Hinweis, ob aktuell der SETUP-Default folgt oder ein explizites Target gewaehlt ist.
+    const suffix = info.isDefault ? '  (SETUP default)' : '  (custom)';
+    ersteTargetLabel.textContent = (info.path || info.name) + suffix;
     ersteTargetLabel.title = info.path || '';
   };
   window.api?.invoke?.('erste:get-target').then(setErsteTargetLabel).catch(() => {});
@@ -176,6 +179,15 @@ export function bindAppButtons({
       if (res && !res.canceled) setErsteTargetLabel(res);
     } catch (e) {
       console.warn('[erste target] select failed', e);
+    }
+  });
+  // "Use SETUP path": explizite Wahl loeschen -> zurueck auf den SETUP-Market-Pfad.
+  document.getElementById('ersteTargetResetBtn')?.addEventListener('click', async () => {
+    try {
+      const res = await window.api.invoke('erste:reset-target');
+      if (res) setErsteTargetLabel(res);
+    } catch (e) {
+      console.warn('[erste target] reset failed', e);
     }
   });
 

@@ -3,7 +3,6 @@
 // SINGLE source of truth for WHERE the app renders the content the REPORTS
 // module captures. The reports aggregate charts/tables that OTHER feature
 // modules have already rendered into the live DOM:
-//   • ANALYSE ▸ Breakdown   → #panel-breakdown
 //   • RISK ▸ Market Risk     → #panel-market   (MVaR summary, market traffic light)
 //   • RISK ▸ Credit Risk     → #panel-credit   (CVaR pair, credit traffic lights)
 //
@@ -13,11 +12,6 @@
 // the report builders stay untouched. This is the one place where REPORTS is
 // (intentionally) coupled to the rest of the app's DOM.
 // ─────────────────────────────────────────────────────────────────────────
-
-/** ANALYSE ▸ Breakdown panel — source of the breakdown charts. */
-export function getBreakdownPanel() {
-  return document.getElementById('panel-breakdown');
-}
 
 /** RISK ▸ Market Risk panel — source of the MVaR summary + market traffic light. */
 export function getMarketPanel() {

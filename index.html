@@ -301,39 +301,24 @@ Feature:    Wenn es nur in einem Panel gilt
       <span class="section-header">Portfolio</span>
       <span class="chev"></span>
     </button>
+
+    <!-- Create/Change Portfolio als Sub-Trigger unter "Select Portfolio" (gleiche Ebene
+         wie "Portfolio"), nur im PORTFOLIO-View sichtbar (view-analyse-only). -->
+    <button class="section-trigger section-trigger--sub view-analyse-only" type="button"
+            data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
+      <span class="section-header">Create Portfolio</span>
+      <span class="chev"></span>
+    </button>
+
+    <button class="section-trigger section-trigger--sub view-analyse-only" type="button"
+            data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
+      <span class="section-header">Change Portfolio</span>
+      <span class="chev"></span>
+    </button>
   </div>
 </div>
 
-<!-- Portfolio-Verwaltung (aus dem alten PORTFOLIO-Tab): eigene Top-Level-Trigger
-     auf gleicher Ebene wie "Select Portfolio", nur im PORTFOLIO-View sichtbar. -->
-<div class="chart-section view-analyse-only">
-  <button class="section-trigger" type="button"
-          data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
-    <span class="section-header">Create Portfolio</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<div class="chart-section view-analyse-only">
-  <button class="section-trigger" type="button"
-          data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
-    <span class="section-header">Change Portfolio</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<!-- Portfolio Breakdown Trigger (alle Pie-Charts) -->
-<div class="chart-section">
-  <button class="section-trigger"
-          data-panel="panel-breakdown"
-          aria-controls="panel-breakdown"
-          aria-expanded="false">
-    <span class="section-header">Breakdown</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-<!-- Overview: Konzentrations-Dashboard (Dimension per Dropdown im Panel).
+<!-- Breakdown: Konzentrations-Dashboard (Dimension per Dropdown im Panel).
      Alle Dimensionen sind im PDF ueber versteckte Report-Panels einzeln waehlbar
      (ensureConcReportPanels in SummaryBreakdown.js). -->
 <div class="chart-section">
@@ -341,24 +326,10 @@ Feature:    Wenn es nur in einem Panel gilt
           data-panel="panel-concentration"
           aria-controls="panel-concentration"
           aria-expanded="false">
-    <span class="section-header">Overview</span>
+    <span class="section-header">Breakdown</span>
     <span class="chev"></span>
   </button>
 </div>
-
-<!-- Structure: Portfolio-Structure-Ansicht (Ratingstruktur, Laenderallokation,
-     Assetklassen). Charts in SummaryBreakdown.js (renderPortfolioStructure). -->
-<div class="chart-section">
-  <button class="section-trigger"
-          data-panel="panel-structure"
-          aria-controls="panel-structure"
-          aria-expanded="false">
-    <span class="section-header">Structure</span>
-    <span class="chev"></span>
-  </button>
-</div>
-
-
 
     <!--   Performance   Trigger -->
     <div class="chart-section">
@@ -556,18 +527,10 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
     </div>
 
-    <!--   Liquidity   Trigger -->
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-liquidity" aria-controls="panel-liquidity" aria-expanded="false">
-        <span class="section-header">Liquidity</span>
-        <span class="chev"></span>
-      </button>
-    </div>
-
     <!--   Liquidity Dashboard   Trigger (vorerst hier, spaeter einordnen) -->
     <div class="chart-section">
       <button class="section-trigger" data-panel="panel-liquidity-dash" aria-controls="panel-liquidity-dash" aria-expanded="false">
-        <span class="section-header">Liquidity Dashboard</span>
+        <span class="section-header">Liquidity</span>
         <span class="chev"></span>
       </button>
     </div>
@@ -648,62 +611,25 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
 <!-- Panel: Breakdown -->
-<div id="panel-breakdown"
-     class="sub-panel"
-     role="dialog"
-     aria-modal="false"
-     aria-labelledby="panel-breakdown-title"
-     hidden>
-  <div class="sub-panel-header">
-    <div id="panel-breakdown-title" class="sub-panel-title">
-      Portfolio Breakdown
-    </div>
-    <button class="sub-panel-close"
-            data-close="panel-breakdown"
-            aria-label="close">
-      &times;
-    </button>
-  </div>
-
-  <div class="sub-panel-body">
-
-    <!-- Uebersicht + Value-Selector -->
-    <div class="portfolio-info">
-
-      <!--    Uebersicht: Issuer / Product / General (wird von JS mit Breakdown-Text befÃ¼llt) -->
-      <div class="data-wrapper">
-        <div class="data-container" id="portAggDataContainer5"></div>
-      </div>
-
-      <!--   Value-Basis Auswahl -->
-      <div class="data-wrapper" style="margin-top: 8px;">
-        <label for="valueSelector" class="select-label">Value basis</label>
-        <select id="valueSelector" class="deals-dropdown">
-          <option value="NAV">NAV</option>
-          <option value="NOTIONAL">Notional</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Hier rendert JS die Issuer/Product/General-Sektionen + Charts + Legenden -->
-    <div id="pieChartGrid" class="pie-chart-grid">
-      <!-- JS fÃ¼gt hier Chart- und Legend-Boxen ein -->
-    </div>
-
-  </div>
-</div>
-
-
-    <!-- Panel: Emittenten-Konzentration (eigener Trigger, zusaetzlich zum Breakdown) -->
+    <!-- Panel: Breakdown (Konzentrations-Dashboard, Dimension per Dropdown) -->
     <div id="panel-concentration" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-concentration-title" hidden>
       <div class="sub-panel-header">
-        <div id="panel-concentration-title" class="sub-panel-title">Concentration</div>
+        <div id="panel-concentration-title" class="sub-panel-title">Breakdown</div>
         <button class="sub-panel-close" data-close="panel-concentration" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
-        <div class="conc-dim-bar" style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <label for="concDimensionSelect" class="select-label">Dimension</label>
-          <select id="concDimensionSelect" class="deals-dropdown" style="width:220px; min-width:0;"></select>
+        <div class="conc-dim-bar" style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="concDimensionSelect" class="select-label">Dimension</label>
+            <select id="concDimensionSelect" class="deals-dropdown" style="width:220px; min-width:0;"></select>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="concValueSelector" class="select-label">Value basis</label>
+            <select id="concValueSelector" class="deals-dropdown">
+              <option value="NAV">NAV</option>
+              <option value="NOTIONAL">Notional</option>
+            </select>
+          </div>
         </div>
         <div id="issuerConcentrationDashboard" class="conc-dash">
           <div class="conc-dash__head">
@@ -745,49 +671,6 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
     </div>
 
-    <!-- Panel: Structure (Portfolio Structure: Rating / Country / Asset classes) -->
-    <div id="panel-structure" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-structure-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-structure-title" class="sub-panel-title">Portfolio Structure</div>
-        <button class="sub-panel-close" data-close="panel-structure" aria-label="close">&times;</button>
-      </div>
-      <div class="sub-panel-body">
-        <div class="struct-grid">
-          <div class="conc-panel">
-            <div class="conc-panel__title">Rating Structure</div>
-            <canvas id="structRatingChart" class="struct-canvas" data-label="Rating Structure"></canvas>
-          </div>
-          <div class="conc-panel">
-            <div class="conc-panel__title">Country Allocation</div>
-            <canvas id="structCountryChart" class="struct-canvas" data-label="Country Allocation"></canvas>
-          </div>
-          <div class="conc-panel">
-            <div class="conc-panel__title">Asset Classes</div>
-            <canvas id="structCategoryChart" class="struct-canvas" data-label="Asset Classes"></canvas>
-          </div>
-        </div>
-
-        <!-- KPI-Band: groesste Anteile (Investment Grade / AAA-AA / groesstes Land /
-             Staatsanleihen). Gefuellt in renderPortfolioStructure. -->
-        <div id="structKpiContainer" class="conc-kpi-grid" style="margin-top:14px;"></div>
-        <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
-        <div class="data-container" id="structKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
-
-        <!-- Drill-down detail (same engine as Overview), full-width band below the charts. -->
-        <div id="structDetail" class="conc-detail" style="display:none; margin-top:14px;">
-          <div class="conc-detail__head">
-            <span id="structDetailTitle" class="conc-detail__title"></span>
-            <button id="structDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
-          </div>
-          <div id="structDetailTable" class="conc-detail__table"></div>
-        </div>
-
-        <!-- Eigenes Hover-Menue fuer Structure (im eigenen Panel -> korrektes Stacking,
-             unabhaengig von Overview). -->
-        <div id="structCardMenu" class="conc-menu" style="display:none;"></div>
-      </div>
-    </div>
-
     <!-- Panel: Performance -->
     <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
       <div class="sub-panel-header">
@@ -816,7 +699,18 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="chart-box"><canvas id="durationProductYieldChart"></canvas></div>
           </div>
         </div>
+
+        <!-- Drill-down: Klick auf eine Produkt-Bubble -> Position(en) des Produkts.
+             Gleiche Engine wie die anderen Panels (createContribDrill). -->
+        <div id="perfProdDetail" class="conc-detail" style="display:none; margin-top:16px;">
+          <div class="conc-detail__head">
+            <span id="perfProdDetailTitle" class="conc-detail__title"></span>
+            <button id="perfProdDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+          </div>
+          <div id="perfProdDetailTable" class="conc-detail__table"></div>
+        </div>
       </div>
+      <div id="perfProdCardMenu" class="conc-menu" style="display:none;"></div>
 
     </div>
 
@@ -1126,6 +1020,9 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <p class="mvar-caption" style="margin-top: 14px; font-weight: 600;">Value at Risk (VaR)</p>
+    <div id="mvarProductVarKpis" class="mvar-issuer-kpis"></div>
+    <!-- Gespiegeltes KPI-Band fuer Preview/PDF (data-kpi-band). Nicht sichtbar in der UI. -->
+    <div class="data-container" id="mvarProductVarKpisTable" data-label="Product VaR — Key Figures" data-kpi-band="1" style="display:none;"></div>
     <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
       <div class="mvar-prod-chart chart-box"><canvas id="mvarProductVarContribChart"></canvas></div>
       <div class="mvar-prod-chart chart-box"><canvas id="mvarProductVarScatterChart"></canvas></div>
@@ -1139,6 +1036,8 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <p class="mvar-caption" style="margin-top: 18px; font-weight: 600;">Expected Shortfall (ES)</p>
+    <div id="mvarProductEsKpis" class="mvar-issuer-kpis"></div>
+    <div class="data-container" id="mvarProductEsKpisTable" data-label="Product ES — Key Figures" data-kpi-band="1" style="display:none;"></div>
     <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
       <div class="mvar-prod-chart chart-box"><canvas id="mvarProductEsContribChart"></canvas></div>
       <div class="mvar-prod-chart chart-box"><canvas id="mvarProductEsScatterChart"></canvas></div>
@@ -1172,6 +1071,9 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <p class="mvar-caption" style="margin-top: 14px; font-weight: 600;">Value at Risk (VaR)</p>
+    <div id="mvarIssuerVarKpis" class="mvar-issuer-kpis"></div>
+    <!-- Gespiegeltes KPI-Band fuer Preview/PDF (data-kpi-band). Nicht sichtbar in der UI. -->
+    <div class="data-container" id="mvarIssuerVarKpisTable" data-label="Issuer VaR — Key Figures" data-kpi-band="1" style="display:none;"></div>
     <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
       <div class="mvar-prod-chart chart-box">
         <canvas id="mvarIssuerVarContribChart"></canvas>
@@ -1191,6 +1093,8 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <p class="mvar-caption" style="margin-top: 18px; font-weight: 600;">Expected Shortfall (ES)</p>
+    <div id="mvarIssuerEsKpis" class="mvar-issuer-kpis"></div>
+    <div class="data-container" id="mvarIssuerEsKpisTable" data-label="Issuer ES — Key Figures" data-kpi-band="1" style="display:none;"></div>
     <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
       <div class="mvar-prod-chart chart-box">
         <canvas id="mvarIssuerEsContribChart"></canvas>
@@ -1594,6 +1498,15 @@ Feature:    Wenn es nur in einem Panel gilt
         <canvas id="crTailZoomChart" width="560" height="300"></canvas>
       </div>
     </div>
+    <!-- Drill-down Tail risk: Klick auf ein Quantil -> Positionen der dort ausfallenden Emittenten. -->
+    <div id="crTailDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="crTailDetailTitle" class="conc-detail__title"></span>
+        <button id="crTailDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="crTailDetailTable" class="conc-detail__table"></div>
+    </div>
+    <div id="crTailCardMenu" class="conc-menu" style="display:none;"></div>
     <!--   ENDE BLOCK 3.5 -->
 
     <!--   BLOCK 4: Charts -->
@@ -1689,63 +1602,11 @@ Feature:    Wenn es nur in einem Panel gilt
           <div id="clossIssuerCardMenu" class="conc-menu" style="display:none;"></div>
         </div><!-- /#panel-cvar -->
 
-    <!-- Panel: Liquidity (SAUBERES GESCHWISTER-ELEMENT, nicht verschachtelt) -->
-    <div id="panel-liquidity" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-liquidity-title" class="sub-panel-title">Liquidity</div>
-        <button class="sub-panel-close" data-close="panel-liquidity" aria-label="close">&times;</button>
-      </div>
-
-      <div class="sub-panel-body">
-        <!-- Controls -->
-        <div id="liquControlsContainer" class="controls-bar" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
-          <div class="data-wrapper">
-            <div class="dropdown-wrapper">
-              <label for="liquMaturityDropdown" class="select-label" style="display:block; font-weight:600; margin-bottom:6px;">
-                Select Maturity
-              </label>
-              <select id="liquMaturityDropdown" multiple class="select-dropdown" aria-multiselectable="true"></select>
-            </div>
-          </div>
-
-<p style="margin:10px 0;">
-<button id="liquResetFiltersButton"
-        class="reset-FiltersButton"
-        type="button"
-        title="Reset filters"
-        aria-label="Reset filters"></button>
-
-</p>
-        </div>
-
-        <!-- Chart (oben, groß) -->
-        <section class="liqu-chart-card">
-          <h4 class="table-title">Maturity Profile</h4>
-          <div class="liqu-chart-container">
-            <canvas id="liquChart"></canvas>
-          </div>
-        </section>
-
-        <!-- Tabellen -->
-        <div class="liqu-flex-row">
-          <section class="table-card">
-            <h4 class="table-title">Maturity — Category</h4>
-            <div id="liquDataContainer" class="data-container"></div>
-          </section>
-
-          <section class="table-card">
-            <h4 class="table-title">Issuer</h4>
-            <div id="issuerDataContainerLiqu" class="data-container"></div>
-          </section>
-        </div>
-      </div><!-- /.sub-panel-body -->
-    </div>
-
     <!-- Panel: Liquidity Dashboard (Faelligkeiten-Balken + KPI-Band). Rendering:
          liquidityDashboard.js. Cashflows/Kupons + Reserve/Limit folgen spaeter. -->
     <div id="panel-liquidity-dash" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-liquidity-dash-title" hidden>
       <div class="sub-panel-header">
-        <div id="panel-liquidity-dash-title" class="sub-panel-title">Liquidity Dashboard</div>
+        <div id="panel-liquidity-dash-title" class="sub-panel-title">Liquidity</div>
         <button class="sub-panel-close" data-close="panel-liquidity-dash" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
@@ -4260,10 +4121,11 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="upd-btns">
             <button id="getMarketDataButton" class="edit-button" type="button">Get Market Data</button>
             <button id="ersteTargetBrowseBtn" class="edit-button" type="button">Target Workbook…</button>
+            <button id="ersteTargetResetBtn" class="edit-button" type="button">Use SETUP path</button>
           </div>
           <div class="upd-progress" id="marketProgress_get"></div>
         </div>
-        <div class="upd-tile-target">Target: <span id="ersteTargetLabel" title="">…</span></div>
+        <div class="upd-tile-target">Writes to: <span id="ersteTargetLabel" title="">…</span></div>
       </section>
 
     </div>

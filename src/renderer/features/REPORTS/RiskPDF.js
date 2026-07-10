@@ -31,37 +31,6 @@ export const REPORT_DEFAULTS = {
 };
 
 // =====================================================================
-// BREAKDOWN LABELS (optional mapping)
-// =====================================================================
-export const BREAKDOWN_CHART_LABELS = {
-  issuerpiechart:       'Issuer',
-  ratingpiechart:       'Issuer Rating',
-  rankpiechart:         'Capital Structure',
-  ratingrespiechart:    'Product Rating',
-  categorypiechart:     'Product Category',
-  coupontypepiechart:   'Coupon Type',
-  depotbankpiechart:    'Depot Bank',
-  regionpiechart:       'Region',
-  countrypiechart:      'Country',
-  issueriseupiechart:   'EU Exposure',
-  issueriseuropiechart: 'Euro Area Exposure',
-};
-
-function resolveBreakdownChartLabel(chartId, ctx) {
-  if (!chartId) return '';
-  const key = String(chartId).toLowerCase();
-  if (BREAKDOWN_CHART_LABELS[key]) return BREAKDOWN_CHART_LABELS[key];
-
-  try {
-    const el = ctx?.getById?.(chartId) || getInAppById(chartId);
-    const lbl = el?.dataset?.label;
-    if (lbl && String(lbl).trim()) return String(lbl).trim();
-  } catch {}
-
-  return String(chartId);
-}
-
-// =====================================================================
 // TIMESTAMP
 // =====================================================================
 function formatNowTimestamp() {
@@ -300,7 +269,7 @@ function drawCoverPage(doc, layout, { title, subtitle, metaLines = [], logoEl, r
   doc.setTextColor(0);
 }
 
-function drawHeaderFooter(doc, layout, { title, headerLabel, logoEl, reportTimeText } = {}) {
+function drawHeaderFooter(doc, layout, { title, headerLabel, chapter, logoEl, reportTimeText } = {}) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
@@ -317,20 +286,30 @@ function drawHeaderFooter(doc, layout, { title, headerLabel, logoEl, reportTimeT
 
   const t = String(title || 'Risk Report');
 
-  // Kopf (blau): links "vXP | <Portfolio>", rechts Zeitstempel/Datum
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
-  doc.text(String(headerLabel || t), left, headerY);
-  if (reportTimeText) {
-    doc.setFontSize(8);
-    doc.text(String(reportTimeText), pageW - right, headerY, { align: 'right' });
+  // Kopf: gefuellter Navy-Balken (Farbe wie Deckblatt) ueber die volle Breite; links
+  // "vXP | <Portfolio>" (weiss, fett), rechts der Zeitraum (heller Akzent).
+  const bandH = 14;
+  const bandTextY = 9;
+  doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+  doc.rect(0, 0, pageW, bandH, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text(String(headerLabel || t), left, bandTextY);
+  // Uebergeordnetes Kapitel (Level-1) mittig als laufender Kolumnentitel.
+  if (chapter) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(String(chapter).toUpperCase(), pageW / 2, bandTextY, { align: 'center' });
   }
-
-  // Feine Linie unter dem Kopf
-  doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
-  doc.setLineWidth(0.3);
-  doc.line(left, headerY + 3.5, pageW - right, headerY + 3.5);
+  if (reportTimeText) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(200, 210, 222); // Akzentgrau wie die Cover-Labels
+    doc.text(String(reportTimeText), pageW - right, bandTextY, { align: 'right' });
+  }
+  doc.setTextColor(0);
 
   // Feine Linie ueber dem Fuss
   doc.setDrawColor(RULE[0], RULE[1], RULE[2]);
@@ -396,33 +375,6 @@ function kpisFromTableEl(el) {
 }
 
 // =====================================================================
-// BREAKDOWN GROUPING (from DOM) — ROOT-SCOPED
-// =====================================================================
-function groupBreakdownChartsBySection(charts, ctx) {
-  if (!charts || !charts.length) return [];
-  const groupsMap = new Map();
-
-  for (const ch of charts) {
-    const el = ctx?.getById?.(ch.id) || getInAppById(ch.id);
-    if (!el) continue;
-
-    const section = el.closest?.('.pie-section');
-    let groupTitle = 'Breakdown';
-
-    if (section) {
-      const titleEl = section.querySelector('.pie-section-title');
-      const txt = titleEl?.textContent?.trim();
-      if (txt) groupTitle = txt;
-    }
-
-    if (!groupsMap.has(groupTitle)) groupsMap.set(groupTitle, { title: groupTitle, charts: [] });
-    groupsMap.get(groupTitle).charts.push(ch);
-  }
-
-  return Array.from(groupsMap.values());
-}
-
-// =====================================================================
 // GENERATE PDF (Cover + TOC + Content) — ROOT-SCOPED
 // =====================================================================
 export async function generateRiskPDF(filteredData, overrides = {}) {
@@ -483,7 +435,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
   const includeTOC = !!opts.includeTOC;
   // TOC-Seiten werden weiter unten reserviert — erst wenn die Eintragsanzahl
-  // (Sektionen + Breakdown-Untereinträge + Appendix) bekannt ist (Mehrseiten-TOC).
+  // (Anzahl der Sektionen) bekannt ist (Mehrseiten-TOC).
 
   let sections = getActiveRiskSectionsForPdf() || [];
   sections = applyPdfHierarchy(sections);
@@ -491,50 +443,19 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   const sectionNoByKey = {};
   sections.forEach((s) => (sectionNoByKey[s.key] = s.sectionNumber));
 
-  // Breakdown numbering (optional)
-  const breakdownSec = sections.find((s) => s.key === 'breakdown');
-  if (breakdownSec && typeof groupBreakdownChartsBySection === 'function') {
-    const sectionNo = sectionNoByKey[breakdownSec.key] || '1';
-    const chartsForGroups = breakdownSec.enabledCharts || [];
-    const groups = groupBreakdownChartsBySection(chartsForGroups, ctx) || [];
-
-    const breakdownNumbering = { section: sectionNo, groups: {}, charts: {} };
-
-    let gIdx = 1;
-    groups.forEach((g) => {
-      if (!g?.charts?.length) return;
-      const gTitle = g.title || g.name || `Group ${gIdx}`;
-      const gNo = `${sectionNo}.${gIdx}`;
-      breakdownNumbering.groups[gTitle] = gNo;
-
-      let cIdx = 1;
-      g.charts.forEach((ch) => {
-        if (!ch?.id) return;
-        const label = resolveBreakdownChartLabel(ch.id, ctx);
-        breakdownNumbering.charts[ch.id] = { no: `${gNo}.${cIdx}`, label };
-        cIdx++;
-      });
-      gIdx++;
-    });
-
-    breakdownSec.breakdownNumbering = breakdownNumbering;
-  }
-
   // TOC collect
   const tocEntries = [];
   const addTOCEntry = (number, title, page, level = 1) => {
-    tocEntries.push({ title: `${number}. ${title}`, page, level });
+    tocEntries.push({ title, page, level }); // Nummern bewusst weggelassen (Einrueckung via level)
   };
 
   // TOC-Seiten VORAB reservieren, sonst werden überzählige Einträge verworfen
-  // (Mehrseiten-TOC). Eintragsanzahl exakt: 1 pro Sektion (Gruppe ODER Blatt) +
-  // Breakdown-Untereinträge + Appendix. Seitenzahl per Simulation der Schreib-
+  // (Mehrseiten-TOC). Eintragsanzahl exakt: 1 pro Sektion (Gruppe ODER Blatt).
+  // Seitenzahl per Simulation der Schreib-
   // logik (gleicher lineStep/Threshold) → reservierte Seiten == benötigte Seiten.
   const TOC_LINE_STEP = 8;
   if (includeTOC) {
     let estEntries = sections.length;
-    const bn = breakdownSec?.breakdownNumbering;
-    if (bn) estEntries += Object.keys(bn.groups || {}).length + Object.keys(bn.charts || {}).length;
     // Kein Appendix-Eintrag mehr (Produkttabelle entfernt).
 
     const tl = createPdfLayout(doc, layout.cfg);
@@ -550,6 +471,8 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
   let wroteAnySection = false;
   const pendingGroupToc = []; // TOC-Indizes von Gruppen-Überschriften ohne eigene Seite
+  const chapterByPage = {};   // Seite -> uebergeordnetes Kapitel (direkter Elternknoten)
+  const titleByLevel = [];    // Titel je Hierarchie-Ebene (1-basiert)
 
   for (let i = 0; i < sections.length; i++) {
     const sec = sections[i];
@@ -558,6 +481,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
     const title = sec.title || sec.key;
     const level = sec.tocLevel || 1;
+    // Titel dieser Ebene setzen, tiefere (veraltete) Ebenen verwerfen. Das uebergeordnete
+    // Kapitel ist der DIREKTE Elternknoten = Titel eine Ebene hoeher (nicht die Wurzel).
+    titleByLevel[level] = title;
+    titleByLevel.length = level + 1;
+    const parentChapter = titleByLevel[level - 1] || '';
     const hasContent =
       (sec.enabledCharts && sec.enabledCharts.length) ||
       (sec.enabledTables && sec.enabledTables.length);
@@ -581,25 +509,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     pendingGroupToc.forEach((idx) => { if (tocEntries[idx]) tocEntries[idx].page = pageIndex; });
     pendingGroupToc.length = 0;
 
-    if (sec.key === 'breakdown' && sec.breakdownNumbering && typeof groupBreakdownChartsBySection === 'function') {
-      const chartsForGroups = sec.enabledCharts || [];
-      const groups = groupBreakdownChartsBySection(chartsForGroups, ctx) || [];
-
-      groups.forEach((g) => {
-        if (!g?.charts?.length) return;
-        const gTitle = g.title || g.name || '';
-        const gNo = sec.breakdownNumbering.groups[gTitle];
-        if (gNo) tocEntries.push({ title: `${gNo}. ${gTitle}`, page: pageIndex, level: 2 });
-
-        g.charts.forEach((ch) => {
-          const meta = sec.breakdownNumbering.charts[ch.id];
-          if (!meta) return;
-          tocEntries.push({ title: `${meta.no}. ${meta.label}`, page: pageIndex, level: 3 });
-        });
-      });
-    }
-
     await renderPanelSectionToPDF(doc, sec, layout, ctx);
+
+    // Alle von dieser Sektion belegten Seiten dem direkten Elternkapitel zuordnen.
+    const endPage = doc.internal.getNumberOfPages();
+    for (let p = pageIndex; p <= endPage; p++) chapterByPage[p] = parentChapter;
   }
 
   // Gruppen-Überschriften ohne folgendes Blatt: auf die letzte Seite zeigen.
@@ -658,7 +572,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
   for (let p = 2; p <= pageCount; p++) {
     doc.setPage(p);
-    drawHeaderFooter(doc, finalLayout, { title: reportTitle, headerLabel, logoEl, reportTimeText });
+    drawHeaderFooter(doc, finalLayout, { title: reportTitle, headerLabel, chapter: chapterByPage[p] || '', logoEl, reportTimeText });
     drawPageNumber(doc, finalLayout, { pageIndex: p, pageCount });
   }
 
@@ -677,7 +591,6 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
   const sectionTitle = sec.title || sec.key || '';
   const sectionNumber = sec.sectionNumber || '';
-  const breakdownNumbering = sec.breakdownNumbering || null;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -748,7 +661,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   if (sec.key === 'market-dashboard' || sec.key === 'credit-dashboard') {
     const isCredit = sec.key === 'credit-dashboard';
     doc.setFontSize(14); doc.setTextColor(0);
-    doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
+    doc.text(sectionTitle, marginX, y);
     y += cfg.sectionTitleSpacing;
     doc.setFontSize(9); doc.setTextColor(110);
     doc.text(isCredit ? 'Current credit risk position for the selected portfolio.' : 'Current market risk position for the selected portfolio.', marginX, y);
@@ -906,26 +819,46 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     return;
   }
 
-  // ── Sonderlayout: Concentration/Overview als Dashboard-Blatt ──
-  // Treemap (concCards, Plotly) links + Top-10-Balken (concTop10Chart) rechts,
-  // darunter ein KPI-Band aus concKeyFiguresTable. Statt lineare Einzel-Charts.
+  // Breakdown-PARENT (#panel-concentration): nur Kapitel-Titel (Divider) — die
+  // Live-Charts (concCards/concTop10Chart = aktuell gewaehlte Dimension) werden
+  // bewusst NICHT gezeichnet (sonst Doppelung). Die 11 Dimensions-Kinder tragen die
+  // kompakten Dashboards.
   if (sec.key === 'concentration') {
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
+    doc.setFontSize(14); doc.setTextColor(0);
+    doc.text(sectionTitle, marginX, y);
     y += cfg.sectionTitleSpacing;
+    doc.setFontSize(9); doc.setTextColor(110);
+    doc.text('Portfolio breakdown by dimension — see the following pages.', marginX, y);
+    return;
+  }
 
-    // Untertitel unter dem Sektionstitel.
+  // ── Sonderlayout: Breakdown-Dimension (#panel-concentration-<KEY>) als KOMPAKTES
+  // Dashboard-Blatt (wie das Live-Panel): Treemap links + Top-10-Balken rechts,
+  // darunter KPI-Band (Key Figures) + optionale Top-Liste. Jede Grafik/Tabelle ist
+  // EINZELN abwaehlbar -> es wird nur gezeichnet, was in enabledCharts/enabledTables steht.
+  if (sec.key.startsWith('concentration-')) {
+    const dimKey    = sec.key.slice('concentration-'.length);
+    const enChartIds = new Set((sec.enabledCharts || []).map(c => c.id));
+    const enTableIds = new Set((sec.enabledTables || []).map(t => t.id));
+
+    const treemapId = `concTreemap__${dimKey}`;
+    const barId     = `concTop10Chart__${dimKey}`;
+    const kfId      = `concKeyFiguresTable__${dimKey}`;
+    const topId     = `concTopIssuersTable__${dimKey}`;
+
+    const showTree = enChartIds.has(treemapId);
+    const showBar  = enChartIds.has(barId);
+
+    doc.setFontSize(14); doc.setTextColor(0);
+    doc.text(sectionTitle, marginX, y);
+    y += cfg.sectionTitleSpacing;
     doc.setFontSize(9); doc.setTextColor(110);
     doc.text('Share of total portfolio by market value.', marginX, y);
     y += 6;
 
     const contentW = layout.contentWidth;
     const gap = 6;
-    const leftW = contentW * 0.55 - gap / 2;
-    const rightW = contentW * 0.45 - gap / 2;
     const chartsH = 78;
-    const rightX = marginX + leftW + gap;
 
     const drawImg = (imgData, x, boxW, boxH) => {
       doc.setFillColor(247);
@@ -934,185 +867,69 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       const srcW = imgData.width || 900;
       const srcH = imgData.height || 520;
       const scale = Math.min(boxW / srcW, (boxH - 2) / srcH, 1);
-      const w = srcW * scale;
-      const h = srcH * scale;
-      const ix = x + (boxW - w) / 2;
-      const iy = y + (boxH - h) / 2;
-      try { doc.addImage(imgData.dataUrl, 'PNG', ix, iy, w, h); } catch (e) { console.warn('[PDF] dashboard image failed', e); }
+      const w = srcW * scale, h = srcH * scale;
+      try { doc.addImage(imgData.dataUrl, 'PNG', x + (boxW - w) / 2, y + (boxH - h) / 2, w, h); }
+      catch (e) { console.warn('[PDF] breakdown image failed', e); }
     };
 
-    const treemapEl = ctx.getById('concCards');
-    const barEl = ctx.getById('concTop10Chart');
-    const treemapImg = treemapEl
-      ? (treemapEl.tagName === 'CANVAS' ? canvasToPngData(treemapEl) : await plotlyToPngData(treemapEl))
-      : null;
-    const barImg = (barEl && barEl.tagName === 'CANVAS') ? canvasToPngData(barEl) : null;
+    if (showTree || showBar) {
+      const both   = showTree && showBar;
+      const leftW  = both ? contentW * 0.55 - gap / 2 : contentW;
+      const rightW = both ? contentW * 0.45 - gap / 2 : contentW;
+      const rightX = both ? marginX + leftW + gap : marginX;
 
-    ensurePageSpace(chartsH + 52, `${sectionTitle} (cont.)`);
-    // Chart-Ueberschriften: linke ueber der Treemap, rechte (Top 10) ueber dem Balken.
-    doc.setFontSize(10); doc.setTextColor(0);
-    doc.text('All issuers', marginX, y);
-    doc.text('Top 10 issuers', rightX, y);
-    y += 3;
-    drawImg(treemapImg, marginX, leftW, chartsH);
-    drawImg(barImg, rightX, rightW, chartsH);
-    y += chartsH + 10;
+      ensurePageSpace(chartsH + 24, `${sectionTitle} (cont.)`);
+      doc.setFontSize(10); doc.setTextColor(0);
+      if (showTree) doc.text('All entries', marginX, y);
+      if (showBar)  doc.text('Top 10', both ? rightX : marginX, y);
+      y += 3;
 
-    // KPI-Band (Key Figures: Number of entries / Top 10 / Others / Avg / Median).
-    const kpis = kpisFromTableEl(ctx.getById('concKeyFiguresTable'));
-    if (kpis.length) {
-      ensurePageSpace(26);
-      y = drawKpiBand(doc, { marginX, contentW, y }, kpis);
+      if (showTree) {
+        const el = ctx.getById(treemapId);
+        const img = el ? (el.tagName === 'CANVAS' ? canvasToPngData(el) : await plotlyToPngData(el)) : null;
+        drawImg(img, marginX, both ? leftW : contentW, chartsH);
+      }
+      if (showBar) {
+        const el = ctx.getById(barId);
+        const img = (el && el.tagName === 'CANVAS') ? canvasToPngData(el) : null;
+        drawImg(img, both ? rightX : marginX, both ? rightW : contentW, chartsH);
+      }
+      y += chartsH + 10;
+    }
+
+    // KPI-Band (Key Figures) nur wenn ausgewaehlt.
+    if (enTableIds.has(kfId)) {
+      const kpis = kpisFromTableEl(ctx.getById(kfId));
+      if (kpis.length) { ensurePageSpace(26); y = drawKpiBand(doc, { marginX, contentW, y }, kpis); }
+    }
+
+    // Top-Liste (Tabelle) nur wenn ausgewaehlt.
+    if (enTableIds.has(topId)) {
+      const host = ctx.getById(topId);
+      const tableElem = host && host.tagName && host.tagName.toLowerCase() === 'table'
+        ? host : host?.querySelector?.('table');
+      if (tableElem) {
+        ensurePageSpace(40, `${sectionTitle} (cont.)`);
+        safeAutoTable(doc, layout, {
+          html: tableElem, startY: y + 2, theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
+          alternateRowStyles: { fillColor: [255, 255, 255] },
+          tableWidth: layout.contentWidth,
+        });
+        y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 40;
+      }
     }
     return;
   }
 
   const chartsAll = sec.enabledCharts || [];
   const tablesAll = sec.enabledTables || [];
-  const isBreakdown = sec.key === 'breakdown';
-
-  if (isBreakdown) {
-    const legendByChartId = new Map();
-    tablesAll.forEach((t) => {
-      if (!t.id) return;
-      const m = t.id.match(/^(.*)-legend$/i);
-      if (!m) return;
-      legendByChartId.set(m[1], t);
-    });
-
-    const groups = groupBreakdownChartsBySection(chartsAll, ctx);
-    const blocks = [];
-
-    if (groups?.length) {
-      for (const g of groups) (g.charts || []).forEach((ch) => blocks.push({ chart: ch, groupTitle: g.title }));
-    } else {
-      chartsAll.forEach((ch) => blocks.push({ chart: ch, groupTitle: null }));
-    }
-
-    let blockIndex = 0;
-    let firstPageOfSec = true;
-    let lastGroupTitle = null;
-
-    for (const { chart, groupTitle } of blocks) {
-      if (blockIndex === 0) {
-        y = layout.startY();
-        y = Math.max(y, layout.topSafe ?? y);
-      } else {
-        y = layout.newPage(doc);
-        y = Math.max(y, layout.topSafe ?? y);
-      }
-
-      if (firstPageOfSec) {
-        doc.setFontSize(14);
-        doc.setTextColor(0);
-        doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
-        y += 8;
-        firstPageOfSec = false;
-      }
-
-      if (groupTitle && groupTitle !== lastGroupTitle) {
-        const gNo = breakdownNumbering?.groups[groupTitle];
-        const groupHeading = gNo ? `${gNo}. ${groupTitle}` : groupTitle;
-
-        doc.setFontSize(12);
-        doc.setTextColor(0);
-        doc.text(groupHeading, marginX, y);
-        y += 8;
-        lastGroupTitle = groupTitle;
-      }
-
-      const chartMeta = breakdownNumbering?.charts[chart.id];
-      const chartLabel = chartMeta?.label || chart.label || resolveBreakdownChartLabel(chart.id, ctx);
-      const chartNumber = chartMeta?.no;
-      const chartHeading = chartNumber ? `${chartNumber}. ${chartLabel}` : chartLabel;
-
-      doc.setFontSize(11);
-      doc.setTextColor(0);
-      doc.text(chartHeading, marginX, y);
-      y += 6;
-
-      const el = ctx.getById(chart.id);
-      if (el) {
-        let imgData = null;
-        if (el.tagName === 'CANVAS') imgData = canvasToPngData(el);
-        else imgData = await plotlyToPngData(el);
-
-        if (imgData?.dataUrl) {
-          const srcW = imgData.width || 900;
-          const srcH = imgData.height || 520;
-
-          const maxW = layout.contentWidth;
-          const maxH = 90;
-
-          const scale = Math.min(maxW / srcW, maxH / srcH, 1);
-          const targetWidth = srcW * scale;
-          const targetHeight = srcH * scale;
-
-          const boxHeight = targetHeight + 22;
-          ensurePageSpace(boxHeight + 10, `${sectionTitle} (cont.)`);
-
-          const boxX = marginX;
-          const boxY = y;
-          const labelY = boxY + 7;
-          const imgY = boxY + 11;
-          const imgX = boxX + (maxW - targetWidth) / 2;
-
-          doc.setFillColor(245);
-          doc.rect(boxX - 2, boxY, maxW + 4, boxHeight - 4, 'F');
-
-          doc.setFontSize(9);
-          doc.setTextColor(0);
-          doc.text(chartLabel, boxX + maxW / 2, labelY, { align: 'center' });
-
-          try {
-            doc.addImage(imgData.dataUrl, 'PNG', imgX, imgY, targetWidth, targetHeight);
-          } catch (e) {
-            console.warn('[PDF] addImage failed for breakdown chart', chart.id, e);
-          }
-
-          y += boxHeight + 6;
-        }
-      }
-
-      const tMeta = legendByChartId.get(chart.id);
-      if (tMeta) {
-        const host = ctx.getById(tMeta.id);
-        const tableElem =
-          host && host.tagName && host.tagName.toLowerCase() === 'table'
-            ? host
-            : host?.querySelector?.('table');
-
-        if (tableElem) {
-          ensurePageSpace(40, `${sectionTitle} (cont.)`);
-
-          doc.setFontSize(10);
-          doc.setTextColor(0);
-          doc.text(`${chartHeading} Breakdown`, marginX, y);
-
-          safeAutoTable(doc, layout, {
-            html: tableElem,
-            startY: y + 6,
-            theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
-            alternateRowStyles: { fillColor: [255, 255, 255] },
-            tableWidth: layout.contentWidth,
-          });
-
-          y = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + cfg.blockGap : y + 60;
-        }
-      }
-
-      blockIndex++;
-    }
-
-    return;
-  }
 
   // Normal sections
   doc.setFontSize(14);
   doc.setTextColor(0);
-  doc.text(sectionNumber ? `${sectionNumber}. ${sectionTitle}` : sectionTitle, marginX, y);
+  doc.text(sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
 
   // ── Komponiertes Layout: Charts NEBENEINANDER in einer Zeile (Dashboard-Stil)

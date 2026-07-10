@@ -4,7 +4,7 @@ import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../../renderer.js';
 import { renderLossHistogram } from './lossHistogramChart.js';
 import { getColorFromPalette } from '../../../utils/colors.js';
-import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
+import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../SummaryBreakdown.js';
 // import {handleTrafficLight} from './trafficLight.js';
 
 // Global scope â€” this runs as soon as the file is loaded
@@ -29,7 +29,7 @@ const lossIssuerDrill = createContribDrill({ var: _clossIssuerDrillCfg, es: _clo
 // je "<Emittent>_<Seniority>" (z.B. "DZ HYP AG_senior_secured, Hypo Wohnbaubank AG_
 // senior_unsecured"). Emittentennamen enthalten keine Unterstriche -> Teil vor dem
 // ersten "_". Liefert alle Ausfaelle (dedupliziert), nicht nur den ersten.
-function issuersFromRank(rank) {
+export function issuersFromRank(rank) {
   const s = (rank == null ? '' : String(rank)).trim();
   if (!s) return [];
   const out = [];
@@ -54,7 +54,7 @@ function issuersFromRank(rank) {
 // damit im Hover-Menue "By Issuer" erscheint -> Nutzer kann nach einzelnem Emittenten
 // aufsplitten und genau einen auswaehlen. Bei einem Default direkt ISSUER (kein
 // redundantes "By Issuer").
-function lossDefaultStep(issuers) {
+export function lossDefaultStep(issuers) {
   if (!issuers || !issuers.length) return null;
   const set = new Set(issuers.map(n => String(n).trim().toLowerCase()));
   const multi = issuers.length > 1;
@@ -475,21 +475,8 @@ export function setupLossIssuerUI() {
             normalized: true,
             // Platz rechts fuer die Wert-Labels neben den Balken.
             layout: { padding: { right: 96 } },
-            // 'click' -> Legende (Serien aus-/einblenden) + Balken-Drill; 'mousemove'/
-            // 'mouseout' -> Hover-Menue. Steps je Serie ueber datasetIndex waehlen.
-            events: ['mousemove', 'mouseout', 'click'],
-            onHover: (evt, els) => {
-              try {
-                const ds = els && els.length ? (els[0].datasetIndex ?? 0) : 0;
-                lossIssuerDrill.hover('var', evt, els, stepsByDs[ds] || stepsByDs[0]);
-              } catch {}
-            },
-            onClick: (evt, els) => {
-              try {
-                const ds = els && els.length ? (els[0].datasetIndex ?? 0) : 0;
-                lossIssuerDrill.click('var', els, stepsByDs[ds] || stepsByDs[0]);
-              } catch {}
-            },
+            // Drill per RECHTSKLICK (bindRightClickDrill nach der Chart-Erzeugung);
+            // Steps je Serie ueber datasetIndex. Legende bleibt Linksklick (Serien-Toggle).
             plugins: {
               // Canvas-Legende aus: eine sticky HTML-Legende (renderChartLegend) bleibt
               // beim Scrollen sichtbar (die Canvas-Legende wuerde mit wegscrollen).
@@ -530,6 +517,11 @@ export function setupLossIssuerUI() {
             },
           },
         });
+
+        // Drill per RECHTSKLICK: Steps je Serie am Chart hinterlegen, contextmenu binden.
+        window[chartId].$stepsByDs = stepsByDs;
+        bindRightClickDrill(cv, () => window[chartId],
+          (el, ch, e) => lossIssuerDrill.hover('var', { native: e }, [el], ch.$stepsByDs?.[el.datasetIndex] || ch.$stepsByDs?.[0] || []));
 
         // Sticky HTML-Legende (bleibt beim Scrollen sichtbar) aus den Serien aufbauen.
         try { renderChartLegend(window[chartId], document.getElementById('clossChartLegend')); } catch {}

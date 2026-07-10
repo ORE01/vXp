@@ -67,9 +67,9 @@
   margin-top: 8px;
   font-size: 12px;
   color: var(--text-muted, #9aa0a6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Vollen Pfad zeigen (kann X:\ oder UNC \\server\… sein) -> umbrechen statt kappen. */
+  word-break: break-all;
+  line-height: 1.4;
 }
 .upd-import-panel .upd-tile .upd-tile-target #ersteTargetLabel{
   color: var(--text-bright);

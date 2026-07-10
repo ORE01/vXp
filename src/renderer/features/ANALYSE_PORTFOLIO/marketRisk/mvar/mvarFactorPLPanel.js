@@ -23,7 +23,7 @@ import {
   toNumber,
 } from './mvarTransforms.js';
 
-import { createContribDrill, scheduleHideConcMenu } from '../../SummaryBreakdown.js';
+import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../../SummaryBreakdown.js';
 
 
 
@@ -439,8 +439,7 @@ function renderFactorBar(rows, cfg) {
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { factorChartInteract(cfg.kind, 'hover', evt, els, chartRows); } catch {} },
-      onClick: (evt, els) => { try { factorChartInteract(cfg.kind, 'click', evt, els, chartRows); } catch {} },
+      // Drill per RECHTSKLICK (bindRightClickDrill unten).
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(3)}%` } },
@@ -451,7 +450,10 @@ function renderFactorBar(rows, cfg) {
       },
     },
   });
+  chart.$drillRows = chartRows;
   _factorCharts.set(cfg.barId, chart);
+  bindRightClickDrill(canvas, () => _factorCharts.get(cfg.barId),
+    (el, ch, e) => factorChartInteract(cfg.kind, 'hover', { native: e }, [el], ch.$drillRows || []));
 }
 
 // Streudiagramm je Faktor-Gruppe: x = Portfolioanteil (Exposure) %, y = Risikobeitrag %.
@@ -479,8 +481,7 @@ function renderFactorScatter(rows, cfg) {
     ] },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { factorChartInteract(cfg.kind, 'hover', evt, (els || []).filter(x => x.datasetIndex === 1), scRows); } catch {} },
-      onClick: (evt, els) => { try { factorChartInteract(cfg.kind, 'click', evt, (els || []).filter(x => x.datasetIndex === 1), scRows); } catch {} },
+      // Drill per RECHTSKLICK (bindRightClickDrill unten; nur die Punkte-Serie, datasetIndex 1).
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: exposure ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
@@ -492,7 +493,11 @@ function renderFactorScatter(rows, cfg) {
       },
     },
   });
+  chart.$drillRows = scRows;
   _factorCharts.set(cfg.scatterId, chart);
+  bindRightClickDrill(canvas, () => _factorCharts.get(cfg.scatterId),
+    (el, ch, e) => factorChartInteract(cfg.kind, 'hover', { native: e }, [el], ch.$drillRows || []),
+    { datasetIndex: 1 });
 }
 
 // KPIs im Market-Risk-Dashboard-Kartenstil: MVaR / ES MVaR (Total gross, relativ) mit

@@ -42,6 +42,7 @@ import { handleScenarioDefinitionData } from './features/ANALYSE_PORTFOLIO/marke
 
 import { openPanel } from './core/ui/panels/index.js';
 import { showMessageBox, showConfirmationBox } from './core/ui/dialogs/confirm.js';
+import { registerFitCanvasPlugin } from './charts/fitCanvasToDisplayPlugin.js';
 
 import { initPortfolioPanelsLazyRender } from './core/routing/initAnalysePortfolioPanels.js';
 import { initMarketDataPanelsLazyRender } from './core/routing/initMarketDataPanels.js';
@@ -133,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
     appRoot.classList.remove('app-hidden');
     appRoot.style.display = 'block';
   }
+
+  // Globales Chart.js-Plugin gegen den Hover-/Klick-Offset (Pilot: nur bei fitDisplay:true).
+  registerFitCanvasPlugin();
 
   appState = bootstrapCreateAppState();
 

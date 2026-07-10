@@ -4,7 +4,7 @@
 const fs = require('fs');
 const pathMod = require('path');
 const { dialog } = require('electron');
-const { getFilesBaseDir, getExcelPath, getDatabasePath, getExcelEnvOverrides } = require('../../main.path');
+const { getFilesBaseDir, getExcelPath, getDatabasePath, getExcelEnvOverrides, getEffectiveExcelPath } = require('../../main.path');
 const { resolveOneShotCommand } = require('../../services/python.service');
 
 // ---- ERSTE-Zieldatei (vom User per "Browse" wählbar, persistiert) ----
@@ -12,7 +12,11 @@ function _ersteTargetFile() {
   return pathMod.join(getFilesBaseDir(), 'erste_target.json');
 }
 function _defaultErsteTarget() {
-  return getExcelPath('ERSTE_RATES.xlsx');
+  // Default = der im SETUP (Data Sources) eingestellte Market-Pfad, damit die ERSTE-
+  // Abfrage genau dorthin schreibt, wo der Market-Import liest. Dynamisch (folgt dem
+  // SETUP-Override, inkl. X:\ / UNC), solange hier nichts explizit gewaehlt wurde.
+  try { return getEffectiveExcelPath('market').path || getExcelPath('MARKET_DATA.xlsm'); }
+  catch (_) { return getExcelPath('MARKET_DATA.xlsm'); }
 }
 function readErsteTarget() {
   try {
@@ -21,9 +25,23 @@ function readErsteTarget() {
   } catch (_) { /* keine/ungültige Datei -> Default */ }
   return _defaultErsteTarget();
 }
+// Ist aktuell ein EXPLIZIT gewaehltes Target gesetzt (vs. SETUP-Default)?
+function _hasExplicitErsteTarget() {
+  try {
+    const obj = JSON.parse(fs.readFileSync(_ersteTargetFile(), 'utf-8'));
+    return !!(obj && typeof obj.target === 'string' && obj.target.trim());
+  } catch (_) { return false; }
+}
+// Explizite Wahl loeschen -> readErsteTarget faellt auf _defaultErsteTarget (SETUP) zurueck.
+function clearErsteTarget() {
+  try { fs.unlinkSync(_ersteTargetFile()); } catch (_) {}
+  try { fs.unlinkSync(pathMod.join(getFilesBaseDir(), 'erste_cache.json')); } catch (_) {}
+}
 function writeErsteTarget(p) {
   try {
-    fs.writeFileSync(_ersteTargetFile(), JSON.stringify({ target: p }, null, 2), 'utf-8');
+    // Kanonisch normalisieren (UNC-sicher), konsistent zum SETUP-Override.
+    const target = pathMod.normalize(String(p || ''));
+    fs.writeFileSync(_ersteTargetFile(), JSON.stringify({ target }, null, 2), 'utf-8');
   } catch (e) { /* nicht fatal */ }
 }
 
@@ -52,10 +70,18 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
   if (typeof refreshTable !== 'function') throw new Error('[python.handlers] refreshTable missing');
 
   // ===================== ERSTE TARGET WORKBOOK (Browse) =====================
-  // Aktuelle Zieldatei zurückgeben (Default ERSTE_RATES.xlsx, falls nie gewählt).
+  // Aktuelle Zieldatei zurückgeben. isDefault = folgt dem SETUP-Market-Pfad (kein
+  // explizites Target gewaehlt).
   ipcMain.handle('erste:get-target', async () => {
     const p = readErsteTarget();
-    return { path: p, name: pathMod.basename(p) };
+    return { path: p, name: pathMod.basename(p), isDefault: !_hasExplicitErsteTarget() };
+  });
+
+  // Explizite Wahl loeschen -> zurueck auf den SETUP-Market-Pfad.
+  ipcMain.handle('erste:reset-target', async () => {
+    clearErsteTarget();
+    const p = readErsteTarget();
+    return { path: p, name: pathMod.basename(p), isDefault: true };
   });
 
   // Datei-Dialog: Zielmappe für den Scrape wählen (vorbelegt auf files/).
@@ -74,7 +100,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       writeErsteTarget(target);
       // Zielwechsel -> Cache verwerfen, damit der nächste Abruf SICHER neu schreibt.
       try { fs.unlinkSync(pathMod.join(getFilesBaseDir(), 'erste_cache.json')); } catch (_) {}
-      return { canceled: false, path: target, name: pathMod.basename(target) };
+      return { canceled: false, path: pathMod.normalize(target), name: pathMod.basename(target), isDefault: false };
     } catch (e) {
       return { canceled: true, error: e.message };
     }

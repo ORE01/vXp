@@ -97,6 +97,7 @@ module.exports = {
     // ERSTE market-data target workbook (Browse)
     'erste:get-target',
     'erste:select-target',
+    'erste:reset-target',
 
     // Curve Construction (curve_spreads editor)
     'curve-spreads:currencies',

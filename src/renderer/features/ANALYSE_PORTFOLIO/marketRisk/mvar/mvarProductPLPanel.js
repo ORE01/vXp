@@ -19,7 +19,8 @@ import {
 
 import { renderMvarIssuerPLPanel } from './mvarIssuerPLPanel.js';
 import { renderMvarScenarioPanel } from './mvarScenarioPanel.js';
-import { createContribDrill, scheduleHideConcMenu } from '../../SummaryBreakdown.js';
+import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../../SummaryBreakdown.js';
+import { setupHiDPICanvas } from '../../SummaryYield.js';
 
 
 let mvarProdIdVarContribChart = null;
@@ -644,6 +645,53 @@ function productStep(prodId) { return { colKey: 'PROD_ID', value: String(prodId 
 const _prodContribCharts = new Map();
 function destroyProdContribChart(id) { const c = _prodContribCharts.get(id); if (c) { try { c.destroy(); } catch {} _prodContribCharts.delete(id); } }
 function bindProdCanvasLeave(canvas) { if (!canvas || canvas.dataset.prodLeaveBound) return; canvas.dataset.prodLeaveBound = '1'; canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} }); }
+// Kleiner "Reset Zoom"-Button oben rechts ueber dem Scatter. Idempotent; liest die
+// aktuelle Chart-Instanz aus _prodContribCharts, uebersteht also jedes Neuzeichnen.
+function ensureProdScatterZoomTools(canvas, scatterId) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (box.querySelector('.prod-zoom-reset')) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'prod-zoom-reset';
+  btn.textContent = 'Reset Zoom';
+  btn.title = 'Reset zoom';
+  btn.style.cssText =
+    'position:absolute;top:6px;right:6px;z-index:5;font-size:10px;padding:2px 8px;' +
+    'border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;cursor:pointer;';
+  btn.addEventListener('click', () => { try { _prodContribCharts.get(scatterId)?.resetZoom?.(); } catch {} });
+  box.appendChild(btn);
+
+  // Bedienhinweis, damit Zoom + Rechtsklick-Drill auffindbar sind.
+  if (!box.querySelector('.prod-zoom-hint')) {
+    const hint = document.createElement('div');
+    hint.className = 'prod-zoom-hint';
+    hint.textContent = 'Drag to zoom · right-click a point to drill';
+    hint.style.cssText =
+      'position:absolute;top:8px;left:10px;z-index:5;font-size:10px;color:#94a3b8;pointer-events:none;';
+    box.appendChild(hint);
+  }
+}
+// Drill per RECHTSKLICK auf einen Produkt-Punkt: unterdrueckt das native Kontextmenue
+// und oeffnet das Drill-Menue am Cursor. Liest Instanz + Punkte zur Klickzeit neu.
+function bindProdScatterContextDrill(canvas, cfg) {
+  if (!canvas || canvas.dataset.prodCtxBound) return;
+  canvas.dataset.prodCtxBound = '1';
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = _prodContribCharts.get(cfg.scatterId);
+      if (!chart) return;
+      const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])
+        .find(x => x.datasetIndex === 1);
+      if (!el) { scheduleHideConcMenu(); return; }
+      // Steps passend zum aktuellen Punkt-Index aufbauen (Products-Dataset = Index 1).
+      const steps = chart.data.datasets[1].data.map(p => productStep(p?.prod_id));
+      productDrill.hover(cfg.kind, { native: e }, [el], steps);
+    } catch {}
+  });
+}
 
 // prod_id -> Portfolio-Basiszeile (fuer NAV/ISSUER/CATEGORY/... im Chart + Drill).
 function buildProdBaseMap() {
@@ -696,6 +744,57 @@ function buildProductDrillRows(filteredRows, baseMap) {
   return out;
 }
 
+function escKpi(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : '–'; }
+
+// KPI-Band ueber den Charts einer Metrik (VaR/ES): Total, Top-Produkt (% vom Total),
+// Top-5-Konzentration (%), staerkster ueberproportionaler Beitrag (Risk vs. weight).
+function renderProductKpis(chartRows, cfg, hostId, tableId) {
+  const host = document.getElementById(hostId);
+  const tblEl = tableId ? document.getElementById(tableId) : null;
+  if (!host && !tblEl) return;
+  const rows = (Array.isArray(chartRows) ? chartRows : [])
+    .slice()
+    .sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)));
+  if (!rows.length) { if (host) host.innerHTML = ''; if (tblEl) tblEl.innerHTML = ''; return; }
+
+  const total = rows.reduce((s, r) => s + Math.abs(toNumber(r[cfg.absKey], 0)), 0);
+  const top = rows[0];
+  const top5 = rows.slice(0, 5).reduce((s, r) => s + (r[cfg.relKey] || 0), 0);
+  // Staerkster ueberproportionaler Beitrag: max(Risikobeitrag% - NAV-Anteil%).
+  let over = null;
+  for (const r of rows) {
+    if (r[cfg.relKey] == null || r.nav_rel == null) continue;
+    const d = r[cfg.relKey] - r.nav_rel;
+    if (!over || d > over.d) over = { label: r.label, d };
+  }
+  const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toFixed(1)} pp` : '–';
+
+  const cards = [
+    { label: `Total ${cfg.metric}`,     value: fmtAbs(total),            sub: 'sum of contributions',   desc: `Portfolio ${cfg.metric} (all products)` },
+    { label: 'Top product',             value: relPct1(top[cfg.relKey]), sub: top.label || '–',         desc: `Largest ${cfg.metric} contributor` },
+    { label: 'Top-5 concentration',     value: relPct1(top5),            sub: `of total ${cfg.metric}`, desc: '5 largest products combined' },
+    { label: 'Highest risk vs. weight', value: overVal,                  sub: over ? over.label : '–',  desc: 'Contribution above NAV weight' },
+  ];
+
+  if (host) {
+    host.innerHTML = cards.map((c) => `
+      <div class="mr-kpi-card">
+        <div class="mr-kpi-card__label">${escKpi(c.label)}</div>
+        <div class="mr-kpi-card__value">${escKpi(c.value)}</div>
+        <div class="mr-kpi-card__sub">${escKpi(c.sub)}</div>
+        <div class="mr-kpi-card__desc">${escKpi(c.desc)}</div>
+      </div>`).join('');
+  }
+
+  // Gespiegelte Label/Wert-Tabelle fuer Preview/PDF (data-kpi-band -> Kachel-Band).
+  if (tblEl) {
+    tblEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+      cards.map((c) => `<tr><td>${escKpi(c.label)}</td><td>${escKpi(c.value)}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
+}
+
 const PROD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarProductVarContribChart', scatterId: 'mvarProductVarScatterChart' };
 const PROD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarProductEsContribChart',  scatterId: 'mvarProductEsScatterChart' };
 
@@ -727,19 +826,21 @@ function renderProductContribChart(rows, cfg) {
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { productDrill.hover(cfg.kind, evt, els, steps); } catch {} },
-      onClick: (evt, els) => { try { productDrill.click(cfg.kind, els, steps); } catch {} },
+      // Drill per RECHTSKLICK (bindRightClickDrill unten) — konsistent mit den Scatter-Charts.
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% of NAV  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } } },
+        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% of NAV  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } } },
         y: { ticks: { color: chartColor, font: { family: chartFont, size: 10 } }, grid: { display: false } },
       },
     },
   });
+  chart.$barSteps = steps;
   _prodContribCharts.set(cfg.barId, chart);
+  bindRightClickDrill(canvas, () => _prodContribCharts.get(cfg.barId),
+    (el, ch, e) => productDrill.hover(cfg.kind, { native: e }, [el], ch.$barSteps || []));
 }
 
 // Streudiagramm je Produkt: x = NAV-Anteil %, y = Risikobeitrag %, 45°-Diagonale.
@@ -755,12 +856,20 @@ function renderProductScatter(rows, cfg) {
   bindProdCanvasLeave(canvas);
   const scatterSteps = pts.map(p => productStep(p.prod_id));
   const labelSet = new Set([...pts].sort((a, b) => b.y - a.y).slice(0, 8).map(p => p.issuer));
-  const axMax = Math.ceil(Math.max(2, ...pts.map(p => Math.max(p.x, p.y))) * 1.1);
-  canvas.width = 520; canvas.height = 400;
+  // Achse nicht von einzelnen Ausreissern (z. B. eine sehr grosse Position) sprengen
+  // lassen: 95%-Perzentil der Punkt-Maxima als Obergrenze (min. 5 %). Der dichte Cluster
+  // wird so lesbar; der/die extremsten Punkte werden ausserhalb der Achse beschnitten.
+  const maxima = pts.map(p => Math.max(p.x, p.y)).sort((a, b) => a - b);
+  const pctl = (arr, q) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))] : 0);
+  const axMax = Math.max(5, Math.ceil(pctl(maxima, 0.95) * 1.1));
+  // Zeichenpuffer an die TATSAECHLICHE Anzeigegroesse koppeln (CSS erzwingt width:100%/
+  // height per !important). Sonst weichen Logik- und Darstellungsraum ab und die
+  // Hover-/Klick-Koordinaten liegen neben dem sichtbaren Punkt (Tooltip-/Drill-Offset).
+  const scatterCtx = setupHiDPICanvas(canvas, 520, 400, true);
   const bodyCss = getComputedStyle(document.body);
   const chartColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
   const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
-  const chart = new window.Chart(canvas.getContext('2d'), {
+  const chart = new window.Chart(scatterCtx, {
     type: 'scatter',
     plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
     data: { datasets: [
@@ -769,25 +878,44 @@ function renderProductScatter(rows, cfg) {
     ] },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { productDrill.hover(cfg.kind, evt, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
-      onClick: (evt, els) => { try { productDrill.click(cfg.kind, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
+      // Punkte leichter treffen: nearest in 2D (x UND y), etwas groesserer Trefferradius.
+      interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
+      hover:       { mode: 'nearest', intersect: true, axis: 'xy' },
+      elements:    { point: { hitRadius: 8, hoverRadius: 8 } },
+      // Drill wird per RECHTSKLICK ausgeloest (bindProdScatterContextDrill), damit
+      // Hovern und Ziehen (Box-Zoom) das Menue nicht ungewollt oeffnen.
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: NAV ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
         datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: chartColor, font: { family: chartFont, size: 10 }, formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : '') } : undefined,
+        // Zoom/Box-Zoom (chartjs-plugin-zoom, global geladen): Ziehen = Rechteck-Auswahl,
+        // Wheel = Zoom, Ctrl+Ziehen = Pan. Reset ueber den Button (ensureProdScatterZoomTools).
+        zoom: {
+          pan:  { enabled: true, mode: 'xy', modifierKey: 'ctrl' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            drag:  { enabled: true, backgroundColor: 'rgba(75,150,225,0.15)', borderColor: 'rgba(75,150,225,0.6)', borderWidth: 1 },
+            mode: 'xy',
+          },
+        },
       },
       scales: {
-        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
-        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
       },
     },
   });
   _prodContribCharts.set(cfg.scatterId, chart);
+  ensureProdScatterZoomTools(canvas, cfg.scatterId);
+  bindProdScatterContextDrill(canvas, cfg);
 }
 
 function renderProductContribCharts(productRows) {
   const baseMap = buildProdBaseMap();
   const chartRows = buildProductChartRows(productRows, baseMap);
+  renderProductKpis(chartRows, PROD_VAR_CFG, 'mvarProductVarKpis', 'mvarProductVarKpisTable');
+  renderProductKpis(chartRows, PROD_ES_CFG, 'mvarProductEsKpis', 'mvarProductEsKpisTable');
   renderProductContribChart(chartRows, PROD_VAR_CFG); renderProductScatter(chartRows, PROD_VAR_CFG);
   renderProductContribChart(chartRows, PROD_ES_CFG);  renderProductScatter(chartRows, PROD_ES_CFG);
 }

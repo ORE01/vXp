@@ -25,6 +25,16 @@
   color: var(--text-primary);
 }
 
+/* Native Controls erben die Standard-Schrift (--font-family / Inter) NICHT automatisch
+   -> explizit setzen, damit der ganze Drawer eine einheitliche Schrift nutzt. Die rein
+   technische Rohausgabe (.structure-valuation-raw pre) bleibt bewusst Monospace. */
+#structureTimelineModal input,
+#structureTimelineModal select,
+#structureTimelineModal textarea,
+#structureTimelineModal button {
+  font-family: var(--font-family);
+}
+
 /* =====================================================
    Header / Close
 ===================================================== */
@@ -504,22 +514,20 @@
 }
 
 #structureTimelineModal .structure-valuation-result-grid > div {
-  min-height: 50px;
-  padding: 7px 12px;
+  min-height: 0;
+  padding: 4px 10px;
 
+  /* Einzeiliges Raster: Label links, Wert rechts. Keine eigenen Kaestchen
+     (kein Hintergrund/Rahmen/Rundung) -> schlichtes Raster. */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 4px;
+  gap: 8px;
 
-  background: var(--surface-overlay);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-}
-
-#structureTimelineModal .structure-valuation-result-grid > div:hover {
-  background: var(--hover-bg);
-  border-color: var(--border);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 #structureTimelineModal .structure-valuation-result-grid span {
@@ -528,13 +536,38 @@
   color: var(--text-muted) !important;
   text-transform: uppercase;
   letter-spacing: 0.045em;
+  /* Einzeilig: Label nicht umbrechen, bei Platzmangel mit "…" kuerzen. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 #structureTimelineModal .structure-valuation-result-grid strong {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: normal;   /* Werte weiss, aber NICHT fett */
   color: var(--text-bright) !important;
   line-height: 1.1;
+  white-space: nowrap;   /* Wert nie umbrechen */
+  flex: 0 0 auto;
+}
+
+/* Einheitliche Schriftgroesse im gesamten Valuation-Drawer = Standard (--font-size-base).
+   Ausgenommen: Titel (h3/h4) und die rein technische Rohausgabe (.structure-valuation-raw pre). */
+#structureTimelineModal .structure-drawer-card span,
+#structureTimelineModal .structure-drawer-card strong,
+#structureTimelineModal .structure-drawer-card label,
+#structureTimelineModal .structure-drawer-card input,
+#structureTimelineModal .structure-drawer-card select,
+#structureTimelineModal .structure-drawer-card button,
+#structureTimelineModal .structure-drawer-card th,
+#structureTimelineModal .structure-drawer-card td,
+#structureTimelineModal .structure-drawer-card .structure-drawer-note,
+#structureTimelineModal .structure-drawer-card .structure-drawer-hint,
+#structureTimelineModal .structure-drawer-card .valuation-curve-label,
+#structureTimelineModal .structure-drawer-card .valuation-curve-value,
+#structureTimelineModal .structure-drawer-card .valuation-curve-scenario {
+  font-size: var(--font-size-base) !important;
 }
 
 
@@ -544,37 +577,23 @@
   grid-template-columns: repeat(4, minmax(145px, 1fr));
 }
 
-/* Clean-Price-Kachel: dieselbe dezente Optik wie in der Tabelle
-   (.clean-price-highlight-cell, createPortfolio.css): weicher Orange-Tint,
-   normale Schrift, normale Textfarbe. */
+/* Clean Price & Credit Spread: fett wie der Rest, aber MIT ihrer Farbe als Highlight
+   im Raster (weicher Tint, kein Rahmen). */
 #structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) {
   background: var(--cs-clean-bg);
-  border-color: var(--cs-clean-border);
+  border-radius: 6px;
+}
+
+#structureTimelineModal .structure-valuation-result-grid > div.cs-spread-tile {
+  background: var(--cs-spread-bg);
+  border-radius: 6px;
 }
 
 #structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) span,
-#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) strong {
-  color: var(--text-primary) !important;
-}
-
-#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) strong {
-  font-size: 16px;
-  font-weight: normal;
-}
-
-/* Credit-Spread-Kachel: dieselbe dezente Optik wie .credit-spread-highlight-cell. */
-#structureTimelineModal .structure-valuation-result-grid > div.cs-spread-tile {
-  background: var(--cs-spread-bg);
-  border-color: var(--cs-spread-border);
-}
-
+#structureTimelineModal .structure-valuation-result-grid.svr-row--main > div:nth-child(1) strong,
 #structureTimelineModal .cs-spread-tile span,
 #structureTimelineModal .cs-spread-tile strong {
-  color: var(--text-primary) !important;
-}
-
-#structureTimelineModal .cs-spread-tile strong {
-  font-weight: normal;
+  color: var(--text-bright) !important;   /* weiss wie die uebrigen Werte, nicht grau */
 }
 
 

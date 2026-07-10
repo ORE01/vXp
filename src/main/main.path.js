@@ -31,11 +31,17 @@ function getExcelOverride(key) {
   const v = readSettings()?.excelInputs?.[key];
   return (typeof v === 'string' && v.trim()) ? v.trim() : null;
 }
+// Kanonische Windows-Normalisierung (UNC-sicher: KEIN Slash-Tausch, sonst zerbrechen
+// \\server\share-Pfade). Behebt gemischte/redundante Separatoren.
+function normalizePath(p) {
+  const s = String(p || '').trim();
+  return s ? path.normalize(s) : s;
+}
 function setExcelOverride(key, filePath) {
   if (!EXCEL_KEY_FILE[key]) return false;
   const s = readSettings();
   s.excelInputs = s.excelInputs || {};
-  if (filePath) s.excelInputs[key] = String(filePath);
+  if (filePath) s.excelInputs[key] = normalizePath(filePath);
   else delete s.excelInputs[key];
   return writeSettings(s);
 }
@@ -116,9 +122,9 @@ function getUniDataPath() {
 // die Standard-Ableitung aus dem files/-Ordner. key = 'business' | 'market'.
 function getEffectiveExcelPath(key) {
   const ov = getExcelOverride(key);
-  if (ov) return { path: ov, isOverride: true };
+  if (ov) return { path: normalizePath(ov), isOverride: true };
   const fname = EXCEL_KEY_FILE[key];
-  return { path: fname ? getExcelPath(fname) : null, isOverride: false };
+  return { path: fname ? normalizePath(getExcelPath(fname)) : null, isOverride: false };
 }
 
 function getMarketDataPath() {

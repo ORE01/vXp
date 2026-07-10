@@ -5,9 +5,9 @@ import createBarChart from '../../../charts/BarChart.js';
 
 import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../utils/trafficLight.js';
-import { renderCreditRiskDashboard } from './creditRiskDashboard.js';
+import { renderCreditRiskDashboard, renderCreditOverviewCharts } from './creditRiskDashboard.js';
 import { appState } from '../../../renderer.js';
-import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
+import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../SummaryBreakdown.js';
 import { renderChartLegend, sumNavForPort, _fmtLossCompact } from './LossIssuer.js';
 
 // Drill-down fuer den EAD/LGD-Chart (Balken = Emittent -> dessen Positionen).
@@ -345,10 +345,7 @@ export function renderLGDChart() {
         normalized: true,
         // Platz rechts fuer die Wert-Labels neben den Balken.
         layout: { padding: { right: 96 } },
-        // 'mousemove'/'mouseout' -> Hover-Menue, 'click' -> Balken-Drill.
-        events: ['mousemove', 'mouseout', 'click'],
-        onHover: (evt, els) => { try { eadDrill.hover('var', evt, els, steps); } catch {} },
-        onClick: (evt, els) => { try { eadDrill.click('var', els, steps); } catch {} },
+        // Drill per RECHTSKLICK (bindRightClickDrill nach der Chart-Erzeugung).
         plugins: {
           // Canvas-Legende aus: sticky HTML-Legende (renderChartLegend) bleibt beim
           // Scrollen sichtbar, gleiches Styling wie beim Loss-Chart.
@@ -370,6 +367,10 @@ export function renderLGDChart() {
         scales: { y: { beginAtZero: true, ticks: { autoSkip: false } }, x: { beginAtZero: true, grace: '5%' } },
       },
     });
+
+    LGDChart.$eadSteps = steps;
+    bindRightClickDrill(cv, () => LGDChart,
+      (el, ch, e) => eadDrill.hover('var', { native: e }, [el], ch.$eadSteps || []));
 
     try { renderChartLegend(LGDChart, document.getElementById('eadChartLegend')); } catch {}
   });
@@ -412,6 +413,9 @@ export function handleCVaRData(receivedData, index, port_nameArg) {
 
   // Credit-Risk-Dashboard (KPI-Karten) aus denselben CVaR-Daten aktualisieren.
   try { renderCreditRiskDashboard(); } catch (e) { console.warn('[CVaR] credit dashboard render failed', e); }
+  // Overview-Loss-Charts (Loss distribution + Tail zoom) ebenfalls mitziehen, damit sie
+  // beim Portfoliowechsel aktualisieren (nicht erst nach einer Neuberechnung).
+  try { renderCreditOverviewCharts(); } catch (e) { console.warn('[CVaR] credit overview charts render failed', e); }
 }
 
 

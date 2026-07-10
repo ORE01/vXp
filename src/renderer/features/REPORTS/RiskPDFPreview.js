@@ -4,7 +4,6 @@ import { handleCSSensData } from '../ANALYSE_PORTFOLIO/marketRisk/sensitivities/
 // Cross-module DOM access goes through the capture adapter (single source of
 // truth for where Breakdown/Market/Credit render their charts & traffic lights).
 import {
-  getBreakdownPanel,
   getMarketPanel,
   getCreditPanel,
   hasCreditTrafficDom,
@@ -306,98 +305,9 @@ function discoverSectionsFull() {
   return sectionMap;
 }
 
-function injectBreakdownChildren(sections, chartState = {}) {
-  // 1) Wenn es keinen Breakdown-Parent gibt: nichts tun
-  const hasBreakdown = sections.some(s => s.key === 'breakdown');
-  if (!hasBreakdown) return sections;
-
-  // 2) Welche Breakdown-Children sollen injected werden? -> aus Config
-  const childKeys = RISK_CONFIG?.sectionChildrenOrder?.breakdown || [];
-  if (!Array.isArray(childKeys) || childKeys.length === 0) return sections;
-
-  const existing = new Set(sections.map(s => s?.key).filter(Boolean));
-
-  // 3) Alle Breakdown-Charts aus dem DOM holen (einmal)
-  const breakdownPanel = getBreakdownPanel();
-  const breakdownCharts = breakdownPanel ? discoverChartsFromPanel(breakdownPanel) : [];
-
-  // byId: chartId -> chartMeta
-  const byId = new Map(breakdownCharts.map(ch => [ch.id, ch]));
-
-  // 4) Helper: childKey -> groupName, rein aus Config (fallback: aus Key ableiten)
-  // Erwartung: breakdownIssuer -> "Issuer", breakdownProducts -> "Products" oder "Product" (siehe unten)
-  const resolveGroupName = (childKey) => {
-    // a) explizite Zuordnung, falls du das in die Config packen willst
-    const explicit = RISK_CONFIG?.breakdownChildToGroup?.[childKey];
-    if (explicit) return explicit;
-
-    // b) heuristisch: "breakdown" prefix strippen, Rest TitleCase
-    // breakdownIssuer -> Issuer, breakdownGeography -> Geography
-    const rest = String(childKey).replace(/^breakdown/, '');
-    if (!rest) return null;
-
-    // "Products" bleibt "Products"; du kannst aber in Config bewusst "Product" nutzen.
-    return rest.charAt(0).toUpperCase() + rest.slice(1);
-  };
-
-  // 5) Inject: in der Reihenfolge aus sectionChildrenOrder.breakdown
-  const injected = childKeys
-    .filter(childKey => !existing.has(childKey))
-    .map(childKey => {
-      const groupName = resolveGroupName(childKey);
-
-      // IDs der Charts, die zu dieser Group gehören: aus breakdownGroups
-      // WICHTIG: breakdownGroups muss den groupName als Key haben
-      const ids = (groupName && RISK_CONFIG?.breakdownGroups?.[groupName]) ? RISK_CONFIG.breakdownGroups[groupName] : [];
-
-      const chartsInGroup = Array.isArray(ids)
-        ? ids.map(id => byId.get(id)).filter(Boolean)
-        : [];
-
-      const sectionOn = isSectionEnabled(childKey, chartState);
-
-      // enabledCharts: hier entscheidest du, ob du nur "sichtbare" Thumbs willst
-      const enabledCharts = chartsInGroup.filter(ch =>
-        isChartEnabled(childKey, ch.id, chartState)
-      );
-
-      const breakdownControlsHtml = sectionOn
-        ? buildBreakdownControlsWithThumbs(
-            childKey,
-            chartsInGroup,
-            enabledCharts,
-            chartState
-          )
-        : '';
-
-      return {
-        key: childKey,
-        title: sectionTitleFromKey(childKey),            // kommt aus RISK_CONFIG.sectionTitles
-        sectionControls: buildSectionControlsHTML(childKey, chartState),
-        chartItems: [],
-        chartThumbs: [],
-        tableItems: [],
-        tableThumbs: [],
-        breakdownControlsHtml,
-        hasThumbs: true,
-        injected: true,
-        sectionEnabled: sectionOn,
-      };
-    });
-
-  return [...sections, ...injected];
-}
-
-
-
-function canonicalChartSection(sectionKey, chartKey) {
-  // Section-Checkbox bleibt eigenständig je Subsection
-  if (chartKey === '__section__') return sectionKey;
-
-  // Alle Breakdown-Untersections sollen denselben Chart-State wie "breakdown" benutzen
-  if (sectionKey && sectionKey !== 'breakdown' && sectionKey.startsWith('breakdown')) {
-    return 'breakdown';
-  }
+// Chart-State-Kanonik: jede Section (auch die Breakdown-Dimensions-Kinder
+// #panel-concentration-<KEY>) hat ihren eigenen Chart-State -> Identität.
+function canonicalChartSection(sectionKey /*, chartKey */) {
   return sectionKey;
 }
 
@@ -489,17 +399,22 @@ export const RISK_CONFIG = {
   //   XYZ_Modal      -> "XYZ"
   // -------------------------------------------------------------------
   sectionTitles: {
-    // ===== Breakdown =====
-    breakdown: 'Portfolio Breakdown',
+    // ===== Breakdown (Live-Panel #panel-concentration = Parent, je Dimension ein Kind) =====
+    concentration: 'Breakdown',
+    'concentration-ISSUER': 'Issuer',
+    'concentration-RATING': 'Issuer General Rating',
+    'concentration-RANK': 'Issuer Capital Structure',
+    'concentration-RATINGres': 'Product Ratings',
+    'concentration-CATEGORY': 'Product Categories',
+    'concentration-CouponType': 'Product Coupon Type',
+    'concentration-Depotbank': 'Depot Bank',
+    'concentration-IssuerRegion': 'Region',
+    'concentration-IssuerCountryName': 'Country',
+    'concentration-IssuerIsEU': 'EU',
+    'concentration-IssuerIsEuro': 'Euro',
 
     // ===== Market Data (synthetischer Parent; Children = echte MD-Panels) =====
     marketData: 'Market Data',
-
-    // ✅ Injected Breakdown Children (künstliche Sections)
-    breakdownIssuer: 'Issuer',
-    breakdownProducts: 'Products',
-    breakdownGeneral: 'General',
-    breakdownGeography: 'Geography',
 
     // ===== Performance (optional, falls du dieses Panel wirklich hast) =====
     performance: 'Performance',
@@ -543,11 +458,18 @@ export const RISK_CONFIG = {
   // Regel: Nur Keys, die es auch wirklich in sections[] gibt (oder injected specials)
   // -------------------------------------------------------------------
   sectionParents: {
-    // ✅ Breakdown children
-    breakdownIssuer: 'breakdown',
-    breakdownProducts: 'breakdown',
-    breakdownGeneral: 'breakdown',
-    breakdownGeography: 'breakdown',
+    // ✅ Breakdown children (Pro-Dimensions-Panels #panel-concentration-<KEY>)
+    'concentration-ISSUER': 'concentration',
+    'concentration-RATING': 'concentration',
+    'concentration-RANK': 'concentration',
+    'concentration-RATINGres': 'concentration',
+    'concentration-CATEGORY': 'concentration',
+    'concentration-CouponType': 'concentration',
+    'concentration-Depotbank': 'concentration',
+    'concentration-IssuerRegion': 'concentration',
+    'concentration-IssuerCountryName': 'concentration',
+    'concentration-IssuerIsEU': 'concentration',
+    'concentration-IssuerIsEuro': 'concentration',
 
     // Market Data: DYNAMISCH (alle Sub-Panels im #MARKETDATA_Modal).
     // RISK (Market/Credit/History + Untergruppen): DYNAMISCH aus dem Trigger-DOM
@@ -559,12 +481,19 @@ export const RISK_CONFIG = {
   // ✅ Reihenfolge der Children pro Parent
   // -------------------------------------------------------------------
   sectionChildrenOrder: {
-    // ✅ Breakdown children order
-    breakdown: [
-      'breakdownIssuer',
-      'breakdownProducts',
-      'breakdownGeneral',
-      'breakdownGeography',
+    // ✅ Breakdown children order (11 Dimensionen wie im Breakdown-Dropdown)
+    concentration: [
+      'concentration-ISSUER',
+      'concentration-RATING',
+      'concentration-RANK',
+      'concentration-RATINGres',
+      'concentration-CATEGORY',
+      'concentration-CouponType',
+      'concentration-Depotbank',
+      'concentration-IssuerRegion',
+      'concentration-IssuerCountryName',
+      'concentration-IssuerIsEU',
+      'concentration-IssuerIsEuro',
     ],
 
     // marketData + RISK-Reihenfolgen: dynamisch (siehe applySectionHierarchy).
@@ -589,34 +518,6 @@ export const RISK_CONFIG = {
     'riskChart',
     'riskDurationChart',
   ],
-
-  // -------------------------------------------------------------------
-  // Breakdown Gruppierung (innerhalb breakdown)
-  // -------------------------------------------------------------------
-  breakdownGroups: {
-    Issuer: ['issuerPieChart', 'ratingPieChart', 'rankPieChart'],
-    Product: ['ratingresPieChart', 'categoryPieChart', 'coupontypePieChart'],
-    General: ['depotbankPieChart'],
-
-    // ✅ NEU: Geography (IDs müssen exakt zu `${columnName.toLowerCase()}PieChart` passen)
-    // Empfohlen: nutze die "Issuer..." Keys aus deiner v_Portfolios_enriched
-    Geography: [
-      'issuerregionPieChart',       // IssuerRegion
-      'issuercountrynamePieChart',  // IssuerCountryName
-      'issueriseuPieChart',         // IssuerIsEU
-      'issueriseuroPieChart',       // IssuerIsEuro
-      'issueriseeaPieChart',        // IssuerIsEEA
-      'issuerisoecdPieChart',       // IssuerIsOECD
-    ],
-  },
-
-  breakdownChildToGroup: {
-  breakdownIssuer:   'Issuer',
-  breakdownProducts: 'Product',     // oder 'Products' – aber dann überall konsistent
-  breakdownGeneral:  'General',
-  breakdownGeography:'Geography',
-},
-
 
   // -------------------------------------------------------------------
   // Defaults für Mini-Tabellen
@@ -707,13 +608,6 @@ function computeRiskLayout(chartState = {}) {
       t => !IGNORED_TABLE_IDS.includes(t.id)
     );
 
-    // 🔥 Legend-Tabellen im Breakdown-Panel NICHT als "Tables" verwenden
-    if (secKey === 'breakdown') {
-      allTables = allTables.filter(t =>
-        !/piechart-legend$/i.test(t.id)    // z.B. issuerPieChart-legend
-      );
-    }
-
     const enabledCharts = allCharts.filter(ch =>
       isChartEnabled(secKey, ch.id, chartState)
     );
@@ -759,9 +653,12 @@ function buildPreviewSections(chartState) {
     let tableThumbs = [];
 
     // ─────────────────────────────────────────────
-    // 🔥 BREAKDOWN PARENT: nur Container, KEIN Inhalt
+    // 🔥 BREAKDOWN PARENT (#panel-concentration): nur Container, KEIN eigener Inhalt.
+    //    Die 11 Dimensions-Kinder (#panel-concentration-<KEY>) tragen die Charts/Tabellen;
+    //    der Live-Chart des Parents haengt an der aktuell gewaehlten Dimension und
+    //    soll NICHT in den Report (waere je nach letzter Auswahl unterschiedlich).
     // ─────────────────────────────────────────────
-    if (sec.key === 'breakdown') {
+    if (sec.key === 'concentration') {
       sections.push({
         key: sec.key,
         title: sec.title,
@@ -770,15 +667,15 @@ function buildPreviewSections(chartState) {
         tableItems: [],
         chartThumbs: [],
         tableThumbs: [],
-        breakdownControlsHtml: '', // ❌ alte Darstellung weg
-        hasThumbs: true,           // ❌ keine "Noch keine Thumbnails"
+        breakdownControlsHtml: '',
+        hasThumbs: true,           // keine "Noch keine Thumbnails"-Meldung
         sectionEnabled: isOn,
       });
-      return; // ⬅️ wichtig: nichts weiter für breakdown
+      return; // ⬅️ nichts weiter fuer den Breakdown-Parent
     }
 
     // ─────────────────────────────────────────────
-    // 🔹 ALLE ANDEREN SECTIONS (inkl. injected Breakdown-Children)
+    // 🔹 ALLE ANDEREN SECTIONS (inkl. der Breakdown-Dimensions-Kinder)
     // ─────────────────────────────────────────────
     if (isOn) {
       // Charts
@@ -963,158 +860,6 @@ function buildDynamicTableItems(sectionKey, tables, chartState) {
   }).filter(Boolean);
 }
 
-function buildBreakdownControlsWithThumbs(sectionKey, charts, enabledCharts, chartState) {
-  const list = charts || [];
-  if (!list.length) return '';
-
-  const state = chartState || {};
-  const byId  = new Map(list.map(ch => [ch.id, ch]));
-
-  const enabledSet = new Set((enabledCharts || []).map(ch => ch.id));
-
-  // ✅ Thumbs: Chart + passende Legend-MiniTable nebeneinander
-  const thumbMap = new Map();
-  (enabledCharts || []).forEach(ch => {
-    const chartId  = ch.id;
-    const label    = ch.label || chartId;
-    const legendId = `${chartId}-legend`;
-
-    const chartThumb  = smartThumb(chartId, label);
-    const tableThumb  = miniTbl(legendId, {
-      maxWidth: 180,
-      maxHeight: 160,
-      scale: 0.7,
-      fontSize: 9,
-    });
-
-    let html = chartThumb;
-    if (chartThumb && tableThumb) {
-      html = `
-        <div class="rr-thumb-pair">
-          <div class="rr-thumb-pair-chart">
-            ${chartThumb}
-          </div>
-          <div class="rr-thumb-pair-table">
-            ${tableThumb}
-          </div>
-        </div>
-      `;
-    }
-
-    if (html) thumbMap.set(chartId, html);
-  });
-
-  const groupsConfig = (RISK_CONFIG && RISK_CONFIG.breakdownGroups) || {};
-
-  const renderCheckbox = (ch) => {
-    const chartId = ch.id;
-    const label   = ch.label || chartId;
-    // WICHTIG: kanonischer Key (chartStateFlatKey), identisch zu save/isChartEnabled.
-    // Sonst (roher Key) ist der State immer undefined → Box lässt sich nicht abhaken.
-    const flatKey = chartStateFlatKey(sectionKey, chartId);
-    const domId   = `rr-chart-${sectionKey}-${chartId}`;
-    const checked = state[flatKey] !== false ? 'checked' : '';
-
-    return `
-      <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
-        <input
-          type="checkbox"
-          id="${domId}"
-          data-chart-section="${sectionKey}"
-          data-chart-key="${chartId}"
-          ${checked}
-        >
-        <span>${label}</span>
-      </label>
-    `;
-  };
-
-  const groupsHtml = Object.entries(groupsConfig).map(([groupName, ids]) => {
-    const chartsInGroup = (ids || [])
-      .map(id => byId.get(id))
-      .filter(Boolean);
-
-    if (!chartsInGroup.length) return '';
-
-    const thumbs = (ids || [])
-      .filter(id => enabledSet.has(id))
-      .map(id => thumbMap.get(id))
-      .filter(Boolean);
-
-    return `
-      <div class="rr-breakdown-group" style="margin-top:4px;">
-        <div style="
-          font-size:10px;
-          text-transform:uppercase;
-          letter-spacing:.06em;
-          opacity:.75;
-          margin-bottom:2px;">
-          ${groupName.toUpperCase()}
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px 12px;margin-bottom:${thumbs.length ? '4px' : '0'};">
-          ${chartsInGroup.map(renderCheckbox).join('')}
-        </div>
-        ${
-          thumbs.length
-            ? `
-              <div class="risk-chart-thumbs" style="display:flex;flex-wrap:wrap;gap:8px;">
-                ${thumbs.join('')}
-              </div>
-            `
-            : ''
-        }
-      </div>
-    `;
-  }).join('');
-
-  // Charts, die in keiner Gruppe hängen → "Other"
-  const usedIds = new Set(
-    Object.values(groupsConfig)
-      .flat()
-      .filter(Boolean)
-  );
-
-  const leftoverCharts = list.filter(ch => !usedIds.has(ch.id));
-  const leftoverThumbs = leftoverCharts
-    .map(ch => thumbMap.get(ch.id))
-    .filter(Boolean);
-
-  const leftoversHtml =
-    leftoverCharts.length || leftoverThumbs.length
-      ? `
-        <div class="rr-breakdown-group" style="margin-top:6px;">
-          <div style="
-            font-size:10px;
-            text-transform:uppercase;
-            letter-spacing:.06em;
-            opacity:.65;
-            margin-bottom:2px;">
-            OTHER
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px 12px;margin-bottom:${leftoverThumbs.length ? '4px' : '0'};">
-            ${leftoverCharts.map(renderCheckbox).join('')}
-          </div>
-          ${
-            leftoverThumbs.length
-              ? `
-                <div class="risk-chart-thumbs" style="display:flex;flex-wrap:wrap;gap:8px;">
-                  ${leftoverThumbs.join('')}
-                </div>
-              `
-              : ''
-          }
-        </div>
-      `
-      : '';
-
-  return `
-    <div class="rr-chart-controls" style="margin:4px 0 8px;">
-      <div style="font-size:11px;opacity:.8;margin-bottom:4px">Charts:</div>
-      ${groupsHtml}
-      ${leftoversHtml}
-    </div>
-  `;
-}
 
 
 
@@ -1213,7 +958,7 @@ function saveChartToggleStateFromDOM() {
 function chartDefaultEnabled(section, chartKey, state) {
   if (section === 'marketTraffic') return isSectionEnabled('market', state);
   if (section === 'creditTraffic') return isSectionEnabled('credit', state);
-  const canon = canonicalChartSection(section, chartKey); // breakdown* → breakdown
+  const canon = canonicalChartSection(section, chartKey); // Identität (siehe canonicalChartSection)
   return isSectionEnabled(canon, state);
 }
 
@@ -1287,7 +1032,7 @@ function wireChartControlsOnce() {
           });
         }
 
-        // 2) 🔥 Parent → Child-Sections mitsynchronisieren (z.B. breakdown → issuer/products/general)
+        // 2) 🔥 Parent → Child-Sections mitsynchronisieren (z.B. Breakdown → seine 11 Dimensionen)
         const childKeys = getChildSectionKeys(sec);
         if (childKeys && childKeys.length) {
           childKeys.forEach(childKey => {
@@ -2120,10 +1865,10 @@ function renderRiskPreview() {
     const chartState = loadChartToggleState?.() || {};
     let sections     = buildPreviewSections(chartState) || [];
 
-    // ✅ Inject Breakdown child sections (Issuer / Products / General)
-    sections = injectBreakdownChildren(sections, chartState) || sections;
-    // Der "Market Data"-Parent + die RISK-/Tab-Gruppen werden in
-    // applySectionHierarchy generisch injiziert (aus dem Trigger-DOM).
+    // Breakdown-Kinder (Pro-Dimensions-Panels #panel-concentration-<KEY>) werden
+    // regulär über discoverPanels() erfasst und via sectionParents unter den
+    // "Breakdown"-Parent gehängt. Der "Market Data"-Parent + die RISK-/Tab-Gruppen
+    // werden in applySectionHierarchy generisch injiziert (aus dem Trigger-DOM).
 
     // ─────────────────────────────────────────────
     // Helpers
@@ -2271,7 +2016,7 @@ function renderRiskPreview() {
           } else {
             keys.push(`${sk}:__section__`);
             prefixes.add(sk);
-            prefixes.add(canonicalChartSection(sk, '__x__')); // breakdown* → breakdown
+            prefixes.add(canonicalChartSection(sk, '__x__')); // Identität
           }
         });
         __riskGroupBulk.set(G, { keys, prefixes });
@@ -3042,47 +2787,13 @@ export function getActiveRiskSectionsForPdf() {
   let sections = layout
     .filter(sec => isSectionOn(sec.key)) // ✅ Section Checkbox wirkt im PDF
     .map(sec => {
-      let enabledCharts = sec.enabledCharts || [];
-      let enabledTables   = sec.enabledTables ? [...sec.enabledTables] : [];
-
-      // 🔹 SPEZIALFALL: Breakdown. Der PDF-Pfad kennt nur die Parent-Section
-      //    'breakdown' mit ALLEN Charts. Pro Unter-Section (Issuer/Products/…)
-      //    gaten: ein Chart/Legend kommt nur ins PDF, wenn seine Unter-Section
-      //    angehakt ist. Unbekannte Charts hängen am Parent-Toggle.
-      if (sec.key === 'breakdown') {
-        const groups = (RISK_CONFIG && RISK_CONFIG.breakdownGroups) || {};
-        const childToGroup = (RISK_CONFIG && RISK_CONFIG.breakdownChildToGroup) || {};
-
-        // chartId → Unter-Section-Key
-        const chartToChild = new Map();
-        Object.entries(childToGroup).forEach(([childKey, groupName]) => {
-          (groups[groupName] || []).forEach(cid => chartToChild.set(cid, childKey));
-        });
-        // Unter-Section an? Explizit gesetzt → das; sonst dem Parent folgen.
-        const childOn = (childKey) => {
-          const v = chartState[`${childKey}:__section__`];
-          return (typeof v === 'boolean') ? v : isSectionOn('breakdown');
-        };
-
-        // 1) Charts nur behalten, wenn ihre Unter-Section an ist.
-        enabledCharts = enabledCharts.filter(ch => {
-          const child = chartToChild.get(ch.id);
-          return child ? childOn(child) : true;
-        });
-
-        // 2) Legend-Tabellen NUR für aktive Unter-Sections ergänzen.
-        const existingIds = new Set(enabledTables.map(t => t.id));
-        Object.entries(childToGroup).forEach(([childKey, groupName]) => {
-          if (!childOn(childKey)) return;
-          (groups[groupName] || []).forEach(chartId => {
-            const legendId = `${chartId}-legend`;
-            if (existingIds.has(legendId)) return;
-            existingIds.add(legendId);
-            enabledTables.push({ id: legendId, label: `${groupName} Breakdown` });
-          });
-        });
-      }
-
+      const enabledCharts = sec.enabledCharts || [];
+      const enabledTables = sec.enabledTables ? [...sec.enabledTables] : [];
+      // Breakdown-Dimensions-Kinder (#panel-concentration-<KEY>) sind reguläre
+      // Sektionen mit eigenen Charts/Tabellen. Der Parent (#panel-concentration)
+      // BEHÄLT seinen Inhalt hier (sonst wuerde ihn der "nur Sektionen mit Inhalt"-
+      // Filter entfernen und die Kinder verloeren ihren Parent) — RiskPDF zeichnet
+      // fuer den Parent aber nur den Kapitel-Titel (keine Doppelung).
       return { key: sec.key, title: sec.title, enabledCharts, enabledTables };
     });
 

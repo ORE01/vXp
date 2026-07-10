@@ -195,16 +195,6 @@ export function handleStructureTimelineModal(prodId, options = {}) {
   }
 
   <button
-    id="toggleModelSetupDrawer"
-    class="section-trigger structure-action-button"
-    type="button"
-    ${isCreateMode ? 'disabled' : ''}
-    title="${isCreateMode ? 'Create and save the product first.' : ''}"
-  >
-    <span class="section-header">Model Setup</span>
-  </button>
-
-  <button
     id="toggleProductValuationDrawer"
     class="section-trigger structure-action-button"
     type="button"
@@ -212,6 +202,16 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     title="${isCreateMode ? 'Create and save the product first.' : ''}"
   >
     <span class="section-header">Valuation</span>
+  </button>
+
+  <button
+    id="toggleModelSetupDrawer"
+    class="section-trigger structure-action-button"
+    type="button"
+    ${isCreateMode ? 'disabled' : ''}
+    title="${isCreateMode ? 'Create and save the product first.' : ''}"
+  >
+    <span class="section-header">Model Setup</span>
   </button>
 </div>
       </div>

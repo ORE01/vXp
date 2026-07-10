@@ -5,6 +5,101 @@ import {
   getPortfolioColor,
   getEuswCurveColor
 } from '../../utils/colors.js';
+import { createContribDrill, scheduleHideConcMenu } from './SummaryBreakdown.js';
+
+// Drill-down fuer die Produkt-Yield-Scatter (Klick auf Bubble -> Position(en) des
+// Produkts). Gleiche Engine wie die anderen Panels. Nur die 'var'-Schiene noetig.
+const _perfDrillCfg = {
+  detailId: 'perfProdDetail', titleId: 'perfProdDetailTitle',
+  tableId: 'perfProdDetailTable', closeId: 'perfProdDetailClose',
+  menuId: 'perfProdCardMenu', valueType: 'NAV', valueLabel: 'NAV',
+  columns: [
+    { key: 'PROD_ID', label: 'Product ID' },
+    { key: 'DESCRIPTION', label: 'Description' },
+    { key: 'RATINGres', label: 'Rating' },
+    { key: 'NOTIONAL', label: 'Notional', align: 'right', fmt: 'num' },
+    { key: 'NAV', label: 'NAV', align: 'right', fmt: 'num' },
+    { key: '__YTM', label: 'Current yield', align: 'right', fmt: 'pctval' },
+    { key: '__YTM_BUY', label: 'Yield (buy)', align: 'right', fmt: 'pctval' },
+  ],
+};
+const perfDrill = createContribDrill({ var: _perfDrillCfg, es: _perfDrillCfg });
+function perfProdStep(pid) {
+  const s = String(pid ?? '').trim();
+  return s ? { colKey: 'PROD_ID', value: s, label: 'Product' } : null;
+}
+function bindPerfCanvasLeave(canvas) {
+  if (!canvas || canvas.dataset.perfLeaveBound) return;
+  canvas.dataset.perfLeaveBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+}
+// Drill per RECHTSKLICK: unterdrueckt das native Kontextmenue und oeffnet – wenn
+// auf einer Produkt-Bubble geklickt wurde – das Drill-Menue am Cursor. Liest die
+// aktuelle Chart-Instanz zur Klickzeit, uebersteht also jedes Neuzeichnen.
+function bindPerfContextDrill(canvas, targetId) {
+  if (!canvas || canvas.dataset.perfCtxBound) return;
+  canvas.dataset.perfCtxBound = '1';
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = window[targetId + '_chartInstance'];
+      if (!chart) return;
+      const els = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [];
+      const el = els.find(x => chart.data.datasets[x.datasetIndex]?.isProduct);
+      if (!el) { scheduleHideConcMenu(); return; }
+      const pid = chart.data.datasets[el.datasetIndex].label;
+      perfDrill.hover('var', { native: e }, [el], [perfProdStep(pid)]);
+    } catch {}
+  });
+}
+// Zoom-Toolbar oben rechts in der .chart-box des Produkt-Charts: schnelle
+// Maturity-Intervalle (1Y/5Y/10Y auf der X-Achse) + Reset Zoom.
+// Idempotent (nur einmal erzeugt); liest die aktuelle Chart-Instanz zur Klickzeit,
+// uebersteht also jedes Neuzeichnen.
+function ensurePerfZoomResetButton(canvas, targetId) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (box.querySelector('.perf-zoom-tools')) return;
+
+  const bar = document.createElement('div');
+  bar.className = 'perf-zoom-tools';
+  bar.style.cssText = 'position:absolute;top:4px;right:4px;z-index:5;display:flex;gap:3px;';
+
+  const mkBtn = (label, title, onClick) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.title = title;
+    b.style.cssText =
+      'font-size:10px;padding:2px 7px;border:1px solid #cbd5e1;border-radius:4px;' +
+      'background:#f8fafc;color:#334155;cursor:pointer;';
+    b.addEventListener('click', onClick);
+    return b;
+  };
+
+  // Schnelle Maturity-Intervalle: X-Achse auf [0, N] Jahre.
+  [1, 5, 10].forEach((yrs) => {
+    bar.appendChild(mkBtn(`${yrs}Y`, `Show 0–${yrs} years`, () => {
+      try { window[targetId + '_chartInstance']?.zoomScale?.('x', { min: 0, max: yrs }, 'default'); } catch {}
+    }));
+  });
+
+  bar.appendChild(mkBtn('Reset Zoom', 'Reset zoom', () => {
+    try { window[targetId + '_chartInstance']?.resetZoom?.(); } catch {}
+  }));
+
+  box.appendChild(bar);
+}
+// Drill-Datenquelle: Positionen des gewaehlten Portfolios, angereichert mit den
+// normalisierten Yields (current + buy) in Prozent.
+function buildPerfDrillRows() {
+  const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
+  const norm = (raw) => { let v = parseNumberLike(raw); if (Number.isFinite(v) && Math.abs(v) <= 1) v = v * 100; return Number.isFinite(v) ? v : null; };
+  return (appState.getAllPortfolioData?.() || [])
+    .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port)
+    .map(r => ({ ...r, __YTM: norm(r.ytm ?? r.YTM), __YTM_BUY: norm(r.ytm_BUY ?? r.YTM_BUY ?? r.ytm ?? r.YTM) }));
+}
 
 
 let lastSummaryYieldArgs = null;
@@ -351,6 +446,9 @@ const productMaturityPoints = (filteredData || []).map(e => ({
   PROD_ID: e.PROD_ID,
 })).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
 
+// Drill-Datenquelle (Positionen + Yields) fuer beide Produkt-Scatter setzen.
+try { perfDrill.setData(buildPerfDrillRows()); } catch (e) { console.warn('[Perf] drill data failed', e); }
+
 drawYieldVsTimeChart({
   targetId: 'euswapProductYieldChart',
   heading: 'Product Yields vs Maturity',
@@ -359,7 +457,8 @@ drawYieldVsTimeChart({
   pastLabel,
   euswDataOriginal: [],
   points: productMaturityPoints,
-  xMaxOverride: sharedXMax
+  xMaxOverride: sharedXMax,
+  drill: perfDrill
 });
 
     // =========================
@@ -473,7 +572,8 @@ console.log('[PRODUCT DURATION POINTS CHECK]', {
       pastLabel,
       xMaxOverride: sharedXMax,
       euswDataOriginal: durationEUSWData,
-      points: productDurationPoints
+      points: productDurationPoints,
+      drill: perfDrill
     });
   }
 }
@@ -487,6 +587,7 @@ export function drawYieldVsTimeChart({
   euswDataOriginal = [],
   points = [], // entweder Array {x,y} ODER EintrÃ¤ge mit .TtM/.ytm
   xMaxOverride = null, // gemeinsame x-Achsen-Skalierung (von Chart 1 vorgegeben)
+  drill = null, // createContribDrill-Instanz: macht die Produkt-Bubbles klickbar
 }) {
   let canvas = document.getElementById(targetId);
 
@@ -523,6 +624,8 @@ export function drawYieldVsTimeChart({
   }
 
   const ctx = setupHiDPICanvas(canvas, 600, 190, true); // true = an tatsächliche Anzeigegröße anpassen (Tooltip-Koordinaten)
+
+  if (drill) { bindPerfCanvasLeave(canvas); bindPerfContextDrill(canvas, targetId); }
 
   // Vorherigen Chart zerstÃ¶ren
   if (window[targetId + '_chartInstance']) {
@@ -692,6 +795,10 @@ export function drawYieldVsTimeChart({
       responsive: false,
       maintainAspectRatio: false,
 
+      // Produkt-Bubbles interaktiv: Der Drill wird per RECHTSKLICK ausgeloest
+      // (siehe bindPerfContextDrill). Kein Hover-Pop / Linksklick-Drill, damit
+      // normales Ziehen (Zoom) und Hovern das Menue nicht ungewollt oeffnen.
+
       // Tooltip NUR in der Nähe eines Punktes (intersect:true → nicht überall).
       // axis:'xy' ist entscheidend: "nearest" wird in 2D (x UND y) berechnet, so
       // dass beim Draufstehen genau dieser Punkt gewählt wird statt des
@@ -771,10 +878,30 @@ export function drawYieldVsTimeChart({
                 : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
           },
           bodyFont: { size: 13 }
-        }
+        },
+
+        // Zoom nur auf den interaktiven Produkt-Charts (chartjs-plugin-zoom, global geladen).
+        // Normales Ziehen = Rechteck-Auswahl (Intervall), Wheel = Zoom, Ctrl+Drag = verschieben.
+        zoom: drill ? {
+          pan:  { enabled: true, mode: 'xy', modifierKey: 'ctrl' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            drag:  {
+              enabled: true,
+              backgroundColor: 'rgba(75,150,225,0.15)',
+              borderColor: 'rgba(75,150,225,0.6)',
+              borderWidth: 1,
+            },
+            mode: 'xy', // Scatter: in X UND Y zoomen
+          },
+        } : undefined
       }
     }
   });
+
+  // Reset-Zoom-Button (nur interaktive Produkt-Charts).
+  if (drill) ensurePerfZoomResetButton(canvas, targetId);
 
   // Effektiver x-Achsen-Max zurueckgeben, damit alle Charts dieselbe Skalierung
   // (die von Chart 1) uebernehmen koennen.

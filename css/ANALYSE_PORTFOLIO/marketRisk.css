@@ -164,7 +164,8 @@
 }
 
 #panel-market .chart-box canvas,
-#panel-mvar-products .chart-box canvas{
+#panel-mvar-products .chart-box canvas,
+#panel-mvar-issuers .chart-box canvas{
   display:block;
   width:100% !important;
   height:360px !important;
@@ -172,7 +173,8 @@
 
 @media (max-width: 1200px){
   #panel-market .chart-box canvas,
-  #panel-mvar-products .chart-box canvas{
+  #panel-mvar-products .chart-box canvas,
+  #panel-mvar-issuers .chart-box canvas{
     height: 320px !important;
   }
 }
@@ -184,13 +186,15 @@
   }
 
   #panel-market .chart-box,
-  #panel-mvar-products .chart-box{
+  #panel-mvar-products .chart-box,
+  #panel-mvar-issuers .chart-box{
     min-width:0;
     width:100%;
   }
 
   #panel-market .chart-box canvas,
-  #panel-mvar-products .chart-box canvas{
+  #panel-mvar-products .chart-box canvas,
+  #panel-mvar-issuers .chart-box canvas{
     height: 280px !important;
   }
 }
@@ -242,6 +246,9 @@
 #panel-mvar-issuers .mvar-issuer-split .mvar-prod-chart,
 #panel-mvar-products .mvar-issuer-split .mvar-prod-chart,
 #panel-mvar .mvar-issuer-split .mvar-prod-chart{ flex: 1 1 460px; min-width: 320px; }
+
+/* KPI-Band ueber den Issuer-Charts (je VaR-/ES-Zeile): mr-kpi-card-Reihe. */
+.mvar-issuer-kpis{ display:flex; gap:12px; flex-wrap:wrap; margin:8px 0 4px; }
 
 #panel-mvar-products .mvar-mini-table{
   width:100%;

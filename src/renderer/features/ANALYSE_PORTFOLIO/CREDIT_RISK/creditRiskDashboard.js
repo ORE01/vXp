@@ -6,7 +6,47 @@
 // TSI / MSD folgen spaeter.
 
 import { appState } from '../../../renderer.js';
-import { sumNavForPort } from './LossIssuer.js';
+import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep } from './LossIssuer.js';
+import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
+
+// Drill-down fuer den Tail-Zoom-Chart: Klick auf ein Quantil -> Positionen der in diesem
+// Szenario ausfallenden Emittenten (ISSUER_RANK), mit NAV + Loss + Rating. Gleiche Engine
+// wie der Loss-Chart (LossIssuer); eigene Detail-/Menue-Container unter dem Tail-Chart.
+const _crTailDrillCfg = {
+  detailId: 'crTailDetail', titleId: 'crTailDetailTitle',
+  tableId: 'crTailDetailTable', closeId: 'crTailDetailClose',
+  menuId: 'crTailCardMenu', valueType: 'NAV', valueLabel: 'NAV',
+  extraCol: { key: '__LOSS', label: 'Loss' },
+  infoCol: { key: 'RATINGres', label: 'Rating' },
+};
+const crTailDrill = createContribDrill({ var: _crTailDrillCfg, es: _crTailDrillCfg });
+
+function _bindCrTailCanvasLeave(canvas) {
+  if (!canvas || canvas.dataset.crTailLeaveBound) return;
+  canvas.dataset.crTailLeaveBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+}
+
+// Drill per RECHTSKLICK auf einen Quantil-Balken: unterdrueckt das native Kontextmenue
+// und oeffnet das Drill-Menue am Cursor. Liest Chart-Instanz + Steps (je Serie) zur
+// Klickzeit neu, uebersteht also jedes Neuzeichnen.
+function _bindCrTailContextDrill(canvas) {
+  if (!canvas || canvas.dataset.crTailCtxBound) return;
+  canvas.dataset.crTailCtxBound = '1';
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = window.crTailZoomChart;
+      if (!chart) return;
+      const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])[0];
+      if (!el) { scheduleHideConcMenu(); return; }
+      const steps = chart.$crTailSteps?.[el.datasetIndex] || chart.$crTailSteps?.[0] || [];
+      const step = steps[el.index];
+      if (!step) { scheduleHideConcMenu(); return; }
+      crTailDrill.hover('var', { native: e }, [{ index: 0 }], [step]);
+    } catch {}
+  });
+}
 
 let _listenersBound = false;
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; };
@@ -45,6 +85,31 @@ function _destroyCrChart(id) {
   window[id] = null;
 }
 
+// pd_flag-Serien fuer die Loss-Charts (wie im Loss-Histogramm ueber die Legende waehlbar).
+const CR_FLAG_SERIES = [
+  { key: 'rating', label: 'Historic' },
+  { key: 'market', label: 'Market' },
+  { key: 'norm',   label: 'Market adjusted' },
+];
+
+// Sichtbare VaR/ES-Referenzlinien aus den aktuell eingeblendeten Datasets zusammenstellen.
+// chart.$crLineMap[i] = Linien der Serie i; axis 'v' (vertikal) oder 'h' (horizontal).
+function _crRebuildLines(chart, axis) {
+  const map = chart?.$crLineMap;
+  if (!map || !chart.options?.plugins?.crLines) return;
+  const lines = [];
+  map.forEach((ls, i) => { if (chart.isDatasetVisible(i)) lines.push(...ls); });
+  chart.options.plugins.crLines[axis] = lines;
+}
+
+// Legenden-onClick: Standard-Toggle + Linien passend zu den sichtbaren Serien neu aufbauen.
+function _crLegendOnClick(axis) {
+  return (e, item, legend) => {
+    window.Chart.defaults.plugins.legend.onClick(e, item, legend);
+    try { _crRebuildLines(legend.chart, axis); legend.chart.update(); } catch {}
+  };
+}
+
 // LINKS: Loss-Histogramm (lossHistogramMain, RATING) mit Tail-Highlight + VaR/ES-Linien.
 // y = Frequency (log, da die Verteilung stark bei ~0 konzentriert ist). Tail-Bins
 // (Verlust >= VaR) rot. Vertikale VaR (solid) + ES (dashed) Linien.
@@ -53,37 +118,50 @@ function renderCreditLossDist() {
   if (!canvas || !window.Chart) return;
   _destroyCrChart('crLossDistChart');
   const port = appState.getSelectedPortTableName?.();
-  const rows = (appState.getLossHistogram?.() || [])
-    .filter(r => String(r.port_name) === String(port) && String(r.pd_flag).toUpperCase() === 'RATING')
-    .slice().sort((a, b) => Number(a.bin_center) - Number(b.bin_center));
-  if (!rows.length) { canvas.style.display = 'none'; return; }
+  const all = (appState.getLossHistogram?.() || []).filter(r => String(r.port_name) === String(port));
+  if (!all.length) { canvas.style.display = 'none'; return; }
+
+  // Nach pd_flag gruppieren; gemeinsame Bins -> Labels aus einer Basis-Serie (rating bevorzugt).
+  const byFlag = { rating: [], market: [], norm: [] };
+  all.forEach(r => { const f = String(r.pd_flag || '').toLowerCase(); if (byFlag[f]) byFlag[f].push(r); });
+  const baseFlag = byFlag.rating.length ? 'rating' : byFlag.market.length ? 'market' : 'norm';
+  const base = byFlag[baseFlag].slice().sort((a, b) => Number(a.bin_center) - Number(b.bin_center));
+  if (!base.length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
 
-  const rr = creditRowsByFlag().rating || {};
-  const varPct = Math.abs(num(rr.VaR_rel)) * 100;
-  const esPct = Math.abs(num(rr.ES_rel)) * 100;
+  const labels = base.map(r => (Number(r.bin_center) * 100).toFixed(1));
+  const cvarByFlag = creditRowsByFlag();
+  const nearestIdx = (pct) => { let idx = 0, best = Infinity; base.forEach((r, i) => { const d = Math.abs(Number(r.bin_center) * 100 - pct); if (d < best) { best = d; idx = i; } }); return idx; };
 
-  const labels = rows.map(r => (Number(r.bin_center) * 100).toFixed(1));
-  const counts = rows.map(r => { const c = Number(r.count); return c > 0 ? c : null; });
-  const colors = rows.map(r => (Number(r.bin_center) * 100 >= varPct ? BAR_RED : BAR_BLUE));
-  const nearestIdx = (pct) => { let idx = 0, best = Infinity; rows.forEach((r, i) => { const d = Math.abs(Number(r.bin_center) * 100 - pct); if (d < best) { best = d; idx = i; } }); return idx; };
-  const v = [];
-  if (Number.isFinite(varPct)) v.push({ at: nearestIdx(varPct), color: LINE_BLUE, width: 2 });
-  if (Number.isFinite(esPct)) v.push({ at: nearestIdx(esPct), color: LINE_BLUE, width: 2, dash: [6, 4] });
+  // Je pd_flag eine Serie (Historic/Market/Market adjusted); nur Historic initial sichtbar.
+  const lineMap = [];
+  const datasets = CR_FLAG_SERIES.map((f, di) => {
+    const m = new Map(byFlag[f.key].map(r => [Number(r.bin_center), Number(r.count)]));
+    const data = base.map(r => { const c = m.get(Number(r.bin_center)); return c > 0 ? c : null; });
+    const rr = cvarByFlag[f.key] || {};
+    const varPct = Math.abs(num(rr.VaR_rel)) * 100;
+    const esPct = Math.abs(num(rr.ES_rel)) * 100;
+    const colors = base.map(r => (Number(r.bin_center) * 100 >= varPct ? BAR_RED : BAR_BLUE));
+    const lines = [];
+    if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: LINE_BLUE, width: 2 });
+    if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: LINE_BLUE, width: 2, dash: [6, 4] });
+    lineMap.push(lines);
+    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 22, hidden: di !== 0 };
+  });
 
   const col = _crChartColor();
   canvas.width = Math.max(320, Math.floor((canvas.parentElement?.clientWidth || 540) - 28)); canvas.height = 300;
-  window.crLossDistChart = new window.Chart(canvas.getContext('2d'), {
+  const chart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
     plugins: [_crLinePlugin],
-    data: { labels, datasets: [{ label: 'Frequency', data: counts, backgroundColor: colors, borderColor: colors, maxBarThickness: 22 }] },
+    data: { labels, datasets },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: col,
       plugins: {
-        legend: { display: false },
+        legend: { display: true, position: 'top', labels: { color: col, boxWidth: 12, font: { size: 11 } }, onClick: _crLegendOnClick('v') },
         subtitle: { display: true, text: 'Tail red · VaR (solid) · ES (dashed)', color: col, align: 'start', font: { size: 10 } },
-        crLines: { v },
-        tooltip: { callbacks: { title: (c) => `Loss ${labels[c[0].dataIndex]}%`, label: (c) => `Frequency: ${c.parsed.y}` } },
+        crLines: { v: lineMap[0] },
+        tooltip: { callbacks: { title: (c) => `Loss ${labels[c[0].dataIndex]}%`, label: (c) => `${c.dataset.label}: ${c.parsed.y}` } },
       },
       scales: {
         x: { title: { display: true, text: 'Loss (% of NAV)', color: col }, ticks: { color: col, maxTicksLimit: 14, autoSkip: true }, grid: { display: false } },
@@ -91,6 +169,8 @@ function renderCreditLossDist() {
       },
     },
   });
+  chart.$crLineMap = lineMap;
+  window.crLossDistChart = chart;
 }
 
 // RECHTS: Tail-Zoom — Verlust (% vom NAV) je Quantil im Extrem-Tail (sortedLossesIssuer,
@@ -100,40 +180,72 @@ function renderCreditTailZoom() {
   if (!canvas || !window.Chart) return;
   _destroyCrChart('crTailZoomChart');
   const port = appState.getSelectedPortTableName?.();
-  const rows = (appState.getAllLossData?.() || [])
-    .filter(r => String(r.port_name) === String(port) && String(r.pd_flag).toUpperCase() === 'RATING' && Number.isFinite(Number(r.QUANTIL)));
-  if (!rows.length) { canvas.style.display = 'none'; return; }
+  const all = (appState.getAllLossData?.() || [])
+    .filter(r => String(r.port_name) === String(port) && Number.isFinite(Number(r.QUANTIL)));
+  if (!all.length) { canvas.style.display = 'none'; return; }
+
+  const byFlag = { rating: [], market: [], norm: [] };
+  all.forEach(r => { const f = String(r.pd_flag || '').toLowerCase(); if (byFlag[f]) byFlag[f].push(r); });
+  const baseFlag = byFlag.rating.length ? 'rating' : byFlag.market.length ? 'market' : 'norm';
+  if (!byFlag[baseFlag].length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
 
   const sumNav = sumNavForPort(port);
-  const rr = creditRowsByFlag().rating || {};
-  const varPct = Math.abs(num(rr.VaR_rel)) * 100;
-  const esPct = Math.abs(num(rr.ES_rel)) * 100;
-
-  const sorted = rows.slice().sort((a, b) => Number(a.QUANTIL) - Number(b.QUANTIL));
   const targets = [99.0, 99.2, 99.4, 99.5, 99.6, 99.7, 99.8, 99.9, 99.95, 99.99];
-  const nearest = (q) => sorted.reduce((best, r) => (Math.abs(Number(r.QUANTIL) - q) < Math.abs(Number(best.QUANTIL) - q) ? r : best), sorted[0]);
-  const picks = targets.map(q => ({ q, row: nearest(q) }));
-  const labels = picks.map(p => p.q.toFixed(p.q >= 99.9 ? 2 : 1));
-  const lossPct = picks.map(p => (sumNav > 0 ? Number(p.row.LOSS) / sumNav * 100 : 0));
-  const colors = lossPct.map(v => (v >= varPct ? BAR_RED : BAR_BLUE));
-  const h = [];
-  if (Number.isFinite(varPct)) h.push({ at: varPct, color: LINE_BLUE, width: 2 });
-  if (Number.isFinite(esPct)) h.push({ at: esPct, color: LINE_BLUE, width: 2, dash: [6, 4] });
+  const labels = targets.map(q => q.toFixed(q >= 99.9 ? 2 : 1));
+  const cvarByFlag = creditRowsByFlag();
+
+  // Drill-Datenquelle: Positionen des gewaehlten Portfolios (mit ISSUER/__LOSS/RATINGres).
+  try {
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === String(port).trim());
+    crTailDrill.setData(buildPositionLoss(portRows, port));
+  } catch (e) { console.warn('[CreditTail] drill data failed', e); }
+
+  // Je pd_flag eine Serie (Historic/Market/Market adjusted); nur Historic initial sichtbar.
+  // stepsByDs[dsIndex][barIndex] = Drill-Schritt (ausfallende Emittenten im Quantil-Szenario).
+  const lineMap = [];
+  const stepsByDs = [];
+  const datasets = CR_FLAG_SERIES.map((f, di) => {
+    const sorted = byFlag[f.key].slice().sort((a, b) => Number(a.QUANTIL) - Number(b.QUANTIL));
+    let data;
+    let steps;
+    if (sorted.length) {
+      const nearest = (q) => sorted.reduce((best, r) => (Math.abs(Number(r.QUANTIL) - q) < Math.abs(Number(best.QUANTIL) - q) ? r : best), sorted[0]);
+      const picks = targets.map(q => nearest(q));
+      data = picks.map(row => (sumNav > 0 ? Number(row.LOSS) / sumNav * 100 : 0));
+      steps = picks.map(row => lossDefaultStep(issuersFromRank(row?.ISSUER_RANK)));
+    } else {
+      data = targets.map(() => null);
+      steps = targets.map(() => null);
+    }
+    stepsByDs.push(steps);
+    const rr = cvarByFlag[f.key] || {};
+    const varPct = Math.abs(num(rr.VaR_rel)) * 100;
+    const esPct = Math.abs(num(rr.ES_rel)) * 100;
+    const colors = data.map(v => (v != null && v >= varPct ? BAR_RED : BAR_BLUE));
+    const lines = [];
+    if (Number.isFinite(varPct)) lines.push({ at: varPct, color: LINE_BLUE, width: 2 });
+    if (Number.isFinite(esPct)) lines.push({ at: esPct, color: LINE_BLUE, width: 2, dash: [6, 4] });
+    lineMap.push(lines);
+    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 30, hidden: di !== 0 };
+  });
 
   const col = _crChartColor();
   canvas.width = Math.max(320, Math.floor((canvas.parentElement?.clientWidth || 540) - 28)); canvas.height = 300;
-  window.crTailZoomChart = new window.Chart(canvas.getContext('2d'), {
+  const chart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
     plugins: [_crLinePlugin],
-    data: { labels, datasets: [{ label: 'Loss', data: lossPct, backgroundColor: colors, borderColor: colors, maxBarThickness: 30 }] },
+    data: { labels, datasets },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: col,
+      // Drill wird per RECHTSKLICK ausgeloest (_bindCrTailContextDrill), damit Hovern
+      // das Menue nicht ungewollt oeffnet.
       plugins: {
-        legend: { display: false },
+        legend: { display: true, position: 'top', labels: { color: col, boxWidth: 12, font: { size: 11 } }, onClick: _crLegendOnClick('h') },
         subtitle: { display: true, text: 'Loss > VaR red · VaR (solid) · ES (dashed)', color: col, align: 'start', font: { size: 10 } },
-        crLines: { h },
-        tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `Loss: ${Number(c.parsed.y).toFixed(2)}% of NAV` } },
+        crLines: { h: lineMap[0] },
+        tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}% of NAV` } },
       },
       scales: {
         x: { title: { display: true, text: 'Quantile', color: col }, ticks: { color: col }, grid: { display: false } },
@@ -141,6 +253,11 @@ function renderCreditTailZoom() {
       },
     },
   });
+  chart.$crLineMap = lineMap;
+  chart.$crTailSteps = stepsByDs;
+  window.crTailZoomChart = chart;
+  _bindCrTailCanvasLeave(canvas);
+  _bindCrTailContextDrill(canvas);
 }
 
 // Headline-CVaR-Zeile: Historic VaR (pd_flag=rating; Fallback erste Zeile).

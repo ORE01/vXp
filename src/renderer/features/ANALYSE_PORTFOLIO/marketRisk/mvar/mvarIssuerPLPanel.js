@@ -10,7 +10,7 @@ import { formatNumber } from '../../../../utils/tableCellFormats.js';
 
 import { getCurrentMvarContext, rowMatchesMvarContext } from './mvarSelectors.js';
 import { toNumber } from './mvarTransforms.js';
-import { createContribDrill, scheduleHideConcMenu } from '../../SummaryBreakdown.js';
+import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../../SummaryBreakdown.js';
 
 // Getrennte Drill-Kontexte je Metrik (VaR/ES) fuer das Issuers-Panel.
 const issuerDrill = createContribDrill({
@@ -26,10 +26,106 @@ function bindCanvasLeaveHide(canvas) {
   canvas.dataset.issLeaveBound = '1';
   canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
 }
+// Zoom-Toolbar (Reset Zoom) + Bedienhinweis oben im Scatter. Idempotent; liest die aktuelle
+// Chart-Instanz aus _issuerCharts, uebersteht also jedes Neuzeichnen.
+function ensureIssuerScatterZoomTools(canvas, scatterId) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (!box.querySelector('.iss-zoom-reset')) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'iss-zoom-reset';
+    btn.textContent = 'Reset Zoom';
+    btn.title = 'Reset zoom';
+    btn.style.cssText =
+      'position:absolute;top:6px;right:6px;z-index:5;font-size:10px;padding:2px 8px;' +
+      'border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;cursor:pointer;';
+    btn.addEventListener('click', () => { try { _issuerCharts.get(scatterId)?.resetZoom?.(); } catch {} });
+    box.appendChild(btn);
+  }
+  if (!box.querySelector('.iss-zoom-hint')) {
+    const hint = document.createElement('div');
+    hint.className = 'iss-zoom-hint';
+    hint.textContent = 'Drag to zoom · right-click a point to drill';
+    hint.style.cssText =
+      'position:absolute;top:8px;left:10px;z-index:5;font-size:10px;color:#94a3b8;pointer-events:none;';
+    box.appendChild(hint);
+  }
+}
+// Drill per RECHTSKLICK auf einen Emittenten-Punkt: unterdrueckt das native Kontextmenue
+// und oeffnet das Drill-Menue am Cursor. Liest Instanz + Punkte zur Klickzeit neu.
+function bindIssuerScatterContextDrill(canvas, cfg) {
+  if (!canvas || canvas.dataset.issCtxBound) return;
+  canvas.dataset.issCtxBound = '1';
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = _issuerCharts.get(cfg.scatterId);
+      if (!chart) return;
+      const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])
+        .find(x => x.datasetIndex === 1);
+      if (!el) { scheduleHideConcMenu(); return; }
+      // Steps passend zum aktuellen Punkt-Index (Issuers-Dataset = Index 1).
+      const steps = chart.data.datasets[1].data.map(p => issuerStep(p?.issuer));
+      issuerDrill.hover(cfg.kind, { native: e }, [el], steps);
+    } catch {}
+  });
+}
 
 function fmtAbs(v) { return formatNumber()(v); }
 function fmtMaybeAbs(v) { return v == null ? '-' : fmtAbs(v); }
 function fmtRelPct(v) { return v == null ? '-' : `${(v * 100).toFixed(2)}%`; }
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : '–'; }
+
+// KPI-Band ueber den Charts einer Metrik (VaR/ES): Total, Top-Emittent (% vom Total),
+// Top-5-Konzentration (%), staerkster ueberproportionaler Beitrag (Risk vs. weight).
+function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
+  const host = document.getElementById(hostId);
+  const tblEl = tableId ? document.getElementById(tableId) : null;
+  if (!host && !tblEl) return;
+  const rows = (Array.isArray(issuerRows) ? issuerRows : [])
+    .slice()
+    .sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)));
+  if (!rows.length) { if (host) host.innerHTML = ''; if (tblEl) tblEl.innerHTML = ''; return; }
+
+  const total = rows.reduce((s, r) => s + toNumber(r[cfg.absKey], 0), 0);
+  const top = rows[0];
+  const top5 = rows.slice(0, 5).reduce((s, r) => s + (r[cfg.relKey] || 0), 0);
+  // Staerkster ueberproportionaler Beitrag: max(Risikobeitrag% - NAV-Anteil%).
+  let over = null;
+  for (const r of rows) {
+    if (r[cfg.relKey] == null || r.nav_rel == null) continue;
+    const d = r[cfg.relKey] - r.nav_rel;
+    if (!over || d > over.d) over = { issuer: r.issuer, d };
+  }
+  const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toFixed(1)} pp` : '–';
+
+  const cards = [
+    { label: `Total ${cfg.metric}`,     value: fmtAbs(total),            sub: 'sum of contributions',       desc: `Portfolio ${cfg.metric} (all issuers)` },
+    { label: 'Top issuer',              value: relPct1(top[cfg.relKey]), sub: top.issuer || '–',            desc: `Largest ${cfg.metric} contributor` },
+    { label: 'Top-5 concentration',     value: relPct1(top5),            sub: `of total ${cfg.metric}`,     desc: '5 largest issuers combined' },
+    { label: 'Highest risk vs. weight', value: overVal,                  sub: over ? over.issuer : '–',     desc: 'Contribution above NAV weight' },
+  ];
+
+  if (host) {
+    host.innerHTML = cards.map((c) => `
+      <div class="mr-kpi-card">
+        <div class="mr-kpi-card__label">${esc(c.label)}</div>
+        <div class="mr-kpi-card__value">${esc(c.value)}</div>
+        <div class="mr-kpi-card__sub">${esc(c.sub)}</div>
+        <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
+      </div>`).join('');
+  }
+
+  // Gespiegelte Label/Wert-Tabelle fuer Preview/PDF (data-kpi-band -> Kachel-Band).
+  if (tblEl) {
+    tblEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+      cards.map((c) => `<tr><td>${esc(c.label)}</td><td>${esc(c.value)}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
+}
 
 function firstValue(row, keys, fallback = null) {
   for (const key of keys) {
@@ -187,8 +283,7 @@ function renderIssuerChart(rows, cfg) {
     },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { issuerDrill.hover(cfg.kind, evt, els, barSteps); } catch {} },
-      onClick: (evt, els) => { try { issuerDrill.click(cfg.kind, els, barSteps); } catch {} },
+      // Drill per RECHTSKLICK (bindRightClickDrill unten) — konsistent mit den Scatter-Charts.
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
@@ -196,7 +291,7 @@ function renderIssuerChart(rows, cfg) {
       scales: {
         x: {
           beginAtZero: true,
-          ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` },
+          ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` },
           grid: { color: 'rgba(128,128,128,0.15)' },
           title: { display: true, text: `% of NAV  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } },
         },
@@ -204,7 +299,10 @@ function renderIssuerChart(rows, cfg) {
       },
     },
   });
+  chart.$barSteps = barSteps;
   _issuerCharts.set(cfg.barId, chart);
+  bindRightClickDrill(canvas, () => _issuerCharts.get(cfg.barId),
+    (el, ch, e) => issuerDrill.hover(cfg.kind, { native: e }, [el], ch.$barSteps || []));
 }
 
 // Andere Darstellung derselben Daten (wie VORLAGE S.8, rechts): Streudiagramm
@@ -225,7 +323,12 @@ function renderIssuerScatter(rows, cfg) {
   const scatterSteps = pts.map(p => issuerStep(p.issuer));
 
   const labelSet = new Set([...pts].sort((a, b) => b.y - a.y).slice(0, 8).map(p => p.issuer));
-  const axMax = Math.ceil(Math.max(2, ...pts.map(p => Math.max(p.x, p.y))) * 1.1);
+  // Achse nicht von einzelnen Ausreissern sprengen lassen: 95%-Perzentil der Punkt-Maxima
+  // als Obergrenze (min. 5 %). Der dichte Cluster wird lesbar; extremste Punkte werden
+  // ausserhalb der Achse beschnitten (per Zoom erreichbar).
+  const maxima = pts.map(p => Math.max(p.x, p.y)).sort((a, b) => a - b);
+  const pctl = (arr, q) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))] : 0);
+  const axMax = Math.max(5, Math.ceil(pctl(maxima, 0.95) * 1.1));
 
   canvas.width = 520;
   canvas.height = 400;
@@ -244,8 +347,12 @@ function renderIssuerScatter(rows, cfg) {
     },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
-      onHover: (evt, els) => { try { issuerDrill.hover(cfg.kind, evt, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
-      onClick: (evt, els) => { try { issuerDrill.click(cfg.kind, (els || []).filter(e => e.datasetIndex === 1), scatterSteps); } catch {} },
+      // Punkte leichter treffen: nearest in 2D (x UND y), etwas groesserer Trefferradius.
+      interaction: { mode: 'nearest', intersect: true, axis: 'xy' },
+      hover:       { mode: 'nearest', intersect: true, axis: 'xy' },
+      elements:    { point: { hitRadius: 8, hoverRadius: 8 } },
+      // Drill wird per RECHTSKLICK ausgeloest (bindIssuerScatterContextDrill), damit
+      // Hovern und Ziehen (Box-Zoom) das Menue nicht ungewollt oeffnen.
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: NAV ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
@@ -254,14 +361,27 @@ function renderIssuerScatter(rows, cfg) {
           font: { family: chartFont, size: 10 },
           formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : ''),
         } : undefined,
+        // Zoom/Box-Zoom (chartjs-plugin-zoom, global geladen): Ziehen = Rechteck-Auswahl,
+        // Wheel = Zoom, Ctrl+Ziehen = Pan. Reset ueber den Button (ensureIssuerScatterZoomTools).
+        zoom: {
+          pan:  { enabled: true, mode: 'xy', modifierKey: 'ctrl' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            drag:  { enabled: true, backgroundColor: 'rgba(75,150,225,0.15)', borderColor: 'rgba(75,150,225,0.6)', borderWidth: 1 },
+            mode: 'xy',
+          },
+        },
       },
       scales: {
-        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
-        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
       },
     },
   });
   _issuerCharts.set(cfg.scatterId, chart);
+  ensureIssuerScatterZoomTools(canvas, cfg.scatterId);
+  bindIssuerScatterContextDrill(canvas, cfg);
 }
 
 // Enrichte Drill-Rows: je Produkt (Beitrag) mit Portfolio-Feldern (ISSUER/CATEGORY/
@@ -301,6 +421,8 @@ export function renderMvarIssuerPLPanel() {
   if (!rows.length) {
     if (tableContainer) renderTable(tableContainer, [], [], 'No MVaR issuer data.');
     try { issuerDrill.setData([]); } catch {}
+    renderIssuerKpis([], VAR_CFG, 'mvarIssuerVarKpis', 'mvarIssuerVarKpisTable');
+    renderIssuerKpis([], ES_CFG, 'mvarIssuerEsKpis', 'mvarIssuerEsKpisTable');
     renderIssuerChart([], VAR_CFG); renderIssuerScatter([], VAR_CFG);
     renderIssuerChart([], ES_CFG);  renderIssuerScatter([], ES_CFG);
     return;
@@ -310,6 +432,9 @@ export function renderMvarIssuerPLPanel() {
   try { issuerDrill.setData(buildIssuerDrillRows(rows)); } catch (e) { console.warn('[MVaR IssuerPL] drill data failed', e); }
 
   const issuerRows = aggregateByIssuer(rows, buildProdInfoMap());
+
+  renderIssuerKpis(issuerRows, VAR_CFG, 'mvarIssuerVarKpis', 'mvarIssuerVarKpisTable');
+  renderIssuerKpis(issuerRows, ES_CFG, 'mvarIssuerEsKpis', 'mvarIssuerEsKpisTable');
 
   if (tableContainer) {
     renderTable(tableContainer, issuerRows, [
