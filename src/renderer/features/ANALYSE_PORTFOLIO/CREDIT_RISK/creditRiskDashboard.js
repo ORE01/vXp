@@ -48,6 +48,32 @@ function _bindCrTailContextDrill(canvas) {
   });
 }
 
+// Loss-Distribution-Chart (links): gleiches Drill-Muster wie der Tail-Zoom. Klick auf ein
+// Loss-Bin -> Ausfall-Szenario dieser Verlusthoehe (Steps in chart.$crLossSteps). Teilt sich
+// crTailDrill + crTailDetail mit dem Tail-Zoom (ein Detailbereich unter beiden Charts).
+function _bindCrLossCanvasLeave(canvas) {
+  if (!canvas || canvas.dataset.crLossLeaveBound) return;
+  canvas.dataset.crLossLeaveBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+}
+function _bindCrLossContextDrill(canvas) {
+  if (!canvas || canvas.dataset.crLossCtxBound) return;
+  canvas.dataset.crLossCtxBound = '1';
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = window.crLossDistChart;
+      if (!chart) return;
+      const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])[0];
+      if (!el) { scheduleHideConcMenu(); return; }
+      const steps = chart.$crLossSteps?.[el.datasetIndex] || chart.$crLossSteps?.[0] || [];
+      const step = steps[el.index];
+      if (!step) { scheduleHideConcMenu(); return; }
+      crTailDrill.hover('var', { native: e }, [{ index: 0 }], [step]);
+    } catch {}
+  });
+}
+
 let _listenersBound = false;
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; };
 
@@ -134,8 +160,22 @@ function renderCreditLossDist() {
   // Index des Bins, DURCH DAS die VaR/ES-Linie geht (naechstes Bin-Zentrum zum Wert).
   const nearestIdx = (pct) => { let idx = 0, best = Infinity; base.forEach((r, i) => { const d = Math.abs(Number(r.bin_center) * 100 - pct); if (d < best) { best = d; idx = i; } }); return idx; };
 
+  // Drill (wie Tail-Zoom): Loss-Bin -> Ausfall-Szenario dieser Verlusthoehe. Quantil-
+  // Loss-Zeilen je Serie (fuer die Bin->Szenario-Zuordnung) + Positions-Drilldaten setzen.
+  const sumNav = sumNavForPort(port);
+  const lossRows = (appState.getAllLossData?.() || [])
+    .filter(r => String(r.port_name) === String(port) && Number.isFinite(Number(r.QUANTIL)));
+  const lossByFlag = { rating: [], market: [], norm: [] };
+  lossRows.forEach(r => { const f = String(r.pd_flag || '').toLowerCase(); if (lossByFlag[f]) lossByFlag[f].push(r); });
+  try {
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === String(port).trim());
+    crTailDrill.setData(buildPositionLoss(portRows, port));
+  } catch (e) { console.warn('[CreditLossDist] drill data failed', e); }
+
   // Je pd_flag eine Serie (Historic/Market/Market adjusted); nur Historic initial sichtbar.
   const lineMap = [];
+  const stepsByDs = [];   // stepsByDs[dsIndex][binIndex] = Drill-Schritt (ausfallende Emittenten)
   const datasets = CR_FLAG_SERIES.map((f, di) => {
     const m = new Map(byFlag[f.key].map(r => [Number(r.bin_center), Number(r.count)]));
     const data = base.map(r => { const c = m.get(Number(r.bin_center)); return c > 0 ? c : null; });
@@ -150,6 +190,16 @@ function renderCreditLossDist() {
     if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: LINE_BLUE, width: 2 });
     if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: LINE_BLUE, width: 2, dash: [6, 4] });
     lineMap.push(lines);
+    // Drill-Steps je Bin: das Quantil-Szenario dieser Serie, dessen Loss der Bin-Hoehe
+    // am naechsten kommt -> dessen ausfallende Emittenten (ISSUER_RANK).
+    const flagLoss = (lossByFlag[f.key] && lossByFlag[f.key].length) ? lossByFlag[f.key] : lossByFlag.rating;
+    const nearestLossRow = (binPct) => {
+      if (!flagLoss?.length || !(sumNav > 0)) return null;
+      return flagLoss.reduce((best, r) =>
+        (Math.abs(Number(r.LOSS) / sumNav * 100 - binPct) < Math.abs(Number(best.LOSS) / sumNav * 100 - binPct) ? r : best), flagLoss[0]);
+    };
+    const steps = base.map(r => { const row = nearestLossRow(Number(r.bin_center) * 100); return row ? lossDefaultStep(issuersFromRank(row.ISSUER_RANK)) : null; });
+    stepsByDs.push(steps);
     return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 22, hidden: di !== 0 };
   });
 
@@ -174,7 +224,10 @@ function renderCreditLossDist() {
     },
   });
   chart.$crLineMap = lineMap;
+  chart.$crLossSteps = stepsByDs;
   window.crLossDistChart = chart;
+  _bindCrLossCanvasLeave(canvas);
+  _bindCrLossContextDrill(canvas);
 }
 
 // RECHTS: Tail-Zoom — Verlust (% vom NAV) je Quantil im Extrem-Tail (sortedLossesIssuer,

@@ -253,8 +253,8 @@ export function handleLossIssuerMainData(receivedData) {
     // wie die früheren Einzelcharts), als 3 farbige Serien.
     createCombinedLossesChart(ratingData, marketData, marketNormData, 'LossIssuerChartCombinedTop');
 
-    createCombinedLossIssuerChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedChart');
-    createCombinedLossIssuerESChart(ratingData, marketData, marketNormData, 'LossIssuerCombinedESChart');
+    // Total/Tail Loss Distribution (LossIssuerCombinedChart/ESChart) entfernt — die
+    // Canvases sind raus (redundant zu den oberen Loss-Distribution-/Tail-Zoom-Charts).
 
     // Loss-Histogramm mit-rendern: hier ist der Port garantiert gesetzt (die Loss-
     // Charts wurden gerade fuer diesen Port gerendert) -> loest das Timing-Problem

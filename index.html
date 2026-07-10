@@ -331,12 +331,25 @@ Feature:    Wenn es nur in einem Panel gilt
   </button>
 </div>
 
-    <!--   Performance   Trigger -->
-    <div class="chart-section">
-      <button class="section-trigger" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
+    <!--   Performance   Trigger (Gruppe mit Sub-Triggern Current/History) -->
+    <div class="risk-acc">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
         <span class="section-header">Performance</span>
         <span class="chev"></span>
       </button>
+      <div class="risk-acc-body">
+        <!-- Current = bisheriger Performance-Inhalt (#panel-performance). -->
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
+          <span class="section-header">Current</span>
+          <span class="chev"></span>
+        </button>
+        <!-- History = Kopien der Risk-History-Charts (Overview-Yield + Portfolio Value)
+             nebeneinander. Eigene Canvas-IDs (perfHist*), kein ID-Konflikt mit den Originalen. -->
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-performance-history" aria-controls="panel-performance-history" aria-expanded="false">
+          <span class="section-header">History</span>
+          <span class="chev"></span>
+        </button>
+      </div>
     </div>
 
     <!-- ===== RISK-view Trigger-Gruppen (nur in view-risk sichtbar) ===== -->
@@ -662,6 +675,32 @@ Feature:    Wenn es nur in einem Panel gilt
              der Report nativ aufnimmt. Im Live-Panel versteckt. -->
         <div class="data-container" id="concKeyFiguresTable" data-label="Key Figures" style="display:none;"></div>
         <div class="data-container" id="concTopIssuersTable" data-label="Top Issuers" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Panel: Performance — History (Kopien der Risk-History-Charts: Overview-Yield + Portfolio Value) -->
+    <div id="panel-performance-history" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-history-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-performance-history-title" class="sub-panel-title">Performance — History</div>
+        <button class="sub-panel-close" data-close="panel-performance-history" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+        <div style="display:flex; gap:20px; flex-wrap:wrap;">
+          <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
+            <div class="conc-panel__title">Portfolio Performance History</div>
+            <!-- Fixe Hoehe + position:relative -> responsive-Chart fuellt den Container,
+                 waechst NICHT bei jedem Neuzeichnen. -->
+            <div style="position:relative; height:300px;">
+              <canvas id="perfHistYieldChart"></canvas>
+            </div>
+          </div>
+          <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
+            <div class="conc-panel__title">Portfolio Value History</div>
+            <div style="position:relative; height:300px;">
+              <canvas id="perfHistValueChart"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1502,28 +1541,8 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
     <div id="crTailCardMenu" class="conc-menu" style="display:none;"></div>
     <!--   ENDE BLOCK 3.5 -->
-
-    <!--   BLOCK 4: Charts -->
-    <div class="chart-2x1-row" style="display:flex; gap:20px; flex-wrap:wrap; margin-top: 20px;">
-      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-        <p style="text-align: center;">Total Loss Distribution</p>
-        <canvas id="LossIssuerCombinedChart" width="700" height="500"></canvas>
-      </div>
-      <div class="chart-box" style="flex:1 1 420px; min-width:320px;">
-        <p style="text-align: center;">Tail Loss Distribution</p>
-        <canvas id="LossIssuerCombinedESChart" width="700" height="500"></canvas>
-      </div>
-    </div>
-    <!--   ENDE BLOCK 4 -->
-
-    <!--   BLOCK 5: Loss-Histogramm (Dichte-Sicht: Verlust vs. Haeufigkeit) -->
-    <div class="chart-2x1-row" style="display:flex; margin-top: 20px;">
-      <div class="chart-box" style="flex:1 1 100%; min-width:320px;">
-        <p style="text-align: center;">Loss Frequency Distribution (Histogram)</p>
-        <canvas id="lossHistogramChart" width="1400" height="420"></canvas>
-      </div>
-    </div>
-    <!--   ENDE BLOCK 5 -->
+    <!-- BLOCK 4/5 entfernt: Total/Tail Loss Distribution + Loss Frequency Histogram
+         waren redundant zu den oberen Charts (Loss Distribution + Tail Zoom). -->
   </div>
 </div>
 

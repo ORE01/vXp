@@ -1,6 +1,7 @@
 import { openPanel } from '../ui/panels/index.js';
 import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
 import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/trades/tradeUI.js';
+import { renderPerformanceHistoryCopies } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 
 // ------------------------------------------------------------
 // Panel open hook registry (fix for installReceivers warning)
@@ -144,6 +145,12 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
           console.warn('[TRIGGER] refreshMarketRiskUI not available');
         }
       });
+    }
+
+    // Performance -> History: Kopien der Yield-/Value-History-Charts zeichnen, sobald
+    // das Panel sichtbar ist (korrektes Canvas-Sizing).
+    if (panelId === 'panel-performance-history') {
+      requestAnimationFrame(() => { try { renderPerformanceHistoryCopies(); } catch (_) {} });
     }
 
     if (panelId === 'panel-issuer-np') {

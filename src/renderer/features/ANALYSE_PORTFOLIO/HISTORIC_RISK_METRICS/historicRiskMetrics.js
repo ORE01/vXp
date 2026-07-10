@@ -7,13 +7,22 @@ import { appState } from '../../../renderer.js';
       const zoomPluginConfig = {
         annotation: {},
         zoom: {
+          // Pan auf Strg+Ziehen, damit Ziehen fuer den Box-Zoom frei ist.
           pan: {
             enabled: true,
-            mode: "x"
+            mode: "x",
+            modifierKey: "ctrl"
           },
           zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
+            // Box-Zoom: mit der Maus einen Zeitbereich aufziehen.
+            drag: {
+              enabled: true,
+              backgroundColor: "rgba(75,150,225,0.15)",
+              borderColor: "rgba(75,150,225,0.6)",
+              borderWidth: 1
+            },
             mode: "x"
           }
         }
@@ -98,6 +107,100 @@ import { appState } from '../../../renderer.js';
   });
 
   return chart;
+}
+
+// Tooltip fest in die obere linke Ecke der Zeichenflaeche legen (statt am Cursor),
+// damit es die Kurven nicht verdeckt. Einmalig als Chart.js-Positioner registriert.
+let _histTooltipPosBound = false;
+function ensureFixedTooltipPositioner() {
+  if (_histTooltipPosBound) return;
+  const positioners = window.Chart?.Tooltip?.positioners;
+  if (!positioners) return;
+  positioners.histFixedCorner = function () {
+    const area = this.chart?.chartArea;
+    if (!area) return false;
+    return { x: area.left + 10, y: area.top + 10 };
+  };
+  _histTooltipPosBound = true;
+}
+
+// Fadenkreuz-Plugin (opt-in via options.plugins.histCrosshair): vertikale + horizontale
+// Linie am Cursor + Werte am Rand (Datum unten, y-Wert links). Global registriert, wirkt
+// aber NUR auf Charts, die options.plugins.histCrosshair gesetzt haben.
+let _histCrosshairBound = false;
+function ensureHistCrosshairPlugin() {
+  if (_histCrosshairBound) return;
+  if (!window.Chart?.register) return;
+  window.Chart.register({
+    id: "histCrosshair",
+    afterEvent(chart, args) {
+      if (!chart.options?.plugins?.histCrosshair) return;
+      const e = args.event, a = chart.chartArea;
+      let pos = null;
+      if (e && e.type !== "mouseout" && e.x != null &&
+          e.x >= a.left && e.x <= a.right && e.y >= a.top && e.y <= a.bottom) {
+        pos = { x: e.x, y: e.y };
+      }
+      const prev = chart.$histCross;
+      if ((prev?.x !== pos?.x) || (prev?.y !== pos?.y)) { chart.$histCross = pos; args.changed = true; }
+    },
+    afterDraw(chart) {
+      if (!chart.options?.plugins?.histCrosshair) return;
+      const c = chart.$histCross;
+      if (!c) return;
+      const ctx = chart.ctx, a = chart.chartArea;
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(150,160,175,0.9)";
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(c.x, a.top); ctx.lineTo(c.x, a.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.left, c.y); ctx.lineTo(a.right, c.y); ctx.stroke();
+      ctx.setLineDash([]);
+      let xLabel = "", yLabel = "";
+      try {
+        const xs = chart.scales.x, idx = Math.round(xs.getValueForPixel(c.x));
+        xLabel = xs.getLabelForValue ? String(xs.getLabelForValue(idx)) : String(idx);
+      } catch {}
+      try { yLabel = (Number(chart.scales.y.getValueForPixel(c.y)) * 100).toFixed(2) + " %"; } catch {}
+      ctx.font = "10px sans-serif";
+      const pad = 3;
+      if (xLabel) {
+        const w = ctx.measureText(xLabel).width;
+        ctx.fillStyle = "rgba(40,44,52,0.92)"; ctx.fillRect(c.x - w / 2 - pad, a.bottom + 2, w + pad * 2, 14);
+        ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.fillText(xLabel, c.x, a.bottom + 4);
+      }
+      if (yLabel) {
+        const w = ctx.measureText(yLabel).width;
+        ctx.fillStyle = "rgba(40,44,52,0.92)"; ctx.fillRect(a.left - w - pad * 2 - 2, c.y - 7, w + pad * 2, 14);
+        ctx.fillStyle = "#fff"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        ctx.fillText(yLabel, a.left - pad - 2, c.y);
+      }
+      ctx.restore();
+    }
+  });
+  _histCrosshairBound = true;
+}
+
+// "Reset Zoom"-Button oben rechts in den Chart-Container (idempotent). Setzt den Zoom
+// des Charts auf dieser Canvas zurueck (Instanz zur Klickzeit via Chart.getChart).
+function ensureZoomResetButton(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === "static") box.style.position = "relative";
+  if (box.querySelector(".hist-zoom-reset")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "hist-zoom-reset";
+  btn.textContent = "Reset Zoom";
+  btn.style.cssText =
+    "position:absolute;top:4px;right:4px;z-index:6;font-size:10px;padding:2px 8px;" +
+    "border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;cursor:pointer;";
+  btn.addEventListener("click", () => {
+    try { window.Chart.getChart(document.getElementById(canvasId))?.resetZoom?.(); } catch {}
+  });
+  box.appendChild(btn);
 }
 
 
@@ -553,11 +656,11 @@ function renderHistoricCreditRiskChart(historyData) {
     console.error("💥 Fehler beim Erzeugen von historicCreditRiskChart:", err);
   }
 }
-function renderHistoricPortfolioYieldChart(historyData) {
+function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPortfolioYieldChart") {
   historyData = Array.isArray(historyData) ? historyData : [];
 
   if (historyData.length === 0) {
-    destroyChartByCanvasId("historicMarketRiskChart");
+    destroyChartByCanvasId(canvasId);
     return;
   }
   const tsData = appState.getTblTSData();
@@ -645,9 +748,7 @@ function renderHistoricPortfolioYieldChart(historyData) {
     }
   }
 
-  if (historicPortfolioYieldChart) {
-    historicPortfolioYieldChart.destroy();
-  }
+  destroyChartByCanvasId(canvasId);
 
   const data = {
     labels,
@@ -658,7 +759,7 @@ function renderHistoricPortfolioYieldChart(historyData) {
         borderColor: "#4bc0c0",
         backgroundColor: "rgba(75, 192, 192, 0.15)",
         borderWidth: 2,
-        pointRadius: 2,
+        pointRadius: 0,
         tension: 0.2,
         yAxisID: "y"
       },
@@ -668,7 +769,7 @@ function renderHistoricPortfolioYieldChart(historyData) {
         borderColor: "#ff9800",
         backgroundColor: "rgba(255, 152, 0, 0.15)",
         borderWidth: 2,
-        pointRadius: 1.5,
+        pointRadius: 0,
         tension: 0.2,
         yAxisID: "y"
       }
@@ -676,13 +777,22 @@ function renderHistoricPortfolioYieldChart(historyData) {
   };
 
   const options = createPercentChartOptions("MVaR / ES Metrics (%)");
+  // Legende seitlich (rechts) + kleine, leicht abgerundete Symbole.
+  options.plugins.legend = {
+    display: true, position: "right",
+    labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } }
+  };
+  // Tooltip fest in der oberen linken Ecke (nicht am Cursor).
+  ensureFixedTooltipPositioner();
+  options.plugins.tooltip.position = "histFixedCorner";
+  options.plugins.tooltip.caretSize = 0;
+  // Fadenkreuz am Cursor + Werte am Rand.
+  ensureHistCrosshairPlugin();
+  options.plugins.histCrosshair = { enabled: true };
 
-  historicPortfolioYieldChart = createTimeSeriesChart(
-    "historicPortfolioYieldChart",
-    data,
-    options,
-    "line"
-  );
+  const _yieldChart = createTimeSeriesChart(canvasId, data, options, "line");
+  if (canvasId === "historicPortfolioYieldChart") historicPortfolioYieldChart = _yieldChart;
+  ensureZoomResetButton(canvasId);
 }
 function renderHistoricPortfolioSensChart(historyData) {
   historyData = Array.isArray(historyData) ? historyData : [];
@@ -783,7 +893,7 @@ function renderHistoricPortfolioSensChart(historyData) {
     console.error("💥 Fehler beim Erzeugen von historicPortfolioSensChart:", err);
   }
 }
-function renderHistoricPortfolioValueChart(historyData) {
+function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPortfolioValueChart") {
   historyData = Array.isArray(historyData) ? historyData : [];
 
   if (historyData.length === 0) {
@@ -820,9 +930,7 @@ function renderHistoricPortfolioValueChart(historyData) {
     return isNaN(v) ? null : v;
   });
 
-  if (historicPortfolioValueChart) {
-    historicPortfolioValueChart.destroy();
-  }
+  destroyChartByCanvasId(canvasId);
 
   const data = {
     labels,
@@ -834,7 +942,7 @@ function renderHistoricPortfolioValueChart(historyData) {
         borderColor: "rgba(54, 162, 235, 1)",
         backgroundColor: "rgba(54, 162, 235, 0.15)",
         borderWidth: 2,
-        pointRadius: 2,
+        pointRadius: 0,
         tension: 0.2,
         yAxisID: "y"
       },
@@ -845,7 +953,7 @@ function renderHistoricPortfolioValueChart(historyData) {
         borderColor: "rgba(255, 99, 132, 1)",
         backgroundColor: "rgba(255, 99, 132, 0.15)",
         borderWidth: 2,
-        pointRadius: 2,
+        pointRadius: 0,
         tension: 0.2,
         yAxisID: "y"
       },
@@ -854,8 +962,9 @@ function renderHistoricPortfolioValueChart(historyData) {
         label: "Profit/Loss (%)",
         data: profitLossPct,
         yAxisID: "y1",
-        backgroundColor: "rgba(255, 159, 64, 0.5)",
-        borderColor: "rgba(255, 159, 64, 1)",
+        // Gewinn gruen, Verlust rot.
+        backgroundColor: profitLossPct.map(v => (Number(v) >= 0 ? "rgba(46,204,113,0.6)" : "rgba(211,70,70,0.6)")),
+        borderColor: profitLossPct.map(v => (Number(v) >= 0 ? "rgba(46,204,113,1)" : "rgba(211,70,70,1)")),
         borderWidth: 1
       }
     ]
@@ -885,12 +994,22 @@ options.scales.y1 = {
   }
 };
 
-historicPortfolioValueChart = createTimeSeriesChart(
-  "historicPortfolioValueChart",
-  data,
-  options,
-  "bar"
-);
+// Legende seitlich (rechts) + kleine, leicht abgerundete Symbole.
+options.plugins.legend = {
+  display: true, position: "right",
+  labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } }
+};
+// Tooltip fest in der oberen linken Ecke (nicht am Cursor).
+ensureFixedTooltipPositioner();
+options.plugins.tooltip.position = "histFixedCorner";
+options.plugins.tooltip.caretSize = 0;
+// Fadenkreuz am Cursor + Werte am Rand.
+ensureHistCrosshairPlugin();
+options.plugins.histCrosshair = { enabled: true };
+
+const _valueChart = createTimeSeriesChart(canvasId, data, options, "bar");
+if (canvasId === "historicPortfolioValueChart") historicPortfolioValueChart = _valueChart;
+ensureZoomResetButton(canvasId);
 
 }
 
@@ -960,9 +1079,31 @@ export function rerenderHistoricCharts({ keys = null } = {}) {
 
   if (!selectedPortName || histForPort.length === 0) {
     destroyHistoricCharts(keys);
+    try { renderPerformanceHistoryCopies(); } catch {}
     return;
   }
 
   renderHistoricCharts(keys, histForPort);
+  try { renderPerformanceHistoryCopies(); } catch {}
+}
+
+// Kopien der Yield- + Value-History-Charts fuer das Panel "Performance -> History"
+// (eigene Canvas-IDs, damit KEINE ID-Kollision mit den Originalen in Risk History).
+// Zeichnet dieselben Daten in perfHistYieldChart / perfHistValueChart.
+export function renderPerformanceHistoryCopies() {
+  const sel = String(appState.getSelectedPortTableName?.() ?? "").trim();
+  const all = (typeof appState.getPortfolioHistoryData === "function")
+    ? (appState.getPortfolioHistoryData() || [])
+    : [];
+  const hist = Array.isArray(all)
+    ? all.filter(r => String(r?.port_name ?? "").trim() === sel)
+    : [];
+  if (!sel || !hist.length) {
+    destroyChartByCanvasId("perfHistYieldChart");
+    destroyChartByCanvasId("perfHistValueChart");
+    return;
+  }
+  renderHistoricPortfolioYieldChart(hist, "perfHistYieldChart");
+  renderHistoricPortfolioValueChart(hist, "perfHistValueChart");
 }
 

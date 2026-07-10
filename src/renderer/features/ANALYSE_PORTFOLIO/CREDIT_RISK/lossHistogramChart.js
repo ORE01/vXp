@@ -23,20 +23,21 @@ export function renderLossHistogram() {
     listenersInstalled = true;
   }
 
+  // Store leer? Tabelle einmal explizit anfordern — UNABHAENGIG vom (entfernten)
+  // Histogramm-Canvas, da auch das Credit-Dashboard-Loss-Chart (crLossDistChart) diese
+  // Daten nutzt. Antwort landet als lossHistogramMainData -> setzt Store -> feuert
+  // 'losshist:ready' -> beide Charts rendern.
+  if (!(appState.getLossHistogram?.() || []).length && !fetchRequested) {
+    fetchRequested = true;
+    try { window.api?.send?.('fetch-table-data', 'lossHistogramMain'); } catch (_) {}
+    return;
+  }
+
   const canvas = document.getElementById(CHART_ID);
   if (!canvas || !window.Chart) return;
 
   const port = appState.getSelectedPortTableName?.();
   const allRows = appState.getLossHistogram?.() || [];
-
-  // Store leer? Tabelle einmal explizit anfordern — robust gegen eine veraltete
-  // Pump-Tabellenliste (lossHistogramMain entsteht erst beim CVaR-Lauf). Die
-  // Antwort landet als lossHistogramMainData -> setzt Store -> feuert 'losshist:ready'.
-  if (!allRows.length && !fetchRequested) {
-    fetchRequested = true;
-    try { window.api?.send?.('fetch-table-data', 'lossHistogramMain'); } catch (_) {}
-    return;
-  }
 
   const rows = allRows.filter((r) => String(r.port_name) === String(port));
   if (!rows.length) return;
