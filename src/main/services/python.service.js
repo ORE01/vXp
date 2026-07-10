@@ -45,10 +45,11 @@ function resolvePythonExecutableAndArgs() {
   } 
   else if (env === 'thomasdev') {
 
-    pythonExecutable =
-      'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe';
+    // Maschinenunabhaengig von process.resourcesPath ableiten (frueher hardcodiert:
+    // 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/bin/main/main.exe').
+    pythonExecutable = path.join(process.resourcesPath, 'bin', 'main', 'main.exe');
 
-  } 
+  }
   else {
 
     pythonExecutable = path.join(

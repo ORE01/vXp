@@ -66,7 +66,9 @@ function getFilesBaseDir() {
   let baseDir;
 
   if (env === 'thomasdev') {
-    baseDir = path.join(process.cwd(), 'files');
+    // Maschinenunabhaengig von process.resourcesPath ableiten (frueher: process.cwd()/files;
+    // DB/Excel lagen aber unter resources/app.asar.unpacked/files -> jetzt konsistent + portabel).
+    baseDir = path.join(process.resourcesPath, 'app.asar.unpacked', 'files');
   } else if (packaged) {
     baseDir = path.join(process.resourcesPath, 'files');
   } else {
@@ -81,14 +83,8 @@ function getFilesBaseDir() {
 }
 
 function getDatabasePath() {
-  const env = getEnv();
-
-  if (env === 'thomasdev') {
-    const dbPath = 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db';
-    logger.info('DB', `THOMASDEV path: ${dbPath}`);
-    return dbPath;
-  }
-
+  // thomasdev nutzt jetzt (wie alle Modi) getFilesBaseDir() -> maschinenunabhaengig.
+  // Frueher hardcodiert: 'C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/UNI.db'.
   const dbPath = path.join(getFilesBaseDir(), 'UNI.db');
   logger.info('DB', `path: ${dbPath}`);
   return dbPath;
@@ -96,18 +92,12 @@ function getDatabasePath() {
 
 // 🔥 ZENTRALE FUNKTION (GENAU DAS IST DER GAMECHANGER)
 function getExcelPath(fileName) {
-  const env = getEnv();
-
   if (!fileName) {
     throw new Error('[getExcelPath] fileName is required');
   }
 
-  if (env === 'thomasdev') {
-    const excelPath = `C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/${fileName}`;
-    logger.info('EXCEL', `THOMASDEV path: ${excelPath}`);
-    return excelPath;
-  }
-
+  // thomasdev nutzt jetzt (wie alle Modi) getFilesBaseDir() -> maschinenunabhaengig.
+  // Frueher hardcodiert: `C:/Users/wendlert/Desktop/valueXpro_dev/resources/app.asar.unpacked/files/${fileName}`.
   const excelPath = path.join(getFilesBaseDir(), fileName);
   logger.info('EXCEL', `path: ${excelPath}`);
   return excelPath;
