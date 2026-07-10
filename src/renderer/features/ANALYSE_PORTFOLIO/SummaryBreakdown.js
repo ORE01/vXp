@@ -1349,7 +1349,7 @@ export function bindRightClickDrill(canvas, getChart, onPick, opts = {}) {
 // config.var / config.es = { detailId, titleId, tableId, closeId, menuId, valueType, valueLabel }.
 export function createContribDrill(config) {
   const mk = (c) => ({ stack: [], bound: false, menuId: c.menuId, closeId: c.closeId,
-    ctx: { detailId: c.detailId, titleId: c.titleId, tableId: c.tableId, data: null, valueType: c.valueType, valueLabel: c.valueLabel, extraCol: c.extraCol, infoCol: c.infoCol, columns: c.columns } });
+    ctx: { detailId: c.detailId, titleId: c.titleId, tableId: c.tableId, data: null, valueType: c.valueType, valueLabel: c.valueLabel, extraCol: c.extraCol, extraCols: c.extraCols, infoCol: c.infoCol, columns: c.columns } });
   const M = { var: mk(config.var), es: mk(config.es) };
 
   const drillTo = (kind, view) => {
@@ -1536,6 +1536,11 @@ function renderConcView(view, ctx) {
   // Optionale Text-Info-Spalte (z.B. Rating) — nur in der Positions-Sicht, nicht
   // summiert. Werte aus row[info.key].
   const info = (c.infoCol && c.infoCol.key) ? c.infoCol : null;
+  // Mehrere optionale Zusatz-Wertspalten (z.B. VaR-Zerlegung IR/CS je Produkt).
+  // Rueckwaertskompatibel: ein einzelnes extraCol wird als 1-elementige Liste behandelt.
+  const extraCols = Array.isArray(c.extraCols)
+    ? c.extraCols.filter(e => e && e.key)
+    : (extra ? [extra] : []);
 
   // Zeilen nach gesamtem Pfad filtern (s.match hat Vorrang, z.B. Rating-Buckets).
   const rowsAll = data.filter(r => view.path.every(s => s.match ? s.match(r) : __concNorm(r[__concFieldOf(s.colKey)]) === s.value));
@@ -1560,24 +1565,24 @@ function renderConcView(view, ctx) {
     const byField = __concFieldOf(view.by);
     const map = {};
     const nmap = {};   // summiertes Notional je Gruppe
-    const lmap = {};   // summierte Zusatzspalte (z.B. Loss) je Gruppe
+    const emaps = extraCols.map(() => ({}));   // je Zusatzspalte ein Summen-Map je Gruppe
     rowsAll.forEach(r => {
       const k = __concNorm(r[byField]);
       map[k] = (map[k] || 0) + (Number(r[valueType]) || 0);
       nmap[k] = (nmap[k] || 0) + __concNotional(r);
-      if (extra) lmap[k] = (lmap[k] || 0) + (Number(r[extra.key]) || 0);
+      extraCols.forEach((e, ei) => { emaps[ei][k] = (emaps[ei][k] || 0) + (Number(r[e.key]) || 0); });
     });
-    const sub = Object.entries(map).map(([name, val]) => ({ name, val, notional: nmap[name] || 0, extra: lmap[name] || 0 })).sort((a, b) => b.val - a.val);
+    const sub = Object.entries(map).map(([name, val]) => ({ name, val, notional: nmap[name] || 0, extras: extraCols.map((_, ei) => emaps[ei][name] || 0) })).sort((a, b) => b.val - a.val);
     const tot = sub.reduce((s, x) => s + x.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extra ? `<th style="text-align:right;">${__concEsc(extra.label)}</th>` : ''}<th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extraCols.map(e => `<th style="text-align:right;">${__concEsc(e.label)}</th>`).join('')}<th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${sub.map(x => `<tr class="conc-drill-row" data-drill-value="${__concEsc(x.name)}">
             <td>${__concEsc(x.name)} <span class="conc-drill-hint">›</span></td>
             <td style="text-align:right;">${fmtVal(x.notional)}</td>
             <td style="text-align:right;">${fmtVal(x.val)}</td>
-            ${extra ? `<td style="text-align:right;">${fmtVal(x.extra)}</td>` : ''}
+            ${x.extras.map(v => `<td style="text-align:right;">${fmtVal(v)}</td>`).join('')}
             <td style="text-align:right;">${__concPct(x.val / tot)}</td>
           </tr>`).join('')}
         </tbody>
@@ -1615,12 +1620,12 @@ function renderConcView(view, ctx) {
       info: info ? String(r[info.key] ?? '') : '',
       notional: __concNotional(r),
       val:  Number(r[valueType]) || 0,
-      extra: extra ? (Number(r[extra.key]) || 0) : 0,
+      extras: extraCols.map(e => Number(r[e.key]) || 0),
     })).sort((a, b) => b.val - a.val);
     const tot = rows.reduce((s, r) => s + r.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>Product ID</th><th>Description</th>${info ? `<th>${__concEsc(info.label)}</th>` : ''}<th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extra ? `<th style="text-align:right;">${__concEsc(extra.label)}</th>` : ''}<th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>Product ID</th><th>Description</th>${info ? `<th>${__concEsc(info.label)}</th>` : ''}<th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extraCols.map(e => `<th style="text-align:right;">${__concEsc(e.label)}</th>`).join('')}<th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${rows.map(r => `<tr>
             <td>${__concEsc(r.id)}</td>
@@ -1628,7 +1633,7 @@ function renderConcView(view, ctx) {
             ${info ? `<td>${__concEsc(r.info)}</td>` : ''}
             <td style="text-align:right;">${fmtVal(r.notional)}</td>
             <td style="text-align:right;">${fmtVal(r.val)}</td>
-            ${extra ? `<td style="text-align:right;">${fmtVal(r.extra)}</td>` : ''}
+            ${r.extras.map(v => `<td style="text-align:right;">${fmtVal(v)}</td>`).join('')}
             <td style="text-align:right;">${__concPct(r.val / tot)}</td>
           </tr>`).join('')}
         </tbody>

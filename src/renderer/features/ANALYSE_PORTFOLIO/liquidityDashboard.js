@@ -4,7 +4,7 @@
 // Maturity-Bucket, EUR mn) + KPI-Band. Nutzt MATURITY_YEAR + NOTIONAL der Portfolio-
 // Rows (wie liquidity.js). Echte Cashflows (Kupons) + Reserve/Risikolimit folgen.
 
-import { getColorFromPalette, getContrastColor } from '../../utils/colors.js';
+import { getColorFromPalette } from '../../utils/colors.js';
 import {
   setLiqDrillData, liqChartHoverMenu, liqChartClickDrill, scheduleHideConcMenu,
 } from './SummaryBreakdown.js';
@@ -54,6 +54,23 @@ function bucketMaturities(rows) {
 function normVal(raw) {
   const empty = raw === undefined || raw === null || String(raw).trim() === '';
   return empty ? 'Unknown' : String(raw).trim();
+}
+
+// Lesbare, dezente Label-Farbe fuer ein Segment: dunkelgrau auf hellen Flaechen,
+// weiches Weiss auf dunklen. Akzeptiert rgb(a)/#hex.
+function __segTextColor(col) {
+  let r = 128, g = 128, b = 128;
+  if (typeof col === 'string') {
+    const m = col.match(/rgba?\(([^)]+)\)/i);
+    if (m) { const p = m[1].split(',').map(s => parseFloat(s)); r = p[0]; g = p[1]; b = p[2]; }
+    else if (col[0] === '#') {
+      const h = col.slice(1);
+      const s = h.length === 3 ? h.replace(/(.)/g, '$1$1') : h;
+      r = parseInt(s.slice(0, 2), 16); g = parseInt(s.slice(2, 4), 16); b = parseInt(s.slice(4, 6), 16);
+    }
+  }
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  return lum > 150 ? '#333333' : 'rgba(255,255,255,0.9)';
 }
 
 // Balken-Datasets je nach Segmentierung bauen.
@@ -107,7 +124,7 @@ function buildSegments(rows, labels, idxOf, sums, field) {
     });
     return {
       label: val, data: arr.map(toMn),
-      backgroundColor: getContrastColor(vi, 0.88),
+      backgroundColor: getColorFromPalette(vi, 0.88),
       borderColor: 'rgba(255,255,255,0.4)', borderWidth: 0.5,
       maxBarThickness: 48, stack: 'liq',
     };
@@ -235,8 +252,13 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
 
   const seg = buildSegments(rows, labels, idxOf, sums, _chartField);
 
+  // %-Anteile in die Segmente schreiben — NUR bei Gruppierung "By Category" (wenige
+  // Segmente). Bei Issuer/Positions waeren es zu viele/duenne Schichten (unlesbar).
+  const wantSegPct = !!(window.ChartDataLabels && seg.stacked && _chartField === 'CATEGORY');
+
   _liqDashChart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
+    plugins: wantSegPct ? [window.ChartDataLabels] : [],
     data: { labels, datasets: seg.datasets },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -247,7 +269,12 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
       onHover: (evt, els) => { try { liqChartHoverMenu(evt, els, steps); } catch {} },
       onClick: (evt, els) => { try { liqChartClickDrill(els, steps); } catch {} },
       plugins: {
-        legend: { display: false },
+        // Legende oben NUR bei "By Category" (wenige Kategorien); bei Issuer/Positions
+        // waeren es zu viele Eintraege.
+        legend: (_chartField === 'CATEGORY') ? {
+          display: true, position: 'top',
+          labels: { color: chartColor, font: { family: chartFont, size: 11 }, boxWidth: 12, usePointStyle: true, pointStyle: 'rectRounded' },
+        } : { display: false },
         tooltip: {
           mode: 'nearest', intersect: true,
           callbacks: {
@@ -258,6 +285,28 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
             },
           },
         },
+        // Anteil des Segments am jeweiligen Jahresbalken (Segmente je Balken = 100 %).
+        datalabels: wantSegPct ? {
+          // Farbe je Segment an die Hintergrundhelligkeit anpassen; Schrift dezent
+          // (nicht fett), ohne Rand -> ruhiger Look.
+          color: (dctx) => {
+            const bg = dctx.dataset?.backgroundColor;
+            return __segTextColor(Array.isArray(bg) ? bg[dctx.dataIndex] : bg);
+          },
+          font: { family: chartFont, size: 10, weight: '400' },
+          anchor: 'center', align: 'center', clamp: true,
+          formatter: (value, dctx) => {
+            const v = Number(value) || 0;
+            if (v <= 0) return '';
+            const ds = dctx.chart.data.datasets;
+            let barTotal = 0;
+            for (const d of ds) barTotal += Number(d.data[dctx.dataIndex]) || 0;
+            if (barTotal <= 0) return '';
+            const pct = v / barTotal * 100;
+            if (pct < 5) return '';   // zu kleine Segmente nicht beschriften (Platz)
+            return `${pct.toFixed(pct < 10 ? 1 : 0)}%`;
+          },
+        } : { display: false },
       },
       scales: {
         x: { stacked: seg.stacked, ticks: { color: chartColor, font: { family: chartFont, size: 11 } }, grid: { display: false } },

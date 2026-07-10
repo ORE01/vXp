@@ -410,19 +410,16 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
       <div class="risk-acc-body">
 
-        <!-- Market Risk (Gruppe) -->
+        <!-- Market Risk (Gruppe). Der Gruppentoggle klappt die Untertrigger auf UND
+             oeffnet das Dashboard-Panel (frueher eigener "Dashboard"-Sub-Trigger). -->
         <div class="risk-acc">
-          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" data-panel="panel-market-dashboard" aria-controls="panel-market-dashboard" aria-expanded="false">
             <span class="section-header">Market Risk</span>
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market-dashboard" aria-controls="panel-market-dashboard" aria-expanded="false">
-              <span class="section-header">Dashboard</span>
-              <span class="chev"></span>
-            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
-              <span class="section-header">Overview</span>
+              <span class="section-header">Loss Distribution</span>
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
@@ -433,12 +430,12 @@ Feature:    Wenn es nur in einem Panel gilt
               <span class="section-header">Factors</span>
               <span class="chev"></span>
             </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
-              <span class="section-header">Products</span>
-              <span class="chev"></span>
-            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-issuers" aria-controls="panel-mvar-issuers" aria-expanded="false">
               <span class="section-header">Issuers</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
+              <span class="section-header">Products</span>
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-scenarios" aria-controls="panel-mvar-scenarios" aria-expanded="false">
@@ -448,19 +445,16 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </div>
 
-        <!-- Credit Risk (Gruppe) -->
+        <!-- Credit Risk (Gruppe). Der Gruppentoggle klappt die Untertrigger auf UND
+             oeffnet das Dashboard-Panel (frueher eigener "Dashboard"-Sub-Trigger). -->
         <div class="risk-acc">
-          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" data-panel="panel-credit-dashboard" aria-controls="panel-credit-dashboard" aria-expanded="false">
             <span class="section-header">Credit Risk</span>
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit-dashboard" aria-controls="panel-credit-dashboard" aria-expanded="false">
-              <span class="section-header">Dashboard</span>
-              <span class="chev"></span>
-            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
-              <span class="section-header">Overview</span>
+              <span class="section-header">Loss Distribution</span>
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-EAD" aria-controls="panel-EAD" aria-expanded="false">

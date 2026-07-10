@@ -644,6 +644,11 @@ function productStep(prodId) { return { colKey: 'PROD_ID', value: String(prodId 
 
 const _prodContribCharts = new Map();
 function destroyProdContribChart(id) { const c = _prodContribCharts.get(id); if (c) { try { c.destroy(); } catch {} _prodContribCharts.delete(id); } }
+
+// Anzahl im Scatter gezeigter Produkte je Scatter-Canvas (3/5/10/'all'); Default 5.
+const _prodScatterLimit = new Map();
+// Letzte Chart-Rows -> Re-Render des Scatters beim Wechsel der Anzahl.
+let _lastProdChartRows = [];
 function bindProdCanvasLeave(canvas) { if (!canvas || canvas.dataset.prodLeaveBound) return; canvas.dataset.prodLeaveBound = '1'; canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} }); }
 // Kleiner "Reset Zoom"-Button oben rechts ueber dem Scatter. Idempotent; liest die
 // aktuelle Chart-Instanz aus _prodContribCharts, uebersteht also jedes Neuzeichnen.
@@ -673,6 +678,37 @@ function ensureProdScatterZoomTools(canvas, scatterId) {
     box.appendChild(hint);
   }
 }
+// Auswahl "Show: 3 / 5 / 10 / All" oben im Scatter -> begrenzt die Anzahl der
+// gezeigten Produkte (Top-N nach Beitrag). Idempotent; Wert je Scatter gemerkt.
+function ensureProdScatterEntryPicker(canvas, cfg) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (box.querySelector('.prod-entry-count')) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'prod-entry-wrap';
+  wrap.style.cssText = 'position:absolute;top:6px;right:86px;z-index:5;display:flex;align-items:center;gap:4px;';
+  const lbl = document.createElement('span');
+  lbl.textContent = 'Show';
+  lbl.style.cssText = 'font-size:10px;color:#94a3b8;';
+  const sel = document.createElement('select');
+  sel.className = 'prod-entry-count';
+  sel.style.cssText = 'font-size:10px;padding:1px 4px;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;cursor:pointer;';
+  [['3', '3'], ['5', '5'], ['10', '10'], ['all', 'All']].forEach(([v, t]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
+  });
+  const cur = _prodScatterLimit.get(cfg.scatterId);
+  sel.value = (cur == null ? '5' : String(cur));
+  sel.addEventListener('change', () => {
+    const v = sel.value === 'all' ? 'all' : parseInt(sel.value, 10);
+    _prodScatterLimit.set(cfg.scatterId, v);
+    try { renderProductScatter(_lastProdChartRows, cfg); } catch {}
+  });
+  wrap.appendChild(lbl); wrap.appendChild(sel);
+  box.appendChild(wrap);
+}
+
 // Drill per RECHTSKLICK auf einen Produkt-Punkt: unterdrueckt das native Kontextmenue
 // und oeffnet das Drill-Menue am Cursor. Liest Instanz + Punkte zur Klickzeit neu.
 function bindProdScatterContextDrill(canvas, cfg) {
@@ -848,9 +884,14 @@ function renderProductScatter(rows, cfg) {
   const canvas = document.getElementById(cfg.scatterId);
   destroyProdContribChart(cfg.scatterId);
   if (!canvas || !window.Chart) return;
-  const pts = (Array.isArray(rows) ? rows : [])
+  // Nach Beitragsgroesse (aktuelle Metrik) sortieren und optional auf Top-N begrenzen
+  // (Auswahl 3/5/10/All ueber den Entry-Picker). Default: Top 5.
+  const sorted = (Array.isArray(rows) ? rows.slice() : [])
     .filter(r => r.nav_rel != null && r[cfg.relKey] != null)
-    .map(r => ({ x: +(r.nav_rel * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.label || '-', prod_id: r.prod_id }));
+    .sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)));
+  const limit = _prodScatterLimit.has(cfg.scatterId) ? _prodScatterLimit.get(cfg.scatterId) : 5;
+  const limited = (limit === 'all') ? sorted : sorted.slice(0, limit);
+  const pts = limited.map(r => ({ x: +(r.nav_rel * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.label || '-', prod_id: r.prod_id }));
   if (!pts.length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
   bindProdCanvasLeave(canvas);
@@ -861,7 +902,10 @@ function renderProductScatter(rows, cfg) {
   // wird so lesbar; der/die extremsten Punkte werden ausserhalb der Achse beschnitten.
   const maxima = pts.map(p => Math.max(p.x, p.y)).sort((a, b) => a - b);
   const pctl = (arr, q) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))] : 0);
-  const axMax = Math.max(5, Math.ceil(pctl(maxima, 0.95) * 1.1));
+  // Bei begrenzter Auswahl ALLE gewaehlten Punkte zeigen (kein 95%-Clipping, das sonst
+  // den groessten Punkt abschneidet); bei "All" das 95%-Perzentil gegen Ausreisser.
+  const axBasis = (limit === 'all') ? pctl(maxima, 0.95) : (maxima[maxima.length - 1] || 0);
+  const axMax = Math.max(5, Math.ceil(axBasis * 1.1));
   // Zeichenpuffer an die TATSAECHLICHE Anzeigegroesse koppeln (CSS erzwingt width:100%/
   // height per !important). Sonst weichen Logik- und Darstellungsraum ab und die
   // Hover-/Klick-Koordinaten liegen neben dem sichtbaren Punkt (Tooltip-/Drill-Offset).
@@ -908,12 +952,14 @@ function renderProductScatter(rows, cfg) {
   });
   _prodContribCharts.set(cfg.scatterId, chart);
   ensureProdScatterZoomTools(canvas, cfg.scatterId);
+  ensureProdScatterEntryPicker(canvas, cfg);
   bindProdScatterContextDrill(canvas, cfg);
 }
 
 function renderProductContribCharts(productRows) {
   const baseMap = buildProdBaseMap();
   const chartRows = buildProductChartRows(productRows, baseMap);
+  _lastProdChartRows = chartRows;   // fuer Re-Render des Scatters bei Anzahl-Wechsel
   renderProductKpis(chartRows, PROD_VAR_CFG, 'mvarProductVarKpis', 'mvarProductVarKpisTable');
   renderProductKpis(chartRows, PROD_ES_CFG, 'mvarProductEsKpis', 'mvarProductEsKpisTable');
   renderProductContribChart(chartRows, PROD_VAR_CFG); renderProductScatter(chartRows, PROD_VAR_CFG);

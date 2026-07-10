@@ -131,6 +131,7 @@ function renderCreditLossDist() {
 
   const labels = base.map(r => (Number(r.bin_center) * 100).toFixed(1));
   const cvarByFlag = creditRowsByFlag();
+  // Index des Bins, DURCH DAS die VaR/ES-Linie geht (naechstes Bin-Zentrum zum Wert).
   const nearestIdx = (pct) => { let idx = 0, best = Infinity; base.forEach((r, i) => { const d = Math.abs(Number(r.bin_center) * 100 - pct); if (d < best) { best = d; idx = i; } }); return idx; };
 
   // Je pd_flag eine Serie (Historic/Market/Market adjusted); nur Historic initial sichtbar.
@@ -141,7 +142,10 @@ function renderCreditLossDist() {
     const rr = cvarByFlag[f.key] || {};
     const varPct = Math.abs(num(rr.VaR_rel)) * 100;
     const esPct = Math.abs(num(rr.ES_rel)) * 100;
-    const colors = base.map(r => (Number(r.bin_center) * 100 >= varPct ? BAR_RED : BAR_BLUE));
+    // Rot ab dem Bin, DURCH DAS die VaR-Linie geht (nearestIdx) und alle rechts davon —
+    // so ist die Saeule unter der VaR-Linie garantiert rot (Blau/Rot-Grenze = Linie).
+    const varIdx = Number.isFinite(varPct) ? nearestIdx(varPct) : Infinity;
+    const colors = base.map((r, i) => (i >= varIdx ? BAR_RED : BAR_BLUE));
     const lines = [];
     if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: LINE_BLUE, width: 2 });
     if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: LINE_BLUE, width: 2, dash: [6, 4] });

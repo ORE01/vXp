@@ -14,8 +14,8 @@ import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '.
 
 // Getrennte Drill-Kontexte je Metrik (VaR/ES) fuer das Issuers-Panel.
 const issuerDrill = createContribDrill({
-  var: { detailId: 'mrIssuerVarDetail', titleId: 'mrIssuerVarDetailTitle', tableId: 'mrIssuerVarDetailTable', closeId: 'mrIssuerVarDetailClose', menuId: 'mrIssuerVarCardMenu', valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' },
-  es:  { detailId: 'mrIssuerEsDetail',  titleId: 'mrIssuerEsDetailTitle',  tableId: 'mrIssuerEsDetailTable',  closeId: 'mrIssuerEsDetailClose',  menuId: 'mrIssuerEsCardMenu',  valueType: '__ES_CONTRIB',  valueLabel: 'ES contrib' },
+  var: { detailId: 'mrIssuerVarDetail', titleId: 'mrIssuerVarDetailTitle', tableId: 'mrIssuerVarDetailTable', closeId: 'mrIssuerVarDetailClose', menuId: 'mrIssuerVarCardMenu', valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib', extraCols: [{ key: '__VAR_CONTRIB_IR', label: 'IR' }, { key: '__VAR_CONTRIB_CS', label: 'CS' }] },
+  es:  { detailId: 'mrIssuerEsDetail',  titleId: 'mrIssuerEsDetailTitle',  tableId: 'mrIssuerEsDetailTable',  closeId: 'mrIssuerEsDetailClose',  menuId: 'mrIssuerEsCardMenu',  valueType: '__ES_CONTRIB',  valueLabel: 'ES contrib', extraCols: [{ key: '__ES_CONTRIB_IR', label: 'IR' }, { key: '__ES_CONTRIB_CS', label: 'CS' }] },
 });
 
 // Drill-Schritt je Emittent (Dimension ISSUER). renderConcView filtert dann die
@@ -53,6 +53,37 @@ function ensureIssuerScatterZoomTools(canvas, scatterId) {
     box.appendChild(hint);
   }
 }
+// Auswahl "Show: 3 / 5 / 10 / All" oben im Scatter -> begrenzt die Anzahl der
+// gezeigten Emittenten (Top-N nach Beitrag). Idempotent; Wert je Scatter gemerkt.
+function ensureIssuerScatterEntryPicker(canvas, cfg) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (box.querySelector('.iss-entry-count')) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'iss-entry-wrap';
+  wrap.style.cssText = 'position:absolute;top:6px;right:86px;z-index:5;display:flex;align-items:center;gap:4px;';
+  const lbl = document.createElement('span');
+  lbl.textContent = 'Show';
+  lbl.style.cssText = 'font-size:10px;color:#94a3b8;';
+  const sel = document.createElement('select');
+  sel.className = 'iss-entry-count';
+  sel.style.cssText = 'font-size:10px;padding:1px 4px;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;cursor:pointer;';
+  [['3', '3'], ['5', '5'], ['10', '10'], ['all', 'All']].forEach(([v, t]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
+  });
+  const cur = _issuerScatterLimit.get(cfg.scatterId);
+  sel.value = (cur == null ? '5' : String(cur));
+  sel.addEventListener('change', () => {
+    const v = sel.value === 'all' ? 'all' : parseInt(sel.value, 10);
+    _issuerScatterLimit.set(cfg.scatterId, v);
+    try { renderIssuerScatter(_lastIssuerRows, cfg); } catch {}
+  });
+  wrap.appendChild(lbl); wrap.appendChild(sel);
+  box.appendChild(wrap);
+}
+
 // Drill per RECHTSKLICK auf einen Emittenten-Punkt: unterdrueckt das native Kontextmenue
 // und oeffnet das Drill-Menue am Cursor. Liest Instanz + Punkte zur Klickzeit neu.
 function bindIssuerScatterContextDrill(canvas, cfg) {
@@ -227,6 +258,11 @@ function renderTable(container, rows, columns, emptyText) {
 const _issuerCharts = new Map();
 function destroyIssuerChart(id) { const c = _issuerCharts.get(id); if (c) { try { c.destroy(); } catch {} _issuerCharts.delete(id); } }
 
+// Anzahl im Scatter gezeigter Emittenten je Scatter-Canvas (3/5/10/'all'); Default All.
+const _issuerScatterLimit = new Map();
+// Letzte aggregierten Emittenten-Rows -> Re-Render des Scatters beim Wechsel der Anzahl.
+let _lastIssuerRows = [];
+
 // Metrik-Konfiguration: VaR und ES teilen dieselbe Darstellung, nur andere Felder/IDs.
 const VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarIssuerVarContribChart', scatterId: 'mvarIssuerScatterChart' };
 const ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarIssuerEsContribChart',  scatterId: 'mvarIssuerEsScatterChart' };
@@ -313,9 +349,14 @@ function renderIssuerScatter(rows, cfg) {
   destroyIssuerChart(cfg.scatterId);
   if (!canvas || !window.Chart) return;
 
-  const pts = (Array.isArray(rows) ? rows : [])
+  // Nach Beitragsgroesse (aktuelle Metrik) sortieren und optional auf Top-N begrenzen
+  // (Auswahl 3/5/10/All ueber den Entry-Picker). Default: All.
+  const sorted = (Array.isArray(rows) ? rows.slice() : [])
     .filter(r => r.nav_rel != null && r[cfg.relKey] != null)
-    .map(r => ({ x: +(r.nav_rel * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.issuer || '-' }));
+    .sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)));
+  const limit = _issuerScatterLimit.has(cfg.scatterId) ? _issuerScatterLimit.get(cfg.scatterId) : 5;   // Default: Top 5
+  const limited = (limit === 'all') ? sorted : sorted.slice(0, limit);
+  const pts = limited.map(r => ({ x: +(r.nav_rel * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.issuer || '-' }));
 
   if (!pts.length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
@@ -328,7 +369,10 @@ function renderIssuerScatter(rows, cfg) {
   // ausserhalb der Achse beschnitten (per Zoom erreichbar).
   const maxima = pts.map(p => Math.max(p.x, p.y)).sort((a, b) => a - b);
   const pctl = (arr, q) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(q * (arr.length - 1)))] : 0);
-  const axMax = Math.max(5, Math.ceil(pctl(maxima, 0.95) * 1.1));
+  // Bei begrenzter Auswahl ALLE gewaehlten Punkte zeigen (kein 95%-Clipping, das sonst
+  // den groessten Punkt abschneidet); bei "All" das 95%-Perzentil gegen Ausreisser.
+  const axBasis = (limit === 'all') ? pctl(maxima, 0.95) : (maxima[maxima.length - 1] || 0);
+  const axMax = Math.max(5, Math.ceil(axBasis * 1.1));
 
   canvas.width = 520;
   canvas.height = 400;
@@ -381,6 +425,7 @@ function renderIssuerScatter(rows, cfg) {
   });
   _issuerCharts.set(cfg.scatterId, chart);
   ensureIssuerScatterZoomTools(canvas, cfg.scatterId);
+  ensureIssuerScatterEntryPicker(canvas, cfg);
   bindIssuerScatterContextDrill(canvas, cfg);
 }
 
@@ -405,6 +450,11 @@ function buildIssuerDrillRows(productRows) {
       // groesstem Beitrag, Shares positiv.
       __VAR_CONTRIB: Math.abs(toNumber(firstValue(row, ['var_contrib_total', 'VAR_CONTRIB_TOTAL', 'var_abs', 'VaR_abs'], 0), 0)),
       __ES_CONTRIB:  Math.abs(toNumber(firstValue(row, ['es_contrib_total', 'ES_CONTRIB_TOTAL', 'es_abs', 'ES_abs'], 0), 0)),
+      // Faktor-Zerlegung je Produkt (IR/CS) — als eigene Spalten im Positions-Drill.
+      __VAR_CONTRIB_IR: toNumber(firstValue(row, ['var_contrib_ir', 'VAR_CONTRIB_IR'], 0), 0),
+      __VAR_CONTRIB_CS: toNumber(firstValue(row, ['var_contrib_cs', 'VAR_CONTRIB_CS'], 0), 0),
+      __ES_CONTRIB_IR:  toNumber(firstValue(row, ['es_contrib_ir', 'ES_CONTRIB_IR'], 0), 0),
+      __ES_CONTRIB_CS:  toNumber(firstValue(row, ['es_contrib_cs', 'ES_CONTRIB_CS'], 0), 0),
     });
   }
   return out;
@@ -447,6 +497,7 @@ export function renderMvarIssuerPLPanel() {
     ], 'No MVaR issuer data.');
   }
 
+  _lastIssuerRows = issuerRows;   // fuer Re-Render des Scatters bei Anzahl-Wechsel
   requestAnimationFrame(() => {
     renderIssuerChart(issuerRows, VAR_CFG); renderIssuerScatter(issuerRows, VAR_CFG);
     renderIssuerChart(issuerRows, ES_CFG);  renderIssuerScatter(issuerRows, ES_CFG);
