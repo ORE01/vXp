@@ -1,0 +1,100 @@
+/* ==========================================================================
+   Performance-Dashboard (#panel-performance-dashboard)
+   Vollstaendig themebar: nur var(--token) aus tokens/themes.css + drei
+   marken-neutrale Akzentfarben (Gruen/Blau/Rot), die in Dark UND Light passen.
+   ========================================================================== */
+.perf-dash {
+  --perf-green: #22c55e;
+  --perf-green-soft: rgba(34, 197, 94, 0.16);
+  --perf-blue: #5b8def;
+  --perf-blue-soft: rgba(91, 141, 239, 0.16);
+  --perf-red: #ef5350;
+  --perf-grey: #9aa4b2;
+}
+
+.perf-dash .sub-panel-body { padding: 4px 2px 8px; }
+
+/* ---- Kopfbereich ---- */
+.perf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 6px 4px 18px; }
+.perf-title { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-bright); }
+.perf-sub { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.perf-head__tag {
+  align-self: center; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 7px 16px; border-radius: 999px; color: var(--text-primary);
+  background: var(--surface-overlay); border: 1px solid var(--surface-card-border);
+}
+
+/* ---- KPI-Band ---- */
+.perf-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 0 4px 18px; }
+.perf-kpi {
+  position: relative; padding: 18px 20px 16px; border-radius: 12px;
+  background: var(--surface-raised); border: 1px solid var(--surface-card-border);
+  box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.perf-kpi::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--perf-blue); }
+.perf-kpi--green::before { background: var(--perf-green); }
+.perf-kpi--blue::before { background: var(--perf-blue); }
+.perf-kpi__label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); }
+.perf-kpi__value { margin-top: 6px; font-size: 34px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-bright); }
+.perf-kpi__badge {
+  display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--perf-green);
+  padding: 4px 10px; border-radius: 999px; background: var(--perf-green-soft);
+}
+
+/* ---- Karten-Raster ---- */
+.perf-row { display: grid; gap: 18px; margin: 0 4px 18px; }
+.perf-row--charts { grid-template-columns: 1.35fr 1fr; }
+.perf-row--lists { grid-template-columns: 1fr 1fr; }
+.perf-card {
+  padding: 18px 20px; border-radius: 12px; background: var(--surface-raised);
+  border: 1px solid var(--surface-card-border); box-shadow: var(--shadow-sm);
+}
+.perf-card__title { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-bright); }
+.perf-card__sub { margin: 3px 0 14px; font-size: 12px; color: var(--text-muted); }
+.perf-chart-holder { position: relative; height: 250px; margin-top: 8px; }
+.perf-scatter-holder { position: relative; height: 260px; margin-top: 8px; }
+/* Feste Canvas-Bitmap (responsive:false) auf Holder-Groesse skalieren; fitCanvasToDisplay
+   koppelt den Zeichenpuffer bei sichtbarem Panel an diese Anzeige (Hover/Drill exakt). */
+.perf-chart-holder canvas, .perf-scatter-holder canvas { width: 100% !important; height: 100% !important; display: block; }
+
+/* ---- Beitrags-Balken ---- */
+.perf-bars { margin-top: 6px; display: flex; flex-direction: column; gap: 14px; }
+.perf-bar-row { display: grid; grid-template-columns: 120px 1fr auto; align-items: center; gap: 12px; }
+.perf-bar__label { font-size: 13px; color: var(--text-primary); }
+.perf-bar__track { height: 12px; border-radius: 999px; background: var(--surface-overlay); overflow: hidden; }
+.perf-bar__fill { height: 100%; border-radius: 999px; background: var(--perf-blue); }
+.perf-bar__fill--green { background: var(--perf-green); }
+.perf-bar__fill--blue  { background: var(--perf-blue); }
+.perf-bar__fill--grey  { background: var(--perf-grey); }
+.perf-bar__fill--red   { background: var(--perf-red); }
+.perf-bar__val.perf-neg { color: var(--perf-red); }
+.perf-bar__val { font-size: 13px; font-weight: 700; color: var(--text-bright); min-width: 40px; text-align: right; }
+.perf-bars__sum {
+  display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 12px;
+  border-top: 1px solid var(--surface-card-border); font-weight: 700; font-size: 14px; color: var(--text-primary);
+}
+
+/* ---- Top/Flop-Listen ---- */
+.perf-list { list-style: none; margin: 0; padding: 0; }
+.perf-list li { border-top: 1px solid var(--surface-card-border); }
+.perf-list li:first-child { border-top: none; }
+.perf-li { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 14px; padding: 12px 2px; cursor: context-menu; border-radius: 6px; }
+.perf-li:hover { background: var(--hover-bg); }
+.perf-drill-hint { color: var(--text-muted); font-size: 12px; opacity: .55; }
+.perf-rank {
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.perf-rank--pos { color: var(--perf-green); background: var(--perf-green-soft); }
+.perf-rank--neg { color: var(--perf-red); background: rgba(239, 83, 80, 0.16); }
+.perf-list__name { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 14px; color: var(--text-primary); }
+.perf-li__id { color: var(--text-primary); white-space: nowrap; }
+.perf-li__issuer { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.perf-yield { color: var(--text-bright); font-weight: 700; }
+.perf-pos { color: var(--perf-green); font-weight: 700; }
+.perf-neg { color: var(--perf-red); font-weight: 700; }
+
+/* ---- Responsiv: bei schmalem Panel untereinander ---- */
+@media (max-width: 900px) {
+  .perf-kpis, .perf-row--charts, .perf-row--lists { grid-template-columns: 1fr; }
+}

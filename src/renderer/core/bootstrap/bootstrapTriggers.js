@@ -2,6 +2,7 @@ import { openPanel } from '../ui/panels/index.js';
 import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
 import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/trades/tradeUI.js';
 import { renderPerformanceHistoryCopies } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
+import { renderPerformanceDashboard } from '../../features/ANALYSE_PORTFOLIO/performanceDashboard.js';
 
 // ------------------------------------------------------------
 // Panel open hook registry (fix for installReceivers warning)
@@ -151,6 +152,11 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     // das Panel sichtbar ist (korrektes Canvas-Sizing).
     if (panelId === 'panel-performance-history') {
       requestAnimationFrame(() => { try { renderPerformanceHistoryCopies(); } catch (_) {} });
+    }
+
+    // Performance-Dashboard: Rendite-Verlauf-Chart bei sichtbarem Panel zeichnen.
+    if (panelId === 'panel-performance-dashboard') {
+      requestAnimationFrame(() => { try { renderPerformanceDashboard(); } catch (_) {} });
     }
 
     if (panelId === 'panel-issuer-np') {

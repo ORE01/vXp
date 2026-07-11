@@ -10,6 +10,109 @@ import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '.
 // Global scope â€” this runs as soon as the file is loaded
 if (!window.charts) window.charts = {};
 
+// Balkenfarben (rot/blau uebernommen): Tail (>= VaR) rot, Rest blau; Market adjusted heller.
+const CLOSS_BLUE = 'rgba(70,120,180,0.85)';
+const CLOSS_RED = 'rgba(210,70,70,0.85)';
+// Drei klar unterscheidbare Blau-Toene je Serie: Historic (dunkel) -> Market (mittel) ->
+// Market adjusted (hell).
+const CLOSS_BLUES = ['rgba(40,95,160,0.9)', 'rgba(95,160,210,0.9)', 'rgba(165,205,240,0.9)'];
+
+// Plugin: pro SICHTBARER Serie zwei waagrechte Linien am VaR-Quantil (chart.$varIdx), beide
+// im ROT des VaR-Balkens: VaR (strichliert) auf Balkenhoehe + ES (durchgehend) auf Hoehe des
+// Tail-Mittels; beschriftet mit dem Serienname ("VaR Historic" / "ES Historic" / ...).
+const _clossVarLinePlugin = {
+  id: 'clossVarHLine',
+  afterDatasetsDraw(chart) {
+    const idx = chart.$varIdx;
+    if (idx == null || !chart.chartArea || !chart.scales?.y) return;
+    const { ctx, chartArea } = chart;
+    // Beschriftung RECHTS neben dem VaR-Balken (nicht am linken Rand).
+    const barX = chart.scales.x?.getPixelForValue?.(idx);
+    const labelX = Number.isFinite(barX) ? Math.min(barX + 8, chartArea.right - 64) : chartArea.left + 4;
+    const drawHLine = (yVal, dashed, color, text) => {
+      const y = chart.scales.y.getPixelForValue(yVal);
+      if (!Number.isFinite(y)) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash(dashed ? [6, 4] : []);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = color;
+      ctx.moveTo(chartArea.left, y);
+      ctx.lineTo(chartArea.right, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(text, labelX, y - 4);
+      ctx.restore();
+    };
+    // Vorlauf: VaR/ES je SICHTBARER Balken-Serie sammeln (ES = Mittel der Tail-Werte,
+    // Index 0..idx = Quantile >= VaR, da 99.99 links liegt).
+    const series = [];
+    const esByName = {};
+    chart.data.datasets.forEach((ds, i) => {
+      if (ds.type === 'line' || !chart.isDatasetVisible(i)) return;
+      const data = ds.data || [];
+      const varVal = Number(data[idx]);
+      if (!Number.isFinite(varVal)) return;
+      const barColor = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[idx] : ds.backgroundColor;
+      const color = barColor || 'rgba(210,70,70,0.9)';
+      const name = String(ds.label || '').replace(/\s*Losses$/i, '');
+      let sum = 0, cnt = 0;
+      for (let k = 0; k <= idx; k++) { const v = Number(data[k]); if (Number.isFinite(v) && v > 0) { sum += v; cnt++; } }
+      const esVal = cnt ? sum / cnt : null;
+      series.push({ varVal, esVal, color, name });
+      if (esVal != null) esByName[name] = esVal;
+    });
+
+    // MSD-Band: Flaeche zwischen ES Historic und ES Market adjusted (nur wenn beide sichtbar).
+    const esH = esByName['Historic'];
+    const esN = esByName['Market adjusted'];
+    if (esH != null && esN != null) {
+      const y1 = chart.scales.y.getPixelForValue(esH);
+      const y2 = chart.scales.y.getPixelForValue(esN);
+      if (Number.isFinite(y1) && Number.isFinite(y2) && Math.abs(y1 - y2) > 1) {
+        const top = Math.min(y1, y2), h = Math.abs(y1 - y2);
+        ctx.save();
+        ctx.fillStyle = 'rgba(230,170,60,0.20)';
+        ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, h);
+        ctx.fillStyle = 'rgba(240,185,75,0.98)';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('MSD', (chartArea.left + chartArea.right) / 2, top + h / 2);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.restore();
+      }
+    }
+
+    // TSI-Band: Flaeche zwischen VaR Historic und ES Historic (Tail Severity Index),
+    // andere Farbe (Violett) als MSD.
+    const hist = series.find((s) => s.name === 'Historic');
+    if (hist && Number.isFinite(hist.varVal) && hist.esVal != null) {
+      const yv = chart.scales.y.getPixelForValue(hist.varVal);
+      const ye = chart.scales.y.getPixelForValue(hist.esVal);
+      if (Number.isFinite(yv) && Number.isFinite(ye) && Math.abs(yv - ye) > 1) {
+        const top = Math.min(yv, ye), h = Math.abs(yv - ye);
+        ctx.save();
+        ctx.fillStyle = 'rgba(150,110,220,0.20)';
+        ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, h);
+        ctx.fillStyle = 'rgba(180,145,238,0.98)';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('TSI', (chartArea.left + chartArea.right) / 2, top + h / 2);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.restore();
+      }
+    }
+
+    // Linien ueber dem Band: VaR (strichliert) + ES (durchgehend) je Serie.
+    series.forEach((s) => {
+      drawHLine(s.varVal, true, s.color, `VaR ${s.name}`);
+      if (s.esVal != null) drawHLine(s.esVal, false, s.color, `ES ${s.name}`);
+    });
+  },
+};
+
 // Drill-down fuer die kombinierte Loss-Chart (Balken = Quantil -> ausfallender
 // Emittent aus ISSUER_RANK). Dieselbe Engine wie die Market-Risk-Beitragspanels.
 // Nur eine Metrik-Schiene noetig ('var'); die 'es'-Config zeigt auf dieselben IDs
@@ -155,7 +258,7 @@ function getRunVarIndex() {
 
 // Ziel-Quantil des VaR in Prozent (= conf_level * 100, Default 99.9). Der VaR-Balken
 // in den Charts liegt am Quantil, das dem Konfidenzniveau am naechsten ist.
-function getRunConfQuantil() {
+export function getRunConfQuantil() {
   const configs = appState.getCvarInput?.() || [];
   const selName = document.querySelector('.cvar-radio:checked')?.dataset?.name;
   const cfg =
@@ -407,10 +510,15 @@ export function setupLossIssuerUI() {
         };
         const defaultsByDs = [defaultsFor(ratingData), defaultsFor(marketData), defaultsFor(marketNormData)];
 
-        // VaR-Balken (Quantil am naechsten zum Konfidenzniveau) rot einfaerben.
+        // Nur der VaR-Balken (Quantil am naechsten zum Konfidenzniveau) rot, alle anderen
+        // blau. Serie "Market adjusted" (di=2) in helleren Toenen.
         const varIdx = closestIndex(baseQuantils, getRunConfQuantil());
-        const VAR_RED = 'rgba(255, 0, 0, 0.9)';
-        const colorsFor = (col) => baseQuantils.map((_, i) => (i === varIdx ? VAR_RED : col));
+        const VAR_RED = 'rgba(255, 0, 0, 0.9)';   // kraeftiges Rot fuer den VaR-Balken (wie vorher)
+        const barColorsFor = (di) => {
+          const blue = CLOSS_BLUES[di] || CLOSS_BLUE;
+          return baseQuantils.map((_, i) => (i === varIdx ? VAR_RED : blue));
+        };
+        const legendColorFor = (di) => CLOSS_BLUES[di] || CLOSS_BLUE;
         try {
           // Nur Positionen des aktuell gewaehlten Portfolios: getAllPortfolioData()
           // enthaelt ALLE Portfolios, die Drill-Engine filtert aber nur nach ISSUER.
@@ -431,23 +539,25 @@ export function setupLossIssuerUI() {
         const existing = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : null;
         if (existing) { try { existing.destroy(); } catch (e) {} }
 
-        // Canvas-Groesse (responsive:false): Breite = Container-Innenbreite; Hoehe =
-        // je Zeile ein fester Betrag -> bei vielen Zeilen wird das Canvas hoeher als
-        // die Karte, die Karte scrollt (overflow-y in CSS). Chart wird NICHT groesser.
-        const PER_ROW = 40;
-        const padX = 24; // .chart-container-inner padding links+rechts
-        const contentW = Math.max(320, Math.floor((cv.parentNode.clientWidth || 800) - padX));
+        // Canvas-Groesse (responsive:false): um 90 Grad gedreht -> VERTIKALE Balken.
+        // ALLE Quantile in die Kartenbreite (kein horizontales Scrollen). Quantile auf der
+        // x-Achse, 99.99 (groesster Verlust) links.
+        const padY = 24;    // .chart-container-inner padding oben+unten
+        const padX = 24;    // padding links+rechts
+        const contentH = Math.max(220, Math.floor((cv.parentNode.clientHeight || 460) - padY));
+        const contentW = Math.max(320, Math.floor((cv.parentNode.clientWidth || 900) - padX));
+        cv.height = contentH;
         cv.width = contentW;
-        cv.height = Math.max(200, base.length * PER_ROW + 50);
 
         // colors = Balkenfarben-Array (VaR-Balken rot); legendColor = Basis-Serienfarbe
         // fuer die HTML-Legende (Balken-Array taugt dort nicht).
-        const mkDs = (label, data, colors, legendColor) => ({
+        const mkDs = (label, data, colors, legendColor, hidden = false) => ({
           label, data,
           backgroundColor: colors,
           borderColor: colors,
           maxBarThickness: 64,
           _legendColor: legendColor,
+          hidden,   // Standard: nur Historic sichtbar, Market/Market adjusted ausgeblendet
         });
 
         // Fuer die relative Beschriftung (Loss in % vom NAV) — gleiche Basis wie die
@@ -458,23 +568,23 @@ export function setupLossIssuerUI() {
 
         window[chartId] = new Chart(cv.getContext('2d'), {
           type: 'bar',
-          plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+          plugins: [_clossVarLinePlugin, ...(window.ChartDataLabels ? [window.ChartDataLabels] : [])],
           data: {
             labels,
             datasets: [
-              mkDs('Historic Losses', lossByQuantil(ratingData), colorsFor(getColorFromPalette(0, 0.7)), getColorFromPalette(0, 0.7)),
-              mkDs('Market Losses', lossByQuantil(marketData), colorsFor(getColorFromPalette(1, 0.7)), getColorFromPalette(1, 0.7)),
-              mkDs('Market adjusted Losses', lossByQuantil(marketNormData), colorsFor(getColorFromPalette(2, 0.7)), getColorFromPalette(2, 0.7)),
+              mkDs('Historic Losses', lossByQuantil(ratingData), barColorsFor(0), legendColorFor(0), false),
+              mkDs('Market Losses', lossByQuantil(marketData), barColorsFor(1), legendColorFor(1), true),
+              mkDs('Market adjusted Losses', lossByQuantil(marketNormData), barColorsFor(2), legendColorFor(2), true),
             ],
           },
           options: {
             responsive: false,
             maintainAspectRatio: false,
-            indexAxis: 'y',
+            indexAxis: 'x',
             animation: false,
             normalized: true,
-            // Platz rechts fuer die Wert-Labels neben den Balken.
-            layout: { padding: { right: 96 } },
+            // Werte stehen jetzt im Tooltip -> kein Extra-Platz ueber den Balken noetig.
+            layout: { padding: { top: 16 } },
             // Drill per RECHTSKLICK (bindRightClickDrill nach der Chart-Erzeugung);
             // Steps je Serie ueber datasetIndex. Legende bleibt Linksklick (Serien-Toggle).
             plugins: {
@@ -482,24 +592,22 @@ export function setupLossIssuerUI() {
               // beim Scrollen sichtbar (die Canvas-Legende wuerde mit wegscrollen).
               legend: { display: false },
               annotation: false,
-              // Zwei Beschriftungen je Balken: Wert (abs kompakt + rel % NAV) rechts
-              // aussen, Anzahl Defaults mittig im Balken.
+              // Verlust (kompakt, z.B. 52.9M) + Anteil am NAV (%) stehen jetzt im Tooltip.
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const v = Number(ctx.parsed?.y) || 0;
+                    const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
+                    return `${ctx.dataset.label}: ${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
+                  },
+                },
+              },
+              // Nur noch die Anzahl Defaults unten am Balkenfuss (keine M/%-Labels mehr).
               datalabels: window.ChartDataLabels ? {
                 labels: {
-                  value: {
-                    anchor: 'end', align: 'right', clamp: true,
-                    color: labelColor,
-                    font: { size: 10 },
-                    formatter: (value) => {
-                      const v = Number(value) || 0;
-                      if (!v) return '';
-                      const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
-                      return `${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
-                    },
-                  },
                   defaults: {
-                    // Am Balkenanfang (x=0) -> alle Zahlen in einer Flucht, links.
-                    anchor: 'start', align: 'right', offset: 2, clamp: true,
+                    // Am Balkenfuss (y=0) -> alle Zahlen in einer Flucht, unten.
+                    anchor: 'start', align: 'top', offset: 2, clamp: true,
                     color: '#fff',
                     font: { size: 10, weight: 'bold' },
                     formatter: (value, ctx) => {
@@ -512,14 +620,17 @@ export function setupLossIssuerUI() {
               } : undefined,
             },
             scales: {
-              y: { beginAtZero: true, ticks: { autoSkip: false } },
-              x: { beginAtZero: true, grace: '5%' },
+              // x = Kategorie (Quantile, 99.99 links), y = Verlustwert.
+              x: { beginAtZero: true, ticks: { autoSkip: false, maxRotation: 90, minRotation: 90 } },
+              y: { beginAtZero: true, grace: '5%' },
             },
           },
         });
 
         // Drill per RECHTSKLICK: Steps je Serie am Chart hinterlegen, contextmenu binden.
         window[chartId].$stepsByDs = stepsByDs;
+        // VaR-Quantil-Index fuer die horizontale VaR-Linie (Plugin) hinterlegen.
+        window[chartId].$varIdx = varIdx;
         bindRightClickDrill(cv, () => window[chartId],
           (el, ch, e) => lossIssuerDrill.hover('var', { native: e }, [el], ch.$stepsByDs?.[el.datasetIndex] || ch.$stepsByDs?.[0] || []));
 

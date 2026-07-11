@@ -148,33 +148,68 @@ function ensureHistCrosshairPlugin() {
       if (!chart.options?.plugins?.histCrosshair) return;
       const c = chart.$histCross;
       if (!c) return;
-      const ctx = chart.ctx, a = chart.chartArea;
+      const ctx = chart.ctx, a = chart.chartArea, xs = chart.scales.x;
+
+      // Naechster Datenindex zur Cursor-x-Position.
+      let idx;
+      try { idx = Math.round(xs.getValueForPixel(c.x)); } catch { return; }
+      const len = (chart.data.labels || []).length;
+      if (len) idx = Math.max(0, Math.min(len - 1, idx));
+
+      // Unter den SICHTBAREN Linien-Serien den Punkt bei idx waehlen, der dem Cursor-y am
+      // naechsten liegt -> das Fadenkreuz rastet auf die (naechste) Linie ein.
+      let best = null;
+      (chart.data.datasets || []).forEach((ds, di) => {
+        if (ds.type === 'bar') return;
+        if (!chart.isDatasetVisible(di)) return;
+        const raw = ds.data?.[idx];
+        const val = (raw && typeof raw === 'object') ? raw.y : raw;
+        if (val == null || Number.isNaN(Number(val))) return;
+        const meta = chart.getDatasetMeta(di);
+        const yScale = chart.scales[ds.yAxisID || meta.yAxisID || 'y'] || chart.scales.y;
+        const py = yScale.getPixelForValue(Number(val));
+        if (!Number.isFinite(py)) return;
+        const col = (Array.isArray(ds.borderColor) ? ds.borderColor.find(Boolean) : ds.borderColor) || '#888';
+        const d = Math.abs(py - c.y);
+        if (!best || d < best.d) best = { val, py, d, color: col };
+      });
+
+      const px = xs.getPixelForValue(idx);
+      if (!Number.isFinite(px)) return;
+      const py = best ? best.py : c.y;
+
       ctx.save();
       ctx.lineWidth = 1;
       ctx.strokeStyle = "rgba(150,160,175,0.9)";
       ctx.setLineDash([4, 3]);
-      ctx.beginPath(); ctx.moveTo(c.x, a.top); ctx.lineTo(c.x, a.bottom); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(a.left, c.y); ctx.lineTo(a.right, c.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.left, py); ctx.lineTo(a.right, py); ctx.stroke();
       ctx.setLineDash([]);
-      let xLabel = "", yLabel = "";
-      try {
-        const xs = chart.scales.x, idx = Math.round(xs.getValueForPixel(c.x));
-        xLabel = xs.getLabelForValue ? String(xs.getLabelForValue(idx)) : String(idx);
-      } catch {}
-      try { yLabel = (Number(chart.scales.y.getValueForPixel(c.y)) * 100).toFixed(2) + " %"; } catch {}
+
+      // Punkt auf der Linie markieren.
+      if (best) {
+        ctx.fillStyle = best.color;
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.lineWidth = 1; ctx.strokeStyle = "#fff"; ctx.stroke();
+      }
+
+      // Randbeschriftung: Datum (x) unten am Strich, Linienwert (y) links.
+      let xLabel = "";
+      try { xLabel = xs.getLabelForValue ? String(xs.getLabelForValue(idx)) : String(idx); } catch {}
+      const yLabel = best ? (Number(best.val) * 100).toFixed(2) + " %" : "";
       ctx.font = "10px sans-serif";
       const pad = 3;
       if (xLabel) {
         const w = ctx.measureText(xLabel).width;
-        ctx.fillStyle = "rgba(40,44,52,0.92)"; ctx.fillRect(c.x - w / 2 - pad, a.bottom + 2, w + pad * 2, 14);
+        ctx.fillStyle = "rgba(40,44,52,0.92)"; ctx.fillRect(px - w / 2 - pad, a.bottom + 2, w + pad * 2, 14);
         ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "top";
-        ctx.fillText(xLabel, c.x, a.bottom + 4);
+        ctx.fillText(xLabel, px, a.bottom + 4);
       }
       if (yLabel) {
         const w = ctx.measureText(yLabel).width;
-        ctx.fillStyle = "rgba(40,44,52,0.92)"; ctx.fillRect(a.left - w - pad * 2 - 2, c.y - 7, w + pad * 2, 14);
+        ctx.fillStyle = "rgba(40,44,52,0.92)"; ctx.fillRect(a.left - w - pad * 2 - 2, py - 7, w + pad * 2, 14);
         ctx.fillStyle = "#fff"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
-        ctx.fillText(yLabel, a.left - pad - 2, c.y);
+        ctx.fillText(yLabel, a.left - pad - 2, py);
       }
       ctx.restore();
     }

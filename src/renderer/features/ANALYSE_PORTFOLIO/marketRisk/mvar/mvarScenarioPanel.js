@@ -158,14 +158,16 @@ function renderKpis(bars) {
   const mostNeg = bars.reduce((a, b) => (b.impact < a.impact ? b : a), bars[0]);
   const mostPos = bars.reduce((a, b) => (b.impact > a.impact ? b : a), bars[0]);
   const card = (title, label, value, color) => `
-    <div class="cp-card" style="margin-bottom:10px;">
+    <div class="cp-card" style="flex:1 1 200px; margin:0;">
       <div style="font-size:12px; color:var(--text-muted);">${title}</div>
       <div style="font-size:13px; color:var(--text-bright);">${label}</div>
       <div style="font-size:20px; font-weight:700; color:${color};">${value}</div>
     </div>`;
   c.innerHTML =
+    '<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;">' +
     card('Largest negative driver', mostNeg.label, fmtMio(mostNeg.impact), NEG) +
-    card('Largest positive driver', mostPos.label, fmtMio(mostPos.impact), POS);
+    card('Largest positive driver', mostPos.label, fmtMio(mostPos.impact), POS) +
+    '</div>';
 }
 
 function render() {

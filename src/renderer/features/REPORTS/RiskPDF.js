@@ -139,6 +139,25 @@ function addLogoKeepAspect(doc, logoElOrSrc, { x, y, maxW, maxH, format = 'PNG' 
 // =====================================================================
 // AUTOTABLE SAFE WRAPPER
 // =====================================================================
+// Einheitliche Report-Karten-Optik: heller Fill + weicher, abgerundeter Rahmen.
+const RPT_CARD_FILL = [247, 248, 250];
+const RPT_CARD_BORDER = [226, 230, 236];
+const RPT_CARD_HEAD = [237, 240, 244];
+const RPT_MUTED = [107, 120, 136];
+const RPT_TEXT = [26, 31, 41];
+function drawChartCard(doc, x, y, w, h) {
+  doc.setDrawColor(...RPT_CARD_BORDER); doc.setFillColor(...RPT_CARD_FILL); doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD');
+}
+
+// Credit Top-Tail-Drivers: je PD-Ansicht Chart + Tabelle NEBENEINANDER, Ansichten untereinander.
+const CR_DRIVER_VIEWS = [
+  { chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist' },
+  { chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm' },
+];
+const CR_DRIVER_CHART_IDS = new Set(CR_DRIVER_VIEWS.map(v => v.chartId));
+const CR_DRIVER_TABLE_IDS = new Set(CR_DRIVER_VIEWS.map(v => v.tableId));
+
 function safeAutoTable(doc, layout, options = {}) {
   if (!doc || typeof doc.autoTable !== 'function') {
     console.warn('[PDF] autoTable not available (jspdf-autotable missing?)');
@@ -155,6 +174,9 @@ function safeAutoTable(doc, layout, options = {}) {
     doc.autoTable({
       ...options,
       startY: safeStartY,
+      // Einheitliche Karten-Optik: weiche Rahmenlinien + heller, muted Kopf.
+      styles: { ...(options.styles || {}), lineColor: RPT_CARD_BORDER, lineWidth: 0.1 },
+      headStyles: { fontStyle: 'bold', ...(options.headStyles || {}), fillColor: RPT_CARD_HEAD, textColor: RPT_MUTED, lineColor: RPT_CARD_BORDER, lineWidth: 0.1 },
       margin: {
         left: options.margin?.left ?? (layout?.left ?? 14),
         right: options.margin?.right ?? (layout?.right ?? 14),
@@ -162,6 +184,20 @@ function safeAutoTable(doc, layout, options = {}) {
         bottom: options.margin?.bottom ?? bottomMargin,
       },
     });
+    // Weicher, abgerundeter Kartenrahmen um die Tabelle (fehlertolerant). Nur wenn die
+    // Tabelle auf EINER Seite steht (sonst zeichnet der Rahmen ueber die Seitengrenze).
+    try {
+      const t = doc.lastAutoTable;
+      const y1 = t?.finalY;
+      const curPage = (doc.internal?.getCurrentPageInfo?.() || {}).pageNumber;
+      const singlePage = !t?.startPageNumber || !curPage || t.startPageNumber === curPage;
+      if (t && Number.isFinite(y1) && singlePage) {
+        const x0 = t.settings?.margin?.left ?? (layout?.left ?? 14);
+        const y0 = Number.isFinite(t.settings?.startY) ? t.settings.startY : safeStartY;
+        const w0 = t.table?.width ?? options.tableWidth ?? layout?.contentWidth ?? 0;
+        if (w0 > 0 && y1 > y0) { doc.setDrawColor(...RPT_CARD_BORDER); doc.setLineWidth(0.2); doc.roundedRect(x0, y0, w0, y1 - y0, 2, 2, 'S'); }
+      }
+    } catch {}
     return doc.lastAutoTable || null;
   } catch (e) {
     console.warn('[PDF] autoTable failed', e);
@@ -344,23 +380,28 @@ function drawPageNumber(doc, layout, { pageIndex, pageCount } = {}) {
 
 // Formatiertes KPI-Band (Kacheln: grosser Wert + kleines Label auf hellgrauer Karte),
 // wie auf der Concentration-Seite (PROTOTYPE Page 3). Gibt das neue y zurueck.
-function drawKpiBand(doc, { marginX, contentW, y }, kpis) {
+function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
   if (!Array.isArray(kpis) || !kpis.length) return y;
   const n = kpis.length;
   const tileGap = 4;
   const tileW = (contentW - tileGap * (n - 1)) / n;
-  const tileH = 20;
+  // Einheitlicher KPI-Karten-Stil fuer ALLE Report-Sektionen: abgerundete Box mit Rahmen,
+  // oben kleines GROSSGESCHRIEBENES muted Label, darunter fetter dunkler Wert (linksbuendig)
+  // — analog zu den Risk-Limit/Buffer-Karten im Dashboard.
+  const tileH = opts.tileH || 18;
+  const valFont = opts.valueFont || 13;
+  const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41];
   kpis.forEach((k, idx) => {
     const x = marginX + idx * (tileW + tileGap);
-    doc.setFillColor(245);
-    doc.rect(x, y, tileW, tileH, 'F');
-    doc.setFontSize(14); doc.setTextColor(0);
-    doc.text(String(k.value ?? ''), x + tileW / 2, y + 9, { align: 'center' });
-    doc.setFontSize(7); doc.setTextColor(110);
-    doc.text(String(k.label ?? ''), x + tileW / 2, y + 15, { align: 'center' });
+    doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+    doc.roundedRect(x, y, tileW, tileH, 2, 2, 'FD');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+    doc.text(String(k.label ?? '').toUpperCase(), x + 5, y + 6);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(valFont); doc.setTextColor(...TEXT);
+    doc.text(String(k.value ?? ''), x + 5, y + 13.5);
   });
-  doc.setTextColor(0);
-  return y + tileH + 8;
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
+  return y + tileH + (opts.gapAfter ?? 6);
 }
 
 // KPI-Paare (Label/Wert) aus einer gespiegelten .data-container-Tabelle lesen.
@@ -607,13 +648,13 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       const exportHeight = Math.max(520, el.clientHeight || 520);
 
       const dataUrl = await Plotly.toImage(el, {
-        format: 'png',
+        format: 'jpeg',
         width: exportWidth,
         height: exportHeight,
         scale: 2,
       });
 
-      return { dataUrl, width: exportWidth, height: exportHeight };
+      return { dataUrl, width: exportWidth, height: exportHeight, fmt: 'JPEG' };
     } catch (e) {
       console.warn('[PDF] Plotly export failed for', el.id, e);
       return null;
@@ -632,8 +673,22 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         srcH = rect.height || 520;
       }
 
-      const dataUrl = canvas.toDataURL('image/png');
-      return { dataUrl, width: srcW, height: srcH };
+      // Charts als JPEG statt PNG einbetten -> drastisch kleinere PDF-Datei (Flaechen/
+      // Verlaeufe komprimieren als PNG kaum). Chart-Canvas sind transparent, daher vorher
+      // auf WEISS komponieren, sonst wird der JPEG-Hintergrund schwarz.
+      let dataUrl, fmt = 'JPEG';
+      try {
+        const off = document.createElement('canvas');
+        off.width = srcW; off.height = srcH;
+        const octx = off.getContext('2d');
+        octx.fillStyle = '#ffffff';
+        octx.fillRect(0, 0, srcW, srcH);
+        octx.drawImage(canvas, 0, 0, srcW, srcH);
+        dataUrl = off.toDataURL('image/jpeg', 0.82);
+      } catch {
+        dataUrl = canvas.toDataURL('image/png'); fmt = 'PNG';
+      }
+      return { dataUrl, width: srcW, height: srcH, fmt };
     } catch (e) {
       console.warn('[PDF] Canvas export failed for', canvas?.id, e);
       return null;
@@ -861,16 +916,21 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const chartsH = 78;
 
     const drawImg = (imgData, x, boxW, boxH) => {
-      doc.setFillColor(247);
-      doc.rect(x, y, boxW, boxH, 'F');
+      drawChartCard(doc, x, y, boxW, boxH);
       if (!imgData?.dataUrl) return;
       const srcW = imgData.width || 900;
       const srcH = imgData.height || 520;
       const scale = Math.min(boxW / srcW, (boxH - 2) / srcH, 1);
       const w = srcW * scale, h = srcH * scale;
-      try { doc.addImage(imgData.dataUrl, 'PNG', x + (boxW - w) / 2, y + (boxH - h) / 2, w, h); }
+      try { doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', x + (boxW - w) / 2, y + (boxH - h) / 2, w, h); }
       catch (e) { console.warn('[PDF] breakdown image failed', e); }
     };
+
+    // KPI-Band (Key Figures) IMMER oberhalb der Graphen (nur wenn ausgewaehlt).
+    if (enTableIds.has(kfId)) {
+      const kpis = kpisFromTableEl(ctx.getById(kfId));
+      if (kpis.length) { ensurePageSpace(26); y = drawKpiBand(doc, { marginX, contentW, y }, kpis); }
+    }
 
     if (showTree || showBar) {
       const both   = showTree && showBar;
@@ -897,12 +957,6 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       y += chartsH + 10;
     }
 
-    // KPI-Band (Key Figures) nur wenn ausgewaehlt.
-    if (enTableIds.has(kfId)) {
-      const kpis = kpisFromTableEl(ctx.getById(kfId));
-      if (kpis.length) { ensurePageSpace(26); y = drawKpiBand(doc, { marginX, contentW, y }, kpis); }
-    }
-
     // Top-Liste (Tabelle) nur wenn ausgewaehlt.
     if (enTableIds.has(topId)) {
       const host = ctx.getById(topId);
@@ -923,6 +977,94 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     return;
   }
 
+  // ── Sonderlayout: Yield-Dashboard (#panel-performance-dashboard) als KOMPAKTES
+  // Ein-Seiten-Blatt: oben KPI-Band, darunter beide Charts nebeneinander, darunter
+  // die zwei Listen-Tabellen nebeneinander. Jede Grafik/Tabelle bleibt einzeln abwaehlbar.
+  if (sec.key === 'performance-dashboard') {
+    const enChartIds = new Set((sec.enabledCharts || []).map(c => c.id));
+    const enTableIds = new Set((sec.enabledTables || []).map(t => t.id));
+    const contentW = layout.contentWidth;
+    const gap = 6;
+
+    // Alles auf eine Seite: EINMAL genug Platz fuer das ganze Blatt reservieren (bricht
+    // ggf. vorher auf eine frische Seite um). Danach KEINE Zwischen-Umbrueche mehr, sonst
+    // rutschen die Tabellen auf die naechste Seite obwohl Platz da ist.
+    ensurePageSpace(140);
+
+    doc.setFontSize(14); doc.setTextColor(0);
+    doc.text(sectionTitle, marginX, y);
+    y += cfg.sectionTitleSpacing;
+    doc.setFontSize(9); doc.setTextColor(110);
+    doc.text('Yield development and key yield drivers.', marginX, y);
+    y += 6;
+
+    // 1) KPI-Band oben (flacher als der Standard).
+    if (enTableIds.has('perfKpiTable')) {
+      const kpis = kpisFromTableEl(ctx.getById('perfKpiTable'));
+      if (kpis.length) { y = drawKpiBand(doc, { marginX, contentW, y }, kpis); }
+    }
+
+    // 2) Beide Charts nebeneinander.
+    const showRet = enChartIds.has('perfReturnChart');
+    const showSc  = enChartIds.has('perfYieldScatter');
+    const drawImg = (imgData, x, boxW, boxH) => {
+      drawChartCard(doc, x, y, boxW, boxH);
+      if (!imgData?.dataUrl) return;
+      const srcW = imgData.width || 900, srcH = imgData.height || 520;
+      const scale = Math.min(boxW / srcW, (boxH - 2) / srcH, 1);
+      const w = srcW * scale, h = srcH * scale;
+      try { doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', x + (boxW - w) / 2, y + (boxH - h) / 2, w, h); }
+      catch (e) { console.warn('[PDF] yield chart image failed', e); }
+    };
+    if (showRet || showSc) {
+      const both   = showRet && showSc;
+      const leftW  = both ? contentW / 2 - gap / 2 : contentW;
+      const rightW = both ? contentW / 2 - gap / 2 : contentW;
+      const rightX = both ? marginX + leftW + gap : marginX;
+      const chartsH = 58;
+      // Echten Grafik-Titel aus dem Live-DOM uebernehmen (.perf-card__title neben dem Canvas).
+      const cardTitle = (id, fb) => {
+        const el = ctx.getById(id);
+        const t = el?.closest?.('.perf-card')?.querySelector?.('.perf-card__title')?.textContent?.trim();
+        return t || fb;
+      };
+      doc.setFontSize(10); doc.setTextColor(0);
+      if (showRet) doc.text(cardTitle('perfReturnChart', 'Yield development'), marginX, y);
+      if (showSc)  doc.text(cardTitle('perfYieldScatter', 'Yield contribution'), both ? rightX : marginX, y);
+      y += 3;
+      if (showRet) { const el = ctx.getById('perfReturnChart');  drawImg(el ? canvasToPngData(el) : null, marginX, both ? leftW : contentW, chartsH); }
+      if (showSc)  { const el = ctx.getById('perfYieldScatter'); drawImg(el ? canvasToPngData(el) : null, both ? rightX : marginX, both ? rightW : contentW, chartsH); }
+      y += chartsH + 8;
+    }
+
+    // 3) Beide Listen-Tabellen nebeneinander (Top / Flop).
+    const tblElem = (host) => (host && host.tagName && host.tagName.toLowerCase() === 'table')
+      ? host : host?.querySelector?.('table');
+    const topTbl  = enTableIds.has('perfTopTable')  ? tblElem(ctx.getById('perfTopTable'))  : null;
+    const flopTbl = enTableIds.has('perfFlopTable') ? tblElem(ctx.getById('perfFlopTable')) : null;
+    if (topTbl || flopTbl) {
+      const both   = !!(topTbl && flopTbl);
+      const halfW  = both ? contentW / 2 - gap / 2 : contentW;
+      const rightX = both ? marginX + halfW + gap : marginX;
+      // Kein Umbruch hier: der Reserve-Check oben stellt sicher, dass die Tabellen
+      // auf dieselbe Seite wie die Charts passen.
+      doc.setFontSize(10); doc.setTextColor(0);
+      if (topTbl)  doc.text('Top yield contributors', marginX, y);
+      if (flopTbl) doc.text('Largest yield detractors', both ? rightX : marginX, y);
+      const tblStartY = y + 3;
+      const tblOpts = {
+        theme: 'grid', styles: { fontSize: 8, cellPadding: 2 }, pageBreak: 'avoid',
+        headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
+        alternateRowStyles: { fillColor: [255, 255, 255] },
+      };
+      let y1 = tblStartY, y2 = tblStartY;
+      if (topTbl)  { safeAutoTable(doc, layout, { ...tblOpts, html: topTbl,  startY: tblStartY, tableWidth: both ? halfW : contentW, margin: { left: marginX } });          y1 = doc.lastAutoTable?.finalY || tblStartY; }
+      if (flopTbl) { safeAutoTable(doc, layout, { ...tblOpts, html: flopTbl, startY: tblStartY, tableWidth: both ? halfW : contentW, margin: { left: both ? rightX : marginX } }); y2 = doc.lastAutoTable?.finalY || tblStartY; }
+      y = Math.max(y1, y2) + cfg.blockGap;
+    }
+    return;
+  }
+
   const chartsAll = sec.enabledCharts || [];
   const tablesAll = sec.enabledTables || [];
 
@@ -931,6 +1073,21 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   doc.setTextColor(0);
   doc.text(sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
+
+  // KPI-Baender (data-kpi-band) IMMER oberhalb der Graphen zeichnen (Dashboard-Konvention).
+  // Vorgezogen aus dem Tabellen-Loop; dort werden sie dann uebersprungen.
+  for (const t of tablesAll) {
+    const el = ctx.getById(t.id);
+    if (!el || !el.dataset || !el.dataset.kpiBand) continue;
+    const kpis = kpisFromTableEl(el);
+    if (!kpis.length) continue;
+    ensurePageSpace(32, `${sectionTitle} (cont.)`);
+    doc.setFontSize(10); doc.setTextColor(0);
+    doc.text(String(t.label || 'Key Figures'), marginX, y);
+    y += 6;
+    y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis);
+    y += cfg.blockGap;
+  }
 
   // ── Komponiertes Layout: Charts NEBENEINANDER in einer Zeile (Dashboard-Stil)
   //    fuer Structure + Market-Risk-Seiten; Tabellen laufen danach im Standard-
@@ -964,12 +1121,15 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     }
   }
 
-  const COMPOSED_ROW_KEYS = new Set(['structure', 'market', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios']);
+  const COMPOSED_ROW_KEYS = new Set(['structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities']);
   const composedRow = COMPOSED_ROW_KEYS.has(sec.key) && (sec.enabledCharts || []).length > 0;
   if (composedRow) {
-    const rowCharts = sec.enabledCharts || [];
+    // Credit-Tail-Driver-Charts NICHT in der Nebeneinander-Reihe (sie werden unten je
+    // PD-Ansicht als Chart+Tabelle-Paar gezeichnet).
+    const rowCharts = (sec.enabledCharts || []).filter(ch => !CR_DRIVER_CHART_IDS.has(ch.id));
     // Issuers/Products/Factors: 2 pro Reihe (Balken+Scatter je Metrik untereinander).
-    const perRow = (sec.key === 'mvar-issuers' || sec.key === 'mvar-products' || sec.key === 'mvar') ? 2 : Math.min(rowCharts.length, 3);
+    const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities']);
+    const perRow = FORCE_TWO_PER_ROW.has(sec.key) ? 2 : Math.min(rowCharts.length, 3);
     const cgap = 6;
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
     const cellH = perRow >= 3 ? 70 : 84;
@@ -981,8 +1141,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       if (el) imgData = (el.tagName === 'CANVAS') ? canvasToPngData(el) : await plotlyToPngData(el);
       if (col === 0) { ensurePageSpace(cellH + 16, `${sectionTitle} (cont.)`); rowY = y; }
       const x = marginX + col * (cellW + cgap);
-      doc.setFillColor(245);
-      doc.rect(x, rowY, cellW, cellH + 8, 'F');
+      drawChartCard(doc, x, rowY, cellW, cellH + 8);
       doc.setFontSize(8); doc.setTextColor(90);
       doc.text(ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
       if (imgData?.dataUrl) {
@@ -994,12 +1153,63 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         const h = srcH * scale;
         const ix = x + (cellW - w) / 2;
         const iy = rowY + 7 + (availH - h) / 2;
-        try { doc.addImage(imgData.dataUrl, 'PNG', ix, iy, w, h); } catch (e) { console.warn('[PDF] composed chart failed', ch.id, e); }
+        try { doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', ix, iy, w, h); } catch (e) { console.warn('[PDF] composed chart failed', ch.id, e); }
       }
       col++;
       if (col >= perRow) { col = 0; y = rowY + cellH + 16; }
     }
     if (col > 0) y = rowY + cellH + 16;
+  }
+
+  // ── Credit Top-Tail-Drivers: je PD-Ansicht Chart (links) + Tabelle (rechts) NEBENEINANDER,
+  //    die zwei Ansichten (Historic / Market adjusted) untereinander. Chart traegt seinen
+  //    Titel selbst -> keine zusaetzliche Karten-Beschriftung. Tabellen werden im spaeteren
+  //    Tabellen-Loop uebersprungen (CR_DRIVER_TABLE_IDS). ──
+  if (sec.key === 'credit') {
+    const enC = new Set((sec.enabledCharts || []).map(c => c.id));
+    const enT = new Set((sec.enabledTables || []).map(t => t.id));
+    const gap = 6;
+    for (const v of CR_DRIVER_VIEWS) {
+      const showChart = enC.has(v.chartId);
+      const host = ctx.getById(v.tableId);
+      const tbl = enT.has(v.tableId) && host
+        ? (host.tagName?.toLowerCase() === 'table' ? host : host.querySelector?.('table'))
+        : null;
+      if (!showChart && !tbl) continue;
+
+      const both = showChart && tbl;
+      const chartW = both ? layout.contentWidth * 0.54 - gap / 2 : layout.contentWidth;
+      const tableX = marginX + chartW + gap;
+      const tableW = both ? layout.contentWidth - chartW - gap : layout.contentWidth;
+      const blockH = 60;
+      ensurePageSpace(blockH + 12, `${sectionTitle} (cont.)`);
+      const rowTop = y;
+
+      if (showChart) {
+        const el = ctx.getById(v.chartId);
+        const img = el ? canvasToPngData(el) : null;
+        drawChartCard(doc, marginX, rowTop, chartW, blockH + 8);
+        if (img?.dataUrl) {
+          const srcW = img.width || 900, srcH = img.height || 520;
+          const availH = blockH - 2;
+          const scale = Math.min(chartW / srcW, availH / srcH, 1);
+          const w = srcW * scale, h = srcH * scale;
+          try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', marginX + (chartW - w) / 2, rowTop + 7 + (availH - h) / 2, w, h); }
+          catch (e) { console.warn('[PDF] tail driver chart failed', v.chartId, e); }
+        }
+      }
+
+      let bottom = rowTop + (showChart ? blockH + 8 : 0);
+      if (tbl) {
+        safeAutoTable(doc, layout, {
+          html: tbl, startY: rowTop + 2, theme: 'grid',
+          styles: { fontSize: 7.5, cellPadding: 1.5 },
+          tableWidth: tableW, margin: { left: both ? tableX : marginX }, pageBreak: 'avoid',
+        });
+        bottom = Math.max(bottom, doc.lastAutoTable?.finalY || rowTop);
+      }
+      y = bottom + cfg.blockGap;
+    }
   }
 
   // Graphiken 1-spaltig (~60% Breite links), damit rechts die Notiz danebenpasst
@@ -1044,15 +1254,14 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const imgY = boxY + 11;
     const imgX = marginX + (chartWidth - targetWidth) / 2;
 
-    doc.setFillColor(245);
-    doc.rect(marginX - 2, boxY, chartWidth + 4, blockHeight - 4, 'F');
+    drawChartCard(doc, marginX - 2, boxY, chartWidth + 4, blockHeight - 4);
 
     doc.setFontSize(9);
     doc.setTextColor(0);
     doc.text(ch.label || ch.id, marginX + chartWidth / 2, labelY, { align: 'center' });
 
     try {
-      doc.addImage(imgData.dataUrl, 'PNG', imgX, imgY, targetWidth, targetHeight);
+      doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', imgX, imgY, targetWidth, targetHeight);
     } catch (e) {
       console.warn('[PDF] addImage failed for', ch.id, e);
     }
@@ -1069,21 +1278,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   }
 
   for (const t of tablesAll) {
-    // KPI-Tabellen (data-kpi-band) als formatiertes Kachel-Band rendern statt als
-    // schmucklose Tabelle (wie die Concentration-Seite / PROTOTYPE Page 3).
+    // KPI-Baender (data-kpi-band) sind bereits oberhalb der Graphen gezeichnet -> hier
+    // ueberspringen, damit sie nicht doppelt (und unter den Charts) erscheinen.
     const kpiEl = ctx.getById(t.id);
-    if (kpiEl && kpiEl.dataset && kpiEl.dataset.kpiBand) {
-      const kpis = kpisFromTableEl(kpiEl);
-      if (kpis.length) {
-        ensurePageSpace(32, `${sectionTitle} (cont.)`);
-        doc.setFontSize(10); doc.setTextColor(0);
-        doc.text(String(t.label || 'Key Figures'), marginX, y);
-        y += 6;
-        y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis);
-        y += cfg.blockGap;
-      }
-      continue;
-    }
+    if (kpiEl && kpiEl.dataset && kpiEl.dataset.kpiBand) continue;
+    // Credit Tail-Driver-Tabellen sind bereits neben ihrem Chart gezeichnet -> ueberspringen.
+    if (CR_DRIVER_TABLE_IDS.has(t.id)) continue;
 
     const tbl = extractTableFromContainer(t.id, { maxRows: 500, maxCols: 40, ctx });
     if (!tbl) continue;

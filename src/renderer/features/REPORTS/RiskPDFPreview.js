@@ -18,6 +18,7 @@ import { prepareLiquidityDashboardForReport } from '../ANALYSE_PORTFOLIO/liquidi
 // Credit-Overview-Charts (Loss distribution + Tail zoom) vor der Erfassung rendern,
 // damit sie im Report erscheinen, ohne dass man das Overview-Panel vorher oeffnet.
 import { renderCreditOverviewCharts } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
+import { renderPerformanceDashboard } from '../ANALYSE_PORTFOLIO/performanceDashboard.js';
 
 // Materialisiert ALLE Report-Quellen aus dem Store, ohne dass Tabs/Panels offen
 // sein müssen. Durchgängig: Lazy-Panels (Registry) + RISK-Charts, die nicht an
@@ -1861,6 +1862,7 @@ function renderRiskPreview() {
     // damit Preview/PDF immer die by-category-Ansicht inkl. Cash-Flow-Tabelle zeigen.
     try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPreview] liquidity dashboard prep failed', e); }
     try { renderCreditOverviewCharts(); } catch (e) { console.warn('[RiskPreview] credit overview charts prep failed', e); }
+    try { renderPerformanceDashboard(); } catch (e) { console.warn('[RiskPreview] yield dashboard prep failed', e); }
 
     const chartState = loadChartToggleState?.() || {};
     let sections     = buildPreviewSections(chartState) || [];
@@ -2772,6 +2774,7 @@ export function getActiveRiskSectionsForPdf() {
   // (Chart + Cash-Flow-Pivot) im DOM steht, bevor die Sektionen erfasst werden.
   try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPdf] liquidity dashboard prep failed', e); }
   try { renderCreditOverviewCharts(); } catch (e) { console.warn('[RiskPdf] credit overview charts prep failed', e); }
+  try { renderPerformanceDashboard(); } catch (e) { console.warn('[RiskPdf] yield dashboard prep failed', e); }
   const chartState = loadChartToggleState?.() || {};
   const layout     = computeRiskLayout(chartState) || [];
 

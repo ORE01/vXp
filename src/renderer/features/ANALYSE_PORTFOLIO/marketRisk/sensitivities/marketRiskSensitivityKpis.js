@@ -335,6 +335,29 @@ function clearAndHideSensitivityKpi(valueElementId) {
   setSensitivityKpiVisible(valueElementId, 0);
 }
 
+// Spiegelt die 5 Sensitivities-KPIs in eine versteckte data-kpi-band-Tabelle (#sensKpiTable),
+// damit Preview/PDF sie oberhalb der Charts als KPI-Band zeichnen (KPIs-zuerst-Logik).
+function fillSensReportKpiBand() {
+  const tbl = document.getElementById('sensKpiTable');
+  if (!tbl) return;
+  const esc = (s) => String(s ?? '').replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]));
+  const defs = [
+    ['Total PV01', 'SensTotalPV01'],
+    ['Total CPV01', 'SensTotalCPV01'],
+    ['Top IR Tenor', 'SensTopIRTenor'],
+    ['Top Credit Bucket', 'SensTopCreditBucket'],
+    ['Total Vega', 'SensTotalVega'],
+  ];
+  const rows = defs
+    .map(([label, id]) => [label, (document.getElementById(id)?.textContent || '').trim()])
+    .filter(([, v]) => v && v !== '—' && v !== '-');
+  tbl.innerHTML = rows.length
+    ? `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+        rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')
+      }</tbody></table>`
+    : '';
+}
+
 export function updateMarketRiskSensitivityKpis({
   rows = [],
   portName = null,
@@ -532,4 +555,7 @@ if (hasCPV01Data) {
     //   });
     // }
   }
+
+  // Report-Spiegel: Sensitivities-KPIs als verstecktes data-kpi-band (Preview/PDF).
+  fillSensReportKpiBand();
 }

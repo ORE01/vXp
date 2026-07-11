@@ -93,8 +93,12 @@
 :is(#panel-cvar, #panel-EAD) #LossIssuerChartCombinedTop{
   position:static !important;
   inset:auto !important;
+  display:block;
+  /* Vertikale Balken, alle Quantile in die Kartenbreite (kein Scroll): Canvas fuellt die
+     Karte. height:100% ueberschreibt das globale chart.css height:auto. */
   width:100% !important;
-  height:auto !important;
+  height:100% !important;
+  max-width:100% !important;
 }
 
 /* Combined Losses-Chart steht oben in voller Panel-Breite. Das globale
@@ -104,8 +108,7 @@
 :is(#panel-cvar, #panel-EAD) #LossIssuerChartContainerCombined{
   width:100%;
   max-width:100%;
-  overflow-y:auto;
-  scrollbar-gutter:stable;   /* Scrollbar-Platz reservieren -> Breite bleibt stabil */
+  overflow:hidden;           /* kein Scroll: alle Quantile passen in die Kartenbreite */
 }
 
 /* Sticky HTML-Legende: bleibt beim Scrollen oben rechts sichtbar. Hintergrund deckt

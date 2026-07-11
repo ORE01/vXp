@@ -6,8 +6,9 @@
 // TSI / MSD folgen spaeter.
 
 import { appState } from '../../../renderer.js';
-import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep } from './LossIssuer.js';
+import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep, getRunConfQuantil } from './LossIssuer.js';
 import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
+import { getColorFromPalette } from '../../../utils/colors.js';
 
 // Drill-down fuer den Tail-Zoom-Chart: Klick auf ein Quantil -> Positionen der in diesem
 // Szenario ausfallenden Emittenten (ISSUER_RANK), mit NAV + Loss + Rating. Gleiche Engine
@@ -99,9 +100,44 @@ const _crLinePlugin = {
     (opts.h || []).forEach(o => { const y = chart.scales.y.getPixelForValue(o.at); if (Number.isFinite(y)) stroke(y, false, o); });
   },
 };
+
+// TSI-Band (VaR Historic -> ES Historic, violett) + MSD-Band (ES Historic -> ES Market
+// adjusted, amber), je per chart.$showTSI / chart.$showMSD ein-/ausblendbar. Werte aus
+// chart.$bandVals = { ratingVar, ratingEs, normEs } (in % vom NAV).
+const _crBandsPlugin = {
+  id: 'crBands',
+  afterDatasetsDraw(chart) {
+    const bv = chart.$bandVals;
+    if (!bv || !chart.chartArea || !chart.scales?.y) return;
+    const { ctx, chartArea } = chart;
+    const ySc = chart.scales.y;
+    const drawBand = (v0, v1, fill, textFill, label) => {
+      if (!Number.isFinite(v0) || !Number.isFinite(v1)) return;
+      const y0 = ySc.getPixelForValue(v0), y1 = ySc.getPixelForValue(v1);
+      if (!Number.isFinite(y0) || !Number.isFinite(y1) || Math.abs(y0 - y1) < 1) return;
+      const top = Math.min(y0, y1), h = Math.abs(y0 - y1);
+      ctx.save();
+      ctx.fillStyle = fill;
+      ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, h);
+      ctx.fillStyle = textFill;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, (chartArea.left + chartArea.right) / 2, top + h / 2);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.restore();
+    };
+    if (chart.$showTSI) drawBand(bv.ratingVar, bv.ratingEs, 'rgba(150,110,220,0.20)', 'rgba(180,145,238,0.98)', 'TSI');
+    if (chart.$showMSD) drawBand(bv.ratingEs, bv.normEs, 'rgba(230,170,60,0.20)', 'rgba(240,185,75,0.98)', 'MSD');
+  },
+};
 const LINE_BLUE = 'rgba(43,108,176,0.95)';
 const BAR_BLUE = 'rgba(70,120,180,0.85)';
 const BAR_RED = 'rgba(210,70,70,0.85)';
+// Hellere Varianten fuer die Serie "Market adjusted" (norm) -> optisch von Historic
+// unterscheidbar (analog zu den eigenen Serienfarben in LossIssuerCombinedChart).
+const LINE_BLUE_LIGHT = 'rgba(120,175,225,0.95)';
+const BAR_BLUE_LIGHT = 'rgba(125,180,225,0.85)';
+const BAR_RED_LIGHT = 'rgba(235,150,150,0.85)';
 function _crChartColor() {
   return (getComputedStyle(document.body).getPropertyValue('--text-primary') || '').trim() || '#333';
 }
@@ -185,10 +221,15 @@ function renderCreditLossDist() {
     // Rot ab dem Bin, DURCH DAS die VaR-Linie geht (nearestIdx) und alle rechts davon —
     // so ist die Saeule unter der VaR-Linie garantiert rot (Blau/Rot-Grenze = Linie).
     const varIdx = Number.isFinite(varPct) ? nearestIdx(varPct) : Infinity;
-    const colors = base.map((r, i) => (i >= varIdx ? BAR_RED : BAR_BLUE));
+    // "Market adjusted" (norm) in hellerem Blau/Rot -> von Historic unterscheidbar.
+    const isNorm = f.key === 'norm';
+    const barBlue = isNorm ? BAR_BLUE_LIGHT : BAR_BLUE;
+    const barRed = isNorm ? BAR_RED_LIGHT : BAR_RED;
+    const lineCol = isNorm ? LINE_BLUE_LIGHT : LINE_BLUE;
+    const colors = base.map((r, i) => (i >= varIdx ? barRed : barBlue));
     const lines = [];
-    if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: LINE_BLUE, width: 2 });
-    if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: LINE_BLUE, width: 2, dash: [6, 4] });
+    if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: lineCol, width: 2 });
+    if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: lineCol, width: 2, dash: [6, 4] });
     lineMap.push(lines);
     // Drill-Steps je Bin: das Quantil-Szenario dieser Serie, dessen Loss der Bin-Hoehe
     // am naechsten kommt -> dessen ausfallende Emittenten (ISSUER_RANK).
@@ -280,27 +321,55 @@ function renderCreditTailZoom() {
     const rr = cvarByFlag[f.key] || {};
     const varPct = Math.abs(num(rr.VaR_rel)) * 100;
     const esPct = Math.abs(num(rr.ES_rel)) * 100;
-    const colors = data.map(v => (v != null && v >= varPct ? BAR_RED : BAR_BLUE));
+    // "Market adjusted" (norm) in hellerem Blau/Rot -> von Historic unterscheidbar.
+    const isNorm = f.key === 'norm';
+    const barBlue = isNorm ? BAR_BLUE_LIGHT : BAR_BLUE;
+    const barRed = isNorm ? BAR_RED_LIGHT : BAR_RED;
+    const lineCol = isNorm ? LINE_BLUE_LIGHT : LINE_BLUE;
+    const colors = data.map(v => (v != null && v >= varPct ? barRed : barBlue));
     const lines = [];
-    if (Number.isFinite(varPct)) lines.push({ at: varPct, color: LINE_BLUE, width: 2 });
-    if (Number.isFinite(esPct)) lines.push({ at: esPct, color: LINE_BLUE, width: 2, dash: [6, 4] });
+    if (Number.isFinite(varPct)) lines.push({ at: varPct, color: lineCol, width: 2 });
+    if (Number.isFinite(esPct)) lines.push({ at: esPct, color: lineCol, width: 2, dash: [6, 4] });
     lineMap.push(lines);
     return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 30, hidden: di !== 0 };
   });
+
+  // VaR/ES je Flag (% vom NAV) fuer die TSI/MSD-Baender.
+  const _bandOf = (flag) => { const rr = cvarByFlag[flag] || {}; return { varPct: Math.abs(num(rr.VaR_rel)) * 100, esPct: Math.abs(num(rr.ES_rel)) * 100 }; };
+  const ratingBand = _bandOf('rating');
+  const normBand = _bandOf('norm');
 
   const col = _crChartColor();
   canvas.width = Math.max(320, Math.floor((canvas.parentElement?.clientWidth || 540) - 28)); canvas.height = 300;
   const chart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
-    plugins: [_crLinePlugin],
+    plugins: [_crBandsPlugin, _crLinePlugin],
     data: { labels, datasets },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: col,
       // Drill wird per RECHTSKLICK ausgeloest (_bindCrTailContextDrill), damit Hovern
       // das Menue nicht ungewollt oeffnet.
       plugins: {
-        legend: { display: true, position: 'top', labels: { color: col, boxWidth: 12, font: { size: 11 } }, onClick: _crLegendOnClick('h') },
-        subtitle: { display: true, text: 'Loss > VaR red · VaR (solid) · ES (dashed)', color: col, align: 'start', font: { size: 10 } },
+        legend: {
+          display: true, position: 'top',
+          labels: {
+            color: col, boxWidth: 12, font: { size: 11 },
+            // Zusatz-Eintraege TSI/MSD zum Ein-/Ausschalten der Baender.
+            generateLabels: (ch) => {
+              const items = window.Chart.defaults.plugins.legend.labels.generateLabels(ch);
+              items.push({ text: 'TSI', fillStyle: 'rgba(150,110,220,0.9)', strokeStyle: 'rgba(150,110,220,0.9)', hidden: !ch.$showTSI, datasetIndex: -1, $band: 'tsi' });
+              items.push({ text: 'MSD', fillStyle: 'rgba(230,170,60,0.9)', strokeStyle: 'rgba(230,170,60,0.9)', hidden: !ch.$showMSD, datasetIndex: -1, $band: 'msd' });
+              return items;
+            },
+          },
+          onClick: (e, item, legend) => {
+            const ch = legend.chart;
+            if (item.$band === 'tsi') { ch.$showTSI = !ch.$showTSI; ch.update(); return; }
+            if (item.$band === 'msd') { ch.$showMSD = !ch.$showMSD; ch.update(); return; }
+            _crLegendOnClick('h')(e, item, legend);
+          },
+        },
+        subtitle: { display: true, text: 'Loss > VaR red · VaR (solid) · ES (dashed) · TSI/MSD bands', color: col, align: 'start', font: { size: 10 } },
         crLines: { h: lineMap[0] },
         tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}% of NAV` } },
       },
@@ -312,9 +381,126 @@ function renderCreditTailZoom() {
   });
   chart.$crLineMap = lineMap;
   chart.$crTailSteps = stepsByDs;
+  chart.$bandVals = { ratingVar: ratingBand.varPct, ratingEs: ratingBand.esPct, normEs: normBand.esPct };
+  chart.$showTSI = true;   // Standard: Baender an (per Legende TSI/MSD aus-/einschaltbar)
+  chart.$showMSD = true;
+  try { chart.update(); } catch {}
   window.crTailZoomChart = chart;
   _bindCrTailCanvasLeave(canvas);
   _bindCrTailContextDrill(canvas);
+}
+
+// ── TOP TAIL DRIVERS: Emittenten mit dem groessten Beitrag zum Tail-Verlust ──
+// Zwei GETRENNTE Ansichten untereinander: Historic (pd_flag RATING) und Market adjusted
+// (pd_flag NORM). Metrik "Verlustanteil im Tail": Summe des Emittenten-Verlusts
+// (NOTIONAL x LGD-Rate) ueber die Tail-Szenarien (Quantil >= VaR-Konfidenzquantil) des
+// jeweiligen pd_flags, in denen er ausfaellt; je PD auf 100 % normiert. Nur Top 8.
+const CR_TAIL_VIEWS = [
+  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', title: 'Top tail drivers — Historic', colorIdx: 0 },
+  { flag: 'NORM',   chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm', title: 'Top tail drivers — Market adjusted', colorIdx: 2 },
+];
+
+// Top-8-Emittenten nach Tail-Verlustanteil fuer EIN pd_flag.
+function crTailTopForFlag(flag, issuerLoss, issuerRating, allLoss, confQ) {
+  const rows = allLoss.filter(r => String(r?.pd_flag ?? '').toUpperCase() === flag);
+  let tail = rows.filter(r => Number(r.QUANTIL) >= confQ);
+  if (tail.length < 3) {
+    const sorted = rows.slice().sort((a, b) => Number(b.LOSS) - Number(a.LOSS));
+    tail = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.05)));
+  }
+  const c = new Map();
+  for (const s of tail) {
+    for (const nm of issuersFromRank(s.ISSUER_RANK)) {
+      const key = String(nm).trim().toLowerCase();
+      c.set(key, (c.get(key) || 0) + (issuerLoss.get(key)?.loss || 0));
+    }
+  }
+  const total = [...c.values()].reduce((a, b) => a + b, 0);
+  return [...c.entries()]
+    .map(([k, v]) => ({ name: issuerLoss.get(k)?.name || k, rating: issuerRating.get(k) || '', pct: total > 0 ? v / total * 100 : 0 }))
+    .filter(it => it.pct > 0)
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 8);
+}
+
+export function renderCreditTailContributors() {
+  const present = CR_TAIL_VIEWS.some(v => document.getElementById(v.chartId) || document.getElementById(v.tableId));
+  if (!present) return;
+
+  const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
+
+  // Verlust-bei-Ausfall + Rating je Emittent (PD-unabhaengig: LGD aus EAD).
+  const portRows = (appState.getAllPortfolioData?.() || [])
+    .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port);
+  const issuerLoss = new Map();     // key -> { name, loss }
+  const issuerRating = new Map();   // key -> rating
+  for (const r of buildPositionLoss(portRows, port)) {
+    const name = String(r?.ISSUER ?? '').trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const cur = issuerLoss.get(key) || { name, loss: 0 };
+    cur.loss += Number(r.__LOSS) || 0;
+    issuerLoss.set(key, cur);
+    if (!issuerRating.get(key)) issuerRating.set(key, String(r?.RATINGres ?? r?.RATING ?? '').trim());
+  }
+
+  const confQ = getRunConfQuantil();
+  const allLoss = (appState.getAllLossData?.() || []).filter(r => String(r?.port_name ?? '') === port);
+
+  for (const v of CR_TAIL_VIEWS) {
+    const top = crTailTopForFlag(v.flag, issuerLoss, issuerRating, allLoss, confQ);
+    renderCrTailContribChart(document.getElementById(v.chartId), v.chartId, top, v.title, v.colorIdx);
+    const tblEl = document.getElementById(v.tableId);
+    if (tblEl) {
+      if (!top.length) {
+        tblEl.innerHTML = '<table class="conc-report-table"><tbody><tr><td>No tail data.</td></tr></tbody></table>';
+      } else {
+        tblEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>#</th><th>Issuer</th><th style="text-align:right;">Contribution</th><th>Rating</th></tr></thead><tbody>${
+          top.map((it, i) => `<tr><td>${i + 1}</td><td>${esc(it.name)}</td><td style="text-align:right;">${it.pct.toFixed(1)} %</td><td>${esc(it.rating)}</td></tr>`).join('')
+        }</tbody></table>`;
+      }
+    }
+  }
+}
+
+function renderCrTailContribChart(canvas, winKey, items, title, colorIdx) {
+  if (!canvas || !window.Chart) return;
+  _destroyCrChart(winKey);
+  if (!items || !items.length) return;
+
+  // Feste Bitmap-Groesse -> malt auch bei verstecktem Panel (Report-Erfassung).
+  canvas.width = 560; canvas.height = 260;
+  const bodyCss = getComputedStyle(document.body);
+  const col = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
+  const font = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
+  const c = getColorFromPalette(colorIdx, 0.8);
+  const cb = getColorFromPalette(colorIdx, 0.95);
+
+  window[winKey] = new window.Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
+    data: {
+      labels: items.map(it => it.name),
+      datasets: [{ label: 'Contribution to tail loss (%)', data: items.map(it => +it.pct.toFixed(1)), backgroundColor: c, borderColor: cb, maxBarThickness: 22 }],
+    },
+    options: {
+      responsive: false, maintainAspectRatio: false, indexAxis: 'y', animation: false,
+      layout: { padding: { right: 44 } },
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: title, color: col, font: { family: font, size: 12, weight: 'bold' } },
+        datalabels: window.ChartDataLabels ? {
+          anchor: 'end', align: 'right', clamp: true, color: col, font: { family: font, size: 10 },
+          formatter: (v) => `${Number(v).toFixed(0)}%`,
+        } : undefined,
+        tooltip: { callbacks: { label: (ctx) => `${Number(ctx.parsed.x).toFixed(1)} %` } },
+      },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: 'Contribution to tail loss (%)', color: col, font: { family: font } }, ticks: { color: col, font: { family: font }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { ticks: { color: col, font: { family: font }, autoSkip: false }, grid: { display: false } },
+      },
+    },
+  });
 }
 
 // Headline-CVaR-Zeile: Historic VaR (pd_flag=rating; Fallback erste Zeile).
@@ -518,6 +704,19 @@ export function renderCreditRiskDashboard() {
 export function renderCreditOverviewCharts() {
   try { renderCreditLossDist(); } catch (e) { console.warn('[CreditOverview] loss dist failed', e); }
   try { renderCreditTailZoom(); } catch (e) { console.warn('[CreditOverview] tail zoom failed', e); }
+  try { renderCreditTailContributors(); } catch (e) { console.warn('[CreditOverview] tail contributors failed', e); }
+  // KPI-Band der Loss-Distribution-Seite (Report) aus dem Credit-Dashboard-Modell spiegeln.
+  try {
+    const tblEl = document.getElementById('crLossKpiTable');
+    if (tblEl) {
+      const { cards } = getCreditDashboardModel();
+      const rows = [];
+      (cards || []).forEach((c) => { rows.push([c.label, c.rel]); if (c.abs) rows.push([`${c.label} (abs)`, c.abs]); });
+      tblEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+        rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')
+      }</tbody></table>`;
+    }
+  } catch (e) { console.warn('[CreditOverview] kpi band failed', e); }
 }
 
 function limitBarHtml(m) {

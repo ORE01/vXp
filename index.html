@@ -60,6 +60,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
 
   <link href="./css/ANALYSE_PORTFOLIO/performance.css" rel="stylesheet">
+  <link href="./css/ANALYSE_PORTFOLIO/performanceDashboard.css" rel="stylesheet">
 
   <link href="./css/ANALYSE_PORTFOLIO/inputMarketRisk.css" rel="stylesheet">
 
@@ -331,10 +332,11 @@ Feature:    Wenn es nur in einem Panel gilt
   </button>
 </div>
 
-    <!--   Performance   Trigger (Gruppe mit Sub-Triggern Current/History) -->
-    <div class="risk-acc">
-      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
-        <span class="section-header">Performance</span>
+    <!--   Performance   Trigger (Gruppe: klappt auf UND oeffnet das Performance-Dashboard;
+           Sub-Trigger Current/History wie Market Risk -> Dashboard-Muster) -->
+    <div class="risk-acc view-analyse-only">
+      <button class="section-trigger risk-acc-toggle" type="button" data-panel="panel-performance-dashboard" aria-controls="panel-performance-dashboard" aria-expanded="false">
+        <span class="section-header">Yield</span>
         <span class="chev"></span>
       </button>
       <div class="risk-acc-body">
@@ -439,6 +441,10 @@ Feature:    Wenn es nur in einem Panel gilt
               <span class="section-header">Sensitivities</span>
               <span class="chev"></span>
             </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-scenarios" aria-controls="panel-mvar-scenarios" aria-expanded="false">
+              <span class="section-header">Scenarios</span>
+              <span class="chev"></span>
+            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar" aria-controls="panel-mvar" aria-expanded="false">
               <span class="section-header">Factors</span>
               <span class="chev"></span>
@@ -449,10 +455,6 @@ Feature:    Wenn es nur in einem Panel gilt
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
               <span class="section-header">Products</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-scenarios" aria-controls="panel-mvar-scenarios" aria-expanded="false">
-              <span class="section-header">Scenarios</span>
               <span class="chev"></span>
             </button>
           </div>
@@ -701,6 +703,81 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Panel: Performance Dashboard (Uebersicht; oeffnet ueber den Performance-Trigger) -->
+    <div id="panel-performance-dashboard" class="sub-panel perf-dash" role="dialog" aria-modal="false" aria-labelledby="panel-performance-dashboard-title" hidden>
+      <div class="sub-panel-header">
+        <div id="panel-performance-dashboard-title" class="sub-panel-title">Yield</div>
+        <button class="sub-panel-close" data-close="panel-performance-dashboard" aria-label="close">&times;</button>
+      </div>
+      <div class="sub-panel-body">
+
+        <div class="perf-head">
+          <div>
+            <h1 class="perf-title">Portfolio Yield</h1>
+            <p class="perf-sub">Yield development and key yield drivers</p>
+          </div>
+          <span class="perf-head__tag">MANAGEMENT</span>
+        </div>
+
+        <div class="perf-kpis">
+          <div class="perf-kpi perf-kpi--green">
+            <div class="perf-kpi__label">PORTFOLIO YIELD</div>
+            <div class="perf-kpi__value" id="perfKpiReturn">–</div>
+            <span class="perf-kpi__badge" id="perfKpiBadge" style="display:none;"></span>
+          </div>
+          <div class="perf-kpi perf-kpi--blue">
+            <div class="perf-kpi__label">PREVIOUS PERIOD YIELD</div>
+            <div class="perf-kpi__value" id="perfKpiPrev">–</div>
+          </div>
+          <div class="perf-kpi perf-kpi--blue">
+            <div class="perf-kpi__label">PROFIT / LOSS</div>
+            <div class="perf-kpi__value" id="perfKpiErtrag">–</div>
+          </div>
+        </div>
+
+        <div class="perf-row perf-row--charts">
+          <div class="perf-card">
+            <h2 class="perf-card__title">How is the yield developing?</h2>
+            <div class="perf-chart-holder"><canvas id="perfReturnChart"></canvas></div>
+          </div>
+          <div class="perf-card">
+            <h2 class="perf-card__title">Where does the yield come from?</h2>
+            <p class="perf-card__sub">Weighted yield contribution vs. portfolio share (NAV)</p>
+            <div class="perf-scatter-holder"><canvas id="perfYieldScatter"></canvas></div>
+          </div>
+        </div>
+
+        <div class="perf-row perf-row--lists">
+          <div class="perf-card">
+            <h2 class="perf-card__title">Top yield contributors</h2>
+            <p class="perf-card__sub">Yield contribution to total portfolio yield</p>
+            <ul class="perf-list" id="perfTopList"></ul>
+          </div>
+          <div class="perf-card">
+            <h2 class="perf-card__title">Largest yield detractors</h2>
+            <p class="perf-card__sub">Yield contribution to total portfolio yield</p>
+            <ul class="perf-list" id="perfFlopList"></ul>
+          </div>
+        </div>
+
+        <!-- Standard-Drill (renderConcView): Positionen des per Rechtsklick gewaehlten Contributors. -->
+        <div id="perfDrillDetail" class="conc-detail" style="display:none; margin: 0 4px 12px;">
+          <div class="conc-detail__head">
+            <span id="perfDrillDetailTitle" class="conc-detail__title"></span>
+            <button id="perfDrillDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+          </div>
+          <div id="perfDrillDetailTable" class="conc-detail__table"></div>
+        </div>
+        <div id="perfDrillCardMenu" class="conc-menu" style="display:none;"></div>
+
+        <!-- Report-Spiegel (unsichtbar): KPIs als KPI-Band + Listen als Tabellen fuer Preview/PDF. -->
+        <div class="data-container" id="perfKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+        <div class="data-container" id="perfTopTable" data-label="Top yield contributors" style="display:none;"></div>
+        <div class="data-container" id="perfFlopTable" data-label="Largest yield detractors" style="display:none;"></div>
+
       </div>
     </div>
 
@@ -1166,28 +1243,37 @@ Feature:    Wenn es nur in einem Panel gilt
       <p class="mvar-caption">First-order valuation impact per scenario (sensitivity &times; shift) for the selected Portfolio</p>
     </div>
 
+    <!-- Add scenario (halbe Breite) + Tornado/KPI daneben -->
+    <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch;">
     <!-- Builder: eigene Szenarien anlegen -->
-    <section class="cp-card" style="margin-bottom:14px;">
+    <section class="cp-card" style="flex:1 1 300px; min-width:0; margin:0;">
       <h2 class="small-section-header">Add scenario</h2>
-      <div class="data-wrapper" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <label for="scenarioFactorSelect" class="select-label">Factor</label>
-        <select id="scenarioFactorSelect" class="deals-dropdown" style="min-width:180px;"></select>
-        <label for="scenarioShiftInput" class="select-label">Shift</label>
-        <input type="number" id="scenarioShiftInput" class="input-field" value="100" step="10" style="width:110px;" />
-        <span id="scenarioShiftUnit" style="color:var(--text-muted); font-size:12px;">bp</span>
+      <div class="data-wrapper" style="display:flex; flex-direction:column; align-items:flex-start; gap:10px;">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+          <label for="scenarioFactorSelect" class="select-label">Factor</label>
+          <select id="scenarioFactorSelect" class="deals-dropdown" style="width:260px; min-width:160px; max-width:100%;"></select>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+          <label for="scenarioShiftInput" class="select-label">Shift</label>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="number" id="scenarioShiftInput" class="input-field" value="100" step="10" style="width:110px;" />
+            <span id="scenarioShiftUnit" style="color:var(--text-muted); font-size:12px;">bp</span>
+          </div>
+        </div>
         <button type="button" id="scenarioAddBtn" class="edit-button">Add (± up/down)</button>
       </div>
       <div id="scenarioListContainer" class="data-container" style="margin-top:10px;"></div>
     </section>
 
-    <!-- Tornado + KPI -->
-    <div class="mvar-prod-split" style="margin-top: 14px;">
+    <!-- Tornado + KPI (daneben) -->
+    <div class="mvar-prod-split" style="flex:1.3 1 380px; min-width:0; margin:0;">
       <div class="mvar-prod-chart chart-box">
         <canvas id="scenarioTornadoChart"></canvas>
       </div>
       <div class="mvar-prod-table chart-box">
         <div id="scenarioKpiContainer"></div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -1279,7 +1365,8 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
       </div>
 
-
+      <!-- Report-Spiegel (unsichtbar): Sensitivities-KPIs als KPI-Band fuer Preview/PDF. -->
+      <div class="data-container" id="sensKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
       <!-- Sensitivity Type Tabs -->
       <div class="sens-tabs" role="tablist" aria-label="Sensitivity type">
@@ -1329,7 +1416,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="pv01-chart-container chart-container">
-            <canvas id="PV01Chart"></canvas>
+            <canvas id="PV01Chart" data-label="PV01 by Tenor"></canvas>
           </div>
         </div>
 
@@ -1361,7 +1448,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="cpv01-chart-container chart-container">
-            <canvas id="CPV01Chart"></canvas>
+            <canvas id="CPV01Chart" data-label="CPV01 by Rating Bucket"></canvas>
           </div>
         </div>
 
@@ -1520,15 +1607,18 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
     <!--   ENDE BLOCK 3 -->
 
+    <!-- Report-Spiegel (unsichtbar): Credit-KPIs als KPI-Band fuer Preview/PDF. -->
+    <div class="data-container" id="crLossKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+
     <!--   BLOCK 3.5: Loss distribution (Histogramm + Tail) und Tail-Zoom (Quantile) -->
     <div id="crDashLossCharts" style="display:flex; gap:20px; flex-wrap:wrap; margin-top:20px;">
       <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
         <div class="conc-panel__title">Loss distribution with tail highlight</div>
-        <canvas id="crLossDistChart" width="560" height="300"></canvas>
+        <canvas id="crLossDistChart" width="560" height="300" data-label="Loss distribution with tail highlight"></canvas>
       </div>
       <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
         <div class="conc-panel__title">Tail zoom: quantiles, VaR and ES</div>
-        <canvas id="crTailZoomChart" width="560" height="300"></canvas>
+        <canvas id="crTailZoomChart" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
       </div>
     </div>
     <!-- Drill-down Tail risk: Klick auf ein Quantil -> Positionen der dort ausfallenden Emittenten. -->
@@ -1541,6 +1631,26 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
     <div id="crTailCardMenu" class="conc-menu" style="display:none;"></div>
     <!--   ENDE BLOCK 3.5 -->
+
+    <!--   BLOCK 3.6: Top Tail Drivers (Emittenten mit groesstem Beitrag zum Tail-Verlust) -->
+    <div class="conc-panel" style="margin-top:20px;">
+      <div class="conc-panel__title">Top tail drivers &mdash; issuers contributing most to tail loss</div>
+      <!-- Historic (pd_flag RATING) -->
+      <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
+        <div style="flex:1 1 420px; min-width:340px;">
+          <canvas id="crTailContribChartHist" width="560" height="260" data-label="Top tail drivers &mdash; Historic"></canvas>
+        </div>
+        <div class="data-container" id="crTailContribTableHist" data-label="Top tail drivers &mdash; Historic" style="flex:1 1 320px; min-width:300px;"></div>
+      </div>
+      <!-- Market adjusted (pd_flag NORM) -->
+      <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; margin-top:18px;">
+        <div style="flex:1 1 420px; min-width:340px;">
+          <canvas id="crTailContribChartNorm" width="560" height="260" data-label="Top tail drivers &mdash; Market adjusted"></canvas>
+        </div>
+        <div class="data-container" id="crTailContribTableNorm" data-label="Top tail drivers &mdash; Market adjusted" style="flex:1 1 320px; min-width:300px;"></div>
+      </div>
+    </div>
+    <!--   ENDE BLOCK 3.6 -->
     <!-- BLOCK 4/5 entfernt: Total/Tail Loss Distribution + Loss Frequency Histogram
          waren redundant zu den oberen Charts (Loss Distribution + Tail Zoom). -->
   </div>

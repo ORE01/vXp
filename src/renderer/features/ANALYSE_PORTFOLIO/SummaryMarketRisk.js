@@ -71,6 +71,7 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
 
   const chosenAsof = asof_date || chosenAgg?.asof_date || null;
   const varTRel = Number(chosenAgg?.VaR_T_rel) || 0;
+  const esTRel = Number(chosenAgg?.ES_T_rel ?? chosenAgg?.ES_rel ?? chosenAgg?.es_t_rel) || 0;
 
   // --- Distribution data: try exact (port, scenario, asof) first ---
 let mvarDistData = appState.getMvarDistData({
@@ -140,14 +141,45 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
   const ctx = canvas.getContext('2d');
   if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
 
-  const { data, options } = drawMvarHistogram(plValues, portValueRel, varTRel);
-  window.plMvarDistChartInstance = new Chart(ctx, { type: 'bar', data, options });
+  const { data, options, veLines } = drawMvarHistogram(plValues, portValueRel, varTRel, esTRel);
+  const chart = new Chart(ctx, { type: 'bar', data, options, plugins: [_mvarVELinePlugin] });
+  chart.$veLines = veLines;
+  try { chart.update(); } catch {}
+  window.plMvarDistChartInstance = chart;
 
   // NOTE: the synthetic line chart (tsEU1YChart) is now drawn earlier in this function
   // (before the distribution-data early-returns), so it is not redrawn here.
 }
 
 // HISTOGRAMM:
+
+// Vertikale VaR/ES-Linien am jeweiligen P/L-Bin (chart.$veLines = [{at,label,color,dash}]).
+const _mvarVELinePlugin = {
+  id: 'mvarVELines',
+  afterDatasetsDraw(chart) {
+    const lines = chart.$veLines;
+    if (!Array.isArray(lines) || !chart.chartArea || !chart.scales?.x) return;
+    const { ctx, chartArea } = chart;
+    lines.forEach((ln) => {
+      if (!Number.isFinite(ln.at)) return;
+      const x = chart.scales.x.getPixelForValue(ln.at);
+      if (!Number.isFinite(x)) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash(ln.dash || []);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = ln.color || 'rgba(255,0,0,0.95)';
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = ln.color || 'rgba(255,0,0,0.95)';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText(ln.label || '', x + 3, chartArea.top + 11);
+      ctx.restore();
+    });
+  },
+};
 
 function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   // 1. In absolute Performance umrechnen
@@ -178,10 +210,16 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
     return `${start}% - ${end}%`;
   });
 
-  return { labels, bins };
+  // 6. Normalverteilungs-Parameter (in adjusted-Einheiten) + Bin-Zentren fuer die Kurve.
+  const mu = avg;
+  const variance = adjusted.reduce((s, v) => s + (v - avg) * (v - avg), 0) / Math.max(1, adjusted.length);
+  const sigma = Math.sqrt(variance);
+  const centers = bins.map((_, i) => min + (i + 0.5) * binWidth);
+
+  return { labels, bins, min, binWidth, mu, sigma, centers, total: adjusted.length };
 }
 
-function drawMvarHistogram(plValues, portValueRel, varTRel) {
+function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
 
   const toPercent = v => v * 100;
@@ -220,21 +258,40 @@ function drawMvarHistogram(plValues, portValueRel, varTRel) {
   const portBinIndex = findBinIndexForValue(portPercent, histogram.labels);
   const thresholdBinIndex = findBinIndexForValue(thresholdPercent, histogram.labels);
 
+  // ES-Schwelle (analog VaR) -> Bin-Index.
+  const esPercent = toPercent(esTRel) / 100;
+  const esBinIndex = findBinIndexForValue(portPercent + esPercent, histogram.labels);
+
+  // Normalverteilung ueber das Histogramm (gleiche Frequenz-Skala): total * binWidth * pdf.
+  const { mu, sigma, binWidth, centers, total } = histogram;
+  const normal = (sigma > 0)
+    ? centers.map(c => total * binWidth * (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-((c - mu) ** 2) / (2 * sigma * sigma)))
+    : centers.map(() => 0);
+
+  // VaR/ES-Linien (vertikal am jeweiligen P/L-Bin).
+  const veLines = [];
+  if (thresholdBinIndex !== -1 && Number.isFinite(varTRel) && varTRel !== 0) veLines.push({ at: thresholdBinIndex, label: 'VaR', color: 'rgba(255,0,0,0.95)', dash: [] });
+  if (esBinIndex !== -1 && Number.isFinite(esTRel) && esTRel !== 0) veLines.push({ at: esBinIndex, label: 'ES', color: 'rgba(255,150,0,0.98)', dash: [6, 4] });
+
   const pCol = getPortfolioColor(1); // Garmin-Pink fÃ¼r Portfolio-Bin
 
+  // Tail rot: ALLE Bins ab dem VaR-Bin abwaerts (schlechteres P/L = kleinerer Index),
+  // inklusive VaR-Bin. Rest blau (Portfolio-Bin bleibt pink). Nur bei echtem VaR-Wert.
+  const varRedUpTo = (Number.isFinite(varTRel) && varTRel !== 0 && thresholdBinIndex !== -1) ? thresholdBinIndex : -1;
+
   const backgroundColor = histogram.bins.map((_, i) => {
-    if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
-      return 'rgba(255, 0, 0, 1)'; // Threshold-Bin: True Red
+    if (varRedUpTo !== -1 && i <= varRedUpTo) {
+      return 'rgba(255, 0, 0, 0.55)'; // Tail (<= VaR): rot
     }
     if (portBinIndex !== -1 && i === portBinIndex) {
       return pCol.backgroundColor;  // Portfolio-Bin: Garmin-Pink
     }
-    return 'rgba(54, 162, 235, 0.5)'; // Standard
+    return 'rgba(54, 162, 235, 0.5)'; // Standard blau
   });
 
   const borderColor = histogram.bins.map((_, i) => {
-    if (thresholdBinIndex !== -1 && i === thresholdBinIndex) {
-      return 'rgba(255, 0, 0, 1)';
+    if (varRedUpTo !== -1 && i <= varRedUpTo) {
+      return 'rgba(255, 0, 0, 0.9)';
     }
     if (portBinIndex !== -1 && i === portBinIndex) {
       return pCol.borderColor; // Portfolio-Bin Rand: Garmin-Pink
@@ -251,37 +308,46 @@ function drawMvarHistogram(plValues, portValueRel, varTRel) {
           data: histogram.bins,
           backgroundColor,
           borderColor,
-          borderWidth: 1
-        }
+          borderWidth: 1,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Normal',
+          data: normal,
+          borderColor: 'rgba(255,255,255,0.9)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.35,
+          order: 1,
+        },
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: 'y', // horizontaler Chart
+      indexAxis: 'x', // um 90 Grad gedreht -> vertikale Balken (P/L auf x, Frequency auf y)
       scales: {
         x: {
-          title: { display: true, text: 'Frequency' },
-          ticks: { beginAtZero: true }
+          title: { display: true, text: 'P/L as % of NAV' },
+          ticks: { maxRotation: 90, minRotation: 90, autoSkip: true, maxTicksLimit: 16 }
         },
         y: {
-          title: { display: true, text: 'P/L as % of NAV' },
-          reverse: true
+          beginAtZero: true,
+          title: { display: true, text: 'Frequency' }
         }
       },
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: context => {
-              const freq = context.raw;
-              const label = context.label;
-              return `${label}: ${freq}`;
-            }
+            label: context => `${context.label}: ${context.raw}`
           }
         }
       }
-    }
+    },
+    veLines,
   };
 }
 
