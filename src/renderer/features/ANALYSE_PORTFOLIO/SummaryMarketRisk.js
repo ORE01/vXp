@@ -183,7 +183,7 @@ const _mvarVELinePlugin = {
 
 function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   // 1. In absolute Performance umrechnen
-  const adjusted = values.map(v => portValueRel * (1 + v / 100)); // z. B. -2% â†’ 0.97
+  const adjusted = values;   // P/L% direkt (KEIN Bond-Preis) -> P&L-konforme x-Achse // z. B. -2% â†’ 0.97
 
   // 2. Basiswerte
   const avg = adjusted.reduce((sum, v) => sum + v, 0) / adjusted.length;
@@ -205,8 +205,8 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
 
   // 5. Labels generieren als Prozent (% vom NAV)
   const labels = bins.map((_, i) => {
-    const start = ((min + i * binWidth) * 100).toFixed(2);
-    const end = ((min + (i + 1) * binWidth) * 100).toFixed(2);
+    const start = (min + i * binWidth).toFixed(2);
+    const end = (min + (i + 1) * binWidth).toFixed(2);
     return `${start}% - ${end}%`;
   });
 
@@ -222,12 +222,13 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
 function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
   const histogram = createHistogramDataAdjusted(plValues, portValueRel);
 
-  const toPercent = v => v * 100;
-
-  const portPercent = toPercent(portValueRel);
-  const varPercent = toPercent(varTRel) / 100;
-
-  const thresholdPercent = portPercent + varPercent;
+  // VaR/ES sind bereits in % (P/L vom NAV), gleiche Einheit wie die Balken -> Bin-Index
+  // direkt ueber die Bin-Kanten (robust auch bei negativen Werten).
+  const binIndexOf = (value) => {
+    if (!Number.isFinite(value) || !(histogram.binWidth > 0)) return -1;
+    const idx = Math.floor((value - histogram.min) / histogram.binWidth);
+    return (idx >= 0 && idx < histogram.bins.length) ? idx : -1;
+  };
 
   // âœ… Robust: entfernt ALLE Prozentzeichen, normalisiert Dash-Varianten, parst sauber
   const findBinIndexForValue = (value, labels) =>
@@ -255,12 +256,8 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
       return value >= lo && value <= hi;
     });
 
-  const portBinIndex = findBinIndexForValue(portPercent, histogram.labels);
-  const thresholdBinIndex = findBinIndexForValue(thresholdPercent, histogram.labels);
-
-  // ES-Schwelle (analog VaR) -> Bin-Index.
-  const esPercent = toPercent(esTRel) / 100;
-  const esBinIndex = findBinIndexForValue(portPercent + esPercent, histogram.labels);
+  const thresholdBinIndex = binIndexOf(varTRel);
+  const esBinIndex = binIndexOf(esTRel);
 
   // Normalverteilung ueber das Histogramm (gleiche Frequenz-Skala): total * binWidth * pdf.
   const { mu, sigma, binWidth, centers, total } = histogram;
@@ -279,25 +276,14 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
   // inklusive VaR-Bin. Rest blau (Portfolio-Bin bleibt pink). Nur bei echtem VaR-Wert.
   const varRedUpTo = (Number.isFinite(varTRel) && varTRel !== 0 && thresholdBinIndex !== -1) ? thresholdBinIndex : -1;
 
-  const backgroundColor = histogram.bins.map((_, i) => {
-    if (varRedUpTo !== -1 && i <= varRedUpTo) {
-      return 'rgba(255, 0, 0, 0.55)'; // Tail (<= VaR): rot
-    }
-    if (portBinIndex !== -1 && i === portBinIndex) {
-      return pCol.backgroundColor;  // Portfolio-Bin: Garmin-Pink
-    }
-    return 'rgba(54, 162, 235, 0.5)'; // Standard blau
-  });
+  // Kein Pink-/Portfolio-Bin mehr (das war der Durchschnitt). Tail ab VaR rot, Rest blau.
+  const backgroundColor = histogram.bins.map((_, i) =>
+    (varRedUpTo !== -1 && i <= varRedUpTo) ? 'rgba(255, 0, 0, 0.55)' : 'rgba(54, 162, 235, 0.5)'
+  );
 
-  const borderColor = histogram.bins.map((_, i) => {
-    if (varRedUpTo !== -1 && i <= varRedUpTo) {
-      return 'rgba(255, 0, 0, 0.9)';
-    }
-    if (portBinIndex !== -1 && i === portBinIndex) {
-      return pCol.borderColor; // Portfolio-Bin Rand: Garmin-Pink
-    }
-    return 'rgba(54, 162, 235, 1)';
-  });
+  const borderColor = histogram.bins.map((_, i) =>
+    (varRedUpTo !== -1 && i <= varRedUpTo) ? 'rgba(255, 0, 0, 0.9)' : 'rgba(54, 162, 235, 1)'
+  );
 
   return {
     data: {

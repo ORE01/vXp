@@ -66,9 +66,19 @@ function getFilesBaseDir() {
   let baseDir;
 
   if (env === 'thomasdev') {
-    // Maschinenunabhaengig von process.resourcesPath ableiten (frueher: process.cwd()/files;
-    // DB/Excel lagen aber unter resources/app.asar.unpacked/files -> jetzt konsistent + portabel).
-    baseDir = path.join(process.resourcesPath, 'app.asar.unpacked', 'files');
+    // Maschinenunabhaengig: ERSTEN existierenden Kandidaten waehlen. Gepacktes Build ->
+    // resources/app.asar.unpacked/files; Dev/Start (electron .) -> cwd/files bzw. relativ zum
+    // Source. (Frueher hart auf resources/app.asar.unpacked/files -> im Dev nicht vorhanden,
+    // DB nicht gefunden -> Main-Init brach ab -> IPC-Handler fehlten.)
+    const candidates = [
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'files'),
+      path.join(process.cwd(), 'files'),
+      path.join(__dirname, '..', '..', 'files'),
+    ];
+    const existsSafe = (p) => { try { return !!p && fs.existsSync(p); } catch { return false; } };
+    baseDir = candidates.find(p => existsSafe(path.join(p, 'UNI.db')))
+           || candidates.find(existsSafe)
+           || candidates[0];
   } else if (packaged) {
     baseDir = path.join(process.resourcesPath, 'files');
   } else {
