@@ -43,6 +43,50 @@ module.exports = function registerCrudHandlers({
   const _bulkEnd = typeof bulkUpdateEnd === 'function' ? bulkUpdateEnd : () => {};
 
   // ------------------------------------------------------------
+  // Issuer -> IssuerRankRating Bridge
+  // ------------------------------------------------------------
+  // Issuer-Rang-Spalten == IssuerRankRating.RANK (1:1 Namensgleichheit).
+  const ISSUER_RANK_COLUMNS = [
+    'senior_secured', 'senior_preferred', 'senior_unsecured',
+    'senior_subordinated', 'junior_subordinated',
+  ];
+
+  // Bridge: Rating-Edit in der Issuers-Ansicht (Tabelle Issuer) in die vom
+  // Rechenkern gelesene Tabelle IssuerRankRating spiegeln. Die Engine
+  // (FairValue/products/enrich/issuer.py) liest das Rating je (TICKER, RANK)
+  // NUR aus IssuerRankRating; Issuer.RATING wird dort nicht als Rating
+  // verwendet. Ohne Spiegelung greift eine Rating-Aenderung nicht in die
+  // CS-Sensitivitaeten.
+  async function syncIssuerRatingToRankRating(uniqueIdentifier, newData = {}) {
+    if (typeof dbApi.runSQL !== 'function') return;
+    if (!uniqueIdentifier || uniqueIdentifier.column !== 'TICKER') return;
+    const ticker = String(uniqueIdentifier.value || '').trim().toUpperCase();
+    if (!ticker) return;
+
+    // (RANK -> Rating): blankes RATING -> Default-Rang 'senior_unsecured';
+    // explizite Rang-Spalten gewinnen.
+    const upserts = new Map();
+    if (Object.prototype.hasOwnProperty.call(newData, 'RATING')) {
+      upserts.set('senior_unsecured', newData.RATING);
+    }
+    for (const col of ISSUER_RANK_COLUMNS) {
+      if (Object.prototype.hasOwnProperty.call(newData, col)) upserts.set(col, newData[col]);
+    }
+    if (upserts.size === 0) return;
+
+    for (const [rank, ratingRaw] of upserts) {
+      const rating = (ratingRaw == null) ? null : String(ratingRaw).trim();
+      await dbApi.runSQL(
+        `INSERT INTO IssuerRankRating (TICKER, RANK, RATING, SOURCE, updated_at)
+           VALUES (?, ?, ?, 'issuer_panel', CURRENT_TIMESTAMP)
+         ON CONFLICT(TICKER, RANK) DO UPDATE SET
+           RATING = excluded.RATING, SOURCE = 'issuer_panel', updated_at = CURRENT_TIMESTAMP`,
+        [ticker, rank, rating]
+      );
+    }
+  }
+
+  // ------------------------------------------------------------
   // Refresh rules
   // ------------------------------------------------------------
   const REFRESH_DEPENDENCIES = {
@@ -221,6 +265,14 @@ module.exports = function registerCrudHandlers({
         }
 
         try {
+          if (String(cleanTableName) === 'Issuer') {
+            try {
+              await syncIssuerRatingToRankRating(uniqueIdentifier, newData);
+            } catch (e) {
+              console.warn('[crud.handlers] Issuer->IssuerRankRating sync failed:', e?.message || e);
+            }
+          }
+
           const refreshList = computeRefreshList(cleanTableName, newData);
 
           await refreshWithOptionalLock(refreshList);

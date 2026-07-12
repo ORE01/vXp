@@ -401,7 +401,8 @@ const CR_TAIL_VIEWS = [
 ];
 
 // Top-8-Emittenten nach Tail-Verlustanteil fuer EIN pd_flag.
-function crTailTopForFlag(flag, issuerLoss, issuerRating, allLoss, confQ) {
+// Exportiert: auch die HOME-Overview-Kachel nutzt diese Logik (Top tail drivers).
+export function crTailTopForFlag(flag, issuerLoss, issuerRating, allLoss, confQ) {
   const rows = allLoss.filter(r => String(r?.pd_flag ?? '').toUpperCase() === flag);
   let tail = rows.filter(r => Number(r.QUANTIL) >= confQ);
   if (tail.length < 3) {
@@ -511,36 +512,39 @@ function currentCvarRow() {
 }
 
 // Credit-Warn-/Limit-Schwellen je Metrik (Fraktion); Fallback = App-Defaults.
-// dir: 'neg' -> kleiner = schlechter (CVAR); 'pos' -> groesser = schlechter (TSI/MSD).
 const CR_DEFAULTS = {
-  CVAR: { yellow: -0.050, red: -0.052, dir: 'neg' },
-  TSI:  { yellow: 0.010, red: 0.014, dir: 'pos' },
-  MSD:  { yellow: 0.010, red: 0.030, dir: 'pos' },
+  CVAR: { yellow: -0.050, red: -0.052 },
+  TSI:  { yellow: 0.010, red: 0.014 },
+  MSD:  { yellow: 0.010, red: 0.030 },
 };
+// Schwellen wie die CVaR-Ampeln (CVaR.js) lesen: DB-Felder heissen
+// yellow_threshold/red_threshold (CustomerCreditRiskThresholdSetting);
+// alte Prozentwerte (>1) auf Brueche normalisieren, Ergebnis als BETRAG.
 function crThreshold(code) {
   const r = appState.getCustomerCreditRiskThreshold?.(code);
   const d = CR_DEFAULTS[code] || CR_DEFAULTS.CVAR;
-  const y = r ? Number(r.yellow_loss_limit) : NaN;
-  const rd = r ? Number(r.red_loss_limit) : NaN;
-  return { yellow: Number.isFinite(y) ? y : d.yellow, red: Number.isFinite(rd) ? rd : d.red, dir: d.dir };
+  let y = Number(r?.yellow_threshold ?? r?.yellow_loss_limit);
+  let rd = Number(r?.red_threshold ?? r?.red_loss_limit);
+  if (!Number.isFinite(y)) y = d.yellow;
+  if (!Number.isFinite(rd)) rd = d.red;
+  if (Math.abs(y) > 1 || Math.abs(rd) > 1) { y /= 100; rd /= 100; }
+  return { yellow: Math.abs(y), red: Math.abs(rd) };
 }
-// Ampel: Wert (Fraktion) vs. Schwellen (Fraktion), Richtung aus der Schwelle.
+// Ampel exakt wie CVaR.js (trafficLightStateForCvar/-Tsi/-Msd): Betrag des
+// Werts vs. Betrag der Schwellen — die Verlustseite ist negativ, das
+// Vorzeichen traegt keine Information.
 function trafficState(valFraction, th) {
-  const v = Number(valFraction);
+  const v = Math.abs(Number(valFraction));
   if (!Number.isFinite(v)) return null;
-  if (th.dir === 'pos') {
-    if (v > th.red) return 'red';
-    if (v > th.yellow) return 'yellow';
-    return 'green';
-  }
-  if (v < th.red) return 'red';
-  if (v < th.yellow) return 'yellow';
+  if (v >= th.red) return 'red';
+  if (v >= th.yellow) return 'yellow';
   return 'green';
 }
 
-// pd_flag -> erste Zeile (rating / market / norm).
-function creditRowsByFlag() {
-  const rows = appState.getCvarData?.() || [];
+// pd_flag -> erste Zeile (rating / market / norm). rowsIn: optionale CVaR-Zeilen
+// (z.B. von der HOME-Overview), sonst die des gewaehlten Portfolios.
+function creditRowsByFlag(rowsIn = null) {
+  const rows = rowsIn || appState.getCvarData?.() || [];
   const byFlag = {};
   for (const r of rows) { const f = String(r?.pd_flag ?? '').toLowerCase(); if (f && !byFlag[f]) byFlag[f] = r; }
   return byFlag;
@@ -597,8 +601,10 @@ function lastHistoryRow() {
 }
 
 // Datenmodell (Karten + Limit) — Basis fuer HTML-Render und PDF-Composed-Renderer.
-export function getCreditDashboardModel() {
-  const byFlag = creditRowsByFlag();
+// rowsOverride: die HOME-Overview uebergibt ihre eigenen CVaR-Zeilen, damit ihre
+// Kennzahlen garantiert zum Overview-Portfolio gehoeren.
+export function getCreditDashboardModel(rowsOverride = null) {
+  const byFlag = creditRowsByFlag(rowsOverride);
   const row = byFlag.rating || byFlag[Object.keys(byFlag)[0]] || null;   // Historic VaR
   const normRow = byFlag.norm || null;
 

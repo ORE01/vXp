@@ -104,8 +104,10 @@ function lastHistoryRow() {
 // Datenmodell des Dashboards (Karten + Limit) aus dem Store — inkl. fertiger
 // Anzeige-Strings. Basis fuer den HTML-Render (Screen) UND den nativen PDF-Composed-
 // Renderer in RiskPDF (Vektor-Text/Rechtecke, KEIN Bild).
-export function getMarketDashboardModel() {
-  const row = currentMvarRow();
+// rowOverride: die HOME-Overview uebergibt ihre eigene Zeilenauswahl, damit ihre
+// KPI-Kaestchen und ihr Chart garantiert dieselbe MVaR-Zeile zeigen.
+export function getMarketDashboardModel(rowOverride = null) {
+  const row = rowOverride || currentMvarRow();
   const interval = String(appState.selectedMvarInterval ?? '').trim();
 
   const th = (() => { try { return getMVaRThresholdsFromInputUsingState(); } catch { return null; } })();

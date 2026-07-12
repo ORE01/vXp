@@ -62,9 +62,12 @@ const BREAKDOWN_CONFIG = [
   {
     key: 'Product',
     title: 'Product',
-    overview: 'Product Rating, Category, Coupon Type',
+    overview: 'Product Rating, Rating Resolved, Category, Coupon Type',
     columns: [
-      { key: 'RATINGres',  label: 'Product Ratings' },
+      // RATING_PROD = eigenes Produkt-Rating; RATINGres = aufgeloestes Rating
+      // (Produkt-Rating, sonst Issuer/Rank) — beides eigene Dimensionen.
+      { key: 'RATING_PROD', label: 'Product Ratings' },
+      { key: 'RATINGres',  label: 'Rating Resolved' },
       { key: 'CATEGORY',   label: 'Product Categories' },
       { key: 'CouponType', label: 'Product Coupon Type' },
     ],
@@ -300,12 +303,12 @@ container.appendChild(row);
 
 
 // Datenfeld pro Breakdown-Spalte (entkoppelt von Canvas-ID/Label).
-// "Product Ratings" soll das EIGENE Produkt-Rating (RATING_PROD) zeigen, NICHT
-// das aufgelöste RATINGres (das bei fehlendem Produkt-Rating aufs Issuer-Rating
-// zurückfällt → sonst tauchen alle Produkte auf).
-const COLUMN_DATA_FIELD = { RATINGres: 'RATING_PROD' };
-// Spalten, bei denen Zeilen OHNE Wert ausgeschlossen werden (statt "Unknown").
-const COLUMN_EXCLUDE_EMPTY = new Set(['RATINGres']); // nur Produkte mit eigenem Rating
+// Seit "Product Ratings" (RATING_PROD) und "Rating Resolved" (RATINGres) eigene
+// Dimensionen sind, liest jede Dimension direkt ihre eigene Spalte.
+const COLUMN_DATA_FIELD = {};
+// Spalten, bei denen Zeilen OHNE Wert ausgeschlossen werden (statt "None").
+// Produkte ohne eigenes Rating werden bewusst als "None" GEZEIGT.
+const COLUMN_EXCLUDE_EMPTY = new Set([]);
 
 // Value-Basis (NAV/Notional) für das Breakdown-Panel (#concValueSelector).
 // Fallback auf den alten globalen #valueSelector, dann NAV.
@@ -467,8 +470,8 @@ function getValuesByColumn(data, columnName, valueType = 'NAV', excludeEmpty = f
 
     if (excludeEmpty && isEmpty) return; // z. B. Produkte ohne eigenes Rating ausblenden
 
-    // Normalize "empty" values to Unknown (ONLY for real categorical columns)
-    const key = isEmpty ? 'Unknown' : String(raw).trim();
+    // Leere Werte als "None" ausweisen (es gibt schlicht keinen Wert).
+    const key = isEmpty ? 'None' : String(raw).trim();
 
     const value = Number(entry[valueType]) || 0;
     map[key] = (map[key] || 0) + value;
@@ -1153,7 +1156,8 @@ function __concNotional(r) {
 }
 function __concNorm(raw) {
   const isEmpty = raw === undefined || raw === null || String(raw).trim() === '';
-  return isEmpty ? 'Unknown' : String(raw).trim();
+  // Leere Werte als "None" ausweisen (es gibt schlicht keinen Wert).
+  return isEmpty ? 'None' : String(raw).trim();
 }
 
 function __concMenuHide() {

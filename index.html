@@ -96,6 +96,7 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/UPDATES/historicDataImport.css" rel="stylesheet">
   <link href="./css/UPDATES/vxpImports.css" rel="stylesheet">
   
+  <link href="./css/HOME/overview.css" rel="stylesheet">
   <link href="./css/REPORTS/riskReportsModal.css" rel="stylesheet">
   <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
   <link href="./css/REPORTS/offersPreview.css" rel="stylesheet">
@@ -248,6 +249,7 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
     <div class="tab">
+      <button class="tablinks" id="HOME_Tab">OVERVIEW</button>
       <button class="tablinks" id="ANALYSE_Tab">PORTFOLIO</button>
       <button class="tablinks" id="RISK_Tab">RISK</button>
       <!-- COMPARE PORTFOLIOS → verschoben nach RISK ▸ "Risk Comparison" -->
@@ -259,6 +261,154 @@ Feature:    Wenn es nur in einem Panel gilt
       <button class="tablinks" id="DATA_Tab">UPDATES</button>
       <button class="tablinks" id="CUSTOMER_SETUP_Tab">CUSTOMER SETUP</button>
     </div>
+
+
+<!-- ============================================================
+     HAFTUNGSAUSSCHLUSS-GATE (Boot)
+     Liegt beim Start ueber der App. OK wird erst freigegeben, wenn
+     die Portfolio-Daten geladen sind (initHomeDisclaimer in
+     features/HOME/homeOverview.js). Styles: css/HOME/overview.css.
+     ============================================================ -->
+<div id="disclaimerGate" class="disclaimer-gate">
+  <div class="disclaimer-box" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
+    <h2 id="disclaimerTitle">Haftungsausschluß</h2>
+    <div class="disclaimer-text">
+      <p>Bitte beachten Sie, dass die folgenden Ausführungen einen wesentlichen Bestandteil der vorliegenden Informationen darstellen.</p>
+      <p>Diese Unterlage wurde nur zu Informationszwecken erstellt und stellt keine Anlageberatung oder Anlageempfehlung dar. Die vorliegenden Informationen sind insbesonders kein Angebot und keine Aufforderung zum Kauf oder Verkauf von Wertpapieren. Sie dienen nur der Erstinformation und können eine auf die individuellen Verhältnisse und Kenntnisse des Anlegers bezogene Beratung nicht ersetzen.</p>
+      <p>Jede Kapitalveranlagung ist mit einem Risiko verbunden. Wert und Rendite einer Anlage können plötzlich und in erheblichem Umfang steigen oder fallen und können nicht garantiert werden. Auch Währungsschwankungen können die Entwicklung des Investments beeinflussen. Es besteht die Möglichkeit, dass der Anleger nicht die gesamte investierte Summe zurück erhält, insbesonders dann, wenn die Kapitalanlage nur für kurze Zeit besteht. Ich weise darauf hin, dass sich die Zahlenangaben auf die Vergangenheit beziehen und dass die frühere Wertentwicklung kein verlässlicher Indikator für künftige Ergebnisse ist.</p>
+      <p>Die vorliegenden Informationen wurden auf der Grundlage von öffentlich zugänglichen Informationen sowie von intern erstellten Daten erarbeitet. Diese Quellen werden von mir als verlässlich eingeschätzt; ich übernehme für die Vollständigkeit und inhaltliche Richtigkeit dieser Quellen aber keine Haftung. Ich, Ronald Schaufler, übernehme weder ausdrücklich noch stillschweigend die Haftung für Schäden, die im Zusammenhang mit der Verwendung der vorliegenden Informationen entstehen.</p>
+      <p>Sämtliche in der vorliegenden Information enthaltenen Schätzungen oder Werturteile sind das Resultat einer unabhängigen Einschätzung. Sie geben meine Überzeugung zum Zeitpunkt des Redaktionsschlusses wieder und können ohne vorherige Ankündigung geändert werden. Die Entlohnung hängt weder in der Vergangenheit, der Gegenwart noch in der Zukunft direkt oder indirekt mit den Einschätzungen oder Sichtweisen, die in den vorliegenden Informationen geäußert werden, zusammen.</p>
+    </div>
+    <div class="disclaimer-foot">
+      <span class="disclaimer-status" id="disclaimerStatus">Portfolio wird geladen…</span>
+      <button id="disclaimerOkBtn" class="disclaimer-ok" disabled>OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     HOME / OVERVIEW  (Landing nach Login)
+     Fuellung: features/HOME/homeOverview.js (liest die beim Boot
+     gefuellten Stores; kein Rechnen). Default-Show via tabs.js.
+     ============================================================ -->
+<div id="HOME_Modal" class="table">
+  <div class="home-overview">
+    <div class="home-head">
+      <div>
+        <h1 class="home-title">Financial Risk Management Overview</h1>
+        <div class="home-sub" id="homeAsOf">Portfolio: –</div>
+      </div>
+    </div>
+
+    <div class="home-cards">
+      <!-- Portfolio -->
+      <section class="home-card dash-card">
+        <div class="home-card-head">
+          <span class="home-ico home-ico--link" id="homePfIco" style="--ico-bg:#3d6ff2" role="button" tabindex="0" title="Portfolio öffnen">
+            <svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-8z" fill="#fff"/><path d="M14 2.3A8 8 0 0 1 21.7 10H14z" fill="#fff" opacity=".9"/></svg>
+          </span>
+          Portfolio<span class="home-card-port" id="homePfPort"></span>
+        </div>
+        <div class="home-card-hero">
+          <span class="home-hero-value kpi-tile__value" id="homePfNotional">–</span>
+          <span class="home-hero-label">Notional</span>
+        </div>
+        <div class="home-kpis">
+          <div class="home-kpi"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
+          <div class="home-kpi"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-lbl">Yield</span></div>
+          <div class="home-kpi"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-lbl">PV01 (bp)</span></div>
+          <div class="home-kpi"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-lbl">CPV01 (bp)</span></div>
+        </div>
+        <div class="home-chart-cap">Largest issuers (% of notional)</div>
+        <div class="home-chart"><canvas id="homePfChart"></canvas></div>
+      </section>
+
+      <!-- Market Risk -->
+      <section class="home-card dash-card">
+        <div class="home-card-head">
+          <span class="home-ico home-ico--link" id="homeMktIco" style="--ico-bg:#d6409f" role="button" tabindex="0" title="Market Risk öffnen">
+            <svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.4" height="8" rx="1" fill="#fff"/><rect x="10.3" y="8" width="3.4" height="12" rx="1" fill="#fff"/><rect x="16.6" y="4" width="3.4" height="16" rx="1" fill="#fff"/></svg>
+          </span>
+          Market Risk<span class="home-card-port" id="homeMktPort"></span>
+        </div>
+        <div class="home-card-hero home-card-hero--row">
+          <div class="home-hero-block">
+            <span class="home-hero-row">
+              <span class="home-hero-value kpi-tile__value" id="homeMktVar">–</span>
+              <span class="mr-amp-dot" id="homeMktVarDot" hidden></span>
+            </span>
+            <span class="home-hero-label" id="homeMktVarRel">Normal Risk (VaR)</span>
+          </div>
+          <div class="home-hero-block">
+            <span class="home-hero-row">
+              <span class="home-hero-value kpi-tile__value" id="homeMktEs">–</span>
+              <span class="mr-amp-dot" id="homeMktEsDot" hidden></span>
+            </span>
+            <span class="home-hero-label">Extreme Risk (ES) · <span id="homeMktEsAbs">–</span></span>
+          </div>
+        </div>
+        <div class="home-kpis">
+          <div class="home-kpi">
+            <span class="home-kpi-val" id="homeMktRollVar">–</span>
+            <span class="home-kpi-abs" id="homeMktRollVarAbs">–</span>
+            <span class="home-kpi-lbl">Normal Risk (VaR) · ROLLING_1</span>
+          </div>
+          <div class="home-kpi">
+            <span class="home-kpi-val" id="homeMktRollEs">–</span>
+            <span class="home-kpi-abs" id="homeMktRollEsAbs">–</span>
+            <span class="home-kpi-lbl">Extreme Risk (ES) · ROLLING_1</span>
+          </div>
+        </div>
+        <div class="home-chart-cap">Top product contributions (% of total VaR)</div>
+        <div class="home-chart"><canvas id="homeMktChart"></canvas></div>
+      </section>
+
+      <!-- Credit Risk -->
+      <section class="home-card dash-card">
+        <div class="home-card-head">
+          <span class="home-ico home-ico--link" id="homeCrIco" style="--ico-bg:#7c3aed" role="button" tabindex="0" title="Credit Risk öffnen">
+            <svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5z" fill="#fff"/><path d="M12 7.5v5" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15.8" r="1.3" fill="#7c3aed"/></svg>
+          </span>
+          Credit Risk<span class="home-card-port" id="homeCrPort"></span>
+        </div>
+        <!-- Kennzahlen aus dem Credit-Risk-Dashboard (getCreditDashboardModel):
+             Hero = Normal Risk (VaR), darunter ES / TSI / MSD in 2er-Reihen. -->
+        <div class="home-card-hero home-card-hero--row">
+          <div class="home-hero-block">
+            <span class="home-hero-row">
+              <span class="home-hero-value kpi-tile__value" id="homeCrVar">–</span>
+              <span class="mr-amp-dot" id="homeCrVarDot" hidden></span>
+            </span>
+            <span class="home-hero-label" id="homeCrVarRel">Normal Risk (VaR)</span>
+          </div>
+          <div class="home-hero-block">
+            <span class="home-hero-row">
+              <span class="home-hero-value kpi-tile__value" id="homeCrEs">–</span>
+              <span class="mr-amp-dot" id="homeCrEsDot" hidden></span>
+            </span>
+            <span class="home-hero-label">Extreme Risk (ES) · <span id="homeCrEsAbs">–</span></span>
+          </div>
+        </div>
+        <div class="home-kpis">
+          <div class="home-kpi">
+            <span class="home-kpi-val">Cluster Risk (TSI)</span>
+            <span class="home-kpi-val"><span id="homeCrTsi">–</span> <span class="mr-amp-dot" id="homeCrTsiDot" hidden></span></span>
+          </div>
+          <div class="home-kpi">
+            <span class="home-kpi-val">Market Stress (MSD)</span>
+            <span class="home-kpi-val"><span id="homeCrMsd">–</span> <span class="mr-amp-dot" id="homeCrMsdDot" hidden></span></span>
+          </div>
+        </div>
+        <div class="home-chart-cap">Top tail drivers — contribution to tail loss (%)</div>
+        <div class="home-chart"><canvas id="homeCrChart"></canvas></div>
+      </section>
+    </div>
+
+    <div class="home-empty" id="homeEmptyHint" hidden>
+      No default portfolio set, or no saved results yet. Set a default portfolio in Customer Setup and run the analyses.
+    </div>
+  </div>
+</div>
 
 
 

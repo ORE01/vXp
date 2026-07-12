@@ -400,12 +400,16 @@ export const RISK_CONFIG = {
   //   XYZ_Modal      -> "XYZ"
   // -------------------------------------------------------------------
   sectionTitles: {
+    // ===== HOME-Overview (verstecktes Report-Panel #panel-overview, homeOverview.js) =====
+    overview: 'Overview',
+
     // ===== Breakdown (Live-Panel #panel-concentration = Parent, je Dimension ein Kind) =====
     concentration: 'Breakdown',
     'concentration-ISSUER': 'Issuer',
     'concentration-RATING': 'Issuer General Rating',
     'concentration-RANK': 'Issuer Capital Structure',
-    'concentration-RATINGres': 'Product Ratings',
+    'concentration-RATING_PROD': 'Product Ratings',
+    'concentration-RATINGres': 'Rating Resolved',
     'concentration-CATEGORY': 'Product Categories',
     'concentration-CouponType': 'Product Coupon Type',
     'concentration-Depotbank': 'Depot Bank',
@@ -463,6 +467,7 @@ export const RISK_CONFIG = {
     'concentration-ISSUER': 'concentration',
     'concentration-RATING': 'concentration',
     'concentration-RANK': 'concentration',
+    'concentration-RATING_PROD': 'concentration',
     'concentration-RATINGres': 'concentration',
     'concentration-CATEGORY': 'concentration',
     'concentration-CouponType': 'concentration',
@@ -487,6 +492,7 @@ export const RISK_CONFIG = {
       'concentration-ISSUER',
       'concentration-RATING',
       'concentration-RANK',
+      'concentration-RATING_PROD',
       'concentration-RATINGres',
       'concentration-CATEGORY',
       'concentration-CouponType',
@@ -682,7 +688,15 @@ function buildPreviewSections(chartState) {
       // Charts
       chartItems = buildDynamicChartItems(sec.key, sec.charts, chartState);
       chartThumbs = (sec.enabledCharts || [])
-        .map(ch => { const th = smartThumb(ch.id, ch.label); return th ? thumbWithNoteHtml(ch.id, th) : ''; })
+        .map(ch => {
+          const th = smartThumb(ch.id, ch.label);
+          if (!th) return '';
+          // Overview: Chart-Ueberschrift fett UEBER dem Thumb (wie in der App).
+          const body = (sec.key === 'overview')
+            ? `<div><div style="font-weight:700;color:var(--text-bright);font-size:12px;margin:0 0 4px;">${ch.label || ch.id}</div>${th}</div>`
+            : th;
+          return thumbWithNoteHtml(ch.id, body);
+        })
         .filter(Boolean);
 
       // Tables
@@ -1820,6 +1834,7 @@ function applySectionHierarchy(sections) {
   // Panel-Discovery-Index. Generisch: liest die Reihenfolge aus den Tab-Buttons,
   // folgt also automatisch, wenn die Tabs umsortiert werden.
   const TAB_NODE_BUTTON = {
+    overview: 'HOME_Tab',
     tab__analyse: 'ANALYSE_Tab', tab__risk: 'RISK_Tab', marketData: 'MARKETDATA_Tab',
     tab__cs: 'CUSTOMER_SETUP_Tab',
   };
@@ -1863,6 +1878,8 @@ function renderRiskPreview() {
     try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPreview] liquidity dashboard prep failed', e); }
     try { renderCreditOverviewCharts(); } catch (e) { console.warn('[RiskPreview] credit overview charts prep failed', e); }
     try { renderPerformanceDashboard(); } catch (e) { console.warn('[RiskPreview] yield dashboard prep failed', e); }
+    // HOME-Overview rendern -> befuellt das versteckte Report-Panel #panel-overview.
+    try { window.renderHomeOverview?.(); } catch (e) { console.warn('[RiskPreview] home overview prep failed', e); }
 
     const chartState = loadChartToggleState?.() || {};
     let sections     = buildPreviewSections(chartState) || [];
@@ -2775,6 +2792,8 @@ export function getActiveRiskSectionsForPdf() {
   try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPdf] liquidity dashboard prep failed', e); }
   try { renderCreditOverviewCharts(); } catch (e) { console.warn('[RiskPdf] credit overview charts prep failed', e); }
   try { renderPerformanceDashboard(); } catch (e) { console.warn('[RiskPdf] yield dashboard prep failed', e); }
+  // HOME-Overview rendern -> befuellt das versteckte Report-Panel #panel-overview.
+  try { window.renderHomeOverview?.(); } catch (e) { console.warn('[RiskPdf] home overview prep failed', e); }
   const chartState = loadChartToggleState?.() || {};
   const layout     = computeRiskLayout(chartState) || [];
 

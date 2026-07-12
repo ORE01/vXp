@@ -276,11 +276,9 @@
 }
 
 
-/* Close-"x" in ALLEN Slide-in-Panels ausblenden.
-   Schließen weiterhin per Backdrop-Klick und Escape (siehe utils/slideIn.js). */
-.sub-panel-close {
-  display: none !important;
-}
+/* Close-"x" in allen Slide-in-Panels sichtbar: zurueck zur Overview, die im
+   PORTFOLIO/RISK-Tab dahinter liegt. Backdrop-Klick und Escape schliessen
+   weiterhin ebenfalls (utils/slideIn.js). */
 
 
 

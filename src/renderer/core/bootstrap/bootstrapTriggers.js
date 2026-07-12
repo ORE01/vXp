@@ -1,4 +1,4 @@
-import { openPanel } from '../ui/panels/index.js';
+import { openPanel, closePanel } from '../ui/panels/index.js';
 import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../features/OFFERS/offersUI.js';
 import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/trades/tradeUI.js';
 import { renderPerformanceHistoryCopies } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
@@ -188,6 +188,31 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
       const isOpen = btn.getAttribute('aria-expanded') === 'true';
       btn.setAttribute('aria-expanded', String(!isOpen));
     }
+  });
+
+  // Schliessen der Slide-In-Panels: X im Panel-Header (data-close), Klick auf
+  // den Backdrop, Escape. Gegenstueck zu openPanel — vorher gab es keinen
+  // aktiven Close-Handler (utils/slideIn.js ist nicht eingebunden).
+  document.addEventListener('click', (e) => {
+    const closeBtn = e.target.closest?.('.sub-panel-close');
+    if (closeBtn) {
+      e.preventDefault();
+      const id = closeBtn.dataset.close || closeBtn.closest('.sub-panel')?.id;
+      if (id) closePanel(id);
+      return;
+    }
+
+    if (e.target.classList?.contains('sub-panel-backdrop')) {
+      const scope = e.target.closest('.table') || document;
+      const open = scope.querySelector('.sub-panel.open');
+      if (open) closePanel(open.id);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const open = document.querySelector('.sub-panel.open');
+    if (open) closePanel(open.id);
   });
 
   // console.log('[BOOT] bootstrapTriggers active');

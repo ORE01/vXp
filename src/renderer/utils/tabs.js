@@ -9,6 +9,9 @@ function hideModal(el) {
 
 function showModal(targetModalId, allModals) {
   allModals.forEach(hideModal);
+  // Hintergrund-Modus der Overview beim Tab-Wechsel immer zuruecksetzen;
+  // PORTFOLIO/RISK schalten ihn danach gezielt wieder ein (showHomeBehind).
+  document.getElementById('HOME_Modal')?.classList.remove('home-behind');
   const target = document.getElementById(targetModalId);
   if (target) {
     target.style.visibility = 'visible';
@@ -16,6 +19,20 @@ function showModal(targetModalId, allModals) {
     target.style.height = 'auto';
     target.style.overflow = 'visible';
   }
+}
+
+// OVERVIEW als Hintergrund-Ebene im PORTFOLIO/RISK-Tab: bleibt rechts neben dem
+// Trigger-Baum sichtbar (Position via .home-behind in css/HOME/overview.css) und
+// wird erst ueberdeckt, wenn ein Trigger ein Slide-In-Panel oeffnet (z-index).
+function showHomeBehind() {
+  const home = document.getElementById('HOME_Modal');
+  if (!home) return;
+  home.classList.add('home-behind');
+  home.style.visibility = 'visible';
+  home.style.opacity = '1';
+  home.style.height = 'auto';
+  home.style.overflow = 'auto';
+  try { window.renderHomeOverview?.(); } catch (_) {}
 }
 
 // ANALYSE and RISK share #ANALYSE_Modal. Switching only toggles which triggers
@@ -204,6 +221,7 @@ function bindRiskAccordion() {
 
 export function initializeTabs() {
   const map = {
+    'HOME_Tab': 'HOME_Modal',
     'DATA_Tab': 'DATA_Modal',
     'DataProvider_Tab': 'DataProvider_Modal',
     'MARKETDATA_Tab': 'MARKETDATA_Modal',
@@ -247,6 +265,7 @@ export function initializeTabs() {
       // VALUATION uses the same inline "Select Portfolio" picker as RISK -> keep it
       // mirrored to createdPortDropdown0, exactly like the RISK tab does.
       syncRiskDropdownFromPort();
+      showHomeBehind();
     });
   }
   if (riskTab) {
@@ -257,6 +276,7 @@ export function initializeTabs() {
       setAnalyseView('risk');
       showModal(ANALYSE_MODAL_ID, tables);
       syncRiskDropdownFromPort();
+      showHomeBehind();
     });
   }
 
@@ -265,8 +285,20 @@ export function initializeTabs() {
   wireRiskCalcStatus();
   bindRiskAccordion();
 
-  // Default to the ANALYSE view.
+  // OVERVIEW: beim Oeffnen des Home-Tabs aus den (bereits gefuellten) Stores neu rendern.
+  const homeTab = document.getElementById('HOME_Tab');
+  if (homeTab) {
+    homeTab.addEventListener('click', () => {
+      try { window.renderHomeOverview?.(); } catch (_) {}
+    });
+  }
+
+  // Default to the ANALYSE view class (greift erst, wenn PORTFOLIO/RISK geoeffnet wird).
   setAnalyseView('analyse');
   // Populate the shared inline "Select Portfolio" picker for the default view too.
   syncRiskDropdownFromPort();
+
+  // Landing nach Login = OVERVIEW (frueher: kein Modal sichtbar -> nur Header).
+  showModal('HOME_Modal', tables);
+  try { window.renderHomeOverview?.(); } catch (_) {}
 }

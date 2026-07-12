@@ -380,6 +380,86 @@ function drawPageNumber(doc, layout, { pageIndex, pageCount } = {}) {
 
 // Formatiertes KPI-Band (Kacheln: grosser Wert + kleines Label auf hellgrauer Karte),
 // wie auf der Concentration-Seite (PROTOTYPE Page 3). Gibt das neue y zurueck.
+// Canvas -> JPEG (weiss hinterlegt), modulweit — fuer Renderer ausserhalb von
+// renderPanelSectionToPDF (z.B. Breakdown-Kompaktmodus).
+function canvasToJpegModule(canvas) {
+  if (!canvas) return null;
+  try {
+    let srcW = canvas.width;
+    let srcH = canvas.height;
+    if (!srcW || !srcH) {
+      const rect = canvas.getBoundingClientRect();
+      srcW = rect.width || 900;
+      srcH = rect.height || 520;
+    }
+    let dataUrl, fmt = 'JPEG';
+    try {
+      const off = document.createElement('canvas');
+      off.width = srcW; off.height = srcH;
+      const octx = off.getContext('2d');
+      octx.fillStyle = '#ffffff';
+      octx.fillRect(0, 0, srcW, srcH);
+      octx.drawImage(canvas, 0, 0, srcW, srcH);
+      dataUrl = off.toDataURL('image/jpeg', 0.82);
+    } catch {
+      dataUrl = canvas.toDataURL('image/png'); fmt = 'PNG';
+    }
+    return { dataUrl, width: srcW, height: srcH, fmt };
+  } catch (e) {
+    console.warn('[PDF] Canvas export failed for', canvas?.id, e);
+    return null;
+  }
+}
+
+// Kompakt-Modus fuer Breakdown-Dimensionen (Treemap abgewaehlt): EINE Spalte je
+// Dimension — Titel + Top-10-Balkenchart + kompakte Key Figures (Label links,
+// Wert rechts). Drei Spalten teilen sich eine Seite; state = { col, top }.
+function renderConcCompactColumn(doc, sec, layout, ctx, state) {
+  const { left: marginX } = layout;
+  const gap = 6;
+  const colW = (layout.contentWidth - gap * 2) / 3;
+  const col = state ? state.col : 0;
+  const top = state ? state.top : Math.max(layout.startY(), layout.topSafe ?? 0);
+  const x = marginX + col * (colW + gap);
+  let y = top;
+
+  const dimKey = String(sec.key).slice('concentration-'.length);
+  const enTableIds = new Set((sec.enabledTables || []).map((t) => t.id));
+
+  doc.setFontSize(12); doc.setTextColor(0);
+  doc.text(String(sec.title || dimKey), x, y);
+  y += 3;
+
+  const el = ctx.getById(`concTop10Chart__${dimKey}`);
+  const img = (el && el.tagName === 'CANVAS') ? canvasToJpegModule(el) : null;
+  const chartH = 64;
+  drawChartCard(doc, x, y, colW, chartH);
+  if (img?.dataUrl) {
+    const srcW = img.width || 900, srcH = img.height || 520;
+    const scale = Math.min(colW / srcW, (chartH - 2) / srcH, 1);
+    const w = srcW * scale, h = srcH * scale;
+    try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', x + (colW - w) / 2, y + (chartH - h) / 2, w, h); }
+    catch (e) { console.warn('[PDF] compact breakdown chart failed', dimKey, e); }
+  }
+  y += chartH + 6;
+
+  // Key Figures kompakt an die Spaltenbreite angepasst: je Zeile Label (muted,
+  // links) + Wert (fett, rechtsbuendig).
+  if (enTableIds.has(`concKeyFiguresTable__${dimKey}`)) {
+    const kpis = kpisFromTableEl(ctx.getById(`concKeyFiguresTable__${dimKey}`));
+    kpis.forEach((k) => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(107, 120, 136);
+      doc.text(String(k.label ?? '').toUpperCase(), x, y);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41);
+      doc.text(String(k.value ?? ''), x + colW, y, { align: 'right' });
+      y += 5;
+    });
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
+  }
+
+  return { col: col + 1, top };
+}
+
 function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
   if (!Array.isArray(kpis) || !kpis.length) return y;
   const n = kpis.length;
@@ -512,6 +592,21 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
   let wroteAnySection = false;
   const pendingGroupToc = []; // TOC-Indizes von Gruppen-Überschriften ohne eigene Seite
+
+  // Kompakt-Modus fuer Breakdown-Dimensionen: Treemap abgewaehlt und keine
+  // Top-Liste -> nur Balkenchart (+ Key Figures). Solche Dimensionen teilen
+  // sich zu dritt eine Seite (Spalten) statt je eine eigene Seite zu belegen.
+  const concCompactQualifies = (s) => {
+    const key = String(s?.key || '');
+    if (!key.startsWith('concentration-')) return false;
+    const dim = key.slice('concentration-'.length);
+    const ch = new Set((s.enabledCharts || []).map((c) => c.id));
+    const tb = new Set((s.enabledTables || []).map((t) => t.id));
+    return ch.has(`concTop10Chart__${dim}`)
+      && !ch.has(`concTreemap__${dim}`)
+      && !tb.has(`concTopIssuersTable__${dim}`);
+  };
+  let concCompactState = null; // { col, top } der laufenden Kompakt-Seite
   const chapterByPage = {};   // Seite -> uebergeordnetes Kapitel (direkter Elternknoten)
   const titleByLevel = [];    // Titel je Hierarchie-Ebene (1-basiert)
 
@@ -528,8 +623,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     titleByLevel.length = level + 1;
     const parentChapter = titleByLevel[level - 1] || '';
     const hasContent =
-      (sec.enabledCharts && sec.enabledCharts.length) ||
-      (sec.enabledTables && sec.enabledTables.length);
+      // Breakdown-PARENT: reine Kapitel-Ueberschrift (die Inhalte tragen die
+      // Dimensions-Kinder) -> keine eigene, fast leere Divider-Seite erzeugen.
+      sec.key !== 'concentration' &&
+      ((sec.enabledCharts && sec.enabledCharts.length) ||
+       (sec.enabledTables && sec.enabledTables.length));
 
     // Gruppen-/Überschrift-Sektionen (ohne Inhalt): NUR ins Inhaltsverzeichnis,
     // keine eigene Seite. Die Seitenzahl folgt dem ersten Blatt darunter.
@@ -539,7 +637,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       continue;
     }
 
-    if (wroteAnySection) doc.addPage();
+    const compact = concCompactQualifies(sec);
+    const continuing = compact && concCompactState && concCompactState.col < 3;
+    if (!compact) concCompactState = null;
+
+    if (wroteAnySection && !continuing) doc.addPage();
     wroteAnySection = true;
 
     const pageIndex = doc.internal.getNumberOfPages();
@@ -550,7 +652,11 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     pendingGroupToc.forEach((idx) => { if (tocEntries[idx]) tocEntries[idx].page = pageIndex; });
     pendingGroupToc.length = 0;
 
-    await renderPanelSectionToPDF(doc, sec, layout, ctx);
+    if (compact) {
+      concCompactState = renderConcCompactColumn(doc, sec, layout, ctx, continuing ? concCompactState : null);
+    } else {
+      await renderPanelSectionToPDF(doc, sec, layout, ctx);
+    }
 
     // Alle von dieser Sektion belegten Seiten dem direkten Elternkapitel zuordnen.
     const endPage = doc.internal.getNumberOfPages();
@@ -874,18 +980,9 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     return;
   }
 
-  // Breakdown-PARENT (#panel-concentration): nur Kapitel-Titel (Divider) — die
-  // Live-Charts (concCards/concTop10Chart = aktuell gewaehlte Dimension) werden
-  // bewusst NICHT gezeichnet (sonst Doppelung). Die 11 Dimensions-Kinder tragen die
-  // kompakten Dashboards.
-  if (sec.key === 'concentration') {
-    doc.setFontSize(14); doc.setTextColor(0);
-    doc.text(sectionTitle, marginX, y);
-    y += cfg.sectionTitleSpacing;
-    doc.setFontSize(9); doc.setTextColor(110);
-    doc.text('Portfolio breakdown by dimension — see the following pages.', marginX, y);
-    return;
-  }
+  // Breakdown-PARENT (#panel-concentration): reine Kapitel-Ueberschrift, wird im
+  // Sektions-Loop uebersprungen (hasContent = false) -> keine Divider-Seite mehr.
+  // Die 11 Dimensions-Kinder tragen die kompakten Dashboards.
 
   // ── Sonderlayout: Breakdown-Dimension (#panel-concentration-<KEY>) als KOMPAKTES
   // Dashboard-Blatt (wie das Live-Panel): Treemap links + Top-10-Balken rechts,
@@ -1121,7 +1218,112 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     }
   }
 
-  const COMPOSED_ROW_KEYS = new Set(['structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities']);
+  // ── Sonderlayout: HOME-Overview als KPI-Karten wie in der App (3 Karten
+  //    nebeneinander: Portfolio / Market Risk / Credit Risk), nativ als Vektor.
+  //    Werte/Ampeln kommen aus den gerenderten HOME-Elementen (Prep ruft
+  //    renderHomeOverview). Die Charts folgen darunter als composedRow; die
+  //    gespiegelte KPI-Tabelle (overviewKpiTable) wird im Tabellen-Loop uebersprungen.
+  if (sec.key === 'overview') {
+    const otxt = (id) => (ctx.getById(id)?.textContent || '').trim() || '–';
+    const odot = (id) => {
+      const el = ctx.getById(id);
+      if (!el || el.hidden) return null;
+      for (const s of ['green', 'yellow', 'red']) if (el.classList?.contains(`mr-amp--${s}`)) return s;
+      return null;
+    };
+    const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236],
+          TEXT = [26, 31, 41], BOX = [240, 242, 246];
+    const ampRgb = (s) => ({ green: [76, 175, 80], yellow: [224, 176, 0], red: [211, 47, 47] }[s] || [154, 167, 180]);
+    const portSuffix = otxt('homePfPort') !== '–' ? ` ${otxt('homePfPort')}` : '';
+
+    const ovCards = [
+      { title: `PORTFOLIO${portSuffix}`,
+        hero: otxt('homePfNotional'), heroDot: null, heroSub: 'Notional',
+        boxes: [
+          { v: otxt('homePfNav'), lbl: 'Net Asset Value' },
+          { v: otxt('homePfYield'), lbl: 'Yield' },
+          { v: otxt('homePfPv01'), lbl: 'PV01 (bp)' },
+          { v: otxt('homePfCpv01'), lbl: 'CPV01 (bp)' },
+        ] },
+      { title: `MARKET RISK${portSuffix}`,
+        hero: otxt('homeMktVar'), heroDot: odot('homeMktVarDot'), heroSub: otxt('homeMktVarRel'),
+        hero2: otxt('homeMktEs'), hero2Dot: odot('homeMktEsDot'), hero2Sub: `Extreme Risk (ES) · ${otxt('homeMktEsAbs')}`,
+        boxes: [
+          { v: otxt('homeMktRollVar'), sub: otxt('homeMktRollVarAbs'), lbl: 'VaR · ROLLING_1' },
+          { v: otxt('homeMktRollEs'), sub: otxt('homeMktRollEsAbs'), lbl: 'ES · ROLLING_1' },
+        ] },
+      { title: `CREDIT RISK${portSuffix}`,
+        hero: otxt('homeCrVar'), heroDot: odot('homeCrVarDot'), heroSub: otxt('homeCrVarRel'),
+        hero2: otxt('homeCrEs'), hero2Dot: odot('homeCrEsDot'), hero2Sub: `Extreme Risk (ES) · ${otxt('homeCrEsAbs')}`,
+        boxes: [
+          { pre: 'Cluster Risk (TSI)', v: otxt('homeCrTsi'), dot: odot('homeCrTsiDot') },
+          { pre: 'Market Stress (MSD)', v: otxt('homeCrMsd'), dot: odot('homeCrMsdDot') },
+        ] },
+    ];
+
+    const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovCardH = 58, ovBoxH = 13;
+    ensurePageSpace(ovCardH + 8, `${sectionTitle} (cont.)`);
+    ovCards.forEach((c, i) => {
+      const x = marginX + i * (ovCardW + ovGap), tx = x + 5;
+      doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+      doc.roundedRect(x, y, ovCardW, ovCardH, 2, 2, 'FD');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      doc.text(String(c.title), tx, y + 7);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT);
+      doc.text(String(c.hero), tx, y + 16.5);
+      if (c.heroDot) { const a = ampRgb(c.heroDot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + doc.getTextWidth(String(c.hero)) + 3.2, y + 15, 1.5, 'F'); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+      doc.text(String(c.heroSub), tx, y + 21);
+
+      // Zweiter Hero-Wert (ES) rechts neben dem ersten — wie in der App.
+      if (c.hero2 != null) {
+        const tx2 = tx + (ovCardW - 10) / 2;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT);
+        doc.text(String(c.hero2), tx2, y + 16.5);
+        if (c.hero2Dot) { const a = ampRgb(c.hero2Dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx2 + doc.getTextWidth(String(c.hero2)) + 3.2, y + 15, 1.5, 'F'); }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+        doc.text(String(c.hero2Sub || ''), tx2, y + 21);
+      }
+
+      const innerW = ovCardW - 10, halfW = (innerW - 3) / 2;
+      let byy = y + 24, col = 0;
+      (c.boxes || []).forEach((b) => {
+        if (b.wide && col > 0) { col = 0; byy += ovBoxH + 3; }
+        const w = b.wide ? innerW : halfW;
+        const bx = tx + (b.wide ? 0 : col * (halfW + 3));
+        doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+        doc.roundedRect(bx, byy, w, ovBoxH, 1.5, 1.5, 'FD');
+        const vs = String(b.v);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+        if (b.pre) {
+          // Zweizeilige Ampel-Box (wie in der App): Zeile 1 = Titel,
+          // Zeile 2 = Einstufung in Ampelfarbe + Ampel-Punkt. Sonst nichts.
+          doc.setTextColor(...TEXT);
+          doc.text(String(b.pre), bx + 3, byy + 5.2);
+          const a2 = b.dot ? ampRgb(b.dot) : TEXT;
+          doc.setTextColor(a2[0], a2[1], a2[2]);
+          doc.text(vs, bx + 3, byy + 10.8);
+          if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 9.6, 1.1, 'F'); }
+        } else {
+          doc.setTextColor(...TEXT);
+          doc.text(vs, bx + 3, byy + 5.2);
+          if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 4, 1.1, 'F'); }
+          if (b.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(String(b.sub), bx + 3, byy + 8.2); }
+          if (b.lbl) {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+            doc.text(String(b.lbl), bx + 3, byy + 11.2);
+          }
+        }
+        if (b.wide) { col = 0; byy += ovBoxH + 3; }
+        else { col += 1; if (col >= 2) { col = 0; byy += ovBoxH + 3; } }
+      });
+    });
+    y += ovCardH + 8;
+  }
+
+  // 'overview': die 3 HOME-Overview-Charts nebeneinander in EINER Reihe ->
+  // Sektion (KPI-Karten + Charts) passt komplett auf eine Seite.
+  const COMPOSED_ROW_KEYS = new Set(['overview', 'structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities']);
   const composedRow = COMPOSED_ROW_KEYS.has(sec.key) && (sec.enabledCharts || []).length > 0;
   if (composedRow) {
     // Credit-Tail-Driver-Charts NICHT in der Nebeneinander-Reihe (sie werden unten je
@@ -1142,8 +1344,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       if (col === 0) { ensurePageSpace(cellH + 16, `${sectionTitle} (cont.)`); rowY = y; }
       const x = marginX + col * (cellW + cgap);
       drawChartCard(doc, x, rowY, cellW, cellH + 8);
-      doc.setFontSize(8); doc.setTextColor(90);
+      // Overview: Chart-Ueberschrift fett/dunkel (wie in der App ueber dem Graphen).
+      if (sec.key === 'overview') { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); }
+      else { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90); }
       doc.text(ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
       if (imgData?.dataUrl) {
         const srcW = imgData.width || 900;
         const srcH = imgData.height || 520;
@@ -1284,6 +1489,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     if (kpiEl && kpiEl.dataset && kpiEl.dataset.kpiBand) continue;
     // Credit Tail-Driver-Tabellen sind bereits neben ihrem Chart gezeichnet -> ueberspringen.
     if (CR_DRIVER_TABLE_IDS.has(t.id)) continue;
+    // Overview: KPIs sind bereits als native Karten gezeichnet -> Spiegel-Tabelle ueberspringen.
+    if (sec.key === 'overview' && t.id === 'overviewKpiTable') continue;
 
     const tbl = extractTableFromContainer(t.id, { maxRows: 500, maxCols: 40, ctx });
     if (!tbl) continue;

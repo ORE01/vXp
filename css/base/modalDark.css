@@ -135,7 +135,8 @@ input[type="text"]:focus,
 textarea:focus {
   background-color: var(--input-focus-bg);
   border: 1px solid var(--input-focus-border);
-  color: var(--input-text);
+  /* Fokus-Hintergrund ist im Dark Theme dunkel -> Textfarbe MUSS mitschalten. */
+  color: var(--input-focus-text, var(--input-text));
 }
 
 .modal-content input[type="text"],

@@ -65,7 +65,20 @@ export function handleMVaRData(receivedData, index) {
     return;
   }
 
-  renderMVaRRelativeTableWithIndex(filteredData, index);
+  // Zusaetzlich die juengste ROLLING_1-Zeile desselben Portfolios (wird bei jedem
+  // MVaR-Lauf mitgerechnet) -> eigene Spalte neben dem gewaehlten Szenario.
+  let rollingData = null;
+  if (normalizeMvarText(scenarioName) !== 'ROLLING_1') {
+    const rollMatches = receivedData.filter(row =>
+      rowMatchesMvarContext(row, { portName, scenarioName: 'ROLLING_1' })
+    );
+    rollingData = rollMatches
+      .slice()
+      .sort((a, b) => getMvarRowAsofDate(a).localeCompare(getMvarRowAsofDate(b)))
+      .at(-1) || null;
+  }
+
+  renderMVaRRelativeTableWithIndex(filteredData, index, { rollingData, scenarioName });
 
 let thresholds = getMVaRThresholdsFromInputUsingState();
 
@@ -164,7 +177,7 @@ function clearContainers(containerIds) {
   });
 }
 
-function renderMVaRRelativeTableWithIndex(data, index) {
+function renderMVaRRelativeTableWithIndex(data, index, { rollingData = null, scenarioName = '' } = {}) {
   const containerId = `MVaRDataContainer${index}`;
   const container = document.getElementById(containerId);
 
@@ -191,7 +204,12 @@ function renderMVaRRelativeTableWithIndex(data, index) {
 
   const headerRow = table.insertRow();
 
-  ['label', 'value'].forEach(text => {
+  // Mit Rolling-Spalte: Spaltenkoepfe = Szenario-Namen; sonst wie bisher.
+  const withRolling = !!rollingData;
+  const headers = withRolling
+    ? ['label', String(scenarioName || 'value'), 'ROLLING_1']
+    : ['label', 'value'];
+  headers.forEach(text => {
     const cell = headerRow.insertCell();
     cell.textContent = text;
   });
@@ -200,16 +218,18 @@ function renderMVaRRelativeTableWithIndex(data, index) {
     {
       label: 'Total VaR',
       value: formatNumberWithCommas(data.VaR_T_rel),
+      rolling: withRolling ? formatNumberWithCommas(rollingData.VaR_T_rel) : null,
       metric: 'totalVar',
     },
     {
       label: 'Total ES',
       value: formatNumberWithCommas(data.ES_T_rel),
+      rolling: withRolling ? formatNumberWithCommas(rollingData.ES_T_rel) : null,
       metric: 'totalEs',
     },
   ];
 
-  rows.forEach(({ label, value, metric }) => {
+  rows.forEach(({ label, value, rolling, metric }) => {
     const row = table.insertRow();
     // Tag the row so the traffic-light state can colour its cells later
     // (replaces the separate traffic-light widget for Total VaR).
@@ -217,6 +237,7 @@ function renderMVaRRelativeTableWithIndex(data, index) {
 
     row.insertCell(0).textContent = label;
     row.insertCell(1).textContent = value;
+    if (withRolling) row.insertCell(2).textContent = rolling ?? '';
   });
 
   container.appendChild(table);

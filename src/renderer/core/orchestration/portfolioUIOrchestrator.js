@@ -454,6 +454,11 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
         const LossData = appState.getAllLossData?.() || [];
         handleLossIssuerMainData(LossData);
       },
+
+      // HOME-Overview folgt der Portfolio-Auswahl (liest getSelectedPortTableName).
+      () => {
+        try { window.renderHomeOverview?.(); } catch (_) {}
+      },
     ];
 
     runPortfolioRenderQueue(renderTasks);

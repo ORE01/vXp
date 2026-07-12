@@ -37,7 +37,7 @@
   --surface-overlay:   #333;             /* Inputs, gerade Tabellenzeilen */
   --surface-header:    #222;             /* Toolbar, Thead, Sidebar */
   --surface-deep:        #161719;                  /* sehr dunkle Elemente (z.B. Icon-Buttons) */
-  --surface-card:        #0f0f10;                  /* Chart/Table Card-Hintergrund */
+  --surface-card:        var(--surface-raised);    /* Chart/Table Card-Hintergrund = einheitliches Kachel-Grau */
   --surface-card-border: rgba(255, 255, 255, 0.08);
   --surface-modal:       rgb(70, 69, 69);          /* Modal-Content-Hintergrund */
   --surface-modal-backdrop: rgba(0, 0, 0, 0.5);   /* Modal-Overlay */
@@ -104,6 +104,7 @@
   --input-text:        #222222;
   --input-border:      #555555;
   --input-focus-bg:    #333333;
+  --input-focus-text:  #ffffff;            /* Fokus-Hintergrund ist dunkel -> helle Schrift */
   --input-focus-border: #4CAF50;
 
   /* --- Backwards-Kompatibilität / Aliases --- */
@@ -215,6 +216,7 @@ html:has(body.light-theme) {
   --input-text:        #222222;
   --input-border:      #cccccc;
   --input-focus-bg:    #ffffff;
+  --input-focus-text:  #222222;
   --input-focus-border: #4CAF50;
 
   /* --- Shadows --- */

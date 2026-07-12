@@ -1,0 +1,226 @@
+/* css/HOME/overview.css
+   Landing "Financial Risk Management Overview" — drei KPI-Karten (Portfolio /
+   Marktrisiko / Kreditrisiko).
+   Optik der Kacheln kommt aus dem zentralen Baustein (components/surfaces.css:
+   .dash-card, .kpi-tile__*) + Token aus tokens/themes.css -> Dark/Light
+   automatisch, hier stehen nur Layout-Regeln. Keine Akzentfarben. */
+
+.home-overview {
+  /* Padding oben gross genug, damit die fixe Seitensuche ("Search current page...")
+     den Titel nicht ueberdeckt. */
+  padding: 64px 26px 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Landing (HOME-Tab): denselben Platz wie die Trigger-Spalte im PORTFOLIO/RISK-
+   Tab freihalten, damit die Kacheln beim Tab-Wechsel nicht nach rechts springen —
+   identische horizontale Lage in beiden Modi. */
+#HOME_Modal:not(.home-behind) {
+  padding-left: var(--sidebar-width);
+}
+
+/* Hintergrund-Modus (PORTFOLIO/RISK-Tab): Overview liegt fix rechts neben dem
+   Trigger-Baum und bleibt sichtbar, bis ein Slide-In-Panel (z-index 1100) bzw.
+   dessen Backdrop (1050) sie ueberdeckt. Klassen-Toggle in utils/tabs.js. */
+#HOME_Modal.home-behind {
+  position: fixed;
+  top: var(--topbar-height);
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+  z-index: 900;
+}
+#HOME_Modal.home-behind .home-overview {
+  /* Die Suchbox liegt hier ueber der Trigger-Spalte links, nicht ueber dem Titel. */
+  padding-top: 16px;
+}
+
+.home-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.home-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--text-bright);
+}
+.home-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.home-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+@media (max-width: 1080px) {
+  .home-cards { grid-template-columns: 1fr; }
+}
+
+/* Flaeche/Rand/Schatten liefert .dash-card — hier nur der Karten-Innenaufbau. */
+.home-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+}
+
+.home-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.home-card-port { color: var(--text-muted); font-weight: 600; letter-spacing: .3px; }
+
+/* Icon-Badge im Kartenkopf (runder Farbkreis + weisses Symbol, Vorlage-Look). */
+.home-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ico-bg, var(--text-muted));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.home-ico svg { width: 15px; height: 15px; display: block; }
+.home-ico--link { cursor: pointer; }
+.home-ico--link:hover { filter: brightness(1.15); }
+
+.home-card-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+/* Zwei Hero-Werte nebeneinander (z.B. VaR + ES in der Market-Karte). */
+.home-card-hero--row { flex-direction: row; align-items: flex-start; gap: 28px; }
+.home-hero-block { display: flex; flex-direction: column; gap: 2px; }
+/* Wert-Groesse/-Farbe kommt von .kpi-tile__value */
+.home-hero-row { display: inline-flex; align-items: center; gap: 8px; }
+.home-hero-row .mr-amp-dot { width: 11px; height: 11px; }
+.home-kpi-val .mr-amp-dot { vertical-align: middle; margin-left: 4px; }
+.home-hero-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.home-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.home-kpi {
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.home-kpi-val { font-size: 14px; font-weight: 700; color: var(--text-bright); }
+.home-kpi-abs { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.home-kpi--wide { grid-column: 1 / -1; }
+.home-kpi-lbl { font-size: 10.5px; color: var(--text-muted); }
+
+/* Beschriftung UEBER dem Chart, fett + hell fuer gute Lesbarkeit; das Paar
+   (Cap + Chart) wird ueber margin-top:auto an den Kartenboden gedrueckt. */
+.home-chart-cap {
+  margin-top: auto;
+  padding-top: 10px;
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-bright);
+  text-align: center;
+}
+.home-chart {
+  position: relative;
+  height: 220px;
+}
+
+.home-empty {
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+/* ---- Haftungsausschluss-Gate (Boot) ---- */
+.disclaimer-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: var(--surface-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.disclaimer-gate[hidden] { display: none; }
+.disclaimer-box {
+  width: min(720px, calc(100vw - 48px));
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 20px 24px;
+}
+.disclaimer-box h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.disclaimer-text {
+  overflow: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+.disclaimer-text p { margin: 0 0 10px; }
+.disclaimer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+.disclaimer-status { font-size: 12px; color: var(--text-muted); }
+.disclaimer-ok {
+  min-width: 96px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-card-border);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.disclaimer-ok:hover:not(:disabled) { background: var(--accent-hover); }
+.disclaimer-ok:disabled {
+  background: var(--surface-overlay);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}

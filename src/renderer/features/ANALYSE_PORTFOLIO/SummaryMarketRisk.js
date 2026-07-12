@@ -62,16 +62,29 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
   let chosenAgg = null;
   if (asof_date) {
     chosenAgg = aggMatches.find(x => String(x.asof_date) === String(asof_date)) || null;
-  } else if (aggMatches.length) {
+  }
+  // Fallback: kein exakter Stichtag (Aufrufer uebergeben teils veraltete/fixe
+  // asof-Daten) -> juengste Aggregat-Zeile nehmen. Sonst sind VaR/ES = 0 und
+  // weder die VaR-/ES-Linien noch der rote Tail werden gezeichnet.
+  if (!chosenAgg && aggMatches.length) {
     const sorted = aggMatches
       .slice()
       .sort((a, b) => String(a.asof_date).localeCompare(String(b.asof_date)));
     chosenAgg = sorted[sorted.length - 1] || null;
   }
 
-  const chosenAsof = asof_date || chosenAgg?.asof_date || null;
+  // Stichtag der tatsaechlich gewaehlten Aggregat-Zeile (exakt ODER Fallback) —
+  // so passen VaR/ES-Linien und Verteilung immer zusammen.
+  const chosenAsof = chosenAgg?.asof_date || asof_date || null;
   const varTRel = Number(chosenAgg?.VaR_T_rel) || 0;
   const esTRel = Number(chosenAgg?.ES_T_rel ?? chosenAgg?.ES_rel ?? chosenAgg?.es_t_rel) || 0;
+
+  // Horizont-Skalierung: die gespeicherte Verteilung ist die TAEGLICHE P/L-Serie,
+  // VaR/ES sind aber mit sqrt(horizon_days) skaliert (Engine: pl * sqrt(h)).
+  // Die Verteilung wird daher auf denselben Horizont gebracht — sonst liegen die
+  // VaR/ES-Linien um Faktor sqrt(h) ausserhalb der Verteilungsmasse.
+  const horizonDays = Math.max(1, Number(chosenAgg?.horizon_days) || 1);
+  const horizonScale = Math.sqrt(horizonDays);
 
   // --- Distribution data: try exact (port, scenario, asof) first ---
 let mvarDistData = appState.getMvarDistData({
@@ -124,7 +137,7 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
       return Number(raw);
     })
     .filter(v => Number.isFinite(v))
-    .map(v => (v / portNav) * 100);
+    .map(v => (v / portNav) * 100 * horizonScale);
 
   if (plValues.length === 0) {
     console.warn("No numeric P/L values found in distribution data. Check column name mapping.", {
@@ -134,6 +147,31 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
     return;
   }
 
+  // --- ROLLING_1-Verteilung als Overlay (wird seit dem MVaR-Nachlauf immer
+  // mitgerechnet). Nur wenn das gewaehlte Szenario nicht selbst ROLLING_1 ist. ---
+  let overlay = null;
+  if (String(scenario_name ?? '').trim().toUpperCase() !== 'ROLLING_1') {
+    // Rolling-Aggregat zuerst (VaR/ES + Horizont fuer die sqrt(h)-Skalierung).
+    const rollAgg = mvarAggData
+      .filter(item => item && item.port_name === port_name && item.scenario_name === 'ROLLING_1')
+      .sort((a, b) => String(a.asof_date).localeCompare(String(b.asof_date)))
+      .at(-1) || null;
+    const rollScale = Math.sqrt(Math.max(1, Number(rollAgg?.horizon_days) || horizonDays));
+
+    const rollDist = appState.getMvarDistData({ port_name, scenario_name: 'ROLLING_1' }) || [];
+    const rollVals = rollDist
+      .map(row => Number(row?.pl_total ?? row?.PL_TOTAL ?? row?.["P/L"] ?? row?.pl ?? row?.PL ?? null))
+      .filter(v => Number.isFinite(v))
+      .map(v => (v / portNav) * 100 * rollScale);
+    if (rollVals.length) {
+      overlay = { values: rollVals, label: 'ROLLING_1' };
+      if (rollAgg) {
+        overlay.varTRel = Number(rollAgg.VaR_T_rel) || 0;
+        overlay.esTRel = Number(rollAgg.ES_T_rel ?? rollAgg.ES_rel) || 0;
+      }
+    }
+  }
+
   // --- Render chart ---
   const canvas = document.getElementById('plMvarDistChart');
   if (!canvas) return console.warn("Canvas #plMvarDistChart not found in DOM");
@@ -141,11 +179,26 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
   const ctx = canvas.getContext('2d');
   if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
 
-  const { data, options, veLines } = drawMvarHistogram(plValues, portValueRel, varTRel, esTRel);
+  const { data, options, veLines } = drawMvarHistogram(plValues, portValueRel, varTRel, esTRel, {
+    overlay,
+    mainLabel: scenario_name || 'Selected scenario',
+    horizonDays,
+  });
   const chart = new Chart(ctx, { type: 'bar', data, options, plugins: [_mvarVELinePlugin] });
   chart.$veLines = veLines;
+
+  // Standard-Auswahl: nur gewaehltes Szenario + VaR-Linie sichtbar. ES-Linien
+  // und ROLLING_1 starten abgewaehlt (durchgestrichen) und lassen sich per
+  // Legenden-Klick zuschalten.
+  chart.$hiddenGroups = new Set(['overlay']);
+  chart.$hiddenMetrics = new Set(['es']);
+  chart.data.datasets.forEach((d, i) => {
+    if (d.group === 'overlay' || d.metricToggle === 'es') chart.setDatasetVisibility(i, false);
+  });
+
   try { chart.update(); } catch {}
   window.plMvarDistChartInstance = chart;
+  ensureDistZoomTools(canvas);
 
   // NOTE: the synthetic line chart (tsEU1YChart) is now drawn earlier in this function
   // (before the distribution-data early-returns), so it is not redrawn here.
@@ -162,6 +215,10 @@ const _mvarVELinePlugin = {
     const { ctx, chartArea } = chart;
     lines.forEach((ln) => {
       if (!Number.isFinite(ln.at)) return;
+      // Ausgeblendete Szenario-Gruppe bzw. ausgeblendete Metrik (VaR/ES-Toggle)
+      // -> Linie nicht zeichnen.
+      if (ln.group && chart.$hiddenGroups?.has(ln.group)) return;
+      if (ln.metric && chart.$hiddenMetrics?.has(ln.metric)) return;
       const x = chart.scales.x.getPixelForValue(ln.at);
       if (!Number.isFinite(x)) return;
       ctx.save();
@@ -175,24 +232,34 @@ const _mvarVELinePlugin = {
       ctx.setLineDash([]);
       ctx.fillStyle = ln.color || 'rgba(255,0,0,0.95)';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(ln.label || '', x + 3, chartArea.top + 11);
+      // dy: Label-Zeile (Rolling-Linien in zweiter Zeile, damit sich nichts ueberlappt).
+      ctx.fillText(ln.label || '', x + 3, chartArea.top + (ln.dy || 11));
       ctx.restore();
     });
   },
 };
 
-function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
+function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50, includeValues = []) {
   // 1. In absolute Performance umrechnen
   const adjusted = values;   // P/L% direkt (KEIN Bond-Preis) -> P&L-konforme x-Achse // z. B. -2% â†’ 0.97
 
   // 2. Basiswerte
   const avg = adjusted.reduce((sum, v) => sum + v, 0) / adjusted.length;
   const spread = Math.max(...adjusted) - Math.min(...adjusted);
-  const padding = spread * 0.2; // â¬…ï¸ Optional: Padding fÃ¼r Symmetrie
+  const padding = spread * 0.35; // breitere x-Achse (mehr Kontext um die Verteilung)
 
   // 3. Symmetrischer Bereich um avg
-  const min = avg - spread / 2 - padding;
-  const max = avg + spread / 2 + padding;
+  let min = avg - spread / 2 - padding;
+  let max = avg + spread / 2 + padding;
+
+  // VaR/ES-Marken (includeValues) IMMER in den sichtbaren Bereich aufnehmen —
+  // sonst liegen die Linien ausserhalb der Bins und werden nicht gezeichnet.
+  (includeValues || []).forEach((v) => {
+    if (!Number.isFinite(v)) return;
+    if (v < min) min = v - spread * 0.05;
+    if (v > max) max = v + spread * 0.05;
+  });
+
   const binWidth = (max - min) / numBins;
 
   const bins = Array(numBins).fill(0);
@@ -219,8 +286,37 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50) {
   return { labels, bins, min, binWidth, mu, sigma, centers, total: adjusted.length };
 }
 
-function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
-  const histogram = createHistogramDataAdjusted(plValues, portValueRel);
+function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overlay = null, mainLabel = 'Frequency', horizonDays = 1 } = {}) {
+  // VaR/ES BEIDER Szenarien in den Bin-Bereich aufnehmen, damit alle Linien
+  // immer sichtbar sind.
+  const marks = [varTRel, esTRel, overlay?.varTRel, overlay?.esTRel]
+    .filter((v) => Number.isFinite(v) && v !== 0);
+  const histogram = createHistogramDataAdjusted(plValues, portValueRel, 50, marks);
+
+  // Overlay-Verteilung (z.B. ROLLING_1) in DIESELBEN Bins zaehlen, damit beide
+  // Histogramme exakt uebereinander liegen. Werte ausserhalb landen im Randbin.
+  let overlayBins = null;
+  let overlayNormal = null;
+  if (overlay && Array.isArray(overlay.values) && overlay.values.length && histogram.binWidth > 0) {
+    overlayBins = Array(histogram.bins.length).fill(0);
+    overlay.values.forEach((v) => {
+      if (!Number.isFinite(v)) return;
+      const idx = Math.max(0, Math.min(
+        Math.floor((v - histogram.min) / histogram.binWidth),
+        overlayBins.length - 1
+      ));
+      overlayBins[idx]++;
+    });
+
+    // Normalverteilung der Overlay-Serie (eigene mu/sigma, gleiche Frequenz-Skala).
+    const oN = overlay.values.length;
+    const oMu = overlay.values.reduce((s, v) => s + v, 0) / oN;
+    const oVar = overlay.values.reduce((s, v) => s + (v - oMu) * (v - oMu), 0) / oN;
+    const oSigma = Math.sqrt(oVar);
+    overlayNormal = (oSigma > 0)
+      ? histogram.centers.map(c => oN * histogram.binWidth * (1 / (oSigma * Math.sqrt(2 * Math.PI))) * Math.exp(-((c - oMu) ** 2) / (2 * oSigma * oSigma)))
+      : null;
+  }
 
   // VaR/ES sind bereits in % (P/L vom NAV), gleiche Einheit wie die Balken -> Bin-Index
   // direkt ueber die Bin-Kanten (robust auch bei negativen Werten).
@@ -265,10 +361,30 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
     ? centers.map(c => total * binWidth * (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-((c - mu) ** 2) / (2 * sigma * sigma)))
     : centers.map(() => 0);
 
-  // VaR/ES-Linien (vertikal am jeweiligen P/L-Bin).
+  // VaR/ES-Linien (vertikal am jeweiligen P/L-Bin) — fuer BEIDE Szenarien,
+  // beschriftet mit dem Szenario-Namen. Gewaehltes Szenario rot/orange,
+  // ROLLING_1 in Rosa (Balkenfarbe); Rolling-Labels in zweiter Zeile.
   const veLines = [];
-  if (thresholdBinIndex !== -1 && Number.isFinite(varTRel) && varTRel !== 0) veLines.push({ at: thresholdBinIndex, label: 'VaR', color: 'rgba(255,0,0,0.95)', dash: [] });
-  if (esBinIndex !== -1 && Number.isFinite(esTRel) && esTRel !== 0) veLines.push({ at: esBinIndex, label: 'ES', color: 'rgba(255,150,0,0.98)', dash: [6, 4] });
+  const scenTag = String(mainLabel || '').trim();
+  if (thresholdBinIndex !== -1 && Number.isFinite(varTRel) && varTRel !== 0) {
+    veLines.push({ at: thresholdBinIndex, label: scenTag ? `VaR ${scenTag}` : 'VaR', color: 'rgba(255,0,0,0.95)', dash: [], group: 'main', metric: 'var' });
+  }
+  if (esBinIndex !== -1 && Number.isFinite(esTRel) && esTRel !== 0) {
+    veLines.push({ at: esBinIndex, label: scenTag ? `ES ${scenTag}` : 'ES', color: 'rgba(255,150,0,0.98)', dash: [6, 4], group: 'main', metric: 'es' });
+  }
+  if (overlay) {
+    const rollTag = String(overlay.label || 'ROLLING_1');
+    const rollVarIdx = binIndexOf(overlay.varTRel);
+    const rollEsIdx = binIndexOf(overlay.esTRel);
+    if (rollVarIdx !== -1 && Number.isFinite(overlay.varTRel) && overlay.varTRel !== 0) {
+      veLines.push({ at: rollVarIdx, label: `VaR ${rollTag}`, color: 'rgba(214,64,159,0.95)', dash: [], group: 'overlay', metric: 'var' });
+    }
+    if (rollEsIdx !== -1 && Number.isFinite(overlay.esTRel) && overlay.esTRel !== 0) {
+      veLines.push({ at: rollEsIdx, label: `ES ${rollTag}`, color: 'rgba(214,64,159,0.95)', dash: [6, 4], group: 'overlay', metric: 'es' });
+    }
+  }
+  // Jedes Linien-Label in eine EIGENE Zeile (fester vertikaler Abstand).
+  veLines.forEach((ln, i) => { ln.dy = 11 + i * 13; });
 
   const pCol = getPortfolioColor(1); // Garmin-Pink fÃ¼r Portfolio-Bin
 
@@ -285,30 +401,76 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
     (varRedUpTo !== -1 && i <= varRedUpTo) ? 'rgba(255, 0, 0, 0.9)' : 'rgba(54, 162, 235, 1)'
   );
 
+  // Beide Balkenserien uebereinander (grouped:false -> volle Kategorie-Breite),
+  // Overlay halbtransparent in Magenta darueber. 'group' verbindet Balken,
+  // Normalkurve und VaR-/ES-Linien eines Szenarios -> Legenden-Klick toggelt alles.
+  const datasets = [
+    {
+      label: String(mainLabel || 'Frequency'),
+      data: histogram.bins,
+      backgroundColor,
+      borderColor,
+      borderWidth: 1,
+      grouped: false,
+      order: 3,
+      group: 'main',
+    },
+  ];
+  if (overlayBins) {
+    datasets.push({
+      label: String(overlay.label || 'ROLLING_1'),
+      data: overlayBins,
+      backgroundColor: 'rgba(214, 64, 159, 0.35)',
+      borderColor: 'rgba(214, 64, 159, 0.85)',
+      borderWidth: 1,
+      grouped: false,
+      order: 2,
+      group: 'overlay',
+    });
+  }
+  // Normalverteilung des gewaehlten Szenarios: BLAU gestrichelt (Balkenfarbe).
+  datasets.push({
+    type: 'line',
+    label: 'Normal',
+    data: normal,
+    borderColor: 'rgba(54, 162, 235, 1)',
+    borderDash: [6, 4],
+    borderWidth: 2,
+    pointRadius: 0,
+    fill: false,
+    tension: 0.35,
+    order: 1,
+    group: 'main',
+  });
+  // Normalverteilung der Overlay-Serie (ROLLING_1): ROSA durchgezogen (Balkenfarbe).
+  if (overlayNormal) {
+    datasets.push({
+      type: 'line',
+      label: `Normal ${String(overlay.label || 'ROLLING_1')}`,
+      data: overlayNormal,
+      borderColor: 'rgba(214, 64, 159, 0.95)',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false,
+      tension: 0.35,
+      order: 0,
+      group: 'overlay',
+    });
+  }
+
+  // Legenden-Schalter fuer die VaR-/ES-Linien: leere Dummy-Datasets, deren
+  // Legenden-Klick ALLE VaR- bzw. ES-Linien (beider Szenarien) togglet.
+  if (veLines.some((l) => l.metric === 'var')) {
+    datasets.push({ type: 'line', label: 'VaR', data: [], borderColor: 'rgba(255,0,0,0.95)', backgroundColor: 'rgba(255,0,0,0.95)', pointRadius: 0, metricToggle: 'var' });
+  }
+  if (veLines.some((l) => l.metric === 'es')) {
+    datasets.push({ type: 'line', label: 'ES', data: [], borderColor: 'rgba(255,150,0,0.98)', backgroundColor: 'rgba(255,150,0,0.98)', pointRadius: 0, metricToggle: 'es' });
+  }
+
   return {
     data: {
       labels: histogram.labels,
-      datasets: [
-        {
-          label: 'Frequency',
-          data: histogram.bins,
-          backgroundColor,
-          borderColor,
-          borderWidth: 1,
-          order: 2,
-        },
-        {
-          type: 'line',
-          label: 'Normal',
-          data: normal,
-          borderColor: 'rgba(255,255,255,0.9)',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: false,
-          tension: 0.35,
-          order: 1,
-        },
-      ]
+      datasets,
     },
     options: {
       responsive: true,
@@ -316,7 +478,7 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
       indexAxis: 'x', // um 90 Grad gedreht -> vertikale Balken (P/L auf x, Frequency auf y)
       scales: {
         x: {
-          title: { display: true, text: 'P/L as % of NAV' },
+          title: { display: true, text: horizonDays > 1 ? `P/L as % of NAV (${horizonDays}d horizon)` : 'P/L as % of NAV' },
           ticks: { maxRotation: 90, minRotation: 90, autoSkip: true, maxTicksLimit: 16 }
         },
         y: {
@@ -325,16 +487,101 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0) {
         }
       },
       plugins: {
-        legend: { display: false },
+        // Mit Overlay (zwei Verteilungen) Legende RECHTS zeigen (kleine Kaestchen),
+        // sonst wie bisher aus. Die Normal-Kurven bleiben aus der Legende draussen.
+        legend: {
+          display: !!overlayBins || veLines.length > 0,
+          position: 'right',
+          labels: {
+            boxWidth: 12,
+            boxHeight: 6,
+            filter: (it) => !String(it.text).startsWith('Normal'),
+            // Legendenfarbe explizit je Gruppe: die Balkenfarbe ist ein ARRAY
+            // (Tail rot) -> Chart.js wuerde sonst die erste Farbe (rot) zeigen.
+            generateLabels: (chart) => {
+              const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+              items.forEach((it) => {
+                const g = chart.data.datasets[it.datasetIndex]?.group;
+                if (g === 'main') {
+                  it.fillStyle = 'rgba(54, 162, 235, 0.7)';
+                  it.strokeStyle = 'rgba(54, 162, 235, 1)';
+                } else if (g === 'overlay') {
+                  it.fillStyle = 'rgba(214, 64, 159, 0.6)';
+                  it.strokeStyle = 'rgba(214, 64, 159, 0.85)';
+                }
+              });
+              return items;
+            },
+          },
+          // Legenden-Klick: Szenario-Eintraege togglen die GANZE Gruppe (Balken +
+          // Normalkurve + Linien via chart.$hiddenGroups); die "VaR"/"ES"-Eintraege
+          // togglen NUR die jeweiligen Linien (chart.$hiddenMetrics).
+          onClick: (e, item, legend) => {
+            const chart = legend.chart;
+            const ds = chart.data.datasets[item.datasetIndex];
+
+            if (ds?.metricToggle) {
+              const hiddenM = new Set(chart.$hiddenMetrics || []);
+              const nowHidden = !hiddenM.has(ds.metricToggle);
+              if (nowHidden) hiddenM.add(ds.metricToggle); else hiddenM.delete(ds.metricToggle);
+              chart.$hiddenMetrics = hiddenM;
+              chart.setDatasetVisibility(item.datasetIndex, !nowHidden); // Durchstreichen
+              chart.update();
+              return;
+            }
+
+            const group = ds?.group;
+            if (!group) return;
+            const hidden = new Set(chart.$hiddenGroups || []);
+            const nowHidden = !hidden.has(group);
+            if (nowHidden) hidden.add(group); else hidden.delete(group);
+            chart.$hiddenGroups = hidden;
+            chart.data.datasets.forEach((d, i) => {
+              if (d.group === group) chart.setDatasetVisibility(i, !nowHidden);
+            });
+            chart.update();
+          },
+        },
         tooltip: {
           callbacks: {
-            label: context => `${context.label}: ${context.raw}`
+            label: context => `${context.dataset?.label ?? ''}: ${context.raw}`
           }
-        }
+        },
+        // Intervall-Zoom (chartjs-plugin-zoom, global geladen): Ziehen = x-Intervall
+        // aufziehen, Wheel = Zoom, Ctrl+Ziehen = Pan. Reset ueber den Button.
+        zoom: {
+          pan: { enabled: true, mode: 'x', modifierKey: 'ctrl' },
+          zoom: {
+            drag: { enabled: true, backgroundColor: 'rgba(75,150,225,0.15)', borderColor: 'rgba(75,150,225,0.6)', borderWidth: 1 },
+            wheel: { enabled: true },
+            mode: 'x',
+          },
+        },
       }
     },
     veLines,
   };
+}
+
+// "Reset Zoom"-Button oben rechts im Verteilungs-Chart (idempotent).
+function ensureDistZoomTools(canvas) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (box.querySelector('.pl-dist-resetzoom')) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'pl-dist-resetzoom';
+  btn.textContent = 'Reset Zoom';
+  btn.title = 'Zoom zuruecksetzen';
+  Object.assign(btn.style, {
+    position: 'absolute', top: '6px', right: '8px', zIndex: 5,
+    fontSize: '11px', padding: '2px 8px', cursor: 'pointer',
+  });
+  btn.addEventListener('click', () => {
+    try { window.plMvarDistChartInstance?.resetZoom?.(); } catch (_) {}
+  });
+  box.appendChild(btn);
 }
 
 

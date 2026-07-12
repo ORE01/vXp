@@ -69,6 +69,7 @@ import { handleProviderData } from './features/DATA_PROVIDER/DATAProvider.js';
 import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORECASTING/ML.js';
 
 import { handleSummaryMarketRiskData, handleMvarProductTable } from './features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
+import { renderHomeOverview, initHomeDisclaimer } from './features/HOME/homeOverview.js';
 import { startOfferImport, handleSubmitMatching, quickImportWithStandardMapping } from './features/OFFERS/readOffers.js';
 
 import { setupCustomerReportsPresetUI } from './features/REPORTS/CustomerReportsPresetUI.js';
@@ -148,6 +149,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   bootstrapStores(appState);
+
+  // Home-Overview global verfuegbar machen (initializeTabs in bootstrapBindings
+  // ruft window.renderHomeOverview beim Default-Landing auf; dataRouter re-rendert
+  // nach relevanten Table-Updates).
+  window.renderHomeOverview = renderHomeOverview;
+
+  // Haftungsausschluss ueber der App, solange die Portfolio-Daten laden.
+  initHomeDisclaimer();
 
   bootstrapUIBasics(appState);
   bootstrapTriggers(appState, { emitPanelOpen });

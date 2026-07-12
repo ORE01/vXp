@@ -589,6 +589,26 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
     try {
       await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', pythonArgs);
+
+      // Immer ZUSAETZLICH das rollierende Fenster rechnen (ROLLING_1) — die
+      // Ergebnis-Tabellen sind je Szenario+Stichtag getrennt (ux_MarketVaR_run),
+      // der Nachlauf ergaenzt also die Rolling-Historie ohne das gewaehlte
+      // Szenario zu beruehren. Scheitert er, bleibt der Hauptlauf gueltig.
+      if (String(selectedInterval).trim().toUpperCase() !== 'ROLLING_1') {
+        try {
+          const rollingArgs = ['--table', tableName, '--intervalName', 'ROLLING_1'];
+          if (var_days !== undefined && var_days !== null && var_days !== '') {
+            rollingArgs.push('--varDays', String(var_days));
+          }
+          if (confidence !== undefined && confidence !== null && confidence !== '') {
+            rollingArgs.push('--confidence', String(confidence));
+          }
+          await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', rollingArgs);
+        } catch (e) {
+          console.warn('[MVaR] ROLLING_1-Nachlauf fehlgeschlagen:', e?.message || e);
+        }
+      }
+
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
 
       event.reply('py-mvar-complete', { success: true, projectName: 'py-MVaR' });

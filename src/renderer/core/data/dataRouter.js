@@ -4,11 +4,32 @@
  * Central router for DataPump table events.
  * Goal: keep installReceivers thin and avoid duplicated table-specific logic.
  */
+
+// Home-Overview nach diesen Tabellen neu rendern (Portfolio/Marktrisiko/Kreditrisiko
+// + Default-Portfolio). Deferred, damit der Store-Update davor durch ist.
+const HOME_RELEVANT_CHANNELS = new Set([
+  'PortfoliosData',
+  'PortfolioRiskSensitivitiesData',
+  'MarketVaRData',
+  'CreditVaRData',
+  'CustomerDefaultPortfolioData',
+]);
+let _homeRenderTimer = null;
+function scheduleHomeOverviewRender() {
+  if (_homeRenderTimer) return;
+  _homeRenderTimer = setTimeout(() => {
+    _homeRenderTimer = null;
+    try { window.renderHomeOverview?.(); } catch (_) {}
+  }, 80);
+}
+
 export function routeTableData({ appState }, channel, data, handlers = {}) {
 
   //console.log("ROUTER CHANNEL:", channel);
 
   const rows = Array.isArray(data) ? data : [];
+
+  if (HOME_RELEVANT_CHANNELS.has(channel)) scheduleHomeOverviewRender();
 
   switch (channel) {
     // CUSTOMER
