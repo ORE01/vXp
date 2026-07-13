@@ -111,6 +111,26 @@
   border-color: var(--border-subtle);
 }
 
+/* Mini-Icon-Badges in Triggern (Portfolio / Market Risk / Credit Risk) —
+   eingesetzt via decorateTriggerIcons() in utils/tabs.js. */
+.section-trigger .trigger-ico {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ico-bg, var(--text-muted));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.section-trigger .trigger-ico svg { width: 9px; height: 9px; display: block; }
+/* KPI-Farbstreifen (links) am Trigger: Gruppen-Trigger vererben ihre Bereichs-
+   Farbe an alle Unterpunkte (gesetzt via decorateTriggerIcons in utils/tabs.js). */
+.section-trigger.has-accent { box-shadow: inset 3px 0 0 var(--trigger-accent, transparent); }
+/* Mit Icon: Inhalt linksbuendig, Chevron bleibt rechts. */
+.section-trigger.has-ico { justify-content: flex-start; }
+.section-trigger.has-ico .chev { margin-left: auto; }
+
 /* Unterpunkt-Trigger */
 .table .section-trigger--sub {
   /* alt war height: 24px; -> macht 2 Zeilen kaputt */

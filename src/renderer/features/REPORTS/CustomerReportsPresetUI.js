@@ -11,6 +11,24 @@ import { ensureRendered } from '../../utils/domHelpers.js';
 
 let wired = false;
 
+// Kurzes Bestaetigungs-Feedback direkt am Button: Label wechselt (z.B. "✓ Saved"),
+// Button ist waehrenddessen gesperrt (Schutz gegen Mehrfach-Klicks), danach
+// automatischer Reset auf das Original-Label.
+function flashButton(btn, text, ok = true, ms = 1600) {
+  if (!btn || btn.dataset.flashing === '1') return;
+  btn.dataset.flashing = '1';
+  const orig = btn.textContent;
+  btn.textContent = text;
+  btn.disabled = true;
+  if (!ok) btn.style.opacity = '0.7';
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.disabled = false;
+    btn.style.opacity = '';
+    delete btn.dataset.flashing;
+  }, ms);
+}
+
 export function setupCustomerReportsPresetUI() {
   ensureRendered(async () => {
     const dd  = document.getElementById('customerReportsDropdown');
@@ -78,12 +96,14 @@ export function setupCustomerReportsPresetUI() {
         setActiveName(name);
 
         const row = await loadCustomerReport(name);
-        if (!row?.state_json) return;
+        if (!row?.state_json) { flashButton(btnLoad, '✗ not found', false); return; }
 
         try {
           applyRiskPresetState(JSON.parse(row.state_json));
+          flashButton(btnLoad, '✓ Loaded');
         } catch (e) {
           console.warn('Invalid preset JSON', e);
+          flashButton(btnLoad, '✗ invalid', false);
         }
 
         // âœ… ensure UI reflects loaded preset name
@@ -110,6 +130,7 @@ export function setupCustomerReportsPresetUI() {
         try { state.__tableNotes = JSON.parse(localStorage.getItem('rr-table-notes') || '{}'); } catch (_) {}
 
         const ok = await saveCustomerReport(name, state, 'risk');
+        flashButton(btnSave, ok ? '✓ Saved' : '✗ failed', ok);
 
         // âœ… NACH SAVE: Dropdown neu laden (damit neuer Eintrag sofort sichtbar ist)
         if (ok) await refreshPresets(name);
@@ -120,6 +141,7 @@ export function setupCustomerReportsPresetUI() {
         if (!name) return;
 
         const ok = await deleteCustomerReport(name);
+        flashButton(btnDel, ok ? '✓ Deleted' : '✗ failed', ok);
 
         // âœ… NACH DELETE: Dropdown neu laden (damit gelÃ¶schter Eintrag verschwindet)
         if (ok) await refreshPresets('');

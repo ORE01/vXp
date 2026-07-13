@@ -3,7 +3,6 @@ import processData from '../../../core/ui/modal/modalData.js';
 import createBarChart from '../../../charts/BarChart.js';
 import { appState } from '../../../renderer.js';
 import { renderLossHistogram } from './lossHistogramChart.js';
-import { getColorFromPalette } from '../../../utils/colors.js';
 import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../SummaryBreakdown.js';
 // import {handleTrafficLight} from './trafficLight.js';
 
@@ -11,11 +10,13 @@ import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '.
 if (!window.charts) window.charts = {};
 
 // Balkenfarben (rot/blau uebernommen): Tail (>= VaR) rot, Rest blau; Market adjusted heller.
-const CLOSS_BLUE = 'rgba(70,120,180,0.85)';
+const CLOSS_BLUE = 'rgba(122,92,145,0.9)'; // Credit-Purpur (Basis)
 const CLOSS_RED = 'rgba(210,70,70,0.85)';
 // Drei klar unterscheidbare Blau-Toene je Serie: Historic (dunkel) -> Market (mittel) ->
 // Market adjusted (hell).
-const CLOSS_BLUES = ['rgba(40,95,160,0.9)', 'rgba(95,160,210,0.9)', 'rgba(165,205,240,0.9)'];
+// Credit-Palette (Purpur-Familie): Historic (dunkel) -> Market (mittel) ->
+// Market adjusted (hell).
+const CLOSS_BLUES = ['rgba(94,70,111,0.9)', 'rgba(122,92,145,0.9)', 'rgba(178,152,200,0.9)'];
 
 // Plugin: pro SICHTBARER Serie zwei waagrechte Linien am VaR-Quantil (chart.$varIdx), beide
 // im ROT des VaR-Balkens: VaR (strichliert) auf Balkenhoehe + ES (durchgehend) auf Hoehe des
@@ -710,11 +711,12 @@ export function setupLossIssuerUI() {
         return found ? found.ISSUER_RANK : 'N/A';
       });
 
-      // Colors for the chart bars
+      // Colors for the chart bars — Credit-Palette (Purpur-Familie, wie die
+      // kombinierten Loss-Charts): Historic dunkel, Market mittel, adjusted hell.
       const highlightColor = 'rgba(255, 0, 0, 0.9)'; // Red for highlight
-      const defaultRatingColor = getColorFromPalette(0, 0.7); // Historic (Palette-Blau)
-      const defaultMarketColor = getColorFromPalette(1, 0.7); // Market (Palette-Orange)
-      const defaultMarketNormColor = getColorFromPalette(2, 0.7); // Market adjusted (Palette-Grün)
+      const defaultRatingColor = 'rgba(94,70,111,0.8)';
+      const defaultMarketColor = 'rgba(122,92,145,0.8)';
+      const defaultMarketNormColor = 'rgba(178,152,200,0.8)';
 
       // VaR-Balken = Quantil am naechsten zum Konfidenzniveau (statt exaktem ===99.9,
       // das seit der 6-stelligen QUANTIL-Praezision nie mehr traf).
@@ -933,9 +935,11 @@ export function setupLossIssuerUI() {
       const highlightColor1 = 'rgba(255, 0, 0, 0.9)'; // Red for highlight 1
       const highlightColor2 = 'rgba(200, 0, 0, 0.9)'; // Darker Red for highlight 2
       const highlightColor3 = 'rgba(150, 0, 0, 0.9)'; // Even Darker Red for highlight 3
-      const defaultRatingColor = getColorFromPalette(0, 0.7); // Historic (Palette-Blau)
-      const defaultMarketColor = getColorFromPalette(1, 0.7); // Market (Palette-Orange)
-      const defaultMarketNormColor = getColorFromPalette(2, 0.7); // Market adjusted (Palette-Grün)
+      // ES-Chart: gelblichere Nuance (Gold/Bronze-Familie) zur Credit-Purpur-
+      // Palette — Historic dunkel, Market mittel, adjusted hell.
+      const defaultRatingColor = 'rgba(122,103,60,0.8)';
+      const defaultMarketColor = 'rgba(155,126,82,0.8)';
+      const defaultMarketNormColor = 'rgba(196,168,120,0.8)';
 
       // VaR-Balken = Quantil am naechsten zum Konfidenzniveau (robust gegen die
       // 6-stellige QUANTIL-Praezision und beliebiges n_simulations).

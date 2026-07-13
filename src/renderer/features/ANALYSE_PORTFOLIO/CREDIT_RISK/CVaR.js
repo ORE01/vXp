@@ -538,9 +538,10 @@ function getTsiRatingValues(allFilteredDataByPdFlag) {
 
   const esVal = Number(row[esKey]);
   const varVal = Number(row[varKey]);
-  if (!Number.isFinite(esVal) || !Number.isFinite(varVal)) return null;
+  if (!Number.isFinite(esVal) || !Number.isFinite(varVal) || varVal === 0) return null;
 
-  return { esVal, varVal, tsiDiff: esVal - varVal };
+  // TSI relativ: (ES - VaR) / VaR statt reiner Differenz.
+  return { esVal, varVal, tsiDiff: (esVal - varVal) / varVal };
 }
 
 // Build the TSI table (ES / VaR / TSI stacked) and put the traffic-light dot on the
@@ -597,9 +598,10 @@ function getMsdValues(allFilteredDataByPdFlag) {
 
   const esRating = Number(ratingRow.ES_rel); // Historic ES
   const esNorm   = Number(normRow.ES_rel);   // Adjusted ES
-  if (!Number.isFinite(esRating) || !Number.isFinite(esNorm)) return null;
+  if (!Number.isFinite(esRating) || !Number.isFinite(esNorm) || esRating === 0) return null;
 
-  return { esRating, esNorm, msdDiff: esNorm - esRating };
+  // MSD relativ: (Adjusted ES - Historic ES) / Historic ES statt reiner Differenz.
+  return { esRating, esNorm, msdDiff: (esNorm - esRating) / esRating };
 }
 
 // Build the MSD table (Adjusted ES / Historic ES / MSD) and put the dot on the MSD row.
@@ -938,8 +940,9 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
     return null;
   }
 
-  // Differenz, z.B. -0.01 = -1%, aber wir vergleichen den Betrag
-  const diffRel = esNorm - esRating;
+  // MSD relativ: (Adjusted ES - Historic ES) / Historic ES; verglichen wird der Betrag.
+  if (esRating === 0) return null;
+  const diffRel = (esNorm - esRating) / esRating;
   const valueToCompare = Math.abs(diffRel);
 
   // console.log('Credit Risk Ampel MSD (ES):', {
@@ -1046,10 +1049,11 @@ function trafficLightStateForTsi(allFilteredDataByPdFlag, _flags) {
     return null;
   }
 
-  // TSI in Prozentpunkten: Differenz zweier relativer Werte
-  // z.B. -0.07 - (-0.05) = -0.02 ( = -2 %-Punkte )
-  const tsiDiff = esVal - varVal;
-  const valueToCompare = Math.abs(tsiDiff);  // 0.02
+  // TSI relativ: (ES - VaR) / VaR; z.B. (-0.07 - (-0.05)) / -0.05 = 0.4.
+  // Verglichen wird der Betrag.
+  if (varVal === 0) return null;
+  const tsiDiff = (esVal - varVal) / varVal;
+  const valueToCompare = Math.abs(tsiDiff);
 
   // console.log('TSI (rating, Prozentpunkte):', {
   //   esKey,

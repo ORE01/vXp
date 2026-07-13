@@ -271,17 +271,25 @@ Feature:    Wenn es nur in einem Panel gilt
      ============================================================ -->
 <div id="disclaimerGate" class="disclaimer-gate">
   <div class="disclaimer-box" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
-    <h2 id="disclaimerTitle">Haftungsausschluß</h2>
+    <h2 id="disclaimerTitle">Wichtige Hinweise zu den Berechnungsergebnissen</h2>
     <div class="disclaimer-text">
-      <p>Bitte beachten Sie, dass die folgenden Ausführungen einen wesentlichen Bestandteil der vorliegenden Informationen darstellen.</p>
-      <p>Diese Unterlage wurde nur zu Informationszwecken erstellt und stellt keine Anlageberatung oder Anlageempfehlung dar. Die vorliegenden Informationen sind insbesonders kein Angebot und keine Aufforderung zum Kauf oder Verkauf von Wertpapieren. Sie dienen nur der Erstinformation und können eine auf die individuellen Verhältnisse und Kenntnisse des Anlegers bezogene Beratung nicht ersetzen.</p>
-      <p>Jede Kapitalveranlagung ist mit einem Risiko verbunden. Wert und Rendite einer Anlage können plötzlich und in erheblichem Umfang steigen oder fallen und können nicht garantiert werden. Auch Währungsschwankungen können die Entwicklung des Investments beeinflussen. Es besteht die Möglichkeit, dass der Anleger nicht die gesamte investierte Summe zurück erhält, insbesonders dann, wenn die Kapitalanlage nur für kurze Zeit besteht. Ich weise darauf hin, dass sich die Zahlenangaben auf die Vergangenheit beziehen und dass die frühere Wertentwicklung kein verlässlicher Indikator für künftige Ergebnisse ist.</p>
-      <p>Die vorliegenden Informationen wurden auf der Grundlage von öffentlich zugänglichen Informationen sowie von intern erstellten Daten erarbeitet. Diese Quellen werden von mir als verlässlich eingeschätzt; ich übernehme für die Vollständigkeit und inhaltliche Richtigkeit dieser Quellen aber keine Haftung. Ich, Ronald Schaufler, übernehme weder ausdrücklich noch stillschweigend die Haftung für Schäden, die im Zusammenhang mit der Verwendung der vorliegenden Informationen entstehen.</p>
-      <p>Sämtliche in der vorliegenden Information enthaltenen Schätzungen oder Werturteile sind das Resultat einer unabhängigen Einschätzung. Sie geben meine Überzeugung zum Zeitpunkt des Redaktionsschlusses wieder und können ohne vorherige Ankündigung geändert werden. Die Entlohnung hängt weder in der Vergangenheit, der Gegenwart noch in der Zukunft direkt oder indirekt mit den Einschätzungen oder Sichtweisen, die in den vorliegenden Informationen geäußert werden, zusammen.</p>
+      <p>Dieser Report wurde mit ValuationXpro erstellt. ValuationXpro ist ein Analyse- und Berechnungssystem zur Ermittlung und Darstellung von Fair Values, Renditen, Durationen, Sensitivitäten, Value at Risk, Expected Shortfall, Kreditrisiken, Stressszenarien sowie weiteren Performance- und Risikokennzahlen.</p>
+      <p>Die dargestellten Ergebnisse dienen ausschließlich Informations- und Analysezwecken. Sie stellen weder eine Anlageberatung noch eine Anlageempfehlung oder eine Aufforderung zum Kauf, Verkauf oder Halten von Finanzinstrumenten dar.</p>
+      <p>Die Berechnungsergebnisse basieren auf den zum jeweiligen Bewertungsstichtag verfügbaren Eingabe-, Positions-, Stamm- und Marktdaten sowie auf den ausgewählten Modellen, Methoden, Annahmen und Parametern. Die Qualität und Aussagekraft der Ergebnisse hängen wesentlich von der Richtigkeit, Vollständigkeit, Aktualität und Konsistenz dieser Daten und Einstellungen ab.</p>
+      <p>Bewertungs- und Risikomodelle bilden wirtschaftliche und finanzielle Zusammenhänge in vereinfachter Form ab. Abweichende Daten, Modelle, Annahmen, Parameter oder Marktbedingungen können zu wesentlich anderen Ergebnissen führen.</p>
+      <p>Die ausgewiesenen Fair Values sind modellbasierte Bewertungswerte. Sie stellen keine verbindlichen Marktpreise, handelbaren Kurse oder garantierten Veräußerungspreise dar.</p>
+      <p>Value at Risk, Expected Shortfall und vergleichbare Risikokennzahlen sind statistische Schätzungen auf Grundlage bestimmter Annahmen, Wahrscheinlichkeitsniveaus und Beobachtungszeiträume. Sie stellen keine Obergrenze für mögliche Verluste dar. Tatsächliche Verluste können die ausgewiesenen Werte erheblich überschreiten.</p>
+      <p>Stressszenarien und Simulationen beschreiben hypothetische Entwicklungen. Sie sind keine Prognosen tatsächlich eintretender Marktbewegungen. Angaben zur historischen Performance sind kein verlässlicher Indikator für zukünftige Ergebnisse.</p>
+      <p>Die Ergebnisse sind vor ihrer Verwendung durch fachlich qualifizierte Personen auf Plausibilität, Vollständigkeit und Eignung für den jeweiligen Verwendungszweck zu prüfen. Entscheidungen dürfen nicht ausschließlich auf Grundlage dieses Reports getroffen werden.</p>
+      <p>Für Gewährleistung und Haftung gelten die jeweiligen vertraglichen Vereinbarungen sowie die Lizenz- und Nutzungsbedingungen von ValuationXpro. Zwingende gesetzliche Haftungsbestimmungen bleiben unberührt.</p>
     </div>
     <div class="disclaimer-foot">
+      <label class="disclaimer-agree">
+        <input type="checkbox" id="disclaimerAgree">
+        <span>Ich habe die Nutzungsbedingungen und die Hinweise zu den Berechnungsergebnissen gelesen. Ich akzeptiere die Nutzungsbedingungen und nehme zur Kenntnis, dass die Ergebnisse von ValuationXpro modell- und datenabhängige Analysewerte darstellen.</span>
+      </label>
       <span class="disclaimer-status" id="disclaimerStatus">Portfolio wird geladen…</span>
-      <button id="disclaimerOkBtn" class="disclaimer-ok" disabled>OK</button>
+      <button id="disclaimerOkBtn" class="disclaimer-ok" disabled>Weiter</button>
     </div>
   </div>
 </div>
@@ -304,7 +312,7 @@ Feature:    Wenn es nur in einem Panel gilt
       <!-- Portfolio -->
       <section class="home-card dash-card">
         <div class="home-card-head">
-          <span class="home-ico home-ico--link" id="homePfIco" style="--ico-bg:#3d6ff2" role="button" tabindex="0" title="Portfolio öffnen">
+          <span class="home-ico home-ico--link" id="homePfIco" style="--ico-bg:#6C9BD1" role="button" tabindex="0" title="Portfolio öffnen">
             <svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-8z" fill="#fff"/><path d="M14 2.3A8 8 0 0 1 21.7 10H14z" fill="#fff" opacity=".9"/></svg>
           </span>
           Portfolio<span class="home-card-port" id="homePfPort"></span>
@@ -326,7 +334,7 @@ Feature:    Wenn es nur in einem Panel gilt
       <!-- Market Risk -->
       <section class="home-card dash-card">
         <div class="home-card-head">
-          <span class="home-ico home-ico--link" id="homeMktIco" style="--ico-bg:#d6409f" role="button" tabindex="0" title="Market Risk öffnen">
+          <span class="home-ico home-ico--link" id="homeMktIco" style="--ico-bg:#2A7F7F" role="button" tabindex="0" title="Market Risk öffnen">
             <svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.4" height="8" rx="1" fill="#fff"/><rect x="10.3" y="8" width="3.4" height="12" rx="1" fill="#fff"/><rect x="16.6" y="4" width="3.4" height="16" rx="1" fill="#fff"/></svg>
           </span>
           Market Risk<span class="home-card-port" id="homeMktPort"></span>
@@ -351,12 +359,12 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi">
             <span class="home-kpi-val" id="homeMktRollVar">–</span>
             <span class="home-kpi-abs" id="homeMktRollVarAbs">–</span>
-            <span class="home-kpi-lbl">Normal Risk (VaR) · ROLLING_1</span>
+            <span class="home-kpi-lbl">Normal Risk (VaR) · <span id="homeMktScenNameVar">–</span></span>
           </div>
           <div class="home-kpi">
             <span class="home-kpi-val" id="homeMktRollEs">–</span>
             <span class="home-kpi-abs" id="homeMktRollEsAbs">–</span>
-            <span class="home-kpi-lbl">Extreme Risk (ES) · ROLLING_1</span>
+            <span class="home-kpi-lbl">Extreme Risk (ES) · <span id="homeMktScenNameEs">–</span></span>
           </div>
         </div>
         <div class="home-chart-cap">Top product contributions (% of total VaR)</div>
@@ -366,8 +374,8 @@ Feature:    Wenn es nur in einem Panel gilt
       <!-- Credit Risk -->
       <section class="home-card dash-card">
         <div class="home-card-head">
-          <span class="home-ico home-ico--link" id="homeCrIco" style="--ico-bg:#7c3aed" role="button" tabindex="0" title="Credit Risk öffnen">
-            <svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5z" fill="#fff"/><path d="M12 7.5v5" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15.8" r="1.3" fill="#7c3aed"/></svg>
+          <span class="home-ico home-ico--link" id="homeCrIco" style="--ico-bg:#7A5C91" role="button" tabindex="0" title="Credit Risk öffnen">
+            <svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5z" fill="#fff"/><path d="M12 7.5v5" stroke="#7A5C91" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15.8" r="1.3" fill="#7A5C91"/></svg>
           </span>
           Credit Risk<span class="home-card-port" id="homeCrPort"></span>
         </div>
@@ -509,71 +517,31 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- "Select Portfolio" wurde nach oben verschoben und ist jetzt für VALUATION
          UND RISK identisch (siehe oben, .risk-acc ohne .risk-section). -->
 
-    <!--   Risk Configuration — verschachteltes Accordion: Gruppen-Trigger
-           klappen die nächste Ebene auf (kein Slide-In, kein data-panel),
-           nur die Blätter (Model Selection / Factor Mapping / Credit Risk)
-           öffnen ein Slide-In. -->
-    <div class="risk-acc risk-section">
-      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
-        <span class="section-header">Risk Configuration</span>
-        <span class="chev"></span>
-      </button>
-
-      <div class="risk-acc-body">
-
-        <!-- Input Market Risk (Gruppe) -->
-        <div class="risk-acc">
-          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
-            <span class="section-header">Market Risk</span>
-            <span class="chev"></span>
-          </button>
-
-          <div class="risk-acc-body">
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
-              <span class="section-header">Scenario Period</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-factor-series-map" aria-controls="panel-mvar-factor-series-map" aria-expanded="false">
-              <span class="section-header">Factor Mapping</span>
-              <span class="chev"></span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Input Credit Risk (Blatt) -->
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
-          <span class="section-header">Credit Risk</span>
-          <span class="chev"></span>
-        </button>
-
-      </div>
-    </div>
-
-    <!--   Risk Calculation (Gruppe) → Run / Calculate Risk -->
-    <div class="risk-acc risk-section">
-      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
-        <span class="section-header">Risk Calculation</span>
-        <span class="chev"></span>
-      </button>
-      <div class="risk-acc-body">
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-risk-calc" aria-controls="panel-risk-calc" aria-expanded="false">
-          <span class="section-header">Run / Calculate Risk</span>
-          <span class="chev"></span>
-        </button>
-        <button id="historicMetricsAddButton" type="button" class="edit-button">
-          <span class="button-label">Save to Historic Metrics</span>
-        </button>
-      </div>
-    </div>
-
-    <!--   Risk Results (Gruppe) → Market Risk + Credit Risk — gleiches
-           .risk-acc-System wie Risk Configuration (Haupt → Sub → Sub-Sub). -->
+    <!--   Risk Results (Gruppe) → Risk Calculation + Market Risk + Credit Risk —
+           gleiches .risk-acc-System wie Risk Configuration (Haupt → Sub → Sub-Sub). -->
     <div class="risk-acc risk-section">
       <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
         <span class="section-header">Risk Results</span>
         <span class="chev"></span>
       </button>
       <div class="risk-acc-body">
+
+        <!-- Risk Calculation (Untergruppe, ERSTER Punkt) → Run / Calculate Risk -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+            <span class="section-header">Risk Calculation</span>
+            <span class="chev"></span>
+          </button>
+          <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-risk-calc" aria-controls="panel-risk-calc" aria-expanded="false">
+              <span class="section-header">Run / Calculate Risk</span>
+              <span class="chev"></span>
+            </button>
+            <button id="historicMetricsAddButton" type="button" class="edit-button">
+              <span class="button-label">Save to Historic Metrics</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Market Risk (Gruppe). Der Gruppentoggle klappt die Untertrigger auf UND
              oeffnet das Dashboard-Panel (frueher eigener "Dashboard"-Sub-Trigger). -->
@@ -584,7 +552,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </button>
           <div class="risk-acc-body">
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
-              <span class="section-header">Loss Distribution</span>
+              <span class="section-header">Profit/Loss</span>
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
@@ -619,7 +587,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </button>
           <div class="risk-acc-body">
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
-              <span class="section-header">Loss Distribution</span>
+              <span class="section-header">Profit/Loss</span>
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-EAD" aria-controls="panel-EAD" aria-expanded="false">
@@ -627,7 +595,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <span class="chev"></span>
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-cvar" aria-controls="panel-cvar" aria-expanded="false">
-              <span class="section-header">VaR/ES</span>
+              <span class="section-header">Loss Distribution</span>
               <span class="chev"></span>
             </button>
           </div>
@@ -683,6 +651,45 @@ Feature:    Wenn es nur in einem Panel gilt
           <span class="section-header">Credit Risk</span>
           <span class="chev"></span>
         </button>
+      </div>
+    </div>
+
+    <!--   Risk Configuration (ans ENDE der Trigger verschoben) — verschachteltes
+           Accordion: Gruppen-Trigger klappen die nächste Ebene auf (kein Slide-In,
+           kein data-panel), nur die Blätter öffnen ein Slide-In. -->
+    <div class="risk-acc risk-section">
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Risk Configuration</span>
+        <span class="chev"></span>
+      </button>
+
+      <div class="risk-acc-body">
+
+        <!-- Input Market Risk (Gruppe) -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+            <span class="section-header">Market Risk</span>
+            <span class="chev"></span>
+          </button>
+
+          <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-risk-input-market" aria-controls="panel-risk-input-market" aria-expanded="false">
+              <span class="section-header">Scenario Period</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-factor-series-map" aria-controls="panel-mvar-factor-series-map" aria-expanded="false">
+              <span class="section-header">Factor Mapping</span>
+              <span class="chev"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Credit Risk (Blatt) -->
+        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
+          <span class="section-header">Credit Risk</span>
+          <span class="chev"></span>
+        </button>
+
       </div>
     </div>
 
@@ -1058,7 +1065,7 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Panel: Market VaR -->
 <div id="panel-market" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-market-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-market-title" class="sub-panel-title">Market Profit/Loss Distribution</div>
+    <div id="panel-market-title" class="sub-panel-title">Profit/Loss</div>
     <button class="sub-panel-close" data-close="panel-market" aria-label="close">&times;</button>
   </div>
 
@@ -1106,10 +1113,66 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- 3) CHARTS NEBENEINANDER -->
     <div class="chart-2x1-row">
       <div class="chart-box">
-        <canvas id="tsEU1YChart"></canvas>
+        <canvas id="plMvarDistChart"></canvas>
       </div>
       <div class="chart-box">
-        <canvas id="plMvarDistChart"></canvas>
+        <div class="synth-bond-controls">
+          <label for="synthBondTtmSelect">Maturity</label>
+          <select id="synthBondTtmSelect">
+            <option value="1">1Y</option>
+            <option value="2">2Y</option>
+            <option value="3">3Y</option>
+            <option value="4">4Y</option>
+            <option value="5" selected>5Y</option>
+            <option value="6">6Y</option>
+            <option value="7">7Y</option>
+            <option value="8">8Y</option>
+            <option value="9">9Y</option>
+            <option value="10">10Y</option>
+            <option value="11">11Y</option>
+            <option value="12">12Y</option>
+            <option value="13">13Y</option>
+            <option value="14">14Y</option>
+            <option value="15">15Y</option>
+            <option value="16">16Y</option>
+            <option value="17">17Y</option>
+            <option value="18">18Y</option>
+            <option value="19">19Y</option>
+            <option value="20">20Y</option>
+          </select>
+          <label for="synthBondRatingSelect">Rating</label>
+          <select id="synthBondRatingSelect">
+            <option value="AAA">AAA</option>
+            <option value="AA+">AA+</option>
+            <option value="AA">AA</option>
+            <option value="AA-">AA-</option>
+            <option value="A+">A+</option>
+            <option value="A" selected>A</option>
+            <option value="A-">A-</option>
+            <option value="BBB+">BBB+</option>
+            <option value="BBB">BBB</option>
+            <option value="BBB-">BBB-</option>
+            <option value="BB+">BB+</option>
+            <option value="BB">BB</option>
+            <option value="BB-">BB-</option>
+          </select>
+          <div class="synth-range-group">
+            <button type="button" class="synth-range" data-years="1">1Y</button>
+            <button type="button" class="synth-range" data-years="3">3Y</button>
+            <button type="button" class="synth-range is-active" data-years="5">5Y</button>
+            <button type="button" class="synth-range" data-years="10">10Y</button>
+            <button type="button" class="synth-range" data-years="0">Max</button>
+          </div>
+        </div>
+        <canvas id="tsEU1YChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Rolling-VaR zum Synth-Chart: eigene Box in gleicher Groesse, rechts
+         ausgerichtet (unter dem Synth-Chart). -->
+    <div class="chart-2x1-row chart-2x1-row--var">
+      <div class="chart-box">
+        <canvas id="synthVarChart"></canvas>
       </div>
     </div>
 
@@ -1653,7 +1716,7 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Panel: Credit Risk  -->
 <div id="panel-credit" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-credit-title" class="sub-panel-title">Credit Loss Distribution</div>
+    <div id="panel-credit-title" class="sub-panel-title">Profit/Loss</div>
     <button class="sub-panel-close" data-close="panel-credit" aria-label="close">&times;</button>
   </div>
 
@@ -1848,7 +1911,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <!-- Panel: Credit Risk   Details -->
         <div id="panel-cvar" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-cvar-title" hidden>
           <div class="sub-panel-header">
-            <div id="panel-cvar-title" class="sub-panel-title">Credit Value at Risk (VaR) & Expected Shortfall (ES)</div>
+            <div id="panel-cvar-title" class="sub-panel-title">Loss Distribution</div>
             <button class="sub-panel-close" data-close="panel-cvar" aria-label="close">&times;</button>
           </div>
 

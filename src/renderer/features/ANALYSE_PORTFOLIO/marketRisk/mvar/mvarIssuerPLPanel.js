@@ -313,8 +313,13 @@ function renderIssuerChart(rows, cfg) {
     data: {
       labels,
       datasets: [
-        { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(88,121,160,0.85)', borderColor: 'rgba(88,121,160,0.85)', borderWidth: 1, maxBarThickness: 10 },
-        { label: `Risk contribution (${cfg.metric})`, data: contribPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 10 },
+        // Palette: Portfolio-Anteil = Portfolio-Blau; Risiko-Beitrag = Market-Teal
+        // (VaR) bzw. gelblichere Nuance (ES), damit beide Metriken unterscheidbar sind.
+        { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 1, maxBarThickness: 10 },
+        { label: `Risk contribution (${cfg.metric})`, data: contribPct,
+          backgroundColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
+          borderColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
+          borderWidth: 1, maxBarThickness: 10 },
       ],
     },
     options: {

@@ -63,7 +63,23 @@ function esc(s) {
 const CONS_DEFAULTS = {
   VaR_T_rel: { yellow: -0.005, red: -0.010 },
   ES_T_rel:  { yellow: -0.007, red: -0.015 },
+  TSI:       { yellow: 0.20, red: 0.30 },
 };
+
+// TSI-Schwellen (relativ, positiv) fuer das AKTIVE Warning-Profil; Fallback
+// CONSERVATIVE bzw. App-Defaults — analog zum Credit-Dashboard.
+function tsiThreshold() {
+  const profile = String(appState.getCustomerMarketRiskSetting?.()?.risk_warning_profile || 'CONSERVATIVE');
+  const rows = appState.getCustomerMarketRiskThresholdsByProfile?.(profile) || [];
+  const r = rows.find((x) => String(x.metric_code) === 'TSI');
+  const d = CONS_DEFAULTS.TSI;
+  const y = r ? Number(r.yellow_loss_limit) : NaN;
+  const rd = r ? Number(r.red_loss_limit) : NaN;
+  return {
+    yellow: Math.abs(Number.isFinite(y) ? y : d.yellow),
+    red: Math.abs(Number.isFinite(rd) ? rd : d.red),
+  };
+}
 // Warn-/Limit-Schwellen (Fraktion, z.B. -0.010) fuer eine Metrik aus dem
 // CONSERVATIVE-Profil; Fallback auf Defaults.
 function conservativeLimit(metricCode) {
@@ -130,20 +146,34 @@ export function getMarketDashboardModel(rowOverride = null) {
   const dVarAbs = magDelta(num(row?.VaR_T_abs), lastVarAbs);
   const limit = computeLimitModel(row, varState);
 
+  // TSI wie im Credit-Dashboard: (ES - VaR) / VaR (relativ, positiv);
+  // absolute Zusatzinfo = EUR-Abstand zwischen ES und VaR.
+  const varRel = num(row?.VaR_T_rel);
+  const esRel = num(row?.ES_T_rel);
+  const tsiVal = (row && Number.isFinite(varRel) && varRel !== 0 && Number.isFinite(esRel))
+    ? (esRel - varRel) / varRel
+    : NaN;
+  const tsiTh = tsiThreshold();
+  const tsiState = Number.isFinite(tsiVal)
+    ? (Math.abs(tsiVal) >= tsiTh.red ? 'red' : Math.abs(tsiVal) >= tsiTh.yellow ? 'yellow' : 'green')
+    : null;
+  const tsiRelStr = Number.isFinite(tsiVal) ? `${Number((tsiVal * 100).toFixed(1))}%` : '–';
+  const tsiAbsStr = row ? fmtEur(num(row?.ES_T_abs) - num(row?.VaR_T_abs)) : '–';
+
   // KPI-Karten (4): relativer Wert = Hauptzahl, absoluter Wert immer darunter.
   const cards = [
-    { label: 'MVaR', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs), desc: interval || 'confidence · holding period',
+    { label: 'Normal Risk (VaR)', full: 'Value at Risk', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs), desc: interval || 'confidence · holding period',
       state: varState, dRel: dVarRel, dAbs: dVarAbs, relDeltaStr: fmtPpSigned(dVarRel), absDeltaStr: fmtEurSigned(dVarAbs) },
-    { label: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs), desc: 'beyond MVaR', state: esState },
-    { label: 'Delta vs previous', rel: fmtPpSigned(dVarRel), abs: fmtEurSigned(dVarAbs), desc: 'vs previous period', state: 'neutral', isDelta: true },
+    { label: 'Extreme Risk (ES)', full: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs), desc: 'beyond VaR', state: esState },
+    { label: 'Cluster Risk (TSI)', full: 'Tail Severity Indicator', rel: tsiRelStr, abs: tsiAbsStr, desc: '(ES - VaR) / VaR', state: tsiState },
     { label: 'Limit buffer', rel: (limit ? limit.bufferRelStr : '–'), abs: (limit && limit.bufferAbs != null ? fmtEur(limit.bufferAbs) : '–'), desc: 'remaining to limit', state: varState },
   ];
 
   // Risk development: previous MVaR -> current MVaR -> Expected Shortfall (rel main, abs below).
   const prevVarRel = Number.isFinite(lastVarRelPct) ? -Math.abs(lastVarRelPct) : NaN;
   const flow = [
-    { label: 'MVaR previous', rel: fmtPct(prevVarRel), abs: (Number.isFinite(lastVarAbs) ? fmtEur(lastVarAbs) : '–') },
-    { label: 'MVaR current', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs) },
+    { label: 'VaR previous', rel: fmtPct(prevVarRel), abs: (Number.isFinite(lastVarAbs) ? fmtEur(lastVarAbs) : '–') },
+    { label: 'VaR current', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs) },
     { label: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs) },
   ];
 
@@ -173,37 +203,29 @@ export function renderMarketRiskDashboard() {
 
   const { status, cards, flow, limit } = getMarketDashboardModel();
 
-  if (introEl) introEl.textContent = 'Current market risk position for the selected portfolio.';
+  // Intro-Zeile + Status-/Beschreibungs-Box bewusst entfernt (redundant zu den
+  // KPI-Karten mit Ampeln) — Container leeren, damit nichts stehen bleibt.
+  if (introEl) introEl.textContent = '';
+  if (statusEl) statusEl.innerHTML = '';
 
-  // Status-/Beschreibungs-Box mit grosser Ampel.
-  if (statusEl) {
-    const amp = `mr-amp--${status.state || 'neutral'}`;
-    statusEl.innerHTML = `
-      <div class="mr-status">
-        <div class="mr-status__body">
-          <div class="mr-status__title">Market Risk Overview</div>
-          <div class="mr-status__text">${esc(status.text)}</div>
-        </div>
-        <div class="mr-status__badge">
-          <span class="mr-amp-dot ${amp} mr-status__dot"></span>
-          <span class="mr-status__badge-lbl">${esc(status.label)}</span>
-        </div>
-      </div>`;
-  }
-
-  // KPI-Karten: relativ = Hauptzahl, absolut immer darunter.
+  // KPI-Karten wie im Credit-Dashboard: je Kennzahl EINE Zeile — Karte links,
+  // Limit-Block rechts. Echtes Limit beim VaR (erste Karte); die uebrigen
+  // Zeilen zeigen ein Mock-up als Platzhalter.
   if (host) {
-    host.innerHTML = cards.map((c) => {
+    host.innerHTML = cards.map((c, i) => {
       const amp = `mr-amp--${c.state || 'neutral'}`;
       const dot = c.isDelta ? '' : `<span class="mr-amp-dot ${amp}"></span>`;
       const valCls = c.isDelta ? 'mr-kpi-card__value mr-kpi-card__value--delta' : 'mr-kpi-card__value';
-      return `
+      const cardHtml = `
       <div class="mr-kpi-card">
         <div class="mr-kpi-card__label">${esc(c.label)}</div>
         <div class="${valCls}">${esc(c.rel)}${dot}</div>
+        ${c.full ? `<div class="mr-kpi-card__full">${esc(c.full)}</div>` : ''}
         <div class="mr-kpi-card__sub">${esc(c.abs)}</div>
         <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
       </div>`;
+      const limitHtml = (i === 0) ? mrLimitBarHtml(limit) : mrMockLimitHtml();
+      return `<div class="cr-metric-row">${cardHtml}<div class="cr-metric-limit">${limitHtml}</div></div>`;
     }).join('');
   }
 
@@ -221,7 +243,8 @@ export function renderMarketRiskDashboard() {
       }</div>`;
   }
 
-  renderLimitHtml(limitEl, limit);
+  // Limit sitzt jetzt in der VaR-Zeile — den alten Block unten leeren.
+  if (limitEl) limitEl.innerHTML = '';
 
   // KPI-Band-Spiegelung nur fuer die PREVIEW (Thumbnail-Erfassung). Das PDF zeichnet
   // das Dashboard nativ (RiskPDF, Composed).
@@ -262,12 +285,12 @@ function computeLimitModel(row, state) {
   };
 }
 
-function renderLimitHtml(el, m) {
-  if (!el) return;
-  if (!m) { el.innerHTML = '<div class="mr-dash-intro">No market risk data for the selected portfolio yet.</div>'; return; }
+// Limit-Block als HTML-String (in der VaR-Zeile rechts neben der Karte).
+function mrLimitBarHtml(m) {
+  if (!m) return '<div class="mr-dash-intro">No market risk data for the selected portfolio yet.</div>';
   const amp = `mr-amp--${m.state || 'neutral'}`;
   const fillW = Math.min(100, m.util * 100);
-  el.innerHTML = `
+  return `
     <div class="mr-limit">
       <div class="mr-limit__head">
         <span class="mr-limit__title">Limit utilization</span>
@@ -276,7 +299,7 @@ function renderLimitHtml(el, m) {
       <div class="mr-limit__bar">
         <div class="mr-limit__zone mr-limit__zone--green" style="left:0;width:${m.yellowRatio}%"></div>
         <div class="mr-limit__zone mr-limit__zone--amber" style="left:${m.yellowRatio}%;width:${100 - m.yellowRatio}%"></div>
-        <div class="mr-limit__fill" style="width:${fillW}%"></div>
+        <div class="mr-limit__fill mr-limit__fill--${m.state || 'neutral'}" style="width:${fillW}%"></div>
       </div>
       <div class="mr-limit__scale">
         <span>0%</span>
@@ -294,6 +317,31 @@ function renderLimitHtml(el, m) {
           <div class="mr-limit-card__val">${esc(m.bufferRelStr)}</div>
           <div class="mr-limit-card__sub">${m.bufferAbsStr ? esc(m.bufferAbsStr) : 'remaining to limit'}</div>
         </div>
+      </div>
+    </div>`;
+}
+
+// Mock-up-Limit-Block (Platzhalter fuer Kennzahlen ohne eigenes Limit).
+function mrMockLimitHtml() {
+  return `
+    <div class="mr-limit mr-limit--mock">
+      <div class="mr-limit__head">
+        <span class="mr-limit__title">Limit utilization</span>
+        <span class="mr-limit__util mr-amp--neutral">— %</span>
+      </div>
+      <div class="mr-limit__bar">
+        <div class="mr-limit__zone mr-limit__zone--green" style="left:0;width:50%"></div>
+        <div class="mr-limit__zone mr-limit__zone--amber" style="left:50%;width:50%"></div>
+        <div class="mr-limit__fill" style="width:0%"></div>
+      </div>
+      <div class="mr-limit__scale">
+        <span>0%</span>
+        <span>Warning —</span>
+        <span>Limit —</span>
+      </div>
+      <div class="mr-limit__cards">
+        <div class="mr-limit-card"><div class="mr-limit-card__lbl">Risk limit</div><div class="mr-limit-card__val">–</div><div class="mr-limit-card__sub">mock-up</div></div>
+        <div class="mr-limit-card"><div class="mr-limit-card__lbl">Buffer</div><div class="mr-limit-card__val">–</div><div class="mr-limit-card__sub">mock-up</div></div>
       </div>
     </div>`;
 }

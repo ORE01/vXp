@@ -219,6 +219,58 @@ function bindRiskAccordion() {
   });
 }
 
+// Mini-Icon-Badges (gleiche Farben/Symbole wie die Overview-Karten) in alle
+// Trigger mit den Labels "Portfolio" / "Market Risk" / "Credit Risk" einsetzen.
+// Dokumentweit + idempotent (bereits dekorierte Buttons werden uebersprungen).
+const TRIGGER_ICONS = {
+  'Portfolio': {
+    bg: '#6C9BD1',
+    svg: '<svg viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 0 8 8h-8z" fill="#fff"/><path d="M14 2.3A8 8 0 0 1 21.7 10H14z" fill="#fff" opacity=".9"/></svg>',
+  },
+  'Market Risk': {
+    bg: '#2A7F7F',
+    svg: '<svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.4" height="8" rx="1" fill="#fff"/><rect x="10.3" y="8" width="3.4" height="12" rx="1" fill="#fff"/><rect x="16.6" y="4" width="3.4" height="16" rx="1" fill="#fff"/></svg>',
+  },
+  'Credit Risk': {
+    bg: '#7A5C91',
+    svg: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5z" fill="#fff"/></svg>',
+  },
+};
+
+function decorateTriggerIcons() {
+  document.querySelectorAll('.section-trigger .section-header').forEach((h) => {
+    const cfg = TRIGGER_ICONS[(h.textContent || '').trim()];
+    if (!cfg) return;
+    const btn = h.closest('.section-trigger');
+    if (!btn) return;
+
+    if (!btn.querySelector('.trigger-ico')) {
+      btn.classList.add('has-ico');
+      const ico = document.createElement('span');
+      ico.className = 'trigger-ico';
+      ico.style.setProperty('--ico-bg', cfg.bg);
+      ico.setAttribute('aria-hidden', 'true');
+      ico.innerHTML = cfg.svg;
+      btn.insertBefore(ico, h);
+    }
+
+    // KPI-Farbstreifen: Gruppen-Trigger (Accordion-Kopf) faerben ALLE Trigger
+    // ihres Teilbaums (Unterpunkte, Configuration-Blaetter, verschachtelte
+    // Gruppen) mit der Bereichs-Farbe; Einzel-Trigger nur sich selbst.
+    const applyAccent = (el) => {
+      el.classList.add('has-accent');
+      el.style.setProperty('--trigger-accent', cfg.bg);
+    };
+    if (btn.classList.contains('risk-acc-toggle')) {
+      const acc = btn.closest('.risk-acc');
+      if (acc) acc.querySelectorAll('.section-trigger').forEach(applyAccent);
+      applyAccent(btn);
+    } else {
+      applyAccent(btn);
+    }
+  });
+}
+
 export function initializeTabs() {
   const map = {
     'HOME_Tab': 'HOME_Modal',
@@ -284,6 +336,7 @@ export function initializeTabs() {
   relocateRiskInputs();
   wireRiskCalcStatus();
   bindRiskAccordion();
+  decorateTriggerIcons();
 
   // OVERVIEW: beim Oeffnen des Home-Tabs aus den (bereits gefuellten) Stores neu rendern.
   const homeTab = document.getElementById('HOME_Tab');

@@ -91,10 +91,11 @@ const METRICS_CR = [
 ];
 
 // App defaults (mirror the DB seed); used only if the store has no row yet.
+// TSI/MSD sind relative Kennzahlen: TSI = (ES-VaR)/VaR, MSD = (adjES-histES)/histES.
 const THRESHOLD_DEFAULTS_CR = {
   CVAR: { yellow: -0.050, red: -0.052, description: 'Historic VaR%' },
-  TSI: { yellow: 0.010, red: 0.014, description: 'Historic ES - Historic VaR' },
-  MSD: { yellow: 0.010, red: 0.030, description: 'Adjusted ES - Historic ES' },
+  TSI: { yellow: 0.20, red: 0.30, description: '(Historic ES - Historic VaR) / Historic VaR' },
+  MSD: { yellow: 0.20, red: 0.60, description: '(Adjusted ES - Historic ES) / Historic ES' },
 };
 
 function escapeHtml(value) {

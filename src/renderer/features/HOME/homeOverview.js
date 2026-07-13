@@ -153,7 +153,7 @@ function renderPortfolioCard(port) {
     'homePfChart',
     top.map((e) => e[0]),
     top.map((e) => (notional ? +(e[1] / notional * 100).toFixed(1) : 0)),
-    'rgba(61,111,242,0.85)',
+    'rgba(108, 155, 209, 0.9)',
     { fmtValue: (v) => `${Number(v).toFixed(1)}%`, fmtTip: (v) => ` ${Number(v).toFixed(1)} % of notional` },
   );
   return true;
@@ -192,6 +192,23 @@ function latestMarketDataDate() {
   return max || null;
 }
 
+// MARKET-STRESS-Buffer-Ampel (HOME-Market-Karte): Buffer = Abstand des aktuellen
+// Markts (ROLLING_1) zum Stress-Szenario, relativ zum Rolling-Wert.
+// Schwellen aus dem Customer Setup (CustomerMarketRiskThresholdSetting,
+// Metrik MARKET_STRESS, aktives Warning-Profil); Fallback 30% gelb / 10% rot.
+const MARKET_STRESS_DEFAULTS = { yellow: 0.30, red: 0.10 };
+function marketStressThreshold() {
+  const profile = String(appState.getCustomerMarketRiskSetting?.()?.risk_warning_profile || 'CONSERVATIVE');
+  const rows = appState.getCustomerMarketRiskThresholdsByProfile?.(profile) || [];
+  const r = rows.find((x) => String(x.metric_code) === 'MARKET_STRESS');
+  const y = r ? Number(r.yellow_loss_limit) : NaN;
+  const rd = r ? Number(r.red_loss_limit) : NaN;
+  return {
+    yellow: Number.isFinite(y) ? Math.abs(y) : MARKET_STRESS_DEFAULTS.yellow,
+    red: Number.isFinite(rd) ? Math.abs(rd) : MARKET_STRESS_DEFAULTS.red,
+  };
+}
+
 function renderMarketCard(port) {
   setText('homeMktPort', port ? `· ${port}` : '');
   const rows = (appState.getAllMvarData?.() || []).filter((r) => normPort(r?.port_name) === port);
@@ -206,36 +223,55 @@ function renderMarketCard(port) {
     return null;
   }
 
-  // KPI-Kaestchen (MVaR + Expected Shortfall) 1:1 aus dem Market-Risk-Dashboard:
-  // gleiches Modell, gleiche Formatierung, gleiche Ampel — gefuettert mit der
-  // Overview-Zeilenauswahl, damit Kaestchen und Chart dieselbe Zeile zeigen.
+  // Reihe 1 (gross) = ROLLING_1 (der AKTUELLE Markt, ohne Szenario-Zusatz im Label),
+  // Reihe 2 (Kaestchen) = das gewaehlte Stress-Szenario. Die Ampel in Reihe 1 ist
+  // MARKET STRESS: Buffer = (|Szenario| - |Rolling|) / |Rolling| je Metrik —
+  // 0% heisst "Markt auf Stress-Niveau"; unter 30% gelb, unter 10% rot.
   const model = getMarketDashboardModel(row);
   const [kMvar, kEs] = model.cards;
 
-  setText('homeMktVar', kMvar.rel);
-  setDot('homeMktVarDot', kMvar.state);
-  setText('homeMktVarRel', `Normal Risk (VaR)  ·  ${kMvar.abs}`);
-  setText('homeMktEs', kEs.rel);
-  setDot('homeMktEsDot', kEs.state);
-  setText('homeMktEsAbs', kEs.abs);
-
-  // ROLLING_1-Vergleichswerte (VaR/ES) — juengste Rolling-Zeile, formatiert ueber
-  // dasselbe Dashboard-Modell. Ohne Rolling-Zeile bleiben die Kaestchen auf '–'.
-  const rollIds = ['homeMktRollVar', 'homeMktRollVarAbs', 'homeMktRollEs', 'homeMktRollEsAbs'];
-  const rollRow = (normalizeMvarText(getMvarRowScenarioName(row)) !== 'ROLLING_1')
+  const scenName = normalizeMvarText(getMvarRowScenarioName(row));
+  const rollRow = (scenName !== 'ROLLING_1')
     ? rows
         .filter((r) => normalizeMvarText(getMvarRowScenarioName(r)) === 'ROLLING_1')
         .sort((a, b) => getMvarRowAsofDate(a).localeCompare(getMvarRowAsofDate(b)))
         .at(-1) || null
-    : null;
-  if (rollRow) {
-    const [rVar, rEs] = getMarketDashboardModel(rollRow).cards;
-    setText('homeMktRollVar', rVar.rel);
-    setText('homeMktRollVarAbs', rVar.abs);
-    setText('homeMktRollEs', rEs.rel);
-    setText('homeMktRollEsAbs', rEs.abs);
+    : row;
+  const stressRow = (scenName !== 'ROLLING_1') ? row : null;
+  const [rVar, rEs] = rollRow ? getMarketDashboardModel(rollRow).cards : [null, null];
+
+  const stressBuffer = (metric) => {
+    const s = Math.abs(Number(stressRow?.[metric]));
+    const r0 = Math.abs(Number(rollRow?.[metric]));
+    if (!Number.isFinite(s) || !Number.isFinite(r0) || r0 === 0) return null;
+    return (s - r0) / r0;
+  };
+  const msTh = marketStressThreshold();
+  const bufferState = (b) => (b == null
+    ? null
+    : b < msTh.red ? 'red' : b < msTh.yellow ? 'yellow' : 'green');
+
+  // Reihe 1: ROLLING-Werte + Market-Stress-Ampel.
+  setText('homeMktVar', rVar ? rVar.rel : '–');
+  setDot('homeMktVarDot', bufferState(stressBuffer('VaR_T_rel')));
+  setText('homeMktVarRel', `Normal Risk (VaR)  ·  ${rVar ? rVar.abs : '–'}`);
+  setText('homeMktEs', rEs ? rEs.rel : '–');
+  setDot('homeMktEsDot', bufferState(stressBuffer('ES_T_rel')));
+  setText('homeMktEsAbs', rEs ? rEs.abs : '–');
+
+  // Reihe 2: gewaehltes Szenario (Name im Label); ohne Stress-Szenario '–'.
+  const rollIds = ['homeMktRollVar', 'homeMktRollVarAbs', 'homeMktRollEs', 'homeMktRollEsAbs'];
+  if (stressRow) {
+    setText('homeMktRollVar', kMvar.rel);
+    setText('homeMktRollVarAbs', kMvar.abs);
+    setText('homeMktRollEs', kEs.rel);
+    setText('homeMktRollEsAbs', kEs.abs);
+    setText('homeMktScenNameVar', scenName);
+    setText('homeMktScenNameEs', scenName);
   } else {
     rollIds.forEach((id) => setText(id, '–'));
+    setText('homeMktScenNameVar', '–');
+    setText('homeMktScenNameEs', '–');
   }
 
 
@@ -279,7 +315,7 @@ function renderMarketCard(port) {
       'homeMktChart',
       prodTop.map(chartLabelFor),
       prodTop.map((p) => +(Math.abs(p.val) / baseAbs * 100).toFixed(1)),
-      'rgba(214,64,159,0.85)',
+      'rgba(42, 127, 127, 0.9)',
       {
         fmtValue: (v) => `${Number(v).toFixed(1)}%`,
         fmtTip: (v) => ` ${Number(v).toFixed(1)} % of total VaR`,
@@ -363,7 +399,7 @@ function renderCreditCard(port) {
       'homeCrChart',
       top.map((t) => (t.rating ? [t.name, t.rating] : t.name)),
       top.map((t) => +t.pct.toFixed(1)),
-      'rgba(124,58,237,0.85)',
+      'rgba(122, 92, 145, 0.9)',
       { fmtValue: (v) => `${Number(v).toFixed(0)}%`, fmtTip: (v) => ` ${Number(v).toFixed(1)} %` },
     );
   } else {
@@ -408,8 +444,8 @@ function syncHomeReportPanel(port) {
     ['CPV01 (bp)', txt('homePfCpv01')],
     ['Market — Normal Risk (VaR)', `${txt('homeMktVar')}  (${txt('homeMktVarRel')})`],
     ['Market — Extreme Risk (ES)', `${txt('homeMktEs')}  (${txt('homeMktEsAbs')})`],
-    ['Market — VaR ROLLING_1', `${txt('homeMktRollVar')}  (${txt('homeMktRollVarAbs')})`],
-    ['Market — ES ROLLING_1', `${txt('homeMktRollEs')}  (${txt('homeMktRollEsAbs')})`],
+    [`Market — VaR ${txt('homeMktScenNameVar')}`, `${txt('homeMktRollVar')}  (${txt('homeMktRollVarAbs')})`],
+    [`Market — ES ${txt('homeMktScenNameEs')}`, `${txt('homeMktRollEs')}  (${txt('homeMktRollEsAbs')})`],
     ['Credit — Normal Risk (VaR)', `${txt('homeCrVar')}  (${txt('homeCrVarRel')})`],
     ['Credit — Extreme Risk (ES)', `${txt('homeCrEs')}  (${txt('homeCrEsAbs')})`],
     ['Credit — Cluster Risk (TSI)', txt('homeCrTsi')],
@@ -436,23 +472,34 @@ function syncHomeReportPanel(port) {
 }
 
 // --- Haftungsausschluss-Gate (Boot) ------------------------------------------
-// Liegt beim Start ueber der App (#disclaimerGate, index.html). OK wird erst
-// freigegeben, wenn die Portfolio-Daten aus dem Boot-Load im Store liegen;
-// Fallback nach 30 s, damit der Nutzer bei leerer DB nicht ausgesperrt ist.
+// Liegt beim Start ueber der App (#disclaimerGate, index.html). "Weiter" wird
+// erst freigegeben, wenn (a) die Portfolio-Daten aus dem Boot-Load im Store
+// liegen (Fallback nach 30 s, damit der Nutzer bei leerer DB nicht ausgesperrt
+// ist) UND (b) die "Ich stimme zu"-Checkbox angehakt ist.
 export function initHomeDisclaimer() {
   const gate = document.getElementById('disclaimerGate');
   const btn = document.getElementById('disclaimerOkBtn');
   const status = document.getElementById('disclaimerStatus');
+  const agree = document.getElementById('disclaimerAgree');
   if (!gate || !btn) return;
 
   btn.addEventListener('click', () => { gate.hidden = true; });
 
   const t0 = Date.now();
-  const enable = (msg) => {
-    btn.disabled = false;
-    if (status) status.textContent = msg;
-    btn.focus();
+  let dataReady = false;
+  let readyMsg = '';
+
+  const sync = () => {
+    const agreed = !agree || agree.checked;
+    btn.disabled = !(dataReady && agreed);
+    if (status && dataReady) {
+      status.textContent = agreed ? readyMsg : `${readyMsg} Bitte zustimmen.`;
+    }
+    if (!btn.disabled) btn.focus();
   };
+  agree?.addEventListener('change', sync);
+
+  const enable = (msg) => { dataReady = true; readyMsg = msg; sync(); };
   (function poll() {
     if (gate.hidden) return;
     if ((appState?.getAllPortfolioData?.() || []).length > 0) {

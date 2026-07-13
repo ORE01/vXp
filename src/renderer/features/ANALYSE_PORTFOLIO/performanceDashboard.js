@@ -243,7 +243,7 @@ function renderPerfScatter(points) {
     data: {
       datasets: [
         { type: 'line', label: 'proportional', data: [{ x: 0, y: 0 }, { x: axMax, y: axMax }], borderColor: 'rgba(150,165,185,0.7)', borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false, order: 2 },
-        { label: 'Positions', data: limited, backgroundColor: 'rgba(91,141,239,0.75)', borderColor: 'rgba(91,141,239,0.9)', pointRadius: 6, pointHoverRadius: 7, order: 1 },
+        { label: 'Positions', data: limited, backgroundColor: 'rgba(108,155,209,0.75)', borderColor: 'rgba(108,155,209,0.9)', pointRadius: 6, pointHoverRadius: 7, order: 1 },
       ],
     },
     options: {
@@ -380,7 +380,7 @@ function renderPerfReturnChart(labels, dataPct) {
   if (!canvas || !window.Chart) return;
   if (_perfReturnChart) { try { _perfReturnChart.destroy(); } catch {} _perfReturnChart = null; }
 
-  const green = '#22c55e';
+  const green = '#6C9BD1'; // Portfolio-Blau (Yield-Primaerfarbe)
   const grid = _cssVar('--chart-grid', 'rgba(120,120,120,0.25)');
   const text = _cssVar('--chart-text', '#888');
   const font = _cssVar('--font-family', 'Inter, sans-serif');
@@ -391,8 +391,8 @@ function renderPerfReturnChart(labels, dataPct) {
 
   const ctx = canvas.getContext('2d');
   const fill = ctx.createLinearGradient(0, 0, 0, 250);
-  fill.addColorStop(0, 'rgba(34,197,94,0.35)');
-  fill.addColorStop(1, 'rgba(34,197,94,0.02)');
+  fill.addColorStop(0, 'rgba(108,155,209,0.35)');
+  fill.addColorStop(1, 'rgba(108,155,209,0.02)');
 
   _perfReturnChart = new window.Chart(ctx, {
     type: 'line',

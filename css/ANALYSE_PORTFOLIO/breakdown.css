@@ -387,6 +387,10 @@
   border-bottom: 1px solid var(--border-subtle);
   margin-bottom: 4px;
   max-width: 260px;
+}
+/* Je Pfad-Eintrag eine eigene Zeile (mehrere Issuer etc. untereinander);
+   einzelne ueberlange Namen werden weiterhin per Ellipsis gekappt. */
+.conc-menu__hdr-line {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .conc-menu__item {
@@ -466,10 +470,34 @@
   flex: 1 1 200px; min-width: 190px; position: relative;
   background: var(--surface-card); border: 1px solid var(--border-subtle);
   border-radius: 8px; padding: 14px 16px;
+  overflow: hidden;
 }
+/* Farbiger Akzent-Streifen oben (wie im Yield-Dashboard): Farbe je Dashboard
+   ueber --mr-kpi-accent; ohne gesetzten Akzent unsichtbar. */
+.mr-kpi-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: var(--mr-kpi-accent, transparent);
+}
+#panel-market-dashboard .mr-kpi-card { --mr-kpi-accent: #2A7F7F; }
+#panel-credit-dashboard .mr-kpi-card { --mr-kpi-accent: #7A5C91; }
+/* Inhalt der Dashboard-KPI-Karten etwas nach rechts geschoben. */
+#panel-market-dashboard .mr-kpi-card,
+#panel-credit-dashboard .mr-kpi-card { padding-left: 26px; }
+/* Market-Dashboard: die grossen KPI-Karten UNTEREINANDER (wie im Credit-
+   Dashboard eine Kennzahl pro Zeile). */
+#panel-market-dashboard .mr-kpi-row,
+#panel-market-dashboard #mrDashKpi { flex-direction: column; }
+/* Dashboard-KPI-Karten: Label weiss/groesser/fett, Wert gross aber semibold
+   (wie die Overview-Karten -> professioneller). */
+#panel-market-dashboard .mr-kpi-card__label,
+#panel-credit-dashboard .mr-kpi-card__label { color: var(--text-bright); font-size: 12.5px; font-weight: 700; }
+#panel-market-dashboard .mr-kpi-card__value,
+#panel-credit-dashboard .mr-kpi-card__value { font-size: 18px; font-weight: 600; color: var(--text-bright); }
 .mr-kpi-card__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
 .mr-kpi-card__value { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-top: 8px; }
 .mr-kpi-card__value .mr-amp-dot { width: 11px; height: 11px; margin-left: 8px; vertical-align: middle; }
+/* Voller Kennzahl-Name klein unter dem Wert (Value at Risk, Expected Shortfall, ...). */
+.mr-kpi-card__full { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .mr-kpi-card__sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 /* Zusatz-Zeilen in einer KPI-Karte (z.B. IR/CS/Vega unter dem Total) */
 .mr-kpi-card__rows { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
@@ -507,6 +535,9 @@
 .cr-metric-row .mr-kpi-card { flex: 0 0 220px; min-width: 200px; }
 .cr-metric-limit { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
 
+/* Mock-up-Limitblock (Market-Dashboard: nur VaR hat ein echtes Limit) */
+.mr-limit--mock { opacity: .4; }
+
 /* Limit-Auslastungsleiste */
 .mr-limit-wrap { margin-top: 20px; }
 .mr-limit__head { display: flex; align-items: baseline; justify-content: space-between; }
@@ -519,7 +550,12 @@
 .mr-limit__zone { position: absolute; top: 0; bottom: 0; }
 .mr-limit__zone--green { background: rgba(76, 175, 80, .22); }
 .mr-limit__zone--amber { background: rgba(224, 176, 0, .22); }
-.mr-limit__fill { position: absolute; top: 0; bottom: 0; left: 0; background: #0B1F3A; border-right: 2px solid #fff; }
+/* Auslastungs-Fuellbalken in den Ampelfarben (Zustand der Kennzahl);
+   neutral/mock = gedaempftes Grau statt dunklem Navy. */
+.mr-limit__fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--text-muted); border-right: 2px solid #fff; }
+.mr-limit__fill--green  { background: #4CAF50; }
+.mr-limit__fill--yellow { background: #E0B000; }
+.mr-limit__fill--red    { background: #D32F2F; }
 .mr-limit__scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 /* Auslastungsleiste ~halb so breit (Kopf/Balken/Skala buendig). */
 .mr-limit__head, .mr-limit__bar, .mr-limit__scale { max-width: 50%; }

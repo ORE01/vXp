@@ -47,16 +47,23 @@ function renderRiskCalcSettings() {
 }
 
 // Editable metrics + UI labels (order = sort_order).
+// dir: 'neg' = Verlust-Limits (gelb > rot), 'pos' = relative Kennzahl (rot > gelb),
+// 'buffer' = Abstands-Kennzahl (gelb > rot; rot = kleinster Puffer).
 const METRICS = [
-  { code: 'VaR_T_rel', label: 'VaR', sort: 10 },
-  { code: 'ES_T_rel', label: 'Expected Shortfall', sort: 20 },
+  { code: 'VaR_T_rel', label: 'VaR', sort: 10, dir: 'neg' },
+  { code: 'ES_T_rel', label: 'Expected Shortfall', sort: 20, dir: 'neg' },
+  { code: 'TSI', label: 'Cluster Risk (TSI)', sort: 30, dir: 'pos' },
+  { code: 'MARKET_STRESS', label: 'Market Stress (Buffer)', sort: 40, dir: 'buffer' },
 ];
 
 // App default limits (mirror the DB seed); used only if the store has no row yet.
+// TSI ist relativ: (ES - VaR) / VaR — positive Schwellen.
+// MARKET_STRESS = Buffer (|Szenario| - |Rolling|) / |Rolling|: unter gelb warnen,
+// unter rot kritisch (Markt nahe am Stress-Niveau).
 const THRESHOLD_DEFAULTS = {
-  CONSERVATIVE: { VaR_T_rel: { yellow: -0.005, red: -0.010 }, ES_T_rel: { yellow: -0.007, red: -0.015 } },
-  BALANCED:     { VaR_T_rel: { yellow: -0.010, red: -0.030 }, ES_T_rel: { yellow: -0.015, red: -0.050 } },
-  AGGRESSIVE:   { VaR_T_rel: { yellow: -0.020, red: -0.050 }, ES_T_rel: { yellow: -0.030, red: -0.080 } },
+  CONSERVATIVE: { VaR_T_rel: { yellow: -0.005, red: -0.010 }, ES_T_rel: { yellow: -0.007, red: -0.015 }, TSI: { yellow: 0.20, red: 0.30 }, MARKET_STRESS: { yellow: 0.30, red: 0.10 } },
+  BALANCED:     { VaR_T_rel: { yellow: -0.010, red: -0.030 }, ES_T_rel: { yellow: -0.015, red: -0.050 }, TSI: { yellow: 0.30, red: 0.50 }, MARKET_STRESS: { yellow: 0.30, red: 0.10 } },
+  AGGRESSIVE:   { VaR_T_rel: { yellow: -0.020, red: -0.050 }, ES_T_rel: { yellow: -0.030, red: -0.080 }, TSI: { yellow: 0.50, red: 0.80 }, MARKET_STRESS: { yellow: 0.30, red: 0.10 } },
 };
 
 // ---- percent <-> decimal -------------------------------------------------
@@ -157,14 +164,23 @@ function readThresholdInputs() {
   });
 }
 
-// Validation: numbers must be finite and yellow must be greater (less negative)
-// than red (yellow_loss_limit > red_loss_limit).
+// Validation: numbers must be finite. Richtung je Metrik:
+// 'neg' (Verlust-Limits): yellow > red (weniger negativ).
+// 'pos' (z.B. TSI):        red > yellow.
 function validateThresholds(rows) {
   for (const r of rows) {
     if (!Number.isFinite(r.yellow_loss_limit) || !Number.isFinite(r.red_loss_limit)) {
       return { ok: false, message: `Invalid number for ${r.metric_code}.` };
     }
-    if (!(r.yellow_loss_limit > r.red_loss_limit)) {
+    const dir = METRICS.find((m) => m.code === r.metric_code)?.dir || 'neg';
+    if (dir === 'pos') {
+      if (!(r.red_loss_limit > r.yellow_loss_limit)) {
+        return {
+          ok: false,
+          message: `${r.metric_code}: Red (${decimalToPctStr(r.red_loss_limit)}%) must be greater than Yellow (${decimalToPctStr(r.yellow_loss_limit)}%).`,
+        };
+      }
+    } else if (!(r.yellow_loss_limit > r.red_loss_limit)) {
       return {
         ok: false,
         message: `${r.metric_code}: Yellow (${decimalToPctStr(r.yellow_loss_limit)}%) must be greater than Red (${decimalToPctStr(r.red_loss_limit)}%).`,

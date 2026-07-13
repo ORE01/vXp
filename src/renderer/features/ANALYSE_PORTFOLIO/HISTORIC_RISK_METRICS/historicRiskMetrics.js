@@ -127,8 +127,10 @@ function ensureFixedTooltipPositioner() {
 // Fadenkreuz-Plugin (opt-in via options.plugins.histCrosshair): vertikale + horizontale
 // Linie am Cursor + Werte am Rand (Datum unten, y-Wert links). Global registriert, wirkt
 // aber NUR auf Charts, die options.plugins.histCrosshair gesetzt haben.
+// valueScale (Default 100): Faktor fuer die y-Randanzeige — die Historic-Charts
+// speichern Anteile (0.985 -> "98.50 %"), Charts mit echten %-Werten setzen 1.
 let _histCrosshairBound = false;
-function ensureHistCrosshairPlugin() {
+export function ensureHistCrosshairPlugin() {
   if (_histCrosshairBound) return;
   if (!window.Chart?.register) return;
   window.Chart.register({
@@ -196,7 +198,8 @@ function ensureHistCrosshairPlugin() {
       // Randbeschriftung: Datum (x) unten am Strich, Linienwert (y) links.
       let xLabel = "";
       try { xLabel = xs.getLabelForValue ? String(xs.getLabelForValue(idx)) : String(idx); } catch {}
-      const yLabel = best ? (Number(best.val) * 100).toFixed(2) + " %" : "";
+      const valueScale = Number(chart.options?.plugins?.histCrosshair?.valueScale ?? 100);
+      const yLabel = best ? (Number(best.val) * valueScale).toFixed(2) + " %" : "";
       ctx.font = "10px sans-serif";
       const pad = 3;
       if (xLabel) {

@@ -331,13 +331,19 @@
 }
 #panel-credit .cvar-col table.CVaRTable th:nth-child(1),
 #panel-credit .cvar-col table.CVaRTable td:nth-child(1){
-  width: 60%;                /* Label-Spalte: fasst "Market Implied VaR" */
+  width: 50%;                /* Label-Spalte (TSI/MSD-Labels sind kurz) */
   white-space: nowrap;
 }
 #panel-credit .cvar-col table.CVaRTable th:nth-child(2),
 #panel-credit .cvar-col table.CVaRTable td:nth-child(2){
-  white-space: nowrap;      /* Value-Spalte = Rest */
-  text-align: right;        /* Werte in ALLEN drei Tabellen rechtsbuendig */
+  white-space: nowrap;      /* Value-Spalte = Rest; muss dreistellige %-Werte
+                               PLUS Ampel-Punkt fassen (z.B. "108.60%" + Dot) */
+  text-align: right;
+  /* Globales .table .data-container td setzt max-width:150px + ellipsis —
+     hier aufheben, sonst wird der Ampel-Punkt als "…" weggeschnitten. */
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
 }
 /* CVaR-Kachel: 3 Spalten (label / VaR / ES) — ueberschreibt die 2-Spalten-Breiten
    oben (gleiche Spezifitaet, daher bewusst SPAETER im File). */

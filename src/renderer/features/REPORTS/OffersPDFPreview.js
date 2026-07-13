@@ -1,5 +1,11 @@
 import { REPORT_DEFAULTS_OFFERS } from './OffersPDF.js';
 import { handleModalAction } from '../../core/ui/modal/modalActions.js';
+import {
+  listCustomerReports,
+  loadCustomerReport,
+  saveCustomerReport,
+  deleteCustomerReport,
+} from './CustomerReports.js';
 import { appState } from '../../../renderer/renderer.js';
 import { drawYieldVsTimeChart, transformTSDataToEUSWFormat, swapPointToDurationAsYearRate } from '../../../renderer/features/ANALYSE_PORTFOLIO/SummaryYield.js';
 // Cross-module DOM access (the OFFERS table host) goes through the capture adapter.
@@ -446,6 +452,77 @@ function selectedOffersFromDOM(containerId = OFFERS_CONTAINER_ID, maxCols = 80) 
 
 
 
+// ---------- Offers-Presets (gespeicherte Report-Konfigurationen, DB) ----------
+// Gleiches Muster wie die Risk-Presets (CustomerReports, report_type='offers'):
+// gespeichert wird der komplette Options-Zustand (Sections, Detail-Felder,
+// Dateiname, Header, TOC); Laden setzt die Controls und rendert neu.
+let __offersPresetRows = [];
+let __offersPresetSelected = '';
+
+async function refreshOffersPresets(preferName = '') {
+  try { __offersPresetRows = (await listCustomerReports('offers')) || []; } catch { __offersPresetRows = []; }
+  const names = new Set(__offersPresetRows.map((r) => String(r.name)));
+  const prefer = String(preferName || __offersPresetSelected || '').trim();
+  __offersPresetSelected = (prefer && names.has(prefer)) ? prefer : String(__offersPresetRows[0]?.name || '');
+}
+
+function offersPresetControlsHTML() {
+  const opts = __offersPresetRows.length
+    ? __offersPresetRows.map((r) =>
+        `<option value="${escapeHtml(r.name)}" ${String(r.name) === __offersPresetSelected ? 'selected' : ''}>${escapeHtml(r.name)}</option>`
+      ).join('')
+    : '<option value="">(no presets)</option>';
+  return `
+    <div class="row">
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <label>Preset
+          <select id="or-presetDropdown" class="offers-input">${opts}</select>
+        </label>
+        <input id="or-presetName" class="offers-input" type="text" placeholder="Preset name" value="${escapeHtml(__offersPresetSelected)}"/>
+        <button id="or-presetLoad" type="button">Load</button>
+        <button id="or-presetSave" type="button">Save</button>
+        <button id="or-presetDelete" type="button">Delete</button>
+        <span id="or-presetStatus" style="opacity:.75"></span>
+      </div>
+    </div>`;
+}
+
+async function handleOffersPresetAction(btnId) {
+  const status = (t) => { const el = document.getElementById('or-presetStatus'); if (el) el.textContent = t; };
+  const name = (document.getElementById('or-presetName')?.value
+    || document.getElementById('or-presetDropdown')?.value || '').trim();
+
+  if (btnId === 'or-presetSave') {
+    if (!name) { status('Name?'); return; }
+    const ok = await saveCustomerReport(name, getOffersReportOptions(), 'offers');
+    if (ok) { await refreshOffersPresets(name); status('saved'); scheduleOffersPreviewRender(); }
+    else status('save failed');
+    return;
+  }
+
+  if (btnId === 'or-presetLoad') {
+    if (!name) return;
+    const row = await loadCustomerReport(name);
+    if (!row?.state_json) { status('not found'); return; }
+    try {
+      __syncOffersControlsWith(JSON.parse(row.state_json));
+      __offersPresetSelected = name;
+      status('loaded');
+      scheduleOffersPreviewRender();
+    } catch (e) {
+      console.warn('[OffersPresets] invalid preset JSON', e);
+      status('invalid');
+    }
+    return;
+  }
+
+  if (btnId === 'or-presetDelete') {
+    if (!name) return;
+    const ok = await deleteCustomerReport(name);
+    if (ok) { await refreshOffersPresets(''); status('deleted'); scheduleOffersPreviewRender(); }
+  }
+}
+
 // ---------- Controls (nur Header) ----------
 function controlsHTML(prefillHeader = '') {
   const DEF = REPORT_DEFAULTS_OFFERS || {};
@@ -463,6 +540,7 @@ function controlsHTML(prefillHeader = '') {
 
   return `
     <div class="offers-controls">
+      ${offersPresetControlsHTML()}
       <div class="row">
         <label> Dateiname
           <input id="or-filename" class="offers-input" type="text" value="${escapeHtml(currentFile)}" />
@@ -557,15 +635,25 @@ export function wireOffersPreview({
   if (wrap) {
     const onClick = (ev) => {
       const h = ev.target.closest('#offersSaveHeaderButton');
-      if (h) { ev.preventDefault(); ev.stopPropagation(); handleSaveHeader(ev); }
+      if (h) { ev.preventDefault(); ev.stopPropagation(); handleSaveHeader(ev); return; }
+      // Preset-Buttons (Load/Save/Delete) — delegiert, ueberlebt jedes Re-Render.
+      const pb = ev.target.closest('#or-presetLoad, #or-presetSave, #or-presetDelete');
+      if (pb) { ev.preventDefault(); ev.stopPropagation(); handleOffersPresetAction(pb.id); }
     };
     const onInput = (ev) => {
-      if (ev.target?.id === 'or-headerText') return;
+      // Kein Re-Render beim Tippen (Fokus-Verlust): Header-Text + Preset-Name.
+      if (ev.target?.id === 'or-headerText' || ev.target?.id === 'or-presetName') return;
       scheduleOffersPreviewRender(containerPreviewId, containerId);
     };
     const onChange = (ev) => {
       const id = ev.target?.id;
       if (!id) return;
+      if (id === 'or-presetDropdown') {
+        __offersPresetSelected = ev.target.value || '';
+        const inp = document.getElementById('or-presetName');
+        if (inp) inp.value = __offersPresetSelected;
+        return;
+      }
       if (id === 'or-includeTOC' || id === 'or-sect-intro' || id === 'or-sect-details' ||
           id === 'or-sect-chart' || id === 'or-sect-signature' || id.startsWith('or-df-')) {
         scheduleOffersPreviewRender(containerPreviewId, containerId);
@@ -603,6 +691,11 @@ export function wireOffersPreview({
     [window, 'offers:data-ready', onOffersReady],
     [window, 'offers:data-clear', onOffersClear],
   );
+
+  // Presets initial laden (Dropdown fuellt sich beim naechsten Render).
+  refreshOffersPresets().then(() => {
+    if (window.__offersDataReady) scheduleOffersPreviewRender(containerPreviewId, containerId);
+  }).catch(() => {});
 
   // Initiales Render nur, wenn Daten bereits vorhanden sind
   if (window.__offersDataReady) {

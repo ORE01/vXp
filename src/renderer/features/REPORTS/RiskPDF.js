@@ -911,7 +911,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
       const mcards = model?.cards || [];
       const mN = Math.max(1, mcards.length);
-      const mGap = 6, mCardW = (contentW - mGap * (mN - 1)) / mN, mCardH = 30;
+      const mGap = 6, mCardW = (contentW - mGap * (mN - 1)) / mN, mCardH = 33;
       ensurePageSpace(mCardH + 6);
       mcards.forEach((c, i) => {
         const x = marginX + i * (mCardW + mGap), tx = x + 5;
@@ -923,10 +923,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         if (c.isDelta) doc.setTextColor(76, 175, 80); else doc.setTextColor(...TEXT);
         const relTxt = String(c.rel); doc.text(relTxt, tx, y + 14);
         if (!c.isDelta) { const relW = doc.getTextWidth(relTxt); const a = ampRgb(c.state); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + relW + 3, y + 12.6, 1.3, 'F'); }
+        // Voller Kennzahl-Name klein unter dem Wert (Value at Risk, ...).
+        if (c.full) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED); doc.text(String(c.full), tx, y + 18.5); }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SUB);
-        if (c.abs) doc.text(String(c.abs), tx, y + 20);
+        if (c.abs) doc.text(String(c.abs), tx, y + (c.full ? 24 : 20));
         doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
-        if (c.desc) doc.text(String(c.desc), tx, y + 25);
+        if (c.desc) doc.text(String(c.desc), tx, y + (c.full ? 29.5 : 25));
       });
       y += mCardH + 10;
 
@@ -957,26 +959,80 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       return;
     }
 
-    // ── CREDIT: KPI-Karten-Reihe + Limitleiste je Kennzahl ──
-    const n = Math.max(1, dcards.length);
-    const gap = 6, cardW = (contentW - gap * (n - 1)) / n, cardH = 34;
-    ensurePageSpace(cardH + 6);
-    dcards.forEach((c, i) => {
-      const x = marginX + i * (cardW + gap), tx = x + 6;
+    // ── CREDIT: je Kennzahl EINE Zeile — links die KPI-Karte, rechts Limitleiste
+    //    + Risk-Limit-/Buffer-Kaestchen (wie das Live-Dashboard). Alle 4 Zeilen
+    //    passen zusammen auf eine Seite. ──
+    const rowGap = 3.5, rowH = 33;
+    const cardW2 = contentW * 0.30;
+    const limX = marginX + cardW2 + 6;
+    const limW = contentW - cardW2 - 6;
+
+    dcards.forEach((c) => {
+      ensurePageSpace(rowH + rowGap, `${sectionTitle} (cont.)`);
+      const rowTop = y;
+      const tx = marginX + 5;
+
+      // KPI-Karte links
       doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-      doc.roundedRect(x, y, cardW, cardH, 2, 2, 'FD');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-      doc.text(String(c.label).toUpperCase(), tx, y + 6.5);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(...TEXT);
-      const relTxt = String(c.rel); doc.text(relTxt, tx, y + 15);
-      const relW = doc.getTextWidth(relTxt);
-      const a = ampRgb(c.state); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + relW + 3, y + 13.5, 1.4, 'F');
-      if (Number.isFinite(c.dRel)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...GOLD); doc.text(String(c.relDeltaStr), tx, y + 21); }
-      if (c.abs) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...SUB); doc.text(String(c.abs), tx, y + 27); }
-      if (Number.isFinite(c.dAbs)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GOLD); doc.text(String(c.absDeltaStr), tx, y + 32); }
+      doc.roundedRect(marginX, rowTop, cardW2, rowH, 2, 2, 'FD');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      doc.text(String(c.label).toUpperCase(), tx, rowTop + 5.5);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT);
+      const relTxt = String(c.rel);
+      doc.text(relTxt, tx, rowTop + 12.5);
+      const a = ampRgb(c.state); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + doc.getTextWidth(relTxt) + 3, rowTop + 11, 1.4, 'F');
+      let cy = rowTop + 17;
+      // Voller Kennzahl-Name klein unter dem Wert (Value at Risk, ...).
+      if (c.full) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED); doc.text(String(c.full), tx, cy); cy += 4.5; }
+      if (Number.isFinite(c.dRel)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GOLD); doc.text(String(c.relDeltaStr), tx, cy); cy += 4.5; }
+      if (c.abs) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SUB); doc.text(String(c.abs), tx, cy); cy += 4.5; }
+      if (Number.isFinite(c.dAbs)) { doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...GOLD); doc.text(String(c.absDeltaStr), tx, cy); cy += 4.5; }
+
+      // Limit-Block rechts (Leiste + Zonen + Risk-Limit/Buffer-Kaestchen)
+      const lim = c.limit;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+      doc.text('Limit utilization', limX, rowTop + 5);
+      if (lim) {
+        const aL = ampRgb(lim.state);
+        doc.setTextColor(aL[0], aL[1], aL[2]); doc.setFontSize(9);
+        doc.text(String(lim.utilStr), limX + limW, rowTop + 5, { align: 'right' });
+
+        const by = rowTop + 7.5, bh = 4.5;
+        doc.setFillColor(...TRACK); doc.rect(limX, by, limW, bh, 'F');
+        const yellowW = limW * (lim.yellowRatio / 100);
+        doc.setFillColor(205, 227, 205); doc.rect(limX, by, yellowW, bh, 'F');
+        doc.setFillColor(245, 233, 197); doc.rect(limX + yellowW, by, limW - yellowW, bh, 'F');
+        doc.setFillColor(...NAVY); doc.rect(limX, by, limW * Math.min(1, lim.util), bh, 'F');
+
+        const sy = by + bh + 3.2;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+        doc.text('0%', limX, sy);
+        doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, limX + limW / 2, sy, { align: 'center' });
+        doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, limX + limW, sy, { align: 'right' });
+
+        const ly = sy + 2.5, lcW = 52, lcGap = 5;
+        const lcH = Math.max(12, rowH - (ly - rowTop) - 1);
+        [
+          { lbl: 'RISK LIMIT', val: String(lim.limitRelStr), sub: (lim.limitAbsStr || 'threshold') },
+          { lbl: 'BUFFER', val: String(lim.bufferRelStr), sub: (lim.bufferAbsStr || 'remaining to limit') },
+        ].forEach((lc, i) => {
+          const bxx = limX + i * (lcW + lcGap);
+          doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+          doc.roundedRect(bxx, ly, lcW, lcH, 2, 2, 'FD');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+          doc.text(lc.lbl, bxx + 4, ly + 4.5);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...TEXT);
+          doc.text(lc.val, bxx + 4, ly + 9.5);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(...MUTED);
+          doc.text(lc.sub, bxx + 4, ly + 12.6);
+        });
+      } else {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text('No limit data.', limX, rowTop + 12);
+      }
+
+      y = rowTop + rowH + rowGap;
     });
-    y += cardH + 10;
-    dcards.forEach((c) => { if (c.limit) drawLimitBar(c.limit, c.label, 'THRESHOLD', null); });
     return;
   }
 
@@ -1173,17 +1229,21 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
   // KPI-Baender (data-kpi-band) IMMER oberhalb der Graphen zeichnen (Dashboard-Konvention).
   // Vorgezogen aus dem Tabellen-Loop; dort werden sie dann uebersprungen.
+  // Kompakt (flachere Kacheln, kleinere Abstaende), wenn die Sektion auch Charts hat —
+  // dann passen KPI-Baender UND die Chart-Reihe zusammen auf EINE Seite.
+  const bandCompact = (sec.enabledCharts || []).length > 0;
   for (const t of tablesAll) {
     const el = ctx.getById(t.id);
     if (!el || !el.dataset || !el.dataset.kpiBand) continue;
     const kpis = kpisFromTableEl(el);
     if (!kpis.length) continue;
-    ensurePageSpace(32, `${sectionTitle} (cont.)`);
+    ensurePageSpace(bandCompact ? 26 : 32, `${sectionTitle} (cont.)`);
     doc.setFontSize(10); doc.setTextColor(0);
     doc.text(String(t.label || 'Key Figures'), marginX, y);
     y += 6;
-    y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis);
-    y += cfg.blockGap;
+    y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis,
+      bandCompact ? { tileH: 14, valueFont: 11, gapAfter: 4 } : {});
+    y += bandCompact ? 4 : cfg.blockGap;
   }
 
   // ── Komponiertes Layout: Charts NEBENEINANDER in einer Zeile (Dashboard-Stil)
@@ -1334,7 +1394,9 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const perRow = FORCE_TWO_PER_ROW.has(sec.key) ? 2 : Math.min(rowCharts.length, 3);
     const cgap = 6;
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
-    const cellH = perRow >= 3 ? 70 : 84;
+    // Mit KPI-Baendern daruerber etwas flacher, damit Baender + Charts auf eine Seite passen.
+    const hasKpiBand = tablesAll.some((t) => ctx.getById(t.id)?.dataset?.kpiBand);
+    const cellH = perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84);
     let col = 0;
     let rowY = y;
     for (const ch of rowCharts) {

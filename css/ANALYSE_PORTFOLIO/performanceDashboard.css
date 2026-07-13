@@ -4,10 +4,12 @@
    marken-neutrale Akzentfarben (Gruen/Blau/Rot), die in Dark UND Light passen.
    ========================================================================== */
 .perf-dash {
-  --perf-green: #22c55e;
-  --perf-green-soft: rgba(34, 197, 94, 0.16);
-  --perf-blue: #5b8def;
-  --perf-blue-soft: rgba(91, 141, 239, 0.16);
+  /* Yield-Palette = Portfolio-Blau (#6C9BD1) als Primaerfarbe,
+     dunklere Blau-Nuance als Sekundaerfarbe. */
+  --perf-green: #6C9BD1;
+  --perf-green-soft: rgba(108, 155, 209, 0.16);
+  --perf-blue: #45719F;
+  --perf-blue-soft: rgba(69, 113, 159, 0.16);
   --perf-red: #ef5350;
   --perf-grey: #9aa4b2;
 }
@@ -15,30 +17,32 @@
 .perf-dash .sub-panel-body { padding: 4px 2px 8px; }
 
 /* ---- Kopfbereich ---- */
-.perf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 6px 4px 18px; }
-.perf-title { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-bright); }
-.perf-sub { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.perf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 6px 4px 14px; }
+/* Titel-Groesse an die Market-/Credit-Dashboards angeglichen. */
+.perf-title { margin: 0; font-size: 18px; font-weight: 700; color: var(--text-bright); }
+.perf-sub { margin: 4px 0 0; font-size: 12px; color: var(--text-muted); }
 .perf-head__tag {
   align-self: center; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
   padding: 7px 16px; border-radius: 999px; color: var(--text-primary);
   background: var(--surface-overlay); border: 1px solid var(--surface-card-border);
 }
 
-/* ---- KPI-Band ---- */
-.perf-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 0 4px 18px; }
+/* ---- KPI-Band — Masse/Typografie wie mr-kpi-card (Market/Credit-Dashboards),
+       der farbige Streifen oben bleibt. ---- */
+.perf-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0 4px 14px; }
 .perf-kpi {
-  position: relative; padding: 18px 20px 16px; border-radius: 12px;
-  background: var(--surface-raised); border: 1px solid var(--surface-card-border);
-  box-shadow: var(--shadow-sm); overflow: hidden;
+  position: relative; padding: 14px 16px; border-radius: 8px;
+  background: var(--surface-card); border: 1px solid var(--border-subtle);
+  overflow: hidden;
 }
 .perf-kpi::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--perf-blue); }
 .perf-kpi--green::before { background: var(--perf-green); }
 .perf-kpi--blue::before { background: var(--perf-blue); }
-.perf-kpi__label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); }
-.perf-kpi__value { margin-top: 6px; font-size: 34px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-bright); }
+.perf-kpi__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.perf-kpi__value { margin-top: 8px; font-size: 22px; font-weight: 700; color: var(--text-primary); }
 .perf-kpi__badge {
-  display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--perf-green);
-  padding: 4px 10px; border-radius: 999px; background: var(--perf-green-soft);
+  display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--perf-green);
+  padding: 3px 9px; border-radius: 999px; background: var(--perf-green-soft);
 }
 
 /* ---- Karten-Raster ---- */

@@ -161,13 +161,21 @@ function ensureMarketRiskThresholds(db, resolve, reject) {
     }
 
     // [profile, metric_code, yellow_loss_limit, red_loss_limit, sort_order]
+    // TSI relativ: (ES - VaR) / VaR — positive Schwellen (rot > gelb).
+    // MARKET_STRESS = Buffer (|Szenario| - |Rolling|) / |Rolling| (gelb > rot).
     const seeds = [
       ['CONSERVATIVE', 'VaR_T_rel', -0.005, -0.010, 10],
       ['CONSERVATIVE', 'ES_T_rel',  -0.007, -0.015, 20],
+      ['CONSERVATIVE', 'TSI',        0.20,   0.30,  30],
+      ['CONSERVATIVE', 'MARKET_STRESS', 0.30, 0.10, 40],
       ['BALANCED',     'VaR_T_rel', -0.010, -0.030, 10],
       ['BALANCED',     'ES_T_rel',  -0.015, -0.050, 20],
+      ['BALANCED',     'TSI',        0.30,   0.50,  30],
+      ['BALANCED',     'MARKET_STRESS', 0.30, 0.10, 40],
       ['AGGRESSIVE',   'VaR_T_rel', -0.020, -0.050, 10],
       ['AGGRESSIVE',   'ES_T_rel',  -0.030, -0.080, 20],
+      ['AGGRESSIVE',   'TSI',        0.50,   0.80,  30],
+      ['AGGRESSIVE',   'MARKET_STRESS', 0.30, 0.10, 40],
     ];
 
     const insertSql = `
@@ -405,10 +413,11 @@ function ensureCreditRiskThresholds(db, resolve, reject) {
     ];
 
     // [metric_code, yellow_threshold, red_threshold, description, sort_order]
+    // TSI/MSD relativ: TSI = (ES-VaR)/VaR, MSD = (adjES-histES)/histES.
     const seeds = [
       ['CVAR', -0.050, -0.052, 'Historic VaR%', 10],
-      ['TSI', 0.010, 0.014, 'Historic ES - Historic VaR', 20],
-      ['MSD', 0.010, 0.030, 'Adjusted ES - Historic ES', 30],
+      ['TSI', 0.20, 0.30, '(Historic ES - Historic VaR) / Historic VaR', 20],
+      ['MSD', 0.20, 0.60, '(Adjusted ES - Historic ES) / Historic ES', 30],
     ];
 
     const insertSql = `

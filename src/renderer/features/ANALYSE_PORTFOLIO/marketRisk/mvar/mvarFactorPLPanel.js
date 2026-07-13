@@ -733,10 +733,12 @@ function renderDiversificationBar(riskTypeRows, cfg) {
 
 // Je Abschnitt (VaR/ES): links VaR%/ES% je Risikotyp, rechts Diversifikations-Zerlegung.
 function renderFactorContribCharts(riskTypeRows) {
-  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorVarContribChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(46,204,113,0.85)', title: 'VaR Contribution by Risk Type', subtitle: '% of portfolio value' });
-  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorVarScatterChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(46,204,113,0.85)', title: 'VaR Decomposition — % of Total VaR', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
-  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorEsContribChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(224,176,0,0.85)', title: 'ES Contribution by Risk Type', subtitle: '% of portfolio value' });
-  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorEsScatterChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(224,176,0,0.85)', title: 'ES Decomposition — % of Total ES', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
+  // Palette: VaR = Market-Teal, ES = gelblichere Nuance (olive) — wie in den
+  // Issuer-/Product-Beitragscharts.
+  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorVarContribChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(42,127,127,0.9)', title: 'VaR Contribution by Risk Type', subtitle: '% of portfolio value' });
+  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorVarScatterChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(42,127,127,0.9)', title: 'VaR Decomposition — % of Total VaR', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
+  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorEsContribChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(122,158,74,0.9)', title: 'ES Contribution by Risk Type', subtitle: '% of portfolio value' });
+  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorEsScatterChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(122,158,74,0.9)', title: 'ES Decomposition — % of Total ES', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
 }
 
 export function renderMVaRFactorPLPanel() {

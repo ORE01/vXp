@@ -1173,10 +1173,16 @@ function __concBuildMenuHtml(prospectivePath, showLabels) {
   const others = BREAKDOWN_CONFIG.flatMap(g => g.columns).filter(c => !used.has(c.key));
   // showLabels: Kopf zeigt "Dimension: Wert" (z.B. "Issuer: UniCredit Bank"), damit
   // klar ist, dass nach der Dimension gedrillt wird — nicht nach einem Balken/Metrik.
-  const head = prospectivePath.map(s => (showLabels && s.label) ? `${s.label}: ${s.value}` : s.value).join(' › ');
+  // Mehrere Pfad-Eintraege (z.B. zwei Issuer) UNTEREINANDER statt in einer Zeile —
+  // sonst wird das Menue zu breit. Tooltip (title) bleibt einzeilig mit ' › '.
+  const parts = prospectivePath.map(s => (showLabels && s.label) ? `${s.label}: ${s.value}` : s.value);
+  const head = parts.join(' › ');
+  const headHtml = parts
+    .map((p, i) => `<div class="conc-menu__hdr-line">${i > 0 ? '› ' : ''}${__concEsc(p)}</div>`)
+    .join('');
   const items = [`<button class="conc-menu__item" data-mode="positions">Positions</button>`]
     .concat(others.map(c => `<button class="conc-menu__item" data-mode="group" data-by="${c.key}">By ${__concEsc(c.label)}</button>`));
-  return `<div class="conc-menu__hdr" title="${__concEsc(head)}">${__concEsc(head)}</div>${items.join('')}`;
+  return `<div class="conc-menu__hdr" title="${__concEsc(head)}">${headHtml}</div>${items.join('')}`;
 }
 
 function __concShowMenu(anchorEl, prospectivePath, drillFn, menuId, showLabels) {

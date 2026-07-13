@@ -8,7 +8,6 @@
 import { appState } from '../../../renderer.js';
 import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep, getRunConfQuantil } from './LossIssuer.js';
 import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
-import { getColorFromPalette } from '../../../utils/colors.js';
 
 // Drill-down fuer den Tail-Zoom-Chart: Klick auf ein Quantil -> Positionen der in diesem
 // Szenario ausfallenden Emittenten (ISSUER_RANK), mit NAV + Loss + Rating. Gleiche Engine
@@ -395,9 +394,10 @@ function renderCreditTailZoom() {
 // (pd_flag NORM). Metrik "Verlustanteil im Tail": Summe des Emittenten-Verlusts
 // (NOTIONAL x LGD-Rate) ueber die Tail-Szenarien (Quantil >= VaR-Konfidenzquantil) des
 // jeweiligen pd_flags, in denen er ausfaellt; je PD auf 100 % normiert. Nur Top 8.
+// Credit-Palette (Purpur): Historic dunkelbasis, Market adjusted hell.
 const CR_TAIL_VIEWS = [
-  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', title: 'Top tail drivers — Historic', colorIdx: 0 },
-  { flag: 'NORM',   chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm', title: 'Top tail drivers — Market adjusted', colorIdx: 2 },
+  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', title: 'Top tail drivers — Historic', fill: 'rgba(122,92,145,0.85)', border: 'rgba(122,92,145,0.95)' },
+  { flag: 'NORM',   chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm', title: 'Top tail drivers — Market adjusted', fill: 'rgba(178,152,200,0.85)', border: 'rgba(178,152,200,0.95)' },
 ];
 
 // Top-8-Emittenten nach Tail-Verlustanteil fuer EIN pd_flag.
@@ -450,7 +450,7 @@ export function renderCreditTailContributors() {
 
   for (const v of CR_TAIL_VIEWS) {
     const top = crTailTopForFlag(v.flag, issuerLoss, issuerRating, allLoss, confQ);
-    renderCrTailContribChart(document.getElementById(v.chartId), v.chartId, top, v.title, v.colorIdx);
+    renderCrTailContribChart(document.getElementById(v.chartId), v.chartId, top, v.title, { fill: v.fill, border: v.border });
     const tblEl = document.getElementById(v.tableId);
     if (tblEl) {
       if (!top.length) {
@@ -464,7 +464,7 @@ export function renderCreditTailContributors() {
   }
 }
 
-function renderCrTailContribChart(canvas, winKey, items, title, colorIdx) {
+function renderCrTailContribChart(canvas, winKey, items, title, colors) {
   if (!canvas || !window.Chart) return;
   _destroyCrChart(winKey);
   if (!items || !items.length) return;
@@ -474,8 +474,8 @@ function renderCrTailContribChart(canvas, winKey, items, title, colorIdx) {
   const bodyCss = getComputedStyle(document.body);
   const col = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
   const font = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
-  const c = getColorFromPalette(colorIdx, 0.8);
-  const cb = getColorFromPalette(colorIdx, 0.95);
+  const c = colors?.fill || 'rgba(122,92,145,0.85)';
+  const cb = colors?.border || 'rgba(122,92,145,0.95)';
 
   window[winKey] = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
@@ -514,8 +514,10 @@ function currentCvarRow() {
 // Credit-Warn-/Limit-Schwellen je Metrik (Fraktion); Fallback = App-Defaults.
 const CR_DEFAULTS = {
   CVAR: { yellow: -0.050, red: -0.052 },
-  TSI:  { yellow: 0.010, red: 0.014 },
-  MSD:  { yellow: 0.010, red: 0.030 },
+  // TSI/MSD sind RELATIVE Kennzahlen: TSI = (ES-VaR)/VaR, MSD = (adjES-histES)/histES.
+  // Defaults entsprechen den alten %-Punkt-Schwellen bei typischem ES/VaR-Niveau (~5%).
+  TSI:  { yellow: 0.20, red: 0.30 },
+  MSD:  { yellow: 0.20, red: 0.60 },
 };
 // Schwellen wie die CVaR-Ampeln (CVaR.js) lesen: DB-Felder heissen
 // yellow_threshold/red_threshold (CustomerCreditRiskThresholdSetting);
@@ -621,9 +623,13 @@ export function getCreditDashboardModel(rowsOverride = null) {
   const curVarRelPct = num(row?.VaR_rel) * 100;
   const curEsRelPct = num(row?.ES_rel) * 100;
 
-  // TSI = Historic ES - Historic VaR (rating). MSD = Adjusted ES (norm) - Historic ES (rating).
-  const tsiVal = row ? (num(row.ES_rel) - num(row.VaR_rel)) : NaN;
-  const msdVal = (row && normRow) ? (num(normRow.ES_rel) - num(row.ES_rel)) : NaN;
+  // TSI = (Historic ES - Historic VaR) / Historic VaR (rating).
+  // MSD = (Adjusted ES - Historic ES) / Historic ES — relative Form.
+  const esHist = row ? num(row.ES_rel) : NaN;
+  const varHist = row ? num(row.VaR_rel) : NaN;
+  const esAdj = normRow ? num(normRow.ES_rel) : NaN;
+  const tsiVal = (row && varHist !== 0) ? (esHist - varHist) / varHist : NaN;
+  const msdVal = (row && normRow && esHist !== 0) ? (esAdj - esHist) / esHist : NaN;
   const tsiTh = crThreshold('TSI');
   const msdTh = crThreshold('MSD');
   const tsiState = Number.isFinite(tsiVal) ? trafficState(tsiVal, tsiTh) : null;
@@ -631,16 +637,16 @@ export function getCreditDashboardModel(rowsOverride = null) {
 
   // Jede Kennzahl mit eigener Limitleiste (computeLimitModel je Wert + Schwelle).
   const cards = [
-    { label: 'CVaR', abs: fmtEur(row?.VaR_abs), rel: fmtRelPct(row?.VaR_rel),
+    { label: 'Normal Risk (VaR)', full: 'Value at Risk', abs: fmtEur(row?.VaR_abs), rel: fmtRelPct(row?.VaR_rel),
       dRel: magDelta(curVarRelPct, lastVarRelPct), dAbs: magDelta(num(row?.VaR_abs), lastVarAbs),
       desc: 'Credit VaR', state: varState, limit: computeLimitModel(row?.VaR_rel, cvarTh, varState) },
-    { label: 'ES CVaR', abs: fmtEur(row?.ES_abs), rel: fmtRelPct(row?.ES_rel),
+    { label: 'Extreme Risk (ES)', full: 'Expected Shortfall', abs: fmtEur(row?.ES_abs), rel: fmtRelPct(row?.ES_rel),
       dRel: magDelta(curEsRelPct, lastEsRelPct), dAbs: magDelta(num(row?.ES_abs), lastEsAbs),
       desc: 'beyond CVaR', state: esState, limit: computeLimitModel(row?.ES_rel, cvarTh, esState) },
-    { label: 'TSI', abs: null, rel: fmtRelPct(tsiVal), dRel: null, dAbs: null,
-      desc: 'Historic ES - VaR', state: tsiState, limit: Number.isFinite(tsiVal) ? computeLimitModel(tsiVal, tsiTh, tsiState) : null },
-    { label: 'MSD', abs: null, rel: fmtRelPct(msdVal), dRel: null, dAbs: null,
-      desc: 'Adjusted - Historic ES', state: msdState, limit: Number.isFinite(msdVal) ? computeLimitModel(msdVal, msdTh, msdState) : null },
+    { label: 'Cluster Risk (TSI)', full: 'Tail Severity Indicator', abs: null, rel: fmtRelPct(tsiVal), dRel: null, dAbs: null,
+      desc: '(ES - VaR) / VaR', state: tsiState, limit: Number.isFinite(tsiVal) ? computeLimitModel(tsiVal, tsiTh, tsiState) : null },
+    { label: 'Market Stress (MSD)', full: 'Market Stress Divergence', abs: null, rel: fmtRelPct(msdVal), dRel: null, dAbs: null,
+      desc: '(Adjusted - Historic ES) / Historic ES', state: msdState, limit: Number.isFinite(msdVal) ? computeLimitModel(msdVal, msdTh, msdState) : null },
   ];
   cards.forEach((c) => { c.relDeltaStr = fmtPpSigned(c.dRel); c.absDeltaStr = fmtEurSigned(c.dAbs); });
 
@@ -687,10 +693,10 @@ export function renderCreditRiskDashboard() {
         <div class="mr-kpi-card">
           <div class="mr-kpi-card__label">${esc(c.label)}</div>
           <div class="mr-kpi-card__value">${esc(c.rel)}<span class="mr-amp-dot ${amp}"></span></div>
+          ${c.full ? `<div class="mr-kpi-card__full">${esc(c.full)}</div>` : ''}
           ${relDeltaHtml}
           ${absHtml}
           ${absDeltaHtml}
-          <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
         </div>`;
       return `<div class="cr-metric-row">${cardHtml}<div class="cr-metric-limit">${limitBarHtml(c.limit)}</div></div>`;
     }).join('');
@@ -738,7 +744,7 @@ function limitBarHtml(m) {
       <div class="mr-limit__bar">
         <div class="mr-limit__zone mr-limit__zone--green" style="left:0;width:${m.yellowRatio}%"></div>
         <div class="mr-limit__zone mr-limit__zone--amber" style="left:${m.yellowRatio}%;width:${100 - m.yellowRatio}%"></div>
-        <div class="mr-limit__fill" style="width:${fillW}%"></div>
+        <div class="mr-limit__fill mr-limit__fill--${m.state || 'neutral'}" style="width:${fillW}%"></div>
       </div>
       <div class="mr-limit__scale">
         <span>0%</span>

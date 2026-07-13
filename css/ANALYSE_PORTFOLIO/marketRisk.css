@@ -163,12 +163,79 @@
   min-width: 320px;
 }
 
+/* Auswahl Laufzeit/Rating fuer den synthetischen Bond (tsEU1YChart) */
+#panel-market .synth-bond-controls{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px 2px;
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+}
+#panel-market .synth-bond-controls label{
+  margin-left: 6px;
+}
+#panel-market .synth-bond-controls label:first-child{
+  margin-left: 0;
+}
+#panel-market .synth-bond-controls select{
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--panel-surface, #0f0f10);
+  color: var(--text-primary, #ddd);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+}
+/* Zeitraum-Buttons wie im Scenario-Period-Chart (mvar-factor-range);
+   margin-right laesst Platz fuer den absolut positionierten Reset-Zoom-Button. */
+#panel-market .synth-bond-controls .synth-range-group{
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 96px;
+}
+#panel-market .synth-bond-controls .synth-range{
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+#panel-market .synth-bond-controls .synth-range:hover{
+  border-color: var(--accent);
+}
+#panel-market .synth-bond-controls .synth-range.is-active{
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+
 #panel-market .chart-box canvas,
 #panel-mvar-products .chart-box canvas,
 #panel-mvar-issuers .chart-box canvas{
   display:block;
   width:100% !important;
   height:360px !important;
+}
+
+/* Intervall-Info unter der VaR/ES-Tabelle (Stichtag, Zeitraum, Konfidenz, Horizont) */
+#panel-market .mvar-interval-info{
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+}
+
+/* Eigene Reihe fuer den Rolling-VaR-Chart: gleiche Boxgroesse wie der Synth-Chart
+   (halbe Reihe), rechts ausgerichtet — sitzt damit direkt unter dem Synth-Chart. */
+#panel-market .chart-2x1-row--var{
+  margin-top: 20px;
+}
+#panel-market .chart-2x1-row--var .chart-box{
+  flex: 0 1 calc(50% - 10px);
+  margin-left: auto;
 }
 
 @media (max-width: 1200px){

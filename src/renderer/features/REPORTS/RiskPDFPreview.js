@@ -937,9 +937,13 @@ function loadChartToggleState() {
   }
 }
 
-// State aus den DOM-Checkboxen speichern
+// State aus den DOM-Checkboxen speichern.
+// WICHTIG: MERGE statt Neuaufbau — Checkboxen, die gerade NICHT im DOM stehen
+// (z.B. Tabellen/Container abgeschalteter Sektionen), behalten ihren explizit
+// gespeicherten Zustand. Vorher wurden diese Eintraege bei jedem Save verworfen
+// und fielen nach dem naechsten Render auf den Default (angehakt) zurueck.
 function saveChartToggleStateFromDOM() {
-  const st = {};
+  const st = loadChartToggleState();
 
   // Charts + Tables
   document.querySelectorAll('input[data-chart-section][data-chart-key]').forEach(el => {
@@ -1006,7 +1010,13 @@ function wireChartControlsOnce() {
   nodes.forEach(el => {
     if (el.dataset.bound) return;
 
-    el.addEventListener('change', () => {
+    el.addEventListener('change', (e) => {
+      // ⚠️ NUR echte User-Klicks verarbeiten. kick() (wireRiskPreview) feuert bei
+      // Tab-Wechsel/visibilitychange synthetische change-Events auf ALLE rr-*
+      // Controls; ohne diesen Guard kaskadiert der Section-Handler dann
+      // "Section an -> alle Kinder an" und ueberschreibt explizit abgehakte
+      // Charts/Container im gespeicherten State (Bug: Haekchen kehren zurueck).
+      if (e && e.isTrusted === false) return;
       // ✅ Gruppen-Master "Include all": ganzer Teilbaum an/aus. State-basiert,
       //    weil Charts ausgeschalteter Sektionen NICHT im DOM stehen.
       if (el.dataset.rrGroupToggle) {

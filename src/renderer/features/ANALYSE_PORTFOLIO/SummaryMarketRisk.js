@@ -1,6 +1,7 @@
 ﻿import { getColorFromPalette, getPortfolioColor } from '../../utils/colors.js';
 import { appState } from '../../renderer.js';
 import { renderMvarProductPLPanel } from './marketRisk/mvar/mvarProductPLPanel.js';
+import { ensureHistCrosshairPlugin } from './HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 
 
 
@@ -20,6 +21,7 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
   const portValue    = num(portfolioData.formPortValue);
   const portNotional = num(portfolioData.formPortNotional);
   const portPV01     = num(portfolioData.formPortPV01);
+  const portCPV01    = num(portfolioData.formPortCPV01);
 
   if (Number.isFinite(portValue) && Number.isFinite(portNotional) && portNotional !== 0) {
     portValueRel = portValue / portNotional;
@@ -36,8 +38,14 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
     portPV01IsFinite: Number.isFinite(portPV01),
   });
 
+  // Entkoppelt: ein Fehler im (rein renderer-seitigen) synthetischen Chart darf
+  // die Python-VaR-Anzeige (Verteilung + VaR-/ES-Linien) nie blockieren.
   if (Number.isFinite(portPV01)) {
-    drawSyntheticPortfolioChart(portfolioEndValue, portPV01, 5);
+    try {
+      drawSyntheticPortfolioChart(portfolioEndValue, portPV01, 5, Number.isFinite(portCPV01) ? portCPV01 : 0, port_name);
+    } catch (e) {
+      console.error('[SYNTH CHART] drawSyntheticPortfolioChart failed:', e);
+    }
   }
 
   // --- NAV ---
@@ -232,8 +240,21 @@ const _mvarVELinePlugin = {
       ctx.setLineDash([]);
       ctx.fillStyle = ln.color || 'rgba(255,0,0,0.95)';
       ctx.font = 'bold 11px sans-serif';
-      // dy: Label-Zeile (Rolling-Linien in zweiter Zeile, damit sich nichts ueberlappt).
-      ctx.fillText(ln.label || '', x + 3, chartArea.top + (ln.dy || 11));
+      // Label LINKS vom Strich, direkt darunter der Wert; reicht der Platz am
+      // linken Chartrand nicht, wird nach rechts ausgewichen. dy staffelt die
+      // Eintraege vertikal, damit sich nichts ueberlappt.
+      const label = ln.label || '';
+      const valueStr = Number.isFinite(ln.value) ? `${Number(ln.value.toFixed(2))}%` : '';
+      const w = Math.max(ctx.measureText(label).width, valueStr ? ctx.measureText(valueStr).width : 0);
+      const fitsLeft = (x - 4 - w) >= chartArea.left;
+      ctx.textAlign = fitsLeft ? 'right' : 'left';
+      const tx = fitsLeft ? x - 4 : x + 4;
+      const ty = chartArea.top + (ln.dy || 11);
+      ctx.fillText(label, tx, ty);
+      if (valueStr) {
+        ctx.font = '10px sans-serif';
+        ctx.fillText(valueStr, tx, ty + 12);
+      }
       ctx.restore();
     });
   },
@@ -363,28 +384,29 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
 
   // VaR/ES-Linien (vertikal am jeweiligen P/L-Bin) — fuer BEIDE Szenarien,
   // beschriftet mit dem Szenario-Namen. Gewaehltes Szenario rot/orange,
-  // ROLLING_1 in Rosa (Balkenfarbe); Rolling-Labels in zweiter Zeile.
+  // ROLLING_1 in leicht dunklerem Rot/Orange (NICHT rosa wie die Balken,
+  // sonst ist alles im Chart rosa); Labels je Linie in eigener Zeile.
   const veLines = [];
   const scenTag = String(mainLabel || '').trim();
   if (thresholdBinIndex !== -1 && Number.isFinite(varTRel) && varTRel !== 0) {
-    veLines.push({ at: thresholdBinIndex, label: scenTag ? `VaR ${scenTag}` : 'VaR', color: 'rgba(255,0,0,0.95)', dash: [], group: 'main', metric: 'var' });
+    veLines.push({ at: thresholdBinIndex, label: scenTag ? `VaR ${scenTag}` : 'VaR', value: varTRel, color: 'rgba(255,0,0,0.95)', dash: [], group: 'main', metric: 'var' });
   }
   if (esBinIndex !== -1 && Number.isFinite(esTRel) && esTRel !== 0) {
-    veLines.push({ at: esBinIndex, label: scenTag ? `ES ${scenTag}` : 'ES', color: 'rgba(255,150,0,0.98)', dash: [6, 4], group: 'main', metric: 'es' });
+    veLines.push({ at: esBinIndex, label: scenTag ? `ES ${scenTag}` : 'ES', value: esTRel, color: 'rgba(255,150,0,0.98)', dash: [6, 4], group: 'main', metric: 'es' });
   }
   if (overlay) {
     const rollTag = String(overlay.label || 'ROLLING_1');
     const rollVarIdx = binIndexOf(overlay.varTRel);
     const rollEsIdx = binIndexOf(overlay.esTRel);
     if (rollVarIdx !== -1 && Number.isFinite(overlay.varTRel) && overlay.varTRel !== 0) {
-      veLines.push({ at: rollVarIdx, label: `VaR ${rollTag}`, color: 'rgba(214,64,159,0.95)', dash: [], group: 'overlay', metric: 'var' });
+      veLines.push({ at: rollVarIdx, label: `VaR ${rollTag}`, value: overlay.varTRel, color: 'rgba(185,25,45,0.95)', dash: [], group: 'overlay', metric: 'var' });
     }
     if (rollEsIdx !== -1 && Number.isFinite(overlay.esTRel) && overlay.esTRel !== 0) {
-      veLines.push({ at: rollEsIdx, label: `ES ${rollTag}`, color: 'rgba(214,64,159,0.95)', dash: [6, 4], group: 'overlay', metric: 'es' });
+      veLines.push({ at: rollEsIdx, label: `ES ${rollTag}`, value: overlay.esTRel, color: 'rgba(205,105,0,0.98)', dash: [6, 4], group: 'overlay', metric: 'es' });
     }
   }
-  // Jedes Linien-Label in eine EIGENE Zeile (fester vertikaler Abstand).
-  veLines.forEach((ln, i) => { ln.dy = 11 + i * 13; });
+  // Jeder Eintrag (Label + Wert darunter) in eigener vertikaler Staffel.
+  veLines.forEach((ln, i) => { ln.dy = 11 + i * 26; });
 
   const pCol = getPortfolioColor(1); // Garmin-Pink fÃ¼r Portfolio-Bin
 
@@ -417,11 +439,20 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
     },
   ];
   if (overlayBins) {
+    // Tail der ROLLING-Balken ab deren VaR-Bin DUNKELROT (Farbe der Rolling-VaR-Linie),
+    // Rest gruen — analog zum roten Tail der Hauptserie.
+    const overlayVarRedUpTo = (overlay && Number.isFinite(overlay.varTRel) && overlay.varTRel !== 0)
+      ? binIndexOf(overlay.varTRel)
+      : -1;
     datasets.push({
       label: String(overlay.label || 'ROLLING_1'),
       data: overlayBins,
-      backgroundColor: 'rgba(214, 64, 159, 0.35)',
-      borderColor: 'rgba(214, 64, 159, 0.85)',
+      backgroundColor: overlayBins.map((_, i) =>
+        (overlayVarRedUpTo !== -1 && i <= overlayVarRedUpTo) ? 'rgba(185, 25, 45, 0.5)' : 'rgba(46, 158, 91, 0.35)'
+      ),
+      borderColor: overlayBins.map((_, i) =>
+        (overlayVarRedUpTo !== -1 && i <= overlayVarRedUpTo) ? 'rgba(185, 25, 45, 0.9)' : 'rgba(46, 158, 91, 0.85)'
+      ),
       borderWidth: 1,
       grouped: false,
       order: 2,
@@ -429,6 +460,7 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
     });
   }
   // Normalverteilung des gewaehlten Szenarios: BLAU gestrichelt (Balkenfarbe).
+  // normalCurve: eigener Legenden-Eintrag, einzeln ein-/ausschaltbar.
   datasets.push({
     type: 'line',
     label: 'Normal',
@@ -441,20 +473,23 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
     tension: 0.35,
     order: 1,
     group: 'main',
+    normalCurve: true,
   });
-  // Normalverteilung der Overlay-Serie (ROLLING_1): ROSA durchgezogen (Balkenfarbe).
+  // Normalverteilung der Overlay-Serie (ROLLING_1): GRUEN, gestrichelt wie die Haupt-Normalkurve.
   if (overlayNormal) {
     datasets.push({
       type: 'line',
       label: `Normal ${String(overlay.label || 'ROLLING_1')}`,
       data: overlayNormal,
-      borderColor: 'rgba(214, 64, 159, 0.95)',
+      borderColor: 'rgba(46, 158, 91, 0.95)',
+      borderDash: [6, 4],
       borderWidth: 2,
       pointRadius: 0,
       fill: false,
       tension: 0.35,
       order: 0,
       group: 'overlay',
+      normalCurve: true,
     });
   }
 
@@ -467,6 +502,7 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
     datasets.push({ type: 'line', label: 'ES', data: [], borderColor: 'rgba(255,150,0,0.98)', backgroundColor: 'rgba(255,150,0,0.98)', pointRadius: 0, metricToggle: 'es' });
   }
 
+  const col = _chartTextColor();
   return {
     data: {
       labels: histogram.labels,
@@ -476,38 +512,49 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: 'x', // um 90 Grad gedreht -> vertikale Balken (P/L auf x, Frequency auf y)
+      color: col,
       scales: {
         x: {
-          title: { display: true, text: horizonDays > 1 ? `P/L as % of NAV (${horizonDays}d horizon)` : 'P/L as % of NAV' },
-          ticks: { maxRotation: 90, minRotation: 90, autoSkip: true, maxTicksLimit: 16 }
+          title: { display: true, text: horizonDays > 1 ? `P/L as % of NAV (${horizonDays}d horizon)` : 'P/L as % of NAV', color: col },
+          ticks: { color: col, maxRotation: 90, minRotation: 90, autoSkip: true, maxTicksLimit: 16 }
         },
         y: {
           beginAtZero: true,
-          title: { display: true, text: 'Frequency' }
+          title: { display: true, text: 'Frequency', color: col },
+          ticks: { color: col }
         }
       },
       plugins: {
         // Mit Overlay (zwei Verteilungen) Legende RECHTS zeigen (kleine Kaestchen),
         // sonst wie bisher aus. Die Normal-Kurven bleiben aus der Legende draussen.
         legend: {
-          display: !!overlayBins || veLines.length > 0,
+          // Immer anzeigen: die Normal-Kurven sind nur ueber die Legende schaltbar.
+          display: true,
           position: 'right',
           labels: {
+            color: col,
             boxWidth: 12,
             boxHeight: 6,
-            filter: (it) => !String(it.text).startsWith('Normal'),
+            font: { size: 11 },
             // Legendenfarbe explizit je Gruppe: die Balkenfarbe ist ein ARRAY
             // (Tail rot) -> Chart.js wuerde sonst die erste Farbe (rot) zeigen.
+            // Normal-Kurven behalten ihre Linienfarbe (eigene, schaltbare Eintraege).
             generateLabels: (chart) => {
               const items = Chart.defaults.plugins.legend.labels.generateLabels(chart);
               items.forEach((it) => {
-                const g = chart.data.datasets[it.datasetIndex]?.group;
+                const ds = chart.data.datasets[it.datasetIndex];
+                if (ds?.normalCurve) {
+                  it.fillStyle = 'transparent';
+                  it.strokeStyle = ds.borderColor;
+                  return;
+                }
+                const g = ds?.group;
                 if (g === 'main') {
                   it.fillStyle = 'rgba(54, 162, 235, 0.7)';
                   it.strokeStyle = 'rgba(54, 162, 235, 1)';
                 } else if (g === 'overlay') {
-                  it.fillStyle = 'rgba(214, 64, 159, 0.6)';
-                  it.strokeStyle = 'rgba(214, 64, 159, 0.85)';
+                  it.fillStyle = 'rgba(46, 158, 91, 0.6)';
+                  it.strokeStyle = 'rgba(46, 158, 91, 0.85)';
                 }
               });
               return items;
@@ -526,6 +573,13 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
               if (nowHidden) hiddenM.add(ds.metricToggle); else hiddenM.delete(ds.metricToggle);
               chart.$hiddenMetrics = hiddenM;
               chart.setDatasetVisibility(item.datasetIndex, !nowHidden); // Durchstreichen
+              chart.update();
+              return;
+            }
+
+            // Normal-Kurven einzeln togglen (NICHT die ganze Szenario-Gruppe).
+            if (ds?.normalCurve) {
+              chart.setDatasetVisibility(item.datasetIndex, !chart.isDatasetVisible(item.datasetIndex));
               chart.update();
               return;
             }
@@ -563,8 +617,13 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
   };
 }
 
-// "Reset Zoom"-Button oben rechts im Verteilungs-Chart (idempotent).
-function ensureDistZoomTools(canvas) {
+// Theme-Textfarbe fuer Chart-Beschriftungen (wie crTailZoomChart im Credit-Dashboard).
+function _chartTextColor() {
+  return (getComputedStyle(document.body).getPropertyValue('--text-primary') || '').trim() || '#333';
+}
+
+// "Reset Zoom"-Button oben rechts im Chart (idempotent, pro .chart-box).
+function ensureDistZoomTools(canvas, instanceKey = 'plMvarDistChartInstance') {
   const box = canvas?.parentElement;
   if (!box) return;
   if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
@@ -579,7 +638,7 @@ function ensureDistZoomTools(canvas) {
     fontSize: '11px', padding: '2px 8px', cursor: 'pointer',
   });
   btn.addEventListener('click', () => {
-    try { window.plMvarDistChartInstance?.resetZoom?.(); } catch (_) {}
+    try { window[instanceKey]?.resetZoom?.(); } catch (_) {}
   });
   box.appendChild(btn);
 }
@@ -587,22 +646,199 @@ function ensureDistZoomTools(canvas) {
 
 // SYNTHETIC PORTFOLIO &  CMB CHART:
 
-function createAllProductData(tsData, testTtM, pv01, startValue = 100) {
+// ===== Factor-Mapping-Anbindung (MVaR FACTOR SERIES MAPPING) =====
+// Die Zins-/Spread-Deltas des synthetischen Charts laufen ueber das Mapping des
+// AKTIVEN Szenarios (MarketVaR_FactorSeriesMap: factor_id -> linked_ts_col x scale),
+// damit ein dort eingestelltes Szenario auch hier wirkt. Fallback: rohe tblTS-Spalten.
+
+// Letzte Aufruf-Parameter fuer Re-Renders durch Dropdown-/Mapping-Aenderungen.
+let __synthChartArgs = null;
+let __synthControlsBound = false;
+// Zeitfenster in Jahren (0 = Max), umschaltbar wie im Scenario-Period-Chart.
+let __synthRangeYears = 5;
+
+// Gleiche Quelle wie das Factor-Mapping-Panel (persistActiveScenario).
+function activeFactorMapScenario() {
+  try { return localStorage.getItem('mvarFactorMapActiveScenario') || 'default'; }
+  catch (_) { return 'default'; }
+}
+
+// factor_id -> { col, scale } fuer das aktive Szenario; nur aktive Zeilen, deren
+// linked_ts_col als tblTS-Spalte existiert (analog buildFactorMap im Factor-Chart-Panel).
+function buildActiveFactorMap(sampleRow) {
+  const active = activeFactorMapScenario();
+  const colSet = new Set(Object.keys(sampleRow || {}));
+  const map = new Map();
+  (appState.getMarketVarFactorSeriesMap?.() || []).forEach((r) => {
+    if (String(r.scenario ?? 'default').trim() !== active) return;
+    if (Number(r.is_active) === 0) return;
+    const col = String(r.linked_ts_col ?? '').trim();
+    if (!col || !colSet.has(col)) return;
+    const scale = Number(r.scale);
+    map.set(String(r.factor_id), { col, scale: Number.isFinite(scale) ? scale : 1 });
+  });
+  return map;
+}
+
+// Lineare Interpolation ueber aufsteigend sortierte (x,y)-Stuetzstellen; ausserhalb geklemmt.
+function interpolatePoints(points, x) {
+  if (!points || points.length === 0) return null;
+  if (points.length === 1) return points[0].y;
+  if (x <= points[0].x) return points[0].y;
+  if (x >= points[points.length - 1].x) return points[points.length - 1].y;
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    if (x >= a.x && x <= b.x) {
+      const t = (x - a.x) / (b.x - a.x);
+      return a.y + t * (b.y - a.y);
+    }
+  }
+  return null;
+}
+
+// Zinssatz fuer targetYear: Stuetzstellen aus den IR:EUR-Faktoren des aktiven
+// Szenarios (gemappte Serie x scale); unter 2 gemappten Stuetzstellen Fallback
+// auf die rohen EU_<n>Y-Spalten.
+function interpolateMappedRate(row, targetYear, factorMap) {
+  const pts = [];
+  if (factorMap) {
+    factorMap.forEach((m, fid) => {
+      const match = /^IR:EUR:(\d+(?:\.\d+)?)Y$/.exec(fid);
+      if (!match) return;
+      const v = parseFloat(row[m.col]);
+      if (!Number.isFinite(v)) return;
+      pts.push({ x: parseFloat(match[1]), y: v * m.scale });
+    });
+  }
+  if (pts.length < 2) return interpolateSwapRateDynamic(row, targetYear);
+  pts.sort((a, b) => a.x - b.x);
+  return interpolatePoints(pts, targetYear);
+}
+
+// Notch-Skala fuer die Rating-Interpolation (Index = Rang, AAA am besten).
+const RATING_NOTCHES = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB', 'BB-'];
+// Rohspalten-Fallback: in tblTS existieren nur die Haupt-Buckets.
+const RATING_RAW_COLS = { AAA: 'US_AAA', AA: 'US_AA', A: 'US_A', BBB: 'US_BBB', BB: 'US_BB' };
+
+// Spread fuer ein Rating: Stuetzstellen aus den CS:EUR-Faktoren des aktiven
+// Szenarios, Zwischenstufen (AA-, A+, ...) linear ueber die Notch-Skala;
+// unter 2 gemappten Stuetzstellen Fallback auf die rohen US_-Spalten.
+// rating: Notch-String ('AA-') ODER numerischer Rang (3.4 = zwischen AA- und A+).
+function interpolateRatingSpread(row, rating, factorMap) {
+  let targetRank;
+  if (Number.isFinite(rating)) {
+    targetRank = rating;
+  } else {
+    const rank = RATING_NOTCHES.indexOf(String(rating || 'A').toUpperCase().trim());
+    targetRank = rank >= 0 ? rank : RATING_NOTCHES.indexOf('A');
+  }
+  let pts = [];
+  if (factorMap) {
+    factorMap.forEach((m, fid) => {
+      const match = /^CS:EUR:(.+)$/.exec(fid);
+      if (!match) return;
+      const notch = RATING_NOTCHES.indexOf(match[1]);
+      if (notch < 0) return;
+      const v = parseFloat(row[m.col]);
+      if (!Number.isFinite(v)) return;
+      pts.push({ x: notch, y: v * m.scale });
+    });
+  }
+  if (pts.length < 2) {
+    pts = [];
+    Object.entries(RATING_RAW_COLS).forEach(([rt, col]) => {
+      const v = parseFloat(row[col]);
+      if (!Number.isFinite(v)) return;
+      pts.push({ x: RATING_NOTCHES.indexOf(rt), y: v });
+    });
+  }
+  if (!pts.length) return null;
+  pts.sort((a, b) => a.x - b.x);
+  return interpolatePoints(pts, targetRank);
+}
+
+// CPV01-gewichtete Rating-Position des Portfolios auf der Notch-Skala.
+// Quelle: PortfolioRiskSensitivities (RISK_TYPE=CPV01, RISK_FACTOR_ID=CS:CCY:<Rating>)
+// — dieselben Buckets wie im Sensitivities-CPV01-Chart. null = keine Daten (-> Fallback 'A').
+function computePortfolioRatingRank(portName) {
+  const norm = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim();
+  const port = norm(portName);
+  if (!port) return null;
+  const rows = appState.getPortfolioRiskSensitivitiesData?.() || [];
+  let weighted = 0, weight = 0;
+  rows.forEach((r) => {
+    if (norm(r.PORT_NAME ?? r.port_name) !== port) return;
+    if (String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim() !== 'CPV01') return;
+    const fid = String(r.RISK_FACTOR_ID ?? r.risk_factor_id ?? '').trim();
+    const bucket = fid.includes(':') ? fid.split(':').pop().trim() : fid;
+    const rank = RATING_NOTCHES.indexOf(bucket);
+    if (rank < 0) return;
+    const v = Math.abs(Number(r.VALUE_BASE ?? r.value_base ?? r.VALUE_LOCAL ?? r.value_local ?? 0));
+    if (!Number.isFinite(v) || v === 0) return;
+    weighted += rank * v;
+    weight += v;
+  });
+  return weight > 0 ? weighted / weight : null;
+}
+
+// Dropdowns (Laufzeit/Rating) und Factor-Map-Aktivierung einmalig binden ->
+// Chart mit den zuletzt uebergebenen Portfolio-Parametern neu zeichnen.
+function bindSynthBondControls() {
+  if (__synthControlsBound) return;
+  const ttmSel = document.getElementById('synthBondTtmSelect');
+  const ratingSel = document.getElementById('synthBondRatingSelect');
+  if (!ttmSel && !ratingSel) return; // Controls (noch) nicht im DOM
+  const redraw = () => {
+    if (!__synthChartArgs) return;
+    const a = __synthChartArgs;
+    drawSyntheticPortfolioChart(a.targetEndValue, a.portPV01, a.testTtM, a.portCPV01, a.portName);
+  };
+  ttmSel?.addEventListener('change', redraw);
+  ratingSel?.addEventListener('change', redraw);
+  // Zeitraum-Buttons (1Y/3Y/5Y/10Y/Max) wie im Scenario-Period-Chart.
+  const rangeBtns = document.querySelectorAll('.synth-bond-controls .synth-range');
+  rangeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      __synthRangeYears = Number(btn.dataset.years) || 0;
+      rangeBtns.forEach((b) => b.classList.toggle('is-active', b === btn));
+      redraw();
+    });
+  });
+  document.addEventListener('mvar:factor-map-changed', redraw);
+  __synthControlsBound = true;
+}
+
+// pv01 treibt den Zinsbeitrag (Laufzeit-interpoliert), cpv01 den Spreadbeitrag
+// (Rating-interpoliert). Beide Deltas laufen ueber das Factor-Mapping des aktiven
+// Szenarios (opts.factorMap); opts.rating bestimmt die Spread-Stufe.
+// Rueckgabe: { points, impacts } — impacts[i] = Tages-P/L in % zum Punkt i (fuer VaR-Pane).
+function createAllProductData(tsData, testTtM, pv01, startValue = 100, cpv01 = 0, opts = {}) {
+  const { factorMap = null, rating = 'A' } = opts;
   const result = [];
+  const impacts = [];
   let currentValue = startValue;
 
   for (let i = 1; i < tsData.length; i++) {
     const prev = tsData[i - 1];
     const curr = tsData[i];
 
-    const prevRate = interpolateSwapRateDynamic(prev, testTtM);
-    const currRate = interpolateSwapRateDynamic(curr, testTtM);
+    const prevRate = interpolateMappedRate(prev, testTtM, factorMap);
+    const currRate = interpolateMappedRate(curr, testTtM, factorMap);
     if (prevRate == null || currRate == null) continue;
 
     const diff = currRate - prevRate;
-    const impact = diff * pv01;
+
+    // Credit-Spread-Beitrag; fehlt die Serie an einem Tag, zaehlt nur der Zins.
+    const prevSpread = interpolateRatingSpread(prev, rating, factorMap);
+    const currSpread = interpolateRatingSpread(curr, rating, factorMap);
+    const sdiff = (Number.isFinite(prevSpread) && Number.isFinite(currSpread))
+      ? currSpread - prevSpread
+      : 0;
+
+    const impact = diff * pv01 + sdiff * cpv01;
     currentValue *= (1 + impact / 100);
 
+    impacts.push(impact);
     result.push({
       x: curr.DATE || curr.date,
       y: currentValue,
@@ -610,10 +846,150 @@ function createAllProductData(tsData, testTtM, pv01, startValue = 100) {
     });
   }
 
-  return result;
+  return { points: result, impacts };
 }
 
-function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM = 5) {
+// Schnittindex des fuehrenden Abschnitts, in dem sich KEINE der beiden Linien bewegt —
+// tblTS ist vor dem echten Datenbeginn konstant rueckgefuellt (Deltas = 0), 'Max'
+// soll aber am Beginn der Faktordaten starten (wie trimLeadingFlat im Factor-Chart).
+function leadingFlatCut(a, b) {
+  const firstMove = (arr) => {
+    if (!arr.length) return 0;
+    const y0 = arr[0].y;
+    const idx = arr.findIndex((p) => p.y !== y0);
+    return idx < 0 ? arr.length : idx;
+  };
+  return Math.max(0, Math.min(firstMove(a), firstMove(b)) - 1);
+}
+
+// ===== Gleitender VaR (glatt: EWMA/RiskMetrics) fuers Pane unter dem Chart =====
+
+// z-Wert zur Konfidenz (Normalverteilung, gaengige Stufen).
+function zScore(confidence) {
+  const table = [
+    [0.90, 1.2816], [0.95, 1.6449], [0.975, 1.9600], [0.99, 2.3263], [0.995, 2.5758],
+  ];
+  let best = table[1];
+  table.forEach((t) => { if (Math.abs(t[0] - confidence) < Math.abs(best[0] - confidence)) best = t; });
+  return best[1];
+}
+
+// Konfidenz + Horizont aus dem Scenario-Period-Setup (Customer Default bevorzugt),
+// Fallback 95 % / 10 Tage.
+function getVarConfHorizon() {
+  const rows = appState.getMvarModelSelectionAppRows?.() || [];
+  const row = rows.find((r) => Number(r.CUSTOMER_DEFAULT ?? r.customer_default) === 1) || rows[0] || {};
+  let conf = parseFloat(String(row.CONFIDENCE ?? row.Confidence ?? row.confidence ?? '').replace('%', '').replace(',', '.'));
+  if (Number.isFinite(conf)) { if (conf > 1) conf /= 100; } else { conf = 0.95; }
+  let h = parseInt(row.VaR_Days ?? row.VAR_DAYS ?? row.var_days, 10);
+  if (!Number.isFinite(h) || h <= 0) h = 10;
+  return { conf, h };
+}
+
+// Gleitender VaR: EWMA (lambda 0.94) auf UEBERLAPPENDEN h-Tages-P/L-Summen statt
+// Eintages-Vol x sqrt(h) — ein Schocktag verteilt sich so auf h Fenster (die Linie
+// steigt ueber ~h Tage statt an einem Tag, max. Tagessprung ~x1.25 statt x2.16),
+// und die Autokorrelation der Tage wird mitgemessen statt per sqrt(h) wegargumentiert.
+// Seed = Varianz der ersten (max 30) Fenster statt erstem Wert^2 (falscher Start).
+// Rueckgabe ist label-synchron: die ersten h-1 Punkte sind null (kein volles Fenster).
+function ewmaVarSeries(impacts, z, horizonDays) {
+  const lambda = 0.94;
+  const h = Math.max(1, Math.round(Number(horizonDays) || 1));
+  const n = impacts.length;
+  if (!n) return [];
+
+  // Ueberlappende h-Tages-Summen (Index i = Fenster endet am Tag i).
+  const sums = new Array(n).fill(null);
+  let run = 0;
+  for (let i = 0; i < n; i++) {
+    run += Number(impacts[i]) || 0;
+    if (i >= h) run -= Number(impacts[i - h]) || 0;
+    if (i >= h - 1) sums[i] = run;
+  }
+
+  const windows = sums.filter((v) => v != null);
+  if (!windows.length) return new Array(n).fill(null);
+
+  const seedN = Math.min(30, windows.length);
+  let variance = windows.slice(0, seedN).reduce((s, v) => s + v * v, 0) / seedN;
+
+  const out = new Array(n).fill(null);
+  for (let i = h - 1; i < n; i++) {
+    const v = sums[i];
+    variance = lambda * variance + (1 - lambda) * v * v;
+    out[i] = z * Math.sqrt(variance);
+  }
+  return out;
+}
+
+// Vollwertiger Rolling-VaR-Chart in eigener Box: gleiche x-Achse, Groesse und
+// Optik wie der Synth-Chart (Legende rechts, Fadenkreuz, Zoom + Reset-Button),
+// nur die y-Achse zeigt den gleitenden VaR.
+function drawSynthVarChart(labels, impBond, impPort, bondLabel, portLabel, bondColor, portColor) {
+  const canvas = document.getElementById('synthVarChart');
+  if (!canvas) return;
+  if (window.synthVarChartInstance) { try { window.synthVarChartInstance.destroy(); } catch (_) {} }
+
+  const { conf, h } = getVarConfHorizon();
+  const z = zScore(conf);
+  const col = _chartTextColor();
+
+  window.synthVarChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    plugins: [_synthZoomSyncPlugin],
+    data: {
+      labels,
+      datasets: [
+        { label: `VaR ${bondLabel}`, data: ewmaVarSeries(impBond, z, h), borderColor: bondColor, backgroundColor: 'transparent', pointRadius: 0, borderWidth: 1.5, tension: 0.1 },
+        { label: `VaR ${portLabel}`, data: ewmaVarSeries(impPort, z, h), borderColor: portColor, backgroundColor: 'transparent', pointRadius: 0, borderWidth: 1.5, tension: 0.1 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      color: col,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      scales: {
+        x: {
+          display: true,
+          type: 'category',
+          title: { display: true, text: 'Date', color: col },
+          ticks: { color: col },
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: `Rolling VaR ${Math.round(conf * 100)}% / ${h}d (% NAV)`, color: col },
+          ticks: { color: col, callback: (v) => `${Number(v).toFixed(2)}%` },
+        },
+      },
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: col, boxWidth: 12, boxHeight: 6, font: { size: 11 } },
+        },
+        tooltip: { enabled: false },
+        histCrosshair: { enabled: true, valueScale: 1 },
+        zoom: {
+          pan: { enabled: true, mode: 'x' },
+          zoom: {
+            drag: { enabled: true },
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x',
+          },
+        },
+      },
+    },
+  });
+
+  ensureDistZoomTools(canvas, 'synthVarChartInstance');
+}
+
+function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM = 5, portCPV01 = 0, portName = null) {
+  // Fuer Re-Renders durch Dropdown-/Factor-Map-Aenderungen merken.
+  __synthChartArgs = { targetEndValue, portPV01, testTtM, portCPV01, portName };
+  bindSynthBondControls();
+
   const tsData = appState.getTblTSData();
 
   console.log('[TS EU1Y CHART] drawSyntheticPortfolioChart called', {
@@ -633,30 +1009,59 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
     return;
   }
 
-  const testCurr = tsData[tsData.length - 1];
-  const testCurrRate = interpolateSwapRateDynamic(testCurr, testTtM) / 100;
+  // Dropdown-Auswahl fuer die Bond-Linie (Fallback: Aufruf-Parameter / Rating A).
+  const selTtm = Number(document.getElementById('synthBondTtmSelect')?.value);
+  const ttm = Number.isFinite(selTtm) && selTtm > 0 ? selTtm : testTtM;
+  const rating = String(document.getElementById('synthBondRatingSelect')?.value || 'A');
 
-  const testPV01 = -testTtM / (1 + testCurrRate);
+  // Factor-Mapping des aktiven Szenarios: bestimmt, welche tblTS-Serien (x scale)
+  // die Zins- und Spread-Deltas liefern.
+  const factorMap = buildActiveFactorMap(tsData[tsData.length - 1]);
+
+  const testCurr = tsData[tsData.length - 1];
+  const testCurrRate = interpolateMappedRate(testCurr, ttm, factorMap) / 100;
+
+  const testPV01 = -ttm / (1 + testCurrRate);
   const portfolioPV01 = portPV01;
 
-  const threeYearsAgo = new Date();
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-  const tsFiltered = tsData.filter(d => new Date(d.DATE || d.date) >= threeYearsAgo);
+  // Zeitfenster (1Y/3Y/5Y/10Y/Max) ab dem juengsten Datum der Zeitreihe.
+  const lastTs = new Date(testCurr.DATE || testCurr.date);
+  let tsFiltered = tsData;
+  if (__synthRangeYears > 0 && !Number.isNaN(lastTs.getTime())) {
+    const cutoff = new Date(lastTs);
+    cutoff.setFullYear(cutoff.getFullYear() - __synthRangeYears);
+    tsFiltered = tsData.filter(d => new Date(d.DATE || d.date) >= cutoff);
+  }
 
-  const rawSynthetic = createAllProductData(tsFiltered, testTtM, testPV01);
-  const rawPortfolio = createAllProductData(tsFiltered, testTtM, portfolioPV01);
+  // Bond: Dropdown-Laufzeit + Dropdown-Rating (Spread-Duration = Zins-Duration).
+  // Portfolio: Deltas vom duration-aequivalenten Kurvenpunkt (Duration ~ ttm/(1+r)
+  // -> ttm = |PV01| * (1+r)), NICHT von einem festen Tenor — beide Linien sind
+  // Ein-Faktor-Naeherungen, das Portfolio kennt seine Kurvenverteilung hier nicht.
+  const durGuess = Math.abs(portfolioPV01);
+  const rPort = interpolateMappedRate(testCurr, durGuess, factorMap) / 100;
+  const portTtm = durGuess * (1 + rPort);
+
+  // Spread-Seite analog: CPV01-gewichtete Rating-Position des Portfolios auf der
+  // Spread-Kurve (statt fix 'A'); ohne CPV01-Buckets Fallback 'A'.
+  const portRatingRank = computePortfolioRatingRank(portName);
+  const portRatingLabel = portRatingRank != null
+    ? (RATING_NOTCHES[Math.round(portRatingRank)] || 'A')
+    : 'A';
+  const portLabel = `Synthetic Portfolio (PV01 ${Number(portfolioPV01).toFixed(2)})`;
+
+  const synthRes = createAllProductData(tsFiltered, ttm, testPV01, 100, testPV01, { factorMap, rating });
+  const portRes = createAllProductData(tsFiltered, portTtm, portfolioPV01, 100, portCPV01, { factorMap, rating: portRatingRank ?? 'A' });
+  const cut = leadingFlatCut(synthRes.points, portRes.points);
+  const rawSynthetic = synthRes.points.slice(cut);
+  const rawPortfolio = portRes.points.slice(cut);
+  const impSynthetic = synthRes.impacts.slice(cut);
+  const impPortfolio = portRes.impacts.slice(cut);
 
   const syntheticData = normalizeCurveToEndValue(rawSynthetic, targetEndValue);
   const portfolioData = normalizeCurveToEndValue(rawPortfolio, targetEndValue);
 
-  const allYValues = [...syntheticData, ...portfolioData].map(p => p.y);
-  const ySpread = Math.max(...allYValues) - Math.min(...allYValues);
-  const yPadding = ySpread * 0.1;
-  const yMax = targetEndValue + ySpread / 2 + yPadding;
-  const yMin = targetEndValue - ySpread / 2 - yPadding;
-
   const cmbValueDataset = {
-    label: `Synthetic CMB (${testTtM}Y)`,
+    label: `Synthetic Portfolio (${ttm}Y ${rating})`,
     data: syntheticData,
     borderColor: 'rgba(45, 212, 191, 0.9)',
     backgroundColor: 'rgba(45, 212, 191, 0.4)',
@@ -664,14 +1069,13 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
     pointRadius: 0
   };
 
-  // âœ… Synthetic Portfolio = Garmin-Pink, gestrichelt
+  // Synthetic Portfolio = Garmin-Pink, durchgezogen
   const pCol = getPortfolioColor(1);
   const portfolioValueDataset = {
-    label: `Synthetic Portfolio`,
+    label: portLabel,
     data: portfolioData,
     borderColor: pCol.borderColor,
     backgroundColor: 'transparent',
-    borderDash: [8, 6],
     tension: 0.1,
     pointRadius: 0
   };
@@ -697,15 +1101,49 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
     'tsEU1YChart',
     'Synthetic Bond vs. Portfolio',
     0,
-    { // optionsOverride
+    { // optionsOverride: nur der Achsentitel — min/max rechnet createSimpleLineChart
+      // selbst (deckt die volle Datenrange ab, sonst wird die Kurve oben abgeschnitten).
       scales: {
         y: {
-          min: yMin,
-          max: yMax,
           title: { display: true, text: 'Normalized Value (%)' },
         }
       }
     }
+  );
+
+  // Legende: unter dem Portfolio-Eintrag das durchschnittliche Rating als eigene,
+  // nicht klickbare Zeile ohne Farbkasten anzeigen.
+  const synthChart = window.tsEU1YChartInstance;
+  if (synthChart) {
+    synthChart.options.plugins.legend.labels.generateLabels = (ch) => {
+      const items = Chart.defaults.plugins.legend.labels.generateLabels(ch);
+      const idx = items.findIndex((it) => it.text === portLabel);
+      const info = {
+        text: `Ø Rating ~${portRatingLabel}`,
+        fillStyle: 'transparent', strokeStyle: 'transparent', lineWidth: 0,
+        datasetIndex: -1, $info: true,
+      };
+      if (idx >= 0) items.splice(idx + 1, 0, info); else items.push(info);
+      return items;
+    };
+    synthChart.options.plugins.legend.onClick = (e, item, legend) => {
+      if (item.$info) return; // Info-Zeile togglet nichts
+      Chart.defaults.plugins.legend.onClick(e, item, legend);
+    };
+    synthChart.update();
+  }
+
+  ensureDistZoomTools(document.getElementById('tsEU1YChart'), 'tsEU1YChartInstance');
+
+  // Gleitender VaR (EWMA) als eigener Chart darunter — gleiche Zeitachse und Farben.
+  drawSynthVarChart(
+    syntheticData.map((p) => formatDateLabel(p.x)),
+    impSynthetic,
+    impPortfolio,
+    cmbValueDataset.label,
+    portLabel,
+    cmbValueDataset.borderColor,
+    pCol.borderColor
   );
 }
 
@@ -753,9 +1191,36 @@ function normalizeCurveToEndValue(curve, targetEndValue) {
   }));
 }
 
+// Zoom-Sync in BEIDE Richtungen: jede x-Range-Aenderung (Drag-/Wheel-Zoom, Pan,
+// Reset) des einen Charts wird auf den anderen gespiegelt. Beide Charts haben
+// identische Kategorie-Labels, daher genuegt das Uebertragen der Indizes.
+// __synthZoomSyncing verhindert Ping-Pong (Sync loest dst-Update aus).
+let __synthZoomSyncing = false;
+const _synthZoomSyncPlugin = {
+  id: 'synthZoomSync',
+  afterUpdate(chart) {
+    if (__synthZoomSyncing) return;
+    const id = chart?.canvas?.id;
+    const dst = id === 'tsEU1YChart' ? window.synthVarChartInstance
+      : id === 'synthVarChart' ? window.tsEU1YChartInstance
+      : null;
+    const xs = chart.scales?.x;
+    if (!dst || !xs) return;
+    const min = xs.min, max = xs.max;
+    const prev = chart.$lastSyncRange;
+    if (prev && prev.min === min && prev.max === max) return;
+    chart.$lastSyncRange = { min, max };
+    const dxs = dst.scales?.x;
+    if (dxs && dxs.min === min && dxs.max === max) return; // schon synchron
+    __synthZoomSyncing = true;
+    try { dst.zoomScale('x', { min, max }, 'none'); } catch (_) {}
+    __synthZoomSyncing = false;
+  },
+};
+
 // NOTE: createSimpleLineChart bleibt bei dir unverÃ¤ndert nutzbar,
 // weil wir die Farben im Dataset selbst setzen (inkl. borderDash fÃ¼r Synthetic Portfolio).
-function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Chart', pointRadius = 0) {
+function createSimpleLineChart(datasets, chartName, chartTitle = 'Line Chart', pointRadius = 0, optionsOverride = {}) {
   const canvasElement = document.getElementById(chartName);
   if (!canvasElement) {
     console.error(`Canvas element with ID "${chartName}" not found.`);
@@ -784,6 +1249,7 @@ data: dataset.data.map(dataPoint => ({
   originalY: dataPoint.originalY
 })),
 
+      pointStyle: 'line', // Legendensymbol (usePointStyle): Linie statt Rechteck
       fill: false,
       borderColor: dataset.borderColor || getColorFromPalette(index),
       backgroundColor: dataset.backgroundColor || 'transparent',
@@ -798,12 +1264,17 @@ data: dataset.data.map(dataPoint => ({
       label: marker.label,
       data: marker.data,
       showLine: false,
+      // Marker am rechten Chartrand nicht an der Plotflaeche abschneiden
+      // (der Endpunkt liegt exakt auf der Kante -> sonst nur ein halber Kreis).
+      clip: false,
       pointRadius: marker.pointRadius ?? 5,
       pointStyle: marker.pointStyle ?? 'circle',
       pointBackgroundColor: marker.pointBackgroundColor ?? 'red',
       pointBorderColor: marker.pointBorderColor ?? 'red',
-      borderColor: 'transparent',
-      backgroundColor: 'transparent',
+      // Punktfarben auch als Dataset-Farben, damit das Legendensymbol sichtbar ist
+      // (showLine: false verhindert ohnehin eine Linie).
+      borderColor: marker.pointBorderColor ?? 'red',
+      backgroundColor: marker.pointBackgroundColor ?? 'red',
       yAxisID: 'y'
     }))
   ];
@@ -820,8 +1291,16 @@ data: dataset.data.map(dataPoint => ({
   const yMin = targetY - spread - padding;
   const yMax = targetY + spread + padding;
 
+  const chartCol = _chartTextColor();
+  // Achs-Overrides des Aufrufers (z. B. y-min/max/title von drawSyntheticPortfolioChart);
+  // title-Objekte werden gemerged, damit die Theme-Textfarbe erhalten bleibt.
+  const xOv = optionsOverride?.scales?.x || {};
+  const yOv = optionsOverride?.scales?.y || {};
+
+  ensureHistCrosshairPlugin(); // Fadenkreuz-Plugin registrieren (idempotent)
   const newChart = new Chart(ctx, {
     type: "line",
+    plugins: [_synthZoomSyncPlugin],
     data: {
       labels: datasets[0].data.map(d => formatDateLabel(d.x)),
       datasets: allDatasets
@@ -829,6 +1308,7 @@ data: dataset.data.map(dataPoint => ({
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      color: chartCol,
       interaction: {
         mode: 'nearest',
         axis: 'x',
@@ -837,26 +1317,30 @@ data: dataset.data.map(dataPoint => ({
       scales: {
         x: {
           display: true,
-          title: { display: true, text: "Date" },
           type: 'category',
+          ticks: { color: chartCol },
+          ...xOv,
+          title: { display: true, text: "Date", color: chartCol, ...(xOv.title || {}) },
         },
         y: {
-          title: { display: true, text: "Value Development (%)" },
-          ticks: { callback: val => `${val.toFixed(2)}%` },
+          ticks: { color: chartCol, callback: val => `${val.toFixed(2)}%` },
           min: yMin,
-          max: yMax
+          max: yMax,
+          ...yOv,
+          title: { display: true, text: "Value Development (%)", color: chartCol, ...(yOv.title || {}) },
         }
       },
       plugins: {
-        tooltip: {
-          filter: context => !context.dataset.label?.includes('Current Portfolio Value'),
-          callbacks: {
-            label: context => {
-              const val = context.raw?.y;
-              return `${context.dataset.label}: ${val.toFixed(2)}%`;
-            }
-          }
+        legend: {
+          position: 'right',
+          // usePointStyle: Marker-Eintrag als KREIS (dataset.pointStyle 'circle'),
+          // Linien-Serien als Linien-Symbol (dataset.pointStyle 'line').
+          labels: { color: chartCol, usePointStyle: true, pointStyleWidth: 16, font: { size: 11 } },
         },
+        tooltip: { enabled: false },
+        // Fadenkreuz mit Randwerten; Werte sind hier schon in %, daher valueScale 1
+        // (das Plugin multipliziert sonst mit 100 wie in den Historic-Charts).
+        histCrosshair: { enabled: true, valueScale: 1 },
         zoom: {
           pan: { enabled: true, mode: 'x' },
           zoom: {

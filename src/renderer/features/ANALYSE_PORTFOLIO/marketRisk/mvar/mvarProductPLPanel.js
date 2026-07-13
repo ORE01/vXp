@@ -578,7 +578,7 @@ function renderProductPdfCanvas(labels, values) {
   const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
   mvarProdIdVarContribChart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 16 }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: 'rgba(42,127,127,0.9)', borderColor: 'rgba(42,127,127,0.9)', borderWidth: 1, maxBarThickness: 16 }] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
       plugins: { legend: { display: false } },
@@ -857,8 +857,13 @@ function renderProductContribChart(rows, cfg) {
   const chart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(88,121,160,0.85)', borderColor: 'rgba(88,121,160,0.85)', borderWidth: 1, maxBarThickness: 10 },
-      { label: `Risk contribution (${cfg.metric})`, data: contribPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 10 },
+      // Palette: Portfolio-Anteil = Portfolio-Blau; Risiko-Beitrag = Market-Teal
+      // (VaR) bzw. gelblichere Nuance (ES), damit beide Metriken unterscheidbar sind.
+      { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 1, maxBarThickness: 10 },
+      { label: `Risk contribution (${cfg.metric})`, data: contribPct,
+        backgroundColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
+        borderColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
+        borderWidth: 1, maxBarThickness: 10 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,

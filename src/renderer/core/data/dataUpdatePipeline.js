@@ -138,19 +138,22 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
     appState.setAllMvarData?.(receivedData);
 
     const mvarData = appState.getAllMvarData?.() || [];
-    try { window.handleMVaRData?.(mvarData, index); } catch {}
+    try { window.handleMVaRData?.(mvarData, index); }
+    catch (e) { console.error('[PIPELINE] handleMVaRData failed:', e); }
   };
 
   const updateMvarDistData = (receivedData, index, port_name) => {
     appState.setMvarDistData?.(receivedData);
     const scenario_name = appState.selectedMvarInterval ?? null;
-    try { window.handleSummaryMarketRiskData?.(port_name, scenario_name); } catch {}
+    try { window.handleSummaryMarketRiskData?.(port_name, scenario_name); }
+    catch (e) { console.error('[PIPELINE] handleSummaryMarketRiskData failed:', e); }
   };
 
   const updateMvarProductData = (receivedData, index, port_name) => {
     appState.setMvarProductData?.(receivedData);
     const scenario_name = appState.selectedMvarInterval ?? null;
-    try { window.handleMvarProductTable?.(port_name, scenario_name); } catch {}
+    try { window.handleMvarProductTable?.(port_name, scenario_name); }
+    catch (e) { console.error('[PIPELINE] handleMvarProductTable failed:', e); }
   };
 
   const updateCvarDataTable = (receivedData, index, port_name) => {

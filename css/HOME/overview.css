@@ -46,8 +46,8 @@
 }
 .home-title {
   margin: 0;
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 600;
   letter-spacing: -.01em;
   color: var(--text-bright);
 }
@@ -77,13 +77,13 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: .08em;
   color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 10px;
 }
-.home-card-port { color: var(--text-muted); font-weight: 600; letter-spacing: .3px; }
+.home-card-port { color: var(--text-muted); font-weight: 500; letter-spacing: .3px; }
 
 /* Icon-Badge im Kartenkopf (runder Farbkreis + weisses Symbol, Vorlage-Look). */
 .home-ico {
@@ -133,8 +133,8 @@
   flex-direction: column;
   gap: 2px;
 }
-.home-kpi-val { font-size: 14px; font-weight: 700; color: var(--text-bright); }
-.home-kpi-abs { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.home-kpi-val { font-size: 14px; font-weight: 600; color: var(--text-bright); }
+.home-kpi-abs { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi--wide { grid-column: 1 / -1; }
 .home-kpi-lbl { font-size: 10.5px; color: var(--text-muted); }
 
@@ -145,7 +145,7 @@
   padding-top: 10px;
   margin-bottom: 6px;
   font-size: 11.5px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-bright);
   text-align: center;
 }
@@ -189,7 +189,7 @@
 .disclaimer-box h2 {
   margin: 0 0 12px;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-bright);
 }
 .disclaimer-text {
@@ -207,6 +207,22 @@
   margin-top: 14px;
 }
 .disclaimer-status { font-size: 12px; color: var(--text-muted); }
+.disclaimer-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+.disclaimer-agree input {
+  cursor: pointer;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
 .disclaimer-ok {
   min-width: 96px;
   padding: 8px 18px;

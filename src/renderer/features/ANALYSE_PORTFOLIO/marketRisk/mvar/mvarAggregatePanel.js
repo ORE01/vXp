@@ -204,10 +204,11 @@ function renderMVaRRelativeTableWithIndex(data, index, { rollingData = null, sce
 
   const headerRow = table.insertRow();
 
-  // Mit Rolling-Spalte: Spaltenkoepfe = Szenario-Namen; sonst wie bisher.
+  // Mit Rolling-Spalte: Spaltenkoepfe = Szenario-Namen; ROLLING_1 zuerst,
+  // dann das gewaehlte Szenario.
   const withRolling = !!rollingData;
   const headers = withRolling
-    ? ['label', String(scenarioName || 'value'), 'ROLLING_1']
+    ? ['label', 'ROLLING_1', String(scenarioName || 'value')]
     : ['label', 'value'];
   headers.forEach(text => {
     const cell = headerRow.insertCell();
@@ -236,11 +237,32 @@ function renderMVaRRelativeTableWithIndex(data, index, { rollingData = null, sce
     row.dataset.metric = metric;
 
     row.insertCell(0).textContent = label;
-    row.insertCell(1).textContent = value;
-    if (withRolling) row.insertCell(2).textContent = rolling ?? '';
+    if (withRolling) row.insertCell(1).textContent = rolling ?? '';
+    // Szenario-Wert-Zelle markieren: hier haengt der Ampel-Punkt
+    // (applyMvarTrafficStateToTable), unabhaengig von der Spaltenreihenfolge.
+    const valueCell = row.insertCell();
+    valueCell.dataset.role = 'value';
+    valueCell.textContent = value;
   });
 
   container.appendChild(table);
+
+  // Eingestelltes/gerechnetes Intervall unter der Tabelle: Stichtag, Zeitraum,
+  // Konfidenz, Horizont — direkt aus der MarketVaR-Zeile (deckt auch ROLLING ab).
+  const d10 = (v) => String(v ?? '').slice(0, 10);
+  const alpha = Number(data.alpha);
+  const horizon = Number(data.horizon_days);
+  const bits = [];
+  if (d10(data.asof_date)) bits.push(`as of ${d10(data.asof_date)}`);
+  if (d10(data.start_date) && d10(data.end_date)) bits.push(`${d10(data.start_date)} → ${d10(data.end_date)}`);
+  if (Number.isFinite(alpha)) bits.push(`Confidence ${(alpha * 100).toFixed(0)}%`);
+  if (Number.isFinite(horizon)) bits.push(`${horizon}d horizon`);
+  if (bits.length) {
+    const info = document.createElement('div');
+    info.className = 'mvar-interval-info';
+    info.textContent = bits.join(' · ');
+    container.appendChild(info);
+  }
 }
 
 // Show the traffic-light state as a small coloured dot AFTER the value (instead of
@@ -253,7 +275,7 @@ function applyMvarTrafficStateToTable(index, state, metric = 'totalVar') {
   const row = container.querySelector(`tr[data-metric="${metric}"]`);
   if (!row) return;
 
-  const valueCell = row.cells[1];
+  const valueCell = row.querySelector('td[data-role="value"]') || row.cells[1];
   if (!valueCell) return;
 
   // Drop any previous dot so re-renders don't stack them.
