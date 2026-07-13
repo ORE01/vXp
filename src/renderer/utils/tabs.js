@@ -269,6 +269,30 @@ function decorateTriggerIcons() {
       applyAccent(btn);
     }
   });
+
+  // PORTFOLIO-Bereich: ALLE Valuation-Trigger bekommen den blauen Portfolio-
+  // Farbstreifen (nur Accent, kein Icon) — analog zu Market/Credit Risk, wo die
+  // Bereichsfarbe den ganzen Teilbaum faerbt. Gruppen-Trigger faerben ihren
+  // .risk-acc-Teilbaum mit (z.B. Yield -> Current/History).
+  const PORTFOLIO_ACCENT_LABELS = new Set([
+    'Select Portfolio', 'Portfolio', 'Create Portfolio', 'Change Portfolio',
+    'Breakdown', 'Yield', 'Current', 'History', 'Liquidity',
+  ]);
+  const portfolioAccent = (el) => {
+    if (el.classList.contains('has-accent')) return;
+    el.classList.add('has-accent');
+    el.style.setProperty('--trigger-accent', TRIGGER_ICONS['Portfolio'].bg);
+  };
+  document.querySelectorAll('.section-trigger .section-header').forEach((h) => {
+    if (!PORTFOLIO_ACCENT_LABELS.has((h.textContent || '').trim())) return;
+    const btn = h.closest('.section-trigger');
+    if (!btn) return;
+    if (btn.classList.contains('risk-acc-toggle')) {
+      const acc = btn.closest('.risk-acc');
+      if (acc) acc.querySelectorAll('.section-trigger').forEach(portfolioAccent);
+    }
+    portfolioAccent(btn);
+  });
 }
 
 export function initializeTabs() {

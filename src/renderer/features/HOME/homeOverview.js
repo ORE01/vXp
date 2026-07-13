@@ -544,10 +544,21 @@ function bindHomeCardLinks() {
   };
 
   // Zwei Frames warten: erst Tab-/Modal-Umschaltung rendern lassen, dann Panel oeffnen.
+  // WICHTIG: War im Ziel-Tab bereits ein Sub-Panel offen (z.B. Breakdown), wird es
+  // beim Tab-Wechsel OHNE Open-Event einfach wieder sichtbar — inkl. alter Scroll-
+  // Position. Daher hier alle offenen Sub-Panels auf "oben" zuruecksetzen.
   const tabThenPanel = (tabId, panelId) => {
     document.getElementById(tabId)?.click();
-    if (!panelId) return;
-    requestAnimationFrame(() => requestAnimationFrame(() => openPanelViaTrigger(panelId)));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      try {
+        document.querySelectorAll('.sub-panel.open').forEach((p) => {
+          p.scrollTop = 0;
+          p.querySelectorAll('.sub-panel-body').forEach((el) => { el.scrollTop = 0; });
+        });
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+      } catch (_) {}
+      if (panelId) openPanelViaTrigger(panelId);
+    }));
   };
 
   const ACTIONS = {

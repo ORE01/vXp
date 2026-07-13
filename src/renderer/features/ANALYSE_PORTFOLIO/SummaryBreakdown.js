@@ -140,6 +140,26 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
       window.registerPanelOpenHook?.('panel-concentration', () => {
         requestAnimationFrame(() => {
           try { renderConcentrationDashboard(_lastBreakdownArgs?.filteredData, { dataField: _concDimension }); } catch {}
+          // Beim Oeffnen OBEN beginnen (Dimension-Dropdown sichtbar) — sonst startet
+          // die Ansicht bei den Charts. Der Scroller ist die .sub-panel-body (KIND
+          // des Panels), zusaetzlich Panel, Vorfahren und Dokument zuruecksetzen.
+          const scrollBreakdownTop = () => {
+            try {
+              const panel = document.getElementById('panel-concentration');
+              if (!panel) return;
+              panel.scrollTop = 0;
+              panel.querySelectorAll('.sub-panel-body, .sub-panel-content').forEach((el) => { el.scrollTop = 0; });
+              let el = panel.parentElement;
+              while (el && el !== document.body) {
+                if (el.scrollTop) el.scrollTop = 0;
+                el = el.parentElement;
+              }
+              if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+            } catch {}
+          };
+          requestAnimationFrame(scrollBreakdownTop);
+          // Nachzuegler abfangen (smooth-scrollIntoView/spaete Renders uebersteuern).
+          setTimeout(scrollBreakdownTop, 120);
         });
       });
     } catch {}

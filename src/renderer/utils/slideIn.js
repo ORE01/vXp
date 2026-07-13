@@ -63,6 +63,13 @@ function initContainer(container) {
 
     // 3) Zielpanel öffnen
     panel.classList.add('open');
+    // Beim Oeffnen immer OBEN beginnen — sonst uebernimmt das Panel die alte
+    // Scroll-Position (z.B. Breakdown startet mitten in den Charts statt beim
+    // Dimension-Dropdown).
+    try {
+      panel.scrollTop = 0;
+      panel.querySelectorAll('.sub-panel-body').forEach((el) => { el.scrollTop = 0; });
+    } catch (_) {}
     setAriaExpanded(id, true);
     showBackdrop();
 
