@@ -94,21 +94,33 @@
   position:static !important;
   inset:auto !important;
   display:block;
-  /* Vertikale Balken, alle Quantile in die Kartenbreite (kein Scroll): Canvas fuellt die
-     Karte. height:100% ueberschreibt das globale chart.css height:auto. */
-  width:100% !important;
+  /* Vertikale Balken: Breite wird per JS in PIXELN gesetzt (proportional zur Zahl der
+     Ausfaelle) und darf ueber die Karte hinausragen -> horizontales Scrollen im
+     .closs-chart-scroll-Wrapper. Daher width:auto/max-width:none statt 100%.
+     Hoehe fuellt weiter den Wrapper (ueberschreibt chart.css height:auto). */
+  width:auto !important;
   height:100% !important;
-  max-width:100% !important;
+  max-width:none !important;
 }
 
 /* Combined Losses-Chart steht oben in voller Panel-Breite. Das globale
    .chart-container-inner{max-width:280px} wuerde die Karte auf 280px kappen ->
-   per ID-Regel aufheben. overflow-y:auto -> scrollen bei vielen Zeilen (feste Hoehe
-   kommt aus der .chart-container-inner-Regel). */
+   per ID-Regel aufheben. Legende oben fix + Chart im Scroll-Wrapper darunter. */
 :is(#panel-cvar, #panel-EAD) #LossIssuerChartContainerCombined{
   width:100%;
   max-width:100%;
-  overflow:hidden;           /* kein Scroll: alle Quantile passen in die Kartenbreite */
+  overflow:hidden;           /* Karte selbst scrollt nicht; nur der innere Wrapper */
+  display:flex;
+  flex-direction:column;
+}
+
+/* Scroll-Wrapper um das Canvas: nimmt die Resthoehe der Karte ein und scrollt
+   horizontal, wenn der (per JS breit gesetzte) Canvas breiter als die Karte ist. */
+:is(#panel-cvar, #panel-EAD) #LossIssuerChartScroll{
+  flex:1;
+  min-height:0;
+  overflow-x:auto;
+  overflow-y:hidden;
 }
 
 /* Sticky HTML-Legende: bleibt beim Scrollen oben rechts sichtbar. Hintergrund deckt

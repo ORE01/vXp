@@ -63,19 +63,33 @@ export function renderPerformanceDashboard() {
   const dates = hist.map(r => r.DATE);
   const returnsFrac = hist.map(r => _num(r.RETURN));          // Fraktionen (0.048)
   const lastRow = hist[hist.length - 1] || {};
-  const prevRow = hist[hist.length - 2] || {};
   const curRet = _num(lastRow.RETURN);
-  const prevRet = _num(prevRow.RETURN);
   const ertrag = _num(lastRow.PROFIT_LOSS);
 
+  // Portfolio-Yield LIVE aus den Positionen: Σ ytmPort / Σ Notional (nominalgewichtete
+  // Kauf-Yield, ytmPort = ytm_BUY × Notional), konsistent mit der Home-Overview-Kachel.
+  // Das ist NICHT der letzte Historic-RETURN — der gehoert in "Previous period".
+  const posRows = (typeof appState.getAllPortfolioData === 'function') ? (appState.getAllPortfolioData() || []) : [];
+  let sumYtmPort = 0, sumNotional = 0;
+  for (const r of (Array.isArray(posRows) ? posRows : [])) {
+    const p = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
+    if (port && p && p !== port) continue;
+    sumYtmPort += _num(r.ytmPort ?? r.ytmport ?? r.YTMPORT) || 0;
+    sumNotional += _num(r.NOTIONAL ?? r.notional) || 0;
+  }
+  const portYield = sumNotional ? (sumYtmPort / sumNotional) : null;
+  const _yieldTxt = portYield != null ? `${(portYield * 100).toFixed(2)} %` : '–';
+
   // --- KPIs ---
-  _setText('perfKpiReturn', _pctFrac(curRet));
-  _setText('perfKpiPrev', _pctFrac(prevRet));
+  // PORTFOLIO YIELD = live gewichtete Yield (ytmPortA/Notional); PREVIOUS PERIOD YIELD
+  // = juengster Historic-Eintrag (RETURN).
+  _setText('perfKpiReturn', _yieldTxt);
+  _setText('perfKpiPrev', _pctFrac(curRet));
   _setText('perfKpiErtrag', _eur(ertrag));
   const badge = document.getElementById('perfKpiBadge');
   if (badge) {
-    if (curRet != null && prevRet != null) {
-      const dPt = (curRet - prevRet) * 100;
+    if (portYield != null && curRet != null) {
+      const dPt = (portYield - curRet) * 100;
       badge.textContent = `${dPt >= 0 ? '↑ ' : '↓ '}${_ppt(dPt, 1)} vs. previous period`;
       badge.style.display = '';
     } else {
@@ -87,8 +101,8 @@ export function renderPerformanceDashboard() {
   const kpiTbl = document.getElementById('perfKpiTable');
   if (kpiTbl) {
     const kpiRows = [
-      ['Portfolio yield', _pctFrac(curRet)],
-      ['Previous period yield', _pctFrac(prevRet)],
+      ['Portfolio yield', _yieldTxt],
+      ['Previous period yield', _pctFrac(curRet)],
       ['Profit / Loss', _eur(ertrag)],
     ];
     kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${

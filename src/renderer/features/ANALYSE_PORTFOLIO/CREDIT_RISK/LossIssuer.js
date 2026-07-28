@@ -511,6 +511,14 @@ export function setupLossIssuerUI() {
         };
         const defaultsByDs = [defaultsFor(ratingData), defaultsFor(marketData), defaultsFor(marketNormData)];
 
+        // Betroffene Emittenten je Serie/Balken (aus ISSUER_RANK, dedupliziert) fuer den
+        // Tooltip. issuersFromRank liefert die reinen Emittentennamen des Ausfalls.
+        const issuersFor = (rows) => {
+          const m = new Map((rows || []).map(r => [r.QUANTIL, r.ISSUER_RANK]));
+          return baseQuantils.map(q => issuersFromRank(m.get(q)));
+        };
+        const issuersByDs = [issuersFor(ratingData), issuersFor(marketData), issuersFor(marketNormData)];
+
         // Nur der VaR-Balken (Quantil am naechsten zum Konfidenzniveau) rot, alle anderen
         // blau. Serie "Market adjusted" (di=2) in helleren Toenen.
         const varIdx = closestIndex(baseQuantils, getRunConfQuantil());
@@ -540,15 +548,26 @@ export function setupLossIssuerUI() {
         const existing = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(cv) : null;
         if (existing) { try { existing.destroy(); } catch (e) {} }
 
-        // Canvas-Groesse (responsive:false): um 90 Grad gedreht -> VERTIKALE Balken.
-        // ALLE Quantile in die Kartenbreite (kein horizontales Scrollen). Quantile auf der
-        // x-Achse, 99.99 (groesster Verlust) links.
-        const padY = 24;    // .chart-container-inner padding oben+unten
-        const padX = 24;    // padding links+rechts
-        const contentH = Math.max(220, Math.floor((cv.parentNode.clientHeight || 460) - padY));
-        const contentW = Math.max(320, Math.floor((cv.parentNode.clientWidth || 900) - padX));
+        // Canvas-Groesse (responsive:false): VERTIKALE Balken, Quantile auf der x-Achse
+        // (99.99 = groesster Verlust links). Breite PROPORTIONAL zur Zahl der Ausfaelle:
+        // passt alles in die Karte -> kartenbreit (kein Scroll); sonst breiter -> der
+        // .closs-chart-scroll-Wrapper scrollt horizontal, statt die Balken zu quetschen.
+        // cv.parentNode ist jetzt der Scroll-Wrapper (nicht die Karte) -> ohne Padding.
+        const wrap = cv.parentNode;
+        const PER_GROUP = 32;      // px pro Quantil-Balkengruppe (fixe Balkenbreite)
+        const MAX_W = 30000;       // Browser rendern Canvas > ~32767px nicht -> Deckel
+        const contentH = Math.max(220, Math.floor(wrap.clientHeight || 436));
+        const availW = Math.max(320, Math.floor(wrap.clientWidth || 876));
+        const contentW = Math.min(MAX_W, Math.max(availW, labels.length * PER_GROUP));
         cv.height = contentH;
         cv.width = contentW;
+        // Anzeigegroesse HART als Inline-!important setzen: schlaegt die globale Regel
+        // .chart-container-inner canvas{width:100% !important} (Nachfahren-Selektor greift
+        // trotz Scroll-Wrapper) und Chart.js. Ohne das bliebe das Canvas kartenbreit ->
+        // Balken gequetscht statt fixe Breite + horizontales Scrollen.
+        cv.style.setProperty('width', contentW + 'px', 'important');
+        cv.style.setProperty('height', contentH + 'px', 'important');
+        cv.style.setProperty('max-width', 'none', 'important');
 
         // colors = Balkenfarben-Array (VaR-Balken rot); legendColor = Basis-Serienfarbe
         // fuer die HTML-Legende (Balken-Array taugt dort nicht).
@@ -600,6 +619,13 @@ export function setupLossIssuerUI() {
                     const v = Number(ctx.parsed?.y) || 0;
                     const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
                     return `${ctx.dataset.label}: ${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
+                  },
+                  // Betroffene Emittenten (aus ISSUER_RANK) unter dem Wert auflisten,
+                  // je Emittent eine Zeile. Leere Ausfaelle -> keine Zusatzzeile.
+                  afterLabel: (ctx) => {
+                    const names = issuersByDs[ctx.datasetIndex]?.[ctx.dataIndex] || [];
+                    if (!names.length) return '';
+                    return ['Defaulting issuers:', ...names.map((n) => `  • ${n}`)];
                   },
                 },
               },

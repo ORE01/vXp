@@ -34,9 +34,11 @@ function bindPerfCanvasLeave(canvas) {
   canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
 }
 // Drill per RECHTSKLICK: unterdrueckt das native Kontextmenue und oeffnet – wenn
-// auf einer Produkt-Bubble geklickt wurde – das Drill-Menue am Cursor. Liest die
-// aktuelle Chart-Instanz zur Klickzeit, uebersteht also jedes Neuzeichnen.
-function bindPerfContextDrill(canvas, targetId) {
+// auf einer Produkt-Bubble geklickt wurde – das Drill-Menue am Cursor. Rechtsklick
+// auf den PORTFOLIO-Punkt (pink) listet ALLE Positionen in der Detail-Tabelle
+// (dort per Spaltenkopf sortierbar, z.B. nach Yield). Liest die aktuelle
+// Chart-Instanz zur Klickzeit, uebersteht also jedes Neuzeichnen.
+function bindPerfContextDrill(canvas, targetId, showAllFallback = false) {
   if (!canvas || canvas.dataset.perfCtxBound) return;
   canvas.dataset.perfCtxBound = '1';
   canvas.addEventListener('contextmenu', (e) => {
@@ -45,11 +47,22 @@ function bindPerfContextDrill(canvas, targetId) {
       const chart = window[targetId + '_chartInstance'];
       if (!chart) return;
       const els = chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [];
-      const el = els.find(x => chart.data.datasets[x.datasetIndex]?.isProduct);
-      if (!el) { scheduleHideConcMenu(); return; }
-      const pid = chart.data.datasets[el.datasetIndex].label;
-      perfDrill.hover('var', { native: e }, [el], [perfProdStep(pid)]);
-    } catch {}
+      const el = els.find(x => {
+        const ds = chart.data.datasets[x.datasetIndex];
+        return ds?.isProduct || ds?.isPortfolio;
+      });
+      const ds = el ? chart.data.datasets[el.datasetIndex] : null;
+      if (ds?.isProduct) { perfDrill.hover('var', { native: e }, [el], [perfProdStep(ds.label)]); return; }
+      // Portfolio-Punkt getroffen ODER Rechtsklick irgendwo im Portfolio-Chart
+      // (showAllFallback): alle Positionen listen — der kleine Punkt muss nicht
+      // pixelgenau getroffen werden.
+      if (ds?.isPortfolio || showAllFallback) {
+        perfDrill.setData(buildPerfDrillRows());
+        perfDrill.showAll('var');
+        return;
+      }
+      scheduleHideConcMenu();
+    } catch (err) { console.warn('[Perf] context drill failed', targetId, err); }
   });
 }
 // Zoom-Toolbar oben rechts in der .chart-box des Produkt-Charts: schnelle
@@ -434,7 +447,8 @@ const sharedXMax = drawYieldVsTimeChart({
   pastYieldCurve,
   pastLabel,
   euswDataOriginal: [],
-  points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }]
+  points: [{ x: portTtM, y: parseFloat(portfolioYield.replace('%', '')) }],
+  ctxDrill: perfDrill
 });
 
     // =========================
@@ -497,7 +511,8 @@ const durationEUSWData = [];
       pastLabel,
       euswDataOriginal: durationEUSWData,
       points: durationPoints,
-      xMaxOverride: sharedXMax
+      xMaxOverride: sharedXMax,
+      ctxDrill: perfDrill
     });
 
     // =========================
@@ -588,6 +603,7 @@ export function drawYieldVsTimeChart({
   points = [], // entweder Array {x,y} ODER EintrÃ¤ge mit .TtM/.ytm
   xMaxOverride = null, // gemeinsame x-Achsen-Skalierung (von Chart 1 vorgegeben)
   drill = null, // createContribDrill-Instanz: macht die Produkt-Bubbles klickbar
+  ctxDrill = null, // nur Rechtsklick-Drill binden (Portfolio-Punkt), ohne Zoom-Toolbar
 }) {
   let canvas = document.getElementById(targetId);
 
@@ -625,7 +641,7 @@ export function drawYieldVsTimeChart({
 
   const ctx = setupHiDPICanvas(canvas, 600, 190, true); // true = an tatsächliche Anzeigegröße anpassen (Tooltip-Koordinaten)
 
-  if (drill) { bindPerfCanvasLeave(canvas); bindPerfContextDrill(canvas, targetId); }
+  if (drill || ctxDrill) { bindPerfCanvasLeave(canvas); bindPerfContextDrill(canvas, targetId, !drill && !!ctxDrill); }
 
   // Vorherigen Chart zerstÃ¶ren
   if (window[targetId + '_chartInstance']) {
@@ -754,6 +770,7 @@ export function drawYieldVsTimeChart({
       borderWidth: 3,
       pointRadius: 8,
       pointHoverRadius: 10,
+      isPortfolio: true, // Rechtsklick -> alle Positionen (bindPerfContextDrill)
       order: 0 // Portfolio-Punkt ganz oben (niedrigster order = oberste Ebene)
     });
   }

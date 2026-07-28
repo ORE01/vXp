@@ -293,6 +293,10 @@ function decorateTriggerIcons() {
     }
     portfolioAccent(btn);
   });
+
+  // Marker-Klasse statt Label-Match: faerbt gezielt einzelne Trigger portfolio-blau,
+  // ohne gleichnamige Trigger anderer Bereiche (Risk History, Market Data) zu treffen.
+  document.querySelectorAll('.section-trigger.pf-accent').forEach(portfolioAccent);
 }
 
 export function initializeTabs() {

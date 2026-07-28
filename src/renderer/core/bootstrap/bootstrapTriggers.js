@@ -3,6 +3,7 @@ import { bindOffersUIOnce, renderOffersPanel, renderOffersTable } from '../../fe
 import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../features/portfolio/trades/tradeUI.js';
 import { renderPerformanceHistoryCopies } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 import { renderPerformanceDashboard } from '../../features/ANALYSE_PORTFOLIO/performanceDashboard.js';
+import { renderCreditTsiPanel, renderCreditMsdPanel } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
 
 // ------------------------------------------------------------
 // Panel open hook registry (fix for installReceivers warning)
@@ -157,6 +158,14 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     // Performance-Dashboard: Rendite-Verlauf-Chart bei sichtbarem Panel zeichnen.
     if (panelId === 'panel-performance-dashboard') {
       requestAnimationFrame(() => { try { renderPerformanceDashboard(); } catch (_) {} });
+    }
+
+    // Credit TSI/MSD: eigene Tabelle (aus Profit/Loss geklont) + Tail-Zoom bei sichtbarem Panel.
+    if (panelId === 'panel-credit-tsi') {
+      requestAnimationFrame(() => { try { renderCreditTsiPanel(); } catch (_) {} });
+    }
+    if (panelId === 'panel-credit-msd') {
+      requestAnimationFrame(() => { try { renderCreditMsdPanel(); } catch (_) {} });
     }
 
     if (panelId === 'panel-issuer-np') {

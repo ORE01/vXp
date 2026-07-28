@@ -317,18 +317,65 @@ Feature:    Wenn es nur in einem Panel gilt
           </span>
           Portfolio<span class="home-card-port" id="homePfPort"></span>
         </div>
-        <div class="home-card-hero">
-          <span class="home-hero-value kpi-tile__value" id="homePfNotional">–</span>
-          <span class="home-hero-label">Notional</span>
-        </div>
         <div class="home-kpis">
-          <div class="home-kpi"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
-          <div class="home-kpi"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-lbl">Yield</span></div>
-          <div class="home-kpi"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-lbl">PV01 (bp)</span></div>
-          <div class="home-kpi"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-lbl">CPV01 (bp)</span></div>
+          <div class="home-kpi home-nav-link" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-lbl">Notional</span></div>
+          <div class="home-kpi home-nav-link" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
+          <div class="home-kpi home-nav-link" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Yield öffnen"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-lbl">Yield</span></div>
         </div>
-        <div class="home-chart-cap">Largest issuers (% of notional)</div>
-        <div class="home-chart"><canvas id="homePfChart"></canvas></div>
+
+        <!-- Risk-Slider (in der Portfolio-Karte): beide Skalen 0 → Ø-Maturity.
+             IR: 0–1Y = Money Market, danach Capital Market; Marke = Zinsduration (−PV01).
+             CS: Short ↔ Long Credit Horizon; Marke = Spread-Duration (−CPV01).
+             Gemeinsame Chips darunter. Anzeige-only, befuellt via updateRiskSliders. -->
+        <div class="rs-group" id="homeRiskSliders">
+          <!-- Interest Rate Sensitivity. data-role = generischer Hook (updateRiskSliders);
+               IDs bleiben zusaetzlich fuer die PDF-Anbindung (RiskPDF liest per ID). -->
+          <div class="rs-card rs-card--ir">
+            <div class="rs-head">
+              <span class="rs-title">Interest Rate Duration</span>
+                          </div>
+            <div class="rs-body">
+              <div class="rs-side rs-side--left">Money<br>Market</div>
+              <div class="rs-mid">
+                <div class="rs-track" id="irTrack" data-role="ir-track">
+                  <div class="rs-boundary" id="irBoundary1y" data-role="ir-1y"></div>
+                  <div class="rs-marker" id="irMarker" data-role="ir-marker"><span class="rs-marker-pill" id="irMarkerVal" data-role="ir-val">–</span></div>
+                </div>
+                <div class="rs-scale">
+                  <span class="rs-scale-min">0</span>
+                  <span class="rs-scale-1y" id="irScale1y" data-role="ir-scale1y">1Y</span>
+                  <span class="rs-scale-max" id="irScaleMax" data-role="ir-max">–</span>
+                </div>
+              </div>
+              <div class="rs-side rs-side--right">Capital<br>Market</div>
+            </div>
+          </div>
+
+          <!-- Credit Spread Sensitivity -->
+          <div class="rs-card rs-card--cs">
+            <div class="rs-head">
+              <span class="rs-title">Credit Spread Duration</span>
+                          </div>
+            <div class="rs-body">
+              <div class="rs-side rs-side--left">Short<br>Credit</div>
+              <div class="rs-mid">
+                <div class="rs-track" id="csTrack" data-role="cs-track">
+                  <div class="rs-marker" id="csMarker" data-role="cs-marker"><span class="rs-marker-pill" id="csMarkerVal" data-role="cs-val">–</span></div>
+                </div>
+                <div class="rs-scale">
+                  <span class="rs-scale-min">0</span>
+                  <span class="rs-scale-max" id="csScaleMax" data-role="cs-max">–</span>
+                </div>
+              </div>
+              <div class="rs-side rs-side--right">Long<br>Credit</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-chart-card home-nav-link" data-nav-panel="panel-concentration" role="button" tabindex="0" title="Breakdown öffnen">
+          <div class="home-chart-cap">Largest issuers (% of notional)</div>
+          <div class="home-chart"><canvas id="homePfChart"></canvas></div>
+        </div>
       </section>
 
       <!-- Market Risk -->
@@ -339,23 +386,15 @@ Feature:    Wenn es nur in einem Panel gilt
           </span>
           Market Risk<span class="home-card-port" id="homeMktPort"></span>
         </div>
-        <div class="home-card-hero home-card-hero--row">
-          <div class="home-hero-block">
-            <span class="home-hero-row">
-              <span class="home-hero-value kpi-tile__value" id="homeMktVar">–</span>
-              <span class="mr-amp-dot" id="homeMktVarDot" hidden></span>
-            </span>
-            <span class="home-hero-label" id="homeMktVarRel">Normal Risk (VaR)</span>
-          </div>
-          <div class="home-hero-block">
-            <span class="home-hero-row">
-              <span class="home-hero-value kpi-tile__value" id="homeMktEs">–</span>
-              <span class="mr-amp-dot" id="homeMktEsDot" hidden></span>
-            </span>
-            <span class="home-hero-label">Extreme Risk (ES) · <span id="homeMktEsAbs">–</span></span>
-          </div>
-        </div>
         <div class="home-kpis">
+          <div class="home-kpi">
+            <span class="home-kpi-val"><span id="homeMktVar">–</span> <span class="mr-amp-dot" id="homeMktVarDot" hidden></span></span>
+            <span class="home-kpi-lbl" id="homeMktVarRel">Normal Risk (VaR)</span>
+          </div>
+          <div class="home-kpi">
+            <span class="home-kpi-val"><span id="homeMktEs">–</span> <span class="mr-amp-dot" id="homeMktEsDot" hidden></span></span>
+            <span class="home-kpi-lbl">Extreme Risk (ES) · <span id="homeMktEsAbs">–</span></span>
+          </div>
           <div class="home-kpi">
             <span class="home-kpi-val" id="homeMktRollVar">–</span>
             <span class="home-kpi-abs" id="homeMktRollVarAbs">–</span>
@@ -367,8 +406,10 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="home-kpi-lbl">Extreme Risk (ES) · <span id="homeMktScenNameEs">–</span></span>
           </div>
         </div>
-        <div class="home-chart-cap">Top product contributions (% of total VaR)</div>
-        <div class="home-chart"><canvas id="homeMktChart"></canvas></div>
+        <div class="home-chart-card">
+          <div class="home-chart-cap">Top product contributions (% of total VaR)</div>
+          <div class="home-chart"><canvas id="homeMktChart"></canvas></div>
+        </div>
       </section>
 
       <!-- Credit Risk -->
@@ -380,35 +421,51 @@ Feature:    Wenn es nur in einem Panel gilt
           Credit Risk<span class="home-card-port" id="homeCrPort"></span>
         </div>
         <!-- Kennzahlen aus dem Credit-Risk-Dashboard (getCreditDashboardModel):
-             Hero = Normal Risk (VaR), darunter ES / TSI / MSD in 2er-Reihen. -->
-        <div class="home-card-hero home-card-hero--row">
-          <div class="home-hero-block">
-            <span class="home-hero-row">
-              <span class="home-hero-value kpi-tile__value" id="homeCrVar">–</span>
-              <span class="mr-amp-dot" id="homeCrVarDot" hidden></span>
-            </span>
-            <span class="home-hero-label" id="homeCrVarRel">Normal Risk (VaR)</span>
-          </div>
-          <div class="home-hero-block">
-            <span class="home-hero-row">
-              <span class="home-hero-value kpi-tile__value" id="homeCrEs">–</span>
-              <span class="mr-amp-dot" id="homeCrEsDot" hidden></span>
-            </span>
-            <span class="home-hero-label">Extreme Risk (ES) · <span id="homeCrEsAbs">–</span></span>
-          </div>
-        </div>
+             VaR / ES als Kacheln, darunter TSI / MSD als Slider. -->
         <div class="home-kpis">
           <div class="home-kpi">
-            <span class="home-kpi-val">Cluster Risk (TSI)</span>
-            <span class="home-kpi-val"><span id="homeCrTsi">–</span> <span class="mr-amp-dot" id="homeCrTsiDot" hidden></span></span>
+            <span class="home-kpi-val"><span id="homeCrVar">–</span> <span class="mr-amp-dot" id="homeCrVarDot" hidden></span></span>
+            <span class="home-kpi-lbl" id="homeCrVarRel">Normal Risk (VaR)</span>
           </div>
           <div class="home-kpi">
-            <span class="home-kpi-val">Market Stress (MSD)</span>
-            <span class="home-kpi-val"><span id="homeCrMsd">–</span> <span class="mr-amp-dot" id="homeCrMsdDot" hidden></span></span>
+            <span class="home-kpi-val"><span id="homeCrEs">–</span> <span class="mr-amp-dot" id="homeCrEsDot" hidden></span></span>
+            <span class="home-kpi-lbl">Extreme Risk (ES) · <span id="homeCrEsAbs">–</span></span>
           </div>
         </div>
-        <div class="home-chart-cap">Top tail drivers — contribution to tail loss (%)</div>
-        <div class="home-chart"><canvas id="homeCrChart"></canvas></div>
+        <!-- Cluster Risk (TSI) + Market Stress (MSD) als Ampel-Slider (echte Schwellen).
+             Befuellt in homeOverview.js -> updateCreditRiskSliders. IDs zusaetzlich fuers PDF. -->
+        <div class="rs-group" id="homeCreditSliders">
+          <div class="rs-card rs-card--tsi">
+            <div class="rs-head"><span class="rs-title">Cluster Risk (TSI)</span></div>
+            <div class="rs-body">
+              <div class="rs-side rs-side--left">Low<br>cluster</div>
+              <div class="rs-mid">
+                <div class="rs-track" id="tsiTrack" data-role="tsi-track">
+                  <div class="rs-marker" id="tsiMarker" data-role="tsi-marker"><span class="rs-marker-pill" id="tsiMarkerVal" data-role="tsi-val">–</span></div>
+                </div>
+                <div class="rs-scale"><span class="rs-scale-min">0</span><span class="rs-scale-max" id="tsiScaleMax" data-role="tsi-max">–</span></div>
+              </div>
+              <div class="rs-side rs-side--right">High<br>cluster</div>
+            </div>
+          </div>
+          <div class="rs-card rs-card--msd">
+            <div class="rs-head"><span class="rs-title">Market Stress (MSD)</span></div>
+            <div class="rs-body">
+              <div class="rs-side rs-side--left">Low<br>stress</div>
+              <div class="rs-mid">
+                <div class="rs-track" id="msdTrack" data-role="msd-track">
+                  <div class="rs-marker" id="msdMarker" data-role="msd-marker"><span class="rs-marker-pill" id="msdMarkerVal" data-role="msd-val">–</span></div>
+                </div>
+                <div class="rs-scale"><span class="rs-scale-min">0</span><span class="rs-scale-max" id="msdScaleMax" data-role="msd-max">–</span></div>
+              </div>
+              <div class="rs-side rs-side--right">High<br>stress</div>
+            </div>
+          </div>
+        </div>
+        <div class="home-chart-card">
+          <div class="home-chart-cap">Top tail drivers — contribution to tail loss (%)</div>
+          <div class="home-chart"><canvas id="homeCrChart"></canvas></div>
+        </div>
       </section>
     </div>
 
@@ -512,6 +569,28 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
     </div>
 
+    <!-- Sensitivities / Scenarios: aus Risk Results -> Market Risk hierher verschoben,
+         gleiche Ebene wie Breakdown/Yield (.chart-section => nur im PORTFOLIO-View). -->
+    <div class="chart-section">
+      <button class="section-trigger pf-accent"
+              data-panel="panel-sensitivities"
+              aria-controls="panel-sensitivities"
+              aria-expanded="false">
+        <span class="section-header">Sensitivities</span>
+        <span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger pf-accent"
+              data-panel="panel-mvar-scenarios"
+              aria-controls="panel-mvar-scenarios"
+              aria-expanded="false">
+        <span class="section-header">Scenarios</span>
+        <span class="chev"></span>
+      </button>
+    </div>
+
     <!-- ===== RISK-view Trigger-Gruppen (nur in view-risk sichtbar) ===== -->
 
     <!-- "Select Portfolio" wurde nach oben verschoben und ist jetzt für VALUATION
@@ -555,14 +634,6 @@ Feature:    Wenn es nur in einem Panel gilt
               <span class="section-header">Profit/Loss</span>
               <span class="chev"></span>
             </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-sensitivities" aria-controls="panel-sensitivities" aria-expanded="false">
-              <span class="section-header">Sensitivities</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-scenarios" aria-controls="panel-mvar-scenarios" aria-expanded="false">
-              <span class="section-header">Scenarios</span>
-              <span class="chev"></span>
-            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar" aria-controls="panel-mvar" aria-expanded="false">
               <span class="section-header">Factors</span>
               <span class="chev"></span>
@@ -573,6 +644,10 @@ Feature:    Wenn es nur in einem Panel gilt
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
               <span class="section-header">Products</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-yield" aria-controls="panel-mvar-yield" aria-expanded="false">
+              <span class="section-header">Yield</span>
               <span class="chev"></span>
             </button>
           </div>
@@ -596,6 +671,14 @@ Feature:    Wenn es nur in einem Panel gilt
             </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-cvar" aria-controls="panel-cvar" aria-expanded="false">
               <span class="section-header">Loss Distribution</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit-tsi" aria-controls="panel-credit-tsi" aria-expanded="false">
+              <span class="section-header">TSI</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit-msd" aria-controls="panel-credit-msd" aria-expanded="false">
+              <span class="section-header">MSD</span>
               <span class="chev"></span>
             </button>
           </div>
@@ -807,7 +890,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div id="concCards" class="conc-cards"></div>
             </div>
             <div class="conc-panel">
-              <div class="conc-panel__title">Top 10</div>
+              <div id="concTopTitle" class="conc-panel__title">Top 10</div>
               <canvas id="concTop10Chart" class="conc-canvas"></canvas>
             </div>
             <div class="conc-panel conc-panel--band">
@@ -1380,6 +1463,58 @@ Feature:    Wenn es nur in einem Panel gilt
   <div id="mrProductEsCardMenu" class="conc-menu" style="display:none;"></div>
 </div>
 
+<!-- Panel: MARKET Yield vs Risk. Gleiche Struktur/Logik wie panel-mvar-products,
+     aber x-Achse = Yield-Anteil (buy, ytmPortA-basiert) statt NAV-Anteil.
+     Rendering: mvarProductPLPanel.js (YIELD_*_CFG). -->
+<div id="panel-mvar-yield" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-yield-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-mvar-yield-title" class="sub-panel-title">MARKET Yield vs Risk</div>
+    <button class="sub-panel-close" data-close="panel-mvar-yield" aria-label="close">&times;</button>
+  </div>
+
+  <div class="sub-panel-body">
+    <div class="mvar-summary-header" style="margin-bottom: 10px;">
+      <p class="mvar-caption">Yield share (buy) vs. risk contribution (VaR / ES) for selected Portfolio & Scenario</p>
+    </div>
+
+    <p class="mvar-caption" style="margin-top: 14px; font-weight: 600;">Value at Risk (VaR)</p>
+    <div id="mvarYieldVarKpis" class="mvar-issuer-kpis"></div>
+    <!-- Gespiegeltes KPI-Band fuer Preview/PDF (data-kpi-band). Nicht sichtbar in der UI. -->
+    <div class="data-container" id="mvarYieldVarKpisTable" data-label="Yield VaR — Key Figures" data-kpi-band="1" style="display:none;"></div>
+    <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarYieldVarContribChart"></canvas></div>
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarYieldVarScatterChart"></canvas></div>
+    </div>
+    <div id="mrYieldVarDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="mrYieldVarDetailTitle" class="conc-detail__title"></span>
+        <button id="mrYieldVarDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="mrYieldVarDetailTable" class="conc-detail__table"></div>
+    </div>
+
+    <p class="mvar-caption" style="margin-top: 18px; font-weight: 600;">Expected Shortfall (ES)</p>
+    <div id="mvarYieldEsKpis" class="mvar-issuer-kpis"></div>
+    <div class="data-container" id="mvarYieldEsKpisTable" data-label="Yield ES — Key Figures" data-kpi-band="1" style="display:none;"></div>
+    <div class="mvar-prod-split mvar-issuer-split" style="margin-top: 6px;">
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarYieldEsContribChart"></canvas></div>
+      <div class="mvar-prod-chart chart-box"><canvas id="mvarYieldEsScatterChart"></canvas></div>
+    </div>
+    <div id="mrYieldEsDetail" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="mrYieldEsDetailTitle" class="conc-detail__title"></span>
+        <button id="mrYieldEsDetailClose" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="mrYieldEsDetailTable" class="conc-detail__table"></div>
+    </div>
+
+    <!-- Volle Yield-Tabelle ganz unten. -->
+    <div class="data-container" id="mvarYieldTableContainer" style="margin-top: 18px;"></div>
+  </div>
+  <div id="mrYieldVarCardMenu" class="conc-menu" style="display:none;"></div>
+  <div id="mrYieldEsCardMenu" class="conc-menu" style="display:none;"></div>
+</div>
+
 <!-- Panel: MARKET Issuer VaR (Beitrag zum MVaR pro Emittent, aggregiert aus den
      Produktbeitraegen ueber prod_id -> ISSUER). Rendering: mvarIssuerPLPanel.js. -->
 <div id="panel-mvar-issuers" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-mvar-issuers-title" hidden>
@@ -1869,6 +2004,58 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 </div>
 
+<!-- Panel: TSI — eigene TSI-Tabelle (aus Profit/Loss geklont) + eigener Tail-Zoom-Chart.
+     Rendering: creditRiskDashboard.js -> renderCreditTsiPanel (onPanelOpen). -->
+<div id="panel-credit-tsi" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-tsi-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-credit-tsi-title" class="sub-panel-title">Tail Severity Index (TSI)</div>
+    <button class="sub-panel-close" data-close="panel-credit-tsi" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body">
+    <p>Tail Severity Index (TSI):</p>
+    <div class="data-container" id="creditTsiTablePanel" style="max-width:380px;"></div>
+    <div class="conc-panel" style="margin-top:20px; max-width:560px;">
+      <div class="conc-panel__title">Tail zoom: quantiles, VaR and ES</div>
+      <canvas id="crTailZoomChartTsi" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
+    </div>
+    <!-- Drill-down (Rechtsklick auf ein Quantil): Positionen der ausfallenden Emittenten. -->
+    <div id="crTailDetailTsi" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="crTailDetailTitleTsi" class="conc-detail__title"></span>
+        <button id="crTailDetailCloseTsi" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="crTailDetailTableTsi" class="conc-detail__table"></div>
+    </div>
+    <div id="crTailCardMenuTsi" class="conc-menu" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Panel: MSD — eigene MSD-Tabelle (aus Profit/Loss geklont) + eigener Tail-Zoom-Chart.
+     Rendering: creditRiskDashboard.js -> renderCreditMsdPanel (onPanelOpen). -->
+<div id="panel-credit-msd" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-msd-title" hidden>
+  <div class="sub-panel-header">
+    <div id="panel-credit-msd-title" class="sub-panel-title">Market Stress Divergence (MSD)</div>
+    <button class="sub-panel-close" data-close="panel-credit-msd" aria-label="close">&times;</button>
+  </div>
+  <div class="sub-panel-body">
+    <p>Market Stress Divergence (MSD):</p>
+    <div class="data-container" id="creditMsdTablePanel" style="max-width:380px;"></div>
+    <div class="conc-panel" style="margin-top:20px; max-width:560px;">
+      <div class="conc-panel__title">Tail zoom: quantiles, VaR and ES</div>
+      <canvas id="crTailZoomChartMsd" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
+    </div>
+    <!-- Drill-down (Rechtsklick auf ein Quantil): Positionen der ausfallenden Emittenten. -->
+    <div id="crTailDetailMsd" class="conc-detail" style="display:none; margin-top:12px;">
+      <div class="conc-detail__head">
+        <span id="crTailDetailTitleMsd" class="conc-detail__title"></span>
+        <button id="crTailDetailCloseMsd" class="conc-detail__close" type="button" aria-label="close">&times;</button>
+      </div>
+      <div id="crTailDetailTableMsd" class="conc-detail__table"></div>
+    </div>
+    <div id="crTailCardMenuMsd" class="conc-menu" style="display:none;"></div>
+  </div>
+</div>
+
 
 
         <!-- Panel: Credit Risk   Details -->
@@ -1919,9 +2106,13 @@ Feature:    Wenn es nur in einem Panel gilt
             <!-- Ganz oben, volle Breite: Loss-Chart (3 Serien) + Drill-down-Tabelle. -->
             <!-- Rating/Market/Norm Losses zusammengefasst in EINER Chart (3 Serien) -->
             <div class="chart-container-inner" id="LossIssuerChartContainerCombined">
-              <!-- Sticky HTML-Legende: bleibt beim Scrollen oben sichtbar (JS: renderChartLegend) -->
+              <!-- HTML-Legende: bleibt als Kopfzeile fix, scrollt NICHT mit dem Chart. -->
               <div id="clossChartLegend" class="closs-chart-legend"></div>
-              <canvas id="LossIssuerChartCombinedTop"></canvas>
+              <!-- Scroll-Wrapper: bei vielen Ausfaellen wird der Canvas breiter als die
+                   Karte -> horizontale Scrollbar, statt alle Balken zu quetschen. -->
+              <div id="LossIssuerChartScroll" class="closs-chart-scroll">
+                <canvas id="LossIssuerChartCombinedTop"></canvas>
+              </div>
             </div>
 
             <!-- Drill-down: Positionen des ausfallenden Emittenten (Balken = Quantil ->
@@ -3689,6 +3880,42 @@ Feature:    Wenn es nur in einem Panel gilt
             <select id="customerDefaultPortfolioSelect" class="deals-dropdown" style="min-width:200px;"></select>
             <button type="button" id="customerDefaultPortfolioSaveBtn" class="edit-button">Save</button>
             <span id="customerDefaultPortfolioStatus" style="font-size:12px; color: var(--text-muted);"></span>
+          </div>
+        </section>
+
+        <!-- Risk Profile: dieselben Sensitivity-Slider wie im Overview (befuellt via
+             updateRiskSliders fuer alle .rs-group). Nur data-role, KEINE IDs -> keine
+             Kollision mit der Overview-Instanz. Zeigt das aktuelle Default-Portfolio. -->
+        <section class="cp-card">
+          <h2 class="small-section-header">Risk Profile</h2>
+          <div class="rs-group">
+            <div class="rs-card rs-card--ir">
+              <div class="rs-head"><span class="rs-title">Interest Rate Duration</span></div>
+              <div class="rs-body">
+                <div class="rs-side rs-side--left">Money<br>Market</div>
+                <div class="rs-mid">
+                  <div class="rs-track" data-role="ir-track">
+                    <div class="rs-boundary" data-role="ir-1y"></div>
+                    <div class="rs-marker" data-role="ir-marker"><span class="rs-marker-pill" data-role="ir-val">–</span></div>
+                  </div>
+                  <div class="rs-scale"><span class="rs-scale-min">0</span><span class="rs-scale-1y" data-role="ir-scale1y">1Y</span><span class="rs-scale-max" data-role="ir-max">–</span></div>
+                </div>
+                <div class="rs-side rs-side--right">Capital<br>Market</div>
+              </div>
+            </div>
+            <div class="rs-card rs-card--cs">
+              <div class="rs-head"><span class="rs-title">Credit Spread Duration</span></div>
+              <div class="rs-body">
+                <div class="rs-side rs-side--left">Short<br>Credit</div>
+                <div class="rs-mid">
+                  <div class="rs-track" data-role="cs-track">
+                    <div class="rs-marker" data-role="cs-marker"><span class="rs-marker-pill" data-role="cs-val">–</span></div>
+                  </div>
+                  <div class="rs-scale"><span class="rs-scale-min">0</span><span class="rs-scale-max" data-role="cs-max">–</span></div>
+                </div>
+                <div class="rs-side rs-side--right">Long<br>Credit</div>
+              </div>
+            </div>
           </div>
         </section>
       </div>

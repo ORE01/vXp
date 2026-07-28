@@ -138,16 +138,29 @@
 .home-kpi--wide { grid-column: 1 / -1; }
 .home-kpi-lbl { font-size: 10.5px; color: var(--text-muted); }
 
+/* Klickbare Overview-Kacheln: Notional/NAV -> Portfolio-Panel, Yield -> Yield-Panel. */
+.home-nav-link { cursor: pointer; }
+.home-kpi.home-nav-link:hover,
+.home-chart-card.home-nav-link:hover { border-color: var(--accent); }
+.home-card-hero.home-nav-link:hover .home-hero-value { text-decoration: underline; text-underline-offset: 3px; }
+
 /* Beschriftung UEBER dem Chart, fett + hell fuer gute Lesbarkeit; das Paar
    (Cap + Chart) wird ueber margin-top:auto an den Kartenboden gedrueckt. */
-.home-chart-cap {
+/* Balken-Chart in einer dunklen Kachel (wie die Slider). margin-top:auto drueckt
+   die Kachel an den Kartenboden. Ueberschrift links im Slider-Titel-Stil. */
+.home-chart-card {
   margin-top: auto;
-  padding-top: 10px;
-  margin-bottom: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+}
+.home-chart-cap {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text-bright);
-  text-align: center;
+  text-align: left;
 }
 .home-chart {
   position: relative;
@@ -240,3 +253,93 @@
   color: var(--text-muted);
   cursor: not-allowed;
 }
+
+/* ===== Interest Rate Risk Slider (Overview) =====
+   Skala 0 → Ø-Maturity; 0–1Y = Money Market (eingefaerbt), danach Capital Market.
+   Marke = Zinsduration (−PV01, Jahre). Anzeige-only; Positionen setzt homeOverview.js. */
+/* Zwei Slider (IR/CS) + gemeinsame Chips INNERHALB der Portfolio-Karte.
+   Jeder Slider ist eine eigene, dunkle Kachel (wie .home-kpi). */
+.rs-group { margin-top: 6px; }
+.rs-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+}
+.rs-card + .rs-card { margin-top: 12px; }   /* Abstand zwischen den beiden Kacheln */
+/* Overview-Slider sind klickbar: Portfolio -> Sensitivities (PV01/CPV01),
+   Credit -> TSI/MSD-Panel. */
+#homeRiskSliders .rs-card,
+#homeCreditSliders .rs-card { cursor: pointer; }
+#homeRiskSliders .rs-card:hover,
+#homeCreditSliders .rs-card:hover { border-color: var(--rs-accent, var(--accent)); }
+/* Fallback-Akzent (Marke), falls keine Ampelfarbe gesetzt ist. */
+.rs-card--ir { --rs-accent: #6C9BD1; }
+.rs-card--cs, .rs-card--tsi, .rs-card--msd { --rs-accent: #7A5C91; }
+.rs-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }
+/* Ueberschrift fett/hell wie in den Kacheln. */
+.rs-title { font-size: 13px; font-weight: 700; color: var(--text-bright); }
+.rs-basis { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+
+/* Track sitzt zwischen zwei zweizeiligen Seiten-Labels (links/rechts) -> kompakter,
+   schmaeler und kuerzer als eine volle Breite. */
+.rs-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;   /* Platz fuer das Marker-Pill oberhalb des Tracks */
+}
+.rs-side {
+  flex: 0 0 46px;   /* feste Breite -> IR- und CS-Track exakt gleich lang */
+  font-size: 10px; font-weight: 600; line-height: 1.2;
+  color: var(--text-bright);
+}
+.rs-side--left { text-align: right; }
+.rs-side--right { text-align: left; }
+.rs-mid { flex: 1 1 auto; min-width: 0; }
+
+/* Track: Ampel-Verlauf (gruen/gelb/rot) wird per JS als background gesetzt
+   (Schwellen abhaengig von der Ø-Maturity). Fallback = neutrale Flaeche. */
+.rs-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-base, var(--surface-overlay));
+  border: 1px solid var(--surface-card-border);
+}
+/* 1Y-Grenze (Money Market | Capital Market), duenne Referenzlinie ueber dem Verlauf. */
+.rs-boundary {
+  position: absolute; top: 0; bottom: 0; left: 0%;
+  width: 2px; background: rgba(255, 255, 255, 0.65); z-index: 1;
+}
+.rs-marker {
+  position: absolute; top: -5px; bottom: -5px; left: 0%;
+  width: 3px; background: var(--rs-accent, #6C9BD1); border-radius: 2px; transform: translateX(-1px);
+}
+.rs-marker-pill {
+  position: absolute; bottom: calc(100% + 5px); left: 50%;
+  transform: translateX(-50%); white-space: nowrap;
+  background: var(--rs-accent, #6C9BD1); color: #fff; font-size: 10.5px; font-weight: 700;
+  padding: 1px 6px; border-radius: 6px;
+}
+.rs-marker-pill::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: var(--rs-accent, #6C9BD1);
+}
+
+.rs-scale { position: relative; height: 14px; margin-top: 8px; font-size: 10.5px; color: var(--text-muted); }
+.rs-scale-min { position: absolute; left: 0; }
+.rs-scale-max { position: absolute; right: 0; }
+.rs-scale-1y { position: absolute; left: 0%; transform: translateX(-50%); }
+
+.rs-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.rs-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 999px; padding: 4px 10px; font-size: 11.5px;
+}
+.rs-chip-lbl { color: var(--text-muted); }
+.rs-chip-val { font-weight: 700; color: var(--text-bright); }

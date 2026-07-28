@@ -173,7 +173,7 @@ export function ensureHistCrosshairPlugin() {
         if (!Number.isFinite(py)) return;
         const col = (Array.isArray(ds.borderColor) ? ds.borderColor.find(Boolean) : ds.borderColor) || '#888';
         const d = Math.abs(py - c.y);
-        if (!best || d < best.d) best = { val, py, d, color: col };
+        if (!best || d < best.d) best = { val, py, d, color: col, yScale };
       });
 
       const px = xs.getPixelForValue(idx);
@@ -198,8 +198,21 @@ export function ensureHistCrosshairPlugin() {
       // Randbeschriftung: Datum (x) unten am Strich, Linienwert (y) links.
       let xLabel = "";
       try { xLabel = xs.getLabelForValue ? String(xs.getLabelForValue(idx)) : String(idx); } catch {}
-      const valueScale = Number(chart.options?.plugins?.histCrosshair?.valueScale ?? 100);
-      const yLabel = best ? (Number(best.val) * valueScale).toFixed(2) + " %" : "";
+      // Fadenkreuz-Label EXAKT wie die y-Achse desselben Charts formatieren, damit
+      // Achse und Fadenkreuz nie auseinanderlaufen (z.B. Bruch 0.0239 -> "2.39 %").
+      // Nur wenn der Chart keinen y-Tick-Callback hat, greift der alte valueScale-Pfad
+      // (Default 100) als Fallback.
+      let yLabel = "";
+      if (best) {
+        const tickCb = best.yScale?.options?.ticks?.callback;
+        if (typeof tickCb === "function") {
+          try { yLabel = String(tickCb.call(best.yScale, Number(best.val), 0, [])); } catch { yLabel = ""; }
+        }
+        if (!yLabel) {
+          const valueScale = Number(chart.options?.plugins?.histCrosshair?.valueScale ?? 100);
+          yLabel = (Number(best.val) * valueScale).toFixed(2) + " %";
+        }
+      }
       ctx.font = "10px sans-serif";
       const pad = 3;
       if (xLabel) {

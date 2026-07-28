@@ -1094,7 +1094,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       ensurePageSpace(chartsH + 24, `${sectionTitle} (cont.)`);
       doc.setFontSize(10); doc.setTextColor(0);
       if (showTree) doc.text('All entries', marginX, y);
-      if (showBar)  doc.text('Top 10', both ? rightX : marginX, y);
+      // "Top N" aus dem data-label des Canvas (Dimensionen mit <10 Auspraegungen).
+      if (showBar) {
+        const barTitle = (ctx.getById(barId)?.dataset?.label || 'Top 10').split(' — ')[0];
+        doc.text(barTitle, both ? rightX : marginX, y);
+      }
       y += 3;
 
       if (showTree) {
@@ -1298,30 +1302,26 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
     const ovCards = [
       { title: `PORTFOLIO${portSuffix}`,
-        hero: otxt('homePfNotional'), heroDot: null, heroSub: 'Notional',
         boxes: [
+          { v: otxt('homePfNotional'), lbl: 'Notional' },
           { v: otxt('homePfNav'), lbl: 'Net Asset Value' },
           { v: otxt('homePfYield'), lbl: 'Yield' },
-          { v: otxt('homePfPv01'), lbl: 'PV01 (bp)' },
-          { v: otxt('homePfCpv01'), lbl: 'CPV01 (bp)' },
         ] },
       { title: `MARKET RISK${portSuffix}`,
-        hero: otxt('homeMktVar'), heroDot: odot('homeMktVarDot'), heroSub: otxt('homeMktVarRel'),
-        hero2: otxt('homeMktEs'), hero2Dot: odot('homeMktEsDot'), hero2Sub: `Extreme Risk (ES) · ${otxt('homeMktEsAbs')}`,
         boxes: [
+          { pre: 'Normal Risk (VaR)', v: otxt('homeMktVar'), dot: odot('homeMktVarDot') },
+          { pre: 'Extreme Risk (ES)', v: otxt('homeMktEs'), dot: odot('homeMktEsDot') },
           { v: otxt('homeMktRollVar'), sub: otxt('homeMktRollVarAbs'), lbl: 'VaR · ROLLING_1' },
           { v: otxt('homeMktRollEs'), sub: otxt('homeMktRollEsAbs'), lbl: 'ES · ROLLING_1' },
         ] },
       { title: `CREDIT RISK${portSuffix}`,
-        hero: otxt('homeCrVar'), heroDot: odot('homeCrVarDot'), heroSub: otxt('homeCrVarRel'),
-        hero2: otxt('homeCrEs'), hero2Dot: odot('homeCrEsDot'), hero2Sub: `Extreme Risk (ES) · ${otxt('homeCrEsAbs')}`,
         boxes: [
-          { pre: 'Cluster Risk (TSI)', v: otxt('homeCrTsi'), dot: odot('homeCrTsiDot') },
-          { pre: 'Market Stress (MSD)', v: otxt('homeCrMsd'), dot: odot('homeCrMsdDot') },
-        ] },
+          { pre: 'Normal Risk (VaR)', v: otxt('homeCrVar'), dot: odot('homeCrVarDot') },
+          { pre: 'Extreme Risk (ES)', v: otxt('homeCrEs'), dot: odot('homeCrEsDot') },
+        ] },   // TSI/MSD folgen als Ampel-Slider unter den Karten
     ];
 
-    const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovCardH = 58, ovBoxH = 13;
+    const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovCardH = 44, ovBoxH = 13;
     ensurePageSpace(ovCardH + 8, `${sectionTitle} (cont.)`);
     ovCards.forEach((c, i) => {
       const x = marginX + i * (ovCardW + ovGap), tx = x + 5;
@@ -1329,24 +1329,10 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       doc.roundedRect(x, y, ovCardW, ovCardH, 2, 2, 'FD');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
       doc.text(String(c.title), tx, y + 7);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT);
-      doc.text(String(c.hero), tx, y + 16.5);
-      if (c.heroDot) { const a = ampRgb(c.heroDot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx + doc.getTextWidth(String(c.hero)) + 3.2, y + 15, 1.5, 'F'); }
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
-      doc.text(String(c.heroSub), tx, y + 21);
 
-      // Zweiter Hero-Wert (ES) rechts neben dem ersten — wie in der App.
-      if (c.hero2 != null) {
-        const tx2 = tx + (ovCardW - 10) / 2;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(...TEXT);
-        doc.text(String(c.hero2), tx2, y + 16.5);
-        if (c.hero2Dot) { const a = ampRgb(c.hero2Dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(tx2 + doc.getTextWidth(String(c.hero2)) + 3.2, y + 15, 1.5, 'F'); }
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
-        doc.text(String(c.hero2Sub || ''), tx2, y + 21);
-      }
-
+      // Kein Hero mehr — alle Kennzahlen als normale Boxen direkt unter dem Titel.
       const innerW = ovCardW - 10, halfW = (innerW - 3) / 2;
-      let byy = y + 24, col = 0;
+      let byy = y + 11, col = 0;
       (c.boxes || []).forEach((b) => {
         if (b.wide && col > 0) { col = 0; byy += ovBoxH + 3; }
         const w = b.wide ? innerW : halfW;
@@ -1379,18 +1365,87 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       });
     });
     y += ovCardH + 8;
+
+    // ── Risk-Slider (Interest Rate / Credit Spread) in voller Breite unter den Karten.
+    //    Positionen/Zonen aus den data-Attributen der gerenderten UI-Slider -> PDF = App.
+    const ds = (id, k) => (ctx.getById(id)?.dataset?.[k] ?? '');
+    const dnum = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+    const drawRiskSlider = (sx, sy, sw, s) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
+      doc.text(s.title, sx, sy);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+      doc.text(s.leftLbl, sx, sy + 4.5);
+      doc.text(s.rightLbl, sx + sw - doc.getTextWidth(s.rightLbl), sy + 4.5);
+      const tY = sy + 12, tH = 4;
+      const gx = sx + sw * (s.gP / 100), yx = sx + sw * (s.yP / 100);
+      doc.setFillColor(...ampRgb('green'));  doc.rect(sx, tY, Math.max(0, gx - sx), tH, 'F');
+      doc.setFillColor(...ampRgb('yellow')); doc.rect(gx, tY, Math.max(0, yx - gx), tH, 'F');
+      doc.setFillColor(...ampRgb('red'));    doc.rect(yx, tY, Math.max(0, sx + sw - yx), tH, 'F');
+      if (s.oneY != null) {
+        const bx = sx + sw * (s.oneY / 100);
+        doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.4); doc.line(bx, tY, bx, tY + tH);
+      }
+      const mx = sx + sw * (s.pos / 100), mc = ampRgb(s.state || 'green');
+      doc.setDrawColor(...mc); doc.setLineWidth(0.8); doc.line(mx, tY - 2, mx, tY + tH + 2);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5);
+      const vw = doc.getTextWidth(s.durTxt) + 3;
+      const px = Math.max(sx, Math.min(sx + sw - vw, mx - vw / 2));
+      doc.setFillColor(...mc); doc.roundedRect(px, tY - 6.5, vw, 4.2, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.text(s.durTxt, px + vw / 2 - doc.getTextWidth(s.durTxt) / 2, tY - 3.6);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+      doc.text('0', sx, tY + tH + 4);
+      doc.text(s.maxTxt, sx + sw - doc.getTextWidth(s.maxTxt), tY + tH + 4);
+    };
+    // Slider unter den Karten: 2 Spalten (links Portfolio: IR/CS, rechts Credit: TSI/MSD).
+    const sGap = 8, sHalfW = (layout.contentWidth - sGap) / 2;
+    const sColL = marginX, sColR = marginX + sHalfW + sGap;
+    const irMax = otxt('irScaleMax'), tsiMax = otxt('tsiScaleMax');
+    if (irMax !== '–' || tsiMax !== '–') {
+      ensurePageSpace(52, `${sectionTitle} (cont.)`);
+      if (irMax !== '–') {
+        drawRiskSlider(sColL, y + 4, sHalfW, {
+          title: 'Interest Rate Duration', leftLbl: 'Money Market', rightLbl: 'Capital Market',
+          gP: dnum(ds('irTrack', 'g')), yP: dnum(ds('irTrack', 'y')),
+          oneY: ds('irTrack', 'oneY') !== '' ? dnum(ds('irTrack', 'oneY')) : null,
+          pos: dnum(ds('irMarker', 'pos')), state: ds('irMarker', 'state') || 'green',
+          durTxt: otxt('irMarkerVal'), maxTxt: irMax,
+        });
+        drawRiskSlider(sColL, y + 30, sHalfW, {
+          title: 'Credit Spread Duration', leftLbl: 'Short Credit Horizon', rightLbl: 'Long Credit Horizon',
+          gP: dnum(ds('csTrack', 'g')), yP: dnum(ds('csTrack', 'y')), oneY: null,
+          pos: dnum(ds('csMarker', 'pos')), state: ds('csMarker', 'state') || 'green',
+          durTxt: otxt('csMarkerVal'), maxTxt: otxt('csScaleMax'),
+        });
+      }
+      if (tsiMax !== '–') {
+        drawRiskSlider(sColR, y + 4, sHalfW, {
+          title: 'Cluster Risk (TSI)', leftLbl: 'Low cluster', rightLbl: 'High cluster',
+          gP: dnum(ds('tsiTrack', 'g')), yP: dnum(ds('tsiTrack', 'y')), oneY: null,
+          pos: dnum(ds('tsiMarker', 'pos')), state: ds('tsiMarker', 'state') || 'green',
+          durTxt: otxt('tsiMarkerVal'), maxTxt: tsiMax,
+        });
+        drawRiskSlider(sColR, y + 30, sHalfW, {
+          title: 'Market Stress (MSD)', leftLbl: 'Low stress', rightLbl: 'High stress',
+          gP: dnum(ds('msdTrack', 'g')), yP: dnum(ds('msdTrack', 'y')), oneY: null,
+          pos: dnum(ds('msdMarker', 'pos')), state: ds('msdMarker', 'state') || 'green',
+          durTxt: otxt('msdMarkerVal'), maxTxt: otxt('msdScaleMax'),
+        });
+      }
+      y += 52;
+    }
   }
 
   // 'overview': die 3 HOME-Overview-Charts nebeneinander in EINER Reihe ->
   // Sektion (KPI-Karten + Charts) passt komplett auf eine Seite.
-  const COMPOSED_ROW_KEYS = new Set(['overview', 'structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities']);
+  const COMPOSED_ROW_KEYS = new Set(['overview', 'structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-yield', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities']);
   const composedRow = COMPOSED_ROW_KEYS.has(sec.key) && (sec.enabledCharts || []).length > 0;
   if (composedRow) {
     // Credit-Tail-Driver-Charts NICHT in der Nebeneinander-Reihe (sie werden unten je
     // PD-Ansicht als Chart+Tabelle-Paar gezeichnet).
     const rowCharts = (sec.enabledCharts || []).filter(ch => !CR_DRIVER_CHART_IDS.has(ch.id));
     // Issuers/Products/Factors: 2 pro Reihe (Balken+Scatter je Metrik untereinander).
-    const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities']);
+    const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar-yield', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities']);
     const perRow = FORCE_TWO_PER_ROW.has(sec.key) ? 2 : Math.min(rowCharts.length, 3);
     const cgap = 6;
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;

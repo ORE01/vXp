@@ -633,6 +633,8 @@ function renderRiskTypeBar(riskTypeRows, cfg) {
   // rel ist bereits in Prozent-Einheiten -> KEIN *100.
   const vals = spec.map(([t]) => +Math.abs(toNumber(byType[t]?.[cfg.relKey], 0)).toFixed(4));
   if (!vals.some(v => v > 0)) { canvas.style.display = 'none'; return; }
+  // Total-Balken blau wie im Decomposition-Waterfall; Risikotypen in Metrik-Farbe.
+  const barColors = spec.map(([t]) => (t === 'TOTAL' ? 'rgba(46,88,130,0.9)' : cfg.color));
   canvas.style.display = 'block';
   canvas.width = 520; canvas.height = 300;
   const bodyCss = getComputedStyle(document.body);
@@ -642,7 +644,7 @@ function renderRiskTypeBar(riskTypeRows, cfg) {
     type: 'bar',
     plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
     data: { labels: spec.map(([, l]) => l), datasets: [
-      { label: `${cfg.metric} %`, data: vals, backgroundColor: cfg.color, borderColor: cfg.color, borderWidth: 1, maxBarThickness: 18 },
+      { label: `${cfg.metric} %`, data: vals, backgroundColor: barColors, borderColor: barColors, borderWidth: 1, maxBarThickness: 18 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,

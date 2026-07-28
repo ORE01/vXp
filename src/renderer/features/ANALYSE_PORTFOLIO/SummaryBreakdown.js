@@ -637,7 +637,7 @@ function renderConcReportTables(kfEl, tiEl, m) {
   if (kfEl) {
     const rows = [
       ['Number of entries', String(m.count)],
-      ['Top 10 share', __concPct(m.top10Share)],
+      [`Top ${m.top.length} share`, __concPct(m.top10Share)],
       ['Others share', __concPct(m.restShare)],
       ['Avg share', __concPct(m.meanShare)],
       ['Median share', __concPct(m.medianShare)],
@@ -719,6 +719,8 @@ function renderConcReportCharts(key, m) {
   const barCanvas = document.getElementById(`concTop10Chart__${key}`);
   if (barCanvas) {
     try { prev.top10?.destroy(); } catch {}
+    // data-label an die tatsaechliche Anzahl anpassen (Preview-Baum + PDF-Ueberschrift).
+    barCanvas.dataset.label = `Top ${top.length} — ${m.dimLabel}`;
     // Canvas-Hoehe nach Balkenanzahl (Lesbarkeit), mit Mindest-/Maxhoehe.
     // Setzen von .width/.height leert das Bitmap -> Chart zeichnet danach frisch.
     barCanvas.width  = 460;
@@ -979,6 +981,9 @@ export function renderConcentrationDashboard(filteredData, opts = {}) {
 
   const titleEl = host.querySelector('.conc-dash__title');
   if (titleEl) titleEl.textContent = dimLabel;
+  // Dimensionen mit <10 Auspraegungen (z.B. Issuer Rating): "Top N" statt fix "Top 10".
+  const topTitleEl = document.getElementById('concTopTitle');
+  if (topTitleEl) topTitleEl.textContent = `Top ${top.length}`;
   const sub = document.getElementById('concHeadSub');
   if (sub) sub.textContent = `${count} entries · basis: ${valueType}`;
 
@@ -992,7 +997,7 @@ export function renderConcentrationDashboard(filteredData, opts = {}) {
   if (kpiEl) {
     const tiles = [
       { v: String(count),          l: 'Number of entries' },
-      { v: __concPct(top10Share),  l: 'Top 10 share' },
+      { v: __concPct(top10Share),  l: `Top ${top.length} share` },
       { v: __concPct(restShare),   l: 'Others share' },
       { v: __concPct(meanShare),   l: 'Avg share' },
       { v: __concPct(medianShare), l: 'Median share' },
@@ -1379,7 +1384,7 @@ export function bindRightClickDrill(canvas, getChart, onPick, opts = {}) {
 // config.var / config.es = { detailId, titleId, tableId, closeId, menuId, valueType, valueLabel }.
 export function createContribDrill(config) {
   const mk = (c) => ({ stack: [], bound: false, menuId: c.menuId, closeId: c.closeId,
-    ctx: { detailId: c.detailId, titleId: c.titleId, tableId: c.tableId, data: null, valueType: c.valueType, valueLabel: c.valueLabel, extraCol: c.extraCol, extraCols: c.extraCols, infoCol: c.infoCol, columns: c.columns } });
+    ctx: { detailId: c.detailId, titleId: c.titleId, tableId: c.tableId, data: null, valueType: c.valueType, valueLabel: c.valueLabel, extraCol: c.extraCol, extraCols: c.extraCols, infoCol: c.infoCol, infoCols: c.infoCols, columns: c.columns } });
   const M = { var: mk(config.var), es: mk(config.es) };
 
   const drillTo = (kind, view) => {
@@ -1563,9 +1568,13 @@ function renderConcView(view, ctx) {
   // Optionale Zusatzspalte (z.B. Loss) — nur wenn der Aufrufer ctx.extraCol setzt.
   // Werte aus row[extra.key]; in der Gruppen-Sicht summiert. Andere Panels unberuehrt.
   const extra = (c.extraCol && c.extraCol.key) ? c.extraCol : null;
-  // Optionale Text-Info-Spalte (z.B. Rating) — nur in der Positions-Sicht, nicht
-  // summiert. Werte aus row[info.key].
+  // Optionale Text-Info-Spalte(n) (z.B. Issuer, Rating) — nur in der Positions-Sicht,
+  // nicht summiert. Werte aus row[info.key]. Mehrere via ctx.infoCols; einzelnes
+  // ctx.infoCol bleibt rueckwaertskompatibel (wird zu 1-elementiger Liste).
   const info = (c.infoCol && c.infoCol.key) ? c.infoCol : null;
+  const infos = Array.isArray(c.infoCols)
+    ? c.infoCols.filter(e => e && e.key)
+    : (info ? [info] : []);
   // Mehrere optionale Zusatz-Wertspalten (z.B. VaR-Zerlegung IR/CS je Produkt).
   // Rueckwaertskompatibel: ein einzelnes extraCol wird als 1-elementige Liste behandelt.
   const extraCols = Array.isArray(c.extraCols)
@@ -1630,14 +1639,42 @@ function renderConcView(view, ctx) {
       if (col.fmt === 'pctval') return Number.isFinite(Number(v)) ? `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %` : '';
       return v == null ? '' : String(v);
     };
-    const sorted = rowsAll.slice().sort((a, b) => __concNotional(b) - __concNotional(a));
+    // Klick auf einen Spaltenkopf sortiert nach dieser Spalte (num/dec/pct/pctval
+    // numerisch, sonst alphabetisch); erneuter Klick dreht die Richtung.
+    // Default wie bisher: Notional absteigend.
+    const isNumCol = (col) => ['num', 'dec', 'pct', 'pctval'].includes(col.fmt);
+    let sortIdx = -1, sortDir = -1;
+    const sortedRows = () => {
+      if (sortIdx < 0) return rowsAll.slice().sort((a, b) => __concNotional(b) - __concNotional(a));
+      const col = cols[sortIdx];
+      return rowsAll.slice().sort((a, b) => {
+        if (isNumCol(col)) {
+          const av = Number(a[col.key]), bv = Number(b[col.key]);
+          return ((Number.isFinite(av) ? av : -Infinity) - (Number.isFinite(bv) ? bv : -Infinity)) * sortDir;
+        }
+        return String(a[col.key] ?? '').localeCompare(String(b[col.key] ?? ''), 'de') * sortDir;
+      });
+    };
+    const bodyHtml = () =>
+      sortedRows().map(r => `<tr>${cols.map(col => `<td${col.align === 'right' ? ' style="text-align:right;"' : ''}>${__concEsc(fmtCell(r, col))}</td>`).join('')}</tr>`).join('');
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr>${cols.map(col => `<th${col.align === 'right' ? ' style="text-align:right;"' : ''}>${__concEsc(col.label)}</th>`).join('')}</tr></thead>
-        <tbody>
-          ${sorted.map(r => `<tr>${cols.map(col => `<td${col.align === 'right' ? ' style="text-align:right;"' : ''}>${__concEsc(fmtCell(r, col))}</td>`).join('')}</tr>`).join('')}
-        </tbody>
+        <thead><tr>${cols.map((col, i) => `<th data-sort-idx="${i}" title="Click to sort" style="cursor:pointer;${col.align === 'right' ? 'text-align:right;' : ''}">${__concEsc(col.label)}<span class="conc-sort-arrow"></span></th>`).join('')}</tr></thead>
+        <tbody>${bodyHtml()}</tbody>
       </table>`;
+    tableEl.querySelector('thead')?.addEventListener('click', (e) => {
+      const th = e.target?.closest?.('[data-sort-idx]');
+      if (!th) return;
+      const i = Number(th.dataset.sortIdx);
+      if (sortIdx === i) sortDir = -sortDir;
+      else { sortIdx = i; sortDir = isNumCol(cols[i]) ? -1 : 1; }   // numerisch: erst groesste
+      tableEl.querySelectorAll('.conc-sort-arrow').forEach(s => { s.textContent = ''; });
+      const arrow = th.querySelector('.conc-sort-arrow');
+      if (arrow) arrow.textContent = sortDir === 1 ? ' ▲' : ' ▼';
+      const tb = tableEl.querySelector('tbody');
+      if (tb) tb.innerHTML = bodyHtml();
+      try { attachIdLinks(tableEl); } catch {}
+    });
     try { attachIdLinks(tableEl); } catch (e) { console.warn('[conc] attachIdLinks failed', e); }
     try { ensureProdHoverBound(tableEl); } catch {}
     detail.style.display = '';
@@ -1647,7 +1684,7 @@ function renderConcView(view, ctx) {
     const rows = rowsAll.map(r => ({
       id:   r.PROD_ID != null ? String(r.PROD_ID) : '',
       desc: (r.DESCRIPTION || '').toString(),
-      info: info ? String(r[info.key] ?? '') : '',
+      infos: infos.map(inf => String(r[inf.key] ?? '')),
       notional: __concNotional(r),
       val:  Number(r[valueType]) || 0,
       extras: extraCols.map(e => Number(r[e.key]) || 0),
@@ -1655,12 +1692,12 @@ function renderConcView(view, ctx) {
     const tot = rows.reduce((s, r) => s + r.val, 0) || 1;
     tableEl.innerHTML = `
       <table class="conc-detail-tbl">
-        <thead><tr><th>Product ID</th><th>Description</th>${info ? `<th>${__concEsc(info.label)}</th>` : ''}<th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extraCols.map(e => `<th style="text-align:right;">${__concEsc(e.label)}</th>`).join('')}<th style="text-align:right;">Share</th></tr></thead>
+        <thead><tr><th>Product ID</th><th>Description</th>${infos.map(inf => `<th>${__concEsc(inf.label)}</th>`).join('')}<th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extraCols.map(e => `<th style="text-align:right;">${__concEsc(e.label)}</th>`).join('')}<th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${rows.map(r => `<tr>
             <td>${__concEsc(r.id)}</td>
             <td>${__concEsc(r.desc)}</td>
-            ${info ? `<td>${__concEsc(r.info)}</td>` : ''}
+            ${r.infos.map(v => `<td>${__concEsc(v)}</td>`).join('')}
             <td style="text-align:right;">${fmtVal(r.notional)}</td>
             <td style="text-align:right;">${fmtVal(r.val)}</td>
             ${r.extras.map(v => `<td style="text-align:right;">${fmtVal(v)}</td>`).join('')}

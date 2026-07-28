@@ -152,7 +152,8 @@
 }
 
 #panel-market .chart-box,
-#panel-mvar-products .chart-box{
+#panel-mvar-products .chart-box,
+#panel-mvar-yield .chart-box{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
@@ -215,6 +216,7 @@
 
 #panel-market .chart-box canvas,
 #panel-mvar-products .chart-box canvas,
+#panel-mvar-yield .chart-box canvas,
 #panel-mvar-issuers .chart-box canvas{
   display:block;
   width:100% !important;
@@ -241,6 +243,7 @@
 @media (max-width: 1200px){
   #panel-market .chart-box canvas,
   #panel-mvar-products .chart-box canvas,
+  #panel-mvar-yield .chart-box canvas,
   #panel-mvar-issuers .chart-box canvas{
     height: 320px !important;
   }
@@ -254,6 +257,7 @@
 
   #panel-market .chart-box,
   #panel-mvar-products .chart-box,
+  #panel-mvar-yield .chart-box,
   #panel-mvar-issuers .chart-box{
     min-width:0;
     width:100%;
@@ -261,6 +265,7 @@
 
   #panel-market .chart-box canvas,
   #panel-mvar-products .chart-box canvas,
+  #panel-mvar-yield .chart-box canvas,
   #panel-mvar-issuers .chart-box canvas{
     height: 280px !important;
   }
@@ -284,7 +289,8 @@
   }
 }
 
-#panel-mvar-products .mvar-prod-split{
+#panel-mvar-products .mvar-prod-split,
+#panel-mvar-yield .mvar-prod-split{
   display:flex;
   gap:20px;
   flex-wrap:wrap;
@@ -292,7 +298,8 @@
   align-items:flex-start;
 }
 
-#panel-mvar-products .mvar-prod-chart{ flex: 2 1 520px; min-width: 320px; }
+#panel-mvar-products .mvar-prod-chart,
+#panel-mvar-yield .mvar-prod-chart{ flex: 2 1 520px; min-width: 320px; }
 #panel-mvar-products .mvar-prod-table{ flex: 1 1 320px; min-width: 260px; overflow:auto; }
 
 /* Factors-Panel: die beiden KPI-Karten (MVaR/ES MVaR) fest nebeneinander;
@@ -304,6 +311,7 @@
 /* Issuers-/Products-/Factors-Panel: Balken links + Streudiagramm rechts, nebeneinander. */
 #panel-mvar-issuers .mvar-issuer-split,
 #panel-mvar-products .mvar-issuer-split,
+#panel-mvar-yield .mvar-issuer-split,
 #panel-mvar .mvar-issuer-split{
   display:flex;
   gap:20px;
@@ -312,6 +320,7 @@
 }
 #panel-mvar-issuers .mvar-issuer-split .mvar-prod-chart,
 #panel-mvar-products .mvar-issuer-split .mvar-prod-chart,
+#panel-mvar-yield .mvar-issuer-split .mvar-prod-chart,
 #panel-mvar .mvar-issuer-split .mvar-prod-chart{ flex: 1 1 460px; min-width: 320px; }
 
 /* KPI-Band ueber den Issuer-Charts (je VaR-/ES-Zeile): mr-kpi-card-Reihe. */

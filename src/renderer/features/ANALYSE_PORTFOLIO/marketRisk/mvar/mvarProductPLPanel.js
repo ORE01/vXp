@@ -640,6 +640,12 @@ const productDrill = createContribDrill({
   var: { detailId: 'mrProductVarDetail', titleId: 'mrProductVarDetailTitle', tableId: 'mrProductVarDetailTable', closeId: 'mrProductVarDetailClose', menuId: 'mrProductVarCardMenu', valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' },
   es:  { detailId: 'mrProductEsDetail',  titleId: 'mrProductEsDetailTitle',  tableId: 'mrProductEsDetailTable',  closeId: 'mrProductEsDetailClose',  menuId: 'mrProductEsCardMenu',  valueType: '__ES_CONTRIB',  valueLabel: 'ES contrib' },
 });
+// Eigener Drill-Kontext fuer das Yield-Panel (#panel-mvar-yield) — gleiche Werte,
+// eigene Detail-/Menue-Container, damit beide Panels unabhaengig drillen koennen.
+const yieldDrill = createContribDrill({
+  var: { detailId: 'mrYieldVarDetail', titleId: 'mrYieldVarDetailTitle', tableId: 'mrYieldVarDetailTable', closeId: 'mrYieldVarDetailClose', menuId: 'mrYieldVarCardMenu', valueType: '__VAR_CONTRIB', valueLabel: 'VaR contrib' },
+  es:  { detailId: 'mrYieldEsDetail',  titleId: 'mrYieldEsDetailTitle',  tableId: 'mrYieldEsDetailTable',  closeId: 'mrYieldEsDetailClose',  menuId: 'mrYieldEsCardMenu',  valueType: '__ES_CONTRIB',  valueLabel: 'ES contrib' },
+});
 function productStep(prodId) { return { colKey: 'PROD_ID', value: String(prodId || ''), label: 'Product' }; }
 
 const _prodContribCharts = new Map();
@@ -724,7 +730,7 @@ function bindProdScatterContextDrill(canvas, cfg) {
       if (!el) { scheduleHideConcMenu(); return; }
       // Steps passend zum aktuellen Punkt-Index aufbauen (Products-Dataset = Index 1).
       const steps = chart.data.datasets[1].data.map(p => productStep(p?.prod_id));
-      productDrill.hover(cfg.kind, { native: e }, [el], steps);
+      (cfg.drill || productDrill).hover(cfg.kind, { native: e }, [el], steps);
     } catch {}
   });
 }
@@ -741,15 +747,22 @@ function buildProdBaseMap() {
   return m;
 }
 
-// Chart-Entities je Produkt: NAV-/VaR-/ES-Anteil (Share of total, Magnitude).
+// Chart-Entities je Produkt: NAV-/Yield-/VaR-/ES-Anteil (Share of total, Magnitude).
+// yield_w = ytmPortA (bereits NAV-gewichtete Yield aus der Portfolio-View, wie im
+// Yield-Dashboard); yield_rel = Anteil an der Portfolio-Yield.
 function buildProductChartRows(productRows, baseMap) {
   const rows = (Array.isArray(productRows) ? productRows : []).map(r => {
     const pid = String(r.prod_id || '');
     const base = baseMap.get(pid) || {};
     return {
       prod_id: pid,
-      label: (r.description || pid || '-'),
+      // Description bevorzugt aus der MVaR-Zeile, sonst aus der Portfolio-Basiszeile
+      // (MVaR-Ergebniszeilen fuehren oft keine description mit).
+      label: (r.description || firstValue(base, ['DESCRIPTION', 'description', 'PRODUCT_NAME', 'product_name'], '') || pid || '-'),
       nav: toNumber(firstValue(base, ['NAV', 'nav'], 0), 0),
+      yield_buy: toNumber(firstValue(base, ['ytm_BUY', 'YTM_BUY', 'ytm_buy'], null), null),
+      yield_act: toNumber(firstValue(base, ['ytm', 'YTM'], null), null),
+      yield_w: toNumber(firstValue(base, ['ytmPortA', 'ytmporta', 'YTMPORTA'], 0), 0),
       var_abs: toNumber(r.var_abs, 0),
       es_abs: toNumber(r.es_abs, 0),
     };
@@ -757,10 +770,12 @@ function buildProductChartRows(productRows, baseMap) {
   const totVar = rows.reduce((s, x) => s + Math.abs(x.var_abs), 0);
   const totEs = rows.reduce((s, x) => s + Math.abs(x.es_abs), 0);
   const totNav = rows.reduce((s, x) => s + x.nav, 0);
+  const totYield = rows.reduce((s, x) => s + x.yield_w, 0);
   rows.forEach(x => {
     x.var_rel = totVar ? Math.abs(x.var_abs) / totVar : null;
     x.es_rel = totEs ? Math.abs(x.es_abs) / totEs : null;
     x.nav_rel = totNav ? x.nav / totNav : null;
+    x.yield_rel = totYield ? x.yield_w / totYield : null;
   });
   return rows;
 }
@@ -794,14 +809,15 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
     .sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)));
   if (!rows.length) { if (host) host.innerHTML = ''; if (tblEl) tblEl.innerHTML = ''; return; }
 
+  const shareKey = cfg.shareKey || 'nav_rel';
   const total = rows.reduce((s, r) => s + Math.abs(toNumber(r[cfg.absKey], 0)), 0);
   const top = rows[0];
   const top5 = rows.slice(0, 5).reduce((s, r) => s + (r[cfg.relKey] || 0), 0);
-  // Staerkster ueberproportionaler Beitrag: max(Risikobeitrag% - NAV-Anteil%).
+  // Staerkster ueberproportionaler Beitrag: max(Risikobeitrag% - Share-Anteil%).
   let over = null;
   for (const r of rows) {
-    if (r[cfg.relKey] == null || r.nav_rel == null) continue;
-    const d = r[cfg.relKey] - r.nav_rel;
+    if (r[cfg.relKey] == null || r[shareKey] == null) continue;
+    const d = r[cfg.relKey] - r[shareKey];
     if (!over || d > over.d) over = { label: r.label, d };
   }
   const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toFixed(1)} pp` : '–';
@@ -810,7 +826,7 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
     { label: `Total ${cfg.metric}`,     value: fmtAbs(total),            sub: 'sum of contributions',   desc: `Portfolio ${cfg.metric} (all products)` },
     { label: 'Top product',             value: relPct1(top[cfg.relKey]), sub: top.label || '–',         desc: `Largest ${cfg.metric} contributor` },
     { label: 'Top-5 concentration',     value: relPct1(top5),            sub: `of total ${cfg.metric}`, desc: '5 largest products combined' },
-    { label: 'Highest risk vs. weight', value: overVal,                  sub: over ? over.label : '–',  desc: 'Contribution above NAV weight' },
+    { label: cfg.overLabel || 'Highest risk vs. weight', value: overVal, sub: over ? over.label : '–',  desc: cfg.overDesc || 'Contribution above NAV weight' },
   ];
 
   if (host) {
@@ -831,16 +847,23 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
   }
 }
 
-const PROD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarProductVarContribChart', scatterId: 'mvarProductVarScatterChart' };
-const PROD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarProductEsContribChart',  scatterId: 'mvarProductEsScatterChart' };
+// shareKey/-Labels bestimmen die Vergleichsachse (x): Products = NAV-Anteil,
+// Yield = Anteil an der Portfolio-Yield (buy, ytmPortA-basiert). drill = Drill-Kontext.
+const PROD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarProductVarContribChart', scatterId: 'mvarProductVarScatterChart', shareKey: 'nav_rel', shareLabel: 'Portfolio share (NAV)', shareAxisTitle: 'Portfolio share % (NAV)', shareShort: 'NAV', overLabel: 'Highest risk vs. weight', overDesc: 'Contribution above NAV weight', drill: productDrill };
+const PROD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarProductEsContribChart',  scatterId: 'mvarProductEsScatterChart',  shareKey: 'nav_rel', shareLabel: 'Portfolio share (NAV)', shareAxisTitle: 'Portfolio share % (NAV)', shareShort: 'NAV', overLabel: 'Highest risk vs. weight', overDesc: 'Contribution above NAV weight', drill: productDrill };
 
-// Gruppierter horizontaler Balken je Produkt (Top 15): NAV-Anteil vs. Risikobeitrag %.
+const YIELD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarYieldVarContribChart', scatterId: 'mvarYieldVarScatterChart', shareKey: 'yield_rel', shareLabel: 'Yield share (buy)', shareAxisTitle: 'Yield share % (buy)', shareShort: 'Yield', overLabel: 'Highest risk vs. yield share', overDesc: 'Contribution above yield share', drill: yieldDrill };
+const YIELD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarYieldEsContribChart',  scatterId: 'mvarYieldEsScatterChart',  shareKey: 'yield_rel', shareLabel: 'Yield share (buy)', shareAxisTitle: 'Yield share % (buy)', shareShort: 'Yield', overLabel: 'Highest risk vs. yield share', overDesc: 'Contribution above yield share', drill: yieldDrill };
+
+// Gruppierter horizontaler Balken je Produkt (Top 15): Share-Anteil (cfg.shareKey:
+// NAV- oder Yield-Anteil) vs. Risikobeitrag %.
 function renderProductContribChart(rows, cfg) {
   const canvas = document.getElementById(cfg.barId);
   destroyProdContribChart(cfg.barId);
   if (!canvas || !window.Chart) return;
+  const shareKey = cfg.shareKey || 'nav_rel';
   const chartRows = (Array.isArray(rows) ? rows : [])
-    .filter(r => Math.abs(toNumber(r[cfg.absKey], 0)) > 0 || Math.abs(toNumber(r.nav, 0)) > 0)
+    .filter(r => Math.abs(toNumber(r[cfg.absKey], 0)) > 0 || Math.abs(toNumber(r[shareKey], 0)) > 0)
     .slice().sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)))
     .slice(0, 15);
   if (!chartRows.length) { canvas.style.display = 'none'; return; }
@@ -848,7 +871,7 @@ function renderProductContribChart(rows, cfg) {
   bindProdCanvasLeave(canvas);
   const labels = chartRows.map(r => r.label || '-');
   const steps = chartRows.map(r => productStep(r.prod_id));
-  const navPct = chartRows.map(r => (r.nav_rel != null ? +(r.nav_rel * 100).toFixed(2) : 0));
+  const navPct = chartRows.map(r => (r[shareKey] != null ? +(r[shareKey] * 100).toFixed(2) : 0));
   const contribPct = chartRows.map(r => (r[cfg.relKey] != null ? +(r[cfg.relKey] * 100).toFixed(2) : 0));
   canvas.width = 760; canvas.height = Math.max(300, chartRows.length * 26 + 70);
   const bodyCss = getComputedStyle(document.body);
@@ -859,7 +882,7 @@ function renderProductContribChart(rows, cfg) {
     data: { labels, datasets: [
       // Palette: Portfolio-Anteil = Portfolio-Blau; Risiko-Beitrag = Market-Teal
       // (VaR) bzw. gelblichere Nuance (ES), damit beide Metriken unterscheidbar sind.
-      { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 1, maxBarThickness: 10 },
+      { label: cfg.shareLabel || 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 1, maxBarThickness: 10 },
       { label: `Risk contribution (${cfg.metric})`, data: contribPct,
         backgroundColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
         borderColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
@@ -873,7 +896,7 @@ function renderProductContribChart(rows, cfg) {
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% of NAV  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } } },
+        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% of ${cfg.shareShort || 'NAV'}  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } } },
         y: { ticks: { color: chartColor, font: { family: chartFont, size: 10 } }, grid: { display: false } },
       },
     },
@@ -881,22 +904,24 @@ function renderProductContribChart(rows, cfg) {
   chart.$barSteps = steps;
   _prodContribCharts.set(cfg.barId, chart);
   bindRightClickDrill(canvas, () => _prodContribCharts.get(cfg.barId),
-    (el, ch, e) => productDrill.hover(cfg.kind, { native: e }, [el], ch.$barSteps || []));
+    (el, ch, e) => (cfg.drill || productDrill).hover(cfg.kind, { native: e }, [el], ch.$barSteps || []));
 }
 
-// Streudiagramm je Produkt: x = NAV-Anteil %, y = Risikobeitrag %, 45°-Diagonale.
+// Streudiagramm je Produkt: x = Share-Anteil % (cfg.shareKey: NAV oder Yield),
+// y = Risikobeitrag %, 45°-Diagonale.
 function renderProductScatter(rows, cfg) {
   const canvas = document.getElementById(cfg.scatterId);
   destroyProdContribChart(cfg.scatterId);
   if (!canvas || !window.Chart) return;
+  const shareKey = cfg.shareKey || 'nav_rel';
   // Nach Beitragsgroesse (aktuelle Metrik) sortieren und optional auf Top-N begrenzen
   // (Auswahl 3/5/10/All ueber den Entry-Picker). Default: Top 5.
   const sorted = (Array.isArray(rows) ? rows.slice() : [])
-    .filter(r => r.nav_rel != null && r[cfg.relKey] != null)
+    .filter(r => r[shareKey] != null && r[cfg.relKey] != null)
     .sort((a, b) => Math.abs(toNumber(b[cfg.absKey], 0)) - Math.abs(toNumber(a[cfg.absKey], 0)));
   const limit = _prodScatterLimit.has(cfg.scatterId) ? _prodScatterLimit.get(cfg.scatterId) : 5;
   const limited = (limit === 'all') ? sorted : sorted.slice(0, limit);
-  const pts = limited.map(r => ({ x: +(r.nav_rel * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.label || '-', prod_id: r.prod_id }));
+  const pts = limited.map(r => ({ x: +(r[shareKey] * 100).toFixed(2), y: +(r[cfg.relKey] * 100).toFixed(2), issuer: r.label || '-', prod_id: r.prod_id }));
   if (!pts.length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
   bindProdCanvasLeave(canvas);
@@ -935,7 +960,7 @@ function renderProductScatter(rows, cfg) {
       // Hovern und Ziehen (Box-Zoom) das Menue nicht ungewollt oeffnen.
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: NAV ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: ${cfg.shareShort || 'NAV'} ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
         datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: chartColor, font: { family: chartFont, size: 10 }, formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : '') } : undefined,
         // Zoom/Box-Zoom (chartjs-plugin-zoom, global geladen): Ziehen = Rechteck-Auswahl,
         // Wheel = Zoom, Ctrl+Ziehen = Pan. Reset ueber den Button (ensureProdScatterZoomTools).
@@ -950,7 +975,7 @@ function renderProductScatter(rows, cfg) {
         },
       },
       scales: {
-        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: cfg.shareAxisTitle || 'Portfolio share % (NAV)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
         y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
       },
     },
@@ -961,6 +986,35 @@ function renderProductScatter(rows, cfg) {
   bindProdScatterContextDrill(canvas, cfg);
 }
 
+// Volle Yield-Tabelle unten im Yield-Panel: Yields + Anteile + Risikobeitraege.
+// Nach Yield (buy) absteigend sortiert — Zeile 1 = renditestaerkstes Produkt, dessen
+// Portfolio- (NAV) und Risiko-Anteile direkt ablesbar sind.
+function renderYieldTable(chartRows) {
+  const container = document.getElementById('mvarYieldTableContainer');
+  if (!container) return;
+  const rows = (Array.isArray(chartRows) ? chartRows.slice() : [])
+    .sort((a, b) => toNumber(b.yield_buy, -Infinity) - toNumber(a.yield_buy, -Infinity));
+  const pct2 = (v) => (v != null && Number.isFinite(v) ? `${(v * 100).toFixed(2)}%` : '-');
+  renderTable(
+    container,
+    rows,
+    [
+      { label: 'Product ID',            value: r => r.prod_id },
+      { label: 'Description',           value: r => r.label },
+      { label: 'Yield (buy)',           value: r => pct2(r.yield_buy), alignRight: true },
+      { label: 'Yield (current)',       value: r => pct2(r.yield_act), alignRight: true },
+      { label: 'Yield share',           value: r => relPct1(r.yield_rel), alignRight: true },
+      { label: 'Portfolio share (NAV)', value: r => relPct1(r.nav_rel), alignRight: true },
+      { label: 'VaR abs',               value: r => formatMaybeAbs(r.var_abs), alignRight: true },
+      { label: 'VaR share',             value: r => relPct1(r.var_rel), alignRight: true },
+      { label: 'ES abs',                value: r => formatMaybeAbs(r.es_abs), alignRight: true },
+      { label: 'ES share',              value: r => relPct1(r.es_rel), alignRight: true },
+    ],
+    'No MVaR yield data.'
+  );
+  attachIdLinks(container, { prodHeader: 'Product ID' });
+}
+
 function renderProductContribCharts(productRows) {
   const baseMap = buildProdBaseMap();
   const chartRows = buildProductChartRows(productRows, baseMap);
@@ -969,6 +1023,12 @@ function renderProductContribCharts(productRows) {
   renderProductKpis(chartRows, PROD_ES_CFG, 'mvarProductEsKpis', 'mvarProductEsKpisTable');
   renderProductContribChart(chartRows, PROD_VAR_CFG); renderProductScatter(chartRows, PROD_VAR_CFG);
   renderProductContribChart(chartRows, PROD_ES_CFG);  renderProductScatter(chartRows, PROD_ES_CFG);
+  // Yield-Panel (#panel-mvar-yield): gleiche Daten, x-Achse = Yield-Anteil (buy).
+  renderProductKpis(chartRows, YIELD_VAR_CFG, 'mvarYieldVarKpis', 'mvarYieldVarKpisTable');
+  renderProductKpis(chartRows, YIELD_ES_CFG, 'mvarYieldEsKpis', 'mvarYieldEsKpisTable');
+  renderProductContribChart(chartRows, YIELD_VAR_CFG); renderProductScatter(chartRows, YIELD_VAR_CFG);
+  renderProductContribChart(chartRows, YIELD_ES_CFG);  renderProductScatter(chartRows, YIELD_ES_CFG);
+  renderYieldTable(chartRows);
 }
 
 export function renderMvarProductPLPanel() {
@@ -1016,6 +1076,7 @@ export function renderMvarProductPLPanel() {
     }
 
     try { productDrill.setData([]); } catch {}
+    try { yieldDrill.setData([]); } catch {}
     renderProductContribCharts([]);
 
     console.warn('[MVaR ProductPL] no rows for current context', {
@@ -1035,9 +1096,13 @@ export function renderMvarProductPLPanel() {
 
   const productRows = buildProductRows(filteredRows);
 
-  // Drill-Datenquelle (Produkte + Portfolio-Felder + Beitraege) fuer beide Metriken.
-  try { productDrill.setData(buildProductDrillRows(filteredRows, buildProdBaseMap())); }
-  catch (e) { console.warn('[MVaR ProductPL] drill data failed', e); }
+  // Drill-Datenquelle (Produkte + Portfolio-Felder + Beitraege) fuer beide Metriken
+  // und beide Panels (Products + Yield).
+  try {
+    const drillRows = buildProductDrillRows(filteredRows, buildProdBaseMap());
+    productDrill.setData(drillRows);
+    yieldDrill.setData(drillRows);
+  } catch (e) { console.warn('[MVaR ProductPL] drill data failed', e); }
 
   if (productTableContainer) {
     renderTable(

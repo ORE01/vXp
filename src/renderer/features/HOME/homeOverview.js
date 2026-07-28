@@ -48,6 +48,122 @@ function setDot(id, state) {
   el.hidden = !state;
 }
 
+// Risk-Slider (Overview, in der Portfolio-Karte): beide Skalen 0 → Ø-Maturity.
+//  IR: 0–1Y = Money Market; Marke = Zinsduration  = −PV01  (Jahre).
+//  CS: Short ↔ Long Credit Horizon; Marke = Spread-Duration = −CPV01 (Jahre).
+// PV01/CPV01 negativ -> Duration positiv. Anzeige-only.
+const _clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+// Ampelfarben (Marke = kraeftig, Track = halbtransparent auf dunkler Kachel).
+const RS_AMP = { green: '#4CAF50', yellow: '#E0B000', red: '#D32F2F' };
+const RS_AMP_T = { green: 'rgba(76,175,80,0.55)', yellow: 'rgba(224,176,0,0.55)', red: 'rgba(211,47,47,0.55)' };
+// DUMMY-Schwellen (Jahre): <g grün, g–y gelb, >y rot. Spaeter durch echte Werte
+// (Customer Setup) ersetzen — nur diese zwei Zahlen je Slider anpassen.
+const RS_DUMMY = { ir: { g: 2, y: 5 }, cs: { g: 2, y: 5 } };
+
+function _ampState(dur, th) {
+  if (dur == null) return null;
+  return dur < th.g ? 'green' : dur < th.y ? 'yellow' : 'red';
+}
+
+// Aktualisiert EINE Slider-Gruppe (.rs-group) ueber ihre data-role-Elemente. So werden
+// beliebig viele Instanzen (Overview, Customer Setup) mit einer Funktion versorgt.
+// Die Overview-Elemente tragen zusaetzlich IDs -> RiskPDF liest die Werte per ID.
+// irDur/csDur sind bereits fertige Durationen in Jahren (im Aufrufer berechnet:
+// abs(PV01)/NAV*10000 bzw. abs(CPV01)/NAV*10000).
+function _applyRiskGroup(group, { avgMat, irDur, csDur }) {
+  const q = (role) => group.querySelector(`[data-role="${role}"]`);
+  const hasMat = Number.isFinite(avgMat) && avgMat > 0;
+  const matTxt = hasMat ? `${avgMat.toFixed(2)}Y` : '–';
+  const posOf = (dur) => (hasMat && Number.isFinite(dur)) ? _clamp01(dur / avgMat) * 100 : 0;
+  const setTxt = (role, t) => { const el = q(role); if (el) el.textContent = t; };
+
+  // Ampel-Verlauf als Track-Hintergrund; %-Grenzen (+1Y) als data-Attribute -> PDF.
+  const setTrack = (role, th, oneY) => {
+    const el = q(role); if (!el) return;
+    if (!hasMat) { el.style.background = ''; el.dataset.g = ''; el.dataset.y = ''; return; }
+    const gP = _clamp01(th.g / avgMat) * 100, yP = _clamp01(th.y / avgMat) * 100;
+    el.style.background =
+      `linear-gradient(90deg, ${RS_AMP_T.green} 0 ${gP}%, ${RS_AMP_T.yellow} ${gP}% ${yP}%, ${RS_AMP_T.red} ${yP}% 100%)`;
+    el.dataset.g = gP.toFixed(2); el.dataset.y = yP.toFixed(2);
+    if (oneY != null) el.dataset.oneY = oneY.toFixed(2);
+  };
+  // Marke: Position + Zonenfarbe (via --rs-accent, Pill erbt es); pos/state als data-Attr.
+  const setMarker = (role, dur, th) => {
+    const el = q(role); if (!el) return;
+    const pos = posOf(dur), state = _ampState(dur, th);
+    el.style.left = `${pos}%`;
+    el.style.setProperty('--rs-accent', state ? RS_AMP[state] : '');
+    el.dataset.pos = pos.toFixed(2); el.dataset.state = state || '';
+  };
+
+  const pos1y = hasMat ? _clamp01(1 / avgMat) * 100 : 0;
+
+  // Interest Rate Sensitivity: Ampel-Track + 1Y-Grenze (Money Market | Capital Market).
+  setTrack('ir-track', RS_DUMMY.ir, pos1y);
+  const ir1y = q('ir-1y'); if (ir1y) ir1y.style.left = `${pos1y}%`;
+  const irS1y = q('ir-scale1y'); if (irS1y) { irS1y.style.left = `${pos1y}%`; irS1y.style.visibility = pos1y >= 96 ? 'hidden' : 'visible'; }
+  setMarker('ir-marker', irDur, RS_DUMMY.ir);
+  setTxt('ir-val', Number.isFinite(irDur) ? `${irDur.toFixed(2)}Y` : '–');
+  setTxt('ir-max', matTxt);
+
+  // Credit Spread Sensitivity: Ampel-Track, Marke auf 0 → Ø-Maturity.
+  setTrack('cs-track', RS_DUMMY.cs, null);
+  setMarker('cs-marker', csDur, RS_DUMMY.cs);
+  setTxt('cs-val', Number.isFinite(csDur) ? `${csDur.toFixed(2)}Y` : '–');
+  setTxt('cs-max', matTxt);
+}
+
+// Alle Slider-Gruppen im Dokument (Overview + Customer Setup) aktualisieren.
+function updateRiskSliders(vals) {
+  document.querySelectorAll('.rs-group').forEach((g) => _applyRiskGroup(g, vals));
+}
+
+// ── Credit-Slider (TSI/MSD): Marke = Wert vs. ECHTE Schwellen (grün<gelb<rot).
+// value/thYellow/thRed/scaleMax sind Fraktionen; state = fertige Ampel-Einstufung.
+function _applyTrafficSlider(group, key, cfg) {
+  const q = (r) => group.querySelector(`[data-role="${key}-${r}"]`);
+  const c = cfg || {};
+  const has = Number.isFinite(c.scaleMax) && c.scaleMax > 0;
+  const pct = (v) => (has && Number.isFinite(v)) ? _clamp01(v / c.scaleMax) * 100 : 0;
+  const track = q('track');
+  if (track) {
+    if (!has || !Number.isFinite(c.thYellow) || !Number.isFinite(c.thRed)) {
+      track.style.background = ''; track.dataset.g = ''; track.dataset.y = '';
+    } else {
+      const gP = _clamp01(c.thYellow / c.scaleMax) * 100, yP = _clamp01(c.thRed / c.scaleMax) * 100;
+      track.style.background =
+        `linear-gradient(90deg, ${RS_AMP_T.green} 0 ${gP}%, ${RS_AMP_T.yellow} ${gP}% ${yP}%, ${RS_AMP_T.red} ${yP}% 100%)`;
+      track.dataset.g = gP.toFixed(2); track.dataset.y = yP.toFixed(2);
+    }
+  }
+  const marker = q('marker');
+  if (marker) {
+    const p = pct(c.value);
+    marker.style.left = `${p}%`;
+    marker.style.setProperty('--rs-accent', c.state ? RS_AMP[c.state] : '');
+    marker.dataset.pos = p.toFixed(2); marker.dataset.state = c.state || '';
+  }
+  const valEl = q('val'); if (valEl) valEl.textContent = (c.valTxt != null && c.valTxt !== '') ? c.valTxt : '–';
+  const maxEl = q('max'); if (maxEl) maxEl.textContent = has ? `${Math.round(c.scaleMax * 100)}%` : '–';
+}
+
+// Skala 0 → ~1,4×Rot-Schwelle (mind. Wert*1,15, damit Marke sichtbar bleibt).
+function _creditSliderCfg(k) {
+  const val = Number.isFinite(k?.val) ? k.val : null;
+  const thY = Number.isFinite(k?.thYellow) ? k.thYellow : null;
+  const thR = Number.isFinite(k?.thRed) ? k.thRed : null;
+  if (val == null || thY == null || thR == null) return { value: null, scaleMax: null };
+  return { value: val, thYellow: thY, thRed: thR, scaleMax: Math.max(thR * 1.4, val * 1.15), state: k.state, valTxt: k.rel };
+}
+
+function updateCreditRiskSliders({ tsi, msd }) {
+  document.querySelectorAll('.rs-group').forEach((g) => {
+    _applyTrafficSlider(g, 'tsi', tsi);
+    _applyTrafficSlider(g, 'msd', msd);
+  });
+}
+
 function destroyChart(id) {
   if (_charts[id]) { try { _charts[id].destroy(); } catch (_) {} delete _charts[id]; }
 }
@@ -111,40 +227,44 @@ function renderPortfolioCard(port) {
   const rows = (appState.getAllPortfolioData?.() || []).filter((r) => normPort(r?.port_name) === port);
 
   if (!rows.length) {
-    ['homePfNotional', 'homePfNav', 'homePfYield', 'homePfPv01', 'homePfCpv01'].forEach((id) => setText(id, '–'));
+    ['homePfNotional', 'homePfNav', 'homePfYield'].forEach((id) => setText(id, '–'));
+    updateRiskSliders({ avgMat: null, irDur: null, csDur: null });
     destroyChart('homePfChart');
     return false;
   }
 
   const enriched = enrichPortfolioRowsWithRisk(rows, port);
 
-  let notional = 0, nav = 0, yieldW = 0, pv01Base = 0, cpv01Base = 0;
+  let notional = 0, nav = 0, yieldW = 0, pv01Base = 0, cpv01Base = 0, ttmW = 0, notTtm = 0;
   const byIssuer = new Map();
   for (const r of enriched) {
     const n = numOf(r.NOTIONAL);
     notional += Number.isFinite(n) ? n : 0;
     nav += numOf(r.NAV) || 0;
-    yieldW += numOf(r.ytmPortA) || 0;
+    yieldW += numOf(r.ytmPort) || 0;
     pv01Base += Number(r.PV01_BASE) || 0;
     cpv01Base += Number(r.CPV01_BASE) || 0;
+    // Durchschnittliche Laufzeit (WAM): TtM nominal-gewichtet; bereits faellige
+    // Positionen (TtM < 0) werden ausgeklammert.
+    const ttm = numOf(r.TtM);
+    if (ttm != null && ttm >= 0 && Number.isFinite(n)) { ttmW += ttm * n; notTtm += n; }
     const iss = String(r.ISSUER ?? '–').trim() || '–';
     byIssuer.set(iss, (byIssuer.get(iss) || 0) + (Number.isFinite(n) ? n : 0));
   }
 
   setText('homePfNotional', fmtEur(notional));
   setText('homePfNav', fmtEur(nav));
-  // Portfolio-Yield exakt wie das Performance-Dashboard ("Portfolio Yield"):
-  // RETURN (Fraktion, Basis PRICE_BUY) der juengsten PortfolioHistory-Zeile.
-  // Fallback (keine History): Summe ytmPortA / Notional.
-  const hist = (appState.getPortfolioHistoryData?.() || [])
-    .filter((r) => normPort(r?.port_name) === port)
-    .sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
-  const ret = Number(hist[hist.length - 1]?.RETURN);
-  setText('homePfYield', Number.isFinite(ret)
-    ? fmtPctRaw(ret * 100)
-    : (notional ? fmtPctRaw((yieldW / notional) * 100) : '–'));
-  setText('homePfPv01', notional ? fmtNum((pv01Base / notional) * 10000) : '–');
-  setText('homePfCpv01', notional ? fmtNum((cpv01Base / notional) * 10000) : '–');
+  // Portfolio-Yield = Σ ytmPort / Σ Notional (nominalgewichtete Kauf-Yield), konsistent
+  // mit der "Portfolio Yield"-KPI im Yield-Panel. NICHT der letzte Historic-RETURN.
+  setText('homePfYield', notional ? fmtPctRaw((yieldW / notional) * 100) : '–');
+
+  // Risk-Slider: Ø-Maturity (WAM) als Skala, Marken = Zins-/Spread-Duration in Jahren:
+  // abs(PV01)/NAV*10000 bzw. abs(CPV01)/NAV*10000.
+  updateRiskSliders({
+    avgMat: notTtm ? (ttmW / notTtm) : null,
+    irDur: nav ? Math.abs(pv01Base) / nav * 10000 : null,
+    csDur: nav ? Math.abs(cpv01Base) / nav * 10000 : null,
+  });
 
   // Mini-Bar (horizontal): groesste Issuer in % vom Gesamt-Notional (Top 4) —
   // Balkenfarbe = Icon-Farbe der Karte (Portfolio-Badge, blau).
@@ -357,9 +477,9 @@ function renderCreditCard(port) {
   const rows = (appState.getAllCvarData?.() || []).filter((r) => normPort(r?.port_name) === port);
 
   if (!rows.length) {
-    ['homeCrVar', 'homeCrVarRel', 'homeCrEs', 'homeCrEsAbs', 'homeCrTsi', 'homeCrMsd'].forEach((id) => setText(id, '–'));
-    ['homeCrVarDot', 'homeCrEsDot', 'homeCrTsiDot', 'homeCrMsdDot'].forEach((id) => setDot(id, null));
-    ['homeCrTsi', 'homeCrMsd'].forEach((id) => { const el = document.getElementById(id); if (el) el.style.color = ''; });
+    ['homeCrVar', 'homeCrVarRel', 'homeCrEs', 'homeCrEsAbs'].forEach((id) => setText(id, '–'));
+    ['homeCrVarDot', 'homeCrEsDot'].forEach((id) => setDot(id, null));
+    updateCreditRiskSliders({ tsi: { value: null, scaleMax: null }, msd: { value: null, scaleMax: null } });
     destroyChart('homeCrChart');
     return false;
   }
@@ -374,21 +494,9 @@ function renderCreditCard(port) {
   setText('homeCrEs', kEs.rel);
   setDot('homeCrEsDot', kEs.state);
   setText('homeCrEsAbs', kEs.abs);
-  // Cluster Risk (TSI) + Market Stress (MSD): Zeile 1 = Titel (fett/hell) +
-  // Einstufung LOW/MEDIUM/HIGH in Ampelfarbe + Ampel-Punkt; Zeile 2 = Limit
-  // (Rot-Schwelle aus dem Customer Setup, via Dashboard-Limit-Modell) +
-  // aktueller Wert daneben.
-  const RISK_WORD = { green: 'LOW', yellow: 'MEDIUM', red: 'HIGH' };
-  const AMP_COLOR = { green: '#4CAF50', yellow: '#E0B000', red: '#D32F2F' };
-  const setRiskWord = (valId, k) => {
-    setText(valId, RISK_WORD[k.state] || '–');
-    const el = document.getElementById(valId);
-    if (el) el.style.color = AMP_COLOR[k.state] || '';
-  };
-  setRiskWord('homeCrTsi', kTsi);
-  setDot('homeCrTsiDot', kTsi.state);
-  setRiskWord('homeCrMsd', kMsd);
-  setDot('homeCrMsdDot', kMsd.state);
+  // Cluster Risk (TSI) + Market Stress (MSD) jetzt als Ampel-Slider: Marke = Wert,
+  // Zonen aus den echten Schwellen (grün/gelb/rot).
+  updateCreditRiskSliders({ tsi: _creditSliderCfg(kTsi), msd: _creditSliderCfg(kMsd) });
 
   // Mini-Bar: Top tail drivers (Historic) — wie im Credit-Risk-Dashboard.
   const top = crTailTopIssuers(port);
@@ -440,16 +548,14 @@ function syncHomeReportPanel(port) {
     ['Notional', txt('homePfNotional')],
     ['Net Asset Value', txt('homePfNav')],
     ['Yield', txt('homePfYield')],
-    ['PV01 (bp)', txt('homePfPv01')],
-    ['CPV01 (bp)', txt('homePfCpv01')],
     ['Market — Normal Risk (VaR)', `${txt('homeMktVar')}  (${txt('homeMktVarRel')})`],
     ['Market — Extreme Risk (ES)', `${txt('homeMktEs')}  (${txt('homeMktEsAbs')})`],
     [`Market — VaR ${txt('homeMktScenNameVar')}`, `${txt('homeMktRollVar')}  (${txt('homeMktRollVarAbs')})`],
     [`Market — ES ${txt('homeMktScenNameEs')}`, `${txt('homeMktRollEs')}  (${txt('homeMktRollEsAbs')})`],
     ['Credit — Normal Risk (VaR)', `${txt('homeCrVar')}  (${txt('homeCrVarRel')})`],
     ['Credit — Extreme Risk (ES)', `${txt('homeCrEs')}  (${txt('homeCrEsAbs')})`],
-    ['Credit — Cluster Risk (TSI)', txt('homeCrTsi')],
-    ['Credit — Market Stress (MSD)', txt('homeCrMsd')],
+    ['Credit — Cluster Risk (TSI)', txt('tsiMarkerVal')],
+    ['Credit — Market Stress (MSD)', txt('msdMarkerVal')],
   ];
   const tbl = document.getElementById('overviewKpiTable');
   if (tbl) {
@@ -547,7 +653,7 @@ function bindHomeCardLinks() {
   // WICHTIG: War im Ziel-Tab bereits ein Sub-Panel offen (z.B. Breakdown), wird es
   // beim Tab-Wechsel OHNE Open-Event einfach wieder sichtbar — inkl. alter Scroll-
   // Position. Daher hier alle offenen Sub-Panels auf "oben" zuruecksetzen.
-  const tabThenPanel = (tabId, panelId) => {
+  const tabThenPanel = (tabId, panelId, then) => {
     document.getElementById(tabId)?.click();
     requestAnimationFrame(() => requestAnimationFrame(() => {
       try {
@@ -558,8 +664,16 @@ function bindHomeCardLinks() {
         if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
       } catch (_) {}
       if (panelId) openPanelViaTrigger(panelId);
+      if (then) requestAnimationFrame(then);
     }));
   };
+
+  // Overview-Slider -> Portfolio-Ansicht, Sensitivities-Panel oeffnen und den
+  // passenden Tab (PV01/CPV01) aktivieren.
+  const openSensitivity = (sensTab) => tabThenPanel('ANALYSE_Tab', 'panel-sensitivities', () => {
+    const t = document.querySelector(`#panel-sensitivities [data-sens-tab="${sensTab}"]`);
+    if (t) t.click();
+  });
 
   const ACTIONS = {
     homePfIco: () => tabThenPanel('ANALYSE_Tab', null),
@@ -569,9 +683,22 @@ function bindHomeCardLinks() {
 
   const run = (e) => {
     const ico = e.target.closest?.('.home-ico--link');
-    if (!ico || !ACTIONS[ico.id]) return;
-    e.preventDefault();
-    ACTIONS[ico.id]();
+    if (ico && ACTIONS[ico.id]) { e.preventDefault(); ACTIONS[ico.id](); return; }
+    // Klick auf einen Overview-Slider (nur die Overview-Instanz #homeRiskSliders):
+    // Interest Rate Duration -> Sensitivities/PV01, Credit Spread Duration -> CPV01.
+    if (e.target.closest?.('#homeRiskSliders')) {
+      if (e.target.closest?.('.rs-card--ir')) { e.preventDefault(); openSensitivity('pv01'); return; }
+      if (e.target.closest?.('.rs-card--cs')) { e.preventDefault(); openSensitivity('cpv01'); return; }
+    }
+    // Credit-Slider (Overview) -> Risk-Ansicht, TSI/MSD-Panel oeffnen.
+    if (e.target.closest?.('#homeCreditSliders')) {
+      if (e.target.closest?.('.rs-card--tsi')) { e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-credit-tsi'); return; }
+      if (e.target.closest?.('.rs-card--msd')) { e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-credit-msd'); return; }
+    }
+    // Kachel-Navigation: Notional/NAV -> Portfolio-Panel (Tabelle + 2 Summaries),
+    // Yield -> Yield-Panel. Ziel steckt in data-nav-panel.
+    const nav = e.target.closest?.('.home-nav-link');
+    if (nav?.dataset?.navPanel) { e.preventDefault(); tabThenPanel('ANALYSE_Tab', nav.dataset.navPanel); return; }
   };
   document.addEventListener('click', run);
   document.addEventListener('keydown', (e) => {

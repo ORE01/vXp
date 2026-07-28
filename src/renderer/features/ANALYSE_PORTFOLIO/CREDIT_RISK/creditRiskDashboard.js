@@ -17,9 +17,29 @@ const _crTailDrillCfg = {
   tableId: 'crTailDetailTable', closeId: 'crTailDetailClose',
   menuId: 'crTailCardMenu', valueType: 'NAV', valueLabel: 'NAV',
   extraCol: { key: '__LOSS', label: 'Loss' },
-  infoCol: { key: 'RATINGres', label: 'Rating' },
+  // Issuer + Rating als Info-Spalten: bei mehreren ausfallenden Emittenten je Szenario
+  // ist so erkennbar, zu welchem Emittenten eine Position gehoert.
+  infoCols: [{ key: 'ISSUER', label: 'Issuer' }, { key: 'RATINGres', label: 'Rating' }],
 };
 const crTailDrill = createContribDrill({ var: _crTailDrillCfg, es: _crTailDrillCfg });
+
+// Eigene Drill-Instanzen je Tail-Zoom-Chart (Original + TSI/MSD-Panel) mit eigenen
+// Detail-/Menue-Containern (Suffix), damit der Drill im jeweiligen Panel erscheint.
+function _mkTailDrill(sfx) {
+  const cfg = {
+    detailId: `crTailDetail${sfx}`, titleId: `crTailDetailTitle${sfx}`,
+    tableId: `crTailDetailTable${sfx}`, closeId: `crTailDetailClose${sfx}`,
+    menuId: `crTailCardMenu${sfx}`, valueType: 'NAV', valueLabel: 'NAV',
+    extraCol: { key: '__LOSS', label: 'Loss' },
+    infoCols: [{ key: 'ISSUER', label: 'Issuer' }, { key: 'RATINGres', label: 'Rating' }],
+  };
+  return createContribDrill({ var: cfg, es: cfg });
+}
+const _crTailDrills = {
+  crTailZoomChart: crTailDrill,
+  crTailZoomChartTsi: _mkTailDrill('Tsi'),
+  crTailZoomChartMsd: _mkTailDrill('Msd'),
+};
 
 function _bindCrTailCanvasLeave(canvas) {
   if (!canvas || canvas.dataset.crTailLeaveBound) return;
@@ -36,14 +56,15 @@ function _bindCrTailContextDrill(canvas) {
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     try {
-      const chart = window.crTailZoomChart;
+      const chart = window[canvas.id];
       if (!chart) return;
+      const drill = _crTailDrills[canvas.id] || crTailDrill;
       const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])[0];
       if (!el) { scheduleHideConcMenu(); return; }
       const steps = chart.$crTailSteps?.[el.datasetIndex] || chart.$crTailSteps?.[0] || [];
       const step = steps[el.index];
       if (!step) { scheduleHideConcMenu(); return; }
-      crTailDrill.hover('var', { native: e }, [{ index: 0 }], [step]);
+      drill.hover('var', { native: e }, [{ index: 0 }], [step]);
     } catch {}
   });
 }
@@ -272,10 +293,10 @@ function renderCreditLossDist() {
 
 // RECHTS: Tail-Zoom — Verlust (% vom NAV) je Quantil im Extrem-Tail (sortedLossesIssuer,
 // RATING). Balken >= VaR rot; horizontale VaR (solid) + ES (dashed) Linien.
-function renderCreditTailZoom() {
-  const canvas = document.getElementById('crTailZoomChart');
+function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
+  const canvas = document.getElementById(canvasId);
   if (!canvas || !window.Chart) return;
-  _destroyCrChart('crTailZoomChart');
+  _destroyCrChart(canvasId);
   const port = appState.getSelectedPortTableName?.();
   const all = (appState.getAllLossData?.() || [])
     .filter(r => String(r.port_name) === String(port) && Number.isFinite(Number(r.QUANTIL)));
@@ -287,6 +308,17 @@ function renderCreditTailZoom() {
   if (!byFlag[baseFlag].length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
 
+  // Welche Baender dieser Chart zeigt: TSI-Panel nur TSI, MSD-Panel nur MSD, sonst beide.
+  const _bands = canvasId === 'crTailZoomChartTsi' ? { tsi: true, msd: false }
+    : canvasId === 'crTailZoomChartMsd' ? { tsi: false, msd: true }
+    : { tsi: true, msd: true };
+  const _bandTxt = _bands.tsi && _bands.msd ? 'TSI/MSD bands' : _bands.tsi ? 'TSI band' : 'MSD band';
+  // MSD-Panel: nur Historic + Market adjusted (kein "Market"), beide sichtbar, keine
+  // fixen VaR/ES-Referenzlinien (die MSD-Divergenz liegt zwischen den ES-Niveaus).
+  // TSI-Panel: nur Historic (TSI = (ES-VaR)/VaR ist rein Historic).
+  const _isMsd = canvasId === 'crTailZoomChartMsd';
+  const _isTsi = canvasId === 'crTailZoomChartTsi';
+
   const sumNav = sumNavForPort(port);
   const targets = [99.0, 99.2, 99.4, 99.5, 99.6, 99.7, 99.8, 99.9, 99.95, 99.99];
   const labels = targets.map(q => q.toFixed(q >= 99.9 ? 2 : 1));
@@ -296,14 +328,17 @@ function renderCreditTailZoom() {
   try {
     const portRows = (appState.getAllPortfolioData?.() || [])
       .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === String(port).trim());
-    crTailDrill.setData(buildPositionLoss(portRows, port));
+    (_crTailDrills[canvasId] || crTailDrill).setData(buildPositionLoss(portRows, port));
   } catch (e) { console.warn('[CreditTail] drill data failed', e); }
 
   // Je pd_flag eine Serie (Historic/Market/Market adjusted); nur Historic initial sichtbar.
   // stepsByDs[dsIndex][barIndex] = Drill-Schritt (ausfallende Emittenten im Quantil-Szenario).
   const lineMap = [];
   const stepsByDs = [];
-  const datasets = CR_FLAG_SERIES.map((f, di) => {
+  const _series = _isTsi ? CR_FLAG_SERIES.filter(f => f.key === 'rating')
+    : _isMsd ? CR_FLAG_SERIES.filter(f => f.key !== 'market')
+    : CR_FLAG_SERIES;
+  const datasets = _series.map((f, di) => {
     const sorted = byFlag[f.key].slice().sort((a, b) => Number(a.QUANTIL) - Number(b.QUANTIL));
     let data;
     let steps;
@@ -330,8 +365,11 @@ function renderCreditTailZoom() {
     if (Number.isFinite(varPct)) lines.push({ at: varPct, color: lineCol, width: 2 });
     if (Number.isFinite(esPct)) lines.push({ at: esPct, color: lineCol, width: 2, dash: [6, 4] });
     lineMap.push(lines);
-    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 30, hidden: di !== 0 };
+    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 30, hidden: _isMsd ? false : (di !== 0) };
   });
+  // MSD: je Serie nur die gestrichelte ES-Linie behalten (keine VaR-Linien) -> die beiden
+  // ES-Niveaus (Historic + Market adjusted) sind die MSD-Bandgrenzen.
+  const lineMapEs = lineMap.map(ls => ls.filter(l => l.dash));
 
   // VaR/ES je Flag (% vom NAV) fuer die TSI/MSD-Baender.
   const _bandOf = (flag) => { const rr = cvarByFlag[flag] || {}; return { varPct: Math.abs(num(rr.VaR_rel)) * 100, esPct: Math.abs(num(rr.ES_rel)) * 100 }; };
@@ -356,8 +394,8 @@ function renderCreditTailZoom() {
             // Zusatz-Eintraege TSI/MSD zum Ein-/Ausschalten der Baender.
             generateLabels: (ch) => {
               const items = window.Chart.defaults.plugins.legend.labels.generateLabels(ch);
-              items.push({ text: 'TSI', fillStyle: 'rgba(150,110,220,0.9)', strokeStyle: 'rgba(150,110,220,0.9)', hidden: !ch.$showTSI, datasetIndex: -1, $band: 'tsi' });
-              items.push({ text: 'MSD', fillStyle: 'rgba(230,170,60,0.9)', strokeStyle: 'rgba(230,170,60,0.9)', hidden: !ch.$showMSD, datasetIndex: -1, $band: 'msd' });
+              if (_bands.tsi) items.push({ text: 'TSI', fillStyle: 'rgba(150,110,220,0.9)', strokeStyle: 'rgba(150,110,220,0.9)', hidden: !ch.$showTSI, datasetIndex: -1, $band: 'tsi' });
+              if (_bands.msd) items.push({ text: 'MSD', fillStyle: 'rgba(230,170,60,0.9)', strokeStyle: 'rgba(230,170,60,0.9)', hidden: !ch.$showMSD, datasetIndex: -1, $band: 'msd' });
               return items;
             },
           },
@@ -368,8 +406,8 @@ function renderCreditTailZoom() {
             _crLegendOnClick('h')(e, item, legend);
           },
         },
-        subtitle: { display: true, text: 'Loss > VaR red · VaR (solid) · ES (dashed) · TSI/MSD bands', color: col, align: 'start', font: { size: 10 } },
-        crLines: { h: lineMap[0] },
+        subtitle: { display: true, text: `Loss > VaR red · VaR (solid) · ES (dashed) · ${_bandTxt}`, color: col, align: 'start', font: { size: 10 } },
+        crLines: { h: _isMsd ? lineMapEs.flat() : lineMap[0] },
         tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}% of NAV` } },
       },
       scales: {
@@ -378,14 +416,16 @@ function renderCreditTailZoom() {
       },
     },
   });
-  chart.$crLineMap = lineMap;
+  chart.$crLineMap = _isMsd ? lineMapEs : lineMap;   // MSD: nur die gestrichelten ES-Linien (auch beim Toggle)
   chart.$crTailSteps = stepsByDs;
   chart.$bandVals = { ratingVar: ratingBand.varPct, ratingEs: ratingBand.esPct, normEs: normBand.esPct };
-  chart.$showTSI = true;   // Standard: Baender an (per Legende TSI/MSD aus-/einschaltbar)
-  chart.$showMSD = true;
+  chart.$showTSI = _bands.tsi;   // je Panel nur das relevante Band (Legende toggelt es)
+  chart.$showMSD = _bands.msd;
   try { chart.update(); } catch {}
-  window.crTailZoomChart = chart;
+  window[canvasId] = chart;
   _bindCrTailCanvasLeave(canvas);
+  // Drill (Rechtsklick) an jedem Chart — je Canvas eigene Drill-Instanz (_crTailDrills)
+  // mit eigenen Detail-/Menue-Containern.
   _bindCrTailContextDrill(canvas);
 }
 
@@ -644,9 +684,12 @@ export function getCreditDashboardModel(rowsOverride = null) {
       dRel: magDelta(curEsRelPct, lastEsRelPct), dAbs: magDelta(num(row?.ES_abs), lastEsAbs),
       desc: 'beyond CVaR', state: esState, limit: computeLimitModel(row?.ES_rel, cvarTh, esState) },
     { label: 'Cluster Risk (TSI)', full: 'Tail Severity Indicator', abs: null, rel: fmtRelPct(tsiVal), dRel: null, dAbs: null,
-      desc: '(ES - VaR) / VaR', state: tsiState, limit: Number.isFinite(tsiVal) ? computeLimitModel(tsiVal, tsiTh, tsiState) : null },
+      desc: '(ES - VaR) / VaR', state: tsiState, limit: Number.isFinite(tsiVal) ? computeLimitModel(tsiVal, tsiTh, tsiState) : null,
+      // Rohwert (Betrag) + Schwellen fuer den Overview-Slider (homeOverview.js).
+      val: Number.isFinite(tsiVal) ? Math.abs(tsiVal) : null, thYellow: tsiTh.yellow, thRed: tsiTh.red },
     { label: 'Market Stress (MSD)', full: 'Market Stress Divergence', abs: null, rel: fmtRelPct(msdVal), dRel: null, dAbs: null,
-      desc: '(Adjusted - Historic ES) / Historic ES', state: msdState, limit: Number.isFinite(msdVal) ? computeLimitModel(msdVal, msdTh, msdState) : null },
+      desc: '(Adjusted - Historic ES) / Historic ES', state: msdState, limit: Number.isFinite(msdVal) ? computeLimitModel(msdVal, msdTh, msdState) : null,
+      val: Number.isFinite(msdVal) ? Math.abs(msdVal) : null, thYellow: msdTh.yellow, thRed: msdTh.red },
   ];
   cards.forEach((c) => { c.relDeltaStr = fmtPpSigned(c.dRel); c.absDeltaStr = fmtEurSigned(c.dAbs); });
 
@@ -713,6 +756,22 @@ export function renderCreditRiskDashboard() {
 
 // Loss-Charts (Histogramm + Tail, Tail-Zoom) — jetzt im Overview-Panel (panel-credit),
 // nicht im Dashboard. Rendert bei Overview-Open und wenn die Loss-Daten eintreffen.
+// TSI-/MSD-Panels (Credit-Risk-Trigger): je eigene Tabelle (aus dem Profit/Loss-Container
+// geklont -> Profit/Loss bleibt Quelle) + eigener Tail-Zoom-Chart. Aufruf beim Panel-Open
+// (bootstrapTriggers). Voraussetzung: "Calculate PL" gelaufen (Tabellen + Loss-Daten da).
+export function renderCreditTsiPanel() {
+  const src = document.getElementById('creditTsiTableContainer0');
+  const dst = document.getElementById('creditTsiTablePanel');
+  if (src && dst) dst.innerHTML = src.innerHTML;
+  try { renderCreditTailZoom('crTailZoomChartTsi'); } catch (e) { console.warn('[CreditTSI] tail zoom failed', e); }
+}
+export function renderCreditMsdPanel() {
+  const src = document.getElementById('creditMsdTableContainer0');
+  const dst = document.getElementById('creditMsdTablePanel');
+  if (src && dst) dst.innerHTML = src.innerHTML;
+  try { renderCreditTailZoom('crTailZoomChartMsd'); } catch (e) { console.warn('[CreditMSD] tail zoom failed', e); }
+}
+
 export function renderCreditOverviewCharts() {
   try { renderCreditLossDist(); } catch (e) { console.warn('[CreditOverview] loss dist failed', e); }
   try { renderCreditTailZoom(); } catch (e) { console.warn('[CreditOverview] tail zoom failed', e); }
