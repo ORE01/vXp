@@ -20,6 +20,8 @@ import { bootstrapIPC } from './core/bootstrap/bootstrapIPC.js';
 import { bootstrapBindings } from './core/bootstrap/bootstrapBindings.js';
 import { handleCustomerTableLayoutsData } from './features/CUSTOMER/tableLayouts/handleCustomerTableLayoutsData.js';
 import { renderCustomerCategoryPanel, initCustomerCategoryCrud } from './features/CUSTOMER_SETUP/customerCategoryPanel.js';
+import { initOverviewTilesPanel, initMarketRiskTilesPanel, initCreditRiskTilesPanel, handleCustomerOverviewTileSettingData } from './features/CUSTOMER_SETUP/overviewTilesPanel.js';
+import { initPortfolioDurationLimitsPanel, handleCustomerPortfolioDurationLimitData } from './features/CUSTOMER_SETUP/portfolioDurationLimitsPanel.js';
 import {
   handleCustomerMarketRiskIntervalOptions,
   initCustomerMarketRiskSave,
@@ -257,7 +259,15 @@ const {
     handleCSBaseData,
     handleCSScenarioData,
     handleCustomerTableLayoutsData,
-    handleCustomerProductCategorySetupData: renderCustomerCategoryPanel,
+    handleCustomerProductCategorySetupData: (rows) => {
+      // Feed the category-setup store (fixed-value exclusion for sensitivities)
+      // in addition to rendering the Customer-Setup category panel.
+      try { appState.setCategorySetupData?.(rows); }
+      catch (e) { console.warn('[CATEGORY STORE] set failed', e); }
+      renderCustomerCategoryPanel(rows);
+    },
+    handleCustomerOverviewTileSettingData,
+    handleCustomerPortfolioDurationLimitData,
     handleCustomerDefaultPortfolioData,
     handleScenarioDefinitionData,
     handleCustomerMarketRiskIntervalOptions,
@@ -310,6 +320,12 @@ const {
   // and wire the framework Add button (Edit buttons are wired on each render).
   renderCustomerCategoryPanel();
   initCustomerCategoryCrud();
+
+  // Customer Setup -> Portfolio -> Overview Tiles: render checkboxes + wire Save.
+  initOverviewTilesPanel();
+  initMarketRiskTilesPanel();
+  initCreditRiskTilesPanel();
+  initPortfolioDurationLimitsPanel();
 
   // Customer Setup -> Risk -> Market Risk -> Interval: wire the Save button.
   initCustomerMarketRiskSave();

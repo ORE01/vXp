@@ -272,3 +272,16 @@
 .reset-FiltersButton:hover  { filter: brightness(1.08); border-color: var(--border); }
 .reset-FiltersButton:active { transform: translateY(1px); }
 .reset-FiltersButton:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Portfolio filter indicator + reset in the side-menu header (above "Select
+   Portfolio"). The button carries the .reset-FiltersButton class, so it looks
+   exactly like the port table's reset button (funnel + red cross). Here we only
+   place it next to the title and toggle its visibility via [hidden]. */
+.portfolio-info .panel-title { display: inline-block; vertical-align: middle; }
+.tree-filter-flag {
+  vertical-align: middle;
+  margin-left: 8px;
+}
+/* Wins over .reset-FiltersButton's display:inline-flex (higher specificity),
+   so the [hidden] attribute actually hides it. */
+.tree-filter-flag[hidden] { display: none; }

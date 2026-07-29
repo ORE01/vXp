@@ -54,6 +54,12 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'CustomerMarketRiskSettingData':
       return handlers.handleCustomerMarketRiskSettingData?.(rows);
 
+    case 'CustomerOverviewTileSettingData':
+      return handlers.handleCustomerOverviewTileSettingData?.(rows);
+
+    case 'CustomerPortfolioDurationLimitData':
+      return handlers.handleCustomerPortfolioDurationLimitData?.(rows);
+
     case 'CustomerMarketRiskThresholdSettingData':
       return handlers.handleCustomerMarketRiskThresholdSettingData?.(rows);
 
@@ -211,6 +217,18 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
         handlers.handlePortfolioRiskSensitivitiesData(rows);
       } else {
         console.warn('[DATA ROUTER] handlePortfolioRiskSensitivitiesData missing');
+      }
+
+      return;
+    }
+
+    case 'ProductRiskSensitivitiesData': {
+      const rows = Array.isArray(data) ? data : [];
+
+      if (typeof handlers.handleProductRiskSensitivitiesData === 'function') {
+        handlers.handleProductRiskSensitivitiesData(rows);
+      } else {
+        console.warn('[DATA ROUTER] handleProductRiskSensitivitiesData missing');
       }
 
       return;

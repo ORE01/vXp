@@ -11,6 +11,24 @@
 
 import { appState } from '../../renderer.js';
 import { createContribDrill, scheduleHideConcMenu } from './SummaryBreakdown.js';
+import { applyColumnFilters } from '../CUSTOMER/tableLayouts/tableColumnFilters.js';
+
+// Header filters of the SELECT PORTFOLIO table (portTable0) must also drive the
+// performance/yield dashboard, so it follows the same portfolio filter.
+const PORT_TABLE_ID = 'portTable0';
+
+// Positions of the selected portfolio, narrowed by the active header filters.
+function getFilteredPositions(port) {
+  const all = (typeof appState.getAllPortfolioData === 'function')
+    ? (appState.getAllPortfolioData() || [])
+    : [];
+  const byPort = (Array.isArray(all) ? all : []).filter(r => {
+    const p = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
+    return !port || !p || p === port;
+  });
+  try { return applyColumnFilters(byPort, PORT_TABLE_ID); }
+  catch (e) { console.warn('[PERF DASH] applyColumnFilters failed', e); return byPort; }
+}
 
 // Standard-Drill (wie ueberall: Rechtsklick -> Menue "Positions / By Category / By Issuer /
 // ..." -> Detailtabelle mit Breadcrumb). Eigener Detail-/Menue-Container unter den Listen.
@@ -69,7 +87,7 @@ export function renderPerformanceDashboard() {
   // Portfolio-Yield LIVE aus den Positionen: Σ ytmPort / Σ Notional (nominalgewichtete
   // Kauf-Yield, ytmPort = ytm_BUY × Notional), konsistent mit der Home-Overview-Kachel.
   // Das ist NICHT der letzte Historic-RETURN — der gehoert in "Previous period".
-  const posRows = (typeof appState.getAllPortfolioData === 'function') ? (appState.getAllPortfolioData() || []) : [];
+  const posRows = getFilteredPositions(port);
   let sumYtmPort = 0, sumNotional = 0;
   for (const r of (Array.isArray(posRows) ? posRows : [])) {
     const p = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
@@ -125,7 +143,7 @@ function renderPerfAttribution(port) {
   const topEl = document.getElementById('perfTopList');
   const flopEl = document.getElementById('perfFlopList');
 
-  const rows = (typeof appState.getAllPortfolioData === 'function') ? (appState.getAllPortfolioData() || []) : [];
+  const rows = getFilteredPositions(port);
   const pos = (Array.isArray(rows) ? rows : []).filter(r => {
     const p = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
     return !port || !p || p === port;

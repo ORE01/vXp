@@ -49,7 +49,24 @@
   line-height: 1.2;
   color: var(--text-bright);
   font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+}
+
+/* KPIs with an absolute number now show the relative (large) with the absolute
+   below (small, muted). */
+.sens-kpi-value .sens-kpi-rel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sens-kpi-value .sens-kpi-abs {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 3px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -108,11 +125,21 @@
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(340px, 0.9fr);
   gap: 16px;
-  align-items: start;
+  /* Stretch so the details card matches the chart card height. */
+  align-items: stretch;
   min-width: 0;
 }
 
 .sens-view[hidden] {
+  display: none !important;
+}
+
+/* KPI cards: show only the ones belonging to the active sensitivity tab
+   (PV01 tab -> Total PV01 + Top IR Tenor; CPV01 -> Total CPV01 + Top Credit
+   Bucket; Vega -> Total Vega). Overrides the per-data inline display. */
+.sens-kpi-row[data-active-tab="pv01"]  .sens-kpi-card:not([data-sens-kpi-for="pv01"]),
+.sens-kpi-row[data-active-tab="cpv01"] .sens-kpi-card:not([data-sens-kpi-for="cpv01"]),
+.sens-kpi-row[data-active-tab="vega"]  .sens-kpi-card:not([data-sens-kpi-for="vega"]) {
   display: none !important;
 }
 
@@ -128,6 +155,16 @@
   padding: 14px;
   box-sizing: border-box;
   min-width: 0;
+  /* Column flow so the details container can flex-fill the card height and the
+     details card ends up exactly as tall as the chart card (grid stretch). */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Details table fills the remaining card height (= chart height) and scrolls. */
+#panel-sensitivities .sens-table-card .data-container {
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .sens-card-header {

@@ -12,12 +12,16 @@ import { installNameListsStore } from '../state/stores/nameListsStore.js';
 import { installCustomerReportsStore } from '../state/stores/customerReportsStore.js';
 import { installDataUpdatePipeline } from '../data/dataUpdatePipeline.js';
 import { installPortfolioRiskSensitivitiesStore } from '../state/stores/portfolioRiskSensitivitiesStore.js';
+import { installProductRiskSensitivitiesStore } from '../state/stores/productRiskSensitivitiesStore.js';
+import { installCategorySetupStore } from '../state/stores/categorySetupStore.js';
 
 export function bootstrapStores(appState) {
   installUIStateStore({ appState });
   installDropdownFilterEngine({ appState });
   installPortfolioDataStore({ appState });
   installPortfolioRiskSensitivitiesStore({ appState });
+  installProductRiskSensitivitiesStore({ appState });
+  installCategorySetupStore({ appState });
   installMarketRiskStore({ appState });
   installCreditRiskStore({ appState });
   installMarketDataStore({ appState });

@@ -83,7 +83,7 @@ function _bindCrLossContextDrill(canvas) {
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     try {
-      const chart = window.crLossDistChart;
+      const chart = window[canvas.id];
       if (!chart) return;
       const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])[0];
       if (!el) { scheduleHideConcMenu(); return; }
@@ -158,6 +158,11 @@ const BAR_RED = 'rgba(210,70,70,0.85)';
 const LINE_BLUE_LIGHT = 'rgba(120,175,225,0.95)';
 const BAR_BLUE_LIGHT = 'rgba(125,180,225,0.85)';
 const BAR_RED_LIGHT = 'rgba(235,150,150,0.85)';
+// Serie "Market": eigene Palette (nicht Blau wie Historic) -> Gruen fuer die
+// normalen Saeulen, Violett fuer die ES-Saeulen (>= VaR).
+const LINE_GREEN = 'rgba(40,150,85,0.95)';
+const BAR_GREEN = 'rgba(70,175,110,0.85)';
+const BAR_VIOLET = 'rgba(150,110,220,0.85)';
 function _crChartColor() {
   return (getComputedStyle(document.body).getPropertyValue('--text-primary') || '').trim() || '#333';
 }
@@ -195,10 +200,10 @@ function _crLegendOnClick(axis) {
 // LINKS: Loss-Histogramm (lossHistogramMain, RATING) mit Tail-Highlight + VaR/ES-Linien.
 // y = Frequency (log, da die Verteilung stark bei ~0 konzentriert ist). Tail-Bins
 // (Verlust >= VaR) rot. Vertikale VaR (solid) + ES (dashed) Linien.
-function renderCreditLossDist() {
-  const canvas = document.getElementById('crLossDistChart');
+function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating') {
+  const canvas = document.getElementById(canvasId);
   if (!canvas || !window.Chart) return;
-  _destroyCrChart('crLossDistChart');
+  _destroyCrChart(canvasId);
   const port = appState.getSelectedPortTableName?.();
   const all = (appState.getLossHistogram?.() || []).filter(r => String(r.port_name) === String(port));
   if (!all.length) { canvas.style.display = 'none'; return; }
@@ -241,11 +246,17 @@ function renderCreditLossDist() {
     // Rot ab dem Bin, DURCH DAS die VaR-Linie geht (nearestIdx) und alle rechts davon —
     // so ist die Saeule unter der VaR-Linie garantiert rot (Blau/Rot-Grenze = Linie).
     const varIdx = Number.isFinite(varPct) ? nearestIdx(varPct) : Infinity;
-    // "Market adjusted" (norm) in hellerem Blau/Rot -> von Historic unterscheidbar.
-    const isNorm = f.key === 'norm';
-    const barBlue = isNorm ? BAR_BLUE_LIGHT : BAR_BLUE;
-    const barRed = isNorm ? BAR_RED_LIGHT : BAR_RED;
-    const lineCol = isNorm ? LINE_BLUE_LIGHT : LINE_BLUE;
+    // Farben je Serie: Historic = Blau/Rot, "Market adjusted" (norm) = helleres
+    // Blau/Rot, "Market" = Gruen (normal) / Violett (ES-Saeulen >= VaR).
+    // barBlue = Saeule unter VaR, barRed = Saeule ab VaR (ES-Bereich).
+    let barBlue, barRed, lineCol;
+    if (f.key === 'market') {
+      barBlue = BAR_GREEN; barRed = BAR_VIOLET; lineCol = LINE_GREEN;
+    } else if (f.key === 'norm') {
+      barBlue = BAR_BLUE_LIGHT; barRed = BAR_RED_LIGHT; lineCol = LINE_BLUE_LIGHT;
+    } else {
+      barBlue = BAR_BLUE; barRed = BAR_RED; lineCol = LINE_BLUE;
+    }
     const colors = base.map((r, i) => (i >= varIdx ? barRed : barBlue));
     const lines = [];
     if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: lineCol, width: 2 });
@@ -261,8 +272,10 @@ function renderCreditLossDist() {
     };
     const steps = base.map(r => { const row = nearestLossRow(Number(r.bin_center) * 100); return row ? lossDefaultStep(issuersFromRank(row.ISSUER_RANK)) : null; });
     stepsByDs.push(steps);
-    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 22, hidden: di !== 0 };
+    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 22, hidden: f.key !== defaultKey };
   });
+  // Index der initial sichtbaren Serie -> passende VaR/ES-Linien (statt fix Dataset 0).
+  const defaultIdx = Math.max(0, CR_FLAG_SERIES.findIndex(f => f.key === defaultKey));
 
   const col = _crChartColor();
   canvas.width = Math.max(320, Math.floor((canvas.parentElement?.clientWidth || 540) - 28)); canvas.height = 300;
@@ -275,7 +288,7 @@ function renderCreditLossDist() {
       plugins: {
         legend: { display: true, position: 'top', labels: { color: col, boxWidth: 12, font: { size: 11 } }, onClick: _crLegendOnClick('v') },
         subtitle: { display: true, text: 'Tail red · VaR (solid) · ES (dashed)', color: col, align: 'start', font: { size: 10 } },
-        crLines: { v: lineMap[0] },
+        crLines: { v: lineMap[defaultIdx] },
         tooltip: { callbacks: { title: (c) => `Loss ${labels[c[0].dataIndex]}%`, label: (c) => `${c.dataset.label}: ${c.parsed.y}` } },
       },
       scales: {
@@ -286,7 +299,7 @@ function renderCreditLossDist() {
   });
   chart.$crLineMap = lineMap;
   chart.$crLossSteps = stepsByDs;
-  window.crLossDistChart = chart;
+  window[canvasId] = chart;
   _bindCrLossCanvasLeave(canvas);
   _bindCrLossContextDrill(canvas);
 }
@@ -773,7 +786,8 @@ export function renderCreditMsdPanel() {
 }
 
 export function renderCreditOverviewCharts() {
-  try { renderCreditLossDist(); } catch (e) { console.warn('[CreditOverview] loss dist failed', e); }
+  try { renderCreditLossDist('crLossDistChart', 'rating'); } catch (e) { console.warn('[CreditOverview] loss dist failed', e); }
+  try { renderCreditLossDist('crLossDistChartNorm', 'norm'); } catch (e) { console.warn('[CreditOverview] loss dist (norm) failed', e); }
   try { renderCreditTailZoom(); } catch (e) { console.warn('[CreditOverview] tail zoom failed', e); }
   try { renderCreditTailContributors(); } catch (e) { console.warn('[CreditOverview] tail contributors failed', e); }
   // KPI-Band der Loss-Distribution-Seite (Report) aus dem Credit-Dashboard-Modell spiegeln.

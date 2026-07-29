@@ -137,11 +137,26 @@
 .home-kpi-abs { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi--wide { grid-column: 1 / -1; }
 .home-kpi-lbl { font-size: 10.5px; color: var(--text-muted); }
+/* Sensitivitaets-Kachel ohne vorhandene Daten ("wenn vorhanden"): ausgeblendet.
+   Als Klasse (nicht Inline), damit die Kunden-Sichtbarkeit sauber kombiniert. */
+.home-tile-empty { display: none; }
+
+/* Value-Switch (Customer Setup): vertauscht gross/klein. Standard = .home-kpi-val
+   gross (absolut), .home-kpi-abs klein (relativ). Mit .home-tile-swap wird der
+   relative Wert gross und der absolute klein; order haelt den grossen Wert oben. */
+.home-kpi.home-tile-swap .home-kpi-abs { order: 0; font-size: 14px; font-weight: 600; color: var(--text-bright); }
+.home-kpi.home-tile-swap .home-kpi-val { order: 1; font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.home-kpi.home-tile-swap .home-kpi-lbl { order: 2; }
 
 /* Klickbare Overview-Kacheln: Notional/NAV -> Portfolio-Panel, Yield -> Yield-Panel. */
 .home-nav-link { cursor: pointer; }
+/* Portfolio-Kacheln/Chart: Hover-Rand in Portfolio-Blau. */
 .home-kpi.home-nav-link:hover,
-.home-chart-card.home-nav-link:hover { border-color: var(--accent); }
+.home-chart-card.home-nav-link:hover { border-color: #6C9BD1; }
+/* Credit-Risk-Kacheln (cr_*): Hover-Rand im Credit-Violett. */
+.home-kpi.home-nav-link[data-tile^="cr_"]:hover { border-color: #7A5C91; }
+/* Market-Risk-Kacheln (mkt_*): Hover-Rand im Market-Teal. */
+.home-kpi.home-nav-link[data-tile^="mkt_"]:hover { border-color: #2A7F7F; }
 .home-card-hero.home-nav-link:hover .home-hero-value { text-decoration: underline; text-underline-offset: 3px; }
 
 /* Beschriftung UEBER dem Chart, fett + hell fuer gute Lesbarkeit; das Paar
@@ -273,7 +288,9 @@
    Credit -> TSI/MSD-Panel. */
 #homeRiskSliders .rs-card,
 #homeCreditSliders .rs-card { cursor: pointer; }
-#homeRiskSliders .rs-card:hover,
+/* Portfolio-Karte: Hover-Rand IMMER Portfolio-Blau (nicht die je-Slider-Akzentfarbe). */
+#homeRiskSliders .rs-card:hover { border-color: #6C9BD1; }
+/* Credit-Karte: Hover-Rand in der Credit-Farbe. */
 #homeCreditSliders .rs-card:hover { border-color: var(--rs-accent, var(--accent)); }
 /* Fallback-Akzent (Marke), falls keine Ampelfarbe gesetzt ist. */
 .rs-card--ir { --rs-accent: #6C9BD1; }

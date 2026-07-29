@@ -358,6 +358,62 @@ function fillSensReportKpiBand() {
     : '';
 }
 
+// Σ NOTIONAL per CCY over the (filtered) holdings — denominator for the relative
+// KPIs (value / Σ Notional × 10000, bp). No fixed-value exclusion, to match the
+// portfolio-level "Interest Rate Sensitivity" (PV01/Notional×10000).
+export function notionalByCcyFromHoldings(holdings) {
+  const out = {};
+  (Array.isArray(holdings) ? holdings : []).forEach(h => {
+    const ccy = String(h.CCY ?? h.ccy ?? '').toUpperCase().trim();
+    const n = Number(h.NOTIONAL ?? h.notional);
+    if (ccy && Number.isFinite(n)) out[ccy] = (out[ccy] || 0) + n;
+  });
+  return out;
+}
+
+// Σ NAV over the (filtered) holdings — denominator for the interest-rate duration.
+export function navTotalFromHoldings(holdings) {
+  return (Array.isArray(holdings) ? holdings : []).reduce((s, h) => {
+    const n = Number(h.NAV ?? h.nav ?? h.NAV_BASE ?? h.nav_base);
+    return s + (Number.isFinite(n) ? n : 0);
+  }, 0);
+}
+
+// Relative = absolute / Σ Notional × 10000 = bp of price change per 1 bp move of
+// the rate/spread/vol (dimensionless, NOT a currency amount), per CCY curve.
+function buildRelByCcy(absByCcy = {}, notionalByCcy = {}) {
+  const rel = {};
+  Object.entries(absByCcy).forEach(([ccy, v]) => {
+    const nom = Number(notionalByCcy?.[ccy]);
+    rel[ccy] = (Number.isFinite(nom) && nom !== 0) ? (Number(v) / nom) * 10000 : 0;
+  });
+  return rel;
+}
+
+function formatRelByCcy(relByCcy = {}) {
+  const entries = Object.entries(relByCcy)
+    .filter(([, v]) => Number.isFinite(Number(v)) && Math.abs(Number(v)) > SENSITIVITY_ZERO_EPSILON)
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  if (!entries.length) return '—';
+  // bp of price (not a currency amount) — no CCY prefix; the currency is shown on
+  // the absolute line below. Multiple curves are joined in the same (sorted) order.
+  return entries.map(([, v]) => `${formatNumber(v, 2)} bp`).join(' | ');
+}
+
+// KPI value = relative (large) with the absolute below (small).
+function setKpiRelAbs(id, relText, absText) {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn('[SENS KPI] DOM element not found:', id);
+    return;
+  }
+  const esc = (s) => String(s ?? '').replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]));
+  el.innerHTML =
+    `<span class="sens-kpi-rel">${esc(relText)}</span>` +
+    `<span class="sens-kpi-abs">${esc(absText)}</span>`;
+}
+
 export function updateMarketRiskSensitivityKpis({
   rows = [],
   portName = null,
@@ -365,6 +421,8 @@ export function updateMarketRiskSensitivityKpis({
   cpv01SourceRows = null,
   cpv01CalcData = null,
   vegaCalcData = null,
+  notionalByCcy = {},
+  navTotal = 0,
 } = {}) {
   const selectedPort = normalizePortName(portName);
 
@@ -428,13 +486,24 @@ if (hasPV01Data) {
   const topIRTenorByCcy = formatTopTenorByCcy(irSensitivityByCcy);
   const hasVisiblePV01 = hasAnyNonZeroRiskByCcy(pv01ByCcy);
 
-  setText('SensTotalPV01', formatRiskByCcy(pv01ByCcy));
+  setKpiRelAbs(
+    'SensTotalPV01',
+    formatRelByCcy(buildRelByCcy(pv01ByCcy, notionalByCcy)),
+    formatRiskByCcy(pv01ByCcy)
+  );
   setText('SensTopIRTenor', topIRTenorByCcy);
+
+  // Modified duration (years) = |Σ PV01| / Σ NAV × 10000 — same as the Overview
+  // "Interest Rate Duration" slider.
+  const totalPv01 = Object.values(pv01ByCcy).reduce((s, v) => s + (Number(v) || 0), 0);
+  const duration = navTotal ? (Math.abs(totalPv01) / navTotal) * 10000 : 0;
+  setText('SensDuration', duration ? `${formatNumber(duration, 2)} y` : '—');
 
   // Pass 1/0 intentionally.
   // The KPI card visibility helper expects a numeric-like value, not a formatted text.
   setSensitivityKpiVisible('SensTotalPV01', hasVisiblePV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopIRTenor', hasVisiblePV01 ? 1 : 0);
+  setSensitivityKpiVisible('SensDuration', (hasVisiblePV01 && duration) ? 1 : 0);
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] PV01 by CCY updated:', {
@@ -447,6 +516,7 @@ if (hasPV01Data) {
 } else {
   clearAndHideSensitivityKpi('SensTotalPV01');
   clearAndHideSensitivityKpi('SensTopIRTenor');
+  clearAndHideSensitivityKpi('SensDuration');
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] PV01 hidden: no data for selected portfolio', {
@@ -482,11 +552,22 @@ if (hasCPV01Data) {
   const topCreditBucketByCcy = formatTopCreditBucketByCcy(groupedCPV01ByCcy);
   const hasVisibleCPV01 = hasAnyNonZeroRiskByCcy(cpv01ByCcy);
 
-  setText('SensTotalCPV01', formatRiskByCcy(cpv01ByCcy));
+  setKpiRelAbs(
+    'SensTotalCPV01',
+    formatRelByCcy(buildRelByCcy(cpv01ByCcy, notionalByCcy)),
+    formatRiskByCcy(cpv01ByCcy)
+  );
   setText('SensTopCreditBucket', topCreditBucketByCcy);
+
+  // Credit spread duration (years) = |Σ CPV01| / Σ NAV × 10000 — analog to the
+  // Overview "Credit Spread Duration" slider.
+  const totalCpv01 = Object.values(cpv01ByCcy).reduce((s, v) => s + (Number(v) || 0), 0);
+  const csDuration = navTotal ? (Math.abs(totalCpv01) / navTotal) * 10000 : 0;
+  setText('SensCsDuration', csDuration ? `${formatNumber(csDuration, 2)} y` : '—');
 
   setSensitivityKpiVisible('SensTotalCPV01', hasVisibleCPV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopCreditBucket', hasVisibleCPV01 ? 1 : 0);
+  setSensitivityKpiVisible('SensCsDuration', (hasVisibleCPV01 && csDuration) ? 1 : 0);
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] CPV01 by CCY updated:', {
@@ -500,6 +581,7 @@ if (hasCPV01Data) {
 } else {
   clearAndHideSensitivityKpi('SensTotalCPV01');
   clearAndHideSensitivityKpi('SensTopCreditBucket');
+  clearAndHideSensitivityKpi('SensCsDuration');
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] CPV01 hidden: no data for selected portfolio', {
@@ -523,7 +605,13 @@ if (hasCPV01Data) {
           ]);
         }, 0);
 
-    setText('SensTotalVega', formatNumber(totalVega, 0));
+    const nomEur = Number(notionalByCcy?.EUR) || 0;
+    const vegaRel = nomEur ? (totalVega / nomEur) * 10000 : 0;
+    setKpiRelAbs(
+      'SensTotalVega',
+      vegaRel ? `${formatNumber(vegaRel, 2)} bp` : '—',
+      formatNumber(totalVega, 0)
+    );
     setSensitivityKpiVisible('SensTotalVega', totalVega);
 
     setSensitivityTabGroupVisible(

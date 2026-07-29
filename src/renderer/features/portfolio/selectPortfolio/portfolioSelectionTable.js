@@ -42,6 +42,7 @@ import {
 import {
   clearColumnFilters,
   applyColumnFilters,
+  hasActiveColumnFilters,
 } from '../../CUSTOMER/tableLayouts/tableColumnFilters.js';
 
 // The active aggregate renderer for the "filtered:" summary box.
@@ -79,24 +80,43 @@ function updateFilteredAgg(index) {
   renderFilteredAgg(filteredRows, index, lastPortName);
 }
 
+// Reflect the port table's filter state on the left tree: show the funnel-with-
+// red-cross flag next to the "Portfolio" trigger whenever a header filter is set.
+function updatePortFilterFlag() {
+  const flag = document.getElementById('portFilterFlag');
+  if (!flag) return;
+  flag.hidden = !hasActiveColumnFilters(TABLE_ID);
+}
+
+function clearAllPortFilters() {
+  clearColumnFilters(TABLE_ID);
+
+  // Re-run the full pipeline so the analyse sections reset to the full
+  // portfolio too (not just the table + agg box).
+  const index = lastPortRender?.index ?? 0;
+  if (typeof appState.handlePortTable === 'function') {
+    appState.handlePortTable(appState.getAllPortfolioData?.() || [], index);
+  } else if (lastPortRender) {
+    renderPortTableOnly(lastPortRender.rows, index);
+    updateFilteredAgg(index);
+  }
+}
+
 function bindPortResetFiltersOnce() {
+  // Toolbar reset button in the SELECT PORTFOLIO panel.
   const btn = document.getElementById('portResetFiltersButton');
-  if (!btn || btn.dataset.tcfResetBound === '1') return;
-  btn.dataset.tcfResetBound = '1';
+  if (btn && btn.dataset.tcfResetBound !== '1') {
+    btn.dataset.tcfResetBound = '1';
+    btn.addEventListener('click', clearAllPortFilters);
+  }
 
-  btn.addEventListener('click', () => {
-    clearColumnFilters(TABLE_ID);
-
-    // Re-run the full pipeline so the analyse sections reset to the full
-    // portfolio too (not just the table + agg box).
-    const index = lastPortRender?.index ?? 0;
-    if (typeof appState.handlePortTable === 'function') {
-      appState.handlePortTable(appState.getAllPortfolioData?.() || [], index);
-    } else if (lastPortRender) {
-      renderPortTableOnly(lastPortRender.rows, index);
-      updateFilteredAgg(index);
-    }
-  });
+  // Side-menu header flag: acts as both an active-filter indicator and a
+  // clear-all-filters button.
+  const flag = document.getElementById('portFilterFlag');
+  if (flag && flag.dataset.tcfResetBound !== '1') {
+    flag.dataset.tcfResetBound = '1';
+    flag.addEventListener('click', clearAllPortFilters);
+  }
 }
 
 const pf = (v) => {
@@ -120,6 +140,7 @@ const safeDiv = (num, den) => (
 function renderPortTableOnly(portData, index) {
   lastPortRender = { rows: portData, index };
   bindPortResetFiltersOnce();
+  updatePortFilterFlag();
 
   renderConfigurableTable({
     tableId: TABLE_ID,

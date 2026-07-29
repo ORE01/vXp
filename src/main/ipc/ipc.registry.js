@@ -42,6 +42,26 @@ module.exports = [
   },
 
   {
+    name: 'customerOverviewTiles',
+    register: require('./handlers/customerOverviewTiles.handlers'),
+    getCtx: ({ ipcMain, dbApi, refreshTable }) => ({
+      ipcMain,
+      dbApi,
+      refreshTable,
+    }),
+  },
+
+  {
+    name: 'customerPortfolioDurationLimits',
+    register: require('./handlers/customerPortfolioDurationLimits.handlers'),
+    getCtx: ({ ipcMain, dbApi, refreshTable }) => ({
+      ipcMain,
+      dbApi,
+      refreshTable,
+    }),
+  },
+
+  {
     name: 'ratesActive',
     register: require('./handlers/ratesActive.handlers'),
     getCtx: ({ ipcMain, dbApi, refreshTable }) => ({

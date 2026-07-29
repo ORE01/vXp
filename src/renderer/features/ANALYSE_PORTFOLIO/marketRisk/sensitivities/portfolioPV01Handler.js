@@ -3,7 +3,52 @@
 import createBarChart from '../../../../charts/BarChart.js';
 import { getIrSensitivityColor } from '../../../../utils/colors.js';
 
-import { updateMarketRiskSensitivityKpis } from './marketRiskSensitivityKpis.js';
+import {
+  updateMarketRiskSensitivityKpis,
+  notionalByCcyFromHoldings,
+  navTotalFromHoldings,
+} from './marketRiskSensitivityKpis.js';
+import { applyColumnFilters } from '../../../CUSTOMER/tableLayouts/tableColumnFilters.js';
+import {
+  createContribDrill,
+  bindRightClickDrill,
+  scheduleHideConcMenu,
+} from '../../SummaryBreakdown.js';
+import { makeSortableDetailsTable } from './detailsTableSort.js';
+
+// Table id of the SELECT PORTFOLIO table whose per-column header filters drive
+// the analyse sections; mirror it here so sensitivities follow the same filter.
+const PORT_TABLE_ID = 'portTable0';
+
+// Right-click drill on the PV01 bars: bar (CCY + tenor) -> contributing products.
+const _pv01DrillCfg = {
+  detailId: 'pv01DrillDetail',
+  titleId: 'pv01DrillDetailTitle',
+  tableId: 'pv01DrillDetailTable',
+  closeId: 'pv01DrillDetailClose',
+  menuId: 'pv01DrillCardMenu',
+  valueType: '__PV01',
+  valueLabel: 'PV01',
+  infoCols: [
+    { key: 'ISSUER', label: 'Issuer' },
+    { key: 'RATINGres', label: 'Rating' },
+  ],
+};
+const pv01Drill = createContribDrill({ var: _pv01DrillCfg, es: _pv01DrillCfg });
+
+// Per-(product, tenor, ccy) contribution rows for the current render, fed to the drill.
+let _pv01DrillRows = [];
+
+// Hide/clear the drill detail table + menu (e.g. on portfolio switch / re-render),
+// so it never lingers with stale values.
+function resetPv01Drill() {
+  const d = document.getElementById('pv01DrillDetail');
+  if (d) d.style.display = 'none';
+  const t = document.getElementById('pv01DrillDetailTable');
+  if (t) t.innerHTML = '';
+  const m = document.getElementById('pv01DrillCardMenu');
+  if (m) m.style.display = 'none';
+}
 
 
 let PV01Chart;
@@ -17,11 +62,15 @@ let PV01RenderToken = 0;
  * - This handler reads from the store.
  * - This handler filters by active portfolio + RISK_TYPE = PV01.
  */
-export function handleIRSensData(appState, forcedPortName = null) {
+export function handleIRSensData(appState, forcedPortName = null, holdingsOverride = null) {
   if (!appState) {
     console.warn('[IR SENS] skipped render: appState missing');
     return;
   }
+
+  // Reset the drill detail on every (re-)render so it doesn't show stale rows
+  // after a portfolio switch / filter change.
+  resetPv01Drill();
 
   const rawPortName =
     forcedPortName ||
@@ -77,23 +126,62 @@ if (!selectedPort) {
 //   ],
 // });
 
-const pv01Rows = riskRowsAll.filter(r =>
-  normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
-  String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim() === 'PV01'
+// -------------------------------------------------------------------------
+// PREFERRED PATH: reconstruct PV01 from per-product per-unit sensitivities
+// times the CURRENTLY FILTERED holdings, so the portfolio filter (and the
+// fixed-value-category exclusion) flow through to the sensitivities view.
+// Falls back to the legacy aggregated PortfolioRiskSensitivities store when
+// the product table or filtered holdings are not available.
+// -------------------------------------------------------------------------
+let calcData = null;
+
+const productSens = appState.getProductRiskSensitivitiesData?.() || [];
+
+// Holdings to reconstruct from: the header-filtered set passed by the
+// orchestrator, or — for other callers — the port data re-filtered by the
+// active header filters, so the portfolio filter always flows through.
+const holdings = Array.isArray(holdingsOverride)
+  ? holdingsOverride
+  : applyColumnFilters(appState.getFilteredPortData?.() || [], PORT_TABLE_ID);
+
+// TRADE_IDs of the filtered holdings — narrows both the legacy fallback rows
+// and the per-trade PRS rows behind the KPIs, so everything follows the filter.
+const filteredTradeIds = new Set(
+  (Array.isArray(holdings) ? holdings : [])
+    .map(h => String(h.TRADE_ID ?? h.trade_id ?? '').trim())
+    .filter(Boolean)
 );
+
+if (productSens.length && holdings.length) {
+  calcData = calculateIRSensitivityFromHoldings(
+    holdings,
+    productSens,
+    selectedPort,
+    appState
+  );
+}
+
+if (!calcData || !calcData.filteredRowsCount) {
+  // Legacy fallback: per-portfolio PV01 rows, narrowed to the filtered holdings'
+  // TRADE_IDs so the fallback chart also follows the filter.
+  let pv01Rows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
+    String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim() === 'PV01'
+  );
+
+  if (filteredTradeIds.size) {
+    pv01Rows = pv01Rows.filter(r =>
+      filteredTradeIds.has(String(r.TRADE_ID ?? r.trade_id ?? '').trim())
+    );
+  }
 
   if (!Array.isArray(pv01Rows) || pv01Rows.length === 0) {
     console.warn('[IR SENS] no PV01 rows for selected portfolio', {
       selectedPort,
       storeRows: riskRowsAll.length,
       availablePorts,
-      availableRiskTypes: [
-        ...new Set(
-          riskRowsAll
-            .map(r => String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim())
-            .filter(Boolean)
-        ),
-      ],
+      productSensRows: productSens.length,
+      holdings: holdings.length,
     });
 
     clearPV01Chart();
@@ -102,20 +190,12 @@ const pv01Rows = riskRowsAll.filter(r =>
     return;
   }
 
-
-  const calcData = calculateIRSensitivity(pv01Rows, selectedPort);
+  calcData = calculateIRSensitivity(pv01Rows, selectedPort);
+}
 
   if (!calcData.filteredRowsCount) {
     console.warn('[IR SENS] skipped render: no usable PV01 rows', {
       selectedPort,
-      inputRows: pv01Rows.length,
-      firstRow: pv01Rows[0],
-      uniqueCcys: [
-        ...new Set(
-          pv01Rows.map(r => String(r.CCY ?? r.ccy ?? '').toUpperCase().trim())
-        ),
-      ],
-      sampleKeys: pv01Rows[0] ? Object.keys(pv01Rows[0]) : [],
     });
 
     clearPV01Chart();
@@ -124,17 +204,143 @@ const pv01Rows = riskRowsAll.filter(r =>
     return;
   }
 
-  const portfolioRows = riskRowsAll.filter(r =>
-  normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort
-);
+  // KPIs must follow the same filter (PRS is per TRADE_ID; fixed-value trades are
+  // already 0 in PRS, so filtered totals stay consistent with the charts).
+  let portfolioRows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort
+  );
+
+  if (filteredTradeIds.size) {
+    portfolioRows = portfolioRows.filter(r =>
+      filteredTradeIds.has(String(r.TRADE_ID ?? r.trade_id ?? '').trim())
+    );
+  }
 
   updateMarketRiskSensitivityKpis({
     rows: portfolioRows,
     portName: selectedPort,
     pv01CalcData: calcData,
+    notionalByCcy: notionalByCcyFromHoldings(holdings),
+    navTotal: navTotalFromHoldings(holdings),
   });
 
+  // Feed the right-click drill (empty on the legacy fallback path).
+  _pv01DrillRows = Array.isArray(calcData.drillRows) ? calcData.drillRows : [];
+
   return renderIRSensTableAndChart(calcData, selectedPort);
+}
+
+/**
+ * Reconstruct PV01-by-CCY from the currently filtered holdings and the
+ * per-product per-unit sensitivities (ProductRiskSensitivities).
+ *
+ * Scale matches the Python trade_sensitivity_scaler:
+ *   PV01 = VALUE_PER_UNIT * NOTIONAL / 10000
+ *
+ * Fixed-value-category holdings are excluded to mirror the Python valuation,
+ * which zeroes those trades in PortfolioRiskSensitivities.
+ *
+ * Returns the same shape as calculateIRSensitivity(), so the existing
+ * render/KPI code path is unchanged.
+ */
+function calculateIRSensitivityFromHoldings(holdings, productSens, portName, appState) {
+  const selectedPort = normalizePortfolioName(portName);
+  const PV01_SCALE = 10000;
+
+  const fixedValueNames =
+    (typeof appState?.getFixedValueCategoryNames === 'function'
+      ? appState.getFixedValueCategoryNames()
+      : null) || new Set();
+
+  // PROD_ID -> [{ tenor, ccy, vpu }] for RISK_TYPE = PV01.
+  const pv01ByProd = new Map();
+
+  productSens.forEach(r => {
+    const riskType = String(r.RISK_TYPE ?? r.risk_type ?? '').toUpperCase().trim();
+    if (riskType !== 'PV01') return;
+
+    const prodId = String(r.PROD_ID ?? r.prod_id ?? '').trim();
+    if (!prodId) return;
+
+    const tenor = parseInt(r.TENOR ?? r.tenor, 10);
+    if (!Number.isFinite(tenor) || tenor < 1 || tenor > 30) return;
+
+    const vpu = parseFloat(r.VALUE_PER_UNIT ?? r.value_per_unit);
+    if (!Number.isFinite(vpu)) return;
+
+    const ccy = String(r.CCY ?? r.ccy ?? 'UNKNOWN').toUpperCase().trim() || 'UNKNOWN';
+
+    if (!pv01ByProd.has(prodId)) pv01ByProd.set(prodId, []);
+    pv01ByProd.get(prodId).push({ tenor, ccy, vpu });
+  });
+
+  const irSensitivityByCcy = {};
+  const pv01TotalByCcy = {};
+  const pv01PartialPctByCcy = {};
+
+  let contributions = 0;
+
+  // Drill rows keyed by product+tenor+ccy (enriched with the holding attributes).
+  const drillByKey = new Map();
+
+  holdings.forEach(row => {
+    // Defensive: if a holding carries a portfolio name, keep only the selected one.
+    const rowPort = normalizePortfolioName(row.port_name ?? row.PORT_NAME);
+    if (rowPort && selectedPort && rowPort !== selectedPort) return;
+
+    // Exclude fixed-value-category holdings (mirrors Python zeroing).
+    const category = String(row.CATEGORY ?? row.category ?? '').trim();
+    if (category && fixedValueNames.has(category)) return;
+
+    const prodId = String(row.PROD_ID ?? row.prod_id ?? '').trim();
+    if (!prodId) return;
+
+    const notional = parseFloat(row.NOTIONAL ?? row.notional);
+    if (!Number.isFinite(notional) || notional === 0) return;
+
+    const sensList = pv01ByProd.get(prodId);
+    if (!sensList || !sensList.length) return;
+
+    sensList.forEach(({ tenor, ccy, vpu }) => {
+      const contrib = (vpu * notional) / PV01_SCALE;
+
+      if (!irSensitivityByCcy[ccy]) {
+        irSensitivityByCcy[ccy] = Array(30).fill(0);
+      }
+      irSensitivityByCcy[ccy][tenor - 1] += contrib;
+      contributions += 1;
+
+      const key = `${prodId}|${tenor}|${ccy}`;
+      let dr = drillByKey.get(key);
+      if (!dr) {
+        dr = { ...row, PROD_ID: prodId, CCY: ccy, __TENOR: tenor, __PV01: 0 };
+        drillByKey.set(key, dr);
+      }
+      dr.__PV01 += contrib;
+    });
+  });
+
+  Object.entries(irSensitivityByCcy).forEach(([ccy, tenorValues]) => {
+    const total = tenorValues.reduce((sum, value) => sum + value, 0);
+    pv01TotalByCcy[ccy] = total;
+    pv01PartialPctByCcy[ccy] = tenorValues.map(value =>
+      total ? Number(((value / total) * 100).toFixed(2)) : 0
+    );
+  });
+
+  return {
+    irSensitivityByCcy,
+    pv01TotalByCcy,
+    pv01PartialPctByCcy,
+    filteredRowsCount: contributions,
+    // Magnitude value so renderConcView (sorts b.val - a.val) puts the largest
+    // PV01 position first — consistent with the other contribution drills.
+    drillRows: [...drillByKey.values()].map(r => ({ ...r, __PV01: Math.abs(r.__PV01) })),
+
+    irSensitivitySum: null,
+    portPV01: null,
+    pv01PartialPct: null,
+  };
 }
 
 function normalizePortfolioName(portName) {
@@ -292,18 +498,24 @@ function renderIRSensTableAndChart(data, portName) {
 
         const tenorCell = row.insertCell();
         tenorCell.textContent = tenor;
+        tenorCell.dataset.sortValue = String(index + 1);
 
         const pv01Cell = row.insertCell();
         pv01Cell.textContent = Number(sum).toLocaleString('de-DE', {
           maximumFractionDigits: 0,
         });
+        pv01Cell.dataset.sortValue = String(Math.abs(Number(sum)));
 
         const weightCell = row.insertCell();
         weightCell.textContent = `${Number(weight).toFixed(2)}%`;
+        weightCell.dataset.sortValue = String(Math.abs(Number(weight)));
       });
     });
 
   wrapper.appendChild(table);
+
+  // Sortable columns (click a header; ▲/▼). Default: PV01 magnitude, largest first.
+  makeSortableDetailsTable(table, { defaultCol: 2, defaultDir: -1 });
 
   mountPV01Details(wrapper);
 
@@ -462,6 +674,36 @@ function createPV01Chart({
     return;
   }
 
+  // ---- Right-click drill: bar (CCY dataset + tenor label) -> contributing products.
+  // Datasets are sorted by CCY (same order as fullDatasets), so datasetIndex -> CCY.
+  const drillCcys = Object.keys(irSensitivityByCcy).sort((a, b) => a.localeCompare(b));
+  PV01Chart.$stepsByDs = {};
+  drillCcys.forEach((ccy, dsIndex) => {
+    PV01Chart.$stepsByDs[dsIndex] = labels.map((lbl) => {
+      const tenor = parseInt(lbl, 10);
+      return {
+        colKey: '__PV01BUCKET',
+        value: `${ccy} ${lbl}`,
+        label: 'Tenor',
+        match: (r) =>
+          String(r.CCY ?? '').toUpperCase().trim() === ccy &&
+          Number(r.__TENOR) === tenor,
+      };
+    });
+  });
+
+  try { pv01Drill.setData(_pv01DrillRows); }
+  catch (e) { console.warn('[PV01 DRILL] setData failed', e); }
+
+  // Self-guards against double-binding on the same canvas across re-renders.
+  bindRightClickDrill(canvas, () => PV01Chart, (el, ch, e) =>
+    pv01Drill.hover('var', { native: e }, [el], ch.$stepsByDs?.[el.datasetIndex] || []));
+
+  if (canvas.dataset.pv01LeaveBound !== '1') {
+    canvas.dataset.pv01LeaveBound = '1';
+    canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+  }
+
   // console.log('[PV01 CHART] rendered by CCY (trimmed)', {
   //   canvasId,
   //   startLabel: labels[0],
@@ -486,17 +728,17 @@ function mountPV01Details(wrapper) {
   //   tableRows: wrapper.querySelectorAll('tr').length,
   // });
 
-  // Hard reset, damit kein altes CSS/Layout die Tabelle verschluckt
+  // Height comes from the flex layout: the container flex-fills the card, which is
+  // stretched to the chart height (see marketRiskSensitivities.css); it scrolls
+  // internally. No fixed height here, so it always matches the chart.
   target.innerHTML = '';
   target.style.display = 'block';
-  target.style.minHeight = '120px';
-  target.style.height = 'auto';
-  target.style.overflow = 'visible';
+  target.style.overflowY = 'auto';
+  target.style.overflowX = 'auto';
   target.style.padding = '8px';
 
   wrapper.style.display = 'block';
   wrapper.style.width = '100%';
-  wrapper.style.height = 'auto';
   wrapper.style.overflow = 'visible';
 
   const table = wrapper.querySelector('table');

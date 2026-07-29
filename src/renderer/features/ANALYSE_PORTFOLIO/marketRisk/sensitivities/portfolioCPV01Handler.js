@@ -7,7 +7,51 @@ import createBarChart from '../../../../charts/BarChart.js';
 
 import { formatNumberWithGrouping } from '../../../../utils/tableCellFormats.js';
 
-import { updateMarketRiskSensitivityKpis } from './marketRiskSensitivityKpis.js';
+import {
+  updateMarketRiskSensitivityKpis,
+  notionalByCcyFromHoldings,
+  navTotalFromHoldings,
+} from './marketRiskSensitivityKpis.js';
+import { applyColumnFilters } from '../../../CUSTOMER/tableLayouts/tableColumnFilters.js';
+import {
+  createContribDrill,
+  bindRightClickDrill,
+  scheduleHideConcMenu,
+} from '../../SummaryBreakdown.js';
+import { wireSortableDetails } from './detailsTableSort.js';
+
+// Table id of the SELECT PORTFOLIO table whose header filters drive the
+// analyse sections; mirror it so CPV01 follows the same portfolio filter.
+const PORT_TABLE_ID = 'portTable0';
+
+// Right-click drill on the CPV01 bars: bar (CCY + rating bucket) -> products.
+const _cpv01DrillCfg = {
+  detailId: 'cpv01DrillDetail',
+  titleId: 'cpv01DrillDetailTitle',
+  tableId: 'cpv01DrillDetailTable',
+  closeId: 'cpv01DrillDetailClose',
+  menuId: 'cpv01DrillCardMenu',
+  valueType: '__CPV01',
+  valueLabel: 'CPV01',
+  infoCols: [
+    { key: 'ISSUER', label: 'Issuer' },
+    { key: 'RATINGres', label: 'Rating' },
+  ],
+};
+const cpv01Drill = createContribDrill({ var: _cpv01DrillCfg, es: _cpv01DrillCfg });
+
+// Per-(product, bucket, ccy) contribution rows for the current render.
+let _cpv01DrillRows = [];
+
+// Hide/clear the drill detail table + menu (e.g. on portfolio switch / re-render).
+function resetCpv01Drill() {
+  const d = document.getElementById('cpv01DrillDetail');
+  if (d) d.style.display = 'none';
+  const t = document.getElementById('cpv01DrillDetailTable');
+  if (t) t.innerHTML = '';
+  const m = document.getElementById('cpv01DrillCardMenu');
+  if (m) m.style.display = 'none';
+}
 
 let CPV01Chart;
 
@@ -81,11 +125,14 @@ function sortCreditBuckets(a, b) {
   return String(a).localeCompare(String(b));
 }
 
-export function handleCSSensData(appState, forcedPortName = null) {
+export function handleCSSensData(appState, forcedPortName = null, holdingsOverride = null) {
   if (!appState) {
     console.warn('[CP SENS] skipped render: appState missing');
     return;
   }
+
+  // Reset the drill detail on every (re-)render (avoid stale rows after switch/filter).
+  resetCpv01Drill();
 
   const rawPortName =
     forcedPortName ||
@@ -132,26 +179,63 @@ export function handleCSSensData(appState, forcedPortName = null) {
   //   riskTypes: availableRiskTypes,
   // });
 
-  const cpv01Rows = riskRowsAll.filter(r =>
-    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
-    normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'CPV01'
+  // Preferred: reconstruct CPV01 from per-product per-unit sensitivities times
+  // the header-filtered holdings, so the portfolio filter flows through.
+  // Fallback: legacy aggregated PortfolioRiskSensitivities rows.
+  let calcData = null;
+
+  const productSens = appState.getProductRiskSensitivitiesData?.() || [];
+  const holdings = Array.isArray(holdingsOverride)
+    ? holdingsOverride
+    : applyColumnFilters(appState.getFilteredPortData?.() || [], PORT_TABLE_ID);
+
+  // TRADE_IDs of the filtered holdings — narrows both the legacy fallback rows
+  // and the per-trade PRS rows behind the KPIs, so everything follows the filter.
+  const filteredTradeIds = new Set(
+    (Array.isArray(holdings) ? holdings : [])
+      .map(h => String(h.TRADE_ID ?? h.trade_id ?? '').trim())
+      .filter(Boolean)
   );
 
-  if (!Array.isArray(cpv01Rows) || cpv01Rows.length === 0) {
-    console.warn('[CP SENS] no CPV01 rows for selected portfolio', {
+  if (productSens.length && holdings.length) {
+    calcData = calculateCreditSensitivityFromHoldings(
+      holdings,
+      productSens,
       selectedPort,
-      storeRows: riskRowsAll.length,
-      availablePorts,
-      availableRiskTypes,
-    });
-
-    clearCPV01Chart();
-    clearCPV01Details();
-
-    return;
+      appState
+    );
   }
 
-  const calcData = calculateCreditSensitivity(cpv01Rows, selectedPort);
+  if (!calcData || !calcData.filteredRowsCount) {
+    let cpv01Rows = riskRowsAll.filter(r =>
+      normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
+      normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'CPV01'
+    );
+
+    if (filteredTradeIds.size) {
+      cpv01Rows = cpv01Rows.filter(r =>
+        filteredTradeIds.has(String(r.TRADE_ID ?? r.trade_id ?? '').trim())
+      );
+    }
+
+    if (!Array.isArray(cpv01Rows) || cpv01Rows.length === 0) {
+      console.warn('[CP SENS] no CPV01 rows for selected portfolio', {
+        selectedPort,
+        storeRows: riskRowsAll.length,
+        availablePorts,
+        availableRiskTypes,
+        productSensRows: productSens.length,
+        holdings: holdings.length,
+      });
+
+      clearCPV01Chart();
+      clearCPV01Details();
+
+      return;
+    }
+
+    calcData = calculateCreditSensitivity(cpv01Rows, selectedPort, holdings);
+  }
 
   const hasAnyCPV01 =
     Object.values(calcData.cpv01TotalByCcy || {}).some(value => {
@@ -172,9 +256,17 @@ export function handleCSSensData(appState, forcedPortName = null) {
     return;
   }
 
-  const portfolioRows = riskRowsAll.filter(r =>
+  // KPIs must follow the same filter (PRS is per TRADE_ID; fixed-value trades are
+  // already 0 in PRS, so filtered totals stay consistent with the charts).
+  let portfolioRows = riskRowsAll.filter(r =>
     normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort
   );
+
+  if (filteredTradeIds.size) {
+    portfolioRows = portfolioRows.filter(r =>
+      filteredTradeIds.has(String(r.TRADE_ID ?? r.trade_id ?? '').trim())
+    );
+  }
 
   updateMarketRiskSensitivityKpis({
     rows: portfolioRows,
@@ -185,18 +277,28 @@ export function handleCSSensData(appState, forcedPortName = null) {
       sortedCPV01ByCcy: calcData.sortedCPV01ByCcy,
       filteredRowsCount: calcData.filteredRowsCount,
     },
+    notionalByCcy: notionalByCcyFromHoldings(holdings),
+    navTotal: navTotalFromHoldings(holdings),
   });
+
+  // Feed the right-click drill (empty on the legacy fallback path).
+  _cpv01DrillRows = Array.isArray(calcData.drillRows) ? calcData.drillRows : [];
 
   return renderCPV01TableAndChart(calcData, selectedPort);
 }
 
-function calculateCreditSensitivity(rows, portName) {
+function calculateCreditSensitivity(rows, portName, holdings = []) {
   const selectedPort = normalizePortfolioName(portName);
 
-  // IMPORTANT:
-  // Do NOT filter to EUR.
-  // Do NOT aggregate different CCYs into one CPV01.
-  // CPV01 belongs to a credit spread curve/CCY: EUR CPV01, USD CPV01, JPY CPV01, ...
+  // Join the per-trade PRS rows to the holdings (by TRADE_ID) so we can bucket by
+  // the product's RESOLVED rating (RATINGres) instead of the issuer base rating
+  // that Python stored, and enrich the drill rows with product attributes.
+  const holdingByTrade = new Map(
+    (Array.isArray(holdings) ? holdings : []).map(h =>
+      [String(h.TRADE_ID ?? h.trade_id ?? '').trim(), h])
+  );
+
+  // IMPORTANT: do NOT aggregate different CCYs into one CPV01.
   const filteredRows = rows.filter(r => {
     const value = Number(
       r.VALUE_BASE ?? r.value_base ?? r.VALUE_LOCAL ?? r.value_local ?? 0
@@ -207,37 +309,44 @@ function calculateCreditSensitivity(rows, portName) {
 
   const groupedCPV01ByCcy = {};
   const cpv01TotalByCcy = {};
+  const drillByKey = new Map();
 
   filteredRows.forEach(r => {
     const ccy = String(r.CCY ?? r.ccy ?? 'UNKNOWN')
       .toUpperCase()
       .trim() || 'UNKNOWN';
 
-    const bucket = normalizeCreditBucket(
-      r.RISK_FACTOR_ID ??
-      r.risk_factor_id ??
-      r.RATING ??
-      r.rating ??
-      r.TENOR ??
-      r.tenor ??
-      'UNKNOWN'
+    const tradeId = String(r.TRADE_ID ?? r.trade_id ?? '').trim();
+    const h = holdingByTrade.get(tradeId) || {};
+
+    // Resolved product rating first; only fall back to the stored issuer bucket
+    // when no resolved rating is available (never use issuer base as resolved).
+    const resolved = normalizeCreditBucket(
+      h.RATINGres ?? h.ratingres ?? h.RATING_PROD ?? h.rating_prod ?? ''
     );
+    const storedBucket = normalizeCreditBucket(
+      r.RISK_FACTOR_ID ?? r.risk_factor_id ?? r.RATING ?? r.rating ?? r.TENOR ?? r.tenor ?? 'UNKNOWN'
+    );
+    const bucket = (resolved && resolved !== 'UNKNOWN') ? resolved : storedBucket;
 
     const value = Number(
       r.VALUE_BASE ?? r.value_base ?? r.VALUE_LOCAL ?? r.value_local ?? 0
     );
 
-    if (!bucket || !Number.isFinite(value) || value === 0) return;
+    if (!bucket || bucket === 'UNKNOWN' || !Number.isFinite(value) || value === 0) return;
 
-    if (!groupedCPV01ByCcy[ccy]) {
-      groupedCPV01ByCcy[ccy] = {};
+    if (!groupedCPV01ByCcy[ccy]) groupedCPV01ByCcy[ccy] = {};
+    groupedCPV01ByCcy[ccy][bucket] = (groupedCPV01ByCcy[ccy][bucket] || 0) + value;
+    cpv01TotalByCcy[ccy] = (cpv01TotalByCcy[ccy] || 0) + value;
+
+    const prodId = String(h.PROD_ID ?? h.prod_id ?? '').trim();
+    const key = `${prodId || tradeId}|${bucket}|${ccy}`;
+    let dr = drillByKey.get(key);
+    if (!dr) {
+      dr = { ...h, PROD_ID: prodId, CCY: ccy, __BUCKET: bucket, __CPV01: 0 };
+      drillByKey.set(key, dr);
     }
-
-    groupedCPV01ByCcy[ccy][bucket] =
-      (groupedCPV01ByCcy[ccy][bucket] || 0) + value;
-
-    cpv01TotalByCcy[ccy] =
-      (cpv01TotalByCcy[ccy] || 0) + value;
+    dr.__CPV01 += value;
   });
 
   const sortedCPV01ByCcy = Object.fromEntries(
@@ -250,29 +359,134 @@ function calculateCreditSensitivity(rows, portName) {
     })
   );
 
-  // console.log('[CP SENS] RESULT BY CCY:', {
-  //   selectedPort,
-  //   inputRows: rows.length,
-  //   filteredRows: filteredRows.length,
-  //   cpv01TotalByCcy,
-  //   groupedCPV01ByCcy,
-  //   sortedCPV01ByCcy,
-  //   uniqueCcys: [
-  //     ...new Set(
-  //       rows.map(r => String(r.CCY ?? r.ccy ?? '').toUpperCase().trim())
-  //     ),
-  //   ],
-  //   firstFilteredRow: filteredRows[0],
-  // });
-
   return {
     cpv01TotalByCcy,
     groupedCPV01ByCcy,
     sortedCPV01ByCcy,
     filteredRowsCount: filteredRows.length,
+    // Magnitude value so the largest CPV01 position sorts first.
+    drillRows: [...drillByKey.values()].map(r => ({ ...r, __CPV01: Math.abs(r.__CPV01) })),
 
     // Legacy keys intentionally disabled.
-    // Do not use one total across currencies/credit curves.
+    totalCPV01: null,
+    groupedCPV01: null,
+    sortedCPV01: [],
+  };
+}
+
+/**
+ * Reconstruct CPV01-by-CCY (bucketed by product rating) from the header-filtered
+ * holdings and the per-product per-unit sensitivities.
+ *
+ * Scale matches Python trade_sensitivity_scaler: CPV01 = VALUE_PER_UNIT * NOTIONAL / 10000.
+ * Rating bucket is the one Python assigned (TENOR/RATING of the CPV01 product row).
+ * Fixed-value-category holdings are excluded (mirrors Python zeroing).
+ * Returns the same shape as calculateCreditSensitivity().
+ */
+function calculateCreditSensitivityFromHoldings(holdings, productSens, portName, appState) {
+  const selectedPort = normalizePortfolioName(portName);
+  const CPV01_SCALE = 10000;
+
+  const fixedValueNames =
+    (typeof appState?.getFixedValueCategoryNames === 'function'
+      ? appState.getFixedValueCategoryNames()
+      : null) || new Set();
+
+  // PROD_ID -> [{ bucket, ccy, vpu }] for RISK_TYPE = CPV01.
+  const cpv01ByProd = new Map();
+
+  productSens.forEach(r => {
+    if (normalizeRiskType(r.RISK_TYPE ?? r.risk_type) !== 'CPV01') return;
+
+    const prodId = String(r.PROD_ID ?? r.prod_id ?? '').trim();
+    if (!prodId) return;
+
+    const vpu = Number(r.VALUE_PER_UNIT ?? r.value_per_unit);
+    if (!Number.isFinite(vpu)) return;
+
+    const bucket = normalizeCreditBucket(
+      r.TENOR ?? r.tenor ?? r.RATING ?? r.rating ??
+      r.RISK_FACTOR_ID ?? r.risk_factor_id
+    );
+    if (!bucket || bucket === 'UNKNOWN') return;
+
+    const ccy = String(r.CCY ?? r.ccy ?? 'UNKNOWN').toUpperCase().trim() || 'UNKNOWN';
+
+    if (!cpv01ByProd.has(prodId)) cpv01ByProd.set(prodId, []);
+    cpv01ByProd.get(prodId).push({ bucket, ccy, vpu });
+  });
+
+  const groupedCPV01ByCcy = {};
+  const cpv01TotalByCcy = {};
+  let contributions = 0;
+
+  // Drill rows keyed by product+bucket+ccy (enriched with holding attributes).
+  const drillByKey = new Map();
+
+  holdings.forEach(row => {
+    const rowPort = normalizePortfolioName(row.port_name ?? row.PORT_NAME);
+    if (rowPort && selectedPort && rowPort !== selectedPort) return;
+
+    const category = String(row.CATEGORY ?? row.category ?? '').trim();
+    if (category && fixedValueNames.has(category)) return;
+
+    const prodId = String(row.PROD_ID ?? row.prod_id ?? '').trim();
+    if (!prodId) return;
+
+    const notional = Number(row.NOTIONAL ?? row.notional);
+    if (!Number.isFinite(notional) || notional === 0) return;
+
+    const list = cpv01ByProd.get(prodId);
+    if (!list || !list.length) return;
+
+    // Aggregate by the product's RESOLVED rating (RATINGres), NOT the issuer base
+    // rating that Python stored as the bucket. A AAA product of a BBB issuer must
+    // sit in the AAA bucket. Only fall back to the stored bucket if no resolved
+    // rating is available (never use the issuer base as the resolved value).
+    const resolvedBucket = normalizeCreditBucket(
+      row.RATINGres ?? row.ratingres ?? row.RATING_PROD ?? row.rating_prod ?? ''
+    );
+
+    list.forEach(({ bucket: storedBucket, ccy, vpu }) => {
+      const value = (vpu * notional) / CPV01_SCALE;
+      if (!Number.isFinite(value) || value === 0) return;
+
+      const bucket = (resolvedBucket && resolvedBucket !== 'UNKNOWN')
+        ? resolvedBucket
+        : storedBucket;
+      if (!bucket || bucket === 'UNKNOWN') return;
+
+      if (!groupedCPV01ByCcy[ccy]) groupedCPV01ByCcy[ccy] = {};
+      groupedCPV01ByCcy[ccy][bucket] = (groupedCPV01ByCcy[ccy][bucket] || 0) + value;
+      cpv01TotalByCcy[ccy] = (cpv01TotalByCcy[ccy] || 0) + value;
+      contributions += 1;
+
+      const key = `${prodId}|${bucket}|${ccy}`;
+      let dr = drillByKey.get(key);
+      if (!dr) {
+        dr = { ...row, PROD_ID: prodId, CCY: ccy, __BUCKET: bucket, __CPV01: 0 };
+        drillByKey.set(key, dr);
+      }
+      dr.__CPV01 += value;
+    });
+  });
+
+  const sortedCPV01ByCcy = Object.fromEntries(
+    Object.entries(groupedCPV01ByCcy).map(([ccy, grouped]) => {
+      const sorted = Object.entries(grouped)
+        .filter(([, value]) => Number.isFinite(value) && value !== 0)
+        .sort((a, b) => sortCreditBuckets(a[0], b[0]));
+      return [ccy, sorted];
+    })
+  );
+
+  return {
+    cpv01TotalByCcy,
+    groupedCPV01ByCcy,
+    sortedCPV01ByCcy,
+    filteredRowsCount: contributions,
+    // Magnitude value so the largest CPV01 position sorts first.
+    drillRows: [...drillByKey.values()].map(r => ({ ...r, __CPV01: Math.abs(r.__CPV01) })),
     totalCPV01: null,
     groupedCPV01: null,
     sortedCPV01: [],
@@ -289,6 +503,7 @@ function renderCPV01TableAndChart(data, portName) {
   wrapper.className = 'csens-wrapper';
 
   const tableData = [];
+  const rawVals = [];
 
   Object.entries(sortedCPV01ByCcy)
     .sort(([ccyA], [ccyB]) => ccyA.localeCompare(ccyB))
@@ -304,12 +519,14 @@ function renderCPV01TableAndChart(data, portName) {
           CPV01: formatNumberWithGrouping(cpv01),
           'Weight %': `${weight.toFixed(2)}%`,
         });
+        rawVals.push({ value: cpv01, weight });
       });
     });
 
   const title = `CPV01 Details by CCY for ${portName}`;
 
   wrapper.innerHTML = processData(tableData, title);
+  wireSortableDetails(wrapper, rawVals, 'CPV01');
 
   mountCPV01Details(wrapper);
 
@@ -339,18 +556,16 @@ function mountCPV01Details(wrapper) {
     return;
   }
 
+  // Height comes from the flex layout (card stretched to the chart height); scrolls
+  // internally. No fixed height so the table always matches the chart.
   target.innerHTML = '';
   target.style.display = 'block';
-  target.style.minHeight = '120px';
-  target.style.maxHeight = '500px';
-  target.style.height = '100%';
   target.style.overflowY = 'auto';
   target.style.overflowX = 'auto';
   target.style.padding = '8px';
 
   wrapper.style.display = 'block';
   wrapper.style.width = '100%';
-  wrapper.style.maxHeight = '100%';
   wrapper.style.overflow = 'visible';
 
   const table = wrapper.querySelector('table');
@@ -426,6 +641,33 @@ function createCPV01Chart({
   };
 
   CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x');
+
+  if (CPV01Chart) {
+    // Right-click drill: bar (CCY dataset + rating bucket) -> contributing products.
+    const drillCcys = Object.keys(sortedCPV01ByCcy).sort((a, b) => a.localeCompare(b));
+    CPV01Chart.$stepsByDs = {};
+    drillCcys.forEach((ccy, dsIndex) => {
+      CPV01Chart.$stepsByDs[dsIndex] = allBuckets.map((bucket) => ({
+        colKey: '__CPV01BUCKET',
+        value: `${ccy} ${bucket}`,
+        label: 'Rating',
+        match: (r) =>
+          String(r.CCY ?? '').toUpperCase().trim() === ccy &&
+          String(r.__BUCKET ?? '') === bucket,
+      }));
+    });
+
+    try { cpv01Drill.setData(_cpv01DrillRows); }
+    catch (e) { console.warn('[CPV01 DRILL] setData failed', e); }
+
+    bindRightClickDrill(canvas, () => CPV01Chart, (el, ch, e) =>
+      cpv01Drill.hover('var', { native: e }, [el], ch.$stepsByDs?.[el.datasetIndex] || []));
+
+    if (canvas.dataset.cpv01LeaveBound !== '1') {
+      canvas.dataset.cpv01LeaveBound = '1';
+      canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+    }
+  }
 
   // console.log('[CPV01 CHART] rendered by CCY', {
   //   canvasId,

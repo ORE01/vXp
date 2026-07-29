@@ -3,6 +3,7 @@ import { setupHiDPICanvas } from './SummaryYield.js';
 import { getFormatRules } from '../../utils/tableCellFormats.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
 import { appState } from '../../renderer.js';
+import { makeSortableDetailsTable } from './marketRisk/sensitivities/detailsTableSort.js';
 
 const { jsPDF } = window.jspdf;
 
@@ -114,6 +115,7 @@ let _concMenuHideT = 0;          // Timeout-Handle fuer das Hover-Menue
 let _concStack = [];             // Drill-Pfad als Stack von Views { path:[{colKey,value,label}], by }
 let _concMenuCtx = null;         // prospektiver Pfad, auf den sich das offene Menue bezieht
 let _concMenuDrill = null;       // Drill-Funktion, die der Menue-Klick ausfuehrt
+let _concCtxThunk = null;        // Rechtsklick-Ziel (Treemap/Balken): merkt sich Hover, zeigt das Menue erst bei contextmenu
 
 export function handleSummaryNotionalData(filteredData, index, port_name) {
   _lastBreakdownArgs = { filteredData, index, port_name };
@@ -928,21 +930,28 @@ function renderConcTreemap(items, host) {
       return false;
     });
 
-    // Hover ueber eine Kachel -> dasselbe Menue wie frueher bei den Karten
+    // Menue erst bei Rechtsklick sichtbar: Hover merkt sich nur Ziel + Ankerpunkt
     // (Positions / By <Dimension>), am Cursor verankert. Auch fuer "Others".
     el.on('plotly_hover', (ev) => {
       const name = ev?.points?.[0]?.label;
-      if (!name) return;
-      __concMenuCancelHide();
+      if (!name) { _concCtxThunk = null; return; }
       const me = ev?.event;
       const x = me && typeof me.clientX === 'number' ? me.clientX : null;
       const y = me && typeof me.clientY === 'number' ? me.clientY : null;
       const anchor = (x != null && y != null)
         ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
         : el;
-      __concShowMenu(anchor, [__concTreemapStep(name)]);
+      _concCtxThunk = () => __concShowMenu(anchor, [__concTreemapStep(name)]);
     });
-    el.on('plotly_unhover', () => __concMenuScheduleHide());
+    el.on('plotly_unhover', () => { _concCtxThunk = null; });
+
+    // Rechtsklick auf eine Kachel -> Drill-Menue.
+    el.addEventListener('contextmenu', (e) => {
+      if (!_concCtxThunk) return;
+      e.preventDefault();
+      __concMenuCancelHide();
+      _concCtxThunk();
+    });
   }
 }
 
@@ -1057,18 +1066,17 @@ export function renderConcentrationDashboard(filteredData, opts = {}) {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         color: chartColor,
         onHover: (evt, els) => {
-          // Hover ueber einen Balken -> dasselbe Menue (Positions / By <Dim>) wie die Treemap.
-          if (!els || !els.length) return;
+          // Menue erst bei Rechtsklick: Hover merkt sich nur Ziel + Ankerpunkt.
+          if (!els || !els.length) { _concCtxThunk = null; return; }
           const name = top[els[0].index]?.name;
-          if (name == null) return;
-          __concMenuCancelHide();
+          if (name == null) { _concCtxThunk = null; return; }
           const me = evt?.native;
           const x = me && typeof me.clientX === 'number' ? me.clientX : null;
           const y = me && typeof me.clientY === 'number' ? me.clientY : null;
           const anchor = (x != null && y != null)
             ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
             : (evt?.chart?.canvas || document.body);
-          __concShowMenu(anchor, [__concStep(_concDimension, String(name))]);
+          _concCtxThunk = () => __concShowMenu(anchor, [__concStep(_concDimension, String(name))]);
         },
         onClick: (evt, els) => {
           if (els && els.length) {
@@ -1110,31 +1118,43 @@ function ensureConcDetailBound(host) {
   if (!host || host.dataset.detailBound) return;
   host.dataset.detailBound = '1';
 
-  // Karte: Hover -> Menue; Klick -> direkt Positionen (Schnellweg).
-  host.addEventListener('mouseover', (e) => {
-    const card = e.target?.closest?.('[data-conc-value]');
-    if (card) { __concMenuCancelHide(); __concShowMenu(card, [__concStep(_concDimension, card.dataset.concValue)]); return; }
-    // Ueber der Treemap (#concCards) bzw. dem Top-10-Balken (#concTop10Chart) managt
-    // deren eigener Hover das Menue -> hier NICHT verstecken (sonst flackert es).
-    if (e.target?.closest?.('#concCards, #concTop10Chart')) return;
-    __concMenuScheduleHide();
-  });
-  host.addEventListener('mouseleave', __concMenuScheduleHide);
+  // Klick auf eine Karte -> direkt Positionen (Schnellweg).
   host.addEventListener('click', (e) => {
     const card = e.target?.closest?.('[data-conc-value]');
     if (card) concDrillTo({ path: [__concStep(_concDimension, card.dataset.concValue)], by: null });
+  });
+  host.addEventListener('mouseleave', __concMenuScheduleHide);
+
+  // Drill-Menue erst bei Rechtsklick sichtbar (Karte ODER Top-10-Balken).
+  host.addEventListener('contextmenu', (e) => {
+    const card = e.target?.closest?.('[data-conc-value]');
+    if (card) {
+      e.preventDefault();
+      __concMenuCancelHide();
+      __concShowMenu(card, [__concStep(_concDimension, card.dataset.concValue)]);
+      return;
+    }
+    if (_concCtxThunk && e.target?.closest?.('#concTop10Chart')) {
+      e.preventDefault();
+      __concMenuCancelHide();
+      _concCtxThunk();
+    }
   });
 
   // Detail-Tabelle: Hover ueber eine gruppierte Zeile -> Menue (weiter drillen).
   const dtable = document.getElementById('concDetailTable');
   if (dtable) {
-    dtable.addEventListener('mouseover', (e) => {
+    dtable.addEventListener('mouseleave', __concMenuScheduleHide);
+    // Drill-Menue fuer gruppierte Zeilen erst bei Rechtsklick (weiter drillen).
+    dtable.addEventListener('contextmenu', (e) => {
       const row = e.target?.closest?.('[data-drill-value]');
       const cur = _concStack[_concStack.length - 1];
-      if (row && cur && cur.by) { __concMenuCancelHide(); __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)]); }
-      else __concMenuScheduleHide();
+      if (row && cur && cur.by) {
+        e.preventDefault();
+        __concMenuCancelHide();
+        __concShowMenu(row, [...cur.path, __concStep(cur.by, row.dataset.drillValue)]);
+      }
     });
-    dtable.addEventListener('mouseleave', __concMenuScheduleHide);
     // Klick auf gruppierte Zeile = Schnellweg -> Positionen dieser Ebene.
     dtable.addEventListener('click', (e) => {
       const row = e.target?.closest?.('[data-drill-value]');
@@ -1619,10 +1639,10 @@ function renderConcView(view, ctx) {
         <tbody>
           ${sub.map(x => `<tr class="conc-drill-row" data-drill-value="${__concEsc(x.name)}">
             <td>${__concEsc(x.name)} <span class="conc-drill-hint">›</span></td>
-            <td style="text-align:right;">${fmtVal(x.notional)}</td>
-            <td style="text-align:right;">${fmtVal(x.val)}</td>
-            ${x.extras.map(v => `<td style="text-align:right;">${fmtVal(v)}</td>`).join('')}
-            <td style="text-align:right;">${__concPct(x.val / tot)}</td>
+            <td style="text-align:right;" data-sort-value="${x.notional}">${fmtVal(x.notional)}</td>
+            <td style="text-align:right;" data-sort-value="${x.val}">${fmtVal(x.val)}</td>
+            ${x.extras.map(v => `<td style="text-align:right;" data-sort-value="${v}">${fmtVal(v)}</td>`).join('')}
+            <td style="text-align:right;" data-sort-value="${tot ? x.val / tot : 0}">${__concPct(x.val / tot)}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
@@ -1698,10 +1718,10 @@ function renderConcView(view, ctx) {
             <td>${__concEsc(r.id)}</td>
             <td>${__concEsc(r.desc)}</td>
             ${r.infos.map(v => `<td>${__concEsc(v)}</td>`).join('')}
-            <td style="text-align:right;">${fmtVal(r.notional)}</td>
-            <td style="text-align:right;">${fmtVal(r.val)}</td>
-            ${r.extras.map(v => `<td style="text-align:right;">${fmtVal(v)}</td>`).join('')}
-            <td style="text-align:right;">${__concPct(r.val / tot)}</td>
+            <td style="text-align:right;" data-sort-value="${r.notional}">${fmtVal(r.notional)}</td>
+            <td style="text-align:right;" data-sort-value="${r.val}">${fmtVal(r.val)}</td>
+            ${r.extras.map(v => `<td style="text-align:right;" data-sort-value="${v}">${fmtVal(v)}</td>`).join('')}
+            <td style="text-align:right;" data-sort-value="${tot ? r.val / tot : 0}">${__concPct(r.val / tot)}</td>
           </tr>`).join('')}
         </tbody>
       </table>`;
@@ -1711,6 +1731,18 @@ function renderConcView(view, ctx) {
     // Hover ueber die Kennnummer -> Produkt-Stammdaten als schwebende Karte.
     try { ensureProdHoverBound(tableEl); } catch {}
   }
+
+  // Make the drill table sortable by clicking headers (▲/▼). Default: the value
+  // column descending — same order the rows already have (so signed drills like
+  // perf are not reordered), just with the arrow shown; for the sensitivities
+  // drills (magnitude values) this is "largest first". (Custom-columns branch
+  // returned above and keeps its own header sorting.)
+  try {
+    makeSortableDetailsTable(tableEl.querySelector('table'), {
+      defaultColLabel: valueLabel,
+      defaultDir: -1,
+    });
+  } catch {}
 
   detail.style.display = '';
   try { detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch {}

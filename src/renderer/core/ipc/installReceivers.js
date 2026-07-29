@@ -25,6 +25,8 @@ export function installReceivers(deps = {}) {
     handleScenarioDefinitionData,
     handleCustomerTableLayoutsData,
     handleCustomerProductCategorySetupData,
+    handleCustomerOverviewTileSettingData,
+    handleCustomerPortfolioDurationLimitData,
     handleCustomerMarketRiskSettingData,
     handleCustomerMarketRiskThresholdSettingData,
     handleCustomerCreditRiskSettingData,
@@ -52,6 +54,7 @@ export function installReceivers(deps = {}) {
     handlePortNameList,
     handlePortfolioData,
     handlePortfolioRiskSensitivitiesData,
+    handleProductRiskSensitivitiesData,
     handleIRSensData,
     handleCSSensData,
     handleVegaSensData,
@@ -209,6 +212,8 @@ api.receive(channel, (data) => {
     handleScenarioDefinitionData,
     handleCustomerTableLayoutsData,
     handleCustomerProductCategorySetupData,
+    handleCustomerOverviewTileSettingData,
+    handleCustomerPortfolioDurationLimitData,
     handleCustomerMarketRiskSettingData,
     handleCustomerMarketRiskThresholdSettingData,
     handleCustomerCreditRiskSettingData,
@@ -235,6 +240,7 @@ api.receive(channel, (data) => {
     handlePortNameList,
     handlePortfolioData,
     handlePortfolioRiskSensitivitiesData,
+    handleProductRiskSensitivitiesData,
     handleIRSensData,
     handleCSSensData,
     handleVegaSensData,
@@ -282,6 +288,8 @@ api.receive(channel, (data) => {
   route('CustomerTSSelectionData');
   route('CustomerTableLayoutsData');
   route('CUSTOMER_PRODUCT_CATEGORY_SETUPData');
+  route('CustomerOverviewTileSettingData');
+  route('CustomerPortfolioDurationLimitData');
   route('CustomerDefaultPortfolioData');
   route('ScenarioDefinitionData');
   route('CustomerMarketRiskSettingData');
@@ -341,6 +349,7 @@ api.receive(channel, (data) => {
   // PORTFOLIO
   route('PortfoliosData');
   route('PortfolioRiskSensitivitiesData');
+  route('ProductRiskSensitivitiesData');
 
   // MVaR
   route('MVaRInputData');

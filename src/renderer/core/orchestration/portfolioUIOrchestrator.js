@@ -6,6 +6,7 @@ import { handlePortAggData, handlePortProdData } from '../../features/portfolio/
 import { handleLiquidityData } from '../../features/ANALYSE_PORTFOLIO/liquidity.js';
 import { handleSummaryNotionalData } from '../../features/ANALYSE_PORTFOLIO/SummaryBreakdown.js';
 import { handleSummaryYieldData } from '../../features/ANALYSE_PORTFOLIO/SummaryYield.js';
+import { renderPerformanceDashboard } from '../../features/ANALYSE_PORTFOLIO/performanceDashboard.js';
 import { handleSummaryMarketRiskData, handleMvarProductTable } from '../../features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
 
 import {
@@ -415,6 +416,18 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
 
       () => handleSummaryYieldData(analyseDataWithRisk, index, port_name),
 
+      () => {
+        // Portfolio Yield/performance dashboard follows the filter/selection.
+        // NOTE: sub-panels are position:fixed, so offsetParent is null even while
+        // visible — check the hidden attribute / computed display instead.
+        const p = document.getElementById('panel-performance-dashboard');
+        const visible = !!p && !p.hidden &&
+          window.getComputedStyle(p).display !== 'none';
+        if (visible) {
+          try { renderPerformanceDashboard(); } catch (_) {}
+        }
+      },
+
       () => handleSummaryMarketRiskData(port_name, scenario_name, '2021-01-03'),
 
       () => handleMvarProductTable(port_name, scenario_name, null),
@@ -434,15 +447,18 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
       },
 
       () => {
-        appState.handleIRSensData?.(appState, port_name);
+        // Pass the header-filtered holdings so PV01 follows the portfolio filter.
+        appState.handleIRSensData?.(appState, port_name, analyseData);
       },
 
       () => {
-        appState.handleCSSensData?.(appState, port_name);
+        // Pass the header-filtered holdings so CPV01 follows the portfolio filter.
+        appState.handleCSSensData?.(appState, port_name, analyseData);
       },
 
       () => {
-        appState.handleVegaSensData?.(appState, port_name);
+        // Pass the header-filtered holdings so Vega follows the portfolio filter.
+        appState.handleVegaSensData?.(appState, port_name, analyseData);
       },
 
       () => {
@@ -462,6 +478,21 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
     ];
 
     runPortfolioRenderQueue(renderTasks);
+  }
+
+  // On a portfolio switch the market-risk module re-renders MVaR + sensitivities
+  // via 'portfolio-context-changed'. The rest of the portfolio view (Breakdown /
+  // Yield / Performance / sums) is only produced by renderPortTable, which the
+  // dropdown switch does not reliably trigger — so re-run it for the new port.
+  if (!appState.__portCtxRerenderBound) {
+    appState.__portCtxRerenderBound = true;
+    document.addEventListener('portfolio-context-changed', () => {
+      try {
+        renderPortTable(appState.getAllPortfolioData?.() || [], appState.getPortIndex?.() ?? 0);
+      } catch (e) {
+        console.warn('[orchestrator] context-change re-render failed', e);
+      }
+    });
   }
 
   return {

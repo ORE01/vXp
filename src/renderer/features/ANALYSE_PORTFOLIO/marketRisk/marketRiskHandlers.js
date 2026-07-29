@@ -1,6 +1,7 @@
 'use strict';
 
 import { handlePortfolioRiskSensitivitiesData } from './sensitivities/portfolioRiskSensitivitiesHandler.js';
+import { handleProductRiskSensitivitiesData } from './sensitivities/productRiskSensitivitiesHandler.js';
 
 import { handleIRSensData } from './sensitivities/portfolioPV01Handler.js';
 import { handleCSSensData } from './sensitivities/portfolioCPV01Handler.js';
@@ -17,6 +18,7 @@ import {
 
 export const marketRiskHandlers = {
   handlePortfolioRiskSensitivitiesData,
+  handleProductRiskSensitivitiesData,
 
   handleIRSensData,
   handleCSSensData,

@@ -45,6 +45,10 @@ function activateSensTab(target) {
     view.hidden = !active;
   });
 
+  // Show only the KPI cards that belong to the active tab (CSS filters by this).
+  const kpiRow = root.querySelector('.sens-kpi-row');
+  if (kpiRow) kpiRow.dataset.activeTab = String(target).trim().toLowerCase();
+
   console.log('[SENS TABS] active:', target);
 }
 
@@ -119,6 +123,13 @@ export function initMarketRiskSensitivityTabs() {
       activateSensTab(target);
     });
   });
+
+  // Initial KPI-card visibility follows the currently active tab.
+  const activeTab = root.querySelector('[data-sens-tab].is-active') || tabs[0];
+  const kpiRow = root.querySelector('.sens-kpi-row');
+  if (kpiRow && activeTab) {
+    kpiRow.dataset.activeTab = String(activeTab.dataset.sensTab).trim().toLowerCase();
+  }
 
   initialized = true;
 

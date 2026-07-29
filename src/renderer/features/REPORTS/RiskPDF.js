@@ -1493,11 +1493,9 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const gap = 6;
     for (const v of CR_DRIVER_VIEWS) {
       const showChart = enC.has(v.chartId);
-      const host = ctx.getById(v.tableId);
-      const tbl = enT.has(v.tableId) && host
-        ? (host.tagName?.toLowerCase() === 'table' ? host : host.querySelector?.('table'))
-        : null;
-      if (!showChart && !tbl) continue;
+      // Tail-Driver-Tabellen sind aus dem Report entfernt (nur Charts) -> nie zeichnen.
+      const tbl = null;
+      if (!showChart) continue;
 
       const both = showChart && tbl;
       const chartW = both ? layout.contentWidth * 0.54 - gap / 2 : layout.contentWidth;

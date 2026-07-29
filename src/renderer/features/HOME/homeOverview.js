@@ -13,6 +13,8 @@ import { buildPositionLoss, getRunConfQuantil } from '../ANALYSE_PORTFOLIO/CREDI
 import { crTailTopForFlag, getCreditDashboardModel } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
 import { getMvarRowAsofDate, getMvarRowScenarioName, normalizeMvarText } from '../ANALYSE_PORTFOLIO/marketRisk/mvar/mvarSelectors.js';
 import { getMarketDashboardModel } from '../ANALYSE_PORTFOLIO/marketRisk/marketRiskDashboard.js';
+import { applyOverviewTileVisibility } from '../CUSTOMER_SETUP/overviewTilesPanel.js';
+import { getPortfolioDurationLimits } from '../CUSTOMER_SETUP/portfolioDurationLimitsPanel.js';
 
 // canvasId -> Chart-Instanz (fuer sauberes Neuzeichnen)
 const _charts = Object.create(null);
@@ -38,6 +40,14 @@ const fmtNum = (v, d = 2) => Number.isFinite(v) ? v.toFixed(d) : '–';
 const normPort = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
 const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
 const showEl = (id, show) => { const el = document.getElementById(id); if (el) el.hidden = !show; };
+// Datenverfuegbarkeit ("wenn vorhanden") ueber CSS-Klasse statt Inline-Style, damit
+// sie sich sauber mit der Kunden-Sichtbarkeit (applyOverviewTileVisibility, Inline)
+// kombiniert: unchecked -> Inline none; checked+leer -> Klasse none; checked+Daten -> sichtbar.
+const setTileEmpty = (tileKey, empty) => {
+  document.querySelectorAll(`[data-tile="${tileKey}"]`).forEach((el) => {
+    el.classList.toggle('home-tile-empty', !!empty);
+  });
+};
 
 // Ampel-Punkt (mr-amp-dot, Styles aus breakdown.css) setzen/verstecken.
 function setDot(id, state) {
@@ -99,17 +109,27 @@ function _applyRiskGroup(group, { avgMat, irDur, csDur }) {
 
   const pos1y = hasMat ? _clamp01(1 / avgMat) * 100 : 0;
 
+  // Ampel-Schwellen (in Jahren) aus den Customer-Setup Duration Limits: g = Gelb,
+  // y = Rot (darunter gruen, dazwischen gelb, darueber rot). Fallback = RS_DUMMY.
+  const _lim = (() => { try { return getPortfolioDurationLimits(); } catch (_) { return null; } })();
+  const _th = (code, dflt) => {
+    const l = _lim?.[code];
+    return (l && Number.isFinite(l.yellow) && Number.isFinite(l.red)) ? { g: l.yellow, y: l.red } : dflt;
+  };
+  const irTh = _th('ir_duration', RS_DUMMY.ir);
+  const csTh = _th('cs_duration', RS_DUMMY.cs);
+
   // Interest Rate Sensitivity: Ampel-Track + 1Y-Grenze (Money Market | Capital Market).
-  setTrack('ir-track', RS_DUMMY.ir, pos1y);
+  setTrack('ir-track', irTh, pos1y);
   const ir1y = q('ir-1y'); if (ir1y) ir1y.style.left = `${pos1y}%`;
   const irS1y = q('ir-scale1y'); if (irS1y) { irS1y.style.left = `${pos1y}%`; irS1y.style.visibility = pos1y >= 96 ? 'hidden' : 'visible'; }
-  setMarker('ir-marker', irDur, RS_DUMMY.ir);
+  setMarker('ir-marker', irDur, irTh);
   setTxt('ir-val', Number.isFinite(irDur) ? `${irDur.toFixed(2)}Y` : '–');
   setTxt('ir-max', matTxt);
 
   // Credit Spread Sensitivity: Ampel-Track, Marke auf 0 → Ø-Maturity.
-  setTrack('cs-track', RS_DUMMY.cs, null);
-  setMarker('cs-marker', csDur, RS_DUMMY.cs);
+  setTrack('cs-track', csTh, null);
+  setMarker('cs-marker', csDur, csTh);
   setTxt('cs-val', Number.isFinite(csDur) ? `${csDur.toFixed(2)}Y` : '–');
   setTxt('cs-max', matTxt);
 }
@@ -227,7 +247,9 @@ function renderPortfolioCard(port) {
   const rows = (appState.getAllPortfolioData?.() || []).filter((r) => normPort(r?.port_name) === port);
 
   if (!rows.length) {
-    ['homePfNotional', 'homePfNav', 'homePfYield'].forEach((id) => setText(id, '–'));
+    ['homePfNotional', 'homePfNav', 'homePfNavRel', 'homePfYield',
+     'homePfPv01', 'homePfPv01Rel', 'homePfCpv01', 'homePfCpv01Rel',
+     'homePfVega', 'homePfVegaRel'].forEach((id) => setText(id, '–'));
     updateRiskSliders({ avgMat: null, irDur: null, csDur: null });
     destroyChart('homePfChart');
     return false;
@@ -235,7 +257,8 @@ function renderPortfolioCard(port) {
 
   const enriched = enrichPortfolioRowsWithRisk(rows, port);
 
-  let notional = 0, nav = 0, yieldW = 0, pv01Base = 0, cpv01Base = 0, ttmW = 0, notTtm = 0;
+  let notional = 0, nav = 0, yieldW = 0, pv01Base = 0, cpv01Base = 0, vegaBase = 0, ttmW = 0, notTtm = 0;
+  let hasPv01 = false, hasCpv01 = false, hasVega = false;
   const byIssuer = new Map();
   for (const r of enriched) {
     const n = numOf(r.NOTIONAL);
@@ -244,6 +267,14 @@ function renderPortfolioCard(port) {
     yieldW += numOf(r.ytmPort) || 0;
     pv01Base += Number(r.PV01_BASE) || 0;
     cpv01Base += Number(r.CPV01_BASE) || 0;
+    vegaBase += Number(r.VEGA_BASE) || 0;
+    // "wenn vorhanden": Sensitivitaet zaehlt als vorhanden, sobald der Risk-Typ
+    // ueberhaupt in den Base-Totals eines Trades auftaucht (nicht ueber die Summe,
+    // die sich zu 0 aufheben koennte).
+    const tb = r.RISK_TOTALS_BASE || {};
+    if ('PV01' in tb)  hasPv01  = true;
+    if ('CPV01' in tb) hasCpv01 = true;
+    if ('VEGA' in tb)  hasVega  = true;
     // Durchschnittliche Laufzeit (WAM): TtM nominal-gewichtet; bereits faellige
     // Positionen (TtM < 0) werden ausgeklammert.
     const ttm = numOf(r.TtM);
@@ -254,9 +285,23 @@ function renderPortfolioCard(port) {
 
   setText('homePfNotional', fmtEur(notional));
   setText('homePfNav', fmtEur(nav));
+  // Relativ zur Nominale: NAV / Notional (in %), analog zur Portfolio-Yield-Kachel.
+  setText('homePfNavRel', notional ? `${fmtPctRaw((nav / notional) * 100)} of notional` : '–');
   // Portfolio-Yield = Σ ytmPort / Σ Notional (nominalgewichtete Kauf-Yield), konsistent
   // mit der "Portfolio Yield"-KPI im Yield-Panel. NICHT der letzte Historic-RETURN.
   setText('homePfYield', notional ? fmtPctRaw((yieldW / notional) * 100) : '–');
+
+  // Sensitivitaeten: absolut (EUR) gross, relativ klein. Relativ = Wert / ΣNotional
+  // × 10000 in "bp" (bp Preisaenderung je 1bp Faktor-Move), konsistent zum
+  // Sensitivities-Panel. Kacheln ohne vorhandene Sensitivitaet werden ausgeblendet.
+  const fmtBp = (v) => Number.isFinite(v) ? `${v.toFixed(2)} bp` : '–';
+  const relBp = (v) => notional ? fmtBp((v / notional) * 10000) : '–';
+  setText('homePfPv01',  fmtEur(pv01Base));   setText('homePfPv01Rel',  relBp(pv01Base));
+  setText('homePfCpv01', fmtEur(cpv01Base));  setText('homePfCpv01Rel', relBp(cpv01Base));
+  setText('homePfVega',  fmtEur(vegaBase));   setText('homePfVegaRel',  relBp(vegaBase));
+  setTileEmpty('pv01',  !hasPv01);
+  setTileEmpty('cpv01', !hasCpv01);
+  setTileEmpty('vega',  !hasVega);
 
   // Risk-Slider: Ø-Maturity (WAM) als Skala, Marken = Zins-/Spread-Duration in Jahren:
   // abs(PV01)/NAV*10000 bzw. abs(CPV01)/NAV*10000.
@@ -695,6 +740,13 @@ function bindHomeCardLinks() {
       if (e.target.closest?.('.rs-card--tsi')) { e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-credit-tsi'); return; }
       if (e.target.closest?.('.rs-card--msd')) { e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-credit-msd'); return; }
     }
+    // Credit-Kacheln Normal/Extreme Risk -> Credit Risk / Profit/Loss.
+    const crTile = e.target.closest?.('.home-kpi[data-tile="cr_var"], .home-kpi[data-tile="cr_es"]');
+    if (crTile) { e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-credit'); return; }
+    // Sensitivitaets-Kacheln (PV01/CPV01/Vega) -> Sensitivities-Panel + passender Tab,
+    // analog zu den Duration-Slidern (data-tile == data-sens-tab).
+    const sensTile = e.target.closest?.('.home-kpi[data-tile="pv01"], .home-kpi[data-tile="cpv01"], .home-kpi[data-tile="vega"]');
+    if (sensTile) { e.preventDefault(); openSensitivity(sensTile.dataset.tile); return; }
     // Kachel-Navigation: Notional/NAV -> Portfolio-Panel (Tabelle + 2 Summaries),
     // Yield -> Yield-Panel. Ziel steckt in data-nav-panel.
     const nav = e.target.closest?.('.home-nav-link');
@@ -736,4 +788,7 @@ export function renderHomeOverview() {
 
   // Report-Spiegel (Preview/PDF) mit den frisch gerenderten Werten befuellen.
   try { syncHomeReportPanel(port); } catch (e) { console.warn('[home] report panel sync', e); }
+
+  // Hide the Overview "Portfolio" tiles the customer deselected (Customer Setup).
+  try { applyOverviewTileVisibility(); } catch (e) { console.warn('[home] tile visibility', e); }
 }

@@ -113,6 +113,12 @@ module.exports = {
     'get-table-rows',
     'table-layout:save-one',
 
+    // Customer Setup -> Portfolio -> Overview Tiles
+    'customer-overview-tiles.save',
+
+    // Customer Setup -> Portfolio -> Duration Limits
+    'customer-portfolio-limits.save',
+
     // Customer Setup -> Risk -> Market Risk -> Interval
     'customer-mr-setting.save',
     'customer-mr-setting.get',
