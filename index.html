@@ -320,7 +320,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi home-nav-link" data-tile="notional" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-lbl">Notional</span></div>
           <div class="home-kpi home-nav-link" data-tile="nav" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-abs" id="homePfNavRel">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
           <div class="home-kpi home-nav-link" data-tile="nav_buy" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNavBuy">–</span><span class="home-kpi-abs" id="homePfNavBuyRel">–</span><span class="home-kpi-lbl">Net Asset Value (Buy)</span></div>
-          <div class="home-kpi home-nav-link" data-tile="pnl" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfPnl">–</span><span class="home-kpi-abs" id="homePfPnlRel">–</span><span class="home-kpi-lbl">Profit/Loss</span></div>
+          <div class="home-kpi home-nav-link" data-tile="pnl" data-nav-panel="panel-performance-history" role="button" tabindex="0" title="Profit/Loss öffnen"><span class="home-kpi-val" id="homePfPnl">–</span><span class="home-kpi-abs" id="homePfPnlRel">–</span><span class="home-kpi-lbl">Profit/Loss</span></div>
           <div class="home-kpi home-nav-link" data-tile="yield" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Yield öffnen"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-lbl">Yield</span></div>
           <div class="home-kpi home-nav-link" data-tile="pv01" role="button" tabindex="0" title="PV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-abs" id="homePfPv01Rel">–</span><span class="home-kpi-lbl">PV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="cpv01" role="button" tabindex="0" title="CPV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-abs" id="homePfCpv01Rel">–</span><span class="home-kpi-lbl">CPV01</span></div>
@@ -522,6 +522,10 @@ Feature:    Wenn es nur in einem Panel gilt
     <div class="risk-select-inline">
       <select id="createdPortDropdownRisk" class="deals-dropdown"></select>
     </div>
+    <!-- Recalculate-Button aus dem Select-Portfolio-Panel hierher verschoben (unter dem Dropdown). -->
+    <div class="risk-select-inline">
+      <button id="fairValueButton" class="edit-button" style="width:100%;">Recalculate Portfolio</button>
+    </div>
     <button class="section-trigger section-trigger--sub" type="button"
             data-panel="panel-selectPort" aria-controls="panel-selectPort" aria-expanded="false">
       <span class="section-header">Portfolio</span>
@@ -560,7 +564,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <!--   Performance   Trigger (Gruppe: reiner Toggle, klappt nur auf).
            Untergruppen: Profit/Loss (bisher "History") + Yield (oeffnet Portfolio Yield). -->
     <div class="risk-acc view-analyse-only">
-      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+      <button class="section-trigger risk-acc-toggle pf-accent" type="button" aria-expanded="false">
         <span class="section-header">Performance</span>
         <span class="chev"></span>
       </button>
@@ -568,7 +572,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <!-- Profit/Loss = bisher "History" (#panel-performance-history): Kopien der
              Risk-History-Charts (Overview-Yield + Portfolio Value) nebeneinander.
              Eigene Canvas-IDs (perfHist*), kein ID-Konflikt mit den Originalen. -->
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-performance-history" aria-controls="panel-performance-history" aria-expanded="false">
+        <button class="section-trigger section-trigger--sub pf-accent" type="button" data-panel="panel-performance-history" aria-controls="panel-performance-history" aria-expanded="false">
           <span class="section-header">Profit/Loss</span>
           <span class="chev"></span>
         </button>
@@ -835,9 +839,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <select id="createdPortDropdown0" class="deals-dropdown"></select>
         </div>
 
-        <div class="button-wrapper">
-          <button id="fairValueButton" class="edit-button">Recalculate Portfolio</button>
-        </div>
+        <!-- Recalculate-Button in den linken Tree verschoben (Select Portfolio, unter dem Dropdown). -->
       </div>
 
       <!-- Summen-Karten rechts neben Dropdown/Button -->
@@ -891,18 +893,10 @@ Feature:    Wenn es nur in einem Panel gilt
         <button class="sub-panel-close" data-close="panel-concentration" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
-        <div class="conc-dim-bar" style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <label for="concDimensionSelect" class="select-label">Dimension</label>
-            <select id="concDimensionSelect" class="deals-dropdown" style="width:220px; min-width:0;"></select>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <label for="concValueSelector" class="select-label">Value basis</label>
-            <select id="concValueSelector" class="deals-dropdown">
-              <option value="NAV">NAV</option>
-              <option value="NOTIONAL">Notional</option>
-            </select>
-          </div>
+        <!-- KPIs/Key Figures ganz nach oben (aus dem Dashboard-Grid herausgeloest). -->
+        <div class="conc-panel conc-panel--band" style="margin-bottom:12px;">
+          <div class="conc-panel__title">Key Figures</div>
+          <div id="concKpiTiles" class="conc-kpi-grid"></div>
         </div>
         <div id="issuerConcentrationDashboard" class="conc-dash">
           <div class="conc-dash__head">
@@ -917,10 +911,21 @@ Feature:    Wenn es nur in einem Panel gilt
               <div id="concTopTitle" class="conc-panel__title">Top 10</div>
               <canvas id="concTop10Chart" class="conc-canvas"></canvas>
             </div>
-            <div class="conc-panel conc-panel--band">
-              <div class="conc-panel__title">Key Figures</div>
-              <div id="concKpiTiles" class="conc-kpi-grid"></div>
-            </div>
+          </div>
+        </div>
+
+        <!-- Auswahl-Dropdowns unter den Graph verschoben. -->
+        <div class="conc-dim-bar" style="display:flex; align-items:center; gap:16px; margin:12px 0;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="concDimensionSelect" class="select-label">Dimension</label>
+            <select id="concDimensionSelect" class="deals-dropdown" style="width:220px; min-width:0;"></select>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label for="concValueSelector" class="select-label">Value basis</label>
+            <select id="concValueSelector" class="deals-dropdown">
+              <option value="NAV">NAV</option>
+              <option value="NOTIONAL">Notional</option>
+            </select>
           </div>
         </div>
 
@@ -951,6 +956,24 @@ Feature:    Wenn es nur in einem Panel gilt
         <button class="sub-panel-close" data-close="panel-performance-history" aria-label="close">&times;</button>
       </div>
       <div class="sub-panel-body">
+        <!-- KPIs: aktueller NAV, Einstandswert (Buy) und P/L des Portfolios (Stil wie Performance-Overview). -->
+        <div class="conc-kpi-grid" style="margin-bottom:16px;">
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="perfHistKpiNav">–</div>
+            <div class="conc-kpi__sub" id="perfHistKpiNavRel">–</div>
+            <div class="conc-kpi__lbl">Net Asset Value</div>
+          </div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="perfHistKpiNavBuy">–</div>
+            <div class="conc-kpi__sub" id="perfHistKpiNavBuyRel">–</div>
+            <div class="conc-kpi__lbl">Net Asset Value (Buy)</div>
+          </div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="perfHistKpiPnl">–</div>
+            <div class="conc-kpi__sub" id="perfHistKpiPnlRel">–</div>
+            <div class="conc-kpi__lbl">Profit / Loss</div>
+          </div>
+        </div>
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
           <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
             <div class="conc-panel__title">Portfolio Value History</div>
@@ -972,27 +995,21 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
       <div class="sub-panel-body">
 
-        <div class="perf-head">
-          <div>
-            <h1 class="perf-title">Portfolio Yield</h1>
-            <p class="perf-sub">Yield development and key yield drivers</p>
-          </div>
-          <span class="perf-head__tag">MANAGEMENT</span>
-        </div>
-
-        <div class="perf-kpis">
-          <div class="perf-kpi perf-kpi--green">
-            <div class="perf-kpi__label">PORTFOLIO YIELD</div>
-            <div class="perf-kpi__value" id="perfKpiReturn">–</div>
+        <!-- Redundanter Kopf (Portfolio Yield / Yield development / MANAGEMENT) entfernt;
+             der Panel-Titel "Yield" oben genuegt. -->
+        <div class="conc-kpi-grid">
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="perfKpiReturn">–</div>
             <span class="perf-kpi__badge" id="perfKpiBadge" style="display:none;"></span>
+            <div class="conc-kpi__lbl">Portfolio Yield</div>
           </div>
-          <div class="perf-kpi perf-kpi--blue">
-            <div class="perf-kpi__label">PREVIOUS PERIOD YIELD</div>
-            <div class="perf-kpi__value" id="perfKpiPrev">–</div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="perfKpiPrev">–</div>
+            <div class="conc-kpi__lbl">Previous Period Yield</div>
           </div>
-          <div class="perf-kpi perf-kpi--blue">
-            <div class="perf-kpi__label">PROFIT / LOSS</div>
-            <div class="perf-kpi__value" id="perfKpiErtrag">–</div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
+            <div class="conc-kpi__lbl">Profit / Loss</div>
           </div>
         </div>
 
@@ -1058,6 +1075,29 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
 
       <div class="sub-panel-body">
+        <!-- KPI-Band: aktueller Portfolio-Yield, Yield bei Kauf und Differenz. Befuellt in SummaryYield.js. -->
+        <div class="conc-kpi-grid" style="margin-bottom:16px;">
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
+            <div class="conc-kpi__lbl">Portfolio Yield (current)</div>
+          </div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
+            <div class="conc-kpi__lbl">Portfolio Yield (at buy)</div>
+          </div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="yieldKpiDelta">–</div>
+            <div class="conc-kpi__lbl">&Delta; vs buy</div>
+          </div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="yieldKpiTtm">–</div>
+            <div class="conc-kpi__lbl">Time to maturity (&Oslash;)</div>
+          </div>
+          <div class="conc-kpi">
+            <div class="conc-kpi__val" id="yieldKpiDuration">–</div>
+            <div class="conc-kpi__lbl">IR duration</div>
+          </div>
+        </div>
         <!-- Auswahl der historischen Vergleichskurve (Monate/Jahre zurück). -->
         <div class="yield-controls" style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-bottom:14px;">
           <label for="yieldYearsBackSelect" style="font-size:13px;">Historical curve:</label>
@@ -2216,6 +2256,8 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="mvar-summary-header" style="margin-bottom: 10px;">
           <p class="mvar-caption">Maturities by bucket (notional, EUR mn) for the selected Portfolio</p>
         </div>
+        <!-- KPI-Band nach oben (ueber den Faelligkeiten-Chart). -->
+        <div id="liqDashKpi" class="conc-kpi-grid" style="margin-bottom:14px;"></div>
         <div class="conc-panel">
           <div class="conc-panel__title liq-panel-head">
             <span>Maturities</span>
@@ -2224,7 +2266,6 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
           <canvas id="liqDashMaturityChart" class="struct-canvas" data-label="Maturities"></canvas>
         </div>
-        <div id="liqDashKpi" class="conc-kpi-grid" style="margin-top:14px;"></div>
         <!-- Versteckte Tabellen-Spiegelung der KPI-Leiste fuer die Report-Erfassung (Preview + PDF). -->
         <div class="data-container" id="liqDashKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 

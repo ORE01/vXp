@@ -260,6 +260,35 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
   // =========================
 const portfolioData = appState.getPortAggData(elementId) || {};
 
+// KPI-Band oben im Panel: aktueller Portfolio-Yield (formPortYieldA), Yield bei Kauf
+// (formPortYield) und Differenz in Basispunkten. Beide Felder liegen als "x%"-Strings vor.
+(() => {
+  const _pctNum = (s) => {
+    let v = parseNumberLike(s);
+    if (Number.isFinite(v) && Math.abs(v) <= 1) v = v * 100; // dezimal -> Prozent
+    return Number.isFinite(v) ? v : null;
+  };
+  const _set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const cur = _pctNum(portfolioData.formPortYieldA ?? portfolioData.formPortYield);
+  const buy = _pctNum(portfolioData.formPortYield);
+  _set('yieldKpiCurrent', cur == null ? '–' : `${cur.toFixed(2)} %`);
+  _set('yieldKpiBuy',     buy == null ? '–' : `${buy.toFixed(2)} %`);
+  _set('yieldKpiDelta', (cur != null && buy != null)
+    ? `${cur - buy >= 0 ? '+' : ''}${Math.round((cur - buy) * 100)} bp`
+    : '–');
+
+  // TtM (Restlaufzeit in Jahren) + IR-Duration (Jahre = abs(PV01)/NAV×10000, wie im
+  // Overview-Slider). Beide auf Portfolio-Ebene aus portAgg.
+  const _num = (s) => { const v = parseNumberLike(s); return Number.isFinite(v) ? v : null; };
+  const ttm  = _num(portfolioData.formPortTtM);
+  const pv01 = _num(portfolioData.formPortPV01);
+  const nav  = _num(portfolioData.formPortValue);
+  const dur  = (pv01 != null && nav != null && nav !== 0)
+    ? Math.abs(pv01) / Math.abs(nav) * 10000 : null;
+  _set('yieldKpiTtm',      ttm == null ? '–' : `${ttm.toFixed(2)} Y`);
+  _set('yieldKpiDuration', dur == null ? '–' : `${dur.toFixed(2)} Y`);
+})();
+
 const currency = 'EUR';
 const curveId = 'EUR:SWAP:6M';
 

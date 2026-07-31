@@ -1,4 +1,5 @@
 import { appState } from '../../../renderer.js';
+import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
 
 
 // HELPER: 
@@ -130,6 +131,16 @@ function ensureFixedTooltipPositioner() {
 // valueScale (Default 100): Faktor fuer die y-Randanzeige — die Historic-Charts
 // speichern Anteile (0.985 -> "98.50 %"), Charts mit echten %-Werten setzen 1.
 let _histCrosshairBound = false;
+// Das Fadenkreuz ist NUR fuer Line-Charts gedacht, nie fuer Balkencharts. Ein Chart
+// gilt als Line-Chart, sobald mindestens eine Serie kein 'bar' ist (der Basistyp des
+// Charts dient als Default fuer Serien ohne eigenen type). So bekommt ein reiner
+// Balkenchart selbst dann kein Fadenkreuz, wenn options.plugins.histCrosshair (z.B.
+// ueber ein geteiltes Options-Objekt) gesetzt sein sollte.
+function _chartHasLineSeries(chart) {
+  const base = chart?.config?.type;
+  const dss = chart?.data?.datasets || [];
+  return dss.some((ds) => (ds?.type || base) !== 'bar');
+}
 export function ensureHistCrosshairPlugin() {
   if (_histCrosshairBound) return;
   if (!window.Chart?.register) return;
@@ -137,6 +148,7 @@ export function ensureHistCrosshairPlugin() {
     id: "histCrosshair",
     afterEvent(chart, args) {
       if (!chart.options?.plugins?.histCrosshair) return;
+      if (!_chartHasLineSeries(chart)) return;   // nur Line-Charts, nie Balkencharts
       const e = args.event, a = chart.chartArea;
       let pos = null;
       if (e && e.type !== "mouseout" && e.x != null &&
@@ -148,6 +160,7 @@ export function ensureHistCrosshairPlugin() {
     },
     afterDraw(chart) {
       if (!chart.options?.plugins?.histCrosshair) return;
+      if (!_chartHasLineSeries(chart)) return;   // nur Line-Charts, nie Balkencharts
       const c = chart.$histCross;
       if (!c) return;
       const ctx = chart.ctx, a = chart.chartArea, xs = chart.scales.x;
@@ -1148,6 +1161,44 @@ export function rerenderHistoricCharts({ keys = null } = {}) {
 // Zeichnet dieselben Daten in perfHistYieldChart / perfHistValueChart.
 export function renderPerformanceHistoryCopies() {
   const sel = String(appState.getSelectedPortTableName?.() ?? "").trim();
+
+  // KPIs: aktueller NAV, Einstandswert (Buy) und P/L des ausgewaehlten Portfolios.
+  // Verhalten wie die Overview-Kacheln: absoluter Wert + relative 2. Zeile; welcher
+  // Wert gross steht, folgt dem Customer-Setup-Switch (abs/rel) der Kacheln nav/nav_buy/pnl.
+  try {
+    const _set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+    const _pf = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+    const _eur = (v) => Number.isFinite(v) ? Math.round(v).toLocaleString("de-DE") + " EUR" : "–";
+    const _pct = (v) => Number.isFinite(v) ? v.toFixed(2) + " %" : "–";
+    // grosser Wert + kleine 2. Zeile je nach Mode ('abs' -> abs gross, 'rel' -> rel gross).
+    const _kpi = (bigId, subId, key, absStr, relStr) => {
+      const rel = (getTileMode?.(key) === "rel");
+      _set(bigId, rel ? relStr : absStr);
+      _set(subId, rel ? absStr : relStr);
+    };
+
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? "").trim() === sel);
+    let _nav = 0, _navBuy = 0, _notional = 0;
+    for (const r of portRows) {
+      const n = _pf(r.NOTIONAL ?? r.notional);
+      _notional += n;
+      _nav += _pf(r.NAV ?? r.nav);
+      _navBuy += (_pf(r.PRICE_BUY ?? r.price_buy) / 100) * n;
+    }
+    const _pnl = _nav - _navBuy;
+
+    // Relative wie in den Overview-Kacheln: NAV/NAVBuy relativ zur Nominale (% of notional),
+    // P/L relativ zum Einstand (% of buy value).
+    const _navRel    = _notional ? `${_pct(_nav / _notional * 100)} of notional` : "–";
+    const _navBuyRel = _notional ? `${_pct(_navBuy / _notional * 100)} of notional` : "–";
+    const _pnlRel    = _navBuy ? _pct(_pnl / _navBuy * 100) : "–";
+
+    _kpi("perfHistKpiNav",    "perfHistKpiNavRel",    "nav",     _eur(_nav),    _navRel);
+    _kpi("perfHistKpiNavBuy", "perfHistKpiNavBuyRel", "nav_buy", _eur(_navBuy), _navBuyRel);
+    _kpi("perfHistKpiPnl",    "perfHistKpiPnlRel",    "pnl",     _eur(_pnl),    _pnlRel);
+  } catch (e) { console.warn("[perfHist] KPI failed", e); }
+
   const all = (typeof appState.getPortfolioHistoryData === "function")
     ? (appState.getPortfolioHistoryData() || [])
     : [];

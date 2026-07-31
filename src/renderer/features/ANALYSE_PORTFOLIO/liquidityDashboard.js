@@ -6,12 +6,16 @@
 
 import { getColorFromPalette } from '../../utils/colors.js';
 import {
-  setLiqDrillData, liqChartHoverMenu, liqChartClickDrill, scheduleHideConcMenu,
+  setLiqDrillData, liqChartHoverMenu, scheduleHideConcMenu, bindRightClickDrill,
 } from './SummaryBreakdown.js';
 
 let _liqDashChart = null;
 let _lastRows = [];
 let _listenerBound = false;
+// Aktuelle Bucket-Steps fuer den (einmalig gebundenen) Rechtsklick-Drill. Wird bei
+// jedem Render neu gesetzt, damit der Handler nach Portfolio-/Segmentwechsel die
+// richtigen Faelligkeits-Buckets trifft.
+let _liqSteps = [];
 // Aktuelle Balken-Segmentierung: null = ein Balken (Total, navy); '__POSITIONS' =
 // eine Schicht je Position; sonst ein Datenfeld (ISSUER/CATEGORY/...) -> Schicht je Wert.
 // Wird durch die Menue-Wahl im Floating-Menue gesetzt ('liq:chart-group'-Event).
@@ -227,6 +231,7 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
   try { setLiqDrillData(rows); } catch {}
 
   const { labels, sums, steps, idxOf } = bucketMaturities(rows);
+  _liqSteps = steps;   // fuer den Rechtsklick-Drill (Handler liest sie zur Klickzeit)
   renderKpis(rows, labels, sums);
   // Pivot-Tabelle Category x Jahr NUR wenn per "By Category"-Button angefordert.
   renderLiqCategoryPivot(rows, labels, _showCategoryPivot);
@@ -264,10 +269,8 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
       // Nur das Segment unter dem Cursor treffen (sonst riesiger Tooltip bei vielen Schichten).
       interaction: { mode: 'nearest', intersect: true },
-      // Klick auf einen Balken -> Drill (Positionen dieser Faelligkeit); Hover ->
-      // Floating-Menue (Positions / By Issuer / By Category / ...), wie in Overview.
-      onHover: (evt, els) => { try { liqChartHoverMenu(evt, els, steps); } catch {} },
-      onClick: (evt, els) => { try { liqChartClickDrill(els, steps); } catch {} },
+      // Drill NUR per Rechtsklick (unten via bindRightClickDrill gebunden) — wie in
+      // allen anderen Charts. Kein Hover-/Linksklick-Menue mehr.
       plugins: {
         // Legende oben NUR bei "By Category" (wenige Kategorien); bei Issuer/Positions
         // waeren es zu viele Eintraege.
@@ -318,6 +321,13 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
         },
       },
     },
+  });
+
+  // Drill NUR per Rechtsklick (contextmenu) — einmalig gebunden, liest Chart + Steps
+  // zur Klickzeit. Rechtsklick auf einen Balken oeffnet das Floating-Menue (Positions /
+  // By Issuer / By Category / ...) am Cursor, konsistent mit allen anderen Drill-Charts.
+  bindRightClickDrill(canvas, () => _liqDashChart, (el, ch, e) => {
+    try { liqChartHoverMenu({ native: e, chart: ch }, [el], _liqSteps); } catch {}
   });
 }
 

@@ -81,6 +81,12 @@ function currentMode(key) {
   return TILE_VALUE_MODE[key]?.defaultMode === 'rel' ? 'rel' : 'abs';
 }
 
+// Oeffentlicher Getter fuer den abs/rel-Anzeigemodus einer Kachel (Customer-Setup-Switch).
+// Wird z.B. von den P/L-Panel-KPIs genutzt, damit sie sich wie die Overview-Kacheln verhalten.
+export function getTileMode(key) {
+  return currentMode(key);
+}
+
 // Apply to the Overview cards: hide unchecked tiles + set the large/small value.
 export function applyOverviewTileVisibility() {
   ALL_TILES.forEach(({ key }) => {
