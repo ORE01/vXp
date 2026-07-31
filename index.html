@@ -46,7 +46,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <link href="./css/components/chart.css" rel="stylesheet">
   <link href="./css/components/sectionTriggers.css" rel="stylesheet">
-  <link href="./css/components/surfaces.css" rel="stylesheet">
+  <link href="./css/components/Surfaces.css" rel="stylesheet">
 
  
   <link href="./css/SELECT_PORTFOLIO/selectPort.css" rel="stylesheet">
@@ -86,7 +86,6 @@ Feature:    Wenn es nur in einem Panel gilt
   
   <link href="./css/MARKET_DATA/creditSpreads.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/historicData.css" rel="stylesheet">
-  <link href="./css/MARKET_DATA/forecasting.css" rel="stylesheet">
  
   <link href="./css/MARKET_DATA/rates.css" rel="stylesheet">
   <link href="./css/MARKET_DATA/forwards.css" rel="stylesheet">
@@ -320,6 +319,8 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="home-kpis">
           <div class="home-kpi home-nav-link" data-tile="notional" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-lbl">Notional</span></div>
           <div class="home-kpi home-nav-link" data-tile="nav" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-abs" id="homePfNavRel">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
+          <div class="home-kpi home-nav-link" data-tile="nav_buy" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNavBuy">–</span><span class="home-kpi-abs" id="homePfNavBuyRel">–</span><span class="home-kpi-lbl">Net Asset Value (Buy)</span></div>
+          <div class="home-kpi home-nav-link" data-tile="pnl" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfPnl">–</span><span class="home-kpi-abs" id="homePfPnlRel">–</span><span class="home-kpi-lbl">Profit/Loss</span></div>
           <div class="home-kpi home-nav-link" data-tile="yield" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Yield öffnen"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-lbl">Yield</span></div>
           <div class="home-kpi home-nav-link" data-tile="pv01" role="button" tabindex="0" title="PV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-abs" id="homePfPv01Rel">–</span><span class="home-kpi-lbl">PV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="cpv01" role="button" tabindex="0" title="CPV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-abs" id="homePfCpv01Rel">–</span><span class="home-kpi-lbl">CPV01</span></div>
@@ -556,25 +557,36 @@ Feature:    Wenn es nur in einem Panel gilt
   </button>
 </div>
 
-    <!--   Performance   Trigger (Gruppe: klappt auf UND oeffnet das Performance-Dashboard;
-           Sub-Trigger Current/History wie Market Risk -> Dashboard-Muster) -->
+    <!--   Performance   Trigger (Gruppe: reiner Toggle, klappt nur auf).
+           Untergruppen: Profit/Loss (bisher "History") + Yield (oeffnet Portfolio Yield). -->
     <div class="risk-acc view-analyse-only">
-      <button class="section-trigger risk-acc-toggle" type="button" data-panel="panel-performance-dashboard" aria-controls="panel-performance-dashboard" aria-expanded="false">
-        <span class="section-header">Yield</span>
+      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
+        <span class="section-header">Performance</span>
         <span class="chev"></span>
       </button>
       <div class="risk-acc-body">
-        <!-- Current = bisheriger Performance-Inhalt (#panel-performance). -->
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
-          <span class="section-header">Current</span>
-          <span class="chev"></span>
-        </button>
-        <!-- History = Kopien der Risk-History-Charts (Overview-Yield + Portfolio Value)
-             nebeneinander. Eigene Canvas-IDs (perfHist*), kein ID-Konflikt mit den Originalen. -->
+        <!-- Profit/Loss = bisher "History" (#panel-performance-history): Kopien der
+             Risk-History-Charts (Overview-Yield + Portfolio Value) nebeneinander.
+             Eigene Canvas-IDs (perfHist*), kein ID-Konflikt mit den Originalen. -->
         <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-performance-history" aria-controls="panel-performance-history" aria-expanded="false">
-          <span class="section-header">History</span>
+          <span class="section-header">Profit/Loss</span>
           <span class="chev"></span>
         </button>
+        <!-- Yield (Untergruppe): klappt auf UND oeffnet Portfolio Yield
+             (#panel-performance-dashboard); enthaelt den Current-Trigger. -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" data-panel="panel-performance-dashboard" aria-controls="panel-performance-dashboard" aria-expanded="false">
+            <span class="section-header">Yield</span>
+            <span class="chev"></span>
+          </button>
+          <div class="risk-acc-body">
+            <!-- Yield vs Rates = bisheriger Performance-Inhalt (#panel-performance). -->
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-performance" aria-controls="panel-performance" aria-expanded="false">
+              <span class="section-header">Yield vs Rates</span>
+              <span class="chev"></span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -940,16 +952,10 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
       <div class="sub-panel-body">
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
-          <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
-            <div class="conc-panel__title">Portfolio Performance History</div>
+          <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
+            <div class="conc-panel__title">Portfolio Value History</div>
             <!-- Fixe Hoehe + position:relative -> responsive-Chart fuellt den Container,
                  waechst NICHT bei jedem Neuzeichnen. -->
-            <div style="position:relative; height:300px;">
-              <canvas id="perfHistYieldChart"></canvas>
-            </div>
-          </div>
-          <div class="conc-panel" style="flex:1 1 420px; min-width:340px;">
-            <div class="conc-panel__title">Portfolio Value History</div>
             <div style="position:relative; height:300px;">
               <canvas id="perfHistValueChart"></canvas>
             </div>
@@ -1030,13 +1036,24 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="data-container" id="perfTopTable" data-label="Top yield contributors" style="display:none;"></div>
         <div class="data-container" id="perfFlopTable" data-label="Largest yield detractors" style="display:none;"></div>
 
+        <!-- Aus "Profit/Loss" hierher verschoben (spaetere Verwendung offen). Gerendert
+             ueber renderPerformanceHistoryCopies() beim Oeffnen dieses Panels. -->
+        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:16px;">
+          <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
+            <div class="conc-panel__title">Portfolio Yield History</div>
+            <div style="position:relative; height:300px;">
+              <canvas id="perfHistYieldChart"></canvas>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
     <!-- Panel: Performance -->
     <div id="panel-performance" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-performance-title" hidden>
       <div class="sub-panel-header">
-        <div id="panel-performance-title" class="sub-panel-title">Performance</div>
+        <div id="panel-performance-title" class="sub-panel-title">Yield vs Rates</div>
         <button class="sub-panel-close" data-close="panel-performance" aria-label="close">&times;</button>
       </div>
 
@@ -2700,17 +2717,6 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
     </div>
 
-    <!--   Machine Learning   Trigger -->
-    <div class="chart-section">
-      <button
-        class="section-trigger"
-        data-panel="panel-ml"
-        aria-controls="panel-ml"
-        aria-expanded="false">
-        <span class="section-header">Forcasting</span>
-        <span class="chev"></span>
-      </button>
-    </div>
 
 <!--   Scenarios   Trigger (Hauptpunkt) -->
 <div class="chart-section">
@@ -3162,6 +3168,9 @@ Feature:    Wenn es nur in einem Panel gilt
       <div class="sub-panel-body">
         <div id="TS_Modal" class="ts-panel-adapter">
           <div id="modal-content-container"></div>
+          <!-- Geteilter Target-Container der TS-Modals (lag frueher im entfernten ML-Panel).
+               Forecast entfernt -> versteckt; TS.js befuellt/liest ihn intern, ohne Effekt auf die TS-Charts. -->
+          <div id="targetCheckboxContainer" class="checkbox-left" style="display:none;"></div>
         </div>
 
         <!-- HIER muss der echte Template-Content rein -->
@@ -3286,98 +3295,6 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <!-- Panel: MACHINE LEARNING (Slide-In) -->
-    <div id="panel-ml" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-ml-title" hidden>
-      <div class="sub-panel-header">
-        <div id="panel-ml-title" class="sub-panel-title">Machine Learning (ML)</div>
-        <button class="sub-panel-close" data-close="panel-ml" aria-label="close">&times;</button>
-      </div>
-
-<div class="sub-panel-body">
-  <!-- Optional: Language Toggle -->
-  <div class="language-toggle" style="margin-bottom:8px;">
-    <!--
-    <button id="lang-en" class="language-button">EN</button>
-    <button id="lang-de" class="language-button">DE</button>
-    -->
-  </div>
-
-  <!-- Content Grid -->
-  <div class="ml-layout">
-    <!-- Left Column: Inputs & Tables -->
-    <section class="ml-left">
-      <h3 class="ml-h3">Select Target</h3>
-      <div class="table-wrapper MLInputWrapper">
-        <div id="targetCheckboxContainer" class="checkbox-left" style="margin-top:10px;"></div>
-      </div>
-
-      <!-- Optional: TS helper container used by your JS -->
-      <div id="MLTS-modal-container"></div>
-
-      <h3 class="ml-h3">Use Trained ML Model</h3>
-      <div class="data-container table-card" style="padding:0;">
-        <table id="MLTrainedModelsTable" class="ml-table">
-          <thead>
-            <tr>
-              <th>ID</th><th>Target</th><th>Model Name</th><th>Created At</th><th>Model Type</th>
-              <th>Epochs</th><th>Batch Size</th><th>Optimizer</th><th>Loss</th><th>Metrics</th>
-              <th>Select Model</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <h3 class="ml-h3">Select Untrained ML Model</h3>
-      <div class="data-container table-card" style="padding:0;">
-        <table id="MLModelsTable" class="ml-table">
-          <thead>
-            <tr><th>ID</th><th>Model Type</th><th>Description</th><th>Select</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div class="table-wrapper MLInputWrapper">
-        <label for="newModelCheckbox" class="ml-inline">
-          <input type="checkbox" id="newModelCheckbox" name="newModelCheckbox" />
-          Use new model
-        </label>
-
-        <div class="ml-params-row">
-          <div class="input-container">
-            <label for="epochsInput">Epochs <span class="info-icon" id="tooltip-epochs">?</span></label>
-            <input type="number" id="epochsInput" name="epochsInput" placeholder="1" />
-          </div>
-
-          <div class="input-container">
-            <label for="batchSizeInput">Batch Size <span class="info-icon" id="tooltip-batch-size">?</span></label>
-            <input type="number" id="batchSizeInput" name="batchSizeInput" placeholder="32" />
-          </div>
-        </div>
-      </div>
-
-      <h3 class="ml-h3">Start ML Model</h3>
-      <div class="button-container">
-        <button id="MLButton" class="edit-button">Run ML</button>
-      </div>
-    </section>
-
-    <!-- Right Column: Charts -->
-    <section class="ml-right">
-      <div class="table-card chart-card">
-        <h4 class="ml-h4">ML Test Data Chart</h4>
-        <canvas id="MLTestDataChart"></canvas>
-      </div>
-
-      <div class="table-card chart-card">
-        <h4 class="ml-h4">ML Predictions Chart</h4>
-        <canvas id="MLFuturePredictionChart"></canvas>
-      </div>
-    </section>
-  </div>
-</div>
-
-    </div>
 
 <!-- Panel: SET SCENARIOS -->
 <div id="panel-scenarios" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-scenarios-title" hidden>

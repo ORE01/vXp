@@ -226,7 +226,6 @@ export function bindAppButtons({
     { buttonId: 'fairValueButton3', projectName: 'py-fairValue' },
 
     { buttonId: 'CSParButton', projectName: 'py-cspar' },
-    { buttonId: 'MLButton', projectName: 'py-ml' },
 
     { buttonId: 'matchColumnsButton', projectName: 'py-matchColumns' },
     { buttonId: 'updateHistoricDataButton', projectName: 'py-historicData' },

@@ -247,7 +247,8 @@ function renderPortfolioCard(port) {
   const rows = (appState.getAllPortfolioData?.() || []).filter((r) => normPort(r?.port_name) === port);
 
   if (!rows.length) {
-    ['homePfNotional', 'homePfNav', 'homePfNavRel', 'homePfYield',
+    ['homePfNotional', 'homePfNav', 'homePfNavRel', 'homePfNavBuy', 'homePfNavBuyRel',
+     'homePfPnl', 'homePfPnlRel', 'homePfYield',
      'homePfPv01', 'homePfPv01Rel', 'homePfCpv01', 'homePfCpv01Rel',
      'homePfVega', 'homePfVegaRel'].forEach((id) => setText(id, '–'));
     updateRiskSliders({ avgMat: null, irDur: null, csDur: null });
@@ -257,13 +258,15 @@ function renderPortfolioCard(port) {
 
   const enriched = enrichPortfolioRowsWithRisk(rows, port);
 
-  let notional = 0, nav = 0, yieldW = 0, pv01Base = 0, cpv01Base = 0, vegaBase = 0, ttmW = 0, notTtm = 0;
+  let notional = 0, nav = 0, navBuy = 0, yieldW = 0, pv01Base = 0, cpv01Base = 0, vegaBase = 0, ttmW = 0, notTtm = 0;
   let hasPv01 = false, hasCpv01 = false, hasVega = false;
   const byIssuer = new Map();
   for (const r of enriched) {
     const n = numOf(r.NOTIONAL);
     notional += Number.isFinite(n) ? n : 0;
     nav += numOf(r.NAV) || 0;
+    // Einstandswert (NetAssetValueBuy): Σ (PRICE_BUY/100 × NOTIONAL), analog PORTFOLIO TOTAL.
+    navBuy += (numOf(r.PRICE_BUY) / 100) * (Number.isFinite(n) ? n : 0);
     yieldW += numOf(r.ytmPort) || 0;
     pv01Base += Number(r.PV01_BASE) || 0;
     cpv01Base += Number(r.CPV01_BASE) || 0;
@@ -287,6 +290,13 @@ function renderPortfolioCard(port) {
   setText('homePfNav', fmtEur(nav));
   // Relativ zur Nominale: NAV / Notional (in %), analog zur Portfolio-Yield-Kachel.
   setText('homePfNavRel', notional ? `${fmtPctRaw((nav / notional) * 100)} of notional` : '–');
+  // Einstandswert (Buy): absolut + relativ (= Ø-Einstandskurs in % der Nominale).
+  setText('homePfNavBuy', fmtEur(navBuy));
+  setText('homePfNavBuyRel', notional ? `${fmtPctRaw((navBuy / notional) * 100)} of notional` : '–');
+  // Profit/Loss = NAV - NAVBuy (absolut); relativ = (NAV - NAVBuy) / NAVBuy in %.
+  const pnl = nav - navBuy;
+  setText('homePfPnl', fmtEur(pnl));
+  setText('homePfPnlRel', navBuy ? fmtPctRaw((pnl / navBuy) * 100) : '–');
   // Portfolio-Yield = Σ ytmPort / Σ Notional (nominalgewichtete Kauf-Yield), konsistent
   // mit der "Portfolio Yield"-KPI im Yield-Panel. NICHT der letzte Historic-RETURN.
   setText('homePfYield', notional ? fmtPctRaw((yieldW / notional) * 100) : '–');

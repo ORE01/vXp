@@ -158,6 +158,8 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     // Performance-Dashboard: Rendite-Verlauf-Chart bei sichtbarem Panel zeichnen.
     if (panelId === 'panel-performance-dashboard') {
       requestAnimationFrame(() => { try { renderPerformanceDashboard(); } catch (_) {} });
+      // Verschobener "Portfolio Performance History"-Chart (jetzt unten in diesem Panel).
+      requestAnimationFrame(() => { try { renderPerformanceHistoryCopies(); } catch (_) {} });
     }
 
     // Credit TSI/MSD: eigene Tabelle (aus Profit/Loss geklont) + Tail-Zoom bei sichtbarem Panel.

@@ -9,6 +9,8 @@
     "ipc:audit": "node src/scripts/ipc-audit.js",
     "start:electron": "electron .",
     "start": "set NODE_ENV=development && npm run ipc:audit && npm run start:electron",
+    "sync:worker": "node src/scripts/sync-worker.js",
+    "prebuild": "npm run sync:worker",
     "build": "electron-builder"
   },
   "build": {

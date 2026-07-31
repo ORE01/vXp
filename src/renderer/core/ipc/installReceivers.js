@@ -75,10 +75,6 @@ export function installReceivers(deps = {}) {
 
     handleAllLossData,
 
-    handleFuturePredictions,
-    handleMLTestData,
-    handleMLTrainedModels,
-    handleMLModels,
 
     createTSModals,
     observePanelTsOpen,
@@ -262,10 +258,6 @@ api.receive(channel, (data) => {
 
     handleAllLossData,
 
-    handleFuturePredictions,
-    handleMLTestData,
-    handleMLTrainedModels,
-    handleMLModels,
 
     createTSModals,
     handlePortfolioHistoryData,
@@ -374,10 +366,6 @@ api.receive(channel, (data) => {
   route('lossHistogramMainData');
 
   // ML
-  route('ML_FuturePredictionsData');
-  route('ML_MergedDataData');
-  route('ML_TrainedModelsData');
-  route('ML_ModelsData');
 
   // TS
   route('tblTSData');

@@ -301,19 +301,6 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'sortedLossesIssuerMainData':
       return handlers.handleAllLossData?.(data);
 
-    // ML
-    case 'ML_FuturePredictionsData':
-      return handlers.handleFuturePredictions?.(data);
-
-    case 'ML_MergedDataData':
-      return handlers.handleMLTestData?.(data);
-
-    case 'ML_TrainedModelsData':
-      return handlers.handleMLTrainedModels?.(data);
-
-    case 'ML_ModelsData':
-      return handlers.handleMLModels?.(data);
-
     // TS
     case 'tblTSData':
       return handlers.createTSModals?.(data);

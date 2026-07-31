@@ -68,7 +68,6 @@ import { marketRiskHandlers } from './features/ANALYSE_PORTFOLIO/marketRisk/mark
 import { handleCVaRData, handleEADData } from './features/ANALYSE_PORTFOLIO/CREDIT_RISK/CVaR.js';
 import { handleFWDData } from './features/MARKET_DATA/forwards/forwardCurvePanel.js';
 import { handleProviderData } from './features/DATA_PROVIDER/DATAProvider.js';
-import { handleFuturePredictions, handleMLTestData, handleMLTrainedModels, handleMLModels } from './features/MARKET_DATA/FORECASTING/ML.js';
 
 import { handleSummaryMarketRiskData, handleMvarProductTable } from './features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
 import { renderHomeOverview, initHomeDisclaimer } from './features/HOME/homeOverview.js';
@@ -285,11 +284,6 @@ const {
     ...analyseHandlers,
     ...marketRiskHandlers,
 
-    handleFuturePredictions,
-    handleMLTestData,
-    handleMLTrainedModels,
-    handleMLModels,
-
     createTSModals,
     observePanelTsOpen,
   });
@@ -349,22 +343,7 @@ function initAllPanelsLazyRender() {
 }
 
   function updateTooltips(language) {
-    //console.log(`Updating tooltips to language: ${language}`);
-
-    const tooltipEpochs = document.getElementById("tooltip-epochs");
-    const tooltipBatchSize = document.getElementById("tooltip-batch-size");
-
-    if (tooltipEpochs) {
-      tooltipEpochs.setAttribute("data-tooltip", tooltips[language].epochs);
-    } else {
-      console.warn("Element with ID 'tooltip-epochs' not found.");
-    }
-
-    if (tooltipBatchSize) {
-      tooltipBatchSize.setAttribute("data-tooltip", tooltips[language].batchSize);
-    } else {
-      console.warn("Element with ID 'tooltip-batch-size' not found.");
-    }
+    // Forecast/ML entfernt -> keine ML-Tooltips (epochs/batch-size) mehr.
   }
 
 export function sortTenors(tenors) {

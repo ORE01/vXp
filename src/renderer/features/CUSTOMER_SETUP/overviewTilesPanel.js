@@ -18,6 +18,8 @@
 export const OVERVIEW_TILES = [
   { key: 'notional',        label: 'Notional' },
   { key: 'nav',             label: 'Net Asset Value' },
+  { key: 'nav_buy',         label: 'Net Asset Value (Buy)' },
+  { key: 'pnl',             label: 'Profit/Loss' },
   { key: 'yield',           label: 'Yield' },
   { key: 'ir_duration',     label: 'Interest Rate Duration' },
   { key: 'cs_duration',     label: 'Credit Spread Duration' },
@@ -54,6 +56,8 @@ const ALL_TILES = [...OVERVIEW_TILES, ...MARKET_RISK_TILES, ...CREDIT_RISK_TILES
 //                  chosen to preserve each tile's existing look.
 const TILE_VALUE_MODE = {
   nav:          { primaryIsAbs: true,  defaultMode: 'abs' },
+  nav_buy:      { primaryIsAbs: true,  defaultMode: 'abs' },
+  pnl:          { primaryIsAbs: true,  defaultMode: 'abs' },
   pv01:         { primaryIsAbs: true,  defaultMode: 'abs' },
   cpv01:        { primaryIsAbs: true,  defaultMode: 'abs' },
   vega:         { primaryIsAbs: true,  defaultMode: 'abs' },

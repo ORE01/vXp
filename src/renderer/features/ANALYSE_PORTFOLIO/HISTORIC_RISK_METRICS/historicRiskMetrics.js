@@ -805,7 +805,9 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
     labels,
     datasets: [
       {
-        label: "Portfolio Return",
+        // Verschobener Yield-History-Chart (#perfHistYieldChart) -> "Portfolio Yield";
+        // der originale Risk-History-Chart behaelt "Portfolio Return".
+        label: canvasId === "perfHistYieldChart" ? "Portfolio Yield" : "Portfolio Return",
         data: returns,
         borderColor: "#4bc0c0",
         backgroundColor: "rgba(75, 192, 192, 0.15)",
@@ -983,12 +985,15 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
 
   destroyChartByCanvasId(canvasId);
 
+  // Verschobener Value-History-Chart (#perfHistValueChart) -> kuerzere, Kachel-konsistente
+  // Legende; der originale Risk-History-Chart behaelt seine bisherigen Labels.
+  const _perf = canvasId === "perfHistValueChart";
   const data = {
     labels,
     datasets: [
       {
         type: "line",
-        label: "Portfolio Value / Notional",
+        label: _perf ? "Portfolio Value" : "Portfolio Value / Notional",
         data: portValuePct,
         borderColor: "rgba(54, 162, 235, 1)",
         backgroundColor: "rgba(54, 162, 235, 0.15)",
@@ -999,7 +1004,7 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
       },
       {
         type: "line",
-        label: "Portfolio BUY Value / Notional",
+        label: _perf ? "Portfolio Value (Buy)" : "Portfolio BUY Value / Notional",
         data: portValueBuyPct,
         borderColor: "rgba(255, 99, 132, 1)",
         backgroundColor: "rgba(255, 99, 132, 0.15)",
@@ -1010,7 +1015,7 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
       },
       {
         type: "bar",
-        label: "Profit/Loss (%)",
+        label: _perf ? "Profit/Loss" : "Profit/Loss (%)",
         data: profitLossPct,
         yAxisID: "y1",
         // Gewinn gruen, Verlust rot.

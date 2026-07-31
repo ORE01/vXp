@@ -479,7 +479,7 @@ function toIsoDateString(d) {
     }
 
     function normalizeDataset(dataset) {
-        console.log("Before normalizeDataset:", dataset.data);
+        // [perf] entfernt: console.log("Before normalizeDataset:", dataset.data);
       
         // Find the first non-NaN and non-null value for normalization
         const firstValidIndex = dataset.data.findIndex(({ y }) => y !== null && !isNaN(y));
@@ -505,14 +505,14 @@ function toIsoDateString(d) {
           originalY // Preserve original value
         }));
       
-        console.log("After normalizeDataset:", normalizedData);
+        // [perf] entfernt: console.log("After normalizeDataset:", normalizedData);
       
         // Return a new dataset with normalized data
         return { ...dataset, data: normalizedData };
     }
       
     function dynamicNormalization(dataset) {
-        console.log("Before dynamicNormalization:", dataset.data);
+        // [perf] entfernt: console.log("Before dynamicNormalization:", dataset.data);
         const validData = dataset.data.filter(({ y }) => y !== null && !isNaN(y));
         const minValue = Math.min(...validData.map(({ y }) => y));
         const maxValue = Math.max(...validData.map(({ y }) => y));
@@ -527,7 +527,7 @@ function toIsoDateString(d) {
             originalY // Preserve original
         }));
 
-        console.log("After dynamicNormalization:", normalizedData);
+        // [perf] entfernt: console.log("After dynamicNormalization:", normalizedData);
         return { ...dataset, data: normalizedData };
     }
 
@@ -540,7 +540,7 @@ function toIsoDateString(d) {
         const volatility = (previousPoint && currentPoint) ? ((currentPoint - previousPoint) / previousPoint) * 100 : null; // Calculate relative change in percentage
         return { x: point.x, y: volatility };
       });
-      console.log(`Calculated daily volatility for dataset [${dataset.label}]`, dataset.data);
+      // [perf] entfernt: console.log(`Calculated daily volatility for dataset [${dataset.label}]`, dataset.data);
     }
 
 

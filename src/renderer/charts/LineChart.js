@@ -1,4 +1,4 @@
-﻿import { getColorFromPalette, getEuswCurveColor } from '../utils/colors.js';
+﻿import { getContrastColor, getEuswCurveColor } from '../utils/colors.js';
 import { saveTrendlines, loadTrendlines } from '../features/MARKET_DATA/HISTORIC_DATA/TS.js';
 //import { saveTrendlines, loadTrendlines } from '../renderer/MARKET_DATA/HISTORIC_DATA/TS.js';
 
@@ -125,7 +125,9 @@ const trendlinePlugin = {
       label: dataset.label,
       data: dataset.data.map(p => ({ x: p.x, y: p.y, originalY: p.originalY })),
       fill: false,
-      borderColor: getColorFromPalette(index),
+      // Nur die Historic-Data-/TS-Charts nutzen die Classic-Palette (PALETTE_HSL),
+      // unabhaengig von der global aktiven ACTIVE_PALETTE (die alle anderen Charts nutzen).
+      borderColor: getContrastColor(index),
       tension: 0.1,
       pointRadius: pointRadius,
       borderWidth: 1,
@@ -162,6 +164,7 @@ const trendlinePlugin = {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,   // Performance: kein Punkt-fuer-Punkt-Animieren (4 Modals, tausende Punkte)
       interaction: { mode: 'nearest', axis: 'x', intersect: false },
       scales: {
         x: { display: true, title: { display: true, text: "Year" } },
@@ -641,7 +644,9 @@ function setupChartButtons(chartInstance, datasets, modalIndex) {
       finalDatasets.push({
         label: dataset.label,
         data: dataset.data,
-        borderColor: getColorFromPalette(index),
+        // Classic-Palette (wie in der Initial-Zeichnung Z.130) — beim Zeitraum-Filter
+        // wurden die Datasets sonst mit der muted-Palette neu gefaerbt.
+        borderColor: getContrastColor(index),
         fill: false,
         tension: 0.1,
         pointRadius: 0,
@@ -829,8 +834,8 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
         }
 
         // Nicht-Original: Palette-Farbe + Background fÃ¼r gefÃ¼lltes Legend-KÃ¤stchen
-        const border = getColorFromPalette(paletteIndex, 1);
-        const bg     = getColorFromPalette(paletteIndex, 0.6);
+        const border = getContrastColor(paletteIndex, 1);
+        const bg     = getContrastColor(paletteIndex, 0.6);
         paletteIndex++;
 
         return {
@@ -1007,8 +1012,8 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
         }
 
         // Nicht-Original: Palette-Farbe + Background fÃ¼r gefÃ¼lltes Legend-KÃ¤stchen
-        const border = getColorFromPalette(paletteIndex, 1);
-        const bg     = getColorFromPalette(paletteIndex, 0.6);
+        const border = getContrastColor(paletteIndex, 1);
+        const bg     = getContrastColor(paletteIndex, 0.6);
         paletteIndex++;
 
         return {
@@ -1127,7 +1132,7 @@ try {
           fill: false,
           borderColor: isOriginalCurve
             ? eusw.borderColor
-            : getColorFromPalette(paletteIndex++, 1),
+            : getContrastColor(paletteIndex++, 1),
           backgroundColor: isOriginalCurve
             ? eusw.backgroundColor
             : undefined,
