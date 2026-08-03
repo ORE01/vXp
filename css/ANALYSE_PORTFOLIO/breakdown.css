@@ -306,8 +306,11 @@
 /* Kennzahlen-Kacheln */
 .conc-kpi-grid {
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  /* Max-Breite je Kachel (feste px statt 1fr) -> wenige Kacheln fuellen NICHT die ganze
+     Breite, sondern stehen links in fester Groesse. Gilt fuer alle KPI-Baender. */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 260px));
   gap:10px;
+  justify-content: start;
 }
 .conc-kpi {
   background: var(--surface-overlay);
@@ -315,7 +318,9 @@
   border-radius: 8px;
   padding: 10px; text-align:center;
 }
-.conc-kpi__val { font-size:20px; font-weight:700; color: var(--text-bright); }
+.conc-kpi__val { font-size:20px; font-weight:700; color: var(--text-bright); white-space:nowrap; }
+/* Zusatz-Qualifier in der Wert-/Sub-Zeile (z.B. "(of notional)") — zarter als der Wert. */
+.conc-kpi__qual { font-weight:400; font-size:0.72em; color: var(--text-muted); }
 /* Optionale 2. Zeile (z.B. abs/rel-Wert im P/L-Panel), zwischen Wert und Label. */
 .conc-kpi__sub { font-size:11px; color: var(--text-muted); margin-top:2px; }
 .conc-kpi__lbl { font-size:10px; color: var(--text-muted); margin-top:2px; }

@@ -317,7 +317,7 @@ Feature:    Wenn es nur in einem Panel gilt
           Portfolio<span class="home-card-port" id="homePfPort"></span>
         </div>
         <div class="home-kpis">
-          <div class="home-kpi home-nav-link" data-tile="notional" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-lbl">Notional</span></div>
+          <div class="home-kpi home-nav-link" data-tile="notional" data-nav-panel="panel-concentration" role="button" tabindex="0" title="Breakdown öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-lbl">Notional</span></div>
           <div class="home-kpi home-nav-link" data-tile="nav" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-abs" id="homePfNavRel">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
           <div class="home-kpi home-nav-link" data-tile="nav_buy" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNavBuy">–</span><span class="home-kpi-abs" id="homePfNavBuyRel">–</span><span class="home-kpi-lbl">Net Asset Value (Buy)</span></div>
           <div class="home-kpi home-nav-link" data-tile="pnl" data-nav-panel="panel-performance-history" role="button" tabindex="0" title="Profit/Loss öffnen"><span class="home-kpi-val" id="homePfPnl">–</span><span class="home-kpi-abs" id="homePfPnlRel">–</span><span class="home-kpi-lbl">Profit/Loss</span></div>
@@ -957,23 +957,30 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
       <div class="sub-panel-body">
         <!-- KPIs: aktueller NAV, Einstandswert (Buy) und P/L des Portfolios (Stil wie Performance-Overview). -->
-        <div class="conc-kpi-grid" style="margin-bottom:16px;">
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="perfHistKpiNav">–</div>
-            <div class="conc-kpi__sub" id="perfHistKpiNavRel">–</div>
-            <div class="conc-kpi__lbl">Net Asset Value</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="perfHistKpiNavBuy">–</div>
-            <div class="conc-kpi__sub" id="perfHistKpiNavBuyRel">–</div>
-            <div class="conc-kpi__lbl">Net Asset Value (Buy)</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="perfHistKpiPnl">–</div>
-            <div class="conc-kpi__sub" id="perfHistKpiPnlRel">–</div>
-            <div class="conc-kpi__lbl">Profit / Loss</div>
+        <div class="conc-panel conc-panel--band" style="margin-bottom:16px;">
+          <div class="conc-panel__title">Key Figures</div>
+          <div class="conc-kpi-grid">
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="perfHistKpiNav">–</div>
+              <div class="conc-kpi__sub" id="perfHistKpiNavRel">–</div>
+              <div class="conc-kpi__lbl">Net Asset Value</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="perfHistKpiNavBuy">–</div>
+              <div class="conc-kpi__sub" id="perfHistKpiNavBuyRel">–</div>
+              <div class="conc-kpi__lbl">Net Asset Value (Buy)</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="perfHistKpiPnl">–</div>
+              <div class="conc-kpi__sub" id="perfHistKpiPnlRel">–</div>
+              <div class="conc-kpi__lbl">Profit / Loss</div>
+            </div>
           </div>
         </div>
+
+        <!-- Gespiegeltes KPI-Band fuer Preview/PDF (data-kpi-band). Nicht in der UI sichtbar. -->
+        <div class="data-container" id="perfHistKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
           <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
             <div class="conc-panel__title">Portfolio Value History</div>
@@ -997,26 +1004,34 @@ Feature:    Wenn es nur in einem Panel gilt
 
         <!-- Redundanter Kopf (Portfolio Yield / Yield development / MANAGEMENT) entfernt;
              der Panel-Titel "Yield" oben genuegt. -->
-        <div class="conc-kpi-grid">
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="perfKpiReturn">–</div>
-            <span class="perf-kpi__badge" id="perfKpiBadge" style="display:none;"></span>
-            <div class="conc-kpi__lbl">Portfolio Yield</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="perfKpiPrev">–</div>
-            <div class="conc-kpi__lbl">Previous Period Yield</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
-            <div class="conc-kpi__lbl">Profit / Loss</div>
+        <div class="conc-panel conc-panel--band" style="margin:0 4px 16px;">
+          <div class="conc-panel__title">Key Figures</div>
+          <div class="conc-kpi-grid">
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="perfKpiReturn">–</div>
+              <div class="conc-kpi__sub" id="perfKpiReturnDelta" style="display:none;">–</div>
+              <div class="conc-kpi__lbl">Portfolio Yield</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
+              <div class="conc-kpi__lbl">Profit / Loss</div>
+            </div>
           </div>
         </div>
 
         <div class="perf-row perf-row--charts">
           <div class="perf-card">
             <h2 class="perf-card__title">How is the yield developing?</h2>
-            <div class="perf-chart-holder"><canvas id="perfReturnChart"></canvas></div>
+            <!-- Vergleichs-Zinsreihe waehlbar (EU/US-Kurven); befuellt in historicRiskMetrics.js. -->
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+              <label for="perfHistCompareSelect" style="font-size:12px; color:var(--text-muted);">Compare with:</label>
+              <select id="perfHistCompareSelect" class="deals-dropdown" style="width:150px; min-width:0;"></select>
+            </div>
+            <!-- Portfolio-Yield-History-Grafik (Zoom/blau) hierher verschoben, ersetzt den
+                 frueheren perfReturnChart. Rendert renderPerformanceHistoryCopies(). -->
+            <div style="position:relative; height:300px;">
+              <canvas id="perfHistYieldChart"></canvas>
+            </div>
           </div>
           <div class="perf-card">
             <h2 class="perf-card__title">Where does the yield come from?</h2>
@@ -1053,16 +1068,6 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="data-container" id="perfTopTable" data-label="Top yield contributors" style="display:none;"></div>
         <div class="data-container" id="perfFlopTable" data-label="Largest yield detractors" style="display:none;"></div>
 
-        <!-- Aus "Profit/Loss" hierher verschoben (spaetere Verwendung offen). Gerendert
-             ueber renderPerformanceHistoryCopies() beim Oeffnen dieses Panels. -->
-        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:16px;">
-          <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
-            <div class="conc-panel__title">Portfolio Yield History</div>
-            <div style="position:relative; height:300px;">
-              <canvas id="perfHistYieldChart"></canvas>
-            </div>
-          </div>
-        </div>
 
       </div>
     </div>
@@ -1076,26 +1081,29 @@ Feature:    Wenn es nur in einem Panel gilt
 
       <div class="sub-panel-body">
         <!-- KPI-Band: aktueller Portfolio-Yield, Yield bei Kauf und Differenz. Befuellt in SummaryYield.js. -->
-        <div class="conc-kpi-grid" style="margin-bottom:16px;">
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
-            <div class="conc-kpi__lbl">Portfolio Yield (current)</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
-            <div class="conc-kpi__lbl">Portfolio Yield (at buy)</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="yieldKpiDelta">–</div>
-            <div class="conc-kpi__lbl">&Delta; vs buy</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="yieldKpiTtm">–</div>
-            <div class="conc-kpi__lbl">Time to maturity (&Oslash;)</div>
-          </div>
-          <div class="conc-kpi">
-            <div class="conc-kpi__val" id="yieldKpiDuration">–</div>
-            <div class="conc-kpi__lbl">IR duration</div>
+        <div class="conc-panel conc-panel--band" style="margin-bottom:16px;">
+          <div class="conc-panel__title">Key Figures</div>
+          <div class="conc-kpi-grid">
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
+              <div class="conc-kpi__lbl">Portfolio Yield (current)</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
+              <div class="conc-kpi__lbl">Portfolio Yield (at buy)</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="yieldKpiDelta">–</div>
+              <div class="conc-kpi__lbl">&Delta; vs buy</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="yieldKpiTtm">–</div>
+              <div class="conc-kpi__lbl">Time to maturity (&Oslash;)</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__val" id="yieldKpiDuration">–</div>
+              <div class="conc-kpi__lbl">IR duration</div>
+            </div>
           </div>
         </div>
         <!-- Auswahl der historischen Vergleichskurve (Monate/Jahre zurück). -->
@@ -1754,41 +1762,40 @@ Feature:    Wenn es nur in einem Panel gilt
   <div class="sub-panel-body">
     <section class="sens-dashboard">
 
-      <!-- KPI Summary — cards are shown per active tab (data-sens-kpi-for). -->
-      <div class="sens-kpi-row">
-        <div class="sens-kpi-card" data-sens-kpi-for="pv01">
-          <div class="sens-kpi-label">Total PV01</div>
-          <div class="sens-kpi-value" id="SensTotalPV01">—</div>
-        </div>
-
-        <div class="sens-kpi-card" data-sens-kpi-for="cpv01">
-          <div class="sens-kpi-label">Total CPV01</div>
-          <div class="sens-kpi-value" id="SensTotalCPV01">—</div>
-        </div>
-
-        <div class="sens-kpi-card" data-sens-kpi-for="pv01">
-          <div class="sens-kpi-label">Top IR Tenor</div>
-          <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
-        </div>
-
-        <div class="sens-kpi-card" data-sens-kpi-for="pv01">
-          <div class="sens-kpi-label">Duration (Years)</div>
-          <div class="sens-kpi-value" id="SensDuration">—</div>
-        </div>
-
-        <div class="sens-kpi-card" data-sens-kpi-for="cpv01">
-          <div class="sens-kpi-label">Top Credit Bucket</div>
-          <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
-        </div>
-
-        <div class="sens-kpi-card" data-sens-kpi-for="cpv01">
-          <div class="sens-kpi-label">Credit Spread Duration (Years)</div>
-          <div class="sens-kpi-value" id="SensCsDuration">—</div>
-        </div>
-
-        <div class="sens-kpi-card" data-sens-kpi-for="vega">
-          <div class="sens-kpi-label">Total Vega</div>
-          <div class="sens-kpi-value" id="SensTotalVega">—</div>
+      <!-- KPI Summary — einheitliches "Key Figures"-Band (conc-kpi) wie in den anderen
+           Panels. Kacheln bleiben per Tab filterbar (data-sens-kpi-for + data-active-tab),
+           Wert-IDs + .sens-kpi-value (rel/abs-2-Zeiler) erhalten. -->
+      <div class="conc-panel conc-panel--band" style="margin-bottom:16px;">
+        <div class="conc-panel__title">Key Figures</div>
+        <div class="sens-kpi-row" data-active-tab="pv01">
+          <div class="conc-kpi" data-sens-kpi-for="pv01">
+            <div class="sens-kpi-value" id="SensTotalPV01">—</div>
+            <div class="conc-kpi__lbl">Total PV01</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="cpv01">
+            <div class="sens-kpi-value" id="SensTotalCPV01">—</div>
+            <div class="conc-kpi__lbl">Total CPV01</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="pv01">
+            <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
+            <div class="conc-kpi__lbl">Top IR Tenor</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="pv01">
+            <div class="sens-kpi-value" id="SensDuration">—</div>
+            <div class="conc-kpi__lbl">Duration (Years)</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="cpv01">
+            <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
+            <div class="conc-kpi__lbl">Top Credit Bucket</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="cpv01">
+            <div class="sens-kpi-value" id="SensCsDuration">—</div>
+            <div class="conc-kpi__lbl">Credit Spread Duration (Years)</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="vega">
+            <div class="sens-kpi-value" id="SensTotalVega">—</div>
+            <div class="conc-kpi__lbl">Total Vega</div>
+          </div>
         </div>
       </div>
 
@@ -2257,7 +2264,10 @@ Feature:    Wenn es nur in einem Panel gilt
           <p class="mvar-caption">Maturities by bucket (notional, EUR mn) for the selected Portfolio</p>
         </div>
         <!-- KPI-Band nach oben (ueber den Faelligkeiten-Chart). -->
-        <div id="liqDashKpi" class="conc-kpi-grid" style="margin-bottom:14px;"></div>
+        <div class="conc-panel conc-panel--band" style="margin-bottom:14px;">
+          <div class="conc-panel__title">Key Figures</div>
+          <div id="liqDashKpi" class="conc-kpi-grid"></div>
+        </div>
         <div class="conc-panel">
           <div class="conc-panel__title liq-panel-head">
             <span>Maturities</span>

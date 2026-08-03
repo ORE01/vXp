@@ -230,7 +230,7 @@ export function renderSwaptionCubeHeatmap() {
     const cells = xLabels.map((optionTenor, colIdx) => {
       const value = z[rowIdx]?.[colIdx];
       const label = typeof value === 'number' && Number.isFinite(value)
-        ? `${(value * 100).toFixed(2)}%`
+        ? `${(value * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
         : '–';
 
       return `
@@ -378,7 +378,7 @@ export function renderSwaptionCubeSummary() {
 
     <div style="margin-bottom:6px; font-size:0.85rem; opacity:0.8; line-height:1.4;">
       ${strikeLabel}<br>
-      Vol-Range: <strong>${(minVol * 100).toFixed(3)} % – ${(maxVol * 100).toFixed(3)} %</strong><br>
+      Vol-Range: <strong>${(minVol * 100).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} % – ${(maxVol * 100).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} %</strong><br>
       Nodes im Ausschnitt: <strong>${flatVols.length}</strong><br>
       Option Tenors: <strong>${xLabels.length}</strong><br>
       Swap Tenors: <strong>${yLabels.length}</strong>

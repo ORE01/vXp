@@ -209,7 +209,7 @@ function generateIssuerTable(data) {
     html += `<tr>
       <td>${d.ISSUER}</td>
       <td>${(d.TOTAL_NOTIONAL || 0).toLocaleString('de-AT')}</td>
-      <td>${(d.SHARE ?? 0).toFixed(2)}</td>
+      <td>${(d.SHARE ?? 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     </tr>`;
   });
 

@@ -5,6 +5,7 @@
 import { appState } from '../../../renderer.js';
 import { issuerData } from '../../issuer/issuerPanel.js';
 import { applyProductTemplateDefaults } from '../productTemplateResolver.js';
+import { parseDeNumber } from '../../../utils/tableCellFormats.js';
 import { validateProductBeforeSave } from '../productValidation.js';
 import { PRODUCT_FIELD_CONFIG } from '../productFieldConfig.js';
 
@@ -314,8 +315,7 @@ function normalizeRate(value) {
 
   if (!raw) return '';
 
-  const clean = raw.replace('%', '').replace(',', '.');
-  const n = Number(clean);
+  const n = parseDeNumber(raw);
 
   if (!Number.isFinite(n)) return raw;
 

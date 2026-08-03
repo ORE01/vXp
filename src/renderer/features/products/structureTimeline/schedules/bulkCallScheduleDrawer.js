@@ -12,6 +12,8 @@ import {
   sendAddProductStructureRow,
 } from './structureRowApi.js';
 
+import { parseDeNumber } from '../../../../utils/tableCellFormats.js';
+
 // ------------------------------------------------------------
 // Bulk CALL schedule
 // ------------------------------------------------------------
@@ -137,8 +139,8 @@ export function renderBulkCallDrawer(drawer, prodId, container, rows, options = 
     ?.addEventListener('click', () => {
       const firstDate = drawer.querySelector('#bulkCallFirstDateInput')?.value || '';
       const lastDate = drawer.querySelector('#bulkCallLastDateInput')?.value || '';
-      const callPrice = Number(drawer.querySelector('#bulkCallPriceInput')?.value || 100);
-      const notionalFactor = Number(drawer.querySelector('#bulkCallNotionalFactorInput')?.value || 1);
+      const callPrice = parseDeNumber(drawer.querySelector('#bulkCallPriceInput')?.value || 100);
+      const notionalFactor = parseDeNumber(drawer.querySelector('#bulkCallNotionalFactorInput')?.value || 1);
 
       if (!firstDate || !lastDate) {
         showStructureMessage(

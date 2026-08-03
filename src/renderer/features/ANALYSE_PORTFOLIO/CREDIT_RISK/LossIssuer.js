@@ -176,7 +176,7 @@ function bindLossCanvasLeaveHide(canvas) {
 }
 
 // Kompakte Zahl fuer die Balken-Beschriftung (z.B. 6.3M) — haelt das Label kurz.
-export const _fmtLossCompact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+export const _fmtLossCompact = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 });
 
 // Eigene HTML-Legende (sticky, bleibt beim Scrollen sichtbar). Klick blendet die
 // Serie aus/ein wie die Chart.js-Legende. legendEl.__chart haelt die aktuelle Chart.
@@ -488,7 +488,7 @@ export function setupLossIssuerUI() {
         // Anzeige mit Zeilennummer VORNE, per " | " von der Wahrscheinlichkeit getrennt.
         const base = (ratingData.length ? ratingData : marketData);
         const baseQuantils = base.map(d => d.QUANTIL);
-        const labels = base.map((d, i) => `${i + 1}  |  ${Number(d.QUANTIL).toFixed(2)}`);
+        const labels = base.map((d, i) => `${i + 1}  |  ${Number(d.QUANTIL).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
         const lossByQuantil = (rows) => {
           const m = new Map((rows || []).map(r => [r.QUANTIL, r.LOSS]));
@@ -618,7 +618,7 @@ export function setupLossIssuerUI() {
                   label: (ctx) => {
                     const v = Number(ctx.parsed?.y) || 0;
                     const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
-                    return `${ctx.dataset.label}: ${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
+                    return `${ctx.dataset.label}: ${_fmtLossCompact.format(v)} · ${rel.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
                   },
                   // Betroffene Emittenten (aus ISSUER_RANK) unter dem Wert auflisten,
                   // je Emittent eine Zeile. Leere Ausfaelle -> keine Zusatzzeile.
@@ -755,7 +755,7 @@ export function setupLossIssuerUI() {
       window.charts[chartId] = new Chart(chartElement.getContext('2d'), {
         type: 'bar',
         data: { 
-          labels: allConvIValues.map(v => Number(v).toFixed(2)),
+          labels: allConvIValues.map(v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
           datasets: [
             { 
               label: 'Historic Loss',
@@ -870,7 +870,7 @@ export function setupLossIssuerUI() {
                   const index = context.dataIndex;
                   const datasetLabel = context.dataset.label;
 
-                  const lossValue = `${Number(context.raw).toFixed(2)} %`;
+                  const lossValue = `${Number(context.raw).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 
                   let issuerRank = 'N/A';
                   if (context.datasetIndex === 0) {
@@ -978,7 +978,7 @@ export function setupLossIssuerUI() {
       window.charts[chartId] = new Chart(chartElement.getContext('2d'), {
         type: 'bar',
         data: { 
-          labels: allConvIValues.map(v => Number(v).toFixed(2)),
+          labels: allConvIValues.map(v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
           datasets: [
             { 
               label: 'Historic VaR',
@@ -1091,7 +1091,7 @@ export function setupLossIssuerUI() {
             tooltip: {
               callbacks: {
                 title: (context) => `QUANTIL: ${allConvIValues[context[0].dataIndex]}`,
-                label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)} %`,
+                label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`,
               }
             }
           }

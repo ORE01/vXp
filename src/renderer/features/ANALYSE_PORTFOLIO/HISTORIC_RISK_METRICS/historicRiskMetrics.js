@@ -50,7 +50,7 @@ import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
                 callback: (val) => {
                   const num = Number(val);
                   if (isNaN(num)) return "";
-                  return (num * 100).toFixed(2) + " %";
+                  return (num * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
                 }
               }
             }
@@ -65,7 +65,7 @@ import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
                   const label = ctx.dataset.label || "";
                   const v = ctx.parsed.y;
                   if (v == null || isNaN(v)) return label + ": n/a";
-                  return label + ": " + (v * 100).toFixed(2) + " %";
+                  return label + ": " + (v * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
                 }
               }
             },
@@ -147,8 +147,8 @@ export function ensureHistCrosshairPlugin() {
   window.Chart.register({
     id: "histCrosshair",
     afterEvent(chart, args) {
-      if (!chart.options?.plugins?.histCrosshair) return;
-      if (!_chartHasLineSeries(chart)) return;   // nur Line-Charts, nie Balkencharts
+      if (chart?.config?.type !== "line") return;   // NUR echte Line-Charts (nie Scatter/Bar)
+      if (chart.options?.plugins?.histCrosshair?.enabled !== true) return;   // explizit aktiviert
       const e = args.event, a = chart.chartArea;
       let pos = null;
       if (e && e.type !== "mouseout" && e.x != null &&
@@ -159,8 +159,8 @@ export function ensureHistCrosshairPlugin() {
       if ((prev?.x !== pos?.x) || (prev?.y !== pos?.y)) { chart.$histCross = pos; args.changed = true; }
     },
     afterDraw(chart) {
-      if (!chart.options?.plugins?.histCrosshair) return;
-      if (!_chartHasLineSeries(chart)) return;   // nur Line-Charts, nie Balkencharts
+      if (chart?.config?.type !== "line") return;   // NUR echte Line-Charts (nie Scatter/Bar)
+      if (chart.options?.plugins?.histCrosshair?.enabled !== true) return;   // explizit aktiviert
       const c = chart.$histCross;
       if (!c) return;
       const ctx = chart.ctx, a = chart.chartArea, xs = chart.scales.x;
@@ -223,7 +223,7 @@ export function ensureHistCrosshairPlugin() {
         }
         if (!yLabel) {
           const valueScale = Number(chart.options?.plugins?.histCrosshair?.valueScale ?? 100);
-          yLabel = (Number(best.val) * valueScale).toFixed(2) + " %";
+          yLabel = (Number(best.val) * valueScale).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
         }
       }
       ctx.font = "10px sans-serif";
@@ -720,6 +720,44 @@ function renderHistoricCreditRiskChart(historyData) {
     console.error("💥 Fehler beim Erzeugen von historicCreditRiskChart:", err);
   }
 }
+// Vergleichs-Zinsreihe im "How is the yield developing?"-Chart (perfHistYieldChart) ist
+// per Dropdown waehlbar. Kandidaten -> nur die, die in tblTS wirklich vorhanden sind,
+// landen im Dropdown. Werte sind wie EU_1Y als Prozent gespeichert (raw/100 -> Bruch).
+const _PERF_HIST_RATE_OPTIONS = [
+  ["EU_1Y", "EU 1Y"], ["EU_5Y", "EU 5Y"], ["EU_10Y", "EU 10Y"], ["EU_20Y", "EU 20Y"], ["EU_30Y", "EU 30Y"],
+  ["EU_ECB_Deposit", "EU ECB Deposit"], ["DE_10Y_long", "DE 10Y"],
+  ["US_1Y", "US 1Y"], ["US_2Y", "US 2Y"], ["US_5Y", "US 5Y"], ["US_10Y", "US 10Y"], ["US_30Y", "US 30Y"],
+  ["US_FED_RATE", "US Fed Rate"],
+];
+let _perfHistCompareCol = "EU_1Y";
+function _perfHistCompareLabel() {
+  const o = _PERF_HIST_RATE_OPTIONS.find(([c]) => c === _perfHistCompareCol);
+  return o ? o[1] : _perfHistCompareCol;
+}
+let _perfHistCompareBound = false;
+function ensurePerfHistCompareDropdown() {
+  const sel = document.getElementById("perfHistCompareSelect");
+  if (!sel) return;
+  const ts = appState.getTblTSData?.() || [];
+  const cols = new Set(Object.keys(ts[0] || {}));
+  const avail = _PERF_HIST_RATE_OPTIONS.filter(([c]) => cols.has(c));
+  if (!avail.length) return;
+  const wantKeys = avail.map(([c]) => c).join(",");
+  if (sel.dataset.keys !== wantKeys) {   // Optionen nur bei Aenderung neu setzen
+    sel.dataset.keys = wantKeys;
+    sel.innerHTML = avail.map(([c, l]) => `<option value="${c}">${l}</option>`).join("");
+  }
+  if (!avail.some(([c]) => c === _perfHistCompareCol)) _perfHistCompareCol = avail[0][0];
+  sel.value = _perfHistCompareCol;
+  if (!_perfHistCompareBound) {
+    _perfHistCompareBound = true;
+    sel.addEventListener("change", () => {
+      _perfHistCompareCol = sel.value;
+      try { renderPerformanceHistoryCopies(); } catch {}
+    });
+  }
+}
+
 function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPortfolioYieldChart") {
   historyData = Array.isArray(historyData) ? historyData : [];
 
@@ -748,11 +786,14 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
   const labels = sortedData.map(row => row.DATE);
   const returns = sortedData.map(row => parseFloat(row.RETURN));
 
+  // Vergleichsreihe: im "How is the yield developing?"-Chart die per Dropdown gewaehlte
+  // Zinsspalte, sonst (Risk-History) fest EU_1Y.
+  const _compareCol = (canvasId === "perfHistYieldChart") ? _perfHistCompareCol : "EU_1Y";
   const tsMap = new Map();
   tsData.forEach(row => {
     if (!row || !row.DATE) return;
     const normDate = normalizeDateStr(row.DATE);
-    const raw = parseFloat(row.EU_1Y);
+    const raw = parseFloat(row[_compareCol]);
 
 
 
@@ -822,15 +863,28 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
         // der originale Risk-History-Chart behaelt "Portfolio Return".
         label: canvasId === "perfHistYieldChart" ? "Portfolio Yield" : "Portfolio Return",
         data: returns,
-        borderColor: "#4bc0c0",
-        backgroundColor: "rgba(75, 192, 192, 0.15)",
-        borderWidth: 2,
+        // NUR im Yield-History-Panel: blaue Linie + blaue Flaechen-Schattierung wie im
+        // "How is the yield developing?"-Chart. Sonst (Risk-History) unveraendert teal.
+        borderColor: canvasId === "perfHistYieldChart" ? "#6C9BD1" : "#4bc0c0",
+        backgroundColor: canvasId === "perfHistYieldChart"
+          ? (c) => {
+              const { ctx, chartArea } = c.chart;
+              if (!chartArea) return "rgba(108,155,209,0.20)";
+              const g = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+              g.addColorStop(0, "rgba(108,155,209,0.35)");
+              g.addColorStop(1, "rgba(108,155,209,0.02)");
+              return g;
+            }
+          : "rgba(75, 192, 192, 0.15)",
+        // Yield-History: glatter + dicker wie im "How is the yield developing?"-Chart.
+        borderWidth: canvasId === "perfHistYieldChart" ? 3 : 2,
         pointRadius: 0,
-        tension: 0.2,
+        tension: canvasId === "perfHistYieldChart" ? 0.35 : 0.2,
+        fill: canvasId === "perfHistYieldChart",
         yAxisID: "y"
       },
       {
-        label: "EU 1Y",
+        label: (canvasId === "perfHistYieldChart") ? _perfHistCompareLabel() : "EU 1Y",
         data: eu1ySeries,
         borderColor: "#ff9800",
         backgroundColor: "rgba(255, 152, 0, 0.15)",
@@ -843,6 +897,28 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
   };
 
   const options = createPercentChartOptions("MVaR / ES Metrics (%)");
+  // Achsen-Beschriftung theme-aware faerben (createPercentChartOptions setzt keine Farbe
+  // -> im Dark-Theme sonst zu dunkel). Nur fuer perfHistYieldChart, wie im Scatter
+  // "Where does the yield come from?" (--chart-text / --chart-grid).
+  if (canvasId === "perfHistYieldChart") {
+    const cs = getComputedStyle(document.body);
+    const axisText = (cs.getPropertyValue("--chart-text") || "#888").trim();
+    const axisGrid = (cs.getPropertyValue("--chart-grid") || "rgba(120,120,120,0.25)").trim();
+    ["x", "y"].forEach((ax) => {
+      const s = options.scales?.[ax];
+      if (!s) return;
+      s.ticks = { ...(s.ticks || {}), color: axisText };
+      s.title = { ...(s.title || {}), color: axisText };
+      s.grid  = { ...(s.grid  || {}), color: axisGrid };
+    });
+    // Korrekter y-Achsentitel (createPercentChartOptions liefert faelschlich "MVaR / ES Metrics").
+    if (options.scales?.y?.title) options.scales.y.title.text = "Portfolio Yield (%)";
+    // Zeitachse: weniger vertikale Gitterlinien. Ohne Limit zieht Chart.js eine Linie pro
+    // Datum (~50) -> dichtes, dunkel wirkendes Band. Wie im Scatter nur wenige Ticks/Linien.
+    if (options.scales?.x) {
+      options.scales.x.ticks = { ...(options.scales.x.ticks || {}), maxTicksLimit: 8, autoSkip: true, maxRotation: 0 };
+    }
+  }
   // Legende seitlich (rechts) + kleine, leicht abgerundete Symbole.
   options.plugins.legend = {
     display: true, position: "right",
@@ -855,6 +931,10 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
   // Fadenkreuz am Cursor + Werte am Rand.
   ensureHistCrosshairPlugin();
   options.plugins.histCrosshair = { enabled: true };
+  // perfHistYieldChart: Tooltip weg (das Fadenkreuz zeigt die Werte am Rand). Crosshair bleibt.
+  if (canvasId === "perfHistYieldChart") {
+    options.plugins.tooltip = { ...(options.plugins.tooltip || {}), enabled: false };
+  }
 
   const _yieldChart = createTimeSeriesChart(canvasId, data, options, "line");
   if (canvasId === "historicPortfolioYieldChart") historicPortfolioYieldChart = _yieldChart;
@@ -932,7 +1012,7 @@ function renderHistoricPortfolioSensChart(historyData) {
 
   options.scales.y.ticks = {
     ...(options.scales.y.ticks || {}),
-    callback: (val) => `${Number(val).toFixed(2)}bp`
+    callback: (val) => `${Number(val).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}bp`
   };
 
   options.plugins = options.plugins || {};
@@ -942,7 +1022,7 @@ function renderHistoricPortfolioSensChart(historyData) {
       ...(options.plugins.tooltip.callbacks || {}),
       label: (ctx) => {
         const y = ctx.raw;
-        return `${ctx.dataset.label}: ${Number(y).toFixed(2)}bp`;
+        return `${ctx.dataset.label}: ${Number(y).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}bp`;
       }
     }
   };
@@ -1045,17 +1125,20 @@ const options = createPercentChartOptions("Portfolio Value / Notional (%)");
 options.scales.y = {
   ...options.scales.y,
   min: 0.9,           // harte Untergrenze
-  beginAtZero: false  // globale Defaults aushebeln
+  beginAtZero: false, // globale Defaults aushebeln
+  // Achsen-Titel aus: ueberlappt bei schmaler Report-Breite sonst die Ticks
+  // (Legende + %-Ticks sind selbsterklaerend).
+  title: { display: false }
 };
 
 options.scales.y1 = {
   position: "right",
-  title: { display: true, text: "Profit/Loss (%)" },
+  title: { display: false },
   ticks: {
     callback: (val) => {
       const num = Number(val);
       if (isNaN(num)) return "";
-      return (num * 100).toFixed(2) + " %";
+      return (num * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
     }
   },
   grid: {
@@ -1064,8 +1147,10 @@ options.scales.y1 = {
 };
 
 // Legende seitlich (rechts) + kleine, leicht abgerundete Symbole.
+// Legende UNTEN (nicht rechts) -> wird bei schmaler Report-Erfassung nicht mehr
+// abgeschnitten und gibt der Plot-Flaeche die volle Breite.
 options.plugins.legend = {
-  display: true, position: "right",
+  display: true, position: "bottom",
   labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } }
 };
 // Tooltip fest in der oberen linken Ecke (nicht am Cursor).
@@ -1159,17 +1244,36 @@ export function rerenderHistoricCharts({ keys = null } = {}) {
 // Kopien der Yield- + Value-History-Charts fuer das Panel "Performance -> History"
 // (eigene Canvas-IDs, damit KEINE ID-Kollision mit den Originalen in Risk History).
 // Zeichnet dieselben Daten in perfHistYieldChart / perfHistValueChart.
+let _perfHistThemeBound = false;
+function _bindPerfHistTheme() {
+  if (_perfHistThemeBound) return;
+  _perfHistThemeBound = true;
+  // Wie der Scatter (bindPerformanceDashboardTheme): bei Theme-Wechsel die perfHist-Charts
+  // mit den neuen Theme-Farben (--chart-grid/--chart-text) neu zeichnen, sonst bleiben sie
+  // in den Farben des Erst-Renders haengen und passen nicht zum Nachbarchart.
+  document.addEventListener("theme:changed", () => {
+    const yp = document.getElementById("panel-performance-dashboard");
+    const pp = document.getElementById("panel-performance-history");
+    if (yp?.classList.contains("open") || pp?.classList.contains("open")) {
+      try { renderPerformanceHistoryCopies(); } catch {}
+    }
+  });
+}
+
 export function renderPerformanceHistoryCopies() {
+  _bindPerfHistTheme();
   const sel = String(appState.getSelectedPortTableName?.() ?? "").trim();
 
   // KPIs: aktueller NAV, Einstandswert (Buy) und P/L des ausgewaehlten Portfolios.
   // Verhalten wie die Overview-Kacheln: absoluter Wert + relative 2. Zeile; welcher
   // Wert gross steht, folgt dem Customer-Setup-Switch (abs/rel) der Kacheln nav/nav_buy/pnl.
   try {
-    const _set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+    const _set = (id, t) => { const el = document.getElementById(id); if (el) el.innerHTML = t; };
+    // "(of notional)" etc. zarter setzen (muted, nicht fett) — wie die 2. Zeile.
+    const _q = (s) => `<span class="conc-kpi__qual">(${s})</span>`;
     const _pf = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
     const _eur = (v) => Number.isFinite(v) ? Math.round(v).toLocaleString("de-DE") + " EUR" : "–";
-    const _pct = (v) => Number.isFinite(v) ? v.toFixed(2) + " %" : "–";
+    const _pct = (v) => Number.isFinite(v) ? v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %" : "–";
     // grosser Wert + kleine 2. Zeile je nach Mode ('abs' -> abs gross, 'rel' -> rel gross).
     const _kpi = (bigId, subId, key, absStr, relStr) => {
       const rel = (getTileMode?.(key) === "rel");
@@ -1190,13 +1294,28 @@ export function renderPerformanceHistoryCopies() {
 
     // Relative wie in den Overview-Kacheln: NAV/NAVBuy relativ zur Nominale (% of notional),
     // P/L relativ zum Einstand (% of buy value).
-    const _navRel    = _notional ? `${_pct(_nav / _notional * 100)} of notional` : "–";
-    const _navBuyRel = _notional ? `${_pct(_navBuy / _notional * 100)} of notional` : "–";
-    const _pnlRel    = _navBuy ? _pct(_pnl / _navBuy * 100) : "–";
+    const _navRel    = _notional ? `${_pct(_nav / _notional * 100)} ${_q("of notional")}` : "–";
+    const _navBuyRel = _notional ? `${_pct(_navBuy / _notional * 100)} ${_q("of notional")}` : "–";
+    const _pnlRel    = _navBuy ? `${_pct(_pnl / _navBuy * 100)} ${_q("of buy value")}` : "–";
 
     _kpi("perfHistKpiNav",    "perfHistKpiNavRel",    "nav",     _eur(_nav),    _navRel);
     _kpi("perfHistKpiNavBuy", "perfHistKpiNavBuyRel", "nav_buy", _eur(_navBuy), _navBuyRel);
     _kpi("perfHistKpiPnl",    "perfHistKpiPnlRel",    "pnl",     _eur(_pnl),    _pnlRel);
+
+    // Report-Spiegel: KPI-Band-Tabelle (data-kpi-band) fuer Preview/PDF.
+    const _kpiTbl = document.getElementById("perfHistKpiTable");
+    if (_kpiTbl) {
+      const _esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const _strip = (s) => String(s).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+      const _rows = [
+        ["Net Asset Value", `${_eur(_nav)} · ${_strip(_navRel)}`],
+        ["Net Asset Value (Buy)", `${_eur(_navBuy)} · ${_strip(_navBuyRel)}`],
+        ["Profit / Loss", `${_eur(_pnl)} · ${_strip(_pnlRel)}`],
+      ];
+      _kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+        _rows.map(([k, v]) => `<tr><td>${_esc(k)}</td><td>${_esc(v)}</td></tr>`).join("")
+      }</tbody></table>`;
+    }
   } catch (e) { console.warn("[perfHist] KPI failed", e); }
 
   const all = (typeof appState.getPortfolioHistoryData === "function")
@@ -1210,6 +1329,7 @@ export function renderPerformanceHistoryCopies() {
     destroyChartByCanvasId("perfHistValueChart");
     return;
   }
+  ensurePerfHistCompareDropdown();   // Vergleichs-Zins-Dropdown befuellen/binden
   renderHistoricPortfolioYieldChart(hist, "perfHistYieldChart");
   renderHistoricPortfolioValueChart(hist, "perfHistValueChart");
 }

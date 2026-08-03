@@ -6,6 +6,7 @@
 // TSI / MSD folgen spaeter.
 
 import { appState } from '../../../renderer.js';
+import { fmtEurCompact } from '../../../utils/tableCellFormats.js';
 import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep, getRunConfQuantil } from './LossIssuer.js';
 import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
 
@@ -216,7 +217,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   if (!base.length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
 
-  const labels = base.map(r => (Number(r.bin_center) * 100).toFixed(1));
+  const labels = base.map(r => (Number(r.bin_center) * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
   const cvarByFlag = creditRowsByFlag();
   // Index des Bins, DURCH DAS die VaR/ES-Linie geht (naechstes Bin-Zentrum zum Wert).
   const nearestIdx = (pct) => { let idx = 0, best = Infinity; base.forEach((r, i) => { const d = Math.abs(Number(r.bin_center) * 100 - pct); if (d < best) { best = d; idx = i; } }); return idx; };
@@ -334,7 +335,7 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
 
   const sumNav = sumNavForPort(port);
   const targets = [99.0, 99.2, 99.4, 99.5, 99.6, 99.7, 99.8, 99.9, 99.95, 99.99];
-  const labels = targets.map(q => q.toFixed(q >= 99.9 ? 2 : 1));
+  const labels = targets.map(q => q.toLocaleString('de-DE', { minimumFractionDigits: q >= 99.9 ? 2 : 1, maximumFractionDigits: q >= 99.9 ? 2 : 1 }));
   const cvarByFlag = creditRowsByFlag();
 
   // Drill-Datenquelle: Positionen des gewaehlten Portfolios (mit ISSUER/__LOSS/RATINGres).
@@ -421,7 +422,7 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
         },
         subtitle: { display: true, text: `Loss > VaR red · VaR (solid) · ES (dashed) · ${_bandTxt}`, color: col, align: 'start', font: { size: 10 } },
         crLines: { h: _isMsd ? lineMapEs.flat() : lineMap[0] },
-        tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `${c.dataset.label}: ${Number(c.parsed.y).toFixed(2)}% of NAV` } },
+        tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `${c.dataset.label}: ${Number(c.parsed.y).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% of NAV` } },
       },
       scales: {
         x: { title: { display: true, text: 'Quantile', color: col }, ticks: { color: col }, grid: { display: false } },
@@ -510,7 +511,7 @@ export function renderCreditTailContributors() {
         tblEl.innerHTML = '<table class="conc-report-table"><tbody><tr><td>No tail data.</td></tr></tbody></table>';
       } else {
         tblEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>#</th><th>Issuer</th><th style="text-align:right;">Contribution</th><th>Rating</th></tr></thead><tbody>${
-          top.map((it, i) => `<tr><td>${i + 1}</td><td>${esc(it.name)}</td><td style="text-align:right;">${it.pct.toFixed(1)} %</td><td>${esc(it.rating)}</td></tr>`).join('')
+          top.map((it, i) => `<tr><td>${i + 1}</td><td>${esc(it.name)}</td><td style="text-align:right;">${it.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</td><td>${esc(it.rating)}</td></tr>`).join('')
         }</tbody></table>`;
       }
     }
@@ -545,12 +546,12 @@ function renderCrTailContribChart(canvas, winKey, items, title, colors) {
         title: { display: true, text: title, color: col, font: { family: font, size: 12, weight: 'bold' } },
         datalabels: window.ChartDataLabels ? {
           anchor: 'end', align: 'right', clamp: true, color: col, font: { family: font, size: 10 },
-          formatter: (v) => `${Number(v).toFixed(0)}%`,
+          formatter: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 })}%`,
         } : undefined,
-        tooltip: { callbacks: { label: (ctx) => `${Number(ctx.parsed.x).toFixed(1)} %` } },
+        tooltip: { callbacks: { label: (ctx) => `${Number(ctx.parsed.x).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %` } },
       },
       scales: {
-        x: { beginAtZero: true, title: { display: true, text: 'Contribution to tail loss (%)', color: col, font: { family: font } }, ticks: { color: col, font: { family: font }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, title: { display: true, text: 'Contribution to tail loss (%)', color: col, font: { family: font } }, ticks: { color: col, font: { family: font }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
         y: { ticks: { color: col, font: { family: font }, autoSkip: false }, grid: { display: false } },
       },
     },
@@ -606,27 +607,23 @@ function creditRowsByFlag(rowsIn = null) {
 }
 
 function fmtEur(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '–';
-  const mn = Math.abs(n) / 1e6;
-  const dec = mn >= 100 ? 0 : mn >= 10 ? 1 : 2;
-  return `EUR ${Number(mn.toFixed(dec)).toLocaleString('en-US')} mn`;
+  return fmtEurCompact(v, { risk: true });
 }
 function fmtEurSigned(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return `${n >= 0 ? '+' : '-'}${fmtEur(Math.abs(n))}`;
+  return fmtEurCompact(n, { risk: true, signed: true });
 }
 function fmtPpSigned(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return `${n >= 0 ? '+' : '-'}${Number(Math.abs(n).toFixed(3))}%`;
+  return `${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString('de-DE', { maximumFractionDigits: 3 })}%`;
 }
 // Credit-rel ist eine Fraktion (-0.05) -> Prozent fuer die Anzeige.
 function fmtRelPct(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '–';
-  return `${Number((n * 100).toFixed(3))}%`;
+  return `${(n * 100).toLocaleString('de-DE', { maximumFractionDigits: 3 })}%`;
 }
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -720,9 +717,9 @@ function computeLimitModel(valueFraction, th, state) {
   const yellowRatio = Math.min(100, (yellowPct / redPct) * 100);
   return {
     redPct, yellowPct, curPct, util, yellowRatio, state,
-    utilStr: `${(util * 100).toFixed(1)}%`,
-    limitRelStr: `${Number(redPct.toFixed(2))}%`,
-    bufferRelStr: `${Number((redPct - curPct).toFixed(2))}%`,
+    utilStr: `${(util * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
+    limitRelStr: `${redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`,
+    bufferRelStr: `${(redPct - curPct).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`,
   };
 }
 
@@ -812,7 +809,7 @@ function limitBarHtml(m) {
     <div class="mr-limit">
       <div class="mr-limit__head">
         <span class="mr-limit__title">Limit utilization</span>
-        <span class="mr-limit__util ${amp}">${(m.util * 100).toFixed(1)}%</span>
+        <span class="mr-limit__util ${amp}">${(m.util * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>
       </div>
       <div class="mr-limit__bar">
         <div class="mr-limit__zone mr-limit__zone--green" style="left:0;width:${m.yellowRatio}%"></div>
@@ -821,8 +818,8 @@ function limitBarHtml(m) {
       </div>
       <div class="mr-limit__scale">
         <span>0%</span>
-        <span>Warning ${Number(m.yellowPct.toFixed(2))}%</span>
-        <span>Limit ${Number(m.redPct.toFixed(2))}%</span>
+        <span>Warning ${m.yellowPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%</span>
+        <span>Limit ${m.redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%</span>
       </div>
       <div class="mr-limit__cards">
         <div class="mr-limit-card">

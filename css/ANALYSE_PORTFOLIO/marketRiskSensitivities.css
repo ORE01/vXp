@@ -22,8 +22,10 @@
 
 .sens-kpi-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  /* conc-kpi-Look: feste Kachelbreite, linksbuendig (nicht mehr 4 Spalten volle Breite). */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 260px));
+  gap: 10px;
+  justify-content: start;
 }
 
 .sens-kpi-card {
@@ -137,9 +139,9 @@
 /* KPI cards: show only the ones belonging to the active sensitivity tab
    (PV01 tab -> Total PV01 + Top IR Tenor; CPV01 -> Total CPV01 + Top Credit
    Bucket; Vega -> Total Vega). Overrides the per-data inline display. */
-.sens-kpi-row[data-active-tab="pv01"]  .sens-kpi-card:not([data-sens-kpi-for="pv01"]),
-.sens-kpi-row[data-active-tab="cpv01"] .sens-kpi-card:not([data-sens-kpi-for="cpv01"]),
-.sens-kpi-row[data-active-tab="vega"]  .sens-kpi-card:not([data-sens-kpi-for="vega"]) {
+.sens-kpi-row[data-active-tab="pv01"]  .conc-kpi:not([data-sens-kpi-for="pv01"]),
+.sens-kpi-row[data-active-tab="cpv01"] .conc-kpi:not([data-sens-kpi-for="cpv01"]),
+.sens-kpi-row[data-active-tab="vega"]  .conc-kpi:not([data-sens-kpi-for="vega"]) {
   display: none !important;
 }
 

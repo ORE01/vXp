@@ -327,8 +327,9 @@ export function renderInterestRateCurvePanel() {
 
     setTimeout(() => {
 
-      if (!isIRPanelVisible()) return;
-
+      // KEIN Sichtbarkeits-Guard mehr: der Report-Warmup (renderAllRegisteredPanels)
+      // muss das IR-Chart aus dem Store auch bei verstecktem Panel materialisieren
+      // (analog Swaption "kein Open-Guard"). Der Canvas-Check unten reicht als Schutz.
       const canvas = document.getElementById('IRLineChart');
       if (!canvas || !canvas.isConnected) return;
 

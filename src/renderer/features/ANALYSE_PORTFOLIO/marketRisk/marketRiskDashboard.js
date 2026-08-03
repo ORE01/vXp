@@ -5,6 +5,7 @@
 // (MVaR + ES MVaR). Deltas gg. Vorperiode und die Limit-Auslastungsleiste folgen.
 
 import { appState } from '../../../renderer.js';
+import { fmtEurCompact } from '../../../utils/tableCellFormats.js';
 import { getMvarRowAsofDate, rowMatchesMvarContext } from './mvar/mvarSelectors.js';
 import { getMVaRThresholdsFromInputUsingState, trafficLightStateForMVaR } from './mvar/mvarAggregatePanel.js';
 
@@ -29,30 +30,26 @@ const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; }
 
 // EUR-Betrag als "EUR <n> mn" (Magnitude, adaptive Nachkommastellen).
 function fmtEur(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return '–';
-  const mn = Math.abs(n) / 1e6;
-  const dec = mn >= 100 ? 0 : mn >= 10 ? 1 : 2;
-  return `EUR ${Number(mn.toFixed(dec)).toLocaleString('en-US')} mn`;
+  return fmtEurCompact(v, { risk: true });
 }
 // Signierter EUR-Betrag (fuer Deltas): +EUR / -EUR. ASCII-Minus, damit der
 // jsPDF-Standardfont (WinAnsi) es korrekt darstellt (kein U+2212).
 function fmtEurSigned(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return `${n >= 0 ? '+' : '-'}${fmtEur(Math.abs(n))}`;
+  return fmtEurCompact(n, { risk: true, signed: true });
 }
 // Signierte Prozentpunkt-Aenderung (fuer relative Deltas): +0.01% / -0.01%.
 function fmtPpSigned(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return `${n >= 0 ? '+' : '-'}${Number(Math.abs(n).toFixed(3))}%`;
+  return `${n >= 0 ? '+' : '-'}${Math.abs(n).toLocaleString('de-DE', { maximumFractionDigits: 3 })}%`;
 }
 // Relativer Wert als Prozent (wie die MVaR-Summary im Screenshot, z.B. -0.244%).
 function fmtPct(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '–';
-  return `${Number(n.toFixed(3))}%`;
+  return `${n.toLocaleString('de-DE', { maximumFractionDigits: 3 })}%`;
 }
 
 function esc(s) {
@@ -157,7 +154,7 @@ export function getMarketDashboardModel(rowOverride = null) {
   const tsiState = Number.isFinite(tsiVal)
     ? (Math.abs(tsiVal) >= tsiTh.red ? 'red' : Math.abs(tsiVal) >= tsiTh.yellow ? 'yellow' : 'green')
     : null;
-  const tsiRelStr = Number.isFinite(tsiVal) ? `${Number((tsiVal * 100).toFixed(1))}%` : '–';
+  const tsiRelStr = Number.isFinite(tsiVal) ? `${(tsiVal * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 })}%` : '–';
   const tsiAbsStr = row ? fmtEur(num(row?.ES_T_abs) - num(row?.VaR_T_abs)) : '–';
 
   // KPI-Karten (4): relativer Wert = Hauptzahl, absoluter Wert immer darunter.
@@ -275,10 +272,10 @@ function computeLimitModel(row, state) {
   const bufferAbs = (limitAbs != null && Number.isFinite(absV)) ? (limitAbs - absV) : null;
   return {
     redPct, yellowPct, curPct, util, yellowRatio, limitAbs, bufferAbs, state,
-    utilStr: `${(util * 100).toFixed(1)}%`,
+    utilStr: `${(util * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
     // Relativ: Limit = Rot-Schwelle in %, Buffer = verbleibende Prozentpunkte bis Limit.
-    limitRelStr: `${Number(redPct.toFixed(2))}%`,
-    bufferRelStr: `${Number((redPct - curPct).toFixed(2))}%`,
+    limitRelStr: `${redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`,
+    bufferRelStr: `${(redPct - curPct).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`,
     // Absolut (fuer Screen + PDF): "EUR … mn".
     limitAbsStr: (limitAbs != null ? fmtEur(limitAbs) : null),
     bufferAbsStr: (bufferAbs != null ? fmtEur(bufferAbs) : null),
@@ -294,7 +291,7 @@ function mrLimitBarHtml(m) {
     <div class="mr-limit">
       <div class="mr-limit__head">
         <span class="mr-limit__title">Limit utilization</span>
-        <span class="mr-limit__util ${amp}">${(m.util * 100).toFixed(1)}%</span>
+        <span class="mr-limit__util ${amp}">${(m.util * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%</span>
       </div>
       <div class="mr-limit__bar">
         <div class="mr-limit__zone mr-limit__zone--green" style="left:0;width:${m.yellowRatio}%"></div>
@@ -303,8 +300,8 @@ function mrLimitBarHtml(m) {
       </div>
       <div class="mr-limit__scale">
         <span>0%</span>
-        <span>Warning ${Number(m.yellowPct.toFixed(2))}%</span>
-        <span>Limit ${Number(m.redPct.toFixed(2))}%</span>
+        <span>Warning ${m.yellowPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%</span>
+        <span>Limit ${m.redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%</span>
       </div>
       <div class="mr-limit__cards">
         <div class="mr-limit-card">

@@ -183,10 +183,10 @@ const trendlinePlugin = {
           callbacks: {
             label: (ctx) => {
               if (ctx.dataset.label.includes('SMA')) {
-                return `${ctx.dataset.label}: ${ctx.raw?.y != null ? ctx.raw.y.toFixed(2) : 'N/A'}`;
+                return `${ctx.dataset.label}: ${ctx.raw?.y != null ? ctx.raw.y.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'}`;
               } else {
                 const ov = ctx.raw ? ctx.raw.originalY : null;
-                return `${ctx.dataset.label}: ${typeof ov === 'number' ? ov.toFixed(2) : 'N/A'}`;
+                return `${ctx.dataset.label}: ${typeof ov === 'number' ? ov.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'}`;
               }
             }
           }
@@ -882,7 +882,7 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
           },
           ticks: {
             color: "rgb(161, 160, 160)",
-            callback: value => value.toFixed(2)
+            callback: value => value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           },
           grid: {
             color: "rgba(255, 255, 255, 0.2)",
@@ -1052,7 +1052,7 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
           title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
           ticks: {
             color: "rgb(161, 160, 160)",
-            callback: v => v.toFixed(2)
+            callback: v => v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           },
           grid: {
             color: "rgba(255, 255, 255, 0.2)",

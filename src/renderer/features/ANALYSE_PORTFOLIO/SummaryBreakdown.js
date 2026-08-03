@@ -398,7 +398,7 @@ function drawPieChartByColumn(filteredData, columnName) {
           callbacks: {
             label: function (context) {
               const value = context.parsed;
-              const percentage = ((value / total) * 100).toFixed(2);
+              const percentage = ((value / total) * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
               const fmtRules = getFormatRules();
               const fmt = fmtRules?.[valueType] || (v => v.toLocaleString('de-DE'));
               return `${labels[context.dataIndex]}: ${fmt(value)} â‚¬ (${percentage}%)`;
@@ -434,7 +434,7 @@ function drawPieChartByColumn(filteredData, columnName) {
   // Zeilen hinzufÃ¼gen (ggf. auf Top 15 beschrÃ¤nken)
   labels.forEach((label, i) => {
     const value = values[i];
-    const percentage = ((value / total) * 100).toFixed(1);
+    const percentage = ((value / total) * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const color = colors[i];
 
     const tr = document.createElement('tr');
@@ -524,7 +524,7 @@ function __concMedian(arr) {
 function __concEsc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-const __concPct = (x) => `${(x * 100).toFixed(x < 0.1 ? 2 : 1)}%`;
+const __concPct = (x) => `${(x * 100).toLocaleString('de-DE', { minimumFractionDigits: x < 0.1 ? 2 : 1, maximumFractionDigits: x < 0.1 ? 2 : 1 })}%`;
 
 // Langen Kachel-Namen auf mehrere Zeilen umbrechen (<br>), damit er auch in
 // schmalen Treemap-Kacheln passt (z.B. "Bayerische Landesbank").
@@ -750,7 +750,7 @@ function renderConcReportCharts(key, m) {
           datalabels: window.ChartDataLabels ? {
             anchor: 'end', align: 'end', clamp: true, offset: 2, color: chartColor,
             font: { family: chartFont, size: 12, weight: '700' },
-            formatter: (v) => `${Number(v).toFixed(1)}%`,
+            formatter: (v) => `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
           } : undefined,
         },
         scales: {
@@ -1092,7 +1092,7 @@ export function renderConcentrationDashboard(filteredData, opts = {}) {
             anchor: 'end', align: 'end', clamp: true, offset: 2,
             color: chartColor,
             font: { family: chartFont, size: 14, weight: '700' },
-            formatter: (v) => `${Number(v).toFixed(1)}%`,
+            formatter: (v) => `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
           } : undefined,
         },
         scales: {

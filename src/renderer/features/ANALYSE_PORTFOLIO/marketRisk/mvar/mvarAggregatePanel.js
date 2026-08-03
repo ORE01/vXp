@@ -255,7 +255,7 @@ function renderMVaRRelativeTableWithIndex(data, index, { rollingData = null, sce
   const bits = [];
   if (d10(data.asof_date)) bits.push(`as of ${d10(data.asof_date)}`);
   if (d10(data.start_date) && d10(data.end_date)) bits.push(`${d10(data.start_date)} → ${d10(data.end_date)}`);
-  if (Number.isFinite(alpha)) bits.push(`Confidence ${(alpha * 100).toFixed(0)}%`);
+  if (Number.isFinite(alpha)) bits.push(`Confidence ${(alpha * 100).toLocaleString('de-DE', { maximumFractionDigits: 0 })}%`);
   if (Number.isFinite(horizon)) bits.push(`${horizon}d horizon`);
   if (bits.length) {
     const info = document.createElement('div');

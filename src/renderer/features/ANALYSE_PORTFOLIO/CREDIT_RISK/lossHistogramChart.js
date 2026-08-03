@@ -14,7 +14,7 @@ let fetchRequested = false;   // lossHistogramMain nur einmal explizit nachforde
 
 function fmtPct(frac) {
   const n = Number(frac);
-  return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '';
+  return Number.isFinite(n) ? `${(n * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '';
 }
 
 export function renderLossHistogram() {
@@ -138,7 +138,7 @@ export function renderLossHistogram() {
         tooltip: {
           callbacks: {
             title: (ctx) => `Loss ${labels[ctx[0].dataIndex]}`,
-            label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(3)} %`,
+            label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} %`,
           },
         },
       },

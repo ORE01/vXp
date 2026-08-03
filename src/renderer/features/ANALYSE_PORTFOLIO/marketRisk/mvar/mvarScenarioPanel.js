@@ -7,6 +7,7 @@
 // Definitionen liegen in der Tabelle ScenarioDefinition (generisches CRUD).
 
 import { appState } from '../../../../renderer.js';
+import { fmtEurCompact } from '../../../../utils/tableCellFormats.js';
 
 const FACTORS = {
   PV01:  { label: 'Interest Rates', unit: 'bp' },
@@ -26,7 +27,7 @@ function normalizePort(p) {
 }
 
 function fmtMio(v) {
-  return `${(v / 1e6).toFixed(1)} Mio EUR`;
+  return fmtEurCompact(v, { risk: true });
 }
 
 // Faktor-Totals (Σ VALUE_BASE je RISK_TYPE) fuer das gewaehlte Portfolio.
@@ -140,7 +141,7 @@ function renderTornado(bars) {
       color: chartColor,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => `${Number(ctx.parsed.x).toFixed(1)} Mio EUR` } },
+        tooltip: { callbacks: { label: (ctx) => fmtEurCompact(Number(ctx.parsed.x) * 1e6, { risk: true }) } },
       },
       scales: {
         x: { title: { display: true, text: 'Valuation impact (Mio EUR)', color: chartColor, font: { family: chartFont } },
@@ -154,20 +155,29 @@ function renderTornado(bars) {
 function renderKpis(bars) {
   const c = document.getElementById('scenarioKpiContainer');
   if (!c) return;
-  if (!bars.length) { c.innerHTML = '<div class="empty-state">No scenario data (no sensitivities for this portfolio).</div>'; return; }
+  // Einheitliches "Key Figures"-Band (conc-kpi) wie in den anderen Panels — auch bei
+  // leeren Szenariodaten sichtbar (nur mit Empty-State-Hinweis).
+  const band = (inner) =>
+    '<div class="conc-panel conc-panel--band"><div class="conc-panel__title">Key Figures</div>' +
+    inner + '</div>';
+  if (!bars.length) {
+    c.innerHTML = band('<div class="empty-state">No scenario data (no sensitivities for this portfolio).</div>');
+    return;
+  }
   const mostNeg = bars.reduce((a, b) => (b.impact < a.impact ? b : a), bars[0]);
   const mostPos = bars.reduce((a, b) => (b.impact > a.impact ? b : a), bars[0]);
   const card = (title, label, value, color) => `
-    <div class="cp-card" style="flex:1 1 200px; margin:0;">
-      <div style="font-size:12px; color:var(--text-muted);">${title}</div>
-      <div style="font-size:13px; color:var(--text-bright);">${label}</div>
-      <div style="font-size:20px; font-weight:700; color:${color};">${value}</div>
+    <div class="conc-kpi">
+      <div class="conc-kpi__val" style="color:${color};">${value}</div>
+      <div class="conc-kpi__sub">${label}</div>
+      <div class="conc-kpi__lbl">${title}</div>
     </div>`;
-  c.innerHTML =
-    '<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:stretch;">' +
+  c.innerHTML = band(
+    '<div class="conc-kpi-grid">' +
     card('Largest negative driver', mostNeg.label, fmtMio(mostNeg.impact), NEG) +
     card('Largest positive driver', mostPos.label, fmtMio(mostPos.impact), POS) +
-    '</div>';
+    '</div>'
+  );
 }
 
 function render() {

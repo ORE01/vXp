@@ -84,7 +84,7 @@ export function formatNumber(value, digits = 6) {
 
   if (!Number.isFinite(n)) return String(value);
 
-  return String(Number(n.toFixed(digits)));
+  return n.toLocaleString('de-DE', { maximumFractionDigits: digits });
 }
 
 export function formatRate(value) {
@@ -94,7 +94,7 @@ export function formatRate(value) {
 
   if (!Number.isFinite(n)) return String(value);
 
-  return `${(n * 100).toFixed(4)}%`;
+  return `${(n * 100).toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}%`;
 }
 
 export function getProductId(row = {}) {

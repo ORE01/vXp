@@ -27,6 +27,8 @@ const excludeEditColumnTables = [
   'DealsMain',
   'OFFERS_DATA',
   'OFFERS_Anleihen_Karl_Franzens_UniversitÃ¤t_150925',
+  'CPV01_Details',   // Sensitivities: CPV01-Details-Tabelle -> keine Edit-Spalte
+  'Vega_Details',    // Sensitivities: Vega-Details-Tabelle -> keine Edit-Spalte
 ];
 
   const excludePortTables = /^Port/;

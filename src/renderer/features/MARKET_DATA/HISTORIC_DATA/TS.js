@@ -312,6 +312,29 @@ function toIsoDateString(d) {
 }
 
 
+// Leitet aus den Serien-Keys (z.B. EU_1Y, US_AAA) ein sprechendes Chart-Label ab,
+// damit Preview/PDF "Interest Rates EUR" / "Credit Spreads USD" zeigen statt "TSlineChart_x".
+function deriveTsChartLabel(keys) {
+  const list = (keys || []).map(k => String(k || '').toUpperCase().trim()).filter(Boolean);
+  if (!list.length) return null;
+  const REGION = { EU: 'EUR', EUR: 'EUR', EUSWAP: 'EUR', DE: 'EUR', AT: 'EUR', US: 'USD', USD: 'USD', GB: 'GBP', UK: 'GBP', CH: 'CHF', JP: 'JPY' };
+  const regions = new Set();
+  const rems = [];
+  for (const k of list) {
+    const parts = k.split(/[_\- ]/);
+    regions.add(parts[0]);
+    rems.push(parts.slice(1).join('_') || k);
+  }
+  const tenorRe  = /^\d+\s*[YM]$|SWAP|^SW\d|OIS|IBOR|YIELD|RATE|ZINS/;
+  const ratingRe = /^(AAA|AA|A|BBB|BB|B|CCC|CC|C|D)[+\-]?$|SPREAD|^CS/;
+  const anyTenor  = rems.some(r => tenorRe.test(r));
+  const anyRating = rems.some(r => ratingRe.test(r));
+  const type = (anyRating && !anyTenor) ? 'Credit Spreads' : (anyTenor ? 'Interest Rates' : 'Time Series');
+  let region = '';
+  if (regions.size === 1) { const r = [...regions][0]; region = REGION[r] || r; }
+  return region ? `${type} ${region}` : type;
+}
+
     function refreshTableAndChartRaw(rowsRaw, headers, checkboxes, modalIndex, dateKey, containerId = 'modal-content-container') {
   const normalizationTypeSelector = document.getElementById(`normalizationTypeSelector_${modalIndex}`);
   const normalizationType = normalizationTypeSelector ? normalizationTypeSelector.value : 'none';
@@ -377,6 +400,13 @@ function toIsoDateString(d) {
     modalIndex,
     { sma1: movingAverages?.period1, sma2: movingAverages?.period2, sma3: movingAverages?.period3 }
   );
+
+  // Aussagekraeftiges Label fuer Preview/PDF aus den Serien ableiten (statt "TSlineChart_x").
+  try {
+    const _cv = document.getElementById(`TSlineChart_${modalIndex}`);
+    const _lbl = deriveTsChartLabel(selectedDatasets.map(d => d.key));
+    if (_cv && _lbl) _cv.dataset.label = _lbl;
+  } catch (e) {}
 
 // ðŸ”„ Risk-Preview updaten - HISTORIC DATA ist jetzt â€žwirklichâ€œ da
   try {
@@ -893,12 +923,13 @@ function wireTsToggle() {
   });
 }
 
-// Zeichnet die TS-Charts automatisch, sobald das Panel SICHTBAR ist (nur dann
-// hat der Canvas korrekte Maße). Gestaffelt (blockiert das Öffnen nicht);
-// bereits gezeichnete Sections werden übersprungen (Zoom/Zustand bleibt).
+// Zeichnet die TS-Charts automatisch. KEIN Sichtbarkeits-Guard mehr: der Report-Warmup
+// (createTSModals -> scheduleTsAutoDraw) muss die Charts auch bei verstecktem Panel aus
+// dem Store materialisieren (analog IR/Swaption). Gestaffelt (blockiert das Öffnen
+// nicht); bereits gezeichnete Sections werden übersprungen (Zoom/Zustand bleibt).
 function scheduleTsAutoDraw() {
   const panel = document.getElementById('panel-ts');
-  if (!panel || panel.hidden) return;
+  if (!panel) return;
   requestAnimationFrame(() => {
     const btns = document.querySelectorAll('#panel-ts [id^="loadButton_"]');
     btns.forEach((btn, i) => {

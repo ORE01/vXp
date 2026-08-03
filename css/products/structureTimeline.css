@@ -293,8 +293,11 @@
 
 .structure-drawer-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  /* Spalten deckeln (kein 1fr -> keine Streckung auf die volle Modalbreite);
+     linksbündig, damit die Eingabefelder kompakt bleiben (~halbe Breite). */
+  grid-template-columns: repeat(3, minmax(180px, 240px));
   gap: 12px;
+  justify-content: start;
 }
 
 .structure-drawer-field {

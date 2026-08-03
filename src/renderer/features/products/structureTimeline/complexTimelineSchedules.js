@@ -5,6 +5,8 @@ import {
   sendUpdateProductStructureRow,
 } from './schedules/structureRowApi.js';
 
+import { parseDeNumber } from '../../../utils/tableCellFormats.js';
+
 'use strict';
 
 import {
@@ -133,13 +135,13 @@ export function renderCreateCouponScheduleEmptyState(container, prodId, options 
         container.querySelector('#initialCouponMaturityDate')?.value || '';
 
       const frequencyInput =
-        Number(container.querySelector('#initialCouponFrequency')?.value || 1);
+        parseDeNumber(container.querySelector('#initialCouponFrequency')?.value || 1);
 
       const couponRateRaw =
         container.querySelector('#initialCouponRate')?.value ?? '';
 
       const notionalFactor =
-        Number(container.querySelector('#initialCouponNotionalFactor')?.value || 1);
+        parseDeNumber(container.querySelector('#initialCouponNotionalFactor')?.value || 1);
 
       const dates = buildBaseTimelineDates(
         startDateInput,
@@ -435,13 +437,13 @@ export function renderNewCallDrawer(drawer, prodId, container, options = {}) {
         drawer.querySelector('#newStructureEventTypeInput')?.value || 'CALL';
 
       const callPrice =
-        Number(drawer.querySelector('#newCallPriceInput')?.value || 100);
+        parseDeNumber(drawer.querySelector('#newCallPriceInput')?.value || 100);
 
       const notionalFactor =
-        Number(drawer.querySelector('#newCallNotionalFactorInput')?.value || 1);
+        parseDeNumber(drawer.querySelector('#newCallNotionalFactorInput')?.value || 1);
 
       const sortOrder =
-        Number(drawer.querySelector('#newCallSortOrderInput')?.value || 10001);
+        parseDeNumber(drawer.querySelector('#newCallSortOrderInput')?.value || 10001);
 
       if (!structureDate) {
         showStructureMessage(

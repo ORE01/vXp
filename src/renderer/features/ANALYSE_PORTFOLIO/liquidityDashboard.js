@@ -5,6 +5,7 @@
 // Rows (wie liquidity.js). Echte Cashflows (Kupons) + Reserve/Risikolimit folgen.
 
 import { getColorFromPalette } from '../../utils/colors.js';
+import { fmtEurCompact } from '../../utils/tableCellFormats.js';
 import {
   setLiqDrillData, liqChartHoverMenu, scheduleHideConcMenu, bindRightClickDrill,
 } from './SummaryBreakdown.js';
@@ -144,7 +145,7 @@ function renderKpis(rows, labels, sums) {
   for (let i = 1; i < sums.length; i++) if (sums[i] > sums[maxI]) maxI = i;
   const cyIdx = labels.indexOf(String(new Date().getFullYear()));
   const next12 = cyIdx >= 0 ? sums[cyIdx] : 0;
-  const fmtMn = (v) => `EUR ${Math.round((v || 0) / 1e6)} mn`;
+  const fmtMn = (v) => fmtEurCompact(v);
   const tiles = [
     { v: fmtMn(next12), l: 'Maturing next 12 months' },
     { v: `${labels[maxI]}: ${fmtMn(sums[maxI])}`, l: 'Largest maturity' },
@@ -284,7 +285,7 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
             label: (ctx) => {
               const v = Number(ctx.parsed.y) || 0;
               const lbl = ctx.dataset?.label;
-              return (seg.stacked && lbl) ? `${lbl}: EUR ${v.toFixed(1)} mn` : `EUR ${v.toFixed(1)} mn`;
+              return (seg.stacked && lbl) ? `${lbl}: ${fmtEurCompact(v * 1e6)}` : fmtEurCompact(v * 1e6);
             },
           },
         },
@@ -307,7 +308,7 @@ export function renderLiquidityDashboard(filteredData, opts = {}) {
             if (barTotal <= 0) return '';
             const pct = v / barTotal * 100;
             if (pct < 5) return '';   // zu kleine Segmente nicht beschriften (Platz)
-            return `${pct.toFixed(pct < 10 ? 1 : 0)}%`;
+            return `${pct.toLocaleString('de-DE', { minimumFractionDigits: pct < 10 ? 1 : 0, maximumFractionDigits: pct < 10 ? 1 : 0 })}%`;
           },
         } : { display: false },
       },

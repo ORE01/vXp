@@ -1461,7 +1461,7 @@ function formatCell(v) {
   if (v == null) return '';
   if (typeof v === 'number') {
     // klein & robust: max 6 decimals, keine scientific notation
-    return Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 6 }) : '';
+    return Number.isFinite(v) ? v.toLocaleString('de-DE', { maximumFractionDigits: 6 }) : '';
   }
   return String(v);
 }
@@ -1585,7 +1585,7 @@ export function renderMvarProdIdEsContribChart(rows) {
         tooltip: {
           callbacks: {
             label: (ctx) =>
-              ` ${Number(ctx.raw).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+              ` ${Number(ctx.raw).toLocaleString('de-DE', { maximumFractionDigits: 2 })}`
           }
         }
       },
@@ -1593,7 +1593,7 @@ export function renderMvarProdIdEsContribChart(rows) {
         x: {
           ticks: {
             callback: (v) =>
-              Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })
+              Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })
           }
         }
       }
@@ -1619,7 +1619,7 @@ function renderProdContribMiniTable(series, {
     return;
   }
 
-  const fmt = (v) => Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const fmt = (v) => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 });
 
   el.innerHTML = `
     <table class="mvar-mini-table">

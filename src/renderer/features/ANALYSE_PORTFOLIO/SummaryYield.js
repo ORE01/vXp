@@ -271,8 +271,8 @@ const portfolioData = appState.getPortAggData(elementId) || {};
   const _set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
   const cur = _pctNum(portfolioData.formPortYieldA ?? portfolioData.formPortYield);
   const buy = _pctNum(portfolioData.formPortYield);
-  _set('yieldKpiCurrent', cur == null ? '–' : `${cur.toFixed(2)} %`);
-  _set('yieldKpiBuy',     buy == null ? '–' : `${buy.toFixed(2)} %`);
+  _set('yieldKpiCurrent', cur == null ? '–' : `${cur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`);
+  _set('yieldKpiBuy',     buy == null ? '–' : `${buy.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`);
   _set('yieldKpiDelta', (cur != null && buy != null)
     ? `${cur - buy >= 0 ? '+' : ''}${Math.round((cur - buy) * 100)} bp`
     : '–');
@@ -285,8 +285,8 @@ const portfolioData = appState.getPortAggData(elementId) || {};
   const nav  = _num(portfolioData.formPortValue);
   const dur  = (pv01 != null && nav != null && nav !== 0)
     ? Math.abs(pv01) / Math.abs(nav) * 10000 : null;
-  _set('yieldKpiTtm',      ttm == null ? '–' : `${ttm.toFixed(2)} Y`);
-  _set('yieldKpiDuration', dur == null ? '–' : `${dur.toFixed(2)} Y`);
+  _set('yieldKpiTtm',      ttm == null ? '–' : `${ttm.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
+  _set('yieldKpiDuration', dur == null ? '–' : `${dur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
 })();
 
 const currency = 'EUR';
@@ -880,7 +880,7 @@ export function drawYieldVsTimeChart({
           title: { display: true, text: 'Yield (%)', font: { size: 11 } },
           ticks: {
             font: { size: 11 },
-            callback: val => `${Number(val).toFixed(2)}%`
+            callback: val => `${Number(val).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
           },
           min: Math.floor(yMin - yPad),
           max: Math.ceil(yMax + yPad)
@@ -920,8 +920,8 @@ export function drawYieldVsTimeChart({
           callbacks: {
             label: context =>
               context.dataset.label === 'Portfolio Yield'
-                ? `Portfolio Yield: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
-                : `${context.dataset.label}: ${context.raw.y.toFixed(2)}% at ${context.raw.x.toFixed(2)}Y`
+                ? `Portfolio Yield: ${context.raw.y.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% at ${context.raw.x.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}Y`
+                : `${context.dataset.label}: ${context.raw.y.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% at ${context.raw.x.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}Y`
           },
           bodyFont: { size: 13 }
         },

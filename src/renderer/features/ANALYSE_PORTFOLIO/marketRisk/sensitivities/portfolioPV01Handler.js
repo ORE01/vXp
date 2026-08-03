@@ -507,7 +507,7 @@ function renderIRSensTableAndChart(data, portName) {
         pv01Cell.dataset.sortValue = String(Math.abs(Number(sum)));
 
         const weightCell = row.insertCell();
-        weightCell.textContent = `${Number(weight).toFixed(2)}%`;
+        weightCell.textContent = `${Number(weight).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
         weightCell.dataset.sortValue = String(Math.abs(Number(weight)));
       });
     });
@@ -663,7 +663,7 @@ function createPV01Chart({
     datasets,
   };
 
-  PV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x');
+  PV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x', { interactive: true });
 
   if (!PV01Chart) {
     console.warn('[PV01 CHART] createBarChart returned null', {

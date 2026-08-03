@@ -179,9 +179,15 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
   //   riskTypes: availableRiskTypes,
   // });
 
-  // Preferred: reconstruct CPV01 from per-product per-unit sensitivities times
-  // the header-filtered holdings, so the portfolio filter flows through.
-  // Fallback: legacy aggregated PortfolioRiskSensitivities rows.
+  // Authoritative: aggregierte PortfolioRiskSensitivities-Rows (per TRADE_ID, exakt
+  // das, was Python gerechnet hat). Diese werden nach den TRADE_IDs der (header-)
+  // gefilterten Holdings eingeschraenkt -> der Portfolio-/Header-Filter laeuft genauso
+  // durch -, und in calculateCreditSensitivity() nach der RESOLVED-Rating (RATINGres)
+  // neu gebucketet.
+  // Fallback: Rekonstruktion aus per-Unit-Sensitivitaeten (ProductRiskSensitivities)
+  // NUR wenn keine autoritativen Rows verfuegbar sind. Die Rekonstruktion
+  // (VALUE_PER_UNIT * NOTIONAL) weicht von den gebuchten Werten ab und darf die
+  // autoritativen Zahlen nicht ueberschreiben.
   let calcData = null;
 
   const productSens = appState.getProductRiskSensitivitiesData?.() || [];
@@ -189,15 +195,31 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
     ? holdingsOverride
     : applyColumnFilters(appState.getFilteredPortData?.() || [], PORT_TABLE_ID);
 
-  // TRADE_IDs of the filtered holdings — narrows both the legacy fallback rows
-  // and the per-trade PRS rows behind the KPIs, so everything follows the filter.
+  // TRADE_IDs of the filtered holdings — narrows the authoritative PRS rows so
+  // everything follows the filter.
   const filteredTradeIds = new Set(
     (Array.isArray(holdings) ? holdings : [])
       .map(h => String(h.TRADE_ID ?? h.trade_id ?? '').trim())
       .filter(Boolean)
   );
 
-  if (productSens.length && holdings.length) {
+  let cpv01Rows = riskRowsAll.filter(r =>
+    normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
+    normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'CPV01'
+  );
+
+  if (filteredTradeIds.size) {
+    cpv01Rows = cpv01Rows.filter(r =>
+      filteredTradeIds.has(String(r.TRADE_ID ?? r.trade_id ?? '').trim())
+    );
+  }
+
+  if (cpv01Rows.length) {
+    calcData = calculateCreditSensitivity(cpv01Rows, selectedPort, holdings);
+  }
+
+  // Fallback nur, wenn die autoritativen Rows nichts Brauchbares ergeben haben.
+  if ((!calcData || !calcData.filteredRowsCount) && productSens.length && holdings.length) {
     calcData = calculateCreditSensitivityFromHoldings(
       holdings,
       productSens,
@@ -207,34 +229,19 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
   }
 
   if (!calcData || !calcData.filteredRowsCount) {
-    let cpv01Rows = riskRowsAll.filter(r =>
-      normalizePortfolioName(r.PORT_NAME ?? r.port_name) === selectedPort &&
-      normalizeRiskType(r.RISK_TYPE ?? r.risk_type) === 'CPV01'
-    );
+    console.warn('[CP SENS] no CPV01 rows for selected portfolio', {
+      selectedPort,
+      storeRows: riskRowsAll.length,
+      availablePorts,
+      availableRiskTypes,
+      productSensRows: productSens.length,
+      holdings: holdings.length,
+    });
 
-    if (filteredTradeIds.size) {
-      cpv01Rows = cpv01Rows.filter(r =>
-        filteredTradeIds.has(String(r.TRADE_ID ?? r.trade_id ?? '').trim())
-      );
-    }
+    clearCPV01Chart();
+    clearCPV01Details();
 
-    if (!Array.isArray(cpv01Rows) || cpv01Rows.length === 0) {
-      console.warn('[CP SENS] no CPV01 rows for selected portfolio', {
-        selectedPort,
-        storeRows: riskRowsAll.length,
-        availablePorts,
-        availableRiskTypes,
-        productSensRows: productSens.length,
-        holdings: holdings.length,
-      });
-
-      clearCPV01Chart();
-      clearCPV01Details();
-
-      return;
-    }
-
-    calcData = calculateCreditSensitivity(cpv01Rows, selectedPort, holdings);
+    return;
   }
 
   const hasAnyCPV01 =
@@ -510,22 +517,31 @@ function renderCPV01TableAndChart(data, portName) {
     .forEach(([ccy, rows]) => {
       const totalForCcy = cpv01TotalByCcy[ccy] || 0;
 
-      rows.forEach(([bucket, cpv01]) => {
-        const weight = totalForCcy ? (cpv01 / totalForCcy) * 100 : 0;
+      // Tabelle nach Beitrag (|CPV01|) absteigend, damit die Zeilenreihenfolge zu den
+      // %-Zahlen passt (groesster Anteil oben). rawVals bleibt synchron. Der Chart nutzt
+      // weiterhin die Rating-Reihenfolge aus sortedCPV01ByCcy (hier nicht mutiert).
+      [...rows]
+        .sort((a, b) => Math.abs(Number(b[1])) - Math.abs(Number(a[1])))
+        .forEach(([bucket, cpv01]) => {
+          const weight = totalForCcy ? (cpv01 / totalForCcy) * 100 : 0;
 
-        tableData.push({
-          CCY: ccy,
-          Bucket: bucket,
-          CPV01: formatNumberWithGrouping(cpv01),
-          'Weight %': `${weight.toFixed(2)}%`,
+          tableData.push({
+            CCY: ccy,
+            Bucket: bucket,
+            // Bereits gruppiert vorformatiert ("-13,775"). Key BEWUSST nicht "CPV01":
+            // sonst wendet processData die CPV01-Zahlenregel (getFormatRules) erneut an
+            // und re-parst den Tausender-Komma-String falsch ("-13,775" -> parseFloat
+            // stoppt am Komma -> -13 -> "-13.0"). Label via columnLabelMap = "CPV01".
+            CPV01_display: formatNumberWithGrouping(cpv01),
+            'Weight %': `${weight.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
+          });
+          rawVals.push({ value: cpv01, weight });
         });
-        rawVals.push({ value: cpv01, weight });
-      });
     });
 
-  const title = `CPV01 Details by CCY for ${portName}`;
-
-  wrapper.innerHTML = processData(tableData, title);
+  // Stabiler Tabellen-Key (wird nicht angezeigt) -> steht in excludeEditColumnTables
+  // (modalData.js), damit die CPV01-Details KEINE Edit-Spalte bekommen.
+  wrapper.innerHTML = processData(tableData, 'CPV01_Details', { CPV01_display: 'CPV01' });
   wireSortableDetails(wrapper, rawVals, 'CPV01');
 
   mountCPV01Details(wrapper);
@@ -640,7 +656,7 @@ function createCPV01Chart({
     datasets,
   };
 
-  CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x');
+  CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x', { interactive: true });
 
   if (CPV01Chart) {
     // Right-click drill: bar (CCY dataset + rating bucket) -> contributing products.

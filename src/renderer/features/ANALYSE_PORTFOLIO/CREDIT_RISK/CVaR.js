@@ -360,7 +360,7 @@ export function renderLGDChart() {
               const v = Number(value) || 0;
               if (!v) return '';
               const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
-              return `${_fmtLossCompact.format(v)} · ${rel.toFixed(1)}%`;
+              return `${_fmtLossCompact.format(v)} · ${rel.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
             },
           } : undefined,
         },
@@ -468,7 +468,7 @@ function populateCVaRTable(container, CVaRData, port_name) {
 
 function formatPercentage(value) {
   if (value === undefined || value === null || isNaN(value)) return 'N/A';
-  return (Number(value) * 100).toFixed(2) + '%';
+  return (Number(value) * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 }
 
 // Cached inputs of the last credit-risk traffic-light render, so the ampel can be

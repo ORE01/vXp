@@ -82,6 +82,80 @@ export function getFormatRules() {
   return rules;
 }
 
+// ================================================================
+// Zentrales Zahlenformat (eine Quelle der Wahrheit) — de-DE:
+//   1.234,56  (Punkt = Tausender, Komma = Dezimal)
+// Regel: Rohwert -> Number(v) -> GENAU EINMAL hiermit formatieren.
+// Niemals einen bereits formatierten String erneut formatieren.
+// ================================================================
+export const APP_LOCALE = 'de-DE';
+
+export function fmtNum(value, decimals = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '–';
+  return n.toLocaleString(APP_LOCALE, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+export function fmtPct(value, decimals = 2) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '–';
+  return `${fmtNum(n, decimals)} %`;
+}
+
+// Einheitlicher kompakter EUR-Betrag (ersetzt Mischformen Mio./mn/M/k/K/bn):
+//   >= 1e9 -> "EUR 1,2 Mrd."     >= 1e6 -> "EUR 212,4 Mio."
+//   >= 1e3 -> "EUR 260,0 Tsd."   sonst  -> "EUR 875"
+// Nachkommastellen: Mrd/Mio(Portfolio)/Tsd = 1 fest; Mio(Risiko) = max 2 (opts.risk);
+// unter 1.000 = 0. Vorzeichen steht vor EUR: "-EUR 87,6 Tsd.".
+export function fmtEurCompact(value, { risk = false, signed = false } = {}) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '–';
+  const neg = n < 0 ? '-' : (signed ? '+' : '');
+  const a = Math.abs(n);
+  const fixed1 = { minimumFractionDigits: 1, maximumFractionDigits: 1 };
+  let scaled, unit, opts;
+  if (a >= 1e9)      { scaled = a / 1e9; unit = ' Mrd.'; opts = fixed1; }
+  else if (a >= 1e6) { scaled = a / 1e6; unit = ' Mio.'; opts = risk ? { maximumFractionDigits: 2 } : fixed1; }
+  else if (a >= 1e3) { scaled = a / 1e3; unit = ' Tsd.'; opts = { maximumFractionDigits: 1 }; }
+  else               { scaled = a;       unit = '';      opts = { maximumFractionDigits: 0 }; }
+  return `${neg}EUR ${scaled.toLocaleString(APP_LOCALE, opts)}${unit}`;
+}
+
+// ---- Eingabe-Pfad (Komma rein -> Punkt in die DB) ----
+// parseDeNumber: de-DE-tolerante Nutzereingabe -> echte number (Punkt).
+//   - Komma vorhanden  -> Komma = Dezimal, Punkte = Tausender (entfernt): "1.234,56" -> 1234.56
+//   - nur Punkte: EIN Punkt = Dezimal ("1.234" -> 1.234, "98.5" -> 98.5);
+//                 MEHRERE Punkte = Tausender ("1.234.567" -> 1234567)
+//   - entfernt %, Währung, Leerzeichen; echtes Minus (U+2212) -> ASCII.
+// NaN wenn nicht parsebar. So gelangt NIE ein Komma in die DB.
+export function parseDeNumber(input) {
+  if (typeof input === 'number') return input;
+  if (input === null || input === undefined) return NaN;
+  let s = String(input).trim().replace(/−/g, '-');
+  s = s.replace(/[^0-9.,\-]/g, '');
+  if (!s || s === '-') return NaN;
+  if (s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if ((s.match(/\./g) || []).length > 1) {
+    s = s.replace(/\./g, '');
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+// toDeInput: Rohwert (number oder Punkt-String aus DB) -> de-DE-Editier-String
+// (Punkt -> Komma, KEINE Tausendergruppierung, verlustfrei). Nur bei reiner Zahl;
+// Text/Datum bleiben unverändert. Für Prefill von Edit-Feldern.
+export function toDeInput(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const s = String(value).trim();
+  if (!/^-?\d*\.?\d+$/.test(s)) return s;
+  return s.replace('.', ',');
+}
+
 export const formatNumber = (decimals = 0, isPercentage = false, multiplyBy100 = false) => (value) => {
   let number = parseFloat(value);
   if (isNaN(number)) return '-';
@@ -92,7 +166,7 @@ export const formatNumber = (decimals = 0, isPercentage = false, multiplyBy100 =
     maximumFractionDigits: decimals
   };
 
-  const formattedNumber = number.toLocaleString('en', options);
+  const formattedNumber = number.toLocaleString(APP_LOCALE, options);
   return isPercentage ? `${formattedNumber}%` : formattedNumber;
 };
 
@@ -114,25 +188,28 @@ export function formatNumberWithCommas(value) {
     return 'run calculation';
   }
 
-  // Format the number to two decimal places and add the % sign
-  return numericValue.toFixed(3) + '%';
+  // Format the number to three decimal places and add the % sign (de-DE)
+  return fmtNum(numericValue, 3) + '%';
 }
 
 // Für die Anzeige (z.B. in Edit-Feldern)
 export function formatDisplayValue(fieldName, value) {
   if (value === null || value === undefined || value === '') return '';
 
-  // Wenn das Feld in der Prozent-Liste ist → Dezimal (0.2) zu Prozent (20.00%)
+  // Wenn das Feld in der Prozent-Liste ist → Dezimal (0.2) zu Prozent (20,000%)
   if (PERCENT_DECIMAL_FIELDS.includes(fieldName)) {
     const num = parseFloat(value);
     if (isNaN(num)) return value;
 
-    // hier kannst du frei entscheiden, wie viele Nachkommastellen du im Input sehen willst
-    // das ist unabhängig von getFormatRules (Tabelle)
-    return (num * 100).toFixed(3) + '%';
+    // de-DE (Komma) für Edit-/Anzeige-Konsistenz; beim Speichern parst
+    // formatInputFieldValue via parseDeNumber wieder zu Punkt für die DB.
+    return toDeInput((num * 100).toFixed(3)) + '%';
   }
 
-  // Alle anderen Felder unverändert
+  // Numerische Felder verlustfrei auf Komma-Anzeige (Punkt -> Komma).
+  if (COUPON_DECIMAL_FIELDS.has(fieldName)) return toDeInput(value);
+
+  // Alle anderen Felder (Text/Datum/…) unverändert
   return value;
 }
 
@@ -155,9 +232,8 @@ export function formatInputFieldValue(fieldName, value) {
     const hadPercent = str.includes('%');
 
     str = str.replace('%', '').trim();
-    str = str.replace(',', '.');
 
-    const num = parseFloat(str);
+    const num = parseDeNumber(str);
     if (isNaN(num)) return null;
 
     // 3% / "3.000%"  -> 0.03
@@ -176,9 +252,8 @@ export function formatInputFieldValue(fieldName, value) {
 
     let str = String(formattedValue).trim();
     str = str.replace('%', '').trim();
-    str = str.replace(',', '.');
 
-    const num = parseFloat(str);
+    const num = parseDeNumber(str);
     if (isNaN(num)) {
       return null;
     }
@@ -186,13 +261,14 @@ export function formatInputFieldValue(fieldName, value) {
     formattedValue = num / 100;
 
   } else if (fieldName === 'NOTIONAL') {
-    formattedValue = parseInt(formattedValue, 10);
+    const n = parseDeNumber(formattedValue);
+    formattedValue = Number.isFinite(n) ? Math.round(n) : formattedValue;
 
   } else if (fieldName === 'RATING') {
     formattedValue = String(formattedValue);
 
   } else if (['a', 'b', 'c', 'd', 'Shift_percent', 'Shift_bp'].includes(fieldName)) {
-    formattedValue = parseFloat(formattedValue) || 0;
+    formattedValue = parseDeNumber(formattedValue) || 0;
   }
 
   return formattedValue;
@@ -243,14 +319,15 @@ export function formatNumberWithGrouping(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '';
 
-  // 0 Nachkommastellen (wie NOTIONAL/NAV typischerweise)
-  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  // 0 Nachkommastellen (wie NOTIONAL/NAV typischerweise), de-DE-Gruppierung
+  // -> "13.775" (Punkt = Tausender). NICHT re-parsen (siehe fmtNum-Regel oben).
+  return Math.round(n).toLocaleString(APP_LOCALE);
 }
 
 export function formatPercentage(value) {
   const number = parseFloat(value);
   if (isNaN(number)) return '-';
-  return number.toFixed(2) + '%';
+  return fmtNum(number, 2) + '%';
 }
 
 

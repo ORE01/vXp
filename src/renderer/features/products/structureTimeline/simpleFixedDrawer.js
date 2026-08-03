@@ -5,6 +5,7 @@
 import { appState } from '../../../renderer.js';
 import { issuerData } from '../../issuer/issuerPanel.js';
 import { applyProductTemplateDefaults } from '../productTemplateResolver.js';
+import { parseDeNumber, toDeInput } from '../../../utils/tableCellFormats.js';
 import { validateProductBeforeSave } from '../productValidation.js';
 import { PRODUCT_FIELD_CONFIG } from '../productFieldConfig.js';
 
@@ -97,7 +98,7 @@ function formatPercent(value) {
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
   if (n !== 0 && Math.abs(n) < 1) {
-    return String(parseFloat((n * 100).toFixed(10)));
+    return toDeInput(String(parseFloat((n * 100).toFixed(10))));
   }
   return raw;
 }
@@ -292,8 +293,7 @@ function normalizeRate(value) {
 
   if (!raw) return '';
 
-  const clean = raw.replace('%', '').replace(',', '.');
-  const n = Number(clean);
+  const n = parseDeNumber(raw);
 
   if (!Number.isFinite(n)) return raw;
 

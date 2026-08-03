@@ -437,7 +437,7 @@ function renderVegaTableAndChart(data, portName) {
     return {
       Bucket: bucket,
       Vega_EUR: formatNumberWithGrouping(vega),
-      'Weight %': `${weight.toFixed(2)}%`,
+      'Weight %': `${weight.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
     };
   });
 
@@ -446,7 +446,10 @@ function renderVegaTableAndChart(data, portName) {
     VEGA_WEIGHT_PCT: totalVega ? (vega / totalVega) * 100 : 0,
   }));
 
-  wrapper.innerHTML = processData(tableData, `Vega Details for ${portName}`);
+  // Stabiler Tabellen-Key (nicht dynamisch mit portName!) -> steht in
+  // excludeEditColumnTables (modalData.js), damit die Vega-Details KEINE Edit-Spalte
+  // bekommen. Analog zu CPV01_Details.
+  wrapper.innerHTML = processData(tableData, 'Vega_Details');
   wireSortableDetails(wrapper, rawVals, 'Vega_EUR');
 
   mountVegaDetails(wrapper);
@@ -523,7 +526,7 @@ function createVegaChart(data) {
     VegaChart = null;
   }
 
-  VegaChart = createBarChart(chartConfig, canvasId, 'bar', 'x');
+  VegaChart = createBarChart(chartConfig, canvasId, 'bar', 'x', { interactive: true });
 
   if (VegaChart) {
     // Right-click drill: bar (surface bucket) -> contributing products (single EUR dataset).

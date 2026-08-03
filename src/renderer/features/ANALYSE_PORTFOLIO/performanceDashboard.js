@@ -12,6 +12,7 @@
 import { appState } from '../../renderer.js';
 import { createContribDrill, scheduleHideConcMenu } from './SummaryBreakdown.js';
 import { applyColumnFilters } from '../CUSTOMER/tableLayouts/tableColumnFilters.js';
+import { fmtNum, fmtEurCompact } from '../../utils/tableCellFormats.js';
 
 // Header filters of the SELECT PORTFOLIO table (portTable0) must also drive the
 // performance/yield dashboard, so it follows the same portfolio filter.
@@ -37,7 +38,12 @@ const _perfDrillCfg = {
   detailId: 'perfDrillDetail', titleId: 'perfDrillDetailTitle', tableId: 'perfDrillDetailTable',
   closeId: 'perfDrillDetailClose', menuId: 'perfDrillCardMenu',
   valueType: '__PERF_WYIELD', valueLabel: 'Yield contrib %',
-  infoCol: { key: 'RATINGres', label: 'Rating' },
+  // Text-Spalten NUR auf Positionsebene: Rating + Yield (buy). Yield als vorformatierter
+  // String (__PERF_YIELD_STR), da infoCols verbatim gerendert werden.
+  infoCols: [
+    { key: 'RATINGres', label: 'Rating' },
+    { key: '__PERF_YIELD_STR', label: 'Yield' },
+  ],
 };
 const perfDrill = createContribDrill({ var: _perfDrillCfg, es: _perfDrillCfg });
 
@@ -54,19 +60,15 @@ function _esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;
 function _pctFrac(frac, d = 1) {
   if (frac == null) return '–';
   const p = frac * 100;
-  return `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(d)} %`;
+  return `${p >= 0 ? '+' : '−'}${fmtNum(Math.abs(p), d)} %`;
 }
 // Prozentpunkte (bereits in %-Einheiten) mit Vorzeichen -> "ppt".
 function _ppt(pt, d = 2) {
-  return `${pt >= 0 ? '+' : '−'}${Math.abs(pt).toFixed(d)} ppt`;
+  return `${pt >= 0 ? '+' : '−'}${fmtNum(Math.abs(pt), d)} ppt`;
 }
 function _eur(v) {
   if (v == null) return '–';
-  const a = Math.abs(v);
-  if (a >= 1e9) return `EUR ${(v / 1e9).toFixed(1)} bn`;
-  if (a >= 1e6) return `EUR ${(v / 1e6).toFixed(1)} M`;
-  if (a >= 1e3) return `EUR ${Math.round(v / 1e3).toLocaleString('en-US')} K`;
-  return `EUR ${Math.round(v).toLocaleString('en-US')}`;
+  return fmtEurCompact(v);
 }
 
 export function renderPerformanceDashboard() {
@@ -81,7 +83,10 @@ export function renderPerformanceDashboard() {
   const dates = hist.map(r => r.DATE);
   const returnsFrac = hist.map(r => _num(r.RETURN));          // Fraktionen (0.048)
   const lastRow = hist[hist.length - 1] || {};
-  const curRet = _num(lastRow.RETURN);
+  // Der JUENGSTE History-Eintrag ist die AKTUELLE Bewertung (heute gespeichert) und deckt
+  // sich mit dem live berechneten Portfolio-Yield. "Previous Period Yield" nimmt daher den
+  // VORLETZTEN Eintrag = echte Vorperiode; die Differenz dazu = tatsaechliche bp-Aenderung.
+  const prevRet = _num((hist[hist.length - 2] || {}).RETURN);
   const ertrag = _num(lastRow.PROFIT_LOSS);
 
   // Portfolio-Yield LIVE aus den Positionen: Σ ytmPort / Σ Notional (nominalgewichtete
@@ -96,22 +101,25 @@ export function renderPerformanceDashboard() {
     sumNotional += _num(r.NOTIONAL ?? r.notional) || 0;
   }
   const portYield = sumNotional ? (sumYtmPort / sumNotional) : null;
-  const _yieldTxt = portYield != null ? `${(portYield * 100).toFixed(2)} %` : '–';
+  const _yieldTxt = portYield != null ? `${fmtNum(portYield * 100, 2)} %` : '–';
 
   // --- KPIs ---
-  // PORTFOLIO YIELD = live gewichtete Yield (ytmPortA/Notional); PREVIOUS PERIOD YIELD
-  // = juengster Historic-Eintrag (RETURN).
+  // PORTFOLIO YIELD = live gewichtete Yield (ytmPortA/Notional). Alles in EINER Kachel:
+  // gross der aktuelle Yield, darunter bp-Aenderung ggü. Vorperiode + deren Yield + Datum.
   _setText('perfKpiReturn', _yieldTxt);
-  _setText('perfKpiPrev', _pctFrac(curRet));
   _setText('perfKpiErtrag', _eur(ertrag));
-  const badge = document.getElementById('perfKpiBadge');
-  if (badge) {
-    if (portYield != null && curRet != null) {
-      const dPt = (portYield - curRet) * 100;
-      badge.textContent = `${dPt >= 0 ? '↑ ' : '↓ '}${_ppt(dPt, 1)} vs. previous period`;
-      badge.style.display = '';
+  // 2. Zeile der Portfolio-Yield-Kachel, z.B. "↑ 9 bp vs previous yield 1.89 % (2025-10-31)".
+  const retDelta = document.getElementById('perfKpiReturnDelta');
+  if (retDelta) {
+    if (portYield != null && prevRet != null) {
+      const dBp = (portYield - prevRet) * 10000;
+      const prevDate = String((hist[hist.length - 2] || {}).DATE ?? '').split(' ')[0];
+      const dateStr = prevDate ? ` (${prevDate})` : '';
+      retDelta.textContent =
+        `${dBp >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(dBp))} bp vs previous yield ${fmtNum(prevRet * 100, 2)} %${dateStr}`;
+      retDelta.style.display = '';
     } else {
-      badge.style.display = 'none';
+      retDelta.style.display = 'none';
     }
   }
 
@@ -120,7 +128,7 @@ export function renderPerformanceDashboard() {
   if (kpiTbl) {
     const kpiRows = [
       ['Portfolio yield', _yieldTxt],
-      ['Previous period yield', _pctFrac(curRet)],
+      ['Previous period yield', _pctFrac(prevRet, 2)],
       ['Profit / Loss', _eur(ertrag)],
     ];
     kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
@@ -190,6 +198,8 @@ function renderPerfAttribution(port) {
   items.forEach((it, i) => {
     it.yShare = totalWY ? it.wyield / totalWY * 100 : 0;  // Anteil an der Portfolio-Yield %
     drillRows[i].__PERF_WYIELD = +it.yShare.toFixed(3);   // %-Wert fuer den Drill
+    // Vorformatierter Yield (buy) fuer die Positions-Drill-Spalte (infoCols = verbatim).
+    drillRows[i].__PERF_YIELD_STR = (it.yieldBuy != null) ? `${fmtNum(it.yieldBuy * 100, 2)} %` : '–';
   });
 
   try { perfDrill.setData(drillRows); } catch (e) { console.warn('[perf] drill data failed', e); }
@@ -224,17 +234,66 @@ function _reportListTable(items, elId) {
     return;
   }
   const body = items.map((it, i) => {
-    const y = (it.yieldBuy != null) ? `${(it.yieldBuy * 100).toFixed(2)} %` : '–';
-    return `<tr><td>${i + 1}</td><td>${_esc(it.name)}</td><td>${_esc(it.issuer || '')}</td><td style="text-align:right;">${y}</td></tr>`;
+    const s = (it.yShare != null) ? `${Math.round(it.yShare)} %` : '–';   // Yield-Contribution (wie im Drill)
+    const y = (it.yieldBuy != null) ? `${fmtNum(it.yieldBuy * 100, 2)} %` : '–';
+    return `<tr><td>${i + 1}</td><td>${_esc(it.name)}</td><td>${_esc(it.issuer || '')}</td><td style="text-align:right;">${s}</td><td style="text-align:right;">${y}</td></tr>`;
   }).join('');
-  el.innerHTML = `<table class="conc-report-table"><thead><tr><th>#</th><th>Product</th><th>Issuer</th><th style="text-align:right;">Yield (buy)</th></tr></thead><tbody>${body}</tbody></table>`;
+  el.innerHTML = `<table class="conc-report-table"><thead><tr><th>#</th><th>Product</th><th>Issuer</th><th style="text-align:right;">Yield contribution</th><th style="text-align:right;">Yield (buy)</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 // ---- Scatter "Where does the yield come from?" (wie MVaR-Contribution) ----
 let _perfScatterChart = null;
-let _perfScatterLimit = 5;      // Show (beste): 3/5/10/All
+let _perfScatterLimit = 3;      // Show (beste): 3/5/10/All
 let _perfScatterWorst = 0;      // Worst (schlechteste): 0(off)/5/10/All
 let _perfScatterPoints = [];
+
+// DOM-Overlay-Fadenkreuz fuer den Yield-Scatter (statt Canvas-Plugin): komplett ausserhalb
+// des Chart-Render-Zyklus -> garantiert EINE Linie, kein Ghosting/keine Doppel-Linien
+// (fitCanvas/DPR-sicher). Folgt dem Cursor, zeigt x (Portfolio share) unten, y (yield
+// contribution) links an den Achsen. Ersetzt den Tooltip.
+function ensurePerfScatterCrosshair(canvas) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  // Duplikat-sicher: vorhandene Overlay-Divs UND alte Listener entfernen, dann GENAU EINEN
+  // Satz neu anlegen. So kann bei keinem Re-Render/Reload ein zweites Fadenkreuz entstehen.
+  box.querySelectorAll('.ps-crosshair').forEach((d) => d.remove());
+  if (box._psMove) canvas.removeEventListener('mousemove', box._psMove);
+  if (box._psLeave) canvas.removeEventListener('mouseleave', box._psLeave);
+  const mk = (css) => {
+    const d = document.createElement('div');
+    d.className = 'ps-crosshair';
+    d.style.cssText = 'position:absolute;pointer-events:none;z-index:4;display:none;' + css;
+    box.appendChild(d);
+    return d;
+  };
+  const vLine = mk('width:0;border-left:1px dashed rgba(150,160,175,0.9);');
+  const hLine = mk('height:0;border-top:1px dashed rgba(150,160,175,0.9);');
+  const lblCss = 'background:rgba(40,44,52,0.92);color:#fff;font:10px sans-serif;line-height:12px;padding:1px 4px;border-radius:2px;white-space:nowrap;';
+  const xLbl = mk(lblCss);
+  const yLbl = mk(lblCss);
+  const all = [vLine, hLine, xLbl, yLbl];
+  const show = (on) => all.forEach((d) => { d.style.display = on ? 'block' : 'none'; });
+  const fmt = (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 1 })}%`;
+  box._psMove = (ev) => {
+    const ch = _perfScatterChart;
+    if (!ch || !ch.chartArea) { show(false); return; }
+    const a = ch.chartArea;
+    const x = ev.offsetX, y = ev.offsetY;                  // canvas-relativ (= chartArea-Raum)
+    if (x < a.left || x > a.right || y < a.top || y > a.bottom) { show(false); return; }
+    const ox = canvas.offsetLeft, oy = canvas.offsetTop;   // Canvas-Offset innerhalb der Box
+    show(true);
+    vLine.style.left = (x + ox) + 'px'; vLine.style.top = (a.top + oy) + 'px'; vLine.style.height = (a.bottom - a.top) + 'px';
+    hLine.style.top = (y + oy) + 'px'; hLine.style.left = (a.left + ox) + 'px'; hLine.style.width = (a.right - a.left) + 'px';
+    xLbl.textContent = fmt(ch.scales.x.getValueForPixel(x));
+    xLbl.style.left = (x + ox) + 'px'; xLbl.style.top = (a.bottom + oy + 3) + 'px'; xLbl.style.transform = 'translateX(-50%)';
+    yLbl.textContent = fmt(ch.scales.y.getValueForPixel(y));
+    yLbl.style.top = (y + oy) + 'px'; yLbl.style.left = (ox + 2) + 'px'; yLbl.style.transform = 'translateY(-50%)';
+  };
+  box._psLeave = () => show(false);
+  canvas.addEventListener('mousemove', box._psMove);
+  canvas.addEventListener('mouseleave', box._psLeave);
+}
 
 function renderPerfScatter(points) {
   _perfScatterPoints = Array.isArray(points) ? points : [];
@@ -285,7 +344,7 @@ function renderPerfScatter(points) {
       elements: { point: { hitRadius: 8, hoverRadius: 8 } },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.name ?? ''}: NAV ${Number(ctx.raw?.x).toFixed(1)}% / yield contrib ${Number(ctx.raw?.y).toFixed(1)}%` } },
+        tooltip: { enabled: false },
         datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: text, font: { family: font, size: 10 }, formatter: (v) => (v && labelSet.has(v.name) ? v.name : '') } : undefined,
         zoom: {
           pan: { enabled: true, mode: 'xy', modifierKey: 'ctrl' },
@@ -293,14 +352,15 @@ function renderPerfScatter(points) {
         },
       },
       scales: {
-        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: text, font: { family: font } }, ticks: { color: text, font: { family: font }, callback: (v) => `${Math.round(Number(v) * 10) / 10}%` }, grid: { color: grid } },
-        y: { beginAtZero: true, max: axMax, title: { display: true, text: 'Weighted yield contribution %', color: text, font: { family: font } }, ticks: { color: text, font: { family: font }, callback: (v) => `${Math.round(Number(v) * 10) / 10}%` }, grid: { color: grid } },
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (NAV)', color: text, font: { family: font } }, ticks: { color: text, font: { family: font }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 1 })}%` }, grid: { color: grid } },
+        y: { beginAtZero: true, max: axMax, title: { display: true, text: 'Weighted yield contribution %', color: text, font: { family: font } }, ticks: { color: text, font: { family: font }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 1 })}%` }, grid: { color: grid } },
       },
     },
   });
 
   ensurePerfScatterTools(canvas);
   ensurePerfScatterDrill(canvas);
+  ensurePerfScatterCrosshair(canvas);
 }
 
 // Reset-Button + "Show N"-Auswahl + Bedienhinweis (idempotent im Chart-Container).
@@ -308,13 +368,6 @@ function ensurePerfScatterTools(canvas) {
   const box = canvas?.parentElement;
   if (!box) return;
   if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
-  if (!box.querySelector('.perf-sc-hint')) {
-    const h = document.createElement('div');
-    h.className = 'perf-sc-hint';
-    h.textContent = 'Drag to zoom · right-click a point to drill';
-    h.style.cssText = 'position:absolute;top:2px;left:6px;z-index:5;font-size:10px;color:#94a3b8;pointer-events:none;';
-    box.appendChild(h);
-  }
   if (!box.querySelector('.perf-sc-reset')) {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'perf-sc-reset'; btn.textContent = 'Reset Zoom';
@@ -341,7 +394,7 @@ function ensurePerfScatterTools(canvas) {
     const lbl = document.createElement('span'); lbl.textContent = 'Worst'; lbl.style.cssText = 'font-size:10px;color:#94a3b8;';
     const sel = document.createElement('select'); sel.className = 'perf-sc-worst';
     sel.style.cssText = 'font-size:10px;padding:1px 4px;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;cursor:pointer;';
-    [['0', '–'], ['5', '5'], ['10', '10'], ['all', 'All']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); });
+    [['0', '–'], ['3', '3'], ['5', '5'], ['10', '10'], ['all', 'All']].forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); });
     sel.value = String(_perfScatterWorst);
     sel.addEventListener('change', () => { _perfScatterWorst = sel.value === 'all' ? 'all' : parseInt(sel.value, 10); renderPerfScatter(_perfScatterPoints); });
     wrap.appendChild(lbl); wrap.appendChild(sel);
@@ -373,13 +426,15 @@ function _listHtml(items, kind) {
   return items.map((it, i) => {
     const rcls = kind === 'neg' ? 'perf-rank--neg' : 'perf-rank--pos';
     const pid = it.prodId != null ? String(it.prodId) : '';
-    const yld = (it.yieldBuy != null) ? `${(it.yieldBuy * 100).toFixed(2)} %` : '–';
+    const shr = (it.yShare != null) ? `${Math.round(it.yShare)} %` : '–';   // Yield-Contribution (wie im Drill)
+    const yld = (it.yieldBuy != null) ? `${fmtNum(it.yieldBuy * 100, 2)} %` : '–';
     return `<li class="perf-li" data-prod="${_esc(pid)}" title="Right-click to drill">
       <span class="perf-rank ${rcls}">${i + 1}</span>
       <span class="perf-list__name">
         <span class="perf-li__id" title="${_esc(it.name)}">${_esc(it.name)}</span>
         <span class="perf-li__issuer" title="${_esc(it.issuer)}">${_esc(it.issuer)}</span>
       </span>
+      <span class="perf-share" title="Yield contribution">${shr}</span>
       <span class="perf-yield" title="Yield (buy)">${yld}</span>
       <span class="perf-drill-hint">›</span>
     </li>`;
@@ -448,11 +503,11 @@ function renderPerfReturnChart(labels, dataPct) {
       responsive: false, maintainAspectRatio: false, animation: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: (c) => `${Number(c.parsed.y).toFixed(2)} %` } },
+        tooltip: { callbacks: { label: (c) => `${fmtNum(c.parsed.y, 2)} %` } },
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: text, font: { family: font }, maxTicksLimit: 12, autoSkip: true } },
-        y: { grid: { color: grid }, ticks: { color: text, font: { family: font }, callback: (v) => `${v} %` } },
+        y: { grid: { color: grid }, ticks: { color: text, font: { family: font }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %` } },
       },
     },
   });

@@ -3,6 +3,7 @@
 'use strict';
 
 import { appState } from '../../../renderer.js';
+import { parseDeNumber } from '../../../utils/tableCellFormats.js';
 
 function getValuationResultCache() {
   if (!window.__productValuationResultCache) {
@@ -130,7 +131,7 @@ function formatNumber(value, digits = 6) {
     return formatValue(value);
   }
 
-  return n.toLocaleString(undefined, {
+  return n.toLocaleString('de-DE', {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
   });
@@ -392,7 +393,7 @@ function formatPercent(value, digits = 4) {
     return formatValue(value);
   }
 
-  return `${(n * 100).toFixed(digits)}%`;
+  return `${(n * 100).toLocaleString('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 }
 
 // Cashflow-Tabellen-Formatter: Datum -> YYYY-MM-DD, sonst "-".
@@ -418,7 +419,7 @@ function formatOptionalNumber(value, digits = 6) {
   // würde sonst fehlende Werte fälschlich als 0.000000 anzeigen.
   if (value === null || value === undefined || value === '') return '-';
   const n = Number(value);
-  return Number.isFinite(n) ? n.toFixed(digits) : '-';
+  return Number.isFinite(n) ? n.toLocaleString('de-DE', { minimumFractionDigits: digits, maximumFractionDigits: digits }) : '-';
 }
 
 function renderCashflowTable(cashflows = []) {
@@ -521,7 +522,7 @@ function renderLegTable(cashflows, leg) {
     const mid = isFloat
       ? [
           escapeHtml(cf.forward == null ? '-' : formatPercent(cf.forward, 4)),
-          escapeHtml(cf.spread == null ? '-' : (Number(cf.spread) * 10000).toFixed(1)),
+          escapeHtml(cf.spread == null ? '-' : (Number(cf.spread) * 10000).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })),
           escapeHtml(cf.rate == null ? '-' : formatPercent(cf.rate, 4)),
         ]
       : [
@@ -689,7 +690,12 @@ function renderResult(container, payload, prodId) {
 
 async function saveCsSpreadOverride(container, prodId) {
   const input = container.querySelector('#productValuationCsSpreadOverrideBp');
-  const rawValue = input?.value || '';
+  let rawValue = input?.value || '';
+  // Komma-Eingabe -> Punkt-Zahl für die DB (leer bleibt leer = Override löschen).
+  if (String(rawValue).trim() !== '') {
+    const _n = parseDeNumber(rawValue);
+    if (Number.isFinite(_n)) rawValue = _n;
+  }
 
   const productId = String(prodId || '').trim();
 

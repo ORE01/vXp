@@ -2,9 +2,13 @@
 
 // ---------- helpers ----------
 function toNumber(txt) {
-  const cleaned = String(txt).replace(/[^\d,\-+.]/g, '');
-  const norm = cleaned.replace(',', '.');
-  const n = parseFloat(norm);
+  let s = String(txt).replace(/−/g, '-').replace(/[^\d,\-+.]/g, '');
+  // de-DE: "1.234,56" -> Punkt = Tausender, Komma = Dezimal. Nur wenn ein Komma
+  // vorhanden ist, sind die Punkte Tausendertrenner (analog detailsTableSort).
+  if (s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+  const n = parseFloat(s);
   return Number.isFinite(n) ? n : NaN;
 }
 

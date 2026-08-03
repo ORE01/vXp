@@ -796,7 +796,7 @@ function buildProductDrillRows(filteredRows, baseMap) {
 }
 
 function escKpi(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : '–'; }
+function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '–'; }
 
 // KPI-Band ueber den Charts einer Metrik (VaR/ES): Total, Top-Produkt (% vom Total),
 // Top-5-Konzentration (%), staerkster ueberproportionaler Beitrag (Risk vs. weight).
@@ -820,7 +820,7 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
     const d = r[cfg.relKey] - r[shareKey];
     if (!over || d > over.d) over = { label: r.label, d };
   }
-  const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toFixed(1)} pp` : '–';
+  const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp` : '–';
 
   const cards = [
     { label: `Total ${cfg.metric}`,     value: fmtAbs(total),            sub: 'sum of contributions',   desc: `Portfolio ${cfg.metric} (all products)` },
@@ -893,7 +893,7 @@ function renderProductContribChart(rows, cfg) {
       // Drill per RECHTSKLICK (bindRightClickDrill unten) — konsistent mit den Scatter-Charts.
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` } },
       },
       scales: {
         x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Math.round(Number(v) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% of ${cfg.shareShort || 'NAV'}  /  % of total ${cfg.metric}`, color: chartColor, font: { family: chartFont } } },
@@ -994,7 +994,7 @@ function renderYieldTable(chartRows) {
   if (!container) return;
   const rows = (Array.isArray(chartRows) ? chartRows.slice() : [])
     .sort((a, b) => toNumber(b.yield_buy, -Infinity) - toNumber(a.yield_buy, -Infinity));
-  const pct2 = (v) => (v != null && Number.isFinite(v) ? `${(v * 100).toFixed(2)}%` : '-');
+  const pct2 = (v) => (v != null && Number.isFinite(v) ? `${(v * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : '-');
   renderTable(
     container,
     rows,

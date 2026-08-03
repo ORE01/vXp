@@ -416,18 +416,18 @@ function rebuildForwardTableWithCms(
   // 3) Neue Datenzeilen ins tbody einfÃ¼gen
   swapYears.forEach((year, index) => {
 const cms1Value = forwardRatesCMS1[index] != null
-  ? forwardRatesCMS1[index].toFixed(3) + '%'
+  ? forwardRatesCMS1[index].toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + '%'
   : 'N/A';
 
 const cms2Value = forwardRatesCMS2[index] != null
-  ? forwardRatesCMS2[index].toFixed(3) + '%'
+  ? forwardRatesCMS2[index].toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + '%'
   : 'N/A';
 
     const newRow = document.createElement('tr');
     newRow.innerHTML = `
       <td>swap</td>
       <td>${year}Y</td>
-      <td>${swapRates[index].toFixed(3)}%</td>
+      <td>${swapRates[index].toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}%</td>
       <td>${cms1Value}</td>
       <td>${cms2Value}</td>
     `;

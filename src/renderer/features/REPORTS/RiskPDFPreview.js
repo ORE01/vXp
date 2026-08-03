@@ -421,8 +421,10 @@ export const RISK_CONFIG = {
     // ===== Market Data (synthetischer Parent; Children = echte MD-Panels) =====
     marketData: 'Market Data',
 
-    // ===== Performance (optional, falls du dieses Panel wirklich hast) =====
-    performance: 'Performance',
+    // ===== Performance-Gruppe (App-Baum: Performance > Profit/Loss, Yield > Yield vs Rates) =====
+    'performance-history': 'Profit/Loss',      // panel-performance-history
+    'performance-dashboard': 'Yield',          // panel-performance-dashboard
+    performance: 'Yield vs Rates',             // panel-performance (Kind von "Yield")
 
     // ===== Market (Parent + Children) =====
     market: 'Market Risk',
@@ -1669,6 +1671,42 @@ function buildRiskHierarchy() {
   });
 }
 
+// Expliziter PORTFOLIO-Teilbaum (die App-Struktur ist fix). Wird als zusaetzliche
+// Hierarchie-Quelle NACH buildRiskHierarchy gemergt und ueberschreibt damit die dort
+// faelschlich unter RISK verwurzelten PORTFOLIO-Items. Spiegelt exakt die App-Nav:
+// PORTFOLIO > Select Portfolio, Breakdown, Performance(Profit/Loss, Yield > Yield vs Rates),
+// Sensitivities, Scenarios, Liquidity. Nur DISCOVERTE Sektionen erscheinen (Rest ignoriert).
+function buildPortfolioHierarchy() {
+  const TAB   = 'tab__analyse';
+  const GSEL  = 'analyse-grp-select-portfolio';
+  const GPERF = 'analyse-grp-performance';
+  const parents = {
+    selectPort: GSEL, newDeals: GSEL, deals: GSEL, [GSEL]: TAB,
+    concentration: TAB,
+    'performance-history': GPERF, 'performance-dashboard': GPERF, [GPERF]: TAB,
+    performance: 'performance-dashboard',
+    sensitivities: TAB, 'mvar-scenarios': TAB, liquidity: TAB,
+  };
+  const order = {
+    [TAB]: [GSEL, 'concentration', GPERF, 'sensitivities', 'mvar-scenarios', 'liquidity'],
+    [GSEL]: ['selectPort', 'newDeals', 'deals'],
+    [GPERF]: ['performance-history', 'performance-dashboard'],
+    'performance-dashboard': ['performance'],
+  };
+  const groupNodes = [
+    { key: TAB,   title: tabLabel('ANALYSE_Tab', 'PORTFOLIO') },
+    { key: GSEL,  title: 'Select Portfolio' },
+    { key: GPERF, title: 'Performance' },
+  ];
+  const labels = {
+    selectPort: 'Portfolio', newDeals: 'Create Portfolio', deals: 'Change Portfolio',
+    concentration: 'Breakdown',
+    'performance-history': 'Profit/Loss', 'performance-dashboard': 'Yield', performance: 'Yield vs Rates',
+    sensitivities: 'Sensitivities', 'mvar-scenarios': 'Scenarios', liquidity: 'Liquidity',
+  };
+  return { parents, order, groupNodes, labels };
+}
+
 // MARKET-DATA-Trigger (#MARKETDATA_Modal .chart-section) → Hierarchie unter Tab
 // "MARKET DATA". Spiegelt die echte Verschachtelung (Volatilities → Swaption*,
 // Interest Rates → Forward, Scenarios → …) automatisch.
@@ -1712,8 +1750,9 @@ function applySectionHierarchy(sections) {
     })
   );
 
-  // Alle Hierarchie-Quellen generisch zusammenführen.
-  const allH = [mdH, risk, ...extraH];
+  // Alle Hierarchie-Quellen generisch zusammenführen. Der explizite PORTFOLIO-Teilbaum
+  // kommt ZULETZT -> ueberschreibt die (falsch unter RISK gewurzelten) PORTFOLIO-Items.
+  const allH = [mdH, risk, ...extraH, buildPortfolioHierarchy()];
 
   const parents = { ...((RISK_CONFIG && RISK_CONFIG.sectionParents) || {}) };
   const orderByParent = { ...((RISK_CONFIG && RISK_CONFIG.sectionChildrenOrder) || {}) };
@@ -2760,7 +2799,12 @@ function miniTableFromContainer(
 // RiskPDFPreview.js
 document.addEventListener('reports:enter', () => {
   try { wireRiskPreview(); } catch (e) { console.error(e); }
-  
+
+  // Lazy-Panels (Market Data, Historic, …) beim Öffnen AUTOMATISCH aus dem Store
+  // materialisieren, damit ihre Charts in Preview/PDF erscheinen, OHNE dass man die
+  // Panels manuell öffnet. Loop-sicher: renderRiskPreview ruft den Warmup NICHT auf;
+  // der Warmup-Ping löst nur ein normales Neuzeichnen der Preview aus.
+  try { warmUpReportSources(); } catch (e) { console.warn('[reports:enter] warmup failed', e); }
 });
 
 document.addEventListener('reports:leave', () => {

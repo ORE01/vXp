@@ -561,6 +561,20 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   let sections = getActiveRiskSectionsForPdf() || [];
   sections = applyPdfHierarchy(sections);
 
+  // Interest Rates + Credit Spreads auf EINE Seite nebeneinander: den CS-Kurven-Chart
+  // in die Rates-Sektion mergen (per Chart-ID, unabhaengig vom Section-Key) und die
+  // eigenstaendige CS-Sektion entfernen. Das 2-up-Rendering uebernimmt composedRow (Flag).
+  try {
+    const _ratesSec = sections.find(s => (s.enabledCharts || []).some(c => c.id === 'IRLineChart'));
+    const _csSec    = sections.find(s => (s.enabledCharts || []).some(c => c.id === 'CS_ChartCanvas'));
+    if (_ratesSec && _csSec && _ratesSec !== _csSec) {
+      _ratesSec.enabledCharts = [...(_ratesSec.enabledCharts || []), ...(_csSec.enabledCharts || [])];
+      _ratesSec.__composed2 = true;
+      _ratesSec.title = 'Market Data — Interest Rates & Credit Spreads';
+      sections = sections.filter(s => s !== _csSec);
+    }
+  } catch (e) { console.warn('[PDF] merge rates+spreads failed', e); }
+
   const sectionNoByKey = {};
   sections.forEach((s) => (sectionNoByKey[s.key] = s.sectionNumber));
 
@@ -865,8 +879,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       const sy = by + bh + 4;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...MUTED);
       doc.text('0%', marginX, sy);
-      doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, marginX + barW / 2, sy, { align: 'center' });
-      doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, marginX + barW, sy, { align: 'right' });
+      doc.text(`Warning ${lim.yellowPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`, marginX + barW / 2, sy, { align: 'center' });
+      doc.text(`Limit ${lim.redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`, marginX + barW, sy, { align: 'right' });
 
       const ly = sy + 5, lcW = 72, lcH = 20, lcGap = 6;
       const lcards = [
@@ -1007,8 +1021,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         const sy = by + bh + 3.2;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
         doc.text('0%', limX, sy);
-        doc.text(`Warning ${Number(lim.yellowPct.toFixed(2))}%`, limX + limW / 2, sy, { align: 'center' });
-        doc.text(`Limit ${Number(lim.redPct.toFixed(2))}%`, limX + limW, sy, { align: 'right' });
+        doc.text(`Warning ${lim.yellowPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`, limX + limW / 2, sy, { align: 'center' });
+        doc.text(`Limit ${lim.redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`, limX + limW, sy, { align: 'right' });
 
         const ly = sy + 2.5, lcW = 52, lcGap = 5;
         const lcH = Math.max(12, rowH - (ly - rowTop) - 1);
@@ -1300,28 +1314,36 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const ampRgb = (s) => ({ green: [76, 175, 80], yellow: [224, 176, 0], red: [211, 47, 47] }[s] || [154, 167, 180]);
     const portSuffix = otxt('homePfPort') !== '–' ? ` ${otxt('homePfPort')}` : '';
 
+    // KPI-Kacheln direkt aus dem App-DOM lesen -> Report zeigt EXAKT die im Customer
+    // Setup angehakten (sichtbaren) Tiles, genau wie die App-Overview (Ampel-Dot,
+    // Sub-/Relativwert und Label werden aus der jeweiligen Kachel uebernommen).
+    const tTxt = (el, sel) => (el?.querySelector(sel)?.textContent || '').trim();
+    const tDot = (el) => {
+      const d = el?.querySelector('.mr-amp-dot');
+      if (!d || d.hidden) return null;
+      for (const s of ['green', 'yellow', 'red']) if (d.classList?.contains(`mr-amp--${s}`)) return s;
+      return null;
+    };
+    const cardFrom = (title, anchorId) => {
+      const card = ctx.getById(anchorId)?.closest('.home-card');
+      const boxes = [];
+      card?.querySelectorAll('.home-kpi[data-tile]').forEach((t) => {
+        if (t.style.display === 'none') return;            // im Customer Setup abgewaehlt -> ausgeblendet
+        const sub = tTxt(t, '.home-kpi-abs');
+        boxes.push({ v: tTxt(t, '.home-kpi-val') || '–', lbl: tTxt(t, '.home-kpi-lbl'), sub: sub || undefined, dot: tDot(t) });
+      });
+      return { title, boxes };
+    };
     const ovCards = [
-      { title: `PORTFOLIO${portSuffix}`,
-        boxes: [
-          { v: otxt('homePfNotional'), lbl: 'Notional' },
-          { v: otxt('homePfNav'), lbl: 'Net Asset Value' },
-          { v: otxt('homePfYield'), lbl: 'Yield' },
-        ] },
-      { title: `MARKET RISK${portSuffix}`,
-        boxes: [
-          { pre: 'Normal Risk (VaR)', v: otxt('homeMktVar'), dot: odot('homeMktVarDot') },
-          { pre: 'Extreme Risk (ES)', v: otxt('homeMktEs'), dot: odot('homeMktEsDot') },
-          { v: otxt('homeMktRollVar'), sub: otxt('homeMktRollVarAbs'), lbl: 'VaR · ROLLING_1' },
-          { v: otxt('homeMktRollEs'), sub: otxt('homeMktRollEsAbs'), lbl: 'ES · ROLLING_1' },
-        ] },
-      { title: `CREDIT RISK${portSuffix}`,
-        boxes: [
-          { pre: 'Normal Risk (VaR)', v: otxt('homeCrVar'), dot: odot('homeCrVarDot') },
-          { pre: 'Extreme Risk (ES)', v: otxt('homeCrEs'), dot: odot('homeCrEsDot') },
-        ] },   // TSI/MSD folgen als Ampel-Slider unter den Karten
+      cardFrom(`PORTFOLIO${portSuffix}`, 'homePfNotional'),
+      cardFrom(`MARKET RISK${portSuffix}`, 'homeMktVar'),
+      cardFrom(`CREDIT RISK${portSuffix}`, 'homeCrVar'),
     ];
 
-    const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovCardH = 44, ovBoxH = 13;
+    const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovBoxH = 13;
+    // Kartenhoehe dynamisch nach der Karte mit den meisten sichtbaren Tiles (2 je Reihe).
+    const ovRowsMax = Math.max(1, ...ovCards.map(c => Math.ceil((c.boxes.length || 1) / 2)));
+    const ovCardH = 11 + ovRowsMax * (ovBoxH + 3);
     ensurePageSpace(ovCardH + 8, `${sectionTitle} (cont.)`);
     ovCards.forEach((c, i) => {
       const x = marginX + i * (ovCardW + ovGap), tx = x + 5;
@@ -1397,9 +1419,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       doc.text('0', sx, tY + tH + 4);
       doc.text(s.maxTxt, sx + sw - doc.getTextWidth(s.maxTxt), tY + tH + 4);
     };
-    // Slider unter den Karten: 2 Spalten (links Portfolio: IR/CS, rechts Credit: TSI/MSD).
-    const sGap = 8, sHalfW = (layout.contentWidth - sGap) / 2;
-    const sColL = marginX, sColR = marginX + sHalfW + sGap;
+    // Slider auf Drittelbreite UNTER die jeweilige Karte -> immer 3-teilig wie in der App:
+    // IR/CS unter Portfolio (links), TSI/MSD unter Credit (rechts), Market-Mitte bleibt frei.
+    // Reuse der Karten-Geometrie (ovCardW/ovGap), damit Slider nie in den Market-Bereich ragen.
+    const sHalfW = ovCardW;
+    const sColL = marginX, sColR = marginX + 2 * (ovCardW + ovGap);
     const irMax = otxt('irScaleMax'), tsiMax = otxt('tsiScaleMax');
     if (irMax !== '–' || tsiMax !== '–') {
       ensurePageSpace(52, `${sectionTitle} (cont.)`);
@@ -1438,20 +1462,31 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
   // 'overview': die 3 HOME-Overview-Charts nebeneinander in EINER Reihe ->
   // Sektion (KPI-Karten + Charts) passt komplett auf eine Seite.
-  const COMPOSED_ROW_KEYS = new Set(['overview', 'structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-yield', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities']);
-  const composedRow = COMPOSED_ROW_KEYS.has(sec.key) && (sec.enabledCharts || []).length > 0;
+  const COMPOSED_ROW_KEYS = new Set(['overview', 'structure', 'market', 'credit', 'mvar', 'mvar-products', 'mvar-yield', 'mvar-issuers', 'mvar-scenarios', 'sensitivities', 'hist-sensitivities', 'performance', 'ts']);
+  const composedRow = (COMPOSED_ROW_KEYS.has(sec.key) || sec.__composed2) && (sec.enabledCharts || []).length > 0;
   if (composedRow) {
     // Credit-Tail-Driver-Charts NICHT in der Nebeneinander-Reihe (sie werden unten je
     // PD-Ansicht als Chart+Tabelle-Paar gezeichnet).
     const rowCharts = (sec.enabledCharts || []).filter(ch => !CR_DRIVER_CHART_IDS.has(ch.id));
     // Issuers/Products/Factors: 2 pro Reihe (Balken+Scatter je Metrik untereinander).
-    const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar-yield', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities']);
-    const perRow = FORCE_TWO_PER_ROW.has(sec.key) ? 2 : Math.min(rowCharts.length, 3);
+    const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar-yield', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities', 'performance', 'ts']);
+    const perRow = (FORCE_TWO_PER_ROW.has(sec.key) || sec.__composed2) ? 2 : Math.min(rowCharts.length, 3);
     const cgap = 6;
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
     // Mit KPI-Baendern daruerber etwas flacher, damit Baender + Charts auf eine Seite passen.
     const hasKpiBand = tablesAll.some((t) => ctx.getById(t.id)?.dataset?.kpiBand);
-    const cellH = perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84);
+    let cellH = perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84);
+    const composedRows = Math.ceil(rowCharts.length / perRow);
+    if (composedRows > 1) {
+      // Chart-Hoehe so begrenzen, dass ALLE Reihen + Titel zusammen auf EINE Seite passen
+      // (v.a. im Querformat, wo die nutzbare Seitenhoehe klein ist) -> z.B. 4 Charts = 2x2.
+      const usable = layout.bottomSafe - layout.topSafe;   // volle frische Seite
+      const fitH = Math.floor((usable - 30) / composedRows) - 16;  // 30 = Reserve Titel/Intro
+      if (fitH > 30) cellH = Math.min(cellH, fitH);
+      // Ganzen Block einmal reservieren -> bricht bei Bedarf komplett auf eine frische Seite
+      // (statt Reihe fuer Reihe), damit das 2x2 zusammenbleibt.
+      ensurePageSpace(composedRows * (cellH + 16) + 2, `${sectionTitle} (cont.)`);
+    }
     let col = 0;
     let rowY = y;
     for (const ch of rowCharts) {

@@ -2,6 +2,8 @@
 
 'use strict';
 
+import { parseDeNumber } from '../../../utils/tableCellFormats.js';
+
 export function showStructureMessage(drawer, message, type = 'info') {
   const modal =
     document.getElementById('structureTimelineModal') ||
@@ -262,7 +264,7 @@ export function renderDrawer(drawer, row, container, prodId, options = {}) {
         const key = input.dataset.payloadKey;
         const rawValue = input.value;
 
-        const numericValue = Number(rawValue);
+        const numericValue = parseDeNumber(rawValue);
 
         payload[key] =
           rawValue !== '' && Number.isFinite(numericValue)

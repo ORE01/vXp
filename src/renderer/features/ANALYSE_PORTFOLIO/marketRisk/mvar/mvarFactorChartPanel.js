@@ -480,7 +480,7 @@ function renderCorrelationMatrix() {
     return _pearson(xs, ys);
   };
 
-  const fmtC = (c) => (c == null || !isFinite(c)) ? '–' : c.toFixed(2);
+  const fmtC = (c) => (c == null || !isFinite(c)) ? '–' : c.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtV = (v) => (v == null || !isFinite(v)) ? '–' : Number(v).toPrecision(3);
   const cellBg = (c) => {
     if (c == null || !isFinite(c)) return 'transparent';

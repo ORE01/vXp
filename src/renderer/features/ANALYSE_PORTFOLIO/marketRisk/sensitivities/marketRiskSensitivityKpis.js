@@ -454,14 +454,16 @@ const pv01Rows = portRows.filter(row => {
     return riskType === 'VEGA_PARALLEL' && ccy === 'EUR';
   });
 
-  const hasPV01Data =
-    pv01CalcData !== null ||
-    pv01Rows.length > 0;
+  // Jeder Handler (PV01/CPV01/Vega) aktualisiert ALLE KPIs: bevorzugt aus seiner
+  // eigenen Berechnung, sonst aus dem Risk-Store-Fallback (PortfolioRiskSensitivities,
+  // nur letzter As-of -> korrekt). So bleibt z.B. der PV01-KPI sichtbar, wenn gerade
+  // der CPV01-Handler laeuft.
+  const hasPV01Data = pv01CalcData !== null || pv01Rows.length > 0;
 
   const hasCPV01Data =
     cpv01CalcData !== null ||
-    cpv01RowsFromRiskStore.length > 0 ||
-    Array.isArray(cpv01SourceRows);
+    Array.isArray(cpv01SourceRows) ||
+    cpv01RowsFromRiskStore.length > 0;
 
   const hasExplicitVegaCalc =
     vegaCalcData !== null &&

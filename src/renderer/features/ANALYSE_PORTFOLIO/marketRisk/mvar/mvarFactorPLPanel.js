@@ -442,10 +442,10 @@ function renderFactorBar(rows, cfg) {
       // Drill per RECHTSKLICK (bindRightClickDrill unten).
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(3)}%` } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}%` } },
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% exposure  /  % ${cfg.metric} contribution`, color: chartColor, font: { family: chartFont } } },
+        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: `% exposure  /  % ${cfg.metric} contribution`, color: chartColor, font: { family: chartFont } } },
         y: { ticks: { color: chartColor, font: { family: chartFont, size: 10 } }, grid: { display: false } },
       },
     },
@@ -488,8 +488,8 @@ function renderFactorScatter(rows, cfg) {
         datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: chartColor, font: { family: chartFont, size: 10 }, formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : '') } : undefined,
       },
       scales: {
-        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (exposure)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
-        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'Portfolio share % (exposure)', color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { beginAtZero: true, max: axMax, title: { display: true, text: `Risk contribution % (${cfg.metric})`, color: chartColor, font: { family: chartFont } }, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
       },
     },
   });
@@ -505,7 +505,7 @@ function renderFactorScatter(rows, cfg) {
 // var_rel/es_rel sind bereits in Prozent-Einheiten (z.B. -0.2432 = -0.2432%) -> KEIN *100.
 function relPct(v) {
   const n = Number(v);
-  return Number.isFinite(n) ? `${Number(n.toFixed(4))}%` : '–';
+  return Number.isFinite(n) ? `${n.toLocaleString('de-DE', { maximumFractionDigits: 4 })}%` : '–';
 }
 function renderFactorKpis(riskTypeRows) {
   const el = document.getElementById('mvarFactorKpi');
@@ -529,8 +529,8 @@ function renderFactorKpis(riskTypeRows) {
   let coreCard = '';
   const dec = computeDecomposition(riskTypeRows, 'var_rel');
   if (dec) {
-    const parts = dec.comp.map(c => `${c.pct.toFixed(1)}%`).join(' + ');
-    const divPart = dec.div < 0 ? `- ${Math.abs(dec.div).toFixed(1)}%` : `+ ${dec.div.toFixed(1)}%`;
+    const parts = dec.comp.map(c => `${c.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`).join(' + ');
+    const divPart = dec.div < 0 ? `- ${Math.abs(dec.div).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : `+ ${dec.div.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
     coreCard = `<div class="mr-kpi-card mvar-core-card">
       <div class="mr-kpi-card__label">Core reading</div>
       <div class="mvar-core-text">IR and CS create gross risk contributions that can exceed 100%. Diversification is a benefit, not an additional risk driver.</div>
@@ -590,10 +590,10 @@ function renderFactorEntriesChart(riskTypeRows) {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(3)}%` } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}%` } },
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: '% of portfolio value', color: chartColor, font: { family: chartFont } } },
+        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: '% of portfolio value', color: chartColor, font: { family: chartFont } } },
         y: { ticks: { color: chartColor, font: { family: chartFont, size: 11 } }, grid: { display: false } },
       },
     },
@@ -653,11 +653,11 @@ function renderRiskTypeBar(riskTypeRows, cfg) {
         legend: { display: false },
         title: { display: !!cfg.title, text: cfg.title || '', color: chartColor, align: 'start', font: { family: chartFont, size: 13, weight: 'bold' } },
         subtitle: { display: !!cfg.subtitle, text: cfg.subtitle || '', color: 'rgba(150,160,175,0.9)', align: 'start', padding: { bottom: 8 }, font: { family: chartFont, size: 10 } },
-        tooltip: { callbacks: { label: (ctx) => `${cfg.metric}: ${Number(ctx.parsed.x).toFixed(3)}%` } },
-        datalabels: window.ChartDataLabels ? { anchor: 'end', align: 'right', color: chartColor, font: { size: 10 }, formatter: (v) => (v ? `${Number(v).toFixed(2)}%` : '') } : undefined,
+        tooltip: { callbacks: { label: (ctx) => `${cfg.metric}: ${Number(ctx.parsed.x).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}%` } },
+        datalabels: window.ChartDataLabels ? { anchor: 'end', align: 'right', color: chartColor, font: { size: 10 }, formatter: (v) => (v ? `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : '') } : undefined,
       },
       scales: {
-        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
         y: { ticks: { color: chartColor, font: { family: chartFont, size: 11 } }, grid: { display: false } },
       },
     },
@@ -697,11 +697,11 @@ function renderDiversificationBar(riskTypeRows, cfg) {
   const segs = [];      // [start,end] je Balken (floating bars)
   const colors = [];
   const dl = [];        // Datalabel-Texte je Balken
-  segs.push([0, 100]); colors.push(blue); dl.push('100.0%');
+  segs.push([0, 100]); colors.push(blue); dl.push('100,0%');
   let cum = 0;
-  comp.forEach(c => { segs.push([cum, cum + c.pct]); colors.push(green); dl.push(`+${c.pct.toFixed(1)}%`); cum += c.pct; });
+  comp.forEach(c => { segs.push([cum, cum + c.pct]); colors.push(green); dl.push(`+${c.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`); cum += c.pct; });
   // Diversifikation: von gross zurueck auf 100 -> Segment [min,max], Label = div (negativ).
-  segs.push([Math.min(100, gross), Math.max(100, gross)]); colors.push(gray); dl.push(`${div.toFixed(1)}%`);
+  segs.push([Math.min(100, gross), Math.max(100, gross)]); colors.push(gray); dl.push(`${div.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`);
 
   canvas.style.display = 'block';
   canvas.width = 520; canvas.height = 300;
@@ -725,7 +725,7 @@ function renderDiversificationBar(riskTypeRows, cfg) {
         datalabels: window.ChartDataLabels ? { anchor: 'end', align: 'right', color: chartColor, font: { size: 10 }, formatter: (v, ctx) => dl[ctx.dataIndex] } : undefined,
       },
       scales: {
-        x: { beginAtZero: true, suggestedMax: Math.max(115, gross + 5), ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${v}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        x: { beginAtZero: true, suggestedMax: Math.max(115, gross + 5), ticks: { color: chartColor, font: { family: chartFont }, callback: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
         y: { ticks: { color: chartColor, font: { family: chartFont, size: 11 } }, grid: { display: false } },
       },
     },

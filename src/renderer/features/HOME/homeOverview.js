@@ -8,6 +8,7 @@
 // OVERVIEW-Tabs und nach relevanten Table-Updates (dataRouter) neu gerendert.
 
 import { appState } from '../../renderer.js';
+import { fmtEurCompact } from '../../utils/tableCellFormats.js';
 import { enrichPortfolioRowsWithRisk } from '../portfolio/shared/portfolioRiskEnrichment.js';
 import { buildPositionLoss, getRunConfQuantil } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/LossIssuer.js';
 import { crTailTopForFlag, getCreditDashboardModel } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
@@ -27,15 +28,10 @@ const numOf = (v) => {
 };
 
 function fmtEur(v) {
-  if (!Number.isFinite(v)) return '–';
-  const a = Math.abs(v);
-  const sign = v < 0 ? '-' : '';
-  if (a >= 1e6) return `${sign}EUR ${(a / 1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })} Mio.`;
-  if (a >= 1e3) return `${sign}EUR ${(a / 1e3).toLocaleString('en-US', { maximumFractionDigits: 1 })} k`;
-  return `${sign}EUR ${a.toFixed(0)}`;
+  return fmtEurCompact(v);
 }
-const fmtPctRaw = (v) => Number.isFinite(v) ? `${v.toFixed(2)} %` : '–';       // Wert ist bereits Prozent (Market)
-const fmtNum = (v, d = 2) => Number.isFinite(v) ? v.toFixed(d) : '–';
+const fmtNum = (v, d = 2) => Number.isFinite(v) ? v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }) : '–';
+const fmtPctRaw = (v) => Number.isFinite(v) ? `${fmtNum(v, 2)} %` : '–';       // Wert ist bereits Prozent (Market)
 
 const normPort = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
 const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
@@ -84,7 +80,7 @@ function _ampState(dur, th) {
 function _applyRiskGroup(group, { avgMat, irDur, csDur }) {
   const q = (role) => group.querySelector(`[data-role="${role}"]`);
   const hasMat = Number.isFinite(avgMat) && avgMat > 0;
-  const matTxt = hasMat ? `${avgMat.toFixed(2)}Y` : '–';
+  const matTxt = hasMat ? `${fmtNum(avgMat, 2)}Y` : '–';
   const posOf = (dur) => (hasMat && Number.isFinite(dur)) ? _clamp01(dur / avgMat) * 100 : 0;
   const setTxt = (role, t) => { const el = q(role); if (el) el.textContent = t; };
 
@@ -124,13 +120,13 @@ function _applyRiskGroup(group, { avgMat, irDur, csDur }) {
   const ir1y = q('ir-1y'); if (ir1y) ir1y.style.left = `${pos1y}%`;
   const irS1y = q('ir-scale1y'); if (irS1y) { irS1y.style.left = `${pos1y}%`; irS1y.style.visibility = pos1y >= 96 ? 'hidden' : 'visible'; }
   setMarker('ir-marker', irDur, irTh);
-  setTxt('ir-val', Number.isFinite(irDur) ? `${irDur.toFixed(2)}Y` : '–');
+  setTxt('ir-val', Number.isFinite(irDur) ? `${fmtNum(irDur, 2)}Y` : '–');
   setTxt('ir-max', matTxt);
 
   // Credit Spread Sensitivity: Ampel-Track, Marke auf 0 → Ø-Maturity.
   setTrack('cs-track', csTh, null);
   setMarker('cs-marker', csDur, csTh);
-  setTxt('cs-val', Number.isFinite(csDur) ? `${csDur.toFixed(2)}Y` : '–');
+  setTxt('cs-val', Number.isFinite(csDur) ? `${fmtNum(csDur, 2)}Y` : '–');
   setTxt('cs-max', matTxt);
 }
 
@@ -198,9 +194,9 @@ function drawMiniHBar(canvasId, labels, values, color, { fmtValue, fmtTip, fmtTi
   const light = document.body.classList.contains('light-theme');
   const gridColor = light ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.10)';
   const tickColor = (getComputedStyle(document.body).getPropertyValue('--text-muted') || '').trim() || '#888';
-  const fv = fmtValue || ((v) => `${Number(v).toFixed(2)}%`);
-  const ft = fmtTip || ((v) => ` ${Number(v).toFixed(3)} %`);
-  const fk = fmtTick || ((v) => `${v}%`);
+  const fv = fmtValue || ((v) => `${fmtNum(Number(v), 2)}%`);
+  const ft = fmtTip || ((v) => ` ${fmtNum(Number(v), 3)} %`);
+  const fk = fmtTick || ((v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`);
   _charts[canvasId] = new window.Chart(cv.getContext('2d'), {
     type: 'bar',
     plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
@@ -304,7 +300,7 @@ function renderPortfolioCard(port) {
   // Sensitivitaeten: absolut (EUR) gross, relativ klein. Relativ = Wert / ΣNotional
   // × 10000 in "bp" (bp Preisaenderung je 1bp Faktor-Move), konsistent zum
   // Sensitivities-Panel. Kacheln ohne vorhandene Sensitivitaet werden ausgeblendet.
-  const fmtBp = (v) => Number.isFinite(v) ? `${v.toFixed(2)} bp` : '–';
+  const fmtBp = (v) => Number.isFinite(v) ? `${fmtNum(v, 2)} bp` : '–';
   const relBp = (v) => notional ? fmtBp((v / notional) * 10000) : '–';
   setText('homePfPv01',  fmtEur(pv01Base));   setText('homePfPv01Rel',  relBp(pv01Base));
   setText('homePfCpv01', fmtEur(cpv01Base));  setText('homePfCpv01Rel', relBp(cpv01Base));
@@ -329,7 +325,7 @@ function renderPortfolioCard(port) {
     top.map((e) => e[0]),
     top.map((e) => (notional ? +(e[1] / notional * 100).toFixed(1) : 0)),
     'rgba(108, 155, 209, 0.9)',
-    { fmtValue: (v) => `${Number(v).toFixed(1)}%`, fmtTip: (v) => ` ${Number(v).toFixed(1)} % of notional` },
+    { fmtValue: (v) => `${fmtNum(Number(v), 1)}%`, fmtTip: (v) => ` ${fmtNum(Number(v), 1)} % of notional` },
   );
   return true;
 }
@@ -492,8 +488,8 @@ function renderMarketCard(port) {
       prodTop.map((p) => +(Math.abs(p.val) / baseAbs * 100).toFixed(1)),
       'rgba(42, 127, 127, 0.9)',
       {
-        fmtValue: (v) => `${Number(v).toFixed(1)}%`,
-        fmtTip: (v) => ` ${Number(v).toFixed(1)} % of total VaR`,
+        fmtValue: (v) => `${fmtNum(Number(v), 1)}%`,
+        fmtTip: (v) => ` ${fmtNum(Number(v), 1)} % of total VaR`,
       },
     );
   } else {
@@ -563,7 +559,7 @@ function renderCreditCard(port) {
       top.map((t) => (t.rating ? [t.name, t.rating] : t.name)),
       top.map((t) => +t.pct.toFixed(1)),
       'rgba(122, 92, 145, 0.9)',
-      { fmtValue: (v) => `${Number(v).toFixed(0)}%`, fmtTip: (v) => ` ${Number(v).toFixed(1)} %` },
+      { fmtValue: (v) => `${fmtNum(Number(v), 0)}%`, fmtTip: (v) => ` ${fmtNum(Number(v), 1)} %` },
     );
   } else {
     destroyChart('homeCrChart');
@@ -718,8 +714,26 @@ function bindHomeCardLinks() {
         });
         if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
       } catch (_) {}
-      if (panelId) openPanelViaTrigger(panelId);
-      if (then) requestAnimationFrame(then);
+      if (panelId) {
+        // Selbstheilendes Oeffnen: der Tab-Wechsel rendert synchron die Overview neu
+        // (showHomeBehind -> renderHomeOverview) und kann das verzoegerte Oeffnen
+        // "verschlucken" -> Panel bekommt/haelt sein .open nicht (intermittierend,
+        // v.a. beim Zurueckspringen auf Overview). Daher oeffnen UND ueber wenige
+        // Frames pruefen, ob .open wirklich blieb; sonst erneut oeffnen. openPanel
+        // ist idempotent, das Nachfassen ist also risikoarm.
+        const ensureOpen = (tries) => {
+          openPanelViaTrigger(panelId);
+          const panel = document.getElementById(panelId);
+          if (tries > 0 && !(panel && panel.classList.contains('open'))) {
+            requestAnimationFrame(() => ensureOpen(tries - 1));
+          } else if (then) {
+            requestAnimationFrame(then);
+          }
+        };
+        ensureOpen(3);
+      } else if (then) {
+        requestAnimationFrame(then);
+      }
     }));
   };
 

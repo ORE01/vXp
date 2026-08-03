@@ -1,6 +1,6 @@
 
 
-function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y') {
+function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y', opts = {}) {
   const canvas = document.getElementById(chartName);
 
   // CRITICAL:
@@ -86,9 +86,10 @@ function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y') {
         animation: false,
         normalized: true,
 
-        // Dashboard-BarCharts brauchen keine Mouse-/Touch-Events.
-        // Das reduziert Event-Binding-Probleme bei UI-Rebuilds.
-        events: [],
+        // Dashboard-BarCharts brauchen standardmaessig keine Mouse-/Touch-Events
+        // (reduziert Event-Binding-Probleme bei UI-Rebuilds). Opt-in via opts.interactive:
+        // nur Hover/Click-Events (KEIN Resize -> responsive:false bleibt) fuer Tooltips.
+        events: opts.interactive ? ['mousemove', 'mouseout', 'click'] : [],
 
         plugins: {
           legend: {
@@ -98,6 +99,9 @@ function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y') {
           // Falls chartjs-plugin-annotation global registriert ist,
           // soll es auf simplen BarCharts nicht laufen.
           annotation: false,
+
+          // Tooltip nur wenn interaktiv (sonst wuerde er ohne Events ohnehin nie erscheinen).
+          tooltip: { enabled: !!opts.interactive },
         },
 
         scales: {

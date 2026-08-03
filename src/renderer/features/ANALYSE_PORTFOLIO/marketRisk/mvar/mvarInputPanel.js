@@ -31,14 +31,14 @@ function escapeHtml(value) {
 function fmtLossPct(value) {
   if (value === null || value === undefined || value === '') return '-';
   const n = Number(value);
-  return Number.isFinite(n) ? `${(n * 100).toFixed(2)} %` : '-';
+  return Number.isFinite(n) ? `${(n * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '-';
 }
 
 // Confidence as percent (0.95 -> "95.00 %"), as before.
 function fmtConfidencePct(value) {
   if (value === null || value === undefined || value === '') return '-';
   const n = Number(value);
-  return Number.isFinite(n) ? `${(n * 100).toFixed(2)} %` : escapeHtml(value);
+  return Number.isFinite(n) ? `${(n * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : escapeHtml(value);
 }
 
 function reloadMVar() {

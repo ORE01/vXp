@@ -172,7 +172,7 @@ export function renderVolSurfacePanel() {
       const value = volMatrix[rowIdx]?.[colIdx];
 
       const label = typeof value === 'number' && Number.isFinite(value)
-        ? `${(value * 100).toFixed(2)}%`
+        ? `${(value * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
         : '–';
 
       return `
@@ -384,7 +384,7 @@ y: {
   },
         ticks: {
           color: "rgb(161,160,160)",
-          callback: v => Number(v).toFixed(3)
+          callback: v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
         },
         grid: { color: "rgb(90,90,90)" }
       }
@@ -436,8 +436,8 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
   const rowsHtml = absVolRows.map(r => `
     <tr>
       <td style="text-align:right;">${r.strikeSpreadBP}</td>
-      <td style="text-align:right;">${(r.volSpread * 100).toFixed(2)} bp</td>
-      <td style="text-align:right;">${(r.absVol * 100).toFixed(3)} %</td>
+      <td style="text-align:right;">${(r.volSpread * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} bp</td>
+      <td style="text-align:right;">${(r.absVol * 100).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} %</td>
     </tr>
   `).join("");
 
@@ -447,9 +447,9 @@ function renderSmileSummaryTable(sortedSmileRows, atmVol) {
     </div>
 
     <div style="margin-bottom:6px; font-size:0.85rem; opacity:0.8; line-height:1.4;">
-      ATM Vol: <strong>${(atmVol * 100).toFixed(3)} %</strong><br>
+      ATM Vol: <strong>${(atmVol * 100).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} %</strong><br>
       Vol-Range (inkl. Smile): 
-      <strong>${(minAbs * 100).toFixed(3)} % – ${(maxAbs * 100).toFixed(3)} %</strong>
+      <strong>${(minAbs * 100).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} % – ${(maxAbs * 100).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} %</strong>
     </div>
 
     <table class="mini-table" style="width:100%; border-collapse:collapse; font-size:0.8rem;">

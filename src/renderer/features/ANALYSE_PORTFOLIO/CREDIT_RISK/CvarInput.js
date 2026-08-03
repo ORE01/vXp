@@ -32,7 +32,7 @@ function escapeHtml(value) {
 function fmtPct(value) {
   if (value === null || value === undefined || value === '') return '-';
   const n = Number(value);
-  return Number.isFinite(n) ? `${(n * 100).toFixed(2)}%` : escapeHtml(value);
+  return Number.isFinite(n) ? `${(n * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : escapeHtml(value);
 }
 
 // Plain numeric / text value (corr, horizon_days, n_simulations).

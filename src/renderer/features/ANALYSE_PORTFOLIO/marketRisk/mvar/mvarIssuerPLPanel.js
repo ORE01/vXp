@@ -106,9 +106,9 @@ function bindIssuerScatterContextDrill(canvas, cfg) {
 
 function fmtAbs(v) { return formatNumber()(v); }
 function fmtMaybeAbs(v) { return v == null ? '-' : fmtAbs(v); }
-function fmtRelPct(v) { return v == null ? '-' : `${(v * 100).toFixed(2)}%`; }
+function fmtRelPct(v) { return v == null ? '-' : `${(v * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`; }
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : '–'; }
+function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '–'; }
 
 // KPI-Band ueber den Charts einer Metrik (VaR/ES): Total, Top-Emittent (% vom Total),
 // Top-5-Konzentration (%), staerkster ueberproportionaler Beitrag (Risk vs. weight).
@@ -131,7 +131,7 @@ function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
     const d = r[cfg.relKey] - r.nav_rel;
     if (!over || d > over.d) over = { issuer: r.issuer, d };
   }
-  const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toFixed(1)} pp` : '–';
+  const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp` : '–';
 
   const cards = [
     { label: `Total ${cfg.metric}`,     value: fmtAbs(total),            sub: 'sum of contributions',       desc: `Portfolio ${cfg.metric} (all issuers)` },
@@ -327,7 +327,7 @@ function renderIssuerChart(rows, cfg) {
       // Drill per RECHTSKLICK (bindRightClickDrill unten) — konsistent mit den Scatter-Charts.
       plugins: {
         legend: { display: true, position: 'top', labels: { color: chartColor, font: { family: chartFont } } },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toFixed(2)}%` } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.x).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` } },
       },
       scales: {
         x: {
