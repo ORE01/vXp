@@ -81,6 +81,15 @@ import { AppState } from './core/state/AppState.js';
 
 import { handleModalAction } from './core/ui/modal/modalActions.js';
 
+// ── Zentrale Chart.js-Textfarbe (Achsentitel, Ticks, Legende) ──────────────────
+// Chart.js v4-Default ist #666 und im Dark-Theme fast unlesbar. Viele Charts setzen
+// keine eigene Farbe und erben diesen Default. Global auf denselben Wert wie
+// tsEU1YChart (createLineChart) setzen, damit ALLE Charts lesbar sind. Charts mit
+// eigener color-Angabe ueberschreiben das weiterhin. Einmalig, vor dem ersten Chart.
+try {
+  if (window.Chart?.defaults) window.Chart.defaults.color = 'rgb(161, 160, 160)';
+} catch (e) { console.warn('[renderer] Chart.defaults.color setzen fehlgeschlagen', e); }
+
 const APP_ROOT = document.getElementById('app-root');
 const REPORT_ROOT = document.getElementById('report-root');
 

@@ -6,7 +6,7 @@
 
 import { appState } from '../../../renderer.js';
 import { fmtEurCompact } from '../../../utils/tableCellFormats.js';
-import { getMvarRowAsofDate, rowMatchesMvarContext } from './mvar/mvarSelectors.js';
+import { getMvarRowAsofDate, rowMatchesMvarContext, normalizeMvarText, getMvarRowScenarioName } from './mvar/mvarSelectors.js';
 import { getMVaRThresholdsFromInputUsingState, trafficLightStateForMVaR } from './mvar/mvarAggregatePanel.js';
 
 let _listenersBound = false;
@@ -26,18 +26,47 @@ function currentMvarRow() {
     .at(-1);
 }
 
+// Szenario-Zeile fuer die zusaetzlichen Buffer: das im Customer Setup gewaehlte Default-
+// Stress-Szenario (Fallback STRESSED, sonst erstes Nicht-Rolling-Szenario). Gibt Zeile +
+// Anzeige-Name zurueck, sonst null.
+function scenarioMvarRow() {
+  const rows = appState.getAllMvarData?.() || [];
+  if (!rows.length) return null;
+  const portName = appState.getSelectedPortTableName?.();
+  if (!portName) return null;
+
+  const rolling = normalizeMvarText(appState.selectedMvarInterval);
+  const forPort = rows.filter((r) => rowMatchesMvarContext(r, { portName }));
+  const available = new Set(forPort.map((r) => normalizeMvarText(getMvarRowScenarioName(r))).filter(Boolean));
+  const custDefault = normalizeMvarText(appState.getCustomerMarketRiskSetting?.()?.default_market_risk_interval_code);
+
+  const scenName = [custDefault, 'STRESSED'].find((s) => s && s !== rolling && available.has(s))
+    || [...available].find((s) => s && s !== rolling)
+    || null;
+  if (!scenName) return null;
+
+  const matches = forPort.filter((r) => normalizeMvarText(getMvarRowScenarioName(r)) === scenName);
+  if (!matches.length) return null;
+  const row = matches.slice()
+    .sort((a, b) => getMvarRowAsofDate(a).localeCompare(getMvarRowAsofDate(b)))
+    .at(-1);
+  // Anzeige: Originalname aus der Zeile (nicht die grossgeschriebene Normalform).
+  return { row, scenName: String(getMvarRowScenarioName(row)).trim() || scenName };
+}
+
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; };
 
-// EUR-Betrag als "EUR <n> mn" (Magnitude, adaptive Nachkommastellen).
+// Betrag als "<n> Tsd./Mio." OHNE Waehrungskuerzel (User-Wunsch: EUR stoert). Bei anderer
+// Waehrung muesste hier ein Symbol wieder ergaenzt werden.
 function fmtEur(v) {
-  return fmtEurCompact(v, { risk: true });
+  return fmtEurCompact(v, { risk: true }).replace('EUR ', '');
 }
-// Signierter EUR-Betrag (fuer Deltas): +EUR / -EUR. ASCII-Minus, damit der
+// Signierter Betrag (fuer Deltas): +/- ohne Waehrungskuerzel. ASCII-Minus, damit der
 // jsPDF-Standardfont (WinAnsi) es korrekt darstellt (kein U+2212).
 function fmtEurSigned(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '';
-  return fmtEurCompact(n, { risk: true, signed: true });
+  return fmtEurCompact(n, { risk: true, signed: true }).replace('EUR ', '');
 }
 // Signierte Prozentpunkt-Aenderung (fuer relative Deltas): +0.01% / -0.01%.
 function fmtPpSigned(v) {
@@ -142,6 +171,7 @@ export function getMarketDashboardModel(rowOverride = null) {
   const dVarRel = magDelta(num(row?.VaR_T_rel), lastVarRelPct);
   const dVarAbs = magDelta(num(row?.VaR_T_abs), lastVarAbs);
   const limit = computeLimitModel(row, varState);
+  const esLimit = computeLimitModel(row, esState, 'ES_T_rel');
 
   // TSI wie im Credit-Dashboard: (ES - VaR) / VaR (relativ, positiv);
   // absolute Zusatzinfo = EUR-Abstand zwischen ES und VaR.
@@ -159,9 +189,9 @@ export function getMarketDashboardModel(rowOverride = null) {
 
   // KPI-Karten (4): relativer Wert = Hauptzahl, absoluter Wert immer darunter.
   const cards = [
-    { label: 'Normal Risk (VaR)', full: 'Value at Risk', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs), desc: interval || 'confidence · holding period',
+    { label: 'Current Market: Normal Risk', full: 'Value at Risk', rel: fmtPct(row?.VaR_T_rel), abs: fmtEur(row?.VaR_T_abs), desc: interval || 'confidence · holding period',
       state: varState, dRel: dVarRel, dAbs: dVarAbs, relDeltaStr: fmtPpSigned(dVarRel), absDeltaStr: fmtEurSigned(dVarAbs) },
-    { label: 'Extreme Risk (ES)', full: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs), desc: 'beyond VaR', state: esState },
+    { label: 'Current Market: Extreme Risk', full: 'Expected Shortfall', rel: fmtPct(row?.ES_T_rel), abs: fmtEur(row?.ES_T_abs), desc: 'beyond VaR', state: esState },
     { label: 'Cluster Risk (TSI)', full: 'Tail Severity Indicator', rel: tsiRelStr, abs: tsiAbsStr, desc: '(ES - VaR) / VaR', state: tsiState },
     { label: 'Limit buffer', rel: (limit ? limit.bufferRelStr : '–'), abs: (limit && limit.bufferAbs != null ? fmtEur(limit.bufferAbs) : '–'), desc: 'remaining to limit', state: varState },
   ];
@@ -184,7 +214,7 @@ export function getMarketDashboardModel(rowOverride = null) {
     : 'No market risk data for the selected portfolio yet.';
   const status = { state, label, text };
 
-  return { status, cards, flow, limit, hasRow: !!row };
+  return { status, cards, flow, limit, esLimit, hasRow: !!row };
 }
 
 export function renderMarketRiskDashboard() {
@@ -198,31 +228,41 @@ export function renderMarketRiskDashboard() {
   const tblEl = document.getElementById('mrDashKpiTable');
   if (!host && !limitEl && !tblEl && !statusEl && !flowEl) return;
 
-  const { status, cards, flow, limit } = getMarketDashboardModel();
+  const { status, cards, flow, limit, esLimit } = getMarketDashboardModel();
 
   // Intro-Zeile + Status-/Beschreibungs-Box bewusst entfernt (redundant zu den
   // KPI-Karten mit Ampeln) — Container leeren, damit nichts stehen bleibt.
   if (introEl) introEl.textContent = '';
   if (statusEl) statusEl.innerHTML = '';
 
-  // KPI-Karten wie im Credit-Dashboard: je Kennzahl EINE Zeile — Karte links,
-  // Limit-Block rechts. Echtes Limit beim VaR (erste Karte); die uebrigen
-  // Zeilen zeigen ein Mock-up als Platzhalter.
+  // Vier Buffer-Zeilen: 2x Rolling (aktuell) + 2x Szenario. Gleiche Limits (Customer Setup /
+  // CONSERVATIVE) — nur der aktuelle Wert / Marker unterscheidet sich je Zeile.
   if (host) {
-    host.innerHTML = cards.map((c, i) => {
+    const scen = scenarioMvarRow();
+    const scenModel = scen ? getMarketDashboardModel(scen.row) : null;
+
+    const buffers = [
+      { c: cards[0], m: limit },
+      { c: cards[1], m: esLimit },
+    ];
+    if (scenModel) {
+      const sName = scen.scenName;
+      buffers.push({ c: { ...scenModel.cards[0], label: `${sName}: Normal Risk` }, m: scenModel.limit });
+      buffers.push({ c: { ...scenModel.cards[1], label: `${sName}: Extreme Risk` }, m: scenModel.esLimit });
+    }
+
+    host.innerHTML = buffers.map(({ c, m }) => {
       const amp = `mr-amp--${c.state || 'neutral'}`;
-      const dot = c.isDelta ? '' : `<span class="mr-amp-dot ${amp}"></span>`;
-      const valCls = c.isDelta ? 'mr-kpi-card__value mr-kpi-card__value--delta' : 'mr-kpi-card__value';
+      const dot = `<span class="mr-amp-dot ${amp}"></span>`;
       const cardHtml = `
       <div class="mr-kpi-card">
         <div class="mr-kpi-card__label">${esc(c.label)}</div>
-        <div class="${valCls}">${esc(c.rel)}${dot}</div>
+        <div class="mr-kpi-card__value">${esc(c.rel)}${dot}</div>
         ${c.full ? `<div class="mr-kpi-card__full">${esc(c.full)}</div>` : ''}
         <div class="mr-kpi-card__sub">${esc(c.abs)}</div>
         <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
       </div>`;
-      const limitHtml = (i === 0) ? mrLimitBarHtml(limit) : mrMockLimitHtml();
-      return `<div class="cr-metric-row">${cardHtml}<div class="cr-metric-limit">${limitHtml}</div></div>`;
+      return `<div class="cr-metric-row">${cardHtml}<div class="cr-metric-limit">${mrLimitBarHtml(m)}</div></div>`;
     }).join('');
   }
 
@@ -257,25 +297,26 @@ export function renderMarketRiskDashboard() {
 // Limit-Modell (CONSERVATIVE): Auslastung = |MVaR| / Rot-Limit; Zonen gruen (bis
 // Gelb-Limit) / amber (bis Rot-Limit). Plus Risikolimit + Puffer in EUR (aus abs/rel
 // abgeleiteter Portfoliowert). null = keine Daten.
-function computeLimitModel(row, state) {
-  const lim = conservativeLimit('VaR_T_rel');
+function computeLimitModel(row, state, metricCode = 'VaR_T_rel') {
+  const absField = metricCode.replace('_rel', '_abs'); // VaR_T_rel -> VaR_T_abs, ES_T_rel -> ES_T_abs
+  const lim = conservativeLimit(metricCode);
   const redPct = Math.abs(lim.red) * 100;       // z.B. 1.0 (%)
   const yellowPct = Math.abs(lim.yellow) * 100; // z.B. 0.5 (%)
-  const curPct = Math.abs(num(row?.VaR_T_rel)); // z.B. 0.244 (%)
+  const curPct = Math.abs(num(row?.[metricCode])); // z.B. 0.244 (%)
   if (!Number.isFinite(curPct) || !(redPct > 0)) return null;
 
   const util = curPct / redPct;
   const yellowRatio = Math.min(100, (yellowPct / redPct) * 100);
-  const absV = Math.abs(num(row?.VaR_T_abs));
+  const absV = Math.abs(num(row?.[absField]));
   const value = (Number.isFinite(absV) && curPct > 0) ? absV / (curPct / 100) : null;
   const limitAbs = value != null ? Math.abs(lim.red) * value : null;
   const bufferAbs = (limitAbs != null && Number.isFinite(absV)) ? (limitAbs - absV) : null;
   return {
     redPct, yellowPct, curPct, util, yellowRatio, limitAbs, bufferAbs, state,
     utilStr: `${(util * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
-    // Relativ: Limit = Rot-Schwelle in %, Buffer = verbleibende Prozentpunkte bis Limit.
+    // Relativ: Limit = Rot-Schwelle in %, Buffer = verbleibende Auslastung (100% - util).
     limitRelStr: `${redPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`,
-    bufferRelStr: `${(redPct - curPct).toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`,
+    bufferRelStr: `${((1 - util) * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
     // Absolut (fuer Screen + PDF): "EUR … mn".
     limitAbsStr: (limitAbs != null ? fmtEur(limitAbs) : null),
     bufferAbsStr: (bufferAbs != null ? fmtEur(bufferAbs) : null),

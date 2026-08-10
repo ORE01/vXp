@@ -26,23 +26,48 @@ export const OVERVIEW_TILES = [
   { key: 'pv01',            label: 'PV01' },
   { key: 'cpv01',           label: 'CPV01' },
   { key: 'vega',            label: 'Vega' },
+  { key: 'cash',            label: 'Cash (non-valued %)' },
+  { key: 'mat_split',       label: 'Maturity split (valued Ø)' },
   { key: 'largest_issuers', label: 'Largest Issuers Chart' },
 ];
 
 export const MARKET_RISK_TILES = [
+  { key: 'mkt_exec',     label: 'Executive Summary' },
+  { key: 'mkt_cur_grp',  label: 'Current Market (Normal + Extreme)' },
+  { key: 'mkt_str_grp',  label: 'Stressed Market (Normal + Extreme)' },
+  { key: 'mkt_scale',    label: 'Normal Risk scale (VaR ticks)' },
+  { key: 'mkt_scale_es', label: 'Extreme Risk scale (ES ticks)' },
   { key: 'mkt_var',      label: 'Normal Risk (VaR)' },
   { key: 'mkt_es',       label: 'Extreme Risk (ES)' },
   { key: 'mkt_scen_var', label: 'Normal Risk (VaR) · Scenario' },
   { key: 'mkt_scen_es',  label: 'Extreme Risk (ES) · Scenario' },
+  { key: 'mkt_cmp_var',  label: 'Normal Risk Comparison' },
+  { key: 'mkt_cmp_es',   label: 'Extreme Risk Comparison' },
+  { key: 'mkt_backtest', label: 'Portfolio Backtest Chart' },
   { key: 'mkt_chart',    label: 'Top Product Contributions Chart' },
 ];
 
 export const CREDIT_RISK_TILES = [
   { key: 'cr_var',   label: 'Normal Risk (VaR)' },
   { key: 'cr_es',    label: 'Extreme Risk (ES)' },
-  { key: 'cr_tsi',   label: 'Cluster Risk (TSI)' },
+  { key: 'cr_tsi',   label: 'Concentration Risk (TCM)' },
   { key: 'cr_msd',   label: 'Market Stress (MSD)' },
   { key: 'cr_chart', label: 'Top Tail Drivers Chart' },
+  // Economic-Capital-Kacheln (Historic + Current) in der Overview-Credit-Karte:
+  { key: 'cr_ec_el',  label: 'Economic Capital · Expected Loss' },
+  { key: 'cr_ec_ede', label: 'Economic Capital · Expected Defaulted Exposure' },
+  { key: 'cr_ec_var', label: 'Economic Capital · VaR' },
+  { key: 'cr_ec_ec',  label: 'Economic Capital · Economic Capital' },
+  { key: 'cr_ec_scale',   label: 'Economic Capital scale (Historic)' },
+  { key: 'cr_ec_scale_m', label: 'Economic Capital scale (Market adjusted)' },
+  // Risk-Buffer-Kacheln (EL <- EC -> VaR nebeneinander) in der Overview-Credit-Karte:
+  { key: 'risk_buffer',   label: 'Risk Buffer (Historic)' },
+  { key: 'risk_buffer_m', label: 'Risk Buffer (Market adjusted)' },
+  // Credit Profit/Loss KPIs (abs/rel-Umschalter + Sichtbarkeit):
+  { key: 'credit_el',       label: 'Expected Loss (P/L)' },
+  { key: 'credit_var_hist', label: 'VaR historic (P/L)' },
+  { key: 'credit_es',       label: 'Expected Shortfall (P/L)' },
+  { key: 'credit_ec',       label: 'Economic Capital (P/L)' },
 ];
 
 const ALL_TILES = [...OVERVIEW_TILES, ...MARKET_RISK_TILES, ...CREDIT_RISK_TILES];
@@ -61,8 +86,23 @@ const TILE_VALUE_MODE = {
   pv01:         { primaryIsAbs: true,  defaultMode: 'abs' },
   cpv01:        { primaryIsAbs: true,  defaultMode: 'abs' },
   vega:         { primaryIsAbs: true,  defaultMode: 'abs' },
-  mkt_scen_var: { primaryIsAbs: false, defaultMode: 'rel' },
-  mkt_scen_es:  { primaryIsAbs: false, defaultMode: 'rel' },
+  // Market-Kacheln: EUR gross (abs, .home-kpi-big) + % klein (rel, .home-kpi-rel) in einer
+  // Zeile. Der Umschalter waehlt, welcher Wert gross ist (abs -> EUR gross / rel -> % gross).
+  mkt_var:      { primaryIsAbs: true, defaultMode: 'abs' },
+  mkt_es:       { primaryIsAbs: true, defaultMode: 'abs' },
+  mkt_scen_var: { primaryIsAbs: true, defaultMode: 'abs' },
+  mkt_scen_es:  { primaryIsAbs: true, defaultMode: 'abs' },
+  mkt_scale:    { primaryIsAbs: true, defaultMode: 'abs' },
+  // Credit Profit/Loss KPIs: abs (EUR) gross ODER rel (%) gross, per Customer Setup waehlbar.
+  credit_el:       { primaryIsAbs: true, defaultMode: 'abs' },
+  credit_var_hist: { primaryIsAbs: true, defaultMode: 'abs' },
+  credit_es:       { primaryIsAbs: true, defaultMode: 'abs' },
+  credit_ec:       { primaryIsAbs: true, defaultMode: 'abs' },
+  // Economic-Capital-Schieber (Historic) in der Overview-Credit-Karte:
+  cr_ec_scale:     { primaryIsAbs: true, defaultMode: 'abs' },
+  // Risk-Buffer-Kacheln: abs (EUR) gross ODER rel (%) gross, per Customer Setup waehlbar.
+  risk_buffer:     { primaryIsAbs: true, defaultMode: 'abs' },
+  risk_buffer_m:   { primaryIsAbs: true, defaultMode: 'abs' },
 };
 
 // tile_key -> boolean. null = not loaded yet -> everything visible by default.
@@ -95,6 +135,23 @@ export function applyOverviewTileVisibility() {
     });
   });
   applyTileValueModes();
+  collapseEmptyKpiGrids();
+}
+
+// Sind in einer Overview-Karte ALLE KPI-Kacheln (.home-kpis) ausgeblendet, hinterlaesst
+// das leere Grid trotzdem seinen unteren Rand (margin-bottom) und die darunterliegende
+// Vergleichsgruppe (.mkt-cmp-group) ihren oberen Rand -> das erste sichtbare Element sitzt
+// zu tief und fluchtet nicht mit den ersten Kacheln der anderen Karten. Daher: leeres
+// Grid ganz ausblenden und den oberen Abstand der Folgegruppe entfernen.
+function collapseEmptyKpiGrids() {
+  document.querySelectorAll('.home-kpis').forEach((grid) => {
+    const tiles = grid.querySelectorAll('[data-tile]');
+    if (!tiles.length) return;
+    const anyVisible = Array.from(tiles).some((t) => t.style.display !== 'none');
+    grid.style.display = anyVisible ? '' : 'none';
+    const group = grid.parentElement?.querySelector('.mkt-cmp-group');
+    if (group) group.style.marginTop = anyVisible ? '' : '0';
+  });
 }
 
 // Toggle the swap class per applicable tile. `home-tile-swap` makes the .home-kpi-abs

@@ -271,12 +271,17 @@ function ensureMarketRiskViews(db, resolve, reject) {
       ${thresholdExpr('VaR_T_rel', 'yellow_loss_limit')} AS var_yellow_loss_limit,
       ${thresholdExpr('VaR_T_rel', 'red_loss_limit')}    AS var_red_loss_limit,
       ${thresholdExpr('ES_T_rel', 'yellow_loss_limit')}  AS es_yellow_loss_limit,
-      ${thresholdExpr('ES_T_rel', 'red_loss_limit')}     AS es_red_loss_limit
+      ${thresholdExpr('ES_T_rel', 'red_loss_limit')}     AS es_red_loss_limit,
+      COALESCE(m.is_selected, 0)                         AS is_selected
     FROM MVaRInput m
   `;
 
   console.log('[DB SCHEMA] ensureMarketRiskViews start');
 
+  // Mehrfach-Auswahl der zu rechnenden Szenarien: 0/1-Flag pro MVaRInput-Intervall.
+  // Idempotent: existiert die Spalte schon, liefert ALTER "duplicate column name" ->
+  // Fehler wird bewusst ignoriert, danach normal die View neu bauen.
+  db.run(`ALTER TABLE MVaRInput ADD COLUMN is_selected INTEGER DEFAULT 0`, () => {
   db.run(`DROP VIEW IF EXISTS v_MVAR_MODEL_SELECTION_APP`, (errDrop) => {
     if (errDrop) {
       // Do not swallow: log loudly. Resolve so a view problem does not abort the
@@ -297,6 +302,7 @@ function ensureMarketRiskViews(db, resolve, reject) {
       resolve();
     });
   });
+  }); // schliesst den ALTER-TABLE-Wrapper (is_selected)
 }
 
 // Customer credit-risk general settings (CUSTOMER SETUP -> Risk -> Credit Risk).

@@ -16,6 +16,7 @@ import { handleVegaSensData } from './sensitivities/portfolioVegaHandler.js';
 
 import { initMarketRiskSensitivityTabs } from './sensitivities/marketRiskSensitivityTabs.js';
 import { renderMarketRiskDashboard } from './marketRiskDashboard.js';
+import { syncMvarViewDropdowns } from './mvar/mvarViewScenario.js';
 
 let sensitivitiesListenerInstalled = false;
 let sensitivityTabsInitialized = false;
@@ -169,6 +170,10 @@ export function createMarketRiskRefresh({ appState } = {}) {
 
     // Market-Risk-Dashboard (KPI-Karten) aus derselben Aggregat-Zeile aktualisieren.
     try { renderMarketRiskDashboard(); } catch (e) { console.warn('[marketRiskRefresh] dashboard render failed', e); }
+
+    // Ansichts-Szenario-Dropdowns (in jedem Panel) mit den gerechneten Szenarien
+    // befuellen + auf das aktuelle View-Szenario synchronisieren (Default ROLLING_1).
+    try { syncMvarViewDropdowns(); } catch (e) { console.warn('[marketRiskRefresh] view dropdown sync failed', e); }
 
     console.log('[marketRiskRefresh] refreshMarketRiskUI DONE', {
       port,

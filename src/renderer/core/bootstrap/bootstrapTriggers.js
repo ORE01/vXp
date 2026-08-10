@@ -135,8 +135,11 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
 
     // ✅ MVaR Panel: beim Öffnen bestehende Daten aus Store/AppState rendern.
     // Wichtig: erst nach openPanel(), damit Chart.js auf sichtbarem Canvas rendert.
-    if (panelId === 'panel-mvar') {
-      // console.log('[TRIGGER] panel-mvar opened → refreshMarketRiskUI');
+    // panel-mvar (Factors) UND panel-portfolio-backtest (ausgelagerter Synth-Backtest-
+    // Chart + Rolling-VaR) rendern beim Oeffnen ueber refreshMarketRiskUI, damit Chart.js
+    // auf sichtbarem Canvas zeichnet (korrektes Sizing).
+    if (panelId === 'panel-mvar' || panelId === 'panel-portfolio-backtest') {
+      // console.log('[TRIGGER]', panelId, 'opened → refreshMarketRiskUI');
 
       requestAnimationFrame(() => {
         if (typeof window.appState?.refreshMarketRiskUI === 'function') {

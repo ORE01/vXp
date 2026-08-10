@@ -368,6 +368,9 @@ export const RISK_CONFIG = {
     'TSDataContainer_2',
     'TSDataContainer_3',
     'TSDataContainer_4',
+    // Fremd-Tabs, die faelschlich als verwaiste Report-Roots auftauchten:
+    'upd-market',   // UPDATES-Tab "Market Data" (Daten-Import) – NICHT die echten Marktdaten
+    'erste',        // DataProvider "Erste / Sparkasse"
   ],
 
   // -------------------------------------------------------------------
@@ -401,7 +404,7 @@ export const RISK_CONFIG = {
   // -------------------------------------------------------------------
   sectionTitles: {
     // ===== HOME-Overview (verstecktes Report-Panel #panel-overview, homeOverview.js) =====
-    overview: 'Overview',
+    overview: 'OVERVIEW',
 
     // ===== Breakdown (Live-Panel #panel-concentration = Parent, je Dimension ein Kind) =====
     concentration: 'Breakdown',
@@ -492,10 +495,11 @@ export const RISK_CONFIG = {
     // ✅ Breakdown children order (11 Dimensionen wie im Breakdown-Dropdown)
     concentration: [
       'concentration-ISSUER',
+      // Direkt nach Issuer die drei Ratings (General -> Product -> Resolved), dann RANK.
       'concentration-RATING',
-      'concentration-RANK',
       'concentration-RATING_PROD',
       'concentration-RATINGres',
+      'concentration-RANK',
       'concentration-CATEGORY',
       'concentration-CouponType',
       'concentration-Depotbank',
@@ -716,6 +720,40 @@ function buildPreviewSections(chartState) {
         .filter(Boolean);
     }
 
+    // Overview: die Live-Risk-Slider (Portfolio IR/CS, Market mr1/mr2, Credit TSI/MSD)
+    // als ID-bereinigte Klone in die Preview uebernehmen. IDs entfernen, damit die
+    // PDF-ID-Lesung aus dem HOME-DOM nicht kollidiert; CSS ist global -> Optik bleibt.
+    let slidersHtml = '';
+    if (sec.key === 'overview') {
+      // Live-Element ID-bereinigt klonen (IDs raus -> keine Kollision mit der PDF-ID-Lesung).
+      const cloneClean = (el) => {
+        if (!el) return '';
+        const c = el.cloneNode(true);
+        c.removeAttribute('id');
+        c.querySelectorAll('[id]').forEach(x => x.removeAttribute('id'));
+        c.style.marginTop = '0';
+        return c.outerHTML;
+      };
+      // Market-Risk-Spalte bekommt zusaetzlich die Current/Stressed-Balkenkacheln (.mkt-grp-tiles).
+      const mktGrp = document.querySelector('#HOME_Modal .mkt-grp-tiles') || document.querySelector('.mkt-grp-tiles');
+      const grp = [
+        ['homeRiskSliders', 'Portfolio', null],
+        ['homeMarketSliders', 'Market Risk', mktGrp],
+        ['homeCreditSliders', 'Credit Risk', null],
+      ];
+      const parts = grp.map(([gid, lbl, extraEl]) => {
+        const inner = [];
+        if (extraEl) inner.push(cloneClean(extraEl));
+        const g = document.getElementById(gid);
+        if (g) inner.push(cloneClean(g));
+        if (!inner.length) return '';
+        return `<div style="flex:1 1 30%;min-width:210px;">`
+          + `<div style="font-weight:700;color:var(--text-bright);font-size:12px;margin:0 0 4px;">${lbl}</div>`
+          + `${inner.join('')}</div>`;
+      }).filter(Boolean);
+      if (parts.length) slidersHtml = `<div style="display:flex;gap:12px;flex-wrap:wrap;">${parts.join('')}</div>`;
+    }
+
     const hasThumbs = !isOn
       ? true
       : (chartThumbs.length || tableThumbs.length);
@@ -729,6 +767,7 @@ function buildPreviewSections(chartState) {
       chartThumbs,
       tableThumbs,
       breakdownControlsHtml: '', // nur Children zeigen Inhalte
+      slidersHtml,
       hasThumbs,
       sectionEnabled: isOn,
     });
@@ -905,8 +944,8 @@ export function getTableNote(tableId) {
 function noteTextareaHtml(tableId) {
   const val = String(loadTableNotes()[tableId] || '');
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return `<textarea class="rr-note-input" data-note-for="${tableId}" placeholder="Notiz…" rows="3"
-      style="width:100%;box-sizing:border-box;font-size:11px;padding:4px;border:1px solid var(--border);border-radius:4px;resize:vertical;">${esc(val)}</textarea>`;
+  return `<textarea class="rr-note-input" data-note-for="${tableId}" placeholder="Note…" rows="2"
+      style="width:220px;max-width:100%;box-sizing:border-box;font-size:11px;padding:4px;border:1px solid var(--border);border-radius:4px;resize:vertical;">${esc(val)}</textarea>`;
 }
 // Tabellen-Thumbnail links + Notiz-Textbox rechts (spiegelt das PDF-Layout).
 function thumbWithNoteHtml(tableId, thumbHtml) {
@@ -944,7 +983,7 @@ function loadChartToggleState() {
 // (z.B. Tabellen/Container abgeschalteter Sektionen), behalten ihren explizit
 // gespeicherten Zustand. Vorher wurden diese Eintraege bei jedem Save verworfen
 // und fielen nach dem naechsten Render auf den Default (angehakt) zurueck.
-function saveChartToggleStateFromDOM() {
+export function saveChartToggleStateFromDOM() {
   const st = loadChartToggleState();
 
   // Charts + Tables
@@ -1426,7 +1465,7 @@ const sectionControls = buildSectionControlsHTML('market', chartState);
         </div>
         ${tableHtml}
         ${tableOn ? `<div style="margin-top:8px;">
-          <div style="font-size:10px;opacity:.7;margin-bottom:2px;">Notiz (im PDF neben der Tabelle)</div>
+          <div style="font-size:10px;opacity:.7;margin-bottom:2px;">Note (shown next to the table in the PDF)</div>
           ${noteTextareaHtml('MVaRDataContainer0')}
         </div>` : ''}
       </div>
@@ -1537,7 +1576,7 @@ function buildCreditTrafficLightsSection(chartState = {}) {
     .filter(([, , ck]) => isChartEnabled('creditTraffic', ck, chartState))
     .map(([id, lbl]) =>
       `<div style="flex:1;min-width:140px;">
-         <div style="font-size:10px;opacity:.7;margin-bottom:2px;">${lbl} – Notiz (im PDF neben der Tabelle)</div>
+         <div style="font-size:10px;opacity:.7;margin-bottom:2px;">${lbl} – Note (shown next to the table in the PDF)</div>
          ${noteTextareaHtml(id)}
        </div>`
     ).join('');
@@ -2196,6 +2235,13 @@ function renderRiskPreview() {
               </div>
             </div>
 
+            ${sec.slidersHtml ? `
+              <div class="risk-section__row risk-section__row--deep">
+                <div class="risk-section__label">Sliders</div>
+                <div class="risk-section__controls">${sec.slidersHtml}</div>
+              </div>
+            ` : ''}
+
             ${
               ((sec.chartItems?.length) ||
                (sec.chartThumbs?.length) ||
@@ -2798,6 +2844,16 @@ function miniTableFromContainer(
 
 // RiskPDFPreview.js
 document.addEventListener('reports:enter', () => {
+  // Frischer App-Start (Reload): EINMAL pro Session den Report-Zustand leeren ->
+  // "reload = nichts vorausgewaehlt, Haekchen aus". Das Flag lebt in-memory und ist
+  // nach jedem Reload wieder weg; Panel-Wechsel INNERHALB der Session behaelt den Zustand.
+  const fresh = !window.__reportsSessionStarted;
+  if (fresh) {
+    window.__reportsSessionStarted = true;
+    try { localStorage.removeItem(CHART_STATE_KEY); } catch {}
+    try { appState?.setActiveCustomerReportName?.(''); } catch {}
+  }
+
   try { wireRiskPreview(); } catch (e) { console.error(e); }
 
   // Lazy-Panels (Market Data, Historic, …) beim Öffnen AUTOMATISCH aus dem Store
@@ -2937,6 +2993,13 @@ export function applyRiskPresetState(state = {}, { forceRender = false } = {}) {
     }
     delete st.__tableNotes;
 
+    // Anzeige-Titel des PDFs aus dem Preset ins Feld zuruecklegen (getrennt vom Report-Namen).
+    if (typeof st.__reportTitle === 'string') {
+      const _tEl = document.getElementById('reportDisplayTitleInput');
+      if (_tEl && st.__reportTitle) _tEl.value = st.__reportTitle;
+    }
+    delete st.__reportTitle;
+
     // 1) Single Source of Truth
     try { localStorage.setItem(CHART_STATE_KEY, JSON.stringify(st)); } catch {}
 
@@ -2955,6 +3018,12 @@ export function applyRiskPresetState(state = {}, { forceRender = false } = {}) {
       const v = st[`${sec}:__section__`];
       el.checked = (typeof v === 'boolean') ? v : true;
     });
+
+    // WICHTIG: den jetzt AUFGELOESTEN DOM-Zustand explizit zurueckschreiben. Sonst
+    // fehlen im gespeicherten State die per-Default (true) angehakten Charts, und das
+    // (opt-in) Re-Render beim erneuten Betreten zeigt "nichts angehakt". So bleibt die
+    // Report-Auswahl inkl. manueller Aenderungen ueber Panel-Wechsel erhalten.
+    try { saveChartToggleStateFromDOM(); } catch {}
 
     // Geladener Report: beim Render die Gruppen mit aktivierten Sections aufklappen.
     __riskExpandCheckedOnce = true;

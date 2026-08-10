@@ -82,6 +82,13 @@
   width: calc(var(--trigger-max-width) - 36px);
 }
 
+/* Level-4 leaves (z.B. Market Risk ▸ Risk Configuration ▸ Scenario Period / Factor
+   Mapping): noch einen Schritt tiefer eingerueckt. */
+#ANALYSE_Modal .section-trigger--sub.risk-acc--l4 {
+  margin-left: 54px;
+  width: calc(var(--trigger-max-width) - 54px);
+}
+
 /* Chevron points down when a group is expanded. */
 #ANALYSE_Modal .risk-acc.is-expanded > .risk-acc-toggle .chev::before {
   transform: rotate(90deg);

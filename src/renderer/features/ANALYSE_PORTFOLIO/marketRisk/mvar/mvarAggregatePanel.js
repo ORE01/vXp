@@ -42,6 +42,7 @@ export function handleMVaRData(receivedData, index) {
 
   if (!matches.length) {
     clearContainers(containerIds);
+    renderMvarPLKpis(null);
 
     console.warn('[MVaR Aggregate] no rows for current context', {
       portName,
@@ -89,6 +90,7 @@ if (!thresholds) {
   });
 
   applyMvarTrafficStateToTable(index, null);
+  renderMvarPLKpis(filteredData, null, null);
   return;
 }
 
@@ -143,8 +145,9 @@ const state = trafficLightStateForMVaR(
 
   // Total ES: same source, same state logic, same colouring — just the ES limits and
   // the ES_T_rel value. Skipped only if ES limits are absent in the customer row.
+  let esState = null;
   if (ES_RED_THRESHOLD != null && ES_YELLOW_THRESHOLD != null) {
-    const esState = trafficLightStateForMVaR(
+    esState = trafficLightStateForMVaR(
       filteredData,
       ES_RED_THRESHOLD,
       ES_YELLOW_THRESHOLD,
@@ -155,6 +158,9 @@ const state = trafficLightStateForMVaR(
       applyMvarTrafficStateToTable(index, esState, 'totalEs');
     }
   }
+
+  // KPI-Kacheln (Total VaR/ES abs + rel, mit Ampel-Punkt) — ersetzen die Tabelle in der Ansicht.
+  renderMvarPLKpis(filteredData, state, esState);
 
   console.log('[MVaR Aggregate] rendered', {
     portName,
@@ -306,6 +312,35 @@ function applyMvarTrafficStateToTable(index, state, metric = 'totalVar') {
   dot.style.verticalAlign = 'middle';
 
   valueCell.appendChild(dot);
+}
+
+// KPI-Kacheln fuer Profit/Loss (ersetzen die VaR/ES-Tabelle in der Ansicht): Total VaR und
+// Total ES je ABSOLUT + relativ aus der Aggregat-Zeile, mit Ampel-Punkt (VaR-/ES-State).
+function renderMvarPLKpis(data, varState, esState) {
+  const el = document.getElementById('mvarPLKpi');
+  if (!el) return;
+  if (!data) { el.innerHTML = ''; return; }
+
+  const fmtAbs = (v) => Number.isFinite(Number(v)) ? Math.abs(Number(v)).toLocaleString('de-DE', { maximumFractionDigits: 0 }) : '–';
+  const fmtRel = (v) => Number.isFinite(Number(v)) ? `${Math.abs(Number(v)).toLocaleString('de-DE', { maximumFractionDigits: 3 })}%` : '–';
+  const dotColor = { green: '#4CAF50', yellow: 'yellow', red: 'red' };
+  const dot = (s) => dotColor[s]
+    ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotColor[s]};margin-left:8px;vertical-align:middle;"></span>`
+    : '';
+
+  el.innerHTML = `
+    <div class="mr-kpi-card">
+      <div class="mr-kpi-card__label">Total VaR</div>
+      <div class="mr-kpi-card__value">${fmtAbs(data.VaR_T_abs)} (${fmtRel(data.VaR_T_rel)})${dot(varState)}</div>
+      <div class="mr-kpi-card__sub">portfolio total</div>
+      <div class="mr-kpi-card__desc">Market Value at Risk</div>
+    </div>
+    <div class="mr-kpi-card">
+      <div class="mr-kpi-card__label">Total ES</div>
+      <div class="mr-kpi-card__value">${fmtAbs(data.ES_T_abs)} (${fmtRel(data.ES_T_rel)})${dot(esState)}</div>
+      <div class="mr-kpi-card__sub">portfolio total</div>
+      <div class="mr-kpi-card__desc">Expected Shortfall</div>
+    </div>`;
 }
 
 export function getMVaRThresholdsFromInputUsingState() {

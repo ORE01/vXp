@@ -6,6 +6,7 @@ import {
   getEuswCurveColor
 } from '../../utils/colors.js';
 import { createContribDrill, scheduleHideConcMenu } from './SummaryBreakdown.js';
+import { enrichPortfolioRowsWithRisk } from '../portfolio/shared/portfolioRiskEnrichment.js';
 
 // Drill-down fuer die Produkt-Yield-Scatter (Klick auf Bubble -> Position(en) des
 // Produkts). Gleiche Engine wie die anderen Panels. Nur die 'var'-Schiene noetig.
@@ -281,12 +282,45 @@ const portfolioData = appState.getPortAggData(elementId) || {};
   // Overview-Slider). Beide auf Portfolio-Ebene aus portAgg.
   const _num = (s) => { const v = parseNumberLike(s); return Number.isFinite(v) ? v : null; };
   const ttm  = _num(portfolioData.formPortTtM);
-  const pv01 = _num(portfolioData.formPortPV01);
-  const nav  = _num(portfolioData.formPortValue);
-  const dur  = (pv01 != null && nav != null && nav !== 0)
-    ? Math.abs(pv01) / Math.abs(nav) * 10000 : null;
+  // IR Duration EXAKT wie Overview-Slider & Sensitivities-Panel: aus den Risk-
+  // angereicherten Zeilen (PV01_BASE), NICHT aus der Holdings-Spalte PV01 /
+  // formPortPV01(abs) — die haben eine andere Basis und ergeben einen falschen Wert.
+  //   IR Duration (Jahre) = |Σ PV01_BASE| / Σ NAV × 10000
+  let dur = null;
+  try {
+    const _pn = port_name || appState.getSelectedPortTableName?.() || '';
+    const _normP = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
+    const _p = _normP(_pn);
+    const _rows = (appState.getAllPortfolioData?.() || []).filter(r => _normP(r?.port_name) === _p);
+    const _enr = enrichPortfolioRowsWithRisk(_rows, _pn);
+    let _pv01Base = 0, _navSum = 0;
+    for (const r of _enr) { _pv01Base += Number(r.PV01_BASE) || 0; _navSum += (_num(r.NAV) || 0); }
+    dur = _navSum ? Math.abs(_pv01Base) / _navSum * 10000 : null;
+  } catch (e) { console.warn('[Yield KPI] IR-Duration-Berechnung fehlgeschlagen', e); }
   _set('yieldKpiTtm',      ttm == null ? '–' : `${ttm.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
   _set('yieldKpiDuration', dur == null ? '–' : `${dur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
+
+  // KPI 1 (Portfolio Yield current) und 3 (Δ vs buy) ausblenden — angezeigt bleiben nur
+  // "Portfolio Yield (at buy)", "Time to maturity (Ø)" und "IR duration".
+  ['yieldKpiCurrent', 'yieldKpiDelta'].forEach(id => {
+    const tile = document.getElementById(id)?.closest('.conc-kpi');
+    if (tile) tile.style.display = 'none';
+  });
+
+  // Report-Spiegel: die 3 sichtbaren KPIs als data-kpi-band-Tabelle fuer Preview/PDF.
+  const _ykTbl = document.getElementById('yieldKpiTable');
+  if (_ykTbl) {
+    const _fmt = (v, unit) => (v == null ? '–' : `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${unit}`);
+    const _escK = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const _rows = [
+      ['Portfolio Yield (at buy)', _fmt(buy, '%')],
+      ['Time to maturity (Ø)',     _fmt(ttm, 'Y')],
+      ['IR duration',              _fmt(dur, 'Y')],
+    ];
+    _ykTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+      _rows.map(([k, v]) => `<tr><td>${_escK(k)}</td><td>${_escK(v)}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
 })();
 
 const currency = 'EUR';
@@ -461,10 +495,10 @@ console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
 
   if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
 
-    insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs Maturity' });
-    insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yields vs Maturity' });
-    insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs Duration' });
-    insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yields vs Duration' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs reference curve', subtitle: 'Maturity' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yield vs reference curve', subtitle: 'Maturity' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs reference curve', subtitle: 'Duration' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yield vs reference curve', subtitle: 'Duration' });
 
     // =========================
     // 1) Portfolio vs Maturity
@@ -737,11 +771,13 @@ export function drawYieldVsTimeChart({
   // EU Yield Curve (blau, solid)
   if (euswPoints.length) {
     datasets.push({
-      label: 'EU Yield Curve',
+      label: 'EUR Swap Curve',
       data: euswPoints,
       showLine: true,
       borderColor: euswSolid.borderColor,
       backgroundColor: euswFill.backgroundColor,
+      pointBackgroundColor: euswSolid.borderColor,
+      pointBorderColor: euswSolid.borderColor,
       tension: 0.3,
       pointRadius: 3,
       order: 3 // Kurven hinter den Punkten (höherer order = unten)
@@ -751,15 +787,20 @@ export function drawYieldVsTimeChart({
   // EU Yield Curve 5 Years Back (gleiches Blau, gestrichelt)
   // Ja: geht exakt so mit borderDash
   if (pastPoints.length) {
+    // Gestrichelte Vergleichskurve: fein + grau, Punkte in derselben Farbe (voll gefuellt).
+    const dashGrey = 'rgba(148,150,158,0.9)';
     datasets.push({
       label: pastLabel,
       data: pastPoints,
       showLine: true,
-      borderColor: euswSolid.borderColor,
-      backgroundColor: euswFill.backgroundColor,
-      borderDash: [6, 6],
+      borderColor: dashGrey,
+      backgroundColor: dashGrey,
+      pointBackgroundColor: dashGrey,
+      pointBorderColor: dashGrey,
+      borderDash: [3, 3],
+      borderWidth: 1,
       tension: 0.3,
-      pointRadius: 3,
+      pointRadius: 2.5,
       order: 3 // Kurven hinter den Punkten
     });
   }
@@ -793,10 +834,11 @@ export function drawYieldVsTimeChart({
     datasets.push({
       label: 'Portfolio Yield',
       type: 'scatter',
+      pointStyle: 'circle',
       data: [portfolioPoint],
       backgroundColor: pCol.backgroundColor,
       borderColor: pCol.borderColor,
-      borderWidth: 3,
+      borderWidth: 0,
       pointRadius: 8,
       pointHoverRadius: 10,
       isPortfolio: true, // Rechtsklick -> alle Positionen (bindPerfContextDrill)
@@ -832,6 +874,10 @@ export function drawYieldVsTimeChart({
 
   // ---- Legend anzeigen? Nur wenn es mind. ein Dataset mit Daten gibt ----
   const showLegend = datasets.some(ds => Array.isArray(ds.data) && ds.data.length > 0);
+
+  // Achsentitel je Chart-Typ: Maturity- vs Duration-Varianten (englisch, wie Zielbild).
+  const isDurationChart = /duration/i.test(targetId);
+  const xAxisTitle = isDurationChart ? 'Duration (years)' : 'Time to maturity (years)';
 
   // Render
   window[targetId + '_chartInstance'] = new Chart(ctx, {
@@ -871,13 +917,15 @@ export function drawYieldVsTimeChart({
       scales: {
         x: {
           type: 'linear',
-          title: { display: true, text: 'Years', align: 'end', font: { size: 11 } },
+          title: { display: true, text: xAxisTitle, align: 'end', font: { size: 11 } },
+          grid: { borderDash: [2, 3], color: 'rgba(128,128,128,0.14)', lineWidth: 1 },
           ticks: { font: { size: 11 } },
           min: 0,
-          max: (Number.isFinite(xMaxOverride) ? xMaxOverride : xMax + 1)
+          max: Math.min(20, (Number.isFinite(xMaxOverride) ? xMaxOverride : xMax + 1))
         },
         y: {
-          title: { display: true, text: 'Yield (%)', font: { size: 11 } },
+          title: { display: true, text: 'Yield p.a.', font: { size: 11 } },
+          grid: { borderDash: [2, 3], color: 'rgba(128,128,128,0.14)', lineWidth: 1 },
           ticks: {
             font: { size: 11 },
             callback: val => `${Number(val).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
@@ -898,12 +946,31 @@ export function drawYieldVsTimeChart({
 
         legend: {
           display: showLegend,
-          position: 'right',
+          position: 'bottom',
+          align: 'center',
           labels: {
+            usePointStyle: true,   // Marker je Dataset via pointStyle (Punkt vs. Linie)
             font: { size: 10 },
             boxWidth: 18,
             boxHeight: 10,
             padding: 14,
+            // Marker je Dataset: Kurven als (ggf. gestrichelte) Linie, Portfolio als Punkt.
+            // Entkoppelt vom On-Chart-pointStyle (dort sollen es gefuellte Kreise sein).
+            generateLabels: (chart) => {
+              const base = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+              base.forEach(item => {
+                const ds = chart.data.datasets[item.datasetIndex];
+                if (!ds) return;
+                if (ds.isPortfolio || ds.label === 'Portfolio Yield') {
+                  item.pointStyle = 'circle';
+                } else if (ds.showLine) {
+                  item.pointStyle = 'line';
+                  item.lineWidth = ds.borderWidth ?? 2;
+                  item.lineDash = ds.borderDash || [];
+                }
+              });
+              return base;
+            },
             filter: (legendItem, data) => {
               const ds = data.datasets?.[legendItem.datasetIndex];
               if (!ds || !Array.isArray(ds.data) || ds.data.length === 0) return false;
@@ -925,6 +992,24 @@ export function drawYieldVsTimeChart({
           },
           bodyFont: { size: 13 }
         },
+
+        // Portfolio-Punkt beschriften (nur bei Einzelpunkt) — Label rechts neben dem
+        // Punkt, wie im Zielbild ("Portfolio X,X%"). chartjs-plugin-annotation ist global geladen.
+        annotation: (portfolioPoint && Number.isFinite(portfolioPoint.x) && Number.isFinite(portfolioPoint.y)) ? {
+          annotations: {
+            portfolioLabel: {
+              type: 'label',
+              xValue: portfolioPoint.x,
+              yValue: portfolioPoint.y,
+              content: [`Portfolio ${Number(portfolioPoint.y).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`],
+              color: getPortfolioColor(1).borderColor,
+              font: { size: 12, weight: 'bold' },
+              position: 'center',
+              xAdjust: 72,
+              backgroundColor: 'transparent',
+            }
+          }
+        } : undefined,
 
         // Zoom nur auf den interaktiven Produkt-Charts (chartjs-plugin-zoom, global geladen).
         // Normales Ziehen = Rechteck-Auswahl (Intervall), Wheel = Zoom, Ctrl+Drag = verschieben.
@@ -1054,7 +1139,7 @@ export function drawYieldVsTimeChart({
       }
       
 
-function insertHeadingIntoExistingChartBox({ canvasId, title }) {
+function insertHeadingIntoExistingChartBox({ canvasId, title, subtitle }) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
@@ -1065,12 +1150,28 @@ function insertHeadingIntoExistingChartBox({ canvasId, title }) {
   const existingHeading = chartBox.querySelector('h3');
   if (existingHeading) return;
 
+  // Titel + optionaler Untertitel (2-zeilig, linksbuendig wie im Zielbild).
+  const wrap = document.createElement('div');
+  wrap.style.marginBottom = '10px';
+
   const heading = document.createElement('h3');
   heading.textContent = title;
-  heading.style.textAlign = 'center';
-  heading.style.marginBottom = '10px';
+  heading.style.textAlign = 'left';
+  heading.style.margin = '0';
 
-  chartBox.insertBefore(heading, canvas);
+  wrap.appendChild(heading);
+
+  if (subtitle) {
+    const sub = document.createElement('div');
+    sub.textContent = subtitle;
+    sub.style.textAlign = 'left';
+    sub.style.fontSize = '12px';
+    sub.style.opacity = '0.7';
+    sub.style.marginTop = '2px';
+    wrap.appendChild(sub);
+  }
+
+  chartBox.insertBefore(wrap, canvas);
 }
 
 

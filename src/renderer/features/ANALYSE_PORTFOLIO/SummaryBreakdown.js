@@ -55,9 +55,14 @@ const BREAKDOWN_CONFIG = [
     title: 'Issuer',
     overview: 'Issuer, Issuer Rating, Capital Structure',
     columns: [
-      { key: 'ISSUER', label: 'Issuer' },
-      { key: 'RATING', label: 'Issuer General Rating' },
-      { key: 'RANK',   label: 'Issuer Capital Structure' },
+      { key: 'ISSUER',      label: 'Issuer' },
+      // Nach Issuer die drei Ratings zusammenhaengend: General -> Product -> Resolved.
+      // (RATING_PROD/RATINGres sind Produkt-Ratings, hier aber bewusst direkt nach dem
+      // Issuer-Rating platziert, damit sie in Dropdown/Preview/PDF zusammen erscheinen.)
+      { key: 'RATING',      label: 'Issuer General Rating' },
+      { key: 'RATING_PROD', label: 'Product Ratings' },
+      { key: 'RATINGres',   label: 'Rating Resolved' },
+      { key: 'RANK',        label: 'Issuer Capital Structure' },
     ],
   },
   {
@@ -65,10 +70,8 @@ const BREAKDOWN_CONFIG = [
     title: 'Product',
     overview: 'Product Rating, Rating Resolved, Category, Coupon Type',
     columns: [
-      // RATING_PROD = eigenes Produkt-Rating; RATINGres = aufgeloestes Rating
-      // (Produkt-Rating, sonst Issuer/Rank) — beides eigene Dimensionen.
-      { key: 'RATING_PROD', label: 'Product Ratings' },
-      { key: 'RATINGres',  label: 'Rating Resolved' },
+      // RATING_PROD / RATINGres wurden in die Issuer-Gruppe verschoben (Ratings direkt
+      // nach Issuer). Hier bleiben die uebrigen Produkt-Dimensionen.
       { key: 'CATEGORY',   label: 'Product Categories' },
       { key: 'CouponType', label: 'Product Coupon Type' },
     ],

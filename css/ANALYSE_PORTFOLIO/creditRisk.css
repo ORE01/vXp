@@ -442,6 +442,19 @@
   min-width: 320px;
 }
 
+/* Tail-Concentration-Kacheln (wie Market Risk/Issuer): jede Grafik/Tabelle in einer eigenen
+   Karte. Nur Karten-Look (kein erzwungenes Canvas-Resize -> Charts behalten ihr Seitenverhaeltnis). */
+#panel-credit .cr-tail-tile,
+#panel-credit-current .cr-tail-tile{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,.08));
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+#panel-credit .cr-tail-tile canvas,
+#panel-credit-current .cr-tail-tile canvas{ display:block; width:100% !important; height:240px !important; }
+
 /* Canvas-Größe im Credit-Panel */
 #panel-credit .chart-box canvas{
   display:block;
@@ -476,6 +489,126 @@
    der NUR diese Tabelle auf table-layout:auto + max-width-Spalten setzte -> die
    CVaR-Tabelle wich von TSI/MSD ab. Entfernt: alle drei nutzen jetzt einheitlich
    die .CVaRTable-Regel (table-layout:fixed, feste Spaltenbreiten, Werte rechts). */
+
+/* ===== Credit Profit/Loss: KEY-FIGURES-Kacheln (Mockup-Stil) ================= */
+.cr-kpi-row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+.cr-kpi-card {
+  flex: 0 1 240px; display: flex; align-items: center; gap: 14px;
+  padding: 6px 18px 6px 0; border-radius: 0;
+  border: none; background: transparent;   /* keine Umrahmung (Wunsch) */
+}
+.cr-kpi-card--el { border-color: #3a6ea5; }
+.cr-kpi-card--ede { border-color: #b8862b; }
+.cr-kpi-card--var { border-color: #7A5C91; }
+.cr-kpi-card--ec { border-color: #2e9e5b; }
+.cr-kpi-ico {
+  display: none;   /* Icons entfernt (Wunsch) */
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%;
+  align-items: center; justify-content: center;
+}
+.cr-kpi-ico svg { width: 25px; height: 25px; }
+.cr-kpi-ico--el { background: rgba(58, 110, 165, .16); color: #5a9bd1; }
+.cr-kpi-ico--ede { background: rgba(184, 134, 43, .16); color: #d9a441; }
+.cr-kpi-ico--var { background: rgba(122, 92, 145, .18); color: #a481c2; }
+.cr-kpi-ico--ec { background: rgba(46, 158, 91, .16); color: #3fb06a; }
+.cr-kpi-body { min-width: 0; }
+/* Ampel-Status-Punkt in der VaR-KPI (aus der ehemaligen CVaR-Tabelle hierher). */
+.cr-kpi-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 8px; vertical-align: middle; }
+/* Zweitwerte (EDE) klein/muted in der EL-Kachel — je Zeile in Klammern. */
+.conc-kpi__val-2nd { margin-left: 6px; font-size: 0.6em; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.conc-kpi__sub-2nd { margin-left: 5px; font-size: 0.9em; color: var(--text-muted); white-space: nowrap; }
+.conc-kpi__lbl-2nd { font-size: 0.9em; color: var(--text-muted); }
+/* Verbindungszeichen (EL + EC = VaR → ES) mittig in den Luecken zwischen den KPI-Kacheln.
+   Groesserer Gap, damit das Zeichen mit Abstand dazwischen sitzt (keine Ueberlappung). */
+#panel-credit .conc-kpi-grid, #panel-credit-current .conc-kpi-grid { gap: 34px; }
+#panel-credit .conc-kpi[data-conn], #panel-credit-current .conc-kpi[data-conn] { position: relative; }
+#panel-credit .conc-kpi[data-conn]::after, #panel-credit-current .conc-kpi[data-conn]::after {
+  content: attr(data-conn);
+  position: absolute; left: 100%; top: 50%;
+  transform: translate(calc(-50% + 17px), -50%);
+  color: var(--text-bright); font-size: 20px; font-weight: 800;
+  opacity: 1; pointer-events: none; z-index: 1;
+}
+/* KPI-Umrandung in den Farben der Loss-Distribution-Grafik: EL weiss (EL-Linie),
+   EC violett (Economic-Capital-Band), VaR orange, ES rot. */
+#panel-credit .conc-kpi[data-tile="credit_el"], #panel-credit-current .conc-kpi[data-tile="credit_el"] { border-color: rgba(235, 235, 235, 0.85); }
+#panel-credit .conc-kpi[data-tile="credit_ec"], #panel-credit-current .conc-kpi[data-tile="credit_ec"] { border-color: rgba(150, 110, 220, 0.9); }
+#panel-credit .conc-kpi[data-tile="credit_var_hist"], #panel-credit-current .conc-kpi[data-tile="credit_var_hist"] { border-color: #f08c00; }
+#panel-credit .conc-kpi[data-tile="credit_es"], #panel-credit-current .conc-kpi[data-tile="credit_es"] { border-color: #e03131; }
+/* KPI-Namen in derselben Farbe wie die Umrandung / Grafik. */
+#panel-credit .conc-kpi[data-tile="credit_el"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_el"] .conc-kpi__lbl { color: rgba(235, 235, 235, 0.92); }
+#panel-credit .conc-kpi[data-tile="credit_ec"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_ec"] .conc-kpi__lbl { color: rgba(180, 145, 238, 0.98); }
+#panel-credit .conc-kpi[data-tile="credit_var_hist"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"] .conc-kpi__lbl { color: #f08c00; }
+#panel-credit .conc-kpi[data-tile="credit_es"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_es"] .conc-kpi__lbl { color: #e03131; }
+/* KPI-Grid + Zusammenfassung NEBENEINANDER (bei zu wenig Breite bricht die Liste nach unten um). */
+#panel-credit .cr-kpi-row, #panel-credit-current .cr-kpi-row {
+  display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap;
+}
+#panel-credit .cr-kpi-row > .conc-kpi-grid, #panel-credit-current .cr-kpi-row > .conc-kpi-grid {
+  flex: 0 0 auto; grid-template-columns: repeat(4, auto);   /* Kacheln content-breit, Grid so schmal wie noetig */
+}
+/* Scatter-Werkzeuge (Hinweis/Show/Reset) aus dem Grafikbereich heben: oben Platz schaffen,
+   damit der Canvas nach unten rutscht und die (absolut positionierten) Werkzeuge darueber sitzen. */
+.cr-scatter-box { padding-top: 30px; padding-right: 128px; }
+
+/* Concentration-Risk-Balken: weisser Marker beim Ist-Wert im .mr-limit__bar (3 Zonen). */
+.cr-conc-mk { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .55); }
+/* Skala mit ungleichen Stuetzstellen (0/60/80/100) absolut positioniert. WICHTIG: feste Hoehe,
+   sonst kollabiert der Block (absolute Kinder) und die Karten darunter verrutschen. */
+.mr-limit__scale.cr-conc-scale2 { display: block; position: relative; height: 1.4em; }
+.cr-conc-scale2 span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.cr-conc-scale2 span:first-child { transform: none; }
+.cr-conc-scale2 span:last-child { transform: translateX(-100%); }
+
+/* Zusammenfassung als Bullet-Liste in umrandeter Karte (wie eine KPI), rechts neben dem Grid. */
+#panel-credit .cr-kpi-summary, #panel-credit-current .cr-kpi-summary {
+  flex: 1 1 260px; min-width: 240px; max-width: 440px; margin: 0;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 11px 16px 11px 30px;          /* Platz links fuer die Bullets */
+  list-style: disc;
+  font-size: 12px; color: var(--text-primary); line-height: 1.4;
+}
+#panel-credit .cr-kpi-summary li, #panel-credit-current .cr-kpi-summary li { margin: 3px 0; }
+#panel-credit .cr-kpi-summary:empty, #panel-credit-current .cr-kpi-summary:empty { display: none; }
+/* Kurzbeschreibung links oben in jeder KPI-Kachel (eine Zeile, per data-tile). */
+#panel-credit .conc-kpi-grid .conc-kpi[data-tile]::before,
+#panel-credit-current .conc-kpi-grid .conc-kpi[data-tile]::before {
+  display: block; text-align: left; font-size: 9px; line-height: 1.2;
+  color: var(--text-bright); margin-bottom: 6px; white-space: nowrap;
+}
+#panel-credit .conc-kpi[data-tile="credit_el"]::before, #panel-credit-current .conc-kpi[data-tile="credit_el"]::before { content: "Reported expected loss"; }
+/* Text kommt aus data-desc (dynamisch aus der Credit-VaR-Config: conf_level + horizon),
+   gesetzt in renderCreditKpiSet. Fallback bis JS laeuft: "Risk buffer". */
+#panel-credit .conc-kpi[data-tile="credit_ec"]::before, #panel-credit-current .conc-kpi[data-tile="credit_ec"]::before { content: attr(data-desc); }
+#panel-credit .conc-kpi[data-tile="credit_ec"]:not([data-desc])::before, #panel-credit-current .conc-kpi[data-tile="credit_ec"]:not([data-desc])::before { content: "Risk buffer"; }
+#panel-credit .conc-kpi[data-tile="credit_var_hist"]::before, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"]::before { content: "Realistic loss threshold"; }
+#panel-credit .conc-kpi[data-tile="credit_es"]::before, #panel-credit-current .conc-kpi[data-tile="credit_es"]::before { content: "Average loss in extreme cases"; }
+/* Serien-Legende (Historic/Market/Market adjusted) als Overlay oben rechts UEBER dem
+   Loss-Dist-Chart (absolut positioniert -> schrumpft den Plot nicht), vertikal gestapelt. */
+.cr-loss-legend { position: absolute; top: 4px; right: 8px; display: flex; flex-direction: column; gap: 3px; align-items: flex-end; z-index: 2; }
+.cr-loss-legend .closs-leg-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; line-height: 1.3; color: var(--text-primary); background: rgba(0,0,0,0.32); padding: 1px 6px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+.cr-loss-legend .closs-leg-item.is-hidden { opacity: 0.45; text-decoration: line-through; }
+.cr-loss-legend .closs-leg-swatch { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto; }
+.cr-kpi-big { font-size: 26px; font-weight: 700; color: var(--text-bright); line-height: 1.1; white-space: nowrap; }
+.cr-kpi-name { font-size: 13px; color: var(--text-bright); margin-top: 3px; }
+.cr-kpi-formula { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.cr-kpi-sub { margin-left: 6px; color: var(--text-muted); }
+.cr-kpi-note {
+  flex: 1 1 210px; align-self: center; display: flex; gap: 8px; align-items: flex-start;
+  font-size: 12px; line-height: 1.45; color: var(--text-muted);
+}
+.cr-kpi-note-ico { font-size: 15px; line-height: 1.2; color: var(--text-muted); }
+.cr-kpi-method { color: #3fb06a; font-weight: 600; }
+
+/* Calculate-PL-Button: gruen mit Rechner-Icon. */
+.edit-button.cvar-calc-btn {
+  background: #2e9e5b; border-color: #2e9e5b; color: #fff;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.edit-button.cvar-calc-btn:hover { background: #278a4f; border-color: #278a4f; }
+.cvar-calc-ico { width: 17px; height: 17px; }
 
 
 

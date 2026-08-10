@@ -121,9 +121,11 @@ const _clossVarLinePlugin = {
 const _clossIssuerDrillCfg = {
   detailId: 'clossIssuerDetail', titleId: 'clossIssuerDetailTitle',
   tableId: 'clossIssuerDetailTable', closeId: 'clossIssuerDetailClose',
-  menuId: 'clossIssuerCardMenu', valueType: 'NAV', valueLabel: 'NAV',
-  // Zusatzspalte Loss (Verlust bei Ausfall) je Position, aus __LOSS (unten befuellt).
-  extraCol: { key: '__LOSS', label: 'Loss' },
+  // Hauptwert = LOSS (Verlust bei Ausfall, aus __LOSS) -> die Positionssumme entspricht
+  // dem Tail-Loss (z.B. 9,1 Mio), nicht der Nominale. NAV bleibt als Nebenspalte sichtbar;
+  // die Notional-Spalte wird von renderConcView ohnehin immer gezeigt.
+  menuId: 'clossIssuerCardMenu', valueType: '__LOSS', valueLabel: 'Loss',
+  extraCol: { key: 'NAV', label: 'NAV' },
   // Text-Info-Spalte Rating (aus RATINGres der enriched-View), nur Positions-Sicht.
   infoCol: { key: 'RATINGres', label: 'Rating' },
 };
@@ -167,6 +169,35 @@ export function lossDefaultStep(issuers) {
     value: issuers.join(', '),
     label: multi ? 'Defaults' : 'Issuer',
     match: (r) => set.has(String(r?.ISSUER ?? '').trim().toLowerCase()),
+  };
+}
+
+// Rank-GENAUER Drill-Schritt fuer ein Szenario (Balken): matcht NUR die tatsaechlich
+// ausfallenden Tranchen (ISSUER+RANK) aus ISSUER_RANK, nicht pauschal alle Positionen
+// des Emittenten. Beispiel: faellt in einem Szenario nur "..._senior_unsecured" (BBB+)
+// aus, wird die "..._senior_secured" (AAA) NICHT gezeigt. ISSUER_RANK = "<Emittent>_
+// <Seniority>" (Emittentennamen ohne "_") -> Split am ERSTEN "_".
+export function lossDefaultStepRanked(issuerRank) {
+  const parts = String(issuerRank ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return null;
+  const keys = new Set();        // "issuer||rank" (ausfallende Tranchen)
+  const issuerSet = new Set();   // distinct Emittentennamen (Label / By-Issuer-Split)
+  for (const p of parts) {
+    const us = p.indexOf('_');
+    const nm = (us >= 0 ? p.slice(0, us) : p).trim();
+    const rk = (us >= 0 ? p.slice(us + 1) : '').trim();
+    if (!nm) continue;
+    keys.add(`${nm.toLowerCase()}||${rk.toLowerCase()}`);
+    issuerSet.add(nm);
+  }
+  if (!keys.size) return null;
+  const issuers = [...issuerSet];
+  const multi = issuers.length > 1;
+  return {
+    colKey: multi ? '__DEFAULTS' : 'ISSUER',
+    value: issuers.join(', '),
+    label: multi ? 'Defaults' : 'Issuer',
+    match: (r) => keys.has(`${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`),
   };
 }
 function bindLossCanvasLeaveHide(canvas) {
@@ -257,9 +288,21 @@ function getRunVarIndex() {
   return 10;
 }
 
+// Vom Nutzer gewaehltes Kredit-Konfidenzniveau (Dropdown im Economic-Capital-Panel).
+// null = Config-Wert. Aendert NUR die AUSWERTUNG (welches Quantil = VaR, Tail-Grenze),
+// NICHT die Simulation. Wirkt zentral ueber getRunConfQuantil().
+let _selCreditConf = null;
+export function getSelectedCreditConf() { return _selCreditConf; }
+export function setSelectedCreditConf(c) {
+  const n = Number(c);
+  _selCreditConf = (Number.isFinite(n) && n > 0 && n < 1) ? n : null;
+}
+
 // Ziel-Quantil des VaR in Prozent (= conf_level * 100, Default 99.9). Der VaR-Balken
 // in den Charts liegt am Quantil, das dem Konfidenzniveau am naechsten ist.
+// Ein per setSelectedCreditConf gesetztes Dropdown-Niveau hat Vorrang vor der Config.
 export function getRunConfQuantil() {
+  if (_selCreditConf != null) return _selCreditConf * 100;
   const configs = appState.getCvarInput?.() || [];
   const selName = document.querySelector('.cvar-radio:checked')?.dataset?.name;
   const cfg =
@@ -269,6 +312,34 @@ export function getRunConfQuantil() {
     null;
   const conf = Number(cfg?.conf_level);
   return (Number.isFinite(conf) && conf > 0 && conf < 1) ? conf * 100 : 99.9;
+}
+
+// VaR/ES aus der vorhandenen Verlustverteilung (sortedLossesIssuerMain) beim aktuell
+// gewaehlten Konfidenzniveau — OHNE neue Simulation. VaR = Loss beim naechstliegenden
+// Quantil; ES = Mittel der Losses jenseits davon (QUANTIL >= Ziel). Rueckgabe wie die
+// CreditVaR-Tabelle (Verlust = negativ), damit vorhandene Math.abs(...)-Leser unveraendert
+// funktionieren. Ersetzt die (teils inkonsistente) gespeicherte CreditVaR-Zeile.
+export function creditVarEsForFlag(port, flag) {
+  const p = String(port ?? '').trim();
+  const fl = String(flag ?? '').toUpperCase();
+  const confQ = getRunConfQuantil();
+  const rows = (appState.getAllLossData?.() || []).filter(r =>
+    String(r?.port_name ?? '').trim() === p &&
+    String(r?.pd_flag ?? '').toUpperCase() === fl &&
+    Number.isFinite(Number(r.QUANTIL)) && Number.isFinite(Number(r.LOSS)));
+  if (!rows.length) return null;
+  let varRow = rows[0], best = Infinity;
+  for (const r of rows) { const d = Math.abs(Number(r.QUANTIL) - confQ); if (d < best) { best = d; varRow = r; } }
+  const varAbs = Number(varRow.LOSS);
+  const tail = rows.filter(r => Number(r.QUANTIL) >= confQ).map(r => Number(r.LOSS));
+  const esAbs = tail.length ? tail.reduce((a, b) => a + b, 0) / tail.length : varAbs;
+  const nav = sumNavForPort(p);
+  const b = nav > 0 ? nav : NaN;
+  return {
+    pd_flag: fl,
+    VaR_abs: -varAbs, VaR_rel: Number.isFinite(b) ? -varAbs / b : NaN,
+    ES_abs: -esAbs,   ES_rel: Number.isFinite(b) ? -esAbs / b : NaN,
+  };
 }
 
 // Index des Wertes in values, der target am naechsten ist (fuer die Balken-Markierung).
@@ -290,6 +361,137 @@ export function sumNavForPort(port) {
   );
   const s = rows.reduce((acc, r) => acc + Number(r.NAV || 0), 0);
   return s > 0 ? s : 1;
+}
+
+// Tail-Emittenten-Auflistung (>= VaR, RATING/Historic): je Emittent Loss-at-default,
+// Anzahl Tail-Szenarien, Tail-Loss-Beitrag und Tail-Share. IDENTISCHE Aggregation wie
+// tailConcentrationIndex() im Economic-Capital-Panel -> die Liste passt 1:1 zur
+// Konzentrationsanalyse (gleiche Emittenten, gleiche Shares, inkl. Unicredit).
+export function tailIssuerBreakdown() {
+  try {
+    const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter((r) => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port);
+    if (!portRows.length) return [];
+    // Verlust-bei-Ausfall je Emittent (issuerLoss, wie in der Tail-Driver-Rechnung) UND
+    // je einzelner Tranche (trancheLoss, "ISSUER||RANK") — Letzteres, damit wir spaeter nur
+    // die tatsaechlich ausfallenden Seniorities zeigen/summieren koennen.
+    const issuerLoss = new Map();     // key -> loss-at-default (alle Tranchen des Emittenten)
+    const trancheLoss = new Map();    // "issuer||rank" -> loss-at-default der Tranche
+    const displayName = new Map();    // key -> Originalschreibweise
+    for (const r of buildPositionLoss(portRows, port)) {
+      const name = String(r?.ISSUER ?? '').trim(); if (!name) continue;
+      const key = name.toLowerCase();
+      const loss = Number(r.__LOSS) || 0;
+      issuerLoss.set(key, (issuerLoss.get(key) || 0) + loss);
+      const tkey = `${key}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
+      trancheLoss.set(tkey, (trancheLoss.get(tkey) || 0) + loss);
+      if (!displayName.has(key)) displayName.set(key, name);
+    }
+    // Tail-Szenarien (Quantil >= Konfidenz). Fallback: obere 5 %, falls zu wenige.
+    const allLoss = (appState.getAllLossData?.() || []).filter((r) => String(r?.port_name ?? '') === port);
+    const rows = allLoss.filter((r) => String(r?.pd_flag ?? '').toUpperCase() === 'RATING');
+    const confQ = getRunConfQuantil();
+    let tail = rows.filter((r) => Number(r.QUANTIL) >= confQ);
+    if (tail.length < 3) {
+      const sorted = rows.slice().sort((a, b) => Number(b.LOSS) - Number(a.LOSS));
+      tail = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.05)));
+    }
+    // Je Emittent: Tail-Loss-Beitrag (fuer die Share, wie tailConcentrationIndex) +
+    // Szenario-Zaehler + Set der tatsaechlich ausfallenden Tranchen (rankKeys). ISSUER_RANK
+    // = "<Emittent>_<Seniority>" (Emittentennamen haben keine "_"): Split am ERSTEN "_".
+    const per = new Map();   // key -> { name, key, contribution, scenarios, rankKeys:Set }
+    for (const s of tail) {
+      const inScenario = new Map();   // issuerKey -> Set(rank) je Szenario (Emittent nur 1x zaehlen)
+      for (const part of String(s?.ISSUER_RANK ?? '').split(',')) {
+        const p = part.trim(); if (!p) continue;
+        const us = p.indexOf('_');
+        const nm = (us >= 0 ? p.slice(0, us) : p).trim();
+        const rk = (us >= 0 ? p.slice(us + 1) : '').trim();
+        const key = nm.toLowerCase(); if (!key) continue;
+        if (!inScenario.has(key)) inScenario.set(key, { name: nm, ranks: new Set() });
+        inScenario.get(key).ranks.add(rk.toLowerCase());
+      }
+      for (const [key, info] of inScenario) {
+        const cur = per.get(key) || { name: displayName.get(key) || info.name, key, contribution: 0, scenarios: 0, rankKeys: new Set() };
+        cur.contribution += (issuerLoss.get(key) || 0);
+        cur.scenarios += 1;
+        info.ranks.forEach((rk) => cur.rankKeys.add(`${key}||${rk}`));
+        per.set(key, cur);
+      }
+    }
+    const list = [...per.values()].filter((x) => x.contribution > 0);
+    const total = list.reduce((a, b) => a + b.contribution, 0);
+    list.forEach((x) => {
+      x.share = total > 0 ? (x.contribution / total) * 100 : 0;
+      // Angezeigter Loss-at-default = NUR die im Tail ausfallenden Tranchen (nicht pauschal
+      // alle Positionen des Emittenten). Fallback: alle Tranchen, falls kein rankKey traf.
+      let ld = 0; x.rankKeys.forEach((tk) => { ld += (trancheLoss.get(tk) || 0); });
+      x.lossAtDefault = ld > 0 ? ld : (issuerLoss.get(x.key) || 0);
+    });
+    list.sort((a, b) => b.contribution - a.contribution);
+    return list;
+  } catch { return []; }
+}
+
+// Baut die Tail-Emittenten-Liste unter dem Loss-Chart (#clossTailListTable).
+export function renderClossTailList() {
+  const host = document.getElementById('clossTailListTable');
+  if (!host) return;
+  // Klick auf eine Zeile -> Positionen des Emittenten im vorhandenen Drill-Panel
+  // (#clossIssuerDetail) via lossIssuerDrill. Einmalig binden (Event-Delegation).
+  if (!host.__tailDrillBound) {
+    host.__tailDrillBound = true;
+    host.addEventListener('click', (e) => {
+      const tr = e.target?.closest?.('tr[data-issuer]');
+      const name = tr?.getAttribute('data-issuer');
+      if (!name) return;
+      try {
+        const selPort = String(appState.getSelectedPortTableName?.() ?? '').trim();
+        const portRows = (appState.getAllPortfolioData?.() || [])
+          .filter((r) => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selPort);
+        lossIssuerDrill.setData(buildPositionLoss(portRows, selPort));
+        // Nur die tatsaechlich ausfallenden Tranchen (ISSUER+RANK) matchen, nicht pauschal
+        // alle Positionen des Emittenten. rankKeys aus tailIssuerBreakdown() (gleiche Quelle
+        // wie die Liste). Fallback: nach ISSUER (falls keine rankKeys vorliegen).
+        const item = (tailIssuerBreakdown() || []).find((x) => x.name === name);
+        const keys = (item && item.rankKeys instanceof Set) ? item.rankKeys : null;
+        const step = (keys && keys.size)
+          ? { colKey: 'ISSUER', value: name, label: 'Issuer',
+              match: (r) => keys.has(`${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`) }
+          : lossDefaultStep([name]);
+        lossIssuerDrill.click('var', [{ index: 0 }], [step]);
+        document.getElementById('clossIssuerDetail')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) { console.warn('[closs tail list] drill failed', err); }
+    });
+  }
+  const list = tailIssuerBreakdown();
+  if (!list.length) { host.innerHTML = '<div class="empty-state" style="padding:8px; color:var(--text-muted);">No tail issuers.</div>'; return; }
+  const fPct = (v) => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %';
+  const th = 'padding:6px 10px; text-align:left; font-size:11px; font-weight:600; color:var(--text-muted); border-bottom:1px solid var(--border-subtle); position:sticky; top:0; background:var(--surface-overlay);';
+  const thR = th + 'text-align:right;';
+  const td = 'padding:5px 10px; font-size:12px; color:var(--text-primary); border-bottom:1px solid var(--border-subtle);';
+  const tdR = td + 'text-align:right;';
+  const body = list.map((x, i) => `
+    <tr data-issuer="${x.name}" title="Show positions">
+      <td style="${tdR} color:var(--text-muted);">${i + 1}</td>
+      <td style="${td}">${x.name}</td>
+      <td style="${tdR}">${_fmtLossCompact.format(x.lossAtDefault)}</td>
+      <td style="${tdR}">${x.scenarios}</td>
+      <td style="${tdR} font-weight:600;">${fPct(x.share)}</td>
+    </tr>`).join('');
+  host.innerHTML = `
+    <style>#clossTailListTable tr[data-issuer]{cursor:pointer} #clossTailListTable tr[data-issuer]:hover td{background:var(--surface-raised);}</style>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead><tr>
+        <th style="${thR}">#</th>
+        <th style="${th}">Issuer</th>
+        <th style="${thR}">Loss at default</th>
+        <th style="${thR}">Tail scenarios</th>
+        <th style="${thR}">Tail share</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
 }
 
 export function handleLossIssuerMainData(receivedData) {
@@ -356,6 +558,8 @@ export function handleLossIssuerMainData(receivedData) {
     // Rating/Market/Norm Losses in EINER horizontalen Balkenchart (gleicher Stil
     // wie die früheren Einzelcharts), als 3 farbige Serien.
     createCombinedLossesChart(ratingData, marketData, marketNormData, 'LossIssuerChartCombinedTop');
+    // Auflistung aller Tail-Emittenten (>= VaR) unter dem Chart.
+    renderClossTailList();
 
     // Total/Tail Loss Distribution (LossIssuerCombinedChart/ESChart) entfernt — die
     // Canvases sind raus (redundant zu den oberen Loss-Distribution-/Tail-Zoom-Charts).
@@ -486,7 +690,12 @@ export function setupLossIssuerUI() {
         // Alle Zeilen (nicht nur 15) -> Chart scrollt (feste Kartenhoehe via CSS,
         // Canvas-Hoehe unten je Zeile). baseQuantils = Lookup-Schluessel; labels =
         // Anzeige mit Zeilennummer VORNE, per " | " von der Wahrscheinlichkeit getrennt.
-        const base = (ratingData.length ? ratingData : marketData);
+        // View-Modus: 'full' = alle Szenarien; 'tail' = nur Tail (>= VaR). VaR-Index auf der
+        // VOLLEN Reihe bestimmen, dann auf den Tail zuschneiden (Balken 1 .. VaR-Balken).
+        const fullBase = (ratingData.length ? ratingData : marketData);
+        const varIdxFull = closestIndex(fullBase.map(d => d.QUANTIL), getRunConfQuantil());
+        const mode = document.getElementById('clossViewMode')?.value || 'full';
+        const base = (mode === 'tail') ? fullBase.slice(0, varIdxFull + 1) : fullBase;
         const baseQuantils = base.map(d => d.QUANTIL);
         const labels = base.map((d, i) => `${i + 1}  |  ${Number(d.QUANTIL).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
@@ -500,7 +709,10 @@ export function setupLossIssuerUI() {
         // passende Steps-Liste ueber els[0].datasetIndex gewaehlt.
         const stepsFor = (rows) => {
           const m = new Map((rows || []).map(r => [r.QUANTIL, r.ISSUER_RANK]));
-          return baseQuantils.map(q => lossDefaultStep(issuersFromRank(m.get(q))));
+          // Rank-genau: nur die im Szenario ausfallenden Tranchen (ISSUER+RANK) matchen,
+          // nicht pauschal alle Positionen des Emittenten (z.B. AAA nicht anzeigen, wenn
+          // im Balken nur die BBB+-Tranche ausfaellt).
+          return baseQuantils.map(q => lossDefaultStepRanked(m.get(q)));
         };
         const stepsByDs = [stepsFor(ratingData), stepsFor(marketData), stepsFor(marketNormData)];
 
@@ -683,6 +895,14 @@ export function setupLossIssuerUI() {
           }
         });
         ro.observe(host);
+      }
+
+      // View-Umschalter (Full/Tail) einmalig binden: bei Wechsel die aktuelle
+      // Render-Funktion (frische Daten) neu aufrufen.
+      const vm = document.getElementById('clossViewMode');
+      if (vm && !vm.__lossViewBound) {
+        vm.__lossViewBound = true;
+        vm.addEventListener('change', () => host?.__lossComboRender?.());
       }
     }
     //VaR

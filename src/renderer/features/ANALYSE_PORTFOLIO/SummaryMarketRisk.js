@@ -180,36 +180,318 @@ if (!Array.isArray(mvarDistData) || mvarDistData.length === 0) {
     }
   }
 
-  // --- Render chart ---
-  const canvas = document.getElementById('plMvarDistChart');
-  if (!canvas) return console.warn("Canvas #plMvarDistChart not found in DOM");
-
-  const ctx = canvas.getContext('2d');
-  if (window.plMvarDistChartInstance) window.plMvarDistChartInstance.destroy();
-
-  const { data, options, veLines } = drawMvarHistogram(plValues, portValueRel, varTRel, esTRel, {
-    overlay,
-    mainLabel: scenario_name || 'Selected scenario',
-    horizonDays,
-  });
-  const chart = new Chart(ctx, { type: 'bar', data, options, plugins: [_mvarVELinePlugin] });
-  chart.$veLines = veLines;
-
-  // Standard-Auswahl: nur gewaehltes Szenario + VaR-Linie sichtbar. ES-Linien
-  // und ROLLING_1 starten abgewaehlt (durchgestrichen) und lassen sich per
-  // Legenden-Klick zuschalten.
-  chart.$hiddenGroups = new Set(['overlay']);
-  chart.$hiddenMetrics = new Set(['es']);
-  chart.data.datasets.forEach((d, i) => {
-    if (d.group === 'overlay' || d.metricToggle === 'es') chart.setDatasetVisibility(i, false);
-  });
-
-  try { chart.update(); } catch {}
-  window.plMvarDistChartInstance = chart;
-  ensureDistZoomTools(canvas);
+  // --- Haupt-(links)-Chart: Kontext cachen. Gezeichnet wird in renderStressDistChart
+  // via _drawMainDist(), damit BEIDE Verteilungs-Charts dieselbe (gemeinsame) x-Achse
+  // bekommen, sobald rechts das Stress-Szenario feststeht. ---
+  __mainDistArgs = {
+    plValues, portValueRel, varTRel, esTRel, overlay,
+    mainLabel: scenario_name || 'Selected scenario', horizonDays,
+  };
 
   // NOTE: the synthetic line chart (tsEU1YChart) is now drawn earlier in this function
   // (before the distribution-data early-returns), so it is not redrawn here.
+
+  // Stress-Verteilung (2. Histogramm rechts neben plMvarDistChart): Kontext cachen,
+  // Dropdown aus den verfuegbaren Szenarien fuellen, zeichnen. Entkoppelt -> ein
+  // Fehler hier darf das Haupt-Histogramm nicht beeintraechtigen.
+  __stressDistArgs = { port_name, portNav, portValueRel };
+  try {
+    populateStressScenarioSelect(port_name);
+    bindStressScenarioControls();
+    renderStressDistChart();
+  } catch (e) {
+    console.error('[STRESS DIST] render failed:', e);
+  }
+}
+
+// ============================================================
+// STRESS-VERTEILUNG (2. Histogramm in Profit/Loss, rechts neben plMvarDistChart):
+// zeigt die P/L-Verteilung des per Dropdown gewaehlten Stress-Szenarios. Datenquelle
+// = MvarDist (gleiche scenario_name-Werte wie das Haupt-Histogramm), Dropdown ohne
+// ROLLING_1. Wiederverwendung von drawMvarHistogram / _mvarVELinePlugin.
+// ============================================================
+let __stressDistArgs = null;      // { port_name, portNav, portValueRel }
+let __mainDistArgs = null;        // linker Chart: { plValues, portValueRel, varTRel, esTRel, overlay, mainLabel, horizonDays }
+let __stressSelBound = false;
+
+function populateStressScenarioSelect(port_name) {
+  const sel = document.getElementById('mvarStressScenarioSelect');
+  if (!sel) return;
+  const port = String(port_name ?? '').trim();
+  // WICHTIG: ALLE Verteilungszeilen (ohne Argument) durchsuchen. getMvarDistData({port_name})
+  // reduziert intern auf den JUENGSTEN asof ueber alle Szenarien -> da ROLLING_1 meist den
+  // neuesten Stichtag hat, blieben nur ROLLING_1-Zeilen uebrig und das Dropdown waere nach
+  // dem ROLLING_1-Ausschluss leer. Die Stress-Szenarien (STRESSED/STRESS_1/...) liegen auf
+  // aelteren asof-Daten.
+  const prev = sel.value;
+  const all = appState.getMvarDistData() || [];
+  // ALLE Szenarien inkl. ROLLING_1 (rechts soll Rolling ebenfalls waehlbar sein).
+  const scenarios = [...new Set(
+    all
+      .filter(r => r && (!port || r.port_name === port))
+      .map(r => String(r?.scenario_name ?? r?.SCENARIO_NAME ?? '').trim())
+      .filter(Boolean)
+  )].sort();
+
+  sel.innerHTML = scenarios.length
+    ? scenarios.map(s => `<option value="${s}">${s}</option>`).join('')
+    : `<option value="">(no scenarios)</option>`;
+
+  // Auswahl: vorherige beibehalten; sonst standardmaessig das erste NICHT-Rolling-
+  // Szenario (Rolling wird schon links gezeigt) -> sinnvolle Normal-vs-Stress-Ansicht.
+  if (prev && scenarios.includes(prev)) {
+    sel.value = prev;
+  } else {
+    // Default = im Customer Setup gewaehltes Szenario (default_market_risk_interval_code),
+    // sofern vorhanden und nicht ROLLING_1 (das steht schon links); sonst erstes Nicht-
+    // Rolling-Szenario, sonst erstes.
+    const custDefaultU = String(appState.getCustomerMarketRiskSetting?.()?.default_market_risk_interval_code ?? '').trim().toUpperCase();
+    const matchDefault = (custDefaultU && custDefaultU !== 'ROLLING_1')
+      ? scenarios.find(s => s.toUpperCase() === custDefaultU)
+      : null;
+    sel.value = matchDefault
+      || scenarios.find(s => s.toUpperCase() !== 'ROLLING_1')
+      || scenarios[0]
+      || '';
+  }
+}
+
+function bindStressScenarioControls() {
+  if (__stressSelBound) return;
+  const sel = document.getElementById('mvarStressScenarioSelect');
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    try { redrawStressChart(); }
+    catch (e) { console.error('[STRESS DIST] redraw failed:', e); }
+  });
+  __stressSelBound = true;
+}
+
+// Stress-Daten (rechter Chart) aus dem gewaehlten Szenario aufbereiten; null, wenn kein
+// Szenario/keine Daten. Analog zum Haupt-Histogramm (juengster Aggregat-Stichtag).
+function _computeStressDist() {
+  const args = __stressDistArgs;
+  if (!args) return null;
+  const { port_name, portNav, portValueRel } = args;
+  const scenario_name = (document.getElementById('mvarStressScenarioSelect')?.value || '').trim();
+  if (!scenario_name || !Number.isFinite(portNav) || portNav === 0) return null;
+
+  const mvarAggData = appState.getAllMvarData() || [];
+  const chosenAgg = mvarAggData
+    .filter(i => i && i.port_name === port_name && i.scenario_name === scenario_name)
+    .sort((a, b) => String(a.asof_date).localeCompare(String(b.asof_date)))
+    .at(-1) || null;
+  const varTRel = Number(chosenAgg?.VaR_T_rel) || 0;
+  const esTRel = Number(chosenAgg?.ES_T_rel ?? chosenAgg?.ES_rel ?? chosenAgg?.es_t_rel) || 0;
+  const horizonDays = Math.max(1, Number(chosenAgg?.horizon_days) || 1);
+  const horizonScale = Math.sqrt(horizonDays);
+
+  const dist = appState.getMvarDistData({ port_name, scenario_name }) || [];
+  const plValues = dist
+    .map(row => Number(row?.pl_total ?? row?.PL_TOTAL ?? row?.["P/L"] ?? row?.pl ?? row?.PL ?? null))
+    .filter(v => Number.isFinite(v))
+    .map(v => (v / portNav) * 100 * horizonScale);
+  if (plValues.length === 0) return null;
+
+  return { plValues, portValueRel, varTRel, esTRel, horizonDays, scenario_name };
+}
+
+// Gemeinsamer x-Achsen-Bereich ueber BEIDE Datensaetze (+ alle VaR/ES-Marken) -> beide
+// Verteilungs-Charts nutzen deckungsgleiche Bins/Achsen. Gleiche Padding-Logik (35 %
+// des Spread) wie createHistogramDataAdjusted.
+function _sharedDistRange(valuesA, valuesB, marks) {
+  const all = [...(valuesA || []), ...(valuesB || [])].filter(v => Number.isFinite(v));
+  if (!all.length) return null;
+  let min = Math.min(...all);
+  let max = Math.max(...all);
+  const spread = max - min;
+  const padding = spread * 0.35;
+  min -= padding;
+  max += padding;
+  (marks || []).forEach(v => {
+    if (!Number.isFinite(v)) return;
+    if (v < min) min = v - spread * 0.05;
+    if (v > max) max = v + spread * 0.05;
+  });
+  return { min, max };
+}
+
+// Linker (Haupt-)Chart aus __mainDistArgs zeichnen; optional mit erzwungenem x-Achsen-
+// Bereich (gemeinsame Achse mit dem Stress-Chart).
+function _drawMainDist(range = null) {
+  const a = __mainDistArgs;
+  if (!a) return;
+  const canvas = document.getElementById('plMvarDistChart');
+  if (!canvas) { console.warn('Canvas #plMvarDistChart not found in DOM'); return; }
+
+  if (window.plMvarDistChartInstance) { try { window.plMvarDistChartInstance.destroy(); } catch (_) {} }
+
+  const { data, options, veLines } = drawMvarHistogram(a.plValues, a.portValueRel, a.varTRel, a.esTRel, {
+    overlay: a.overlay,
+    mainLabel: a.mainLabel,
+    horizonDays: a.horizonDays,
+    range,
+  });
+  const chart = new Chart(canvas.getContext('2d'), { type: 'bar', data, options, plugins: [_mvarVELinePlugin, _distYSyncPlugin] });
+  chart.$veLines = veLines;
+  // Standard: Rolling (Overlay) samt VaR UND ES sichtbar -> nichts ausgeblendet.
+  chart.$hiddenGroups = new Set();
+  chart.$hiddenMetrics = new Set();
+  try { chart.update(); } catch {}
+  window.plMvarDistChartInstance = chart;
+  chart.$distRole = 'main';
+  ensureDistZoomTools(canvas);
+}
+
+// Gemeinsamer x-Achsen-Bereich (linke Verteilung + Stress + alle VaR/ES-Marken) oder
+// null, wenn kein Stress feststeht.
+function _sharedRangeFor(stress) {
+  const a = __mainDistArgs;
+  if (!a || !stress) return null;
+  const marks = [a.varTRel, a.esTRel, a.overlay?.varTRel, a.overlay?.esTRel, stress.varTRel, stress.esTRel]
+    .filter(v => Number.isFinite(v) && v !== 0);
+  return _sharedDistRange(a.plValues, stress.plValues, marks);
+}
+
+// Rechten (Stress-)Chart neu zeichnen oder leeren.
+function _drawStressDist(stress, range) {
+  const canvas = document.getElementById('plMvarStressDistChart');
+  if (!stress || !canvas) {
+    if (window.plMvarStressDistChartInstance) {
+      try { window.plMvarStressDistChartInstance.destroy(); } catch (_) {}
+      window.plMvarStressDistChartInstance = null;
+    }
+    return;
+  }
+  if (window.plMvarStressDistChartInstance) { try { window.plMvarStressDistChartInstance.destroy(); } catch (_) {} }
+  const { data, options, veLines } = drawMvarHistogram(stress.plValues, stress.portValueRel, stress.varTRel, stress.esTRel, {
+    mainLabel: stress.scenario_name,
+    horizonDays: stress.horizonDays,
+    range,
+  });
+  const chart = new Chart(canvas.getContext('2d'), { type: 'bar', data, options, plugins: [_mvarVELinePlugin, _distYSyncPlugin] });
+  chart.$veLines = veLines;
+  // Wie beim Haupt-Histogramm: ES-Linien starten abgewaehlt (per Legende zuschaltbar).
+  chart.$hiddenMetrics = new Set(['es']);
+  chart.data.datasets.forEach((d, i) => {
+    if (d.metricToggle === 'es') chart.setDatasetVisibility(i, false);
+  });
+  try { chart.update(); } catch {}
+  window.plMvarStressDistChartInstance = chart;
+  chart.$distRole = 'stress';
+  ensureDistZoomTools(canvas, 'plMvarStressDistChartInstance');
+}
+
+// Linken Chart NUR auf einen neuen x-Achsen-Bereich nachziehen — IN PLACE (Bins/Labels/
+// VaR-ES-Positionen), OHNE Neuaufbau. So bleiben Legende/ein-/ausgeblendete Serien und die
+// Zoom-Tools erhalten (Dropdown-Wechsel soll die linke Graphik nicht "zuruecksetzen").
+function _updateMainDistRange(range) {
+  const a = __mainDistArgs;
+  const chart = window.plMvarDistChartInstance;
+  if (!a || !chart) return;
+  const { data, veLines } = drawMvarHistogram(a.plValues, a.portValueRel, a.varTRel, a.esTRel, {
+    overlay: a.overlay,
+    mainLabel: a.mainLabel,
+    horizonDays: a.horizonDays,
+    range,
+  });
+  chart.data.labels = data.labels;
+  data.datasets.forEach((ds, i) => {
+    if (chart.data.datasets[i]) chart.data.datasets[i].data = ds.data;
+  });
+  chart.$veLines = veLines;
+  try { chart.update(); } catch (_) {}
+}
+
+// Full-Render (Daten-Refresh): BEIDE Charts frisch zeichnen; gemeinsame x-Achse. Hier darf
+// der linke Chart neu aufgebaut werden (Default-Legende: Rolling + VaR + ES).
+function renderStressDistChart() {
+  let stress = null;
+  try { stress = _computeStressDist(); }
+  catch (e) { console.error('[STRESS DIST] compute failed:', e); stress = null; }
+
+  const range = _sharedRangeFor(stress);
+  _drawMainDist(range);
+  _drawStressDist(stress, range);
+  syncDistYAxes();
+}
+
+// Dropdown-Wechsel: NUR der rechte Chart wird neu gezeichnet. Die linke x-Achse zieht mit
+// (gemeinsamer Bereich, damit die breitere Verteilung nicht abgeschnitten wird), aber IN
+// PLACE -> die linke behaelt Inhalt/Legende, kein Neuaufbau/Flackern.
+function redrawStressChart() {
+  let stress = null;
+  try { stress = _computeStressDist(); }
+  catch (e) { console.error('[STRESS DIST] compute failed:', e); stress = null; }
+
+  const range = _sharedRangeFor(stress);
+  _updateMainDistRange(range);
+  _drawStressDist(stress, range);
+  syncDistYAxes();
+}
+
+// Beide P/L-Verteilungs-Charts (aktuelles + Stress-Szenario) auf DIESELBE y-Achsen-
+// Hoehe bringen: das gemeinsame Maximum richtet sich nach dem groesseren Peak beider
+// Charts. Es zaehlen nur SICHTBARE Datensaetze (abgewaehlte Overlays verzerren nicht),
+// analog zu Chart.js' Auto-Skalierung.
+function _distChartPeak(chart) {
+  if (!chart || !Array.isArray(chart.data?.datasets)) return 0;
+  let peak = 0;
+  chart.data.datasets.forEach((ds, i) => {
+    if (typeof chart.isDatasetVisible === 'function' && !chart.isDatasetVisible(i)) return;
+    const arr = Array.isArray(ds.data) ? ds.data : [];
+    for (const v of arr) {
+      const y = (v && typeof v === 'object') ? Number(v.y) : Number(v);
+      if (Number.isFinite(y) && y > peak) peak = y;
+    }
+  });
+  return peak;
+}
+
+// Gemeinsames y-Maximum beider Verteilungs-Charts. EINE Quelle der Wahrheit: wird von
+// syncDistYAxes berechnet; das Plugin unten wendet NUR diesen Cache an (rechnet NICHT
+// selbst neu). So bekommen beide Charts garantiert denselben Wert, unabhaengig vom
+// Update-Timing (behebt ungleiche y-Achsen z.B. nach STRESS_maxVaR -> STRESS_1).
+let __distSharedYMax = null;
+
+// Chart.js-Plugin: haelt die gemeinsame y-Hoehe bei JEDEM Update/Resize aufrecht, indem es
+// den von syncDistYAxes gesetzten Cache-Wert anwendet (kein eigenes Neuberechnen -> keine
+// Timing-Divergenz zwischen den beiden Charts).
+const _distYSyncPlugin = {
+  id: 'distYSync',
+  beforeUpdate(chart) {
+    try {
+      if (chart.$distRole !== 'main' && chart.$distRole !== 'stress') return;
+      const y = chart.options?.scales?.y;
+      if (!y) return;
+      const both = window.plMvarDistChartInstance && window.plMvarStressDistChartInstance;
+      if (both && __distSharedYMax > 0) y.max = __distSharedYMax;
+      else delete y.max; // nur ein Chart (oder kein Wert) -> Auto-Skala
+    } catch (_) { /* Skalierung darf das Rendern nie blockieren */ }
+  },
+};
+
+// Beide Charts auf DIESELBE y-Achsen-Hoehe (groesserer Peak) bringen. Beide Charts sind
+// hier final gezeichnet -> gemeinsames Maximum EINMAL berechnen, im Cache ablegen und auf
+// beide anwenden. Das Plugin uebernimmt den Cache danach bei Resizes.
+function syncDistYAxes() {
+  const m = window.plMvarDistChartInstance || null;
+  const s = window.plMvarStressDistChartInstance || null;
+
+  if (m && s) {
+    let peak = 0;
+    try { peak = Math.max(_distChartPeak(m), _distChartPeak(s)); } catch (_) { peak = 0; }
+    __distSharedYMax = peak > 0 ? peak * 1.05 : null; // etwas Kopfraum ueber dem groessten Balken
+  } else {
+    __distSharedYMax = null;
+  }
+
+  [m, s].forEach((c) => {
+    if (!c?.options?.scales?.y) return;
+    if (__distSharedYMax != null) c.options.scales.y.max = __distSharedYMax;
+    else delete c.options.scales.y.max;
+    try { c.update(); } catch (_) {}
+  });
 }
 
 // HISTOGRAMM:
@@ -260,7 +542,7 @@ const _mvarVELinePlugin = {
   },
 };
 
-function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50, includeValues = []) {
+function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50, includeValues = [], range = null) {
   // 1. In absolute Performance umrechnen
   const adjusted = values;   // P/L% direkt (KEIN Bond-Preis) -> P&L-konforme x-Achse // z. B. -2% â†’ 0.97
 
@@ -280,6 +562,13 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50, inc
     if (v < min) min = v - spread * 0.05;
     if (v > max) max = v + spread * 0.05;
   });
+
+  // Gemeinsame x-Achse: expliziter Bereich ueberschreibt die datengetriebene Berechnung,
+  // damit zwei Charts (aktuelles + Stress-Szenario) deckungsgleiche Bins/Achsen haben.
+  if (range && Number.isFinite(range.min) && Number.isFinite(range.max) && range.max > range.min) {
+    min = range.min;
+    max = range.max;
+  }
 
   const binWidth = (max - min) / numBins;
 
@@ -307,12 +596,12 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50, inc
   return { labels, bins, min, binWidth, mu, sigma, centers, total: adjusted.length };
 }
 
-function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overlay = null, mainLabel = 'Frequency', horizonDays = 1 } = {}) {
+function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overlay = null, mainLabel = 'Frequency', horizonDays = 1, range = null } = {}) {
   // VaR/ES BEIDER Szenarien in den Bin-Bereich aufnehmen, damit alle Linien
   // immer sichtbar sind.
   const marks = [varTRel, esTRel, overlay?.varTRel, overlay?.esTRel]
     .filter((v) => Number.isFinite(v) && v !== 0);
-  const histogram = createHistogramDataAdjusted(plValues, portValueRel, 50, marks);
+  const histogram = createHistogramDataAdjusted(plValues, portValueRel, 50, marks, range);
 
   // Overlay-Verteilung (z.B. ROLLING_1) in DIESELBEN Bins zaehlen, damit beide
   // Histogramme exakt uebereinander liegen. Werte ausserhalb landen im Randbin.
@@ -655,7 +944,7 @@ function ensureDistZoomTools(canvas, instanceKey = 'plMvarDistChartInstance') {
 let __synthChartArgs = null;
 let __synthControlsBound = false;
 // Zeitfenster in Jahren (0 = Max), umschaltbar wie im Scenario-Period-Chart.
-let __synthRangeYears = 5;
+let __synthRangeYears = 0;
 
 // Gleiche Quelle wie das Factor-Mapping-Panel (persistActiveScenario).
 function activeFactorMapScenario() {
@@ -1134,6 +1423,22 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
   }
 
   ensureDistZoomTools(document.getElementById('tsEU1YChart'), 'tsEU1YChartInstance');
+
+  // Zusaetzliche KOPIE des Backtest-Charts in der Overview-Market-Risk-Karte
+  // (#homeSynthChart, nur der Chart ohne Bedienelemente). Spiegelt bei jedem Neuzeichnen
+  // automatisch mit; createSimpleLineChart mappt die Datasets in NEUE Objekte -> die
+  // Quell-Datasets von tsEU1YChart bleiben unberuehrt.
+  try {
+    if (document.getElementById('homeSynthChart')) {
+      createSimpleLineChart(
+        [cmbValueDataset, portfolioValueDataset, endMarker],
+        'homeSynthChart',
+        'Portfolio Backtest',
+        0,
+        { scales: { y: { title: { display: true, text: 'Normalized Value (%)' } } } }
+      );
+    }
+  } catch (e) { console.warn('[synth mirror] overview copy failed:', e); }
 
   // Gleitender VaR (EWMA) als eigener Chart darunter — gleiche Zeitachse und Farben.
   drawSynthVarChart(

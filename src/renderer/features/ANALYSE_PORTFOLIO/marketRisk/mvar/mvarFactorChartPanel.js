@@ -43,22 +43,35 @@ function redraw() {
   if (__ctx) drawChart(__ctx.rows, __ctx.dateKey, __ctx.factors);
 }
 
-// START/END der im Model-Selection-Table (inputMvarContainer) angehakten Szenarien.
+// Vom Nutzer per Zeilenklick markiertes Szenario (INTERVAL_NAME). Dessen START..END wird —
+// zusaetzlich zu den angehakten Szenarien — im Chart schattiert.
+let __clickedInterval = null;
+
+// Zeitraum der geklickten Szenario-Zeile im Chart hervorheben (aus mvarInputPanel aufgerufen).
+export function highlightScenarioRow(interval) {
+  __clickedInterval = interval ? String(interval).trim() : null;
+  redraw();
+}
+
+// START/END der im Model-Selection-Table (inputMvarContainer) angehakten Szenarien PLUS der
+// per Zeilenklick markierten Zeile.
 function getSelectedScenarioRanges() {
   const container = document.getElementById('inputMvarContainer');
   if (!container) return [];
-  const checked = container.querySelectorAll('input.scenario-checkbox:checked');
-  if (!checked.length) return [];
   const rows = appState.getMvarModelSelectionAppRows?.() || [];
   const byId = new Map(rows.map((r) => [String(r.id ?? ''), r]));
   const byName = new Map(rows.map((r) => [String(r.INTERVAL_NAME ?? ''), r]));
   const out = [];
-  checked.forEach((cb) => {
-    const row = byId.get(String(cb.dataset.id ?? '')) || byName.get(String(cb.dataset.interval ?? ''));
-    if (row && row.START && row.END) {
-      out.push({ start: row.START, end: row.END, label: String(row.INTERVAL_NAME ?? '') });
+  const pushRow = (row) => {
+    const name = String(row?.INTERVAL_NAME ?? '');
+    if (row && row.START && row.END && !out.some((o) => o.label === name)) {
+      out.push({ start: row.START, end: row.END, label: name });
     }
+  };
+  container.querySelectorAll('input.scenario-checkbox:checked').forEach((cb) => {
+    pushRow(byId.get(String(cb.dataset.id ?? '')) || byName.get(String(cb.dataset.interval ?? '')));
   });
+  if (__clickedInterval) pushRow(byName.get(__clickedInterval));
   return out;
 }
 
@@ -472,6 +485,13 @@ function renderCorrelationMatrix() {
   const vol = {};
   sel.forEach((f) => { vol[f] = _stdev(diffs[f].filter((x) => x != null)) * ANN; });
 
+  // Aktuelles Level je Faktor (letzter gueltiger Wert im sichtbaren Fenster) fuer die
+  // absolute (Normal-)Vol in bp = relative Vol × Level. tblTS-Reihen sind in Prozent
+  // (z.B. 3,12 = 3,12%) -> Level_bp = Level × 100.
+  const lastValid = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { const x = arr[i]; if (x != null && isFinite(x)) return x; } return null; };
+  const level = {};
+  sel.forEach((f) => { level[f] = lastValid(series[f]); });
+
   const corr = (a, b) => {
     const da = diffs[a], db = diffs[b], xs = [], ys = [];
     for (let i = 0; i < da.length; i++) {
@@ -481,7 +501,14 @@ function renderCorrelationMatrix() {
   };
 
   const fmtC = (c) => (c == null || !isFinite(c)) ? '–' : c.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtV = (v) => (v == null || !isFinite(v)) ? '–' : Number(v).toPrecision(3);
+  // Relative Vol in % (Rohwert × 100, z.B. 0,2 -> 20%).
+  const fmtRelPct = (v) => (v == null || !isFinite(v)) ? '–' : `${(v * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 })}%`;
+  // Absolute Vol in bp = relative Vol × Level_bp (Level in %, ×100 = bp).
+  const fmtAbsBp = (f) => {
+    const lv = level[f];
+    return (vol[f] == null || !isFinite(vol[f]) || lv == null || !isFinite(lv))
+      ? '–' : `${(vol[f] * lv * 100).toLocaleString('de-DE', { maximumFractionDigits: 0 })} bp`;
+  };
   const cellBg = (c) => {
     if (c == null || !isFinite(c)) return 'transparent';
     const a = Math.min(Math.abs(c), 1) * 0.6;
@@ -492,18 +519,20 @@ function renderCorrelationMatrix() {
   const tdS = 'padding:3px 7px;border:1px solid #eee;font-size:11px;text-align:center;max-width:120px;';
 
   const span = (winLabels[lo] && winLabels[hi]) ? ` — ${winLabels[lo]} … ${winLabels[hi]}` : '';
-  let html = `<div class="mvar-factor-title" style="margin-top:10px;">Correlation (Δ) &amp; annualised volatility${span}</div>`;
+  let html = `<div class="mvar-factor-title" style="margin-top:10px;">Correlation (Δ) &amp; annualised volatility (rel. % · abs. bp)${span}</div>`;
   html += '<div style="overflow:auto;"><table style="border-collapse:collapse;margin-top:4px;width:auto;">';
   html += `<tr><th style="${thS}"></th>`
         + sel.map((f) => `<th style="${thS}">${f}</th>`).join('')
-        + `<th style="${thS}background:rgba(128,128,128,0.16);">Vol (ann.)</th></tr>`;
+        + `<th style="${thS}background:rgba(128,128,128,0.16);">Vol rel.</th>`
+        + `<th style="${thS}background:rgba(128,128,128,0.16);">Vol abs. (bp)</th></tr>`;
   sel.forEach((a) => {
     html += `<tr><th style="${thS}text-align:left;">${a}</th>`;
     sel.forEach((b) => {
       const c = (a === b) ? 1 : corr(a, b);
       html += `<td style="${tdS}background:${cellBg(c)};">${fmtC(c)}</td>`;
     });
-    html += `<td style="${tdS}background:rgba(128,128,128,0.12);font-weight:600;">${fmtV(vol[a])}</td></tr>`;
+    html += `<td style="${tdS}background:rgba(128,128,128,0.12);font-weight:600;">${fmtRelPct(vol[a])}</td>`
+          + `<td style="${tdS}background:rgba(128,128,128,0.12);font-weight:600;">${fmtAbsBp(a)}</td></tr>`;
   });
   html += '</table></div>';
   box.innerHTML = html;

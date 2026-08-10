@@ -295,17 +295,86 @@ export function bindAppButtons({
     });
   }
 
-  setupRadioProjectButton({
-    buttonId: 'mvaRDistButton',
-    projectName: 'py-MVaR',
-    radioSelector: '.scenario-radio',
-    valueAttr: 'data-interval',
-    payloadKey: 'selectedInterval',
-    emptyMessage: 'Select a Timeperiode!',
-  });
+  // ---------- Market Risk: ALLE ausgewaehlten Szenarien rechnen ----------
+  // ROLLING (immer, Baseline) + alle angehakten Stress-Szenarien (is_selected in MVaRInput)
+  // werden SEQUENZIELL gerechnet: ein py-MVaR-Lauf nach dem anderen, der naechste erst nach
+  // 'project-finished'. So sind stets alle ausgewaehlten Szenarien aktuell.
+  function runMvarSequence(button, intervals) {
+    const total = intervals.length;
+    let i = 0;
+
+    // Auf den Abschluss GENAU eines py-MVaR-Laufs warten (andere Projekte ignorieren).
+    const waitForMvarFinished = (cb) => {
+      const h = (data) => {
+        if (data && data.projectName === 'py-MVaR') cb(data);
+        else window.api.once('project-finished', h);
+      };
+      window.api.once('project-finished', h);
+    };
+
+    const runNext = () => {
+      if (i >= total) {
+        // Nach dem Lauf: Ansicht auf ROLLING (Default) zuruecksetzen + einmal frisch rendern.
+        const rollingName = intervals.find((x) => /^ROLLING/i.test(x)) || 'ROLLING_1';
+        try {
+          if (window.appState) window.appState.selectedMvarInterval = rollingName;
+          window.appState?.refreshMarketRiskUI?.(0);
+        } catch (_) {}
+        return;
+      }
+      const interval = intervals[i];
+      waitForMvarFinished(() => { i += 1; runNext(); });
+      py.handleProjectButtonClick(button, 'py-MVaR', { intervalOverride: interval });
+    };
+
+    runNext();
+  }
+
+  function setupMvarSequenceButton(buttonId) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+
+    button.addEventListener('click', () => {
+      const as = window.appState;
+      const rows = as?.getMvarModelSelectionAppRows?.() || [];
+      const isRolling = (r) => /^ROLLING/i.test(String(r?.INTERVAL_NAME ?? '').trim());
+      const rolling = rows.filter(isRolling).map((r) => String(r.INTERVAL_NAME));
+      // Stress-Auswahl aus der SESSION (Set) — spiegelt auch ungespeicherte Haken; Fallback:
+      // gespeichertes is_selected, falls die Session-Auswahl noch nicht initialisiert wurde.
+      const sessionSet = as?.mvarSelectedScenarios;
+      const selected = (sessionSet instanceof Set)
+        ? [...sessionSet]
+        : rows.filter((r) => !isRolling(r) && Number(r.is_selected) === 1).map((r) => String(r.INTERVAL_NAME));
+
+      // ROLLING zuerst (Baseline), dann die ausgewaehlten Szenarien; dedupliziert.
+      const intervals = [...new Set([...(rolling.length ? rolling : ['ROLLING_1']), ...selected])];
+      if (!intervals.length) { showMessageBox?.('No scenario selected!'); return; }
+
+      if (!py || typeof py.handleProjectButtonClick !== 'function') {
+        console.warn('[bindAppButtons] py missing or invalid');
+        return;
+      }
+
+      runMvarSequence(button, intervals);
+    });
+  }
+
+  setupMvarSequenceButton('mvaRDistButton');
 
   setupRadioProjectButton({
     buttonId: 'CVaRButton',
+    projectName: 'py-CVaR',
+    radioSelector: '.cvar-radio',
+    valueAttr: 'data-name',
+    payloadKey: 'cvarName',
+    emptyMessage: 'Select a CVaR configuration!',
+  });
+
+  // Market-adjusted Economic-Capital-Panel: eigener Calculate-Button. Gleiches Projekt (py-CVaR,
+  // liefert historic + market adjusted in EINEM Lauf), aber mit eigenem "executing..."-Status
+  // (handleProjectButtonClick setzt den geklickten Button, also diesen hier).
+  setupRadioProjectButton({
+    buttonId: 'CVaRButtonCurrent',
     projectName: 'py-CVaR',
     radioSelector: '.cvar-radio',
     valueAttr: 'data-name',

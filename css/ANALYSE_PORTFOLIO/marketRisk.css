@@ -164,8 +164,30 @@
   min-width: 320px;
 }
 
-/* Auswahl Laufzeit/Rating fuer den synthetischen Bond (tsEU1YChart) */
-#panel-market .synth-bond-controls{
+/* Ansichts-Szenario-Dropdown (in jedem Market-Risk-Panel oben): schaltet nur die
+   Ansicht um (alle gerechneten Szenarien liegen vor). */
+.mvar-view-bar{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+}
+.mvar-view-bar select.mvar-view-scenario{
+  font-size: 12px;
+  padding: 3px 8px;
+  background: var(--panel-surface, #0f0f10);
+  color: var(--text-primary, #ddd);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Auswahl Laufzeit/Rating fuer den synthetischen Bond (tsEU1YChart). Der Chart liegt
+   jetzt im eigenen Panel #panel-portfolio-backtest -> Styling dorthin gescoped (sonst
+   sitzen die Perioden-Buttons/Selects unstyled links). */
+#panel-portfolio-backtest .synth-bond-controls{
   display: flex;
   align-items: center;
   gap: 6px;
@@ -173,13 +195,13 @@
   font-size: 11px;
   color: var(--text-secondary, #999);
 }
-#panel-market .synth-bond-controls label{
+#panel-portfolio-backtest .synth-bond-controls label{
   margin-left: 6px;
 }
-#panel-market .synth-bond-controls label:first-child{
+#panel-portfolio-backtest .synth-bond-controls label:first-child{
   margin-left: 0;
 }
-#panel-market .synth-bond-controls select{
+#panel-portfolio-backtest .synth-bond-controls select{
   font-size: 11px;
   padding: 2px 6px;
   background: var(--panel-surface, #0f0f10);
@@ -190,13 +212,13 @@
 }
 /* Zeitraum-Buttons wie im Scenario-Period-Chart (mvar-factor-range);
    margin-right laesst Platz fuer den absolut positionierten Reset-Zoom-Button. */
-#panel-market .synth-bond-controls .synth-range-group{
+#panel-portfolio-backtest .synth-bond-controls .synth-range-group{
   display: flex;
   gap: 4px;
   margin-left: auto;
   margin-right: 96px;
 }
-#panel-market .synth-bond-controls .synth-range{
+#panel-portfolio-backtest .synth-bond-controls .synth-range{
   font-size: 11px;
   padding: 2px 8px;
   border: 1px solid var(--border-subtle);
@@ -205,13 +227,36 @@
   color: var(--text-primary);
   cursor: pointer;
 }
-#panel-market .synth-bond-controls .synth-range:hover{
+#panel-portfolio-backtest .synth-bond-controls .synth-range:hover{
   border-color: var(--accent);
 }
-#panel-market .synth-bond-controls .synth-range.is-active{
+#panel-portfolio-backtest .synth-bond-controls .synth-range.is-active{
   background: var(--accent);
   color: var(--text-on-accent);
   border-color: var(--accent);
+}
+
+/* Szenario-Dropdown des Stress-Verteilungs-Charts: oben rechts, direkt UNTER dem
+   Reset-Zoom-Button (top:6px, ~22px hoch) -> bei den Legenden-Labels. */
+#panel-market .chart-box .stress-scenario-picker{
+  position: absolute;
+  top: 34px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+}
+#panel-market .chart-box .stress-scenario-picker select{
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--panel-surface, #0f0f10);
+  color: var(--text-primary, #ddd);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 #panel-market .chart-box canvas,
@@ -238,6 +283,36 @@
 #panel-market .chart-2x1-row--var .chart-box{
   flex: 0 1 calc(50% - 10px);
   margin-left: auto;
+}
+
+/* ============================================================
+   Portfolio Backtest panel (#panel-portfolio-backtest):
+   ausgelagerter Synth-Backtest-Chart (tsEU1YChart) + Rolling-VaR
+   (synthVarChart). Hier liegt KEIN plMvarDist daneben -> beide
+   Charts FULL width, gestapelt (nicht die alte Halb-Breite-rechts,
+   die nur wegen des Nachbar-Charts existierte). Box/Groesse wie die
+   uebrigen Market-Charts; sonst greift die generische ANALYSE-Grid-
+   Regel (2-Spalten, margin:40px auto, max-width:550px) -> falsche Optik. */
+#ANALYSE_Modal #panel-portfolio-backtest .chart-2x1-row{
+  display:flex;
+  flex-wrap:nowrap;
+  width:100%;
+  max-width:none;
+  gap:20px;
+  margin:0 0 20px 0;
+}
+#ANALYSE_Modal #panel-portfolio-backtest .chart-2x1-row--var{
+  margin:0;
+}
+#ANALYSE_Modal #panel-portfolio-backtest .chart-box{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: none;
+  flex: 1 1 100%;
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
 }
 
 @media (max-width: 1200px){

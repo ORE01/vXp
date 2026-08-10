@@ -61,7 +61,7 @@ export function createPythonExecutionRouter(ctx) {
     window.api?.send?.('start-py-fairValue', payload);
   }
 
-  function handleMVaRProject(buttonElement, extraParam) {
+  function handleMVaRProject(buttonElement, extraParam = {}) {
     const selectedTableName = appState.getSelectedPortTableName?.();
     if (!selectedTableName) throw new Error('No table selected for MVaR processing.');
 
@@ -73,9 +73,14 @@ export function createPythonExecutionRouter(ctx) {
     const marketRiskIntervalTouched = !!appState.marketRiskIntervalTouched;
     const fallbackInterval = appState.mvarFallbackInterval || null;
 
-    const finalIntervalUsed = marketRiskIntervalTouched
+    // Sequenz-Lauf ("Calculate all selected"): ein explizit uebergebenes Intervall
+    // gewinnt immer (die Schleife rechnet ROLLING + jedes ausgewaehlte Szenario einzeln).
+    const intervalOverride = extraParam && extraParam.intervalOverride
+      ? String(extraParam.intervalOverride)
+      : null;
+    const finalIntervalUsed = intervalOverride || (marketRiskIntervalTouched
       ? sessionSelectedInterval
-      : (customerDefaultIntervalFromStore || fallbackInterval);
+      : (customerDefaultIntervalFromStore || fallbackInterval));
 
     const source = marketRiskIntervalTouched
       ? 'USER_SELECTION'

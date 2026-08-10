@@ -110,6 +110,21 @@ function fmtRelPct(v) { return v == null ? '-' : `${(v * 100).toLocaleString('de
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function relPct1(v) { return Number.isFinite(v) ? `${(v * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : '–'; }
 
+// Gesamt-VaR/ES aus dem AGGREGAT (MarketVaR) fuer den aktuellen (port, scenario) — DIE EINE
+// Quelle. Die Summe der Issuer-Beitraege reconciled nicht exakt (Euler-Allokation) und zeigt
+// sonst eine andere Zahl als Factors/Dashboard.
+function aggregateTotalForMetric(metric) {
+  const context = getCurrentMvarContext(appState);
+  const rows = (appState.getAllMvarData?.() || []).filter((r) => rowMatchesMvarContext(r, context));
+  if (!rows.length) return null;
+  const asof = (r) => String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10);
+  const row = rows.slice().sort((a, b) => asof(a).localeCompare(asof(b))).at(-1);
+  const isEs = String(metric).toUpperCase() === 'ES';
+  const abs = Math.abs(toNumber(row?.[isEs ? 'ES_T_abs' : 'VaR_T_abs'], 0));
+  const rel = Math.abs(toNumber(row?.[isEs ? 'ES_T_rel' : 'VaR_T_rel'], 0));
+  return { abs, relStr: `${rel.toLocaleString('de-DE', { maximumFractionDigits: 3 })}%` };
+}
+
 // KPI-Band ueber den Charts einer Metrik (VaR/ES): Total, Top-Emittent (% vom Total),
 // Top-5-Konzentration (%), staerkster ueberproportionaler Beitrag (Risk vs. weight).
 function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
@@ -122,6 +137,8 @@ function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
   if (!rows.length) { if (host) host.innerHTML = ''; if (tblEl) tblEl.innerHTML = ''; return; }
 
   const total = rows.reduce((s, r) => s + toNumber(r[cfg.absKey], 0), 0);
+  // Relativer Gesamt-VaR = Summe der relativen Beitraege (erste KPI-Karte: absolut + relativ).
+  const totalRel = rows.reduce((s, r) => s + toNumber(r[cfg.relKey], 0), 0);
   const top = rows[0];
   const top5 = rows.slice(0, 5).reduce((s, r) => s + (r[cfg.relKey] || 0), 0);
   // Staerkster ueberproportionaler Beitrag: max(Risikobeitrag% - NAV-Anteil%).
@@ -133,8 +150,12 @@ function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
   }
   const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp` : '–';
 
+  const aggTot = aggregateTotalForMetric(cfg.metric);
+  const totalCard = aggTot
+    ? { label: `Total ${cfg.metric}`, value: `${fmtAbs(aggTot.abs)} (${aggTot.relStr})`, sub: 'portfolio total',      desc: `Portfolio ${cfg.metric} (all issuers)` }
+    : { label: `Total ${cfg.metric}`, value: `${fmtAbs(total)} (${relPct1(totalRel)})`,  sub: 'sum of contributions', desc: `Portfolio ${cfg.metric} (all issuers)` };
   const cards = [
-    { label: `Total ${cfg.metric}`,     value: fmtAbs(total),            sub: 'sum of contributions',       desc: `Portfolio ${cfg.metric} (all issuers)` },
+    totalCard,
     { label: 'Top issuer',              value: relPct1(top[cfg.relKey]), sub: top.issuer || '–',            desc: `Largest ${cfg.metric} contributor` },
     { label: 'Top-5 concentration',     value: relPct1(top5),            sub: `of total ${cfg.metric}`,     desc: '5 largest issuers combined' },
     { label: 'Highest risk vs. weight', value: overVal,                  sub: over ? over.issuer : '–',     desc: 'Contribution above NAV weight' },

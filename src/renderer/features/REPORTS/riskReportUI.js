@@ -77,8 +77,11 @@ export function wireRiskReportUI({ appRoot, reportRoot, appState, handleIRSensDa
       // Seitenformat aus dem Preview-Selector (Portrait/Landscape).
       const orientation = appRoot.querySelector('#riskPdfOrientation')?.value === 'l' ? 'l' : 'p';
 
+      // Anzeige-Titel aus dem Feld (leer -> generateRiskPDF nutzt Default 'Risk Report').
+      const reportTitle = (appRoot.querySelector('#reportDisplayTitleInput')?.value || '').trim();
+
       // ✅ Report-safe: pass roots into PDF generator
-      generateRiskPDF(data, { fileName, appRoot, reportRoot, orientation });
+      generateRiskPDF(data, { fileName, appRoot, reportRoot, orientation, reportTitle });
     } catch (e) {
       console.error(e);
       const msg = 'Risk-PDF-Erstellung fehlgeschlagen.';

@@ -127,6 +127,8 @@
 /* KPI-Farbstreifen (links) am Trigger: Gruppen-Trigger vererben ihre Bereichs-
    Farbe an alle Unterpunkte (gesetzt via decorateTriggerIcons in utils/tabs.js). */
 .section-trigger.has-accent { box-shadow: inset 3px 0 0 var(--trigger-accent, transparent); }
+/* Gezielt den Farbstreifen unterdruecken (z.B. "Select Portfolio"-Kopf). */
+.section-trigger.no-accent.has-accent { box-shadow: none; }
 /* Mit Icon: Inhalt linksbuendig, Chevron bleibt rechts. */
 .section-trigger.has-ico { justify-content: flex-start; }
 .section-trigger.has-ico .chev { margin-left: auto; }

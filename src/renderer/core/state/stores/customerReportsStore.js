@@ -23,12 +23,7 @@ export function installCustomerReportsStore({ appState } = {}) {
   // -----------------------------
   function setCustomerReportsData(rows) {
     appState.customerReportsData = Array.isArray(rows) ? rows : [];
-
-    // default active name, falls noch keiner gesetzt
-    if (!getActiveCustomerReportName() && appState.customerReportsData.length) {
-      appState.activeCustomerReportName = String(appState.customerReportsData[0]?.name || '').trim();
-    }
-
+    // KEIN Default auf den ersten Report -> beim (Reload-)Start ist nichts vorausgewaehlt.
     notifyObservers();
   }
 
@@ -37,6 +32,9 @@ export function installCustomerReportsStore({ appState } = {}) {
   }
 
   function setActiveCustomerReportName(name) {
+    // NUR in-memory (appState). So bleibt die Auswahl beim Panel-Wechsel INNERHALB der
+    // Session erhalten, ist aber nach einem Reload leer (appState wird neu erzeugt)
+    // -> reload = "nichts vorausgewaehlt".
     appState.activeCustomerReportName = String(name || '').trim();
     notifyObservers();
   }

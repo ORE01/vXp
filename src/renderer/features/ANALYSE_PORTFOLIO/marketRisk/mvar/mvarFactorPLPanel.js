@@ -16,6 +16,7 @@ import {
 } from './mvarSelectors.js';
 
 import {
+  buildDistributions,
   buildFactorRows,
   buildRiskTypeRows,
   buildRiskTypeCcyRows,
@@ -51,9 +52,20 @@ function getStoredRowsForCurrentContext() {
     return [];
   }
 
-  const filteredRows = allRows.filter(row =>
+  let filteredRows = allRows.filter(row =>
     rowMatchesMvarContext(row, context)
   );
+
+  // Nur den JUENGSTEN asof-Stichtag behalten — wie das Aggregat (MarketVaR), das ebenfalls
+  // die letzte Stichtags-Zeile nimmt. Sonst mischt die Faktor-Rekonstruktion mehrere
+  // Rolling-Fenster (mehrere asof) und die Total-VaR wird ueberhoeht (z.B. 481,6 statt
+  // 263,2 Tsd fuer ROLLING_1).
+  {
+    const asofOf = (r) => String(r?.asof_date ?? r?.ASOF_DATE ?? '').slice(0, 10);
+    let latest = '';
+    for (const r of filteredRows) { const d = asofOf(r); if (d && d > latest) latest = d; }
+    if (latest) filteredRows = filteredRows.filter((r) => asofOf(r) === latest);
+  }
 
   // console.log('[MVaR FactorPL] local context filter', {
   //   selectedPort: normalizePortfolioName(portName),
@@ -512,12 +524,14 @@ function renderFactorKpis(riskTypeRows) {
   if (!el) return;
   const byType = {};
   (Array.isArray(riskTypeRows) ? riskTypeRows : []).forEach(r => { byType[String(r.risk_type || '').toUpperCase()] = r; });
-  const card = (label, relKey) => {
+  // Erste KPI = Gesamt-VaR/ES ABSOLUT + relativ (wie in Products/Issuers), darunter die
+  // IR/CS/Vega-Zerlegung (relativ).
+  const card = (label, relKey, absKey) => {
     const T = byType.TOTAL || {};
     const line = (nm, r) => `<div class="mr-kpi-row-line"><span>${nm}</span><span>${r ? relPct(r[relKey]) : '0%'}</span></div>`;
     return `<div class="mr-kpi-card">
       <div class="mr-kpi-card__label">${label}</div>
-      <div class="mr-kpi-card__value">${relPct(T[relKey])}</div>
+      <div class="mr-kpi-card__value">${fmtAbs(Math.abs(Number(T[absKey]) || 0))} (${relPct(T[relKey])})</div>
       <div class="mr-kpi-card__rows">
         ${line('IR', byType.IR)}
         ${line('CS', byType.CS)}
@@ -539,15 +553,14 @@ function renderFactorKpis(riskTypeRows) {
     </div>`;
   }
 
-  el.innerHTML = card('MVaR', 'var_rel') + card('ES MVaR', 'es_rel') + coreCard;
+  el.innerHTML = card('Total VaR', 'var_rel', 'var_abs') + card('Total ES', 'es_rel', 'es_abs') + coreCard;
 }
 
 // Datenmodell der Factor-KPIs (MVaR / ES MVaR, Total + IR/CS/Vega, relativ) fuer den
 // PDF-Renderer (RiskPDF) — damit im Report dieselben Karten wie das Dashboard erscheinen.
 export function getFactorKpiModel() {
-  const filteredRows = getStoredRowsForCurrentContext();
+  const { filteredRows, riskTypeRows } = getFactorComputation();
   if (!Array.isArray(filteredRows) || !filteredRows.length) return null;
-  const riskTypeRows = buildRiskTypeRows(filteredRows, getConfidence(), getRelativeScaleDenominator(), getHorizonDays());
   const byType = {};
   riskTypeRows.forEach(r => { byType[String(r.risk_type || '').toUpperCase()] = r; });
   const mk = (relKey) => {
@@ -743,6 +756,54 @@ function renderFactorContribCharts(riskTypeRows) {
   renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorEsScatterChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(122,158,74,0.9)', title: 'ES Decomposition — % of Total ES', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
 }
 
+// Cache der Faktor-Auswertung pro (port, scenario, asof, settings, rowcount). buildDistributions
+// (teuer: Gruppieren + Quantil ueber ~10k Zeilen) laeuft so nur EINMAL pro Datenstand statt bei
+// jedem Render zweimal; wiederholte Renders und Szenario-Wechsel zurueck auf ein bereits
+// gerechnetes Szenario sind dann sofort da. Invalidierung ueber den Key (asof/rowcount/settings).
+const _factorComputeCache = new Map(); // key -> { filteredRows, riskTypeRows, factorRows }
+const _FACTOR_CACHE_MAX = 12;
+let _factorStoreRef = null;
+
+function getFactorComputation() {
+  // Neue Store-Daten (die DataPump ersetzt das Array nach einer Rechnung) -> Cache leeren.
+  // Zwischen Renders/Szenario-Wechseln bleibt die Referenz stabil -> Cache-Treffer.
+  const storeRows = appState.getMvarFactorPLData?.() || [];
+  if (storeRows !== _factorStoreRef) { _factorComputeCache.clear(); _factorStoreRef = storeRows; }
+
+  const filteredRows = getStoredRowsForCurrentContext();
+  const context = getCurrentMvarContext(appState);
+  const confidence = getConfidence();
+  const horizonDays = getHorizonDays();
+  const denominator = getRelativeScaleDenominator();
+  const asof = filteredRows.length
+    ? String(filteredRows[0]?.asof_date ?? filteredRows[0]?.ASOF_DATE ?? '').slice(0, 10)
+    : '';
+  const key = [
+    String(context.portName ?? ''),
+    String(context.scenarioName ?? ''),
+    asof,
+    filteredRows.length,
+    confidence,
+    horizonDays,
+    denominator,
+  ].join('|');
+
+  const hit = _factorComputeCache.get(key);
+  if (hit) return hit;
+
+  // buildDistributions EINMAL rechnen und an beide Builder weiterreichen.
+  const dists = filteredRows.length ? buildDistributions(filteredRows) : null;
+  const riskTypeRows = buildRiskTypeRows(filteredRows, confidence, denominator, horizonDays, dists);
+  const factorRows = buildFactorRows(filteredRows, confidence, denominator, horizonDays, dists);
+  const entry = { filteredRows, riskTypeRows, factorRows };
+
+  _factorComputeCache.set(key, entry);
+  if (_factorComputeCache.size > _FACTOR_CACHE_MAX) {
+    _factorComputeCache.delete(_factorComputeCache.keys().next().value); // aeltesten Eintrag raus
+  }
+  return entry;
+}
+
 export function renderMVaRFactorPLPanel() {
   const factorContainer = document.getElementById('MVaRFactorPLContainer');
   const typeContainer = document.getElementById('MVaRRiskTypePLContainer');
@@ -756,7 +817,7 @@ export function renderMVaRFactorPLPanel() {
   }
 
   const { portName, scenarioName } = getCurrentMvarContext(appState);
-  const filteredRows = getStoredRowsForCurrentContext();
+  const { filteredRows, riskTypeRows, factorRows } = getFactorComputation();
 
   if (!Array.isArray(filteredRows) || filteredRows.length === 0) {
     renderFactorKpis([]);
@@ -795,12 +856,7 @@ export function renderMVaRFactorPLPanel() {
     return;
   }
 
-  const confidence = getConfidence();
-  const horizonDays = getHorizonDays();
-  const denominator = getRelativeScaleDenominator();
-
-  const riskTypeRows = buildRiskTypeRows(filteredRows, confidence, denominator, horizonDays);
-  const factorRows = buildFactorRows(filteredRows, confidence, denominator, horizonDays);
+  // riskTypeRows/factorRows kommen aus getFactorComputation() (Compute-once + Cache).
 
   // Zwei Abschnitte (VaR/ES): links VaR%/ES% je Risikotyp, rechts Diversifikations-
   // Zerlegung (standalone/Total, Diversification = Summe - 100%).

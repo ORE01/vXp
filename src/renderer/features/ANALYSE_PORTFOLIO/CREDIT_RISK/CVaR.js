@@ -8,7 +8,35 @@ import { updateTrafficLight } from '../../../utils/trafficLight.js';
 import { renderCreditRiskDashboard, renderCreditOverviewCharts } from './creditRiskDashboard.js';
 import { appState } from '../../../renderer.js';
 import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../SummaryBreakdown.js';
-import { renderChartLegend, sumNavForPort, _fmtLossCompact } from './LossIssuer.js';
+import { renderChartLegend, sumNavForPort, _fmtLossCompact, buildPositionLoss, getRunConfQuantil, creditVarEsForFlag, setSelectedCreditConf, getSelectedCreditConf } from './LossIssuer.js';
+import { crTailTopForFlag, tailConcentrationIndex } from './creditRiskDashboard.js';
+import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
+
+// KPI-Betragsformat: kompakt (Tsd./Mio.) mit 2 Nachkommastellen (eigener Formatter,
+// damit die geteilte Bar-/Tooltip-Formatierung _fmtLossCompact unveraendert bleibt).
+const _fmtKpiCompact = new Intl.NumberFormat('de-DE', { notation: 'compact', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Tail-Loss-Anteil der Top-3-Emittenten (%) fuer die Zusammenfassung — gleiche Logik wie
+// das Tail-Panel (crTailTopForFlag). flag = 'RATING' (historic) bzw. 'NORM' (market adjusted).
+function _top3TailShare(port, flag) {
+  try {
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter((r) => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port);
+    if (!portRows.length) return NaN;
+    const issuerLoss = new Map(), issuerRating = new Map();
+    for (const r of buildPositionLoss(portRows, port)) {
+      const name = String(r?.ISSUER ?? '').trim(); if (!name) continue;
+      const key = name.toLowerCase();
+      const cur = issuerLoss.get(key) || { name, loss: 0 };
+      cur.loss += Number(r.__LOSS) || 0; issuerLoss.set(key, cur);
+      if (!issuerRating.get(key)) issuerRating.set(key, '');
+    }
+    const allLoss = (appState.getAllLossData?.() || []).filter((r) => String(r?.port_name ?? '') === port);
+    const top = crTailTopForFlag(flag, issuerLoss, issuerRating, allLoss, getRunConfQuantil());
+    const s = top.slice(0, 3).reduce((a, b) => a + (Number(b.pct) || 0), 0);
+    return (Number.isFinite(s) && s > 0) ? s : NaN;
+  } catch { return NaN; }
+}
 
 // Drill-down fuer den EAD/LGD-Chart (Balken = Emittent -> dessen Positionen).
 // Dieselbe Engine wie die Loss-/Market-Risk-Panels. Nur die 'var'-Schiene noetig;
@@ -109,6 +137,192 @@ let LGDChart = null;
 let filteredEADMainData = [];
 
 
+// Expected Loss (Profit/Loss-Panel, KPI oben) = Summe ueber die RATING-Zeilen des
+// gewaehlten Portfolios von EAD x LGD-Rate x PD. Da die EAD-Spalte LGD bereits der
+// LGD-BETRAG ist (= NOTIONAL x LGD-Rate = EAD x LGD-Rate), gilt EL = Summe(LGD x PD).
+// Ein KPI-Set (Economic-Capital-Panel) je Variante. suffix '' = historic-PD-Panel (panel-credit),
+// suffix 'M' = current-PD-Panel (panel-credit-current). opts.eadPdField = Spalte fuer PD (PD | PD_M),
+// opts.cvarFlag = CreditVaR-Zeile (RATING | MARKET). EL = Summe(LGD-Betrag x PD),
+// EDE = Summe(NOTIONAL x PD); Basis aus dem VaR abgeleitet (EL/EDE/EC-rel konsistent zur VaR-rel).
+// Ampel-Status fuer Credit-VaR aus |VaR_rel| (Bruch) + Customer-CVaR-Schwellen: green < yellow,
+// yellow < red, sonst red. Gleiche Logik wie trafficLightStateForCvar (ehem. CVaR-Tabelle).
+function creditCvarStateForLevel(lossLevel) {
+  const thrRaw = appState.getCustomerCreditRiskThreshold?.('CVAR');
+  if (!thrRaw) return null;
+  const thrObj = Array.isArray(thrRaw) ? (thrRaw.find((r) => r?.metric === 'CVaR') || thrRaw[0]) : thrRaw;
+  let Y = Number(thrObj?.yellow_threshold), R = Number(thrObj?.red_threshold);
+  if (!Number.isFinite(Y) || !Number.isFinite(R)) return null;
+  if (Math.abs(Y) > 1 || Math.abs(R) > 1) { Y /= 100; R /= 100; }
+  Y = Math.abs(Y); R = Math.abs(R);
+  const lvl = Math.abs(Number(lossLevel));
+  if (!Number.isFinite(lvl)) return null;
+  if (lvl >= R) return 'red';
+  if (lvl >= Y) return 'yellow';
+  return 'green';
+}
+
+// Corner-Description der EC-Kachel: "Risk buffer <conf_level> <horizon>" aus der aktiven
+// Credit-VaR-Config (CreditVaRInput). conf_level -> "99,00 %"; horizon_days -> Jahre
+// (256 Handelstage = 1 Jahr in dieser Config), z.B. "1y".
+function riskBufferDescFromConfig() {
+  const configs = appState.getCvarInput?.() || [];
+  const selName = document.querySelector('.cvar-radio:checked')?.dataset?.name;
+  const cfg =
+    (selName && configs.find((c) => String(c.name) === String(selName))) ||
+    configs.find((c) => Number(c.is_active) === 1) ||
+    configs[configs.length - 1] ||
+    null;
+  // Konfidenz aus dem gewaehlten Niveau (Dropdown) via getRunConfQuantil (respektiert das
+  // Dropdown), Horizont weiter aus der Config.
+  const q = getRunConfQuantil();
+  const hDays = Number(cfg?.horizon_days);
+  const confStr = (Number.isFinite(q) && q > 0)
+    ? `${q.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`
+    : '';
+  let hStr = '';
+  if (Number.isFinite(hDays) && hDays > 0) {
+    const years = hDays / 256;
+    const yRound = Math.round(years);
+    hStr = (Math.abs(years - yRound) < 0.05 && yRound >= 1)
+      ? `${yRound}y`
+      : `${years.toLocaleString('de-DE', { maximumFractionDigits: 1 })}y`;
+  }
+  return ['Risk buffer', confStr, hStr].filter(Boolean).join(' ');
+}
+
+function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
+  if (!document.getElementById('creditELBig' + suffix)) return;
+  const eadRows = Array.isArray(rowsOverride) ? rowsOverride : (appState.getAllEADData?.() || []);
+  let elSum = 0, elCnt = 0, edeSum = 0;
+  for (const r of eadRows) {
+    if (String(r?.port_name ?? '').trim() !== port) continue;
+    if (String(r?.pd_flag ?? '').trim().toUpperCase() !== 'RATING') continue;   // Basiszeilen (haben PD + PD_M)
+    const lgd = Number(r?.LGD), pd = Number(r?.[opts.eadPdField]), notion = Number(r?.NOTIONAL);
+    if (Number.isFinite(lgd) && Number.isFinite(pd)) { elSum += lgd * pd; elCnt++; }
+    if (Number.isFinite(notion) && Number.isFinite(pd)) edeSum += notion * pd;
+  }
+  // VaR/ES beim gewaehlten Konfidenzniveau aus der Verteilung neu berechnen (keine
+  // Simulation). Ersetzt die gespeicherte CreditVaR-Zeile.
+  const cvar = creditVarEsForFlag(port, opts.cvarFlag);
+  const varAbs = Math.abs(Number(cvar?.VaR_abs));
+  const varRel = Math.abs(Number(cvar?.VaR_rel));
+  const esAbs = Math.abs(Number(cvar?.ES_abs));
+  const esRel = Math.abs(Number(cvar?.ES_rel));
+  const base = (Number.isFinite(varAbs) && Number.isFinite(varRel) && varRel > 0) ? varAbs / varRel : NaN;
+
+  const haveEl = elCnt > 0, haveVar = Number.isFinite(varAbs), haveEs = Number.isFinite(esAbs);
+  const elRel = (haveEl && Number.isFinite(base)) ? elSum / base : NaN;
+  const edeRel = (haveEl && Number.isFinite(base)) ? edeSum / base : NaN;
+  const ecAbs = (haveEl && haveVar) ? varAbs - elSum : NaN;
+  const ecRel = (Number.isFinite(ecAbs) && Number.isFinite(base)) ? ecAbs / base : NaN;
+
+  const fA = (x) => Number.isFinite(x) ? `EUR ${_fmtKpiCompact.format(x)}` : '–';
+  const fR = (x) => Number.isFinite(x) ? `${(x * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
+  // Grosse Zahl = abs oder rel je nach Customer-Setup-Umschalter (getTileMode; Key ist metrik-,
+  // nicht variantenspezifisch -> beide Panels teilen die Einstellung).
+  const setKpi = (bigId, subId, key, absStr, relStr) => {
+    const mode = (() => { try { return getTileMode(key); } catch { return 'abs'; } })();
+    const big = document.getElementById(bigId), sub = document.getElementById(subId);
+    if (big) big.textContent = mode === 'rel' ? relStr : absStr;
+    if (sub) sub.textContent = mode === 'rel' ? absStr : relStr;
+  };
+  setKpi('creditELBig' + suffix,      'creditELSub' + suffix,      'credit_el',       haveEl ? fA(elSum) : '–', fR(elRel));
+  setKpi('creditEDEBig' + suffix,     'creditEDESub' + suffix,     'credit_ede',      haveEl ? fA(edeSum) : '–', fR(edeRel));
+  setKpi('creditVarHistBig' + suffix, 'creditVarHistSub' + suffix, 'credit_var_hist', haveVar ? fA(varAbs) : '–', fR(varRel));
+  setKpi('creditESBig' + suffix,      'creditESSub' + suffix,      'credit_es',       haveEs ? fA(esAbs) : '–', fR(esRel));
+  setKpi('creditECBig' + suffix,      'creditECSub' + suffix,      'credit_ec',       fA(ecAbs),               fR(ecRel));
+  // EC-Kachel-Beschriftung dynamisch aus der Config: "Risk buffer 99,00 % 1y".
+  const ecTile = document.getElementById('creditECBig' + suffix)?.closest('.conc-kpi[data-tile="credit_ec"]');
+  if (ecTile) ecTile.setAttribute('data-desc', riskBufferDescFromConfig());
+  // EDE zusaetzlich in die EL-Kachel — je Zeile in Klammern: Wert (Z1), rel (Z2), Name (Z3, statisch im HTML).
+  const _emode = (() => { try { return getTileMode('credit_el'); } catch { return 'abs'; } })();
+  const edeExtra = document.getElementById('creditELDE' + suffix);
+  const edeExtraSub = document.getElementById('creditELDESub' + suffix);
+  if (edeExtra) edeExtra.textContent = haveEl ? `(${_emode === 'rel' ? fR(edeRel) : fA(edeSum)})` : '';
+  if (edeExtraSub) edeExtraSub.textContent = haveEl ? `(${_emode === 'rel' ? fA(edeSum) : fR(edeRel)})` : '';
+  // Zusammenfassung als Bullet-Liste (je Panel aus dessen EC/VaR/ES-Werten), rechts neben/unter den KPIs.
+  const summaryEl = document.getElementById('creditKpiSummary' + suffix);
+  if (summaryEl) {
+    if (haveEl && haveVar && haveEs) {
+      // Konzentration (K = round(Effective Tail Drivers), Top-K-Anteil) — gleiche Quelle wie der Slider.
+      const conc = tailConcentrationIndex();
+      const K = (conc && Number.isFinite(conc.eff)) ? Math.max(1, Math.round(conc.eff)) : NaN;
+      const topKShare = (conc && Array.isArray(conc.shares) && Number.isFinite(K))
+        ? conc.shares.slice(0, K).reduce((a, b) => a + b, 0) : NaN;
+      const f1 = (x) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      // rel/abs je Kennzahl nach dem Customer-Setup-Umschalter (wie die KPI-Kacheln).
+      const em = (key) => { try { return getTileMode(key); } catch { return 'abs'; } };
+      const vEl = em('credit_el')       === 'rel' ? fR(elRel) : fA(elSum);
+      const vEc = em('credit_ec')       === 'rel' ? fR(ecRel) : fA(ecAbs);
+      const vEs = em('credit_es')       === 'rel' ? fR(esRel) : fA(esAbs);
+      const items = [
+        `Reported expected loss remains low at ${vEl}.`,
+        `Economic Capital provides a ${vEc} realistic risk buffer.`,
+        `Average loss in extreme cases reaches ${vEs}.`,
+        (Number.isFinite(K) && Number.isFinite(topKShare))
+          ? `Tail risk is highly concentrated: ${K} issuers drive ${f1(topKShare)} % of tail losses.`
+          : 'Tail risk concentration: n/a.',
+      ];
+      summaryEl.innerHTML = items.map((s) => `<li>${s}</li>`).join('');
+    } else {
+      summaryEl.innerHTML = '';
+    }
+  }
+  // Ampel-Status (aus CVaR-Schwellen) als farbiger Punkt in der VaR-KPI (ersetzt die Tabelle).
+  const cvarState = creditCvarStateForLevel(varRel);
+  const dotEl = document.getElementById('creditVarDot' + suffix);
+  if (dotEl) {
+    const col = { green: '#2f9e5f', yellow: '#e0a533', red: '#d9534f' }[cvarState];
+    if (col) { dotEl.hidden = false; dotEl.style.background = col; } else { dotEl.hidden = true; }
+  }
+  const m = document.getElementById('creditVarMethod' + suffix);
+  if (m) m.textContent = opts.methodLabel;
+}
+
+// Konfidenz-Dropdowns (99,9/99,5/99,0) in BEIDEN Panels (Historic + Market adjusted):
+// je Element gebunden, global synchron. Auswahl setzt das Niveau und rechnet VaR/EC/ES +
+// Beschriftung + Loss-Chart neu (OHNE neue Simulation). EL bleibt.
+const _CONF_SELECT_IDS = ['creditConfSelect', 'creditConfSelectM'];
+function _bindCreditConfDropdown() {
+  const curConf = getSelectedCreditConf() ?? (getRunConfQuantil() / 100);
+  _CONF_SELECT_IDS.forEach((id) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    if (!sel.__confBound) {
+      sel.__confBound = true;
+      sel.addEventListener('change', () => {
+        setSelectedCreditConf(Number(sel.value));
+        try { renderCreditExpectedLoss(); } catch {}         // KPI-Kacheln + EC-Beschriftung (spiegelt beide Dropdowns)
+        try { renderCreditRiskDashboard(); } catch {}         // Tail-Concentration/TCM (confQ-abhaengig)
+        try { renderCreditOverviewCharts(); } catch {}        // Loss-Dist-Chart (VaR/ES-Linien + EC-Band)
+      });
+    }
+    // Auf den aktuellen Wert spiegeln (float-sicher die naechstliegende Option waehlen).
+    let bestOpt = null, bestD = Infinity;
+    [...sel.options].forEach((o) => { const d = Math.abs(Number(o.value) - curConf); if (d < bestD) { bestD = d; bestOpt = o; } });
+    if (bestOpt && sel.value !== bestOpt.value) sel.value = bestOpt.value;
+  });
+}
+
+// Beide Varianten rendern: historic PD (panel-credit) + current PD/Market (panel-credit-current).
+export function renderCreditExpectedLoss(rowsOverride) {
+  const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
+  _bindCreditConfDropdown();
+  renderCreditKpiSet(port, '',  { eadPdField: 'PD',   cvarFlag: 'RATING', methodLabel: 'Historic' }, rowsOverride);
+  renderCreditKpiSet(port, 'M', { eadPdField: 'PD_M_norm', cvarFlag: 'NORM', methodLabel: 'Market adjusted' }, rowsOverride);
+}
+
+// Beim Oeffnen des Profit/Loss-Panels das KPI aus dem Store neu rechnen.
+document.addEventListener('panel:opened', (e) => {
+  const p = e?.detail?.panelId;
+  if (p === 'panel-credit' || p === 'panel-credit-current') {
+    try { renderCreditExpectedLoss(); } catch {}
+    // Loss-Charts (crLossDistChart historic / crLossDistChartNorm market adjusted) rendern —
+    // bei sichtbarem Panel, damit die Breite korrekt gemessen wird.
+    try { renderCreditOverviewCharts(); } catch {}
+  }
+});
+
 export function handleEADData(receivedData, index = 0, port_nameArg) {
   const port_name = String(
     port_nameArg ?? appState.getSelectedPortTableName?.() ?? ''
@@ -116,6 +330,9 @@ export function handleEADData(receivedData, index = 0, port_nameArg) {
 
   // âœ… If no portfolio selected: do nothing (no DOM, no chart, no warnings)
   if (!port_name) return;
+
+  // Expected-Loss-KPI (Profit/Loss-Panel) aus den frischen EAD-Daten aktualisieren.
+  try { renderCreditExpectedLoss(receivedData); } catch {}
 
   const EADDataContainer = document.getElementById('EADDataContainer');
   if (!EADDataContainer) return;
@@ -416,6 +633,9 @@ export function handleCVaRData(receivedData, index, port_nameArg) {
   // Overview-Loss-Charts (Loss distribution + Tail zoom) ebenfalls mitziehen, damit sie
   // beim Portfoliowechsel aktualisieren (nicht erst nach einer Neuberechnung).
   try { renderCreditOverviewCharts(); } catch (e) { console.warn('[CVaR] credit overview charts render failed', e); }
+  // Expected Loss + Economic Capital (KPIs oben im Profit/Loss-Panel) neu rechnen — jetzt ist
+  // die frische VaR-historic-Zeile im Store.
+  try { renderCreditExpectedLoss(); } catch {}
 }
 
 

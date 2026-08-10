@@ -38,11 +38,11 @@
 #panel-performance .chart-box canvas{
   display: block;
   width: 100% !important;
-  height: 230px !important;
+  height: 330px !important;
 }
 
 @media (max-width: 1200px){
-  #panel-performance .chart-box canvas{ height: 220px !important; }
+  #panel-performance .chart-box canvas{ height: 320px !important; }
 }
 
 @media (max-width: 800px){
@@ -53,6 +53,6 @@
     min-width: 0;
   }
 
-  #panel-performance .chart-box canvas{ height: 200px !important; }
+  #panel-performance .chart-box canvas{ height: 300px !important; }
 }
 

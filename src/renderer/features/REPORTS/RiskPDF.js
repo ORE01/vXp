@@ -570,7 +570,9 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     if (_ratesSec && _csSec && _ratesSec !== _csSec) {
       _ratesSec.enabledCharts = [...(_ratesSec.enabledCharts || []), ...(_csSec.enabledCharts || [])];
       _ratesSec.__composed2 = true;
-      _ratesSec.title = 'Market Data — Interest Rates & Credit Spreads';
+      // Sektion haengt bereits unter der Gruppe "MARKET DATA" -> Praefix weglassen,
+      // sonst steht "Market Data" doppelt in TOC/Ueberschrift.
+      _ratesSec.title = 'Interest Rates & Credit Spreads';
       sections = sections.filter(s => s !== _csSec);
     }
   } catch (e) { console.warn('[PDF] merge rates+spreads failed', e); }
@@ -1060,6 +1062,14 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   // EINZELN abwaehlbar -> es wird nur gezeichnet, was in enabledCharts/enabledTables steht.
   if (sec.key.startsWith('concentration-')) {
     const dimKey    = sec.key.slice('concentration-'.length);
+
+    // Die drei Ratings (RATING -> RATING_PROD -> RATINGres) sollen zusammen auf EINER
+    // Seite stehen. Vor der ersten Rating-Dimension einen Seitenumbruch erzwingen (sofern
+    // nicht ohnehin Seitenanfang) -> General/Product/Resolved fuellen dieselbe Seite.
+    if (dimKey === 'RATING' && y > layout.topSafe + 2) {
+      y = layout.newPage(doc);
+    }
+
     const enChartIds = new Set((sec.enabledCharts || []).map(c => c.id));
     const enTableIds = new Set((sec.enabledTables || []).map(t => t.id));
 
@@ -1176,7 +1186,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     }
 
     // 2) Beide Charts nebeneinander.
-    const showRet = enChartIds.has('perfReturnChart');
+    const showRet = enChartIds.has('perfHistYieldChart');
     const showSc  = enChartIds.has('perfYieldScatter');
     const drawImg = (imgData, x, boxW, boxH) => {
       drawChartCard(doc, x, y, boxW, boxH);
@@ -1200,10 +1210,10 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         return t || fb;
       };
       doc.setFontSize(10); doc.setTextColor(0);
-      if (showRet) doc.text(cardTitle('perfReturnChart', 'Yield development'), marginX, y);
+      if (showRet) doc.text(cardTitle('perfHistYieldChart', 'Yield development'), marginX, y);
       if (showSc)  doc.text(cardTitle('perfYieldScatter', 'Yield contribution'), both ? rightX : marginX, y);
       y += 3;
-      if (showRet) { const el = ctx.getById('perfReturnChart');  drawImg(el ? canvasToPngData(el) : null, marginX, both ? leftW : contentW, chartsH); }
+      if (showRet) { const el = ctx.getById('perfHistYieldChart');  drawImg(el ? canvasToPngData(el) : null, marginX, both ? leftW : contentW, chartsH); }
       if (showSc)  { const el = ctx.getById('perfYieldScatter'); drawImg(el ? canvasToPngData(el) : null, both ? rightX : marginX, both ? rightW : contentW, chartsH); }
       y += chartsH + 8;
     }
@@ -1233,6 +1243,71 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       if (flopTbl) { safeAutoTable(doc, layout, { ...tblOpts, html: flopTbl, startY: tblStartY, tableWidth: both ? halfW : contentW, margin: { left: both ? rightX : marginX } }); y2 = doc.lastAutoTable?.finalY || tblStartY; }
       y = Math.max(y1, y2) + cfg.blockGap;
     }
+    return;
+  }
+
+  // ── Sonderlayout Liquidity: KPI-Band oben, dann Faelligkeiten-Chart LINKS +
+  //    Pivot-Tabelle (Maturity x Category) RECHTS nebeneinander (statt gestapelt).
+  //    Erkennung ueber den Chart, nicht den Section-Key.
+  if ((sec.enabledCharts || []).some(c => c.id === 'liqDashMaturityChart')) {
+    const enChartIds = new Set((sec.enabledCharts || []).map(c => c.id));
+    const enTableIds = new Set((sec.enabledTables || []).map(t => t.id));
+    const contentW = layout.contentWidth;
+    const gap = 6;
+    ensurePageSpace(120);
+
+    doc.setFontSize(14); doc.setTextColor(0);
+    doc.text(sectionTitle, marginX, y);
+    y += cfg.sectionTitleSpacing;
+
+    // KPI-Band (liqDashKpiTable)
+    for (const t of (sec.enabledTables || [])) {
+      const el = ctx.getById(t.id);
+      if (!el || !el.dataset || !el.dataset.kpiBand) continue;
+      const kpis = kpisFromTableEl(el);
+      if (kpis.length) y = drawKpiBand(doc, { marginX, contentW, y }, kpis);
+      break;
+    }
+
+    const chartEl = enChartIds.has('liqDashMaturityChart') ? ctx.getById('liqDashMaturityChart') : null;
+    const tblHost = ctx.getById('liqDashCategoryPivotTable');
+    const tblEl = (tblHost && tblHost.tagName && tblHost.tagName.toLowerCase() === 'table')
+      ? tblHost : tblHost?.querySelector?.('table');
+    const both   = !!(chartEl && tblEl);
+    const leftW  = both ? contentW / 2 - gap / 2 : contentW;
+    const rightX = both ? marginX + leftW + gap : marginX;
+    const chartH = 88;
+    const rowY = y;
+
+    if (chartEl) {
+      doc.setFontSize(10); doc.setTextColor(0);
+      doc.text('Maturities', marginX, rowY);
+      drawChartCard(doc, marginX, rowY + 3, both ? leftW : contentW, chartH);
+      const img = canvasToPngData(chartEl);
+      if (img?.dataUrl) {
+        const boxW = both ? leftW : contentW;
+        const srcW = img.width || 900, srcH = img.height || 520;
+        const scale = Math.min(boxW / srcW, (chartH - 2) / srcH, 1);
+        const w = srcW * scale, h = srcH * scale;
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', marginX + (boxW - w) / 2, rowY + 3 + (chartH - h) / 2, w, h); }
+        catch (e) { console.warn('[PDF] liquidity chart failed', e); }
+      }
+    }
+
+    let yBottom = rowY + 3 + chartH;
+    if (tblEl) {
+      doc.setFontSize(10); doc.setTextColor(0);
+      doc.text('Maturity — Category', both ? rightX : marginX, rowY);
+      safeAutoTable(doc, layout, {
+        theme: 'grid', styles: { fontSize: 7.5, cellPadding: 1.6 }, pageBreak: 'avoid',
+        headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
+        alternateRowStyles: { fillColor: [255, 255, 255] },
+        html: tblEl, startY: rowY + 3,
+        tableWidth: both ? leftW : contentW, margin: { left: both ? rightX : marginX },
+      });
+      yBottom = Math.max(yBottom, doc.lastAutoTable?.finalY || yBottom);
+    }
+    y = yBottom + cfg.blockGap;
     return;
   }
 
@@ -1324,11 +1399,28 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       for (const s of ['green', 'yellow', 'red']) if (d.classList?.contains(`mr-amp--${s}`)) return s;
       return null;
     };
+    const pctStyle = (el, prop) => { const n = parseFloat(el?.style?.[prop] || ''); return Number.isFinite(n) ? n : null; };
     const cardFrom = (title, anchorId) => {
       const card = ctx.getById(anchorId)?.closest('.home-card');
       const boxes = [];
       card?.querySelectorAll('.home-kpi[data-tile]').forEach((t) => {
         if (t.style.display === 'none') return;            // im Customer Setup abgewaehlt -> ausgeblendet
+        // Zusammengefasste Current/Stressed-Kachel (Balken statt KPI-Val) -> eigenes Box-Format.
+        const grpRows = t.querySelectorAll('.mkt-grp-row');
+        if (grpRows.length) {
+          const rows = [];
+          grpRows.forEach((r) => {
+            const track = r.querySelector('.mkt-grp-track');
+            rows.push({
+              lbl: tTxt(r, '.mkt-grp-lbl'),
+              val: (r.querySelector('.mkt-grp-val')?.textContent || '').replace(/\s+/g, ' ').trim() || '–',
+              greenPct: pctStyle(track?.querySelector('.mkt-grp-zone--green'), 'width'),
+              markerPct: pctStyle(track?.querySelector('.mkt-grp-marker'), 'left'),
+            });
+          });
+          boxes.push({ type: 'group', cap: tTxt(t, '.home-kpi-cap'), dist: tTxt(t, '.mkt-grp-dist'), rows, wide: true });
+          return;
+        }
         const sub = tTxt(t, '.home-kpi-abs');
         boxes.push({ v: tTxt(t, '.home-kpi-val') || '–', lbl: tTxt(t, '.home-kpi-lbl'), sub: sub || undefined, dot: tDot(t) });
       });
@@ -1341,24 +1433,78 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     ];
 
     const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovBoxH = 13;
-    // Kartenhoehe dynamisch nach der Karte mit den meisten sichtbaren Tiles (2 je Reihe).
-    const ovRowsMax = Math.max(1, ...ovCards.map(c => Math.ceil((c.boxes.length || 1) / 2)));
-    const ovCardH = 11 + ovRowsMax * (ovBoxH + 3);
+    const GRP_H = 22; // Hoehe einer Grouped-Tile-Box (Caption + Distanz + 2 Balkenzeilen, groessere Schrift).
+    // Inhaltshoehe je Karte: normale Boxen 2 je Reihe (ovBoxH), Grouped-Tiles voll breit (GRP_H).
+    const contentHeight = (boxes) => {
+      let h = 0, col = 0;
+      (boxes || []).forEach((b) => {
+        const isWide = b.wide || b.type === 'group';
+        if (isWide) { if (col > 0) col = 0; h += (b.type === 'group' ? GRP_H : ovBoxH) + 3; }
+        else if (col === 0) { h += ovBoxH + 3; col = 1; } else { col = 0; }
+      });
+      return Math.max(ovBoxH + 3, h);
+    };
+    const ovCardH = 11 + Math.max(...ovCards.map(c => contentHeight(c.boxes)));
+    // Grouped-Tile (Current/Stressed Market): Caption + Distanz + 2 Balkenzeilen (Zonen + Marker).
+    const drawGroup = (bx, byy, w, b) => {
+      // Look wie die Duration-Bloecke: groessere Schrift + abgerundete Balken. Die Zonen-Farben
+      // (gruen/amber) bleiben, weil sie die Limit-Grenzen darstellen; Marker = aktueller Wert.
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
+      doc.text(String(b.cap || ''), bx, byy + 3);
+      if (b.dist) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+        doc.text(String(b.dist), bx, byy + 7);
+      }
+      const lblW = 17, valW = 22, gap = 2;
+      const trackX = bx + lblW, trackW = Math.max(6, w - lblW - valW - gap);
+      const ZG = [47, 158, 91], ZA = [224, 165, 51];
+      (b.rows || []).forEach((r, i) => {
+        const ry = byy + 9 + i * 7, th = 2.4, rad = 1.1;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+        doc.text(String(r.lbl || ''), bx, ry + 2.6);
+        // Zonen-Balken: runde AUSSEN-Ecken, aber buendiger Farb-Uebergang (keine Einschnuerung).
+        const gp = (r.greenPct != null) ? Math.max(0, Math.min(100, r.greenPct)) : 60;
+        const gW = trackW * gp / 100;
+        if (gW <= 0.2) {
+          doc.setFillColor(...ZA); doc.roundedRect(trackX, ry, trackW, th, rad, rad, 'F');
+        } else if (gW >= trackW - 0.2) {
+          doc.setFillColor(...ZG); doc.roundedRect(trackX, ry, trackW, th, rad, rad, 'F');
+        } else {
+          doc.setFillColor(...ZG); doc.roundedRect(trackX, ry, trackW, th, rad, rad, 'F');            // Basis gruen (runde Enden)
+          doc.setFillColor(...ZA); doc.roundedRect(trackX + gW, ry, trackW - gW, th, rad, rad, 'F');   // amber rechts (rundes rechtes Ende)
+          doc.rect(trackX + gW, ry, Math.min(rad + 0.6, trackW - gW), th, 'F');                        // Uebergang eckig auffuellen -> buendig
+        }
+        if (r.markerPct != null) {
+          const mx = trackX + trackW * Math.max(0, Math.min(100, r.markerPct)) / 100;
+          doc.setDrawColor(40, 40, 40); doc.setLineWidth(0.6); doc.line(mx, ry - 1, mx, ry + th + 1);
+        }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...TEXT);
+        const vt = String(r.val || '–');
+        doc.text(vt, bx + w - doc.getTextWidth(vt), ry + 2.6);
+      });
+    };
     ensurePageSpace(ovCardH + 8, `${sectionTitle} (cont.)`);
     ovCards.forEach((c, i) => {
       const x = marginX + i * (ovCardW + ovGap), tx = x + 5;
-      doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-      doc.roundedRect(x, y, ovCardW, ovCardH, 2, 2, 'FD');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      // Market Risk (Current/Stressed) rahmenlos wie die Duration-Bloecke; Portfolio/Credit bleiben Karten.
+      const frameless = /MARKET RISK/i.test(String(c.title));
+      if (!frameless) {
+        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+        doc.roundedRect(x, y, ovCardW, ovCardH, 2, 2, 'FD');
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+      doc.setTextColor(...(frameless ? TEXT : MUTED));
       doc.text(String(c.title), tx, y + 7);
 
       // Kein Hero mehr — alle Kennzahlen als normale Boxen direkt unter dem Titel.
       const innerW = ovCardW - 10, halfW = (innerW - 3) / 2;
       let byy = y + 11, col = 0;
       (c.boxes || []).forEach((b) => {
-        if (b.wide && col > 0) { col = 0; byy += ovBoxH + 3; }
-        const w = b.wide ? innerW : halfW;
-        const bx = tx + (b.wide ? 0 : col * (halfW + 3));
+        const isWide = b.wide || b.type === 'group';
+        if (isWide && col > 0) { col = 0; byy += ovBoxH + 3; }
+        const w = isWide ? innerW : halfW;
+        const bx = tx + (isWide ? 0 : col * (halfW + 3));
+        if (b.type === 'group') { drawGroup(bx, byy, w, b); byy += GRP_H + 3; col = 0; return; }
         doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
         doc.roundedRect(bx, byy, w, ovBoxH, 1.5, 1.5, 'FD');
         const vs = String(b.v);
@@ -1392,13 +1538,15 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     //    Positionen/Zonen aus den data-Attributen der gerenderten UI-Slider -> PDF = App.
     const ds = (id, k) => (ctx.getById(id)?.dataset?.[k] ?? '');
     const dnum = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+    // Balken-Fuellgrad (%) aus der style.width des gerenderten UI-Balkens (Duration-Kacheln).
+    const barPct = (id) => { const n = parseFloat(ctx.getById(id)?.style?.width || ''); return Number.isFinite(n) ? n : 0; };
     const drawRiskSlider = (sx, sy, sw, s) => {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
       doc.text(s.title, sx, sy);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
       doc.text(s.leftLbl, sx, sy + 4.5);
       doc.text(s.rightLbl, sx + sw - doc.getTextWidth(s.rightLbl), sy + 4.5);
-      const tY = sy + 12, tH = 4;
+      const tY = sy + 12, tH = 3;
       const gx = sx + sw * (s.gP / 100), yx = sx + sw * (s.yP / 100);
       doc.setFillColor(...ampRgb('green'));  doc.rect(sx, tY, Math.max(0, gx - sx), tH, 'F');
       doc.setFillColor(...ampRgb('yellow')); doc.rect(gx, tY, Math.max(0, yx - gx), tH, 'F');
@@ -1419,28 +1567,53 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       doc.text('0', sx, tY + tH + 4);
       doc.text(s.maxTxt, sx + sw - doc.getTextWidth(s.maxTxt), tY + tH + 4);
     };
+    // Duration-Kachel (IR/CS) als 2 Balken (Total NAV / Valued NAV) — statt Slider, wie in der App.
+    const drawDurationBars = (sx, sy, sw, title, rows) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
+      doc.text(title, sx, sy);
+      const lblW = 18, valW = 13, gap = 3;
+      const trackX = sx + lblW, trackW = Math.max(4, sw - lblW - valW - gap);
+      rows.forEach((r, i) => {
+        const ry = sy + 5 + i * 7;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+        doc.text(String(r.lbl), sx, ry + 2.6);
+        doc.setFillColor(226, 230, 236); doc.roundedRect(trackX, ry, trackW, 2.4, 0.9, 0.9, 'F');
+        const fw = Math.max(0, Math.min(trackW, trackW * (r.pct / 100)));
+        if (fw > 0.3) { doc.setFillColor(108, 155, 209); doc.roundedRect(trackX, ry, fw, 2.4, 0.9, 0.9, 'F'); }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...TEXT);
+        doc.text(String(r.valTxt), sx + sw - doc.getTextWidth(String(r.valTxt)), ry + 2.8);
+      });
+    };
     // Slider auf Drittelbreite UNTER die jeweilige Karte -> immer 3-teilig wie in der App:
     // IR/CS unter Portfolio (links), TSI/MSD unter Credit (rechts), Market-Mitte bleibt frei.
     // Reuse der Karten-Geometrie (ovCardW/ovGap), damit Slider nie in den Market-Bereich ragen.
     const sHalfW = ovCardW;
     const sColL = marginX, sColR = marginX + 2 * (ovCardW + ovGap);
+    const sColM = marginX + (ovCardW + ovGap);   // Mitte = Market-Spalte
     const irMax = otxt('irScaleMax'), tsiMax = otxt('tsiScaleMax');
-    if (irMax !== '–' || tsiMax !== '–') {
+    const mr1Max = otxt('mr1ScaleMax'), mr2Max = otxt('mr2ScaleMax');
+    if (irMax !== '–' || tsiMax !== '–' || mr1Max !== '–' || mr2Max !== '–') {
       ensurePageSpace(52, `${sectionTitle} (cont.)`);
       if (irMax !== '–') {
-        drawRiskSlider(sColL, y + 4, sHalfW, {
-          title: 'Interest Rate Duration', leftLbl: 'Money Market', rightLbl: 'Capital Market',
-          gP: dnum(ds('irTrack', 'g')), yP: dnum(ds('irTrack', 'y')),
-          oneY: ds('irTrack', 'oneY') !== '' ? dnum(ds('irTrack', 'oneY')) : null,
-          pos: dnum(ds('irMarker', 'pos')), state: ds('irMarker', 'state') || 'green',
-          durTxt: otxt('irMarkerVal'), maxTxt: irMax,
-        });
-        drawRiskSlider(sColL, y + 30, sHalfW, {
-          title: 'Credit Spread Duration', leftLbl: 'Short Credit Horizon', rightLbl: 'Long Credit Horizon',
-          gP: dnum(ds('csTrack', 'g')), yP: dnum(ds('csTrack', 'y')), oneY: null,
-          pos: dnum(ds('csMarker', 'pos')), state: ds('csMarker', 'state') || 'green',
-          durTxt: otxt('csMarkerVal'), maxTxt: otxt('csScaleMax'),
-        });
+        // Nur zeichnen, wenn die Kachel in Customer Setup nicht ausgehakt ist (display:none im DOM).
+        const tileHidden = (key) => {
+          const el = (ctx.appRoot || document).querySelector(`[data-tile="${key}"]`);
+          return !!el && el.style.display === 'none';
+        };
+        let dy = y + 4;
+        if (!tileHidden('ir_duration')) {
+          drawDurationBars(sColL, dy, sHalfW, 'Interest Rate Duration', [
+            { lbl: 'Total NAV',  valTxt: otxt('homePfIrDurTotal'),  pct: barPct('homePfIrDurTotalBar') },
+            { lbl: 'Valued NAV', valTxt: otxt('homePfIrDurValued'), pct: barPct('homePfIrDurValuedBar') },
+          ]);
+          dy += 22;
+        }
+        if (!tileHidden('cs_duration')) {
+          drawDurationBars(sColL, dy, sHalfW, 'Credit Spread Duration', [
+            { lbl: 'Total NAV',  valTxt: otxt('homePfCsDurTotal'),  pct: barPct('homePfCsDurTotalBar') },
+            { lbl: 'Valued NAV', valTxt: otxt('homePfCsDurValued'), pct: barPct('homePfCsDurValuedBar') },
+          ]);
+        }
       }
       if (tsiMax !== '–') {
         drawRiskSlider(sColR, y + 4, sHalfW, {
@@ -1455,6 +1628,25 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           pos: dnum(ds('msdMarker', 'pos')), state: ds('msdMarker', 'state') || 'green',
           durTxt: otxt('msdMarkerVal'), maxTxt: otxt('msdScaleMax'),
         });
+      }
+      // Market-Risk-Slider (mr1/mr2) in die MITTE (Market-Spalte).
+      if (mr1Max !== '–' || mr2Max !== '–') {
+        if (mr1Max !== '–') {
+          drawRiskSlider(sColM, y + 4, sHalfW, {
+            title: 'Market Indicator 1', leftLbl: 'Low', rightLbl: 'High',
+            gP: dnum(ds('mr1Track', 'g')), yP: dnum(ds('mr1Track', 'y')), oneY: null,
+            pos: dnum(ds('mr1Marker', 'pos')), state: ds('mr1Marker', 'state') || 'green',
+            durTxt: otxt('mr1MarkerVal'), maxTxt: mr1Max,
+          });
+        }
+        if (mr2Max !== '–') {
+          drawRiskSlider(sColM, y + 30, sHalfW, {
+            title: 'Market Indicator 2', leftLbl: 'Low', rightLbl: 'High',
+            gP: dnum(ds('mr2Track', 'g')), yP: dnum(ds('mr2Track', 'y')), oneY: null,
+            pos: dnum(ds('mr2Marker', 'pos')), state: ds('mr2Marker', 'state') || 'green',
+            durTxt: otxt('mr2MarkerVal'), maxTxt: mr2Max,
+          });
+        }
       }
       y += 52;
     }
@@ -1475,17 +1667,34 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
     // Mit KPI-Baendern daruerber etwas flacher, damit Baender + Charts auf eine Seite passen.
     const hasKpiBand = tablesAll.some((t) => ctx.getById(t.id)?.dataset?.kpiBand);
-    let cellH = perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84);
+    // Overview-Charts sind flache Balken-Diagramme -> kompaktere Kachel (kein grosser
+    // Leerraum ueber/unter den Balken) und weniger Gesamthoehe, damit KPIs + Slider +
+    // Charts auf EINE Seite passen.
+    let cellH = (sec.key === 'overview') ? 44 : (perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84));
     const composedRows = Math.ceil(rowCharts.length / perRow);
     if (composedRows > 1) {
-      // Chart-Hoehe so begrenzen, dass ALLE Reihen + Titel zusammen auf EINE Seite passen
-      // (v.a. im Querformat, wo die nutzbare Seitenhoehe klein ist) -> z.B. 4 Charts = 2x2.
-      const usable = layout.bottomSafe - layout.topSafe;   // volle frische Seite
-      const fitH = Math.floor((usable - 30) / composedRows) - 16;  // 30 = Reserve Titel/Intro
-      if (fitH > 30) cellH = Math.min(cellH, fitH);
-      // Ganzen Block einmal reservieren -> bricht bei Bedarf komplett auf eine frische Seite
-      // (statt Reihe fuer Reihe), damit das 2x2 zusammenbleibt.
-      ensurePageSpace(composedRows * (cellH + 16) + 2, `${sectionTitle} (cont.)`);
+      // Bevorzugt auf den RESTPLATZ der aktuellen Seite quetschen (z.B. KPI-Band + Charts
+      // auf EINE Seite), statt auf eine frische Seite umzubrechen. "Zu grosse" Graphen
+      // werden dabei verkleinert. Reicht der Rest nicht, frische Seite + volle Hoehe.
+      const availNow = layout.bottomSafe - y;
+      const fitNow = Math.floor((availNow - 4) / composedRows) - 16;
+      if (fitNow >= 34) {
+        cellH = Math.min(cellH, fitNow);   // passt auf die aktuelle Seite -> KEIN Umbruch
+      } else {
+        const usable = layout.bottomSafe - layout.topSafe;   // volle frische Seite
+        const fitFull = Math.floor((usable - 30) / composedRows) - 16;
+        if (fitFull > 30) cellH = Math.min(cellH, fitFull);
+        // Ganzen Block einmal reservieren -> bricht komplett auf eine frische Seite.
+        ensurePageSpace(composedRows * (cellH + 16) + 2, `${sectionTitle} (cont.)`);
+      }
+    } else if (sec.key === 'overview') {
+      // Overview = EINE Chart-Reihe (3 Charts). Wenn oben KPIs + Slider schon Platz
+      // belegen, die Charts NICHT auf Seite 2 umbrechen, sondern auf den Restplatz der
+      // aktuellen Seite verkleinern (bis zu einer Mindesthoehe) -> alles auf 1 Seite.
+      const remaining = layout.bottomSafe - y - 16;   // -16 = Reserve wie ensurePageSpace unten
+      // Aggressiv: solange noch mind. ~22 Rest ist, die Charts in den Restplatz der
+      // aktuellen Seite quetschen (statt umzubrechen) -> Overview bleibt auf 1 Seite.
+      if (remaining >= 22) cellH = Math.min(cellH, remaining);
     }
     let col = 0;
     let rowY = y;

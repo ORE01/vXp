@@ -79,11 +79,11 @@
   font-size: 11px;
   font-weight: 600;
   letter-spacing: .08em;
-  color: var(--text-muted);
+  color: var(--text-bright);
   text-transform: uppercase;
   margin-bottom: 10px;
 }
-.home-card-port { color: var(--text-muted); font-weight: 500; letter-spacing: .3px; }
+.home-card-port { color: var(--text-bright); font-weight: 500; letter-spacing: .3px; }
 
 /* Icon-Badge im Kartenkopf (runder Farbkreis + weisses Symbol, Vorlage-Look). */
 .home-ico {
@@ -124,6 +124,20 @@
   gap: 8px;
   margin-bottom: 12px;
 }
+/* Economic-Capital-Kacheln (Credit): getrennt Historic / Market adjusted, je 3-zeilig
+   (Name / abs / rel). */
+.cr-ec-cap { font-size: 11px; font-weight: 700; color: var(--text-bright); margin: 10px 0 4px; }
+.cr-ec-sub { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin: 6px 0 4px; }
+.cr-ec3-tile { gap: 1px; }
+.cr-ec3-name { font-size: 10.5px; color: var(--text-muted); line-height: 1.2; }
+.cr-ec3-abs { font-size: 14px; font-weight: 600; color: var(--text-bright); }
+.cr-ec3-rel { font-size: 11px; color: var(--text-muted); }
+/* Economic-Capital-Schieber: EC-Band (EL..VaR, TSI-violett) im Track + Legende darunter. */
+.cr-scale-ecbar { position: relative; height: 4px; margin-top: 3px; }
+.cr-scale-ec { position: absolute; top: 0; height: 100%; background: rgba(150,110,220,0.75); border-radius: 2px; }
+.cr-scale-note { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 10px; color: var(--text-muted); }
+.cr-scale-ec-sw { width: 12px; height: 8px; border-radius: 2px; background: rgba(150,110,220,0.55); display: inline-block; }
+.cr-scale-note b { color: #b491ee; font-weight: 700; }
 .home-kpi {
   background: var(--surface-overlay);
   border: 1px solid var(--surface-card-border);
@@ -137,6 +151,137 @@
 .home-kpi-abs { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi--wide { grid-column: 1 / -1; }
 .home-kpi-lbl { font-size: 10.5px; color: var(--text-muted); }
+/* Portfolio-Kacheln: Label oben (wie die Credit-EC-Kacheln) -> Name / abs / rel.
+   Auch im abs/rel-Swap-Fall (hoehere Spezifitaet als .home-tile-swap .home-kpi-lbl { order:2 }). */
+.home-kpis--labeltop .home-kpi-lbl,
+.home-kpis--labeltop .home-kpi.home-tile-swap .home-kpi-lbl { order: -1; }
+
+/* Zusammengefasste Market-Kacheln (Current/Stressed Market, je Normal + Extreme Risk),
+   untereinander (volle Breite), je Zeile mit Balken. */
+/* Cash-Kachel (Portfolio): ein Balken = Anteil nicht bewerteter Kategorien an der Nominale. */
+.home-cash-track { width: 100%; height: 6px; background: var(--surface-card-border); border-radius: 3px; overflow: hidden; margin: 4px 0 2px; }
+.home-cash-bar { height: 100%; width: 0; background: #6C9BD1; border-radius: 3px; transition: width .2s ease; }
+/* IR-Duration-Split-Kachel (pf-dur-Style): 2-Segment-Balken (nicht bewertet | bewertet),
+   Labels ueber den Segmenten + Ø (Duration aufs Gesamt-NAV) am Balkenende. */
+.pf-dur-split-tile .pf-dur-cap { margin-bottom: 4px; }
+.pf-dur-splitrow { align-items: flex-end; }
+.pf-dur-splitcol { flex: 1 1 auto; min-width: 0; }
+.pf-dur-splitlbls { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+.pf-dur-splitlbl-nv { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.pf-dur-splitlbl-nv b { color: var(--text-bright); font-weight: 700; }
+.pf-dur-splitlbl-v { font-size: 13px; font-weight: 700; color: var(--text-bright); white-space: nowrap; }
+.pf-dur-splittrack { display: flex; }
+.pf-dur-seg { height: 100%; width: 0; transition: width .2s ease; }
+.pf-dur-seg--nv { background: var(--text-muted); opacity: .5; }
+.pf-dur-seg--v  { background: #6C9BD1; }
+.pf-dur-splitavg { flex: 0 0 auto; min-width: 52px; text-align: right; }
+.pf-dur-splitpcts { display: flex; justify-content: space-between; gap: 6px; margin-top: 3px; }
+.pf-dur-splitpcts span { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+/* Duration-Kacheln (IR/CS): kompakt wie die Current-Market-Kachel (nicht so hoch). */
+.pf-dur-tile { padding: 10px 12px; }
+.pf-dur-cap { font-size: 12px; font-weight: 700; color: var(--text-bright); margin-bottom: 2px; }
+/* 2 Balken (Total NAV / Valued NAV), feste Label-/Wert-Spalten -> gleich lang. */
+.pf-dur2 { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.pf-dur-row { display: flex; align-items: center; gap: 8px; }
+.pf-dur-lbl { flex: 0 0 70px; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.pf-dur-track { flex: 1 1 auto; height: 7px; background: var(--surface-card-border); border-radius: 4px; overflow: hidden; }
+.pf-dur-fill { height: 100%; width: 0; background: #6C9BD1; border-radius: 4px; transition: width .2s ease; }
+.pf-dur-val { flex: 0 0 46px; text-align: right; font-size: 12px; font-weight: 600; color: var(--text-bright); white-space: nowrap; }
+/* Executive-Summary-Kachel: Kurzfazit als Bullet-Liste (Status, Stress-Anstieg, Top-Contributor). */
+.mkt-exec-tile { margin-bottom: 12px; }
+.mkt-exec-tile .home-kpi-cap { font-size: 12px; font-weight: 700; color: var(--text-bright); letter-spacing: 0; text-transform: none; }
+.mkt-exec-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.mkt-exec-list li { font-size: 12px; color: var(--text-muted); padding-left: 14px; position: relative; line-height: 1.35; }
+.mkt-exec-list li::before { content: ''; position: absolute; left: 2px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: #2A7F7F; }
+.mkt-exec-list b { color: var(--text-bright); font-weight: 700; }
+.mkt-exec-list b.exec-lo { color: #2f9e5f; }   /* low = gruen */
+.mkt-exec-list b.exec-mid { color: #e0a533; }  /* moderate/elevated = amber */
+.mkt-exec-list b.exec-hi { color: #d9534f; }   /* high = rot */
+.mkt-grp-tiles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+/* Dunkelgraue Karten wie die uebrigen Tiles (Hintergrund/Rahmen/Radius aus Basis-.home-kpi),
+   nur etwas mehr Padding fuer den Inhalt. */
+.mkt-grp-tiles .home-kpi { padding: 10px 12px; }
+/* Ueberschrift CURRENT/STRESSED MARKET wie die NORMAL-RISK-Ueberschrift: hell, groesser, fett. */
+.mkt-grp-tiles .home-kpi-cap { font-size: 12px; font-weight: 700; color: var(--text-bright); letter-spacing: 0; margin-bottom: 2px; }
+/* Kopfzeile der Stressed-Kachel: Titel links, "distance to current" (Buffer VaR/ES) rechts daneben. */
+.mkt-grp-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; }
+.mkt-grp-dist { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.mkt-grp-dist span { color: var(--text-bright); font-weight: 600; }
+.mkt-grp-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.mkt-grp-lbl { flex: 0 0 72px; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.mkt-grp-track { flex: 1 1 auto; height: 7px; background: var(--surface-card-border); border-radius: 4px; overflow: hidden; }
+.mkt-grp-bar { height: 100%; width: 0; border-radius: 4px; transition: width .2s ease; }
+.mkt-grp-bar--cur { background: #2A7F7F; }   /* Current = Market-Teal */
+.mkt-grp-bar--str { background: #d9534f; }   /* Stressed = Rot */
+/* Limit-Zonen-Track (Current Market): gruen bis Warnschwelle, amber bis Limit; Marker = aktueller Wert. */
+.mkt-grp-track--zones { position: relative; overflow: visible; background: transparent; }
+.mkt-grp-zone { position: absolute; top: 0; height: 100%; }
+.mkt-grp-zone--green { background: #2f9e5f; border-radius: 4px 0 0 4px; }
+.mkt-grp-zone--amber { background: #e0a533; border-radius: 0 4px 4px 0; }
+.mkt-grp-marker { position: absolute; top: -2px; width: 2px; height: 11px; background: #fff; border-radius: 1px; transform: translateX(-1px); box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+/* Feste Werte-Spalte -> die (flex-)Tracks werden pro Zeile gleich lang. Linksbuendig, und
+   die abs-Zahl in einer festen Teilspalte, damit "-EUR ..." exakt untereinander steht. */
+.mkt-grp-val { flex: 0 0 134px; text-align: left; white-space: nowrap; }
+/* Risk-Scale-Schieber: ein grauer Track mit 4 weissen Ticks (VaR/ES, Current & Stressed).
+   Track behaelt den grauen Hintergrund (.mkt-grp-track), aber sichtbarer Ueberstand fuer die
+   Ticks -> overflow sichtbar + relative. Ticks erben .mkt-grp-marker (weiss, 2px). */
+.mkt-scale-track { position: relative; overflow: visible; }
+/* Ueberschrift: Mixed Case (kein Uppercase). Links "NORMAL RISK" + muted "Current & Stressed
+   Market", rechtsbuendig die Metrik-Spec "VaR 95% 10 days". */
+.mkt-scale-tile .home-kpi-cap { text-transform: none; }
+.mkt-scale-spec { text-transform: none; }
+/* Header dreispaltig: NORMAL/EXTREME RISK links, "Current & Stressed Market" mittig, Spec rechts. */
+.mkt-grp-head.mkt-scale-head { display: grid; grid-template-columns: 1fr auto 1fr; }
+.mkt-scale-head .mkt-scale-spec { justify-self: end; text-align: right; line-height: 1.25; }
+.mkt-scale-spec-sub { display: block; font-size: 9px; opacity: .85; }
+.mkt-scale-head .mkt-scale-sub { justify-self: center; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+/* Body: Werte-Layer (ueber Ticks) / Track / Limits-Layer (unter Balken) — alle 100% breit,
+   Labels absolut per left% positioniert (gleiche Skala wie Zonen/Ticks). */
+.mkt-scale-body { position: relative; margin-top: 10px; }
+/* Werte-Layer: pro Tick ein 3-zeiliger Block (Name / primaer / sekundaer), zentriert ueber
+   dem Tick per left% (an den Raendern per JS links-/rechtsbuendig). */
+.mkt-scale-vals { position: relative; height: 38px; }
+.mkt-scale-vals > span { position: absolute; bottom: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.25; white-space: nowrap; }
+.mkt-scale-vn { font-size: 9px; color: var(--text-muted); }
+.mkt-scale-vp { font-size: 11px; font-weight: 700; color: var(--text-bright); }
+.mkt-scale-vs { font-size: 9.5px; font-weight: 500; color: var(--text-muted); }
+.mkt-scale-vinc { font-weight: 700; color: #e0a533; }   /* Stress-Anstieg +X % (amber) */
+/* Rot-Limit als Flex-Element (justify-end) -> kann nicht ueber den Inhaltsbereich hinausragen.
+   Gelb-Warnschwelle bleibt absolut an ihrer Schwellenposition (yellowRatio%). */
+.mkt-scale-limits { position: relative; height: 13px; margin-top: 4px; display: flex; justify-content: flex-end; align-items: center; }
+.mkt-scale-limits span { font-size: 9px; color: var(--text-muted); white-space: nowrap; }
+.mkt-scale-lim-warn { position: absolute; top: 0; }
+.mkt-scale-lim-cap { position: absolute; top: 0; left: 0; }
+.mkt-scale-lim-sec { opacity: .75; }
+.mkt-grp-abs { display: inline-block; width: 84px; font-size: 12px; font-weight: 600; color: var(--text-bright); }
+.mkt-grp-rel { display: inline-block; width: 46px; font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+/* Kopfzeile oben in einer Kachel (z.B. "CURRENT MARKET CONDITIONS"): klein, uppercase. */
+.home-kpi-cap { font-size: 9px; font-weight: 700; letter-spacing: .05em; color: var(--text-muted); text-transform: uppercase; }
+/* Relativer Wert (%) klein/grau NEBEN dem grossen absoluten Wert in derselben Zeile. */
+.home-kpi-rel { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+
+/* Market-Risk-Vergleich (VaR | ES, mittig geteilt): Current vs Stress als Balken. */
+/* Zwei eigenstaendige Kacheln (kein umschliessender Gruppen-Rahmen mehr) mit Abstand
+   dazwischen; linke Kante = Kartenkante -> fluchtet mit den Portfolio-KPI-Kacheln. */
+.mkt-cmp-group { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.mkt-cmp { min-width: 0; padding: 8px 10px;
+  background: var(--surface-overlay); border: 1px solid var(--surface-card-border); border-radius: 8px; }
+.mkt-cmp-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.mkt-cmp-name { font-size: 12px; font-weight: 700; color: var(--text-bright); }
+.mkt-cmp-delta { font-size: 12px; font-weight: 700; color: #d9534f; }
+.mkt-cmp-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.mkt-cmp-tag { flex: 0 0 96px; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.mkt-cmp-track { flex: 1 1 auto; height: 8px; background: var(--surface-card-border); border-radius: 4px; overflow: hidden; }
+.mkt-cmp-bar { height: 100%; width: 0; border-radius: 4px; transition: width .2s ease; }
+.mkt-cmp-bar--cur { background: #2A7F7F; }   /* Market-Teal = aktueller Markt */
+.mkt-cmp-bar--str { background: #d9534f; }   /* Rot = Stress */
+.mkt-cmp-val { flex: 0 0 auto; text-align: right; white-space: nowrap; }
+/* absolute + relative Zahl in einer Zelle; "prim" gross/hell, "sec" klein/grau dahinter.
+   Bei mode 'rel' vertauscht die JS die Reihenfolge (rel wird prim). */
+.mkt-cmp-prim { font-size: 11px; font-weight: 600; color: var(--text-bright); }
+.mkt-cmp-sec  { font-size: 9.5px; font-weight: 500; color: var(--text-muted); }
+/* Metrik-Spec-Zeile unter den Balken (z.B. "VaR 95% 10 days") — dynamisch befuellt. */
+.mkt-cmp-spec { margin-top: 5px; font-size: 10px; color: var(--text-muted); }
 /* Sensitivitaets-Kachel ohne vorhandene Daten ("wenn vorhanden"): ausgeblendet.
    Als Klasse (nicht Inline), damit die Kunden-Sichtbarkeit sauber kombiniert. */
 .home-tile-empty { display: none; }
@@ -148,15 +293,25 @@
 .home-kpi.home-tile-swap .home-kpi-val { order: 1; font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi.home-tile-swap .home-kpi-lbl { order: 2; }
 
+/* Market-Kachel-Swap: standard EUR gross (.home-kpi-big) + % klein (.home-kpi-rel).
+   Mit .home-tile-swap wird der %-Wert gross und der EUR-Wert klein/grau. */
+.home-kpi.home-tile-swap .home-kpi-big { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.home-kpi.home-tile-swap .home-kpi-rel { font-size: 14px; font-weight: 600; color: var(--text-bright); }
+
 /* Klickbare Overview-Kacheln: Notional/NAV -> Portfolio-Panel, Yield -> Yield-Panel. */
 .home-nav-link { cursor: pointer; }
 /* Portfolio-Kacheln/Chart: Hover-Rand in Portfolio-Blau. */
 .home-kpi.home-nav-link:hover,
 .home-chart-card.home-nav-link:hover { border-color: #6C9BD1; }
+/* Market-Chart-Cards (Top-Contributions + Backtest-Kopie): Hover im Market-Teal. */
+.home-chart-card.home-nav-link[data-tile="mkt_chart"]:hover,
+.home-chart-card.home-nav-link[data-tile="mkt_backtest"]:hover { border-color: #2A7F7F; }
 /* Credit-Risk-Kacheln (cr_*): Hover-Rand im Credit-Violett. */
 .home-kpi.home-nav-link[data-tile^="cr_"]:hover { border-color: #7A5C91; }
 /* Market-Risk-Kacheln (mkt_*): Hover-Rand im Market-Teal. */
 .home-kpi.home-nav-link[data-tile^="mkt_"]:hover { border-color: #2A7F7F; }
+/* Market-Vergleichsbloecke (NORMAL/EXTREME RISK): eigene Kacheln, Hover-Rand im Market-Teal. */
+.mkt-cmp.home-nav-link:hover { border-color: #2A7F7F; }
 .home-card-hero.home-nav-link:hover .home-hero-value { text-decoration: underline; text-underline-offset: 3px; }
 
 /* Beschriftung UEBER dem Chart, fett + hell fuer gute Lesbarkeit; das Paar
@@ -164,7 +319,6 @@
 /* Balken-Chart in einer dunklen Kachel (wie die Slider). margin-top:auto drueckt
    die Kachel an den Kartenboden. Ueberschrift links im Slider-Titel-Stil. */
 .home-chart-card {
-  margin-top: auto;
   background: var(--surface-overlay);
   border: 1px solid var(--surface-card-border);
   border-radius: 8px;
@@ -179,7 +333,8 @@
 }
 .home-chart {
   position: relative;
-  height: 220px;
+  /* Nur Top-3-Balken -> niedrigere Charts (App + Report-Kopien + PDF ziehen nach). */
+  height: 150px;
 }
 
 .home-empty {
@@ -275,6 +430,10 @@
 /* Zwei Slider (IR/CS) + gemeinsame Chips INNERHALB der Portfolio-Karte.
    Jeder Slider ist eine eigene, dunkle Kachel (wie .home-kpi). */
 .rs-group { margin-top: 6px; }
+/* Slider-Gruppe an den Kartenboden (direkt UEBER den Chart) druecken -> ueber alle
+   3 Panels (Portfolio/Market/Credit) liegen die Slider trotz unterschiedlich hoher
+   KPI-Bloecke auf EINER Linie. Chart hat feste Hoehe + steht ganz unten. */
+.home-card .rs-group { margin-top: auto; }
 .rs-card {
   display: flex;
   flex-direction: column;
@@ -350,6 +509,85 @@
 .rs-scale-min { position: absolute; left: 0; }
 .rs-scale-max { position: absolute; right: 0; }
 .rs-scale-1y { position: absolute; left: 0%; transform: translateX(-50%); }
+
+/* Concentration Risk (TCM) — ersetzt den alten Cluster-Risk-Slider. Feste Skala 0–3.5×,
+   3 Ampelzonen (gruen 0–1.5 / gelb 1.5–2.0 / rot >2.0). Marker-Farbe = Zone des
+   Ist-Werts (via --conc-accent, in homeOverview.js gesetzt). Balkenhoehe = EC-Slider (7px). */
+.rs-card--conc { --rs-accent: #7A5C91; }
+/* "EXTREME RISK" wie Market-Ueberschrift (klein/fett/muted/caps); "Concentration Risk" rechtsbuendig. */
+.rs-card--conc .rs-head { justify-content: space-between; }
+.rs-card--conc .rs-title { font-size: 13px; font-weight: 700; color: var(--text-bright); text-transform: uppercase; letter-spacing: .02em; }
+.rs-card--conc .rs-title-right { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.conc-tcm-sub { margin: 0 0 22px; font-size: 12px; color: var(--text-bright); line-height: 1.4; }
+
+/* Zusammenfassungs-Kachel EL / VaR / Economic Capital nebeneinander — Groesse/Optik
+   wie die Concentration-Risk-Karte (.rs-card). Zusaetzlich zu den Detail-Kacheln. */
+.cr-ec-summary {
+  display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr; gap: 10px;
+  align-items: center;
+  background: var(--surface-overlay);
+  border: 1px solid var(--surface-card-border);
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+  /* Abstand nach UNTEN (nicht oben): so fluchtet die erste Risk-Buffer-Karte bei
+     ausgeblendeten Detail-Kacheln buendig mit dem ersten Inhalt der anderen Karten. */
+  margin-bottom: 12px;
+}
+/* Kopf: RISK BUFFER (gross) + "Economic Capital" (klein/grau) links, PD-Hinweis mittig oben. */
+.cr-ec-sum-head { grid-column: 1 / -1; position: relative; margin-bottom: 8px; min-height: 30px; }
+/* Ueberschrift wie in Market Risk (NORMAL/EXTREME RISK): weiss, ~13px, fett, caps. */
+.cr-ec-sum-title { font-size: 13px; font-weight: 700; color: var(--text-bright); text-transform: uppercase; letter-spacing: .02em; line-height: 1.2; }
+.cr-ec-sum-subtitle { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.cr-ec-sum-pd { position: absolute; top: 1px; right: 0; font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.cr-ec-sum-col { display: flex; flex-direction: column; gap: 1px; }
+.cr-ec-summary .cr-ec3-abs { white-space: nowrap; }
+/* abs/rel-Umschalter (Customer Setup): Standard = abs gross (oben), rel klein (unten).
+   Bei .home-tile-swap wird rel gross und abs klein -> per order + Groesse getauscht. */
+.cr-ec-summary .cr-ec3-name { order: 0; }
+.cr-ec-summary .cr-ec3-abs  { order: 1; }
+.cr-ec-summary .cr-ec3-rel  { order: 2; }
+.cr-ec-summary.home-tile-swap .cr-ec3-rel { order: 1; font-size: 14px; font-weight: 600; color: var(--text-bright); }
+.cr-ec-summary.home-tile-swap .cr-ec3-abs { order: 2; font-size: 11px; font-weight: 400; color: var(--text-muted); white-space: nowrap; }
+/* Pfeile: EC (Mitte) zeigt nach links auf EL bzw. nach rechts auf VaR. Schaft (::before) +
+   Pfeilspitze (::after) + senkrechter Endstrich (border-left/right) an der Spitze. */
+.cr-ec-sum-arrow { position: relative; align-self: center; height: 14px; }
+.cr-ec-sum-arrow::before {
+  content: ""; position: absolute; top: 50%; left: 0; right: 0;
+  border-top: 1.5px solid var(--text-muted);
+}
+.cr-ec-sum-arrow::after {
+  content: ""; position: absolute; top: 50%; transform: translateY(-50%);
+  border: 5px solid transparent;
+}
+/* Nach links: Endstrich links, Spitze zeigt nach links. */
+.cr-ec-sum-arrow--left { border-left: 1.5px solid var(--text-muted); }
+.cr-ec-sum-arrow--left::after { left: 0; border-right-color: var(--text-muted); border-left: 0; }
+/* Nach rechts: Endstrich rechts, Spitze zeigt nach rechts. */
+.cr-ec-sum-arrow--right { border-right: 1.5px solid var(--text-muted); }
+.cr-ec-sum-arrow--right::after { right: 0; border-left-color: var(--text-muted); border-right: 0; }
+.conc-tcm-track {
+  position: relative; height: 7px; border-radius: 4px;
+  background: linear-gradient(90deg,
+    #2f9e5f 0 42.857%, #e0a533 42.857% 57.143%, #d9534f 57.143% 100%);
+}
+/* Concentration-Risk-SCORE-Slider: Skala 0-100%, Zonen gruen <40 / gelb 40-60 / rot >60. */
+.conc-tcm-track.conc-score-track {
+  background: linear-gradient(90deg, #2f9e5f 0 40%, #e0a533 40% 60%, #d9534f 60% 100%);
+}
+.conc-tcm-bound { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.4); }
+/* Marker + Zahl wie im Economic-Capital-Schieber: weisser 2px-Tick (dunkler Rand fuer
+   Sichtbarkeit ueber den Farbzonen), Wert nur weiss (keine farbige Pille). */
+.conc-tcm-marker {
+  position: absolute; top: -2px; left: 0%;
+  width: 2px; height: 11px; background: #fff; border-radius: 1px;
+  transform: translateX(-1px); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6);
+}
+.conc-tcm-pill {
+  position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; color: #fff; font-size: 10.5px; font-weight: 700;
+}
+.conc-tcm-scale { position: relative; height: 14px; margin-top: 8px; font-size: 10.5px; color: var(--text-muted); }
+.conc-tcm-scale span { position: absolute; white-space: nowrap; }
 
 .rs-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .rs-chip {

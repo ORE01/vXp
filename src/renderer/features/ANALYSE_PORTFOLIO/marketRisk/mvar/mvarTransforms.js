@@ -205,13 +205,15 @@ export function buildDistributions(rows) {
   };
 }
 
-export function buildRiskTypeRows(rows, confidence, denominator, horizonDays = 1) {
+export function buildRiskTypeRows(rows, confidence, denominator, horizonDays = 1, dists = null) {
   const safeRows = Array.isArray(rows) ? rows : [];
 
+  // dists optional vorgerechnet (Compute-once): buildDistributions ist teuer (Gruppieren +
+  // Quantil ueber ~10k Zeilen) und wird sonst pro Render zweimal aufgerufen.
   const {
     totalByDate,
     riskTypeByKey,
-  } = buildDistributions(safeRows);
+  } = dists || buildDistributions(safeRows);
 
   const valuesByRiskType = new Map();
   const totalValues = Array.from(totalByDate.values());
@@ -419,13 +421,14 @@ export function buildFactorGroupProductContrib(opts = {}) {
   return out;
 }
 
-export function buildFactorRows(rows, confidence, denominator, horizonDays = 1) {
+export function buildFactorRows(rows, confidence, denominator, horizonDays = 1, dists = null) {
   const safeRows = Array.isArray(rows) ? rows : [];
 
+  // dists optional vorgerechnet (Compute-once), teilt sich buildDistributions mit buildRiskTypeRows.
   const {
     factorByKey,
     factorMeta,
-  } = buildDistributions(safeRows);
+  } = dists || buildDistributions(safeRows);
 
   const valuesByFactor = new Map();
 

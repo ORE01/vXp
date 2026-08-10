@@ -7,7 +7,7 @@
 
 import { appState } from '../../../renderer.js';
 import { fmtEurCompact } from '../../../utils/tableCellFormats.js';
-import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep, getRunConfQuantil } from './LossIssuer.js';
+import { sumNavForPort, buildPositionLoss, issuersFromRank, lossDefaultStep, lossDefaultStepRanked, getRunConfQuantil, creditVarEsForFlag } from './LossIssuer.js';
 import { createContribDrill, scheduleHideConcMenu } from '../SummaryBreakdown.js';
 
 // Drill-down fuer den Tail-Zoom-Chart: Klick auf ein Quantil -> Positionen der in diesem
@@ -96,6 +96,47 @@ function _bindCrLossContextDrill(canvas) {
   });
 }
 
+// Drill per RECHTSKLICK auf einen Top-Tail-Drivers-Balken (= Emittent) -> dessen Positionen.
+// Steps je Balken = lossDefaultStep([issuer]) in chart.$crContribSteps. Rendert wie der Loss-Chart
+// in crTailDrill/crTailDetail (gemeinsamer Detailbereich).
+function _bindCrContribContextDrill(canvas) {
+  if (!canvas || canvas.dataset.crContribCtxBound) return;
+  canvas.dataset.crContribCtxBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = window[canvas.id];
+      if (!chart) return;
+      const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || [])[0];
+      if (!el) { scheduleHideConcMenu(); return; }
+      const step = chart.$crContribSteps?.[el.index];
+      if (!step) { scheduleHideConcMenu(); return; }
+      crTailDrill.hover('var', { native: e }, [{ index: 0 }], [step]);
+    } catch {}
+  });
+}
+
+// Drill per RECHTSKLICK auf einen Scatter-Punkt (= Emittent) -> dessen Positionen. Steps je Punkt
+// = lossDefaultStep([issuer]) in chart.$crScatterSteps (Issuers-Dataset = Index 1).
+function _bindCrScatterContextDrill(canvas) {
+  if (!canvas || canvas.dataset.crScatterCtxBound) return;
+  canvas.dataset.crScatterCtxBound = '1';
+  canvas.addEventListener('mouseleave', () => { try { scheduleHideConcMenu(); } catch {} });
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    try {
+      const chart = window[canvas.id];
+      if (!chart) return;
+      const el = (chart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false) || []).find((x) => x.datasetIndex === 1);
+      if (!el) { scheduleHideConcMenu(); return; }
+      const step = chart.$crScatterSteps?.[el.index];
+      if (!step) { scheduleHideConcMenu(); return; }
+      crTailDrill.hover('var', { native: e }, [{ index: 0 }], [step]);
+    } catch {}
+  });
+}
+
 let _listenersBound = false;
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; };
 
@@ -104,7 +145,6 @@ const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; }
 const _crLinePlugin = {
   id: 'crLines',
   afterDatasetsDraw(chart, args, opts) {
-    if (!opts) return;
     const ctx = chart.ctx, area = chart.chartArea;
     const stroke = (px, vertical, o) => {
       ctx.save();
@@ -117,8 +157,81 @@ const _crLinePlugin = {
       ctx.stroke();
       ctx.restore();
     };
-    (opts.v || []).forEach(o => { const x = chart.scales.x.getPixelForValue(o.at); if (Number.isFinite(x)) stroke(x, true, o); });
-    (opts.h || []).forEach(o => { const y = chart.scales.y.getPixelForValue(o.at); if (Number.isFinite(y)) stroke(y, false, o); });
+    // Referenzlinien zeichnen; die Labels werden GESAMMELT und ganz am Ende gezeichnet
+    // (immer im Vordergrund, jede in eigener Zeile -> kein Ueberlappen von EL/VaR/ES).
+    const vLabels = [];
+    if (opts) {
+      (opts.v || []).forEach(o => {
+        const x = chart.scales.x.getPixelForValue(o.at);
+        if (!Number.isFinite(x)) return;
+        stroke(x, true, o);
+        if (o.label) vLabels.push({ label: o.label, color: o.color || '#ccc' });
+      });
+      (opts.h || []).forEach(o => { const y = chart.scales.y.getPixelForValue(o.at); if (Number.isFinite(y)) stroke(y, false, o); });
+    }
+    const ec = (opts && opts.ec) || chart.$ecArrow;
+    // EC-Band + Tail-Risk-Schattierung nur, wenn die zugehoerige (Default/Historic) Serie eingeblendet ist.
+    const _ecVisible = (chart.$ecDsIdx == null) || (typeof chart.isDatasetVisible !== 'function') || chart.isDatasetVisible(chart.$ecDsIdx);
+    // Economic-Capital-Flaeche (violett) zwischen EL- und VaR-Linie. Der TEXT steht NICHT mehr
+    // hier drin (ueberlappte die Balken), sondern als Annotation unter "Tail Risk" mit Leader-Strich.
+    let ecMidX = NaN;
+    const ecBandY = area.top + (area.bottom - area.top) * 0.60;
+    if (_ecVisible && ec && ec.elIdx >= 0 && ec.varIdx >= 0 && ec.elIdx !== ec.varIdx) {
+      const x1 = chart.scales.x.getPixelForValue(ec.elIdx), x2 = chart.scales.x.getPixelForValue(ec.varIdx);
+      if (Number.isFinite(x1) && Number.isFinite(x2)) {
+        const xa = Math.min(x1, x2), xb = Math.max(x1, x2);
+        ecMidX = (xa + xb) / 2;
+        ctx.save();
+        ctx.fillStyle = 'rgba(150,110,220,0.20)';                     // Flaeche violett (wie TSI)
+        ctx.fillRect(xa, area.top, xb - xa, area.bottom - area.top);
+        ctx.restore();
+      }
+    }
+    // Tail-Risk-Bereich: rechts der VaR-Linie zart rot + "Tail Risk". Darunter "Economic Capital"
+    // mit einem Strich in die EC-Flaeche (das entsprechende Gebiet).
+    if (_ecVisible && ec && ec.varIdx >= 0) {
+      const xv = chart.scales.x.getPixelForValue(ec.varIdx);
+      if (Number.isFinite(xv) && xv < area.right - 4) {
+        const midT = (xv + area.right) / 2;
+        ctx.save();
+        ctx.fillStyle = 'rgba(220,70,70,0.08)';                       // ganz zartes Rot
+        ctx.fillRect(xv, area.top, area.right - xv, area.bottom - area.top);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(224,120,120,0.95)';                     // dezente rote Schrift
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText('Tail', midT, area.top + 20);
+        ctx.fillText('Risk', midT, area.top + 33);
+        // "Economic Capital" darunter + Leader-Strich in die EC-Flaeche.
+        if (Number.isFinite(ecMidX)) {
+          const ecY = area.top + 56;
+          ctx.strokeStyle = 'rgba(180,145,238,0.9)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+          ctx.beginPath(); ctx.moveTo(midT, ecY + 6); ctx.lineTo(ecMidX, ecBandY); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(180,145,238,0.98)';                   // Text violett (wie EC-Band)
+          ctx.beginPath(); ctx.arc(ecMidX, ecBandY, 2.5, 0, Math.PI * 2); ctx.fill();
+          ctx.fillText('Economic', midT, ecY);
+          ctx.fillText('Capital', midT, ecY + 13);
+        }
+        ctx.restore();
+      }
+    }
+    // EL/VaR/ES nebeneinander OBERHALB der Plotflaeche (in der oben reservierten Zone,
+    // layout.padding.top). Reihe von links, farbiger Marker + Text, KEIN Halo.
+    if (vLabels.length) {
+      ctx.save();
+      ctx.font = 'bold 11px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      const sw = 9, gap = 5, itemGap = 16;
+      const y = area.top - 11;               // mittig in der reservierten Zone oberhalb des Plots
+      let x = area.left + 2;
+      vLabels.forEach((l) => {
+        ctx.fillStyle = l.color;
+        ctx.fillRect(x, y - sw / 2, sw, sw);
+        x += sw + gap;
+        ctx.fillText(l.label, x, y);
+        x += ctx.measureText(l.label).width + itemGap;
+      });
+      ctx.restore();
+    }
   },
 };
 
@@ -213,14 +326,54 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   const byFlag = { rating: [], market: [], norm: [] };
   all.forEach(r => { const f = String(r.pd_flag || '').toLowerCase(); if (byFlag[f]) byFlag[f].push(r); });
   const baseFlag = byFlag.rating.length ? 'rating' : byFlag.market.length ? 'market' : 'norm';
-  const base = byFlag[baseFlag].slice().sort((a, b) => Number(a.bin_center) - Number(b.bin_center));
+  let base = byFlag[baseFlag].slice().sort((a, b) => Number(a.bin_center) - Number(b.bin_center));
   if (!base.length) { canvas.style.display = 'none'; return; }
   canvas.style.display = 'block';
+
+  // x-Achse GENAU am letzten Balken der DEFAULT-sichtbaren Serie enden lassen: leere Bins
+  // rechts abschneiden -> der Chart nutzt den Platz, und das Economic-Capital-Band/Label
+  // (laeuft bis zum rechten Rand) wird wieder sichtbar. NUR Graphik, keine Datenaenderung.
+  // (Blendet man eine Serie mit laengerem Tail ein, wird deren Ueberhang mitgekuerzt.)
+  {
+    const visFlag = (byFlag[defaultKey] && byFlag[defaultKey].length) ? defaultKey : baseFlag;
+    const nz = new Set();
+    byFlag[visFlag].forEach(r => { if (Number(r.count) > 0) nz.add(Number(r.bin_center)); });
+    let lastIdx = -1;
+    base.forEach((r, i) => { if (nz.has(Number(r.bin_center))) lastIdx = i; });
+    if (lastIdx >= 0 && lastIdx + 1 < base.length) base = base.slice(0, lastIdx + 1);
+  }
 
   const labels = base.map(r => (Number(r.bin_center) * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
   const cvarByFlag = creditRowsByFlag();
   // Index des Bins, DURCH DAS die VaR/ES-Linie geht (naechstes Bin-Zentrum zum Wert).
   const nearestIdx = (pct) => { let idx = 0, best = Infinity; base.forEach((r, i) => { const d = Math.abs(Number(r.bin_center) * 100 - pct); if (d < best) { best = d; idx = i; } }); return idx; };
+
+  // EL-Linie + Economic-Capital-Flaeche passend zur Default-Serie: rating -> historic (PD),
+  // norm -> market adjusted (PD_M_norm), market -> market (PD_M). VaR aus der gleichen Serie.
+  const _elCfg = ({
+    rating: { pdField: 'PD',        flag: 'rating' },
+    market: { pdField: 'PD_M',      flag: 'market' },
+    norm:   { pdField: 'PD_M_norm', flag: 'norm' },
+  })[defaultKey] || { pdField: 'PD', flag: 'rating' };
+  const _elPct = (() => {
+    const rr = cvarByFlag[_elCfg.flag] || {};
+    const vAbs = Math.abs(num(rr.VaR_abs)), vRel = Math.abs(num(rr.VaR_rel));
+    const b = (vRel > 0) ? vAbs / vRel : NaN;
+    if (!Number.isFinite(b)) return NaN;
+    let elAbs = 0;
+    for (const r of (appState.getAllEADData?.() || [])) {
+      if (String(r.port_name) !== String(port)) continue;
+      if (String(r.pd_flag || '').toUpperCase() !== 'RATING') continue;   // Basiszeilen (haben alle PD-Varianten)
+      const lgd = Number(r.LGD), pd = Number(r[_elCfg.pdField]);
+      if (Number.isFinite(lgd) && Number.isFinite(pd)) elAbs += lgd * pd;
+    }
+    return (elAbs / b) * 100;
+  })();
+  const _elIdx = Number.isFinite(_elPct) ? nearestIdx(_elPct) : -1;
+  const _defVarPct = Math.abs(num((cvarByFlag[_elCfg.flag] || {}).VaR_rel)) * 100;
+  const _defVarIdx = Number.isFinite(_defVarPct) ? nearestIdx(_defVarPct) : -1;
+  // Prozent-Label (de-DE) fuer die EL/VaR/ES-Linienbeschriftung, z.B. "0,03 %".
+  const pctLbl = (v) => Number.isFinite(v) ? `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '';
 
   // Drill (wie Tail-Zoom): Loss-Bin -> Ausfall-Szenario dieser Verlusthoehe. Quantil-
   // Loss-Zeilen je Serie (fuer die Bin->Szenario-Zuordnung) + Positions-Drilldaten setzen.
@@ -260,8 +413,10 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
     }
     const colors = base.map((r, i) => (i >= varIdx ? barRed : barBlue));
     const lines = [];
-    if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: lineCol, width: 2 });
-    if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: lineCol, width: 2, dash: [6, 4] });
+    if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: '#f08c00', width: 2, label: `VaR ${pctLbl(varPct)}` });
+    if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: '#e03131', width: 2, dash: [6, 4], label: `ES ${pctLbl(esPct)}` });
+    // EL-Linie nur bei der Default-Serie dieses Charts (rating bzw. norm/market adjusted).
+    if (f.key === defaultKey && _elIdx >= 0) lines.unshift({ at: _elIdx, color: 'rgba(235,235,235,0.92)', width: 1.5, label: `EL ${pctLbl(_elPct)}` });
     lineMap.push(lines);
     // Drill-Steps je Bin: das Quantil-Szenario dieser Serie, dessen Loss der Bin-Hoehe
     // am naechsten kommt -> dessen ausfallende Emittenten (ISSUER_RANK).
@@ -271,9 +426,9 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
       return flagLoss.reduce((best, r) =>
         (Math.abs(Number(r.LOSS) / sumNav * 100 - binPct) < Math.abs(Number(best.LOSS) / sumNav * 100 - binPct) ? r : best), flagLoss[0]);
     };
-    const steps = base.map(r => { const row = nearestLossRow(Number(r.bin_center) * 100); return row ? lossDefaultStep(issuersFromRank(row.ISSUER_RANK)) : null; });
+    const steps = base.map(r => { const row = nearestLossRow(Number(r.bin_center) * 100); return row ? lossDefaultStepRanked(row.ISSUER_RANK) : null; });
     stepsByDs.push(steps);
-    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 22, hidden: f.key !== defaultKey };
+    return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 22, hidden: f.key !== defaultKey, _legendColor: barBlue };
   });
   // Index der initial sichtbaren Serie -> passende VaR/ES-Linien (statt fix Dataset 0).
   const defaultIdx = Math.max(0, CR_FLAG_SERIES.findIndex(f => f.key === defaultKey));
@@ -286,10 +441,11 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
     data: { labels, datasets },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: col,
+      layout: { padding: { left: 12, top: 22 } },   // links: EL-Linie (nahe 0%) nicht an der y-Achse; oben: Platz fuer die EL/VaR/ES-Reihe UEBER dem Plot
       plugins: {
-        legend: { display: true, position: 'top', labels: { color: col, boxWidth: 12, font: { size: 11 } }, onClick: _crLegendOnClick('v') },
-        subtitle: { display: true, text: 'Tail red · VaR (solid) · ES (dashed)', color: col, align: 'start', font: { size: 10 } },
-        crLines: { v: lineMap[defaultIdx] },
+        legend: { display: false },   // Serien-Legende als HTML-Overlay oben rechts (renderCrLossLegend), schrumpft den Plot nicht
+        subtitle: { display: false },
+        crLines: { v: lineMap[defaultIdx], ec: { elIdx: _elIdx, varIdx: _defVarIdx } },
         tooltip: { callbacks: { title: (c) => `Loss ${labels[c[0].dataIndex]}%`, label: (c) => `${c.dataset.label}: ${c.parsed.y}` } },
       },
       scales: {
@@ -300,9 +456,40 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   });
   chart.$crLineMap = lineMap;
   chart.$crLossSteps = stepsByDs;
+  chart.$ecArrow = { elIdx: _elIdx, varIdx: _defVarIdx };   // Economic-Capital-Flaeche (EL..VaR der Default-Serie)
+  chart.$ecDsIdx = defaultIdx;   // EC-Band + Tail-Risk nur zeigen, solange DIESE Serie (Historic) eingeblendet ist
   window[canvasId] = chart;
   _bindCrLossCanvasLeave(canvas);
   _bindCrLossContextDrill(canvas);
+  // Serien-Legende (Historic/Market/Market adjusted) als HTML-Overlay oben rechts.
+  const legEl = document.getElementById(canvasId === 'crLossDistChartNorm' ? 'crLossDistLegendNorm' : 'crLossDistLegend');
+  if (legEl) renderCrLossLegend(chart, legEl);
+}
+
+// HTML-Overlay-Legende (oben rechts UEBER der Plotflaeche, vertikal gestapelt, klickbar).
+// Schrumpft den Plot NICHT (im Gegensatz zur Chart.js-right-Legende). Toggle blendet die
+// Serie aus/ein und baut die VaR/ES-Linien passend zu den sichtbaren Serien neu.
+function renderCrLossLegend(chart, el) {
+  if (!el || !chart) return;
+  el.__chart = chart;
+  el.innerHTML = chart.data.datasets.map((ds, i) => {
+    const hidden = !chart.isDatasetVisible(i);
+    const c = ds._legendColor || (Array.isArray(ds.backgroundColor) ? ds.backgroundColor.find(x => x) : ds.backgroundColor) || '#888';
+    const label = String(ds.label ?? '').replace(/[<>&]/g, '');
+    return `<span class="closs-leg-item${hidden ? ' is-hidden' : ''}" data-ds="${i}"><span class="closs-leg-swatch" style="background:${c}"></span>${label}</span>`;
+  }).join('');
+  if (!el.dataset.bound) {
+    el.dataset.bound = '1';
+    el.addEventListener('click', (e) => {
+      const item = e.target?.closest?.('.closs-leg-item'); if (!item) return;
+      const ch = el.__chart; const i = Number(item.dataset.ds);
+      if (!ch || !Number.isInteger(i)) return;
+      ch.setDatasetVisibility(i, !ch.isDatasetVisible(i));
+      try { _crRebuildLines(ch, 'v'); } catch {}
+      ch.update();
+      renderCrLossLegend(ch, el);
+    });
+  }
 }
 
 // RECHTS: Tail-Zoom — Verlust (% vom NAV) je Quantil im Extrem-Tail (sortedLossesIssuer,
@@ -360,7 +547,7 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
       const nearest = (q) => sorted.reduce((best, r) => (Math.abs(Number(r.QUANTIL) - q) < Math.abs(Number(best.QUANTIL) - q) ? r : best), sorted[0]);
       const picks = targets.map(q => nearest(q));
       data = picks.map(row => (sumNav > 0 ? Number(row.LOSS) / sumNav * 100 : 0));
-      steps = picks.map(row => lossDefaultStep(issuersFromRank(row?.ISSUER_RANK)));
+      steps = picks.map(row => lossDefaultStepRanked(row?.ISSUER_RANK));
     } else {
       data = targets.map(() => null);
       steps = targets.map(() => null);
@@ -450,12 +637,28 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
 // jeweiligen pd_flags, in denen er ausfaellt; je PD auf 100 % normiert. Nur Top 8.
 // Credit-Palette (Purpur): Historic dunkelbasis, Market adjusted hell.
 const CR_TAIL_VIEWS = [
-  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', title: 'Top tail drivers — Historic', fill: 'rgba(122,92,145,0.85)', border: 'rgba(122,92,145,0.95)' },
-  { flag: 'NORM',   chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm', title: 'Top tail drivers — Market adjusted', fill: 'rgba(178,152,200,0.85)', border: 'rgba(178,152,200,0.95)' },
+  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', tcmTableId: 'crTailTcmTableHist', scatterId: 'crTailTcmScatterHist', title: 'Top tail drivers — Historic', fill: 'rgba(122,92,145,0.85)', border: 'rgba(122,92,145,0.95)' },
+  { flag: 'NORM',   chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm', tcmTableId: 'crTailTcmTableNorm', scatterId: 'crTailTcmScatterNorm', title: 'Top tail drivers — Market adjusted', fill: 'rgba(178,152,200,0.85)', border: 'rgba(178,152,200,0.95)' },
 ];
+
+// Rank-GENAUER Drill-Schritt aus einem rankKeys-Set ("issuer||rank" der im Tail
+// ausfallenden Tranchen): matcht NUR diese Tranchen, nicht pauschal alle Positionen des
+// Emittenten (z.B. AAA nicht anzeigen, wenn im Tail nur die BBB+-Tranche ausfaellt).
+// Fallback (leeres Set) = nach ISSUER (bisheriges Verhalten).
+function crRankStep(name, rankKeys) {
+  if (rankKeys && rankKeys.size) {
+    return {
+      colKey: 'ISSUER', value: name, label: 'Issuer',
+      match: (r) => rankKeys.has(`${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`),
+    };
+  }
+  return lossDefaultStep([name]);
+}
 
 // Top-8-Emittenten nach Tail-Verlustanteil fuer EIN pd_flag.
 // Exportiert: auch die HOME-Overview-Kachel nutzt diese Logik (Top tail drivers).
+// Jedes Item traegt rankKeys = Set der im Tail tatsaechlich ausfallenden "issuer||rank"
+// (fuer rank-genaue Drills; harmlos fuer andere Nutzer).
 export function crTailTopForFlag(flag, issuerLoss, issuerRating, allLoss, confQ) {
   const rows = allLoss.filter(r => String(r?.pd_flag ?? '').toUpperCase() === flag);
   let tail = rows.filter(r => Number(r.QUANTIL) >= confQ);
@@ -464,15 +667,25 @@ export function crTailTopForFlag(flag, issuerLoss, issuerRating, allLoss, confQ)
     tail = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.05)));
   }
   const c = new Map();
+  const rk = new Map();   // key -> Set("issuer||rank") der im Tail ausfallenden Tranchen
   for (const s of tail) {
     for (const nm of issuersFromRank(s.ISSUER_RANK)) {
       const key = String(nm).trim().toLowerCase();
       c.set(key, (c.get(key) || 0) + (issuerLoss.get(key)?.loss || 0));
     }
+    for (const part of String(s?.ISSUER_RANK ?? '').split(',')) {
+      const p = part.trim(); if (!p) continue;
+      const us = p.indexOf('_');
+      const nm = (us >= 0 ? p.slice(0, us) : p).trim().toLowerCase();
+      const rank = (us >= 0 ? p.slice(us + 1) : '').trim().toLowerCase();
+      if (!nm) continue;
+      if (!rk.has(nm)) rk.set(nm, new Set());
+      rk.get(nm).add(`${nm}||${rank}`);
+    }
   }
   const total = [...c.values()].reduce((a, b) => a + b, 0);
   return [...c.entries()]
-    .map(([k, v]) => ({ name: issuerLoss.get(k)?.name || k, rating: issuerRating.get(k) || '', pct: total > 0 ? v / total * 100 : 0 }))
+    .map(([k, v]) => ({ name: issuerLoss.get(k)?.name || k, rating: issuerRating.get(k) || '', pct: total > 0 ? v / total * 100 : 0, rankKeys: rk.get(k) || new Set() }))
     .filter(it => it.pct > 0)
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 8);
@@ -499,6 +712,18 @@ export function renderCreditTailContributors() {
     if (!issuerRating.get(key)) issuerRating.set(key, String(r?.RATINGres ?? r?.RATING ?? '').trim());
   }
 
+  // EAD-Anteil je Emittent (= Exposure-Anteil, Notional-basiert) fuer den Tail Concentration
+  // Multiplier: TCM = Tail-Loss-Anteil / EAD-Anteil (>1 = ueberproportional im Tail).
+  const issuerEad = new Map(); let totalEad = 0;
+  for (const r of portRows) {
+    const name = String(r?.ISSUER ?? '').trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const n = Number(r?.NOTIONAL) || 0;
+    issuerEad.set(key, (issuerEad.get(key) || 0) + n);
+    totalEad += n;
+  }
+
   const confQ = getRunConfQuantil();
   const allLoss = (appState.getAllLossData?.() || []).filter(r => String(r?.port_name ?? '') === port);
 
@@ -515,7 +740,268 @@ export function renderCreditTailContributors() {
         }</tbody></table>`;
       }
     }
+
+    // Tail Concentration Multiplier: Tail-Loss-Anteil vs EAD-Anteil je Emittent.
+    // TCM = Tail-Loss-% / EAD-% (>1 = ueberproportionaler Tail-Beitrag).
+    const tcmRows = top.map((it) => {
+      const ead = issuerEad.get(String(it.name).toLowerCase()) || 0;
+      const eadShare = totalEad > 0 ? ead / totalEad * 100 : NaN;
+      const tcm = (Number.isFinite(eadShare) && eadShare > 0) ? it.pct / eadShare : NaN;
+      return { name: it.name, rating: it.rating, pct: it.pct, eadShare, tcm, rankKeys: it.rankKeys };
+    });
+    // Tabelle nach TCM absteigend sortieren (hoechste Schieflage zuerst; NaN ans Ende).
+    tcmRows.sort((a, b) => (Number.isFinite(b.tcm) ? b.tcm : -Infinity) - (Number.isFinite(a.tcm) ? a.tcm : -Infinity));
+    const tcmEl = document.getElementById(v.tcmTableId);
+    if (tcmEl) {
+      if (!tcmRows.length) {
+        tcmEl.innerHTML = '<table class="conc-report-table"><tbody><tr><td>No tail data.</td></tr></tbody></table>';
+      } else {
+        const p1 = (x) => `${Number(x).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+        tcmEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Issuer</th><th style="text-align:right;">Tail loss</th><th style="text-align:right;">EAD</th><th style="text-align:right;" title="Tail Concentration Multiplier = Tail loss share / EAD share">TCM</th></tr></thead><tbody>${
+          tcmRows.map((it) => {
+            const tcmStyle = !Number.isFinite(it.tcm) ? '' : (it.tcm >= 1.5 ? 'color:#d9534f;font-weight:700;' : it.tcm > 1 ? 'color:#e0a533;font-weight:600;' : '');
+            const tcmStr = Number.isFinite(it.tcm) ? `${it.tcm.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}×` : '–';
+            return `<tr><td>${esc(it.name)}</td><td style="text-align:right;">${p1(it.pct)}</td><td style="text-align:right;">${Number.isFinite(it.eadShare) ? p1(it.eadShare) : '–'}</td><td style="text-align:right;${tcmStyle}">${tcmStr}</td></tr>`;
+          }).join('')
+        }</tbody></table>`;
+      }
+    }
+    // Scatter: x = EAD-Anteil, y = Tail-Loss-Anteil; 45deg-Diagonale = TCM 1. Ueber der Linie -> TCM>1.
+    renderCrTcmScatter(v.scatterId, tcmRows);
   }
+
+  // Portfolio-Ebene: kompakte Summary ueber der Historic-TCM-Tabelle. Gleiche Werte wie der
+  // Concentration-Risk-Slider (_tailConcentrationIndex) + gleiche Schwellen (CONC_GREEN/YELLOW_MAX).
+  // Keine Neuberechnung, keine Tabellenaenderung.
+  const _cSum = document.getElementById('crTcmSummaryHist');
+  const _cFunnel = document.getElementById('crTcmFunnelHist');
+  if (_cSum || _cFunnel) {
+    const conc = tailConcentrationIndex();
+    if (conc && Number.isFinite(conc.pct)) {
+      const f1 = (v) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const status = conc.pct >= CONC_YELLOW_MAX ? 'HIGH' : conc.pct >= CONC_GREEN_MAX ? 'ELEVATED' : 'LOW';
+      const col = conc.pct >= CONC_YELLOW_MAX ? '#d9534f' : conc.pct >= CONC_GREEN_MAX ? '#e0a533' : '#2f9e5f';
+      // K aus den vorhandenen Effective Tail Drivers (NICHT aus TCM), N + topKShare dynamisch.
+      const K = Math.max(1, Math.round(conc.eff));
+      const topKShare = (conc.shares || []).slice(0, K).reduce((a, b) => a + b, 0);
+      const sentence = (Number.isFinite(conc.eff) && conc.n >= 1)
+        ? `${K} out of ${conc.n} issuers drive <b style="color:var(--text-bright);">${f1(topKShare)} %</b> of tail losses.`
+        : '';
+      if (_cSum) _cSum.innerHTML =
+        `<span style="color:var(--text-muted);">Portfolio concentration: <b style="color:var(--text-bright);">${f1(conc.pct)} %</b> &middot; <b style="color:${col};">${status}</b></span>` +
+        (sentence ? `<span style="color:var(--text-muted);">${sentence}</span>` : '');
+      // Funnel in EINER Kachel als 2 Spalten (issuers | iss+rank). Jede Spalte hat eigene
+      // KPI-Boxen (Label + Zahl IN der Box) und eigene ↓-Pfeile dazwischen.
+      const box = (label, v) => `<div style="border:1px solid var(--border-subtle); border-radius:6px; padding:5px 9px; background:var(--surface-overlay); text-align:center;"><div style="font-size:9.5px; color:var(--text-muted); line-height:1.2;">${label}</div><div style="font-size:17px; font-weight:700; color:var(--text-bright); line-height:1.1; margin-top:1px;">${v}</div></div>`;
+      const arrow = `<div style="color:var(--text-bright); font-size:15px; line-height:1; text-align:center; margin:2px 0;">&darr;</div>`;
+      const steps = [
+        ['total', conc.totalIssuers, conc.totalRanks],
+        ['contribute to the loss distribution', conc.defaultedIssuers, conc.defaultedRanks],
+        ['enter the extreme tail', conc.n, conc.n],
+      ];
+      // Letzte Box mit spaltenspezifischem Nomen: "issuers" links, "combinations" rechts.
+      const mkCol = (title, idx, noun) => {
+        const boxes = steps.map((s) => box(s[0], s[idx]));
+        boxes.push(box(`${noun} drive ${f1(topKShare)} % of tail loss`, K));
+        return `<div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"><div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px;">${title}</div>${boxes.join(arrow)}</div>`;
+      };
+      if (_cFunnel) _cFunnel.innerHTML = `<div style="display:flex; gap:14px; flex:1; min-height:0;">${mkCol('issuers', 1, 'issuers')}${mkCol('issuer–rank combinations', 2, 'combinations')}</div>`;
+    } else {
+      if (_cSum) _cSum.innerHTML = '';
+      if (_cFunnel) _cFunnel.innerHTML = '';
+    }
+  }
+}
+
+// State fuer die Credit-Scatter: volle Daten + Show-Limit (Top-N nach Tail-Loss-Anteil) je Canvas.
+const _crScatterRows = new Map();
+const _crScatterLimit = new Map();
+
+// Reset-Zoom-Button + "Show N"-Dropdown + Hinweis oben im Scatter-Container (wie mvarIssuerScatterChart).
+function ensureCrScatterTools(canvas, canvasId) {
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
+  if (!box.querySelector('.cr-scatter-reset')) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'cr-scatter-reset'; btn.textContent = 'Reset Zoom'; btn.title = 'Reset zoom';
+    btn.style.cssText = 'position:absolute;top:4px;right:4px;z-index:5;font-size:10px;padding:2px 8px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--surface-overlay);color:var(--text-bright);cursor:pointer;';
+    btn.addEventListener('click', () => { try { window[canvasId]?.resetZoom?.(); } catch {} });
+    box.appendChild(btn);
+  }
+  if (!box.querySelector('.cr-scatter-count')) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;top:4px;right:84px;z-index:5;display:flex;align-items:center;gap:4px;';
+    const lbl = document.createElement('span'); lbl.textContent = 'Show'; lbl.style.cssText = 'font-size:10px;color:var(--text-muted);';
+    const sel = document.createElement('select'); sel.className = 'cr-scatter-count';
+    sel.style.cssText = 'font-size:10px;padding:1px 4px;border:1px solid var(--border-subtle);border-radius:4px;background:var(--surface-overlay);color:var(--text-bright);cursor:pointer;';
+    [['3', '3'], ['5', '5'], ['all', 'All']].forEach(([val, t]) => { const o = document.createElement('option'); o.value = val; o.textContent = t; sel.appendChild(o); });
+    const cur = _crScatterLimit.get(canvasId);
+    sel.value = (cur == null ? '3' : String(cur));
+    sel.addEventListener('change', () => {
+      const val = sel.value === 'all' ? 'all' : parseInt(sel.value, 10);
+      _crScatterLimit.set(canvasId, val);
+      try { renderCrTcmScatter(canvasId, _crScatterRows.get(canvasId) || []); } catch {}
+    });
+    wrap.appendChild(lbl); wrap.appendChild(sel);
+    box.appendChild(wrap);
+  }
+  if (!box.querySelector('.cr-scatter-hint')) {
+    const hint = document.createElement('div');
+    hint.className = 'cr-scatter-hint';
+    hint.textContent = 'drag to zoom';
+    hint.style.cssText = 'position:absolute;top:6px;left:10px;z-index:5;font-size:10px;color:var(--text-muted);pointer-events:none;white-space:nowrap;';
+    box.appendChild(hint);
+  }
+  if (!box.querySelector('.cr-scatter-legend')) {
+    const lg = document.createElement('div');
+    lg.className = 'cr-scatter-legend';
+    lg.style.cssText = 'position:absolute;top:42px;right:6px;z-index:5;display:flex;flex-direction:column;gap:8px;font-size:9.5px;color:var(--text-muted);pointer-events:none;white-space:nowrap;';
+    const row = (border, label) => `<div style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:22px;height:0;border-top:${border};"></span>${label}</div>`;
+    lg.innerHTML =
+      row('1.5px dashed rgba(150,165,185,0.85)', 'TCM = 1') +
+      row('1.5px solid rgba(150,140,170,0.75)', 'Highest TCM') +
+      row('1px dashed rgba(150,140,170,0.5)', 'Issuer TCM slope');
+    box.appendChild(lg);
+  }
+}
+
+// Zeichnet je Emittenten-Punkt NAME + TCM mit einfacher Kollisionsvermeidung: der TCM
+// kommt zuerst UNTER den Namen (default), sonst DARUEBER, sonst DAHINTER (rechts daneben) —
+// es wird die erste Position gewaehlt, die nichts Bereits-Gezeichnetes ueberlappt (Punkte,
+// Namen, andere TCMs). Ersetzt die ChartDataLabels-Beschriftung des Issuers-Datasets.
+const _crScatterLabelPlugin = {
+  id: 'crScatterLabels',
+  afterDatasetsDraw(chart) {
+    const meta = chart.getDatasetMeta(1);   // Issuers-Dataset
+    const ds = chart.data.datasets[1];
+    if (!meta || !ds || !meta.data) return;
+    const ctx = chart.ctx;
+    const area = chart.chartArea || { left: 0, right: chart.width, top: 0, bottom: chart.height };
+    const css = getComputedStyle(document.body);
+    const nameCol = (css.getPropertyValue('--text-primary') || '').trim() || '#333';
+    const tcmCol = 'rgba(170,150,200,0.98)';
+    const fam = (css.fontFamily || 'system-ui, sans-serif').trim();
+    const NAME_PX = 10.5, TCM_PX = 9.5, GAP = 2, PR = 7;
+    const overlaps = (a, b) => !(a.x2 <= b.x1 || a.x1 >= b.x2 || a.y2 <= b.y1 || a.y1 >= b.y2);
+    const placed = [];
+    meta.data.forEach((el) => placed.push({ x1: el.x - PR, y1: el.y - PR, x2: el.x + PR, y2: el.y + PR }));
+    ctx.save();
+    ctx.textBaseline = 'middle';
+    meta.data.forEach((el, i) => {
+      const r = ds.data[i];
+      if (!r || !r.issuer) return;
+      const px = el.x, py = el.y;
+      // Name: rechts vom Punkt, bei Ueberlauf am rechten Rand nach links.
+      ctx.font = `${NAME_PX}px ${fam}`;
+      const name = String(r.issuer);
+      const nameW = ctx.measureText(name).width;
+      let nameX = px + PR + 4, nameAlign = 'left';
+      let nameL = nameX, nameR = nameX + nameW;
+      if (nameR > area.right - 2) { nameX = px - PR - 4; nameAlign = 'right'; nameR = nameX; nameL = nameX - nameW; }
+      const nameRect = { x1: nameL, y1: py - NAME_PX / 2, x2: nameR, y2: py + NAME_PX / 2 };
+      ctx.textAlign = nameAlign;
+      ctx.fillStyle = nameCol;
+      ctx.fillText(name, nameX, py);
+      placed.push(nameRect);
+      if (!Number.isFinite(r.tcm) || !r.isMaxTcm) return;   // TCM nur beim groessten
+      // TCM: 3 Kandidaten relativ zum Namen — unter (default) / darueber / dahinter.
+      ctx.font = `bold ${TCM_PX}px ${fam}`;
+      const tcm = `TCM ${r.tcm.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}×`;
+      const tcmW = ctx.measureText(tcm).width;
+      const cands = [
+        { x: nameRect.x1, y: nameRect.y2 + GAP + TCM_PX / 2 },   // darunter (default)
+        { x: nameRect.x1, y: nameRect.y1 - GAP - TCM_PX / 2 },   // darueber
+        { x: nameRect.x2 + 6, y: py },                            // dahinter
+      ];
+      let chosen = cands[0];
+      for (const c of cands) {
+        const rect = { x1: c.x, y1: c.y - TCM_PX / 2, x2: c.x + tcmW, y2: c.y + TCM_PX / 2 };
+        if (!placed.some((p) => overlaps(rect, p))) { chosen = c; break; }
+      }
+      ctx.textAlign = 'left';
+      ctx.fillStyle = tcmCol;
+      ctx.fillText(tcm, chosen.x, chosen.y);
+      placed.push({ x1: chosen.x, y1: chosen.y - TCM_PX / 2, x2: chosen.x + tcmW, y2: chosen.y + TCM_PX / 2 });
+    });
+    ctx.restore();
+  },
+};
+
+// Konzentrations-Scatter (wie mvarIssuerScatterChart): x = EAD-Anteil %, y = Tail-Loss-Anteil %,
+// gestrichelte 45deg-Diagonale (TCM = 1). Punkte darueber tragen ueberproportional zum Tail bei
+// (amber > 1, rot >= 1,5). Mit "Show"-Dropdown (Top-N) und Zoom.
+function renderCrTcmScatter(canvasId, rows) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !window.Chart) return;
+  if (Array.isArray(rows)) _crScatterRows.set(canvasId, rows);   // volle Daten fuer Re-Render (Show)
+  const allRows = _crScatterRows.get(canvasId) || rows || [];
+  const limit = _crScatterLimit.has(canvasId) ? _crScatterLimit.get(canvasId) : 3;   // Standard: Top 3
+  const sorted = allRows.slice().sort((a, b) => (Number(b.pct) || 0) - (Number(a.pct) || 0)); // Top-N nach Tail-Loss
+  const shown = (limit === 'all') ? sorted : sorted.slice(0, limit);
+  _destroyCrChart(canvasId);
+  const pts = shown.filter((r) => Number.isFinite(r.eadShare))
+    .map((r) => ({ x: +Number(r.eadShare).toFixed(2), y: +Number(r.pct).toFixed(2), issuer: r.name, tcm: r.tcm, rankKeys: r.rankKeys }));
+  if (!pts.length) { ensureCrScatterTools(canvas, canvasId); return; }
+  // Bitmap = tatsaechliche Anzeigebreite (offsetWidth aus CSS width:100%) x Hoehe 240 -> 1:1, scharf.
+  canvas.width = Math.max(320, Math.floor(canvas.offsetWidth || canvas.parentElement?.clientWidth || 560));
+  canvas.height = 240;
+  const bodyCss = getComputedStyle(document.body);
+  const col = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
+  const font = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
+  const axMax = Math.max(5, Math.ceil(Math.max(...pts.map((p) => Math.max(p.x, p.y))) * 1.1));
+  const ptCol = pts.map((p) => (p.tcm >= 1.5 ? 'rgba(217,83,79,0.85)' : p.tcm > 1 ? 'rgba(224,165,51,0.85)' : 'rgba(122,92,145,0.8)'));
+  // Groessten TCM markieren: dessen Linie DURCHGEZOGEN (+ einziges TCM-Label), die uebrigen strichliert.
+  let _maxI = -1, _maxV = -Infinity;
+  pts.forEach((p, i) => { if (Number.isFinite(p.tcm) && p.tcm > _maxV) { _maxV = p.tcm; _maxI = i; } });
+  pts.forEach((p, i) => { p.isMaxTcm = (i === _maxI); });
+  // Je Emittent eine ZARTE Gerade durch den Ursprung: Steigung m = y/x = TCM des Punkts
+  // (auf y = m·x hat jeder Punkt die Steigung = seinen TCM). Endpunkt im Sichtbereich halten.
+  const tcmLines = pts.map((p) => {
+    const m = p.x > 0 ? p.y / p.x : NaN;
+    let ex = axMax, ey = Number.isFinite(m) ? m * axMax : NaN;
+    if (Number.isFinite(m) && m > 0 && ey > axMax) { ey = axMax; ex = axMax / m; }
+    return {
+      type: 'line', label: `TCM ${p.issuer}`, order: 4, pointRadius: 0, fill: false,
+      borderColor: 'rgba(150,140,170,0.30)',
+      borderWidth: 1,
+      borderDash: p.isMaxTcm ? [] : [4, 4],   // groesster TCM durchgezogen, Rest strichliert — gleich zart
+      data: (Number.isFinite(m) && m > 0) ? [{ x: 0, y: 0 }, { x: ex, y: ey }] : [],
+    };
+  });
+  window[canvasId] = new window.Chart(canvas.getContext('2d'), {
+    type: 'scatter',
+    plugins: [...(window.ChartDataLabels ? [window.ChartDataLabels] : []), _crScatterLabelPlugin],
+    data: {
+      datasets: [
+        { type: 'line', label: 'proportional (TCM = 1)', data: [{ x: 0, y: 0 }, { x: axMax, y: axMax }], borderColor: 'rgba(150,165,185,0.7)', borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false, order: 2 },
+        { label: 'Issuers', data: pts, backgroundColor: ptCol, borderColor: ptCol, pointRadius: 6, pointHoverRadius: 8, order: 1,
+          datalabels: { display: false } },   // Name + TCM zeichnet _crScatterLabelPlugin (mit Kollisionsvermeidung)
+        ...tcmLines,
+      ],
+    },
+    options: {
+      responsive: false, maintainAspectRatio: false, animation: false, color: col,
+      plugins: {
+        legend: { display: false },
+        title: { display: false },
+        tooltip: { callbacks: { label: (ctx) => ctx.raw?.issuer ? `${ctx.raw.issuer}: EAD ${ctx.raw.x}% / Tail ${ctx.raw.y}%${Number.isFinite(ctx.raw.tcm) ? ` (TCM ${ctx.raw.tcm.toFixed(1)}×)` : ''}` : '' } },
+        datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: col, font: { family: font, size: 10 }, formatter: (val) => (val && val.issuer) ? val.issuer : '' } : undefined,
+        zoom: {
+          pan:  { enabled: true, mode: 'xy', modifierKey: 'ctrl' },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, drag: { enabled: true, backgroundColor: 'rgba(75,150,225,0.15)', borderColor: 'rgba(75,150,225,0.6)', borderWidth: 1 }, mode: 'xy' },
+        },
+      },
+      scales: {
+        x: { beginAtZero: true, max: axMax, title: { display: true, text: 'EAD share %', color: col, font: { family: font } }, ticks: { color: col, font: { family: font }, callback: (val) => `${Math.round(Number(val) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+        y: { beginAtZero: true, max: axMax, title: { display: true, text: 'Tail loss share %', color: col, font: { family: font } }, ticks: { color: col, font: { family: font }, callback: (val) => `${Math.round(Number(val) * 100) / 100}%` }, grid: { color: 'rgba(128,128,128,0.15)' } },
+      },
+    },
+  });
+  // Drill: je Punkt die Positionen des Emittenten (Rechtsklick). Aligned mit pts.
+  window[canvasId].$crScatterSteps = pts.map((p) => crRankStep(p.issuer, p.rankKeys));
+  _bindCrScatterContextDrill(canvas);
+  ensureCrScatterTools(canvas, canvasId);
 }
 
 function renderCrTailContribChart(canvas, winKey, items, title, colors) {
@@ -523,8 +1009,10 @@ function renderCrTailContribChart(canvas, winKey, items, title, colors) {
   _destroyCrChart(winKey);
   if (!items || !items.length) return;
 
-  // Feste Bitmap-Groesse -> malt auch bei verstecktem Panel (Report-Erfassung).
-  canvas.width = 560; canvas.height = 260;
+  // Bitmap = tatsaechliche Anzeigebreite (offsetWidth; Fallback 560 bei verstecktem Panel/
+  // Report-Erfassung), Hoehe 240 -> 1:1, keine CSS-Skalierung, scharfe Schrift.
+  canvas.width = Math.max(320, Math.floor(canvas.offsetWidth || canvas.parentElement?.clientWidth || 560));
+  canvas.height = 240;
   const bodyCss = getComputedStyle(document.body);
   const col = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#333';
   const font = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
@@ -543,7 +1031,7 @@ function renderCrTailContribChart(canvas, winKey, items, title, colors) {
       layout: { padding: { right: 44 } },
       plugins: {
         legend: { display: false },
-        title: { display: true, text: title, color: col, font: { family: font, size: 12, weight: 'bold' } },
+        title: { display: false },
         datalabels: window.ChartDataLabels ? {
           anchor: 'end', align: 'right', clamp: true, color: col, font: { family: font, size: 10 },
           formatter: (v) => `${Number(v).toLocaleString('de-DE', { maximumFractionDigits: 0 })}%`,
@@ -556,6 +1044,9 @@ function renderCrTailContribChart(canvas, winKey, items, title, colors) {
       },
     },
   });
+  // Drill: je Balken die Positionen des Emittenten (Rechtsklick).
+  window[winKey].$crContribSteps = items.map((it) => crRankStep(it.name, it.rankKeys));
+  _bindCrContribContextDrill(canvas);
 }
 
 // Headline-CVaR-Zeile: Historic VaR (pd_flag=rating; Fallback erste Zeile).
@@ -600,9 +1091,20 @@ function trafficState(valFraction, th) {
 // pd_flag -> erste Zeile (rating / market / norm). rowsIn: optionale CVaR-Zeilen
 // (z.B. von der HOME-Overview), sonst die des gewaehlten Portfolios.
 function creditRowsByFlag(rowsIn = null) {
-  const rows = rowsIn || appState.getCvarData?.() || [];
+  // Override (z.B. Report-Snapshot) hat Vorrang; sonst VaR/ES beim gewaehlten
+  // Konfidenzniveau aus der Verteilung neu berechnen (keine Simulation, keine
+  // Abhaengigkeit von der gespeicherten CreditVaR-Tabelle).
+  if (rowsIn) {
+    const byFlag = {};
+    for (const r of rowsIn) { const f = String(r?.pd_flag ?? '').toLowerCase(); if (f && !byFlag[f]) byFlag[f] = r; }
+    return byFlag;
+  }
+  const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
   const byFlag = {};
-  for (const r of rows) { const f = String(r?.pd_flag ?? '').toLowerCase(); if (f && !byFlag[f]) byFlag[f] = r; }
+  for (const flag of ['rating', 'market', 'norm']) {
+    const v = creditVarEsForFlag(port, flag);
+    if (v) byFlag[flag] = { pd_flag: flag.toUpperCase(), ...v };
+  }
   return byFlag;
 }
 
@@ -723,6 +1225,83 @@ function computeLimitModel(valueFraction, th, state) {
   };
 }
 
+// Zentrale Schwellen fuer den Concentration-Risk-Slider (Prozent): gruen <40 / gelb 40-60 / rot >60.
+const CONC_GREEN_MAX = 40;    // 0..40 = low concentration
+const CONC_YELLOW_MAX = 60;   // 40..60 = elevated, >60 = high
+
+// Portfolioweiter Management-Concentration-Score auf Basis der Effective Tail Drivers (NICHT
+// "normalized HHI"). Liefert { pct: 0..100, eff: 1/HHI } oder null.
+//   tailShare_i = issuerTailLoss_i / totalTailLoss ;  HHI = Sum(tailShare_i^2) ;  eff = 1/HHI
+//   concentrationScore = ((N - eff) / (N - 1)) * 100  (0 = gleichverteilt, 100 = ein Emittent)
+export function tailConcentrationIndex() {
+  try {
+    const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const portRows = (appState.getAllPortfolioData?.() || [])
+      .filter((r) => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port);
+    if (!portRows.length) return null;
+    // Verlust-bei-Ausfall je Emittent (wie in der Tail-Driver-Rechnung).
+    const issuerLoss = new Map();
+    for (const r of buildPositionLoss(portRows, port)) {
+      const name = String(r?.ISSUER ?? '').trim(); if (!name) continue;
+      const key = name.toLowerCase();
+      issuerLoss.set(key, (issuerLoss.get(key) || 0) + (Number(r.__LOSS) || 0));
+    }
+    // Tail-Szenarien (Quantil >= Konfidenz) -> Tail-Loss je Emittent aufsummieren (ALLE Emittenten).
+    const allLoss = (appState.getAllLossData?.() || []).filter((r) => String(r?.port_name ?? '') === port);
+    const rows = allLoss.filter((r) => String(r?.pd_flag ?? '').toUpperCase() === 'RATING');
+    const confQ = getRunConfQuantil();
+    let tail = rows.filter((r) => Number(r.QUANTIL) >= confQ);
+    if (tail.length < 3) {
+      const sorted = rows.slice().sort((a, b) => Number(b.LOSS) - Number(a.LOSS));
+      tail = sorted.slice(0, Math.max(3, Math.ceil(sorted.length * 0.05)));
+    }
+    const perIssuer = new Map();
+    for (const s of tail) {
+      for (const nm of issuersFromRank(s.ISSUER_RANK)) {
+        const key = String(nm).trim().toLowerCase();
+        perIssuer.set(key, (perIssuer.get(key) || 0) + (issuerLoss.get(key) || 0));
+      }
+    }
+    const losses = [...perIssuer.values()].filter((v) => v > 0);
+    const total = losses.reduce((a, b) => a + b, 0);
+    // N = Anzahl ALLER bereits aggregierten Emittenten mit positivem Tail-Loss-Beitrag
+    // (tailLossShare > 0). KEIN Top-N, NICHT die sichtbaren Tabellenzeilen, keine Zusatz-Aggregation.
+    const N = losses.length;
+    if (!(total > 0) || N < 1) return null;
+    const hhi = losses.reduce((a, v) => { const sh = v / total; return a + sh * sh; }, 0);   // in [1/N, 1]
+    const eff = hhi > 0 ? 1 / hhi : NaN;
+    // Management-Concentration-Score aus den Effective Tail Drivers (KEIN normalized HHI):
+    // ((N - eff) / (N - 1)) * 100. N=1 -> nur ein Emittent -> 100%.
+    const score = (N > 1 && Number.isFinite(eff)) ? ((N - eff) / (N - 1)) * 100 : 100;
+    const pct = Math.max(0, Math.min(100, score));
+    // Tail-Loss-Anteile (%) absteigend + Gesamtzahl der Tail-Emittenten — fuer den Satz
+    // "K out of N issuers drive topK% of tail losses" (K = round(eff), keine feste Top-N-Logik).
+    const shares = losses.map((v) => (v / total) * 100).sort((a, b) => b - a);
+    // Funnel-Kennzahlen: alle Portfolio-Emittenten -> ausgefallene (irgendein Szenario) -> im Tail (N).
+    const totalIssuers = issuerLoss.size;
+    const defaultedSet = new Set();       // distinct Emittenten in der Distribution
+    const defaultedRankSet = new Set();   // distinct Emittent+Rank in der Distribution
+    for (const s of rows) {
+      for (const nm of issuersFromRank(s.ISSUER_RANK)) {
+        const k = String(nm).trim().toLowerCase(); if (k) defaultedSet.add(k);
+      }
+      for (const part of String(s?.ISSUER_RANK ?? '').split(',')) {
+        const p = part.trim().toLowerCase(); if (p) defaultedRankSet.add(p);
+      }
+    }
+    const rankSet = new Set();             // distinct Emittent+Rank im Portfolio
+    for (const r of portRows) {
+      const iss = String(r?.ISSUER ?? '').trim().toLowerCase();
+      if (iss) rankSet.add(`${iss}||${String(r?.RANK ?? '').trim().toLowerCase()}`);
+    }
+    return {
+      pct, eff, n: N, shares,
+      totalIssuers, defaultedIssuers: defaultedSet.size,
+      totalRanks: rankSet.size, defaultedRanks: defaultedRankSet.size,
+    };
+  } catch { return null; }
+}
+
 export function renderCreditRiskDashboard() {
   bindListeners();
 
@@ -732,6 +1311,28 @@ export function renderCreditRiskDashboard() {
   if (!host && !tblEl) return;
 
   const { cards } = getCreditDashboardModel();
+
+  // Concentration Risk = Tail-Loss-Anteil der Top-3-Emittenten (aus der TCM-/Tail-Driver-Tabelle)
+  // gegen ein angenommenes Limit (Warnung 75% / Limit 90%). VOR "Cluster Risk" einschieben — nur
+  // fuer die Anzeige im Limits-Panel (getCreditDashboardModel bleibt unveraendert, damit die
+  // HOME-Overview-Slider nicht verrutschen).
+  // Concentration Risk: portfolioweiter Tail Concentration Index (normalisierter HHI). Eigener
+  // 3-Zonen-Slider (Schwellen CONC_GREEN_MAX/CONC_YELLOW_MAX) mit Marker; keine Limit-Auslastung.
+  const _conc = tailConcentrationIndex();
+  const concPct = _conc ? _conc.pct : NaN;
+  const concEff = _conc ? _conc.eff : NaN;
+  const _f1c = (v) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const concState = Number.isFinite(concPct)
+    ? (concPct >= CONC_YELLOW_MAX ? 'red' : concPct >= CONC_GREEN_MAX ? 'yellow' : 'green') : null;
+  const concCard = {
+    label: 'Concentration Risk', full: 'Tail loss concentration',
+    abs: Number.isFinite(concEff) ? `Effective tail drivers: ${_f1c(concEff)}` : null,
+    rel: Number.isFinite(concPct) ? `${_f1c(concPct)}%` : '–',
+    dRel: null, dAbs: null, desc: '', state: concState,
+    limit: null, concPct, concEff,
+  };
+  const _tsiIdx = cards.findIndex((c) => /cluster risk|tsi/i.test(c.label || ''));
+  cards.splice(_tsiIdx >= 0 ? _tsiIdx : cards.length, 0, concCard);
 
   if (introEl) introEl.textContent = 'Current credit risk position for the selected portfolio.';
 
@@ -751,7 +1352,8 @@ export function renderCreditRiskDashboard() {
           ${absHtml}
           ${absDeltaHtml}
         </div>`;
-      return `<div class="cr-metric-row">${cardHtml}<div class="cr-metric-limit">${limitBarHtml(c.limit)}</div></div>`;
+      const limitCol = Number.isFinite(c.concPct) ? concLimitHtml(c.concPct) : limitBarHtml(c.limit);
+      return `<div class="cr-metric-row">${cardHtml}<div class="cr-metric-limit">${limitCol}</div></div>`;
     }).join('');
   }
 
@@ -799,6 +1401,35 @@ export function renderCreditOverviewCharts() {
       }</tbody></table>`;
     }
   } catch (e) { console.warn('[CreditOverview] kpi band failed', e); }
+}
+
+// Concentration Risk: gleicher .mr-limit-Rahmen (Kopf/Balken/Skala), KEINE Limit-Auslastung und
+// KEINE unteren Boxen (Concentration % + Effective tail drivers stehen bereits links). Balken =
+// 3 Zonen (gruen 0..GREEN_MAX / gelb GREEN_MAX..YELLOW_MAX / rot YELLOW_MAX..100) + Marker.
+function concLimitHtml(pct) {
+  if (!Number.isFinite(pct)) return '<div class="mr-dash-intro">No concentration data.</div>';
+  const p = Math.max(0, Math.min(100, pct));
+  const state = pct >= CONC_YELLOW_MAX ? 'red' : pct >= CONC_GREEN_MAX ? 'yellow' : 'green';
+  const f1 = (v) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return `
+    <div class="mr-limit">
+      <div class="mr-limit__head">
+        <span class="mr-limit__title">Concentration level</span>
+        <span class="mr-limit__util mr-amp--${state}">${f1(pct)}%</span>
+      </div>
+      <div class="mr-limit__bar">
+        <div class="mr-limit__zone" style="left:0;width:${CONC_GREEN_MAX}%;background:rgba(76,175,80,.45)"></div>
+        <div class="mr-limit__zone" style="left:${CONC_GREEN_MAX}%;width:${CONC_YELLOW_MAX - CONC_GREEN_MAX}%;background:rgba(224,176,0,.50)"></div>
+        <div class="mr-limit__zone" style="left:${CONC_YELLOW_MAX}%;width:${100 - CONC_YELLOW_MAX}%;background:rgba(211,47,47,.50)"></div>
+        <div class="cr-conc-mk" style="left:${p}%"></div>
+      </div>
+      <div class="mr-limit__scale cr-conc-scale2">
+        <span style="left:0%">0%</span>
+        <span style="left:${CONC_GREEN_MAX}%">${CONC_GREEN_MAX}%</span>
+        <span style="left:${CONC_YELLOW_MAX}%">${CONC_YELLOW_MAX}%</span>
+        <span style="left:100%">100%</span>
+      </div>
+    </div>`;
 }
 
 function limitBarHtml(m) {
