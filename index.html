@@ -325,7 +325,9 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi home-nav-link" data-tile="pv01" role="button" tabindex="0" title="PV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-abs" id="homePfPv01Rel">–</span><span class="home-kpi-lbl">PV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="cpv01" role="button" tabindex="0" title="CPV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-abs" id="homePfCpv01Rel">–</span><span class="home-kpi-lbl">CPV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="vega" role="button" tabindex="0" title="Vega-Sensitivität öffnen"><span class="home-kpi-val" id="homePfVega">–</span><span class="home-kpi-abs" id="homePfVegaRel">–</span><span class="home-kpi-lbl">Vega</span></div>
-          <div class="home-kpi home-cash-kpi" data-tile="cash" title="Non-valued categories as % of notional"><span class="home-kpi-val" id="homePfCashPct">–</span><div class="home-cash-track"><div class="home-cash-bar" id="homePfCashBar"></div></div><span class="home-kpi-lbl">Cash</span></div>
+          <div class="home-kpi" data-tile="cash" title="Non-valued categories (% of notional)"><span class="home-kpi-val" id="homePfCashPct">–</span><span class="home-kpi-abs" id="homePfCashAbs">–</span><span class="home-kpi-lbl">not Valued</span></div>
+          <!-- Liquidity < 1y: Anteil (Nominale) der Produkte mit Restlaufzeit (TtM) < 1 Jahr (inkl. 0/bereits faellig). Befuellt in renderPortfolioCard. -->
+          <div class="home-kpi" data-tile="liq_1y" title="Products maturing within 1 year — incl. already matured (% of notional)"><span class="home-kpi-val" id="homePfLiq1yPct">–</span><span class="home-kpi-abs" id="homePfLiq1yAbs">–</span><span class="home-kpi-lbl">Liquidity &lt; 1y</span></div>
           <!-- IR-Duration-Split-Kachel (pf-dur-Style, vollbreit): 2-Segment-Balken nach Nominale
                (nicht bewertet | bewertet). Links "not Valued 0Y", ueber dem bewerteten Segment die
                IR-Duration aufs bewertete NAV; am Balkenende Ø = IR-Duration aufs Gesamt-NAV. -->
@@ -334,8 +336,8 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="pf-dur-row pf-dur-splitrow">
               <div class="pf-dur-splitcol">
                 <div class="pf-dur-splitlbls">
-                  <span class="pf-dur-splitlbl-nv">not Valued&nbsp;<b id="homePfMatSplitNvY">0Y</b></span>
-                  <span class="pf-dur-splitlbl-v" id="homePfMatSplitY">–</span>
+                  <span class="pf-dur-splitlbl-nv">not valued: Duration <b id="homePfMatSplitNvY">0Y</b></span>
+                  <span class="pf-dur-splitlbl-v">valued: Duration <b id="homePfMatSplitY">–</b></span>
                 </div>
                 <div class="pf-dur-track pf-dur-splittrack">
                   <div class="pf-dur-seg pf-dur-seg--nv" id="homePfMatSplitNv"></div>
@@ -345,8 +347,17 @@ Feature:    Wenn es nur in einem Panel gilt
                   <span id="homePfMatSplitNvPct">–</span>
                   <span id="homePfMatSplitVPct">–</span>
                 </div>
+                <div class="pf-dur-splitavg-c">average Duration: <b id="homePfMatSplitAvg">–</b></div>
               </div>
-              <span class="pf-dur-val pf-dur-splitavg" id="homePfMatSplitAvg">Ø –</span>
+            </div>
+          </div>
+          <!-- Coupon-Type-Verteilung (nach Nominale): FIX / FLOAT (FLOATER) / STRUCTURED (Rest, z.B. CUSTOM). -->
+          <div class="home-kpi home-kpi--wide pf-cpn-tile" data-tile="coupon_type" title="Coupon type breakdown (% of notional)">
+            <div class="pf-dur-cap">Coupon Type</div>
+            <div class="pf-cpn-row">
+              <div class="pf-cpn-cell"><span class="pf-cpn-val" id="homePfCpnFix">–</span><span class="pf-cpn-lbl">FIX</span></div>
+              <div class="pf-cpn-cell"><span class="pf-cpn-val" id="homePfCpnFloat">–</span><span class="pf-cpn-lbl">FLOAT</span></div>
+              <div class="pf-cpn-cell"><span class="pf-cpn-val" id="homePfCpnStruct">–</span><span class="pf-cpn-lbl">STRUCTURED</span></div>
             </div>
           </div>
         </div>
@@ -439,9 +450,10 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="mkt-grp-head"><span class="home-kpi-cap">EXECUTIVE SUMMARY</span></div>
           <ul class="mkt-exec-list">
             <li id="homeMktExecStatus">–</li>
+            <li id="homeMktExecValued">–</li>
             <li id="homeMktExecVar">–</li>
             <li id="homeMktExecEs">–</li>
-            <li id="homeMktExecTop">–</li>
+            <li id="homeMktExecTop" style="display:none;">–</li>
           </ul>
         </div>
         <div class="home-kpis">
@@ -570,7 +582,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-chart"><canvas id="homeSynthChart"></canvas></div>
         </div>
         <div class="home-chart-card home-nav-link" data-tile="mkt_chart" role="button" tabindex="0" title="Open Market Risk / Products">
-          <div class="home-chart-cap">Top product contributions (% of total VaR)</div>
+          <div class="home-chart-cap">EXTREME RISK - top tail drivers</div>
           <div class="home-chart"><canvas id="homeMktChart"></canvas></div>
         </div>
       </section>
@@ -592,6 +604,17 @@ Feature:    Wenn es nur in einem Panel gilt
             <li id="homeCrExecVar">–</li>
             <li id="homeCrExecEs">–</li>
             <li id="homeCrExecConc">–</li>
+          </ul>
+        </div>
+        <!-- Kopie der Executive Summary: erster Punkt zeigt EDE (Expected Default Exposure)
+             statt EL. Per Customer Setup umschaltbar (cr_exec vs cr_exec_ede). -->
+        <div class="home-kpi mkt-exec-tile" data-tile="cr_exec_ede">
+          <div class="mkt-grp-head"><span class="home-kpi-cap">EXECUTIVE SUMMARY</span></div>
+          <ul class="mkt-exec-list">
+            <li id="homeCrExecEdeEl">–</li>
+            <li id="homeCrExecEdeVar">–</li>
+            <li id="homeCrExecEdeEs">–</li>
+            <li id="homeCrExecEdeConc">–</li>
           </ul>
         </div>
         <!-- Kennzahlen aus dem Credit-Risk-Dashboard (getCreditDashboardModel):
@@ -664,7 +687,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="cr-ec-sum-title">Normal Risk</div>
               <div class="cr-ec-sum-subtitle">Risk Buffer (Economic Capital)</div>
             </div>
-            <div class="cr-ec-sum-pd">Historic Probabilities of Default</div>
+            <div class="cr-ec-sum-pd">Historic Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumPdConf">VaR: –</span></div>
           </div>
           <div class="cr-ec-sum-col">
             <span class="cr-ec3-name">Expected Loss</span>
@@ -684,6 +707,34 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="cr-ec3-rel" id="homeCrSumVarRel">–</span>
           </div>
         </div>
+        <!-- Kopie der Risk-Buffer-Kachel: die "Expected Loss"-Spalte zeigt die EDE-Zahl
+             (Expected Default Exposure = Notional x PD); das Label bleibt "Expected Loss". -->
+        <div class="cr-ec-summary" data-tile="risk_buffer_ede">
+          <div class="cr-ec-sum-head">
+            <div class="cr-ec-sum-titlewrap">
+              <div class="cr-ec-sum-title">Normal Risk</div>
+              <div class="cr-ec-sum-subtitle">Risk Buffer (Economic Capital)</div>
+            </div>
+            <div class="cr-ec-sum-pd">Historic Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumEdePdConf">VaR: –</span></div>
+          </div>
+          <div class="cr-ec-sum-col">
+            <span class="cr-ec3-name">Expected Loss</span>
+            <span class="cr-ec3-abs" id="homeCrSumEdeAbs">–</span>
+            <span class="cr-ec3-rel" id="homeCrSumEdeRel">–</span>
+          </div>
+          <span class="cr-ec-sum-arrow cr-ec-sum-arrow--left" aria-hidden="true"></span>
+          <div class="cr-ec-sum-col">
+            <span class="cr-ec3-name">Economic Capital</span>
+            <span class="cr-ec3-abs" id="homeCrSumEdeEcAbs">–</span>
+            <span class="cr-ec3-rel" id="homeCrSumEdeEcRel">–</span>
+          </div>
+          <span class="cr-ec-sum-arrow cr-ec-sum-arrow--right" aria-hidden="true"></span>
+          <div class="cr-ec-sum-col">
+            <span class="cr-ec3-name">VaR</span>
+            <span class="cr-ec3-abs" id="homeCrSumEdeVarAbs">–</span>
+            <span class="cr-ec3-rel" id="homeCrSumEdeVarRel">–</span>
+          </div>
+        </div>
         <!-- Zusammenfassung Market adjusted: EL <- EC -> VaR nebeneinander (PD_M_norm). -->
         <div class="cr-ec-summary" data-tile="risk_buffer_m">
           <div class="cr-ec-sum-head">
@@ -691,7 +742,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="cr-ec-sum-title">Normal Risk</div>
               <div class="cr-ec-sum-subtitle">Risk Buffer (Economic Capital)</div>
             </div>
-            <div class="cr-ec-sum-pd">Market adjusted Probabilities of Default</div>
+            <div class="cr-ec-sum-pd">Market adjusted Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumMPdConf">VaR: –</span></div>
           </div>
           <div class="cr-ec-sum-col">
             <span class="cr-ec3-name">Expected Loss</span>
@@ -763,7 +814,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <!-- Concentration-Risk-SCORE (HHI-basiert, 0-100%) im Stil des TCM-Sliders. Befuellt in
                homeOverview.js -> renderConcentrationScore. -->
           <div class="rs-card rs-card--conc" data-tile="cr_conc_score">
-            <div class="rs-head"><span class="rs-title">Concentration Risk</span><span class="rs-title-right">Tail concentration score</span></div>
+            <div class="rs-head"><span class="rs-title">EXTREME RISK</span><span class="rs-title-right" id="crConcScoreRight">Concentration Index: HHI</span></div>
             <div class="conc-tcm-sub" id="crConcScoreSub">–</div>
             <div class="conc-tcm-track conc-score-track">
               <span class="conc-tcm-bound" style="left:40%"></span>
@@ -792,7 +843,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </div>
         <div class="home-chart-card" data-tile="cr_chart">
-          <div class="home-chart-cap">EXTREME RISK — contribution to tail loss (%)</div>
+          <div class="home-chart-cap" id="homeCrChartCap">EXTREME RISK - top tail drivers</div>
           <div class="home-chart"><canvas id="homeCrChart"></canvas></div>
         </div>
       </section>
@@ -2394,10 +2445,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="cr-tail-tile">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Where are the largest losses located?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Loss distribution &mdash; market adjusted</div>
-          <div class="cr-loss-chart-wrap" style="position:relative;">
-            <canvas id="crLossDistChartNorm" width="560" height="300" style="max-width:100%;" data-label="Loss distribution &mdash; market adjusted"></canvas>
-            <div id="crLossDistLegendNorm" class="cr-loss-legend"></div>
-          </div>
+          <canvas id="crLossDistChartNorm" width="560" height="300" style="max-width:100%;" data-label="Loss distribution &mdash; market adjusted"></canvas>
         </div>
         <div class="cr-tail-tile">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers drive the largest share of tail losses?</div>
@@ -2580,29 +2628,26 @@ Feature:    Wenn es nur in einem Panel gilt
     <div style="margin-top:20px;">
       <div class="conc-panel__title" style="margin-bottom:8px;">Loss distribution &amp; Tail Loss Concentration &mdash; Historic</div>
       <!-- 2x2-Grid: jede Grafik/Tabelle als eigene Kachel (wie Market Risk/Issuer). -->
-      <!-- Reihe 1: die beiden ersten Graphen (schmaler) + Concentration-Funnel-Kachel daneben. -->
-      <div style="display:grid; grid-template-columns: 1fr 1fr 0.8fr; gap:20px; margin-bottom:20px; align-items:stretch;">
+      <!-- Reihe 1: Loss distribution (breiter) + Top tail drivers. Funnel ist in Reihe 2. -->
+      <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:20px; margin-bottom:20px; align-items:stretch;">
         <div class="cr-tail-tile">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Where are the largest losses located?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Loss distribution with tail highlight</div>
-          <div class="cr-loss-chart-wrap" style="position:relative;">
-            <canvas id="crLossDistChart" width="560" height="300" style="max-width:100%;" data-label="Loss distribution with tail highlight"></canvas>
-            <div id="crLossDistLegend" class="cr-loss-legend"></div>
-          </div>
+          <canvas id="crLossDistChart" width="560" height="300" style="max-width:100%;" data-label="Loss distribution with tail highlight"></canvas>
         </div>
         <div class="cr-tail-tile">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers drive the largest share of tail losses?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Top tail drivers</div>
           <canvas id="crTailContribChartHist" width="560" height="260" style="width:100%; height:auto;" data-label="Top tail drivers &mdash; Historic"></canvas>
         </div>
+      </div>
+      <!-- Reihe 2: Funnel (#1) + Scatter + TCM-Tabelle. -->
+      <div style="display:grid; grid-template-columns: 0.8fr 1fr 1fr; gap:20px;">
         <div class="cr-tail-tile" style="display:flex; flex-direction:column;">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How does tail risk concentrate?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:10px; color:var(--text-muted); font-weight:600;">Concentration funnel</div>
           <div id="crTcmFunnelHist" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"></div>
         </div>
-      </div>
-      <!-- Reihe 2: Scatter + TCM-Tabelle. -->
-      <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:20px;">
         <div class="cr-tail-tile">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers contribute disproportionately to tail losses?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Tail loss vs EAD share</div>

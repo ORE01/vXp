@@ -289,9 +289,9 @@ function getRunVarIndex() {
 }
 
 // Vom Nutzer gewaehltes Kredit-Konfidenzniveau (Dropdown im Economic-Capital-Panel).
-// null = Config-Wert. Aendert NUR die AUSWERTUNG (welches Quantil = VaR, Tail-Grenze),
-// NICHT die Simulation. Wirkt zentral ueber getRunConfQuantil().
-let _selCreditConf = null;
+// Default 0.999 (= 99,9 %); null wuerde den Config-Wert nutzen. Aendert NUR die AUSWERTUNG
+// (welches Quantil = VaR, Tail-Grenze), NICHT die Simulation. Wirkt zentral ueber getRunConfQuantil().
+let _selCreditConf = 0.999;
 export function getSelectedCreditConf() { return _selCreditConf; }
 export function setSelectedCreditConf(c) {
   const n = Number(c);
@@ -492,6 +492,15 @@ export function renderClossTailList() {
       </tr></thead>
       <tbody>${body}</tbody>
     </table>`;
+}
+
+// Loss-Distribution-Trigger neu zeichnen (kombinierter Chart + Tail-Liste) — z.B. nach
+// Confidence-Wechsel: VaR-Balken (closestIndex zu getRunConfQuantil) und Tail-Liste
+// (tailIssuerBreakdown -> getRunConfQuantil) haengen am Konfidenzniveau.
+export function refreshLossDistribution() {
+  const cv = document.getElementById('LossIssuerChartCombinedTop');
+  try { cv?.parentNode?.__lossComboRender?.(); } catch {}
+  try { renderClossTailList(); } catch {}
 }
 
 export function handleLossIssuerMainData(receivedData) {

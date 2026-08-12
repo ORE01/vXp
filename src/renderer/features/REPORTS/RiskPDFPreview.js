@@ -709,6 +709,8 @@ function buildPreviewSections(chartState) {
       tableItems = buildDynamicTableItems(sec.key, sec.tables, chartState);
       tableThumbs = (sec.enabledTables || [])
         .filter(t => !IGNORED_TABLE_IDS.includes(t.id))
+        // Overview: hartkodierte KPI-Zusammenfassung raus -> die gespiegelten Karten (slidersHtml) zeigen die echte Auswahl.
+        .filter(t => !(sec.key === 'overview' && t.id === 'overviewKpiTable'))
         .map(t => {
           // Per-Tabelle-Override: data-max-cols am Element (z.B. breite Pivot-Tabellen).
           const el = document.getElementById(t.id);
@@ -734,24 +736,30 @@ function buildPreviewSections(chartState) {
         c.style.marginTop = '0';
         return c.outerHTML;
       };
-      // Market-Risk-Spalte bekommt zusaetzlich die Current/Stressed-Balkenkacheln (.mkt-grp-tiles).
-      const mktGrp = document.querySelector('#HOME_Modal .mkt-grp-tiles') || document.querySelector('.mkt-grp-tiles');
-      const grp = [
-        ['homeRiskSliders', 'Portfolio', null],
-        ['homeMarketSliders', 'Market Risk', mktGrp],
-        ['homeCreditSliders', 'Credit Risk', null],
+      // Pro Karte den KOMPLETTEN sichtbaren Inhalt spiegeln (alle im Customer Setup angehakten
+      // Kacheln + Slider) — ausser Kartenkopf (Preview hat eigenes Label) und Chart (separater
+      // Thumb). display:none-Kacheln bleiben via globalem CSS verborgen -> Report zeigt EXAKT
+      // die Customer-Setup-Auswahl, ohne feste Whitelist.
+      const cardCols = [
+        ['homePfNotional', 'Portfolio'],
+        ['homeMktVar', 'Market Risk'],
+        ['homeCrVar', 'Credit Risk'],
       ];
-      const parts = grp.map(([gid, lbl, extraEl]) => {
+      const parts = cardCols.map(([anchorId, lbl]) => {
+        const card = document.getElementById(anchorId)?.closest('.home-card');
+        if (!card) return '';
         const inner = [];
-        if (extraEl) inner.push(cloneClean(extraEl));
-        const g = document.getElementById(gid);
-        if (g) inner.push(cloneClean(g));
+        Array.from(card.children).forEach((ch) => {
+          if (ch.classList?.contains('home-card-head')) return;   // Kartenkopf -> eigenes Label
+          if (ch.classList?.contains('home-chart-card')) return;  // Chart -> separater Thumb
+          inner.push(cloneClean(ch));
+        });
         if (!inner.length) return '';
         return `<div style="flex:1 1 30%;min-width:210px;">`
           + `<div style="font-weight:700;color:var(--text-bright);font-size:12px;margin:0 0 4px;">${lbl}</div>`
           + `${inner.join('')}</div>`;
       }).filter(Boolean);
-      if (parts.length) slidersHtml = `<div style="display:flex;gap:12px;flex-wrap:wrap;">${parts.join('')}</div>`;
+      if (parts.length) slidersHtml = `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">${parts.join('')}</div>`;
     }
 
     const hasThumbs = !isOn
@@ -2237,7 +2245,7 @@ function renderRiskPreview() {
 
             ${sec.slidersHtml ? `
               <div class="risk-section__row risk-section__row--deep">
-                <div class="risk-section__label">Sliders</div>
+                <div class="risk-section__label">${sec.key === 'overview' ? 'Overview' : 'Sliders'}</div>
                 <div class="risk-section__controls">${sec.slidersHtml}</div>
               </div>
             ` : ''}

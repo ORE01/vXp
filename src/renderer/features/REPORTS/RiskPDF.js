@@ -47,12 +47,12 @@ export const PDF_LAYOUT_DEFAULTS = {
   marginRight: 14,
 
   headerHeight: 16,
-  headerGap: 12,
+  headerGap: 6,
 
   footerHeight: 10,
   footerGap: 10,
 
-  sectionTitleSpacing: 10,
+  sectionTitleSpacing: 6,
   blockGap: 10,
 };
 
@@ -468,17 +468,31 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
   // Einheitlicher KPI-Karten-Stil fuer ALLE Report-Sektionen: abgerundete Box mit Rahmen,
   // oben kleines GROSSGESCHRIEBENES muted Label, darunter fetter dunkler Wert (linksbuendig)
   // — analog zu den Risk-Limit/Buffer-Karten im Dashboard.
-  const tileH = opts.tileH || 18;
   const valFont = opts.valueFont || 13;
   const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41];
+  // Systemweit 3-zeilig (Name / Wert / Sub-Wert) -> EINHEITLICHE Hoehe, auch wenn nur 2 Zeilen befuellt sind.
+  const tileH = Math.max(opts.tileH || 0, 22);
+  // Wert in zwei Zahlen trennen: "abs · rel" ODER "rel + EUR/USD abs" (z.B. Sensitivities "-1,02 bp" / "EUR -21.701").
+  const splitVal = (v) => {
+    const s = String(v ?? '').trim();
+    if (s.includes('·')) return s.split('·').map((x) => x.trim()).filter(Boolean);
+    const m = s.match(/^(.+?\S)\s*((?:EUR|USD)\s+-?[\d.,].*)$/);
+    if (m && m[1].trim()) return [m[1].trim(), m[2].trim()];
+    return s ? [s] : [];
+  };
   kpis.forEach((k, idx) => {
     const x = marginX + idx * (tileW + tileGap);
     doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
     doc.roundedRect(x, y, tileW, tileH, 2, 2, 'FD');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
-    doc.text(String(k.label ?? '').toUpperCase(), x + 5, y + 6);
+    doc.text(String(k.label ?? '').toUpperCase(), x + 5, y + 5.5);
+    const parts = splitVal(k.value);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(valFont); doc.setTextColor(...TEXT);
-    doc.text(String(k.value ?? ''), x + 5, y + 13.5);
+    doc.text(parts[0] || '', x + 5, y + 12);
+    if (parts[1]) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3)); doc.setTextColor(...MUTED);
+      doc.text(parts.slice(1).join(' · '), x + 5, y + 17.5);
+    }
   });
   doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
   return y + tileH + (opts.gapAfter ?? 6);
@@ -830,6 +844,65 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       y += cfg.sectionTitleSpacing;
     }
   }
+
+  // Economic-Capital-KPI-Story (App-Panel): 4 Karten (EL / EC / VaR / ES) mit Konnektoren + Summary,
+  // nativ nachgezeichnet (das App-Grid ist ein <div>-Grid, kein data-kpi-band).
+  const drawEcStory = (panelId, y0) => {
+    const panel = ctx.getById(panelId) || (ctx.appRoot || document).getElementById(panelId);
+    if (!panel) return y0;
+    const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    const items = Array.from(panel.querySelectorAll('.conc-kpi-grid .conc-kpi')).map((c) => ({
+      val: clean((c.querySelector('.conc-kpi__val')?.childNodes?.[0]?.textContent) || c.querySelector('.conc-kpi__val')?.textContent),
+      val2: clean(c.querySelector('.conc-kpi__val-2nd')?.textContent),
+      sub: clean(c.querySelector('.conc-kpi__sub')?.textContent),
+      lbl: clean(c.querySelector('.conc-kpi__lbl')?.textContent),
+      conn: c.getAttribute('data-conn') || '',
+    })).filter((it) => it.val && it.val !== '–' && it.val !== '—');
+    if (!items.length) return y0;
+    const contentW = layout.contentWidth;
+    const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41];
+    const sumLis = Array.from(panel.querySelectorAll('.cr-kpi-summary li')).map((li) => clean(li.textContent)).filter(Boolean);
+    // Karten VOLL breit; die Summary kommt DARUNTER.
+    const n = items.length, connW = 6, cardW = (contentW - connW * (n - 1)) / n, cardH = 24;
+    ensurePageSpace(cardH + 4, `${sectionTitle} (cont.)`);
+    let cx = marginX;
+    items.forEach((it, i) => {
+      doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
+      doc.roundedRect(cx, y0, cardW, cardH, 2, 2, 'FD');
+      // Werte OBEN: Haupt-Wert, Sub.
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...TEXT);
+      doc.text(it.val, cx + 3, y0 + 7);
+      if (it.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(doc.splitTextToSize(it.sub, cardW - 6)[0] || '', cx + 3, y0 + 11); }
+      // Bezeichnung UNTEN (letzte Zeile(n)), am Boden verankert.
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+      const lbl = doc.splitTextToSize(it.lbl, cardW - 6).slice(0, 2);
+      lbl.forEach((ln, j) => doc.text(ln, cx + 3, y0 + cardH - 2.5 - (lbl.length - 1 - j) * 3));
+      if (i < n - 1) {
+        const cc = it.conn === '→' ? '>' : (it.conn || '');   // "→" ist nicht in WinAnsi -> ">"
+        if (cc) { doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...MUTED); doc.text(cc, cx + cardW + connW / 2 - doc.getTextWidth(cc) / 2, y0 + cardH / 2 + 1.5); }
+      }
+      cx += cardW + connW;
+    });
+    // Executive Summary UNTER den Karten (voll breit, Bullet je Aussage).
+    let ny = y0 + cardH + 5;
+    sumLis.forEach((s) => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...TEXT);
+      const lines = doc.splitTextToSize(s, contentW - 6);
+      ensurePageSpace(lines.length * 4 + 2, `${sectionTitle} (cont.)`);
+      doc.setFillColor(150, 150, 150); doc.circle(marginX + 1.5, ny - 1.2, 0.7, 'F');
+      lines.forEach((ln) => { doc.text(ln, marginX + 5, ny); ny += 4; });
+      ny += 1.5;
+    });
+    return ny + 3;
+  };
+
+  // Frage-Ueberschrift eines EC-Charts/Tabelle (heller Titel = 1. <div> in .cr-tail-tile).
+  const crQuestionFor = (id) => {
+    const el = ctx.getById(id);
+    const tile = el?.closest?.('.cr-tail-tile');
+    const q = tile?.querySelector('div');
+    return (q?.textContent || '').replace(/\s+/g, ' ').trim();
+  };
 
   // ── Sonderlayout: Market-Risk-Dashboard nativ (Vektor, KEIN Bild) ──
   // KPI-Karten (rel. Wert + Ampel + Deltas, abs. Wert + Delta) + Limit-Auslastungs-
@@ -1315,10 +1388,23 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   const tablesAll = sec.enabledTables || [];
 
   // Normal sections
+  // Overview NICHT straffen -> die urspruenglichen Abstaende kompensieren (headerGap 12->6, sectionTitleSpacing 10->6).
+  if (sec.key === 'overview') y += 6;
   doc.setFontSize(14);
   doc.setTextColor(0);
   doc.text(sectionTitle, marginX, y);
   y += cfg.sectionTitleSpacing;
+  if (sec.key === 'overview') y += 4;
+
+  // Economic-Capital-KPI-Story (App-Panel) VOR den Charts, wenn die Sektion EC-Charts hat.
+  // Historic (…Hist) -> panel-credit; market adjusted (…Norm) -> panel-credit-current.
+  let ecPanelId = null;
+  {
+    const enIds = (sec.enabledCharts || []).map((c) => c.id);
+    if (enIds.some((id) => /Hist$/.test(id) && /crTail|crLossDist/.test(id))) ecPanelId = 'panel-credit';
+    else if (enIds.some((id) => /Norm$/.test(id) && /crTail|crLossDist/.test(id))) ecPanelId = 'panel-credit-current';
+    if (ecPanelId) y = drawEcStory(ecPanelId, y);
+  }
 
   // KPI-Baender (data-kpi-band) IMMER oberhalb der Graphen zeichnen (Dashboard-Konvention).
   // Vorgezogen aus dem Tabellen-Loop; dort werden sie dann uebersprungen.
@@ -1328,12 +1414,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   for (const t of tablesAll) {
     const el = ctx.getById(t.id);
     if (!el || !el.dataset || !el.dataset.kpiBand) continue;
+    if (ecPanelId) continue;   // EC-Story ersetzt JEDES KPI-Band in dieser Sektion (altes VaR/ES/TSI/MSD-Band raus)
     const kpis = kpisFromTableEl(el);
     if (!kpis.length) continue;
-    ensurePageSpace(bandCompact ? 26 : 32, `${sectionTitle} (cont.)`);
-    doc.setFontSize(10); doc.setTextColor(0);
-    doc.text(String(t.label || 'Key Figures'), marginX, y);
-    y += 6;
+    ensurePageSpace(bandCompact ? 30 : 34, `${sectionTitle} (cont.)`);
+    // "Key Figures"-Ueberschrift entfernt -> das Band rueckt direkt unter den Sektionstitel.
     y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis,
       bandCompact ? { tileH: 14, valueFont: 11, gapAfter: 4 } : {});
     y += bandCompact ? 4 : cfg.blockGap;
@@ -1400,11 +1485,22 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       return null;
     };
     const pctStyle = (el, prop) => { const n = parseFloat(el?.style?.[prop] || ''); return Number.isFinite(n) ? n : null; };
+    const richText = (el) => (el?.textContent || '').replace(/\s+/g, ' ').trim();
     const cardFrom = (title, anchorId) => {
       const card = ctx.getById(anchorId)?.closest('.home-card');
       const boxes = [];
-      card?.querySelectorAll('.home-kpi[data-tile]').forEach((t) => {
+      // Alle sichtbaren Overview-Kacheln in DOM-Reihenfolge (Standard + Sonderformen).
+      card?.querySelectorAll('[data-tile]').forEach((t) => {
         if (t.style.display === 'none') return;            // im Customer Setup abgewaehlt -> ausgeblendet
+        // Executive-Summary-Liste -> voll-breite Bullet-Zeilen.
+        const execList = t.querySelector('.mkt-exec-list');
+        if (execList) {
+          const lines = Array.from(execList.querySelectorAll('li'))
+            .filter((li) => li.style.display !== 'none')
+            .map((li) => richText(li)).filter((s) => s && s !== '–');
+          if (lines.length) boxes.push({ type: 'exec', cap: richText(t.querySelector('.home-kpi-cap')) || 'EXECUTIVE SUMMARY', lines });
+          return;
+        }
         // Zusammengefasste Current/Stressed-Kachel (Balken statt KPI-Val) -> eigenes Box-Format.
         const grpRows = t.querySelectorAll('.mkt-grp-row');
         if (grpRows.length) {
@@ -1421,8 +1517,86 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           boxes.push({ type: 'group', cap: tTxt(t, '.home-kpi-cap'), dist: tTxt(t, '.mkt-grp-dist'), rows, wide: true });
           return;
         }
-        const sub = tTxt(t, '.home-kpi-abs');
-        boxes.push({ v: tTxt(t, '.home-kpi-val') || '–', lbl: tTxt(t, '.home-kpi-lbl'), sub: sub || undefined, dot: tDot(t) });
+        // Risk-Buffer-Zusammenfassung (EL -> EC -> VaR), 3 Spalten mit Name/abs/rel.
+        if (t.classList.contains('cr-ec-summary')) {
+          const cols = Array.from(t.querySelectorAll('.cr-ec-sum-col')).map((cx) => ({
+            name: richText(cx.querySelector('.cr-ec3-name')),
+            abs: richText(cx.querySelector('.cr-ec3-abs')),
+            rel: richText(cx.querySelector('.cr-ec3-rel')),
+          }));
+          const pdConf = richText(t.querySelector('.cr-ec-sum-pd-conf'));
+          const pdFull = richText(t.querySelector('.cr-ec-sum-pd'));
+          const pdTitle = (pdConf && pdFull.endsWith(pdConf)) ? pdFull.slice(0, pdFull.length - pdConf.length).trim() : pdFull;
+          if (cols.length) boxes.push({ type: 'ecsum', cap: richText(t.querySelector('.cr-ec-sum-title')) || 'Risk Buffer', cols, arrows: true, specTop: pdTitle, specConf: pdConf });
+          return;
+        }
+        // EC-Detailkachel (Name / abs / rel) -> Standard-Box (Wert = abs, Sub = rel, Label = Name).
+        if (t.classList.contains('cr-ec3-tile')) {
+          boxes.push({ v: richText(t.querySelector('.cr-ec3-abs')) || '–', sub: richText(t.querySelector('.cr-ec3-rel')) || undefined, lbl: richText(t.querySelector('.cr-ec3-name')) });
+          return;
+        }
+        // Concentration / EXTREME RISK -> Status als voll-breite Box.
+        // cr_tsi / cr_msd sind ebenfalls .rs-card--conc, werden aber UNTEN als Slider gezeichnet -> hier auslassen.
+        if (t.classList.contains('rs-card--conc')) {
+          const key = t.getAttribute('data-tile') || '';
+          if (key === 'cr_tsi' || key === 'cr_msd') return;
+          boxes.push({
+            type: 'conc',
+            title: richText(t.querySelector('.rs-title')) || 'EXTREME RISK',
+            right: richText(t.querySelector('.rs-title-right')),
+            status: richText(t.querySelector('.conc-tcm-sub')),
+            markerPct: pctStyle(t.querySelector('.conc-tcm-marker'), 'left'),
+            pill: richText(t.querySelector('.conc-tcm-pill')),
+            scale: Array.from(t.querySelectorAll('.conc-tcm-scale span')).map((s) => richText(s)).filter(Boolean),
+          });
+          return;
+        }
+        // Market NORMAL/EXTREME RISK Scale-Kachel -> Caption + Current/Stressed-Werte.
+        if (t.classList.contains('mkt-scale-tile')) {
+          const vals = Array.from(t.querySelectorAll('.mkt-scale-vals > span')).map((sp) => ({
+            name: richText(sp.querySelector('.mkt-scale-vn')),
+            val: richText(sp.querySelector('.mkt-scale-vp')),
+            abs: richText(sp.querySelector('.mkt-scale-vs')),
+            inc: richText(sp.querySelector('.mkt-scale-vinc')),
+          })).filter((v) => v.val || v.name);
+          const track = t.querySelector('.mkt-scale-track');
+          const greenPct = pctStyle(track?.querySelector('.mkt-grp-zone--green'), 'width');
+          const ticks = Array.from(track?.querySelectorAll('.mkt-scale-tick') || []).map((m) => pctStyle(m, 'left')).filter((v) => v != null);
+          const limits = Array.from(t.querySelectorAll('.mkt-scale-limits span')).map((s) => richText(s)).filter(Boolean);
+          boxes.push({ type: 'scale', cap: richText(t.querySelector('.home-kpi-cap')) || 'RISK', spec: richText(t.querySelector('.mkt-scale-spec')), vals, greenPct, ticks, limits });
+          return;
+        }
+        // Coupon-Type-Kachel -> 3 Spalten (FIX / FLOAT / STRUCTURED) im ecsum-Format.
+        if (t.classList.contains('pf-cpn-tile')) {
+          const cols = Array.from(t.querySelectorAll('.pf-cpn-cell')).map((cx) => ({
+            name: richText(cx.querySelector('.pf-cpn-lbl')),
+            abs: richText(cx.querySelector('.pf-cpn-val')),
+            rel: '',
+          }));
+          if (cols.length) boxes.push({ type: 'ecsum', cap: richText(t.querySelector('.pf-dur-cap')) || 'Coupon Type', cols });
+          return;
+        }
+        // Interest-Rate-Duration-Split-Kachel -> voll-breite Box mit Split-Balken (not valued | valued).
+        if (t.classList.contains('pf-dur-split-tile')) {
+          boxes.push({
+            type: 'irdur',
+            cap: richText(t.querySelector('.pf-dur-cap')) || 'Interest Rate Duration',
+            avg: richText(t.querySelector('.pf-dur-splitavg-c')) || richText(t.querySelector('.pf-dur-splitavg')),
+            nvLbl: richText(t.querySelector('.pf-dur-splitlbl-nv')),
+            vLbl: richText(t.querySelector('.pf-dur-splitlbl-v')),
+            nvPct: pctStyle(t.querySelector('.pf-dur-seg--nv'), 'width'),
+            vPct: pctStyle(t.querySelector('.pf-dur-seg--v'), 'width'),
+            nvPctTxt: richText(t.querySelector('.pf-dur-splitpcts span:first-child')),
+            vPctTxt: richText(t.querySelector('.pf-dur-splitpcts span:last-child')),
+          });
+          return;
+        }
+        // Standard-KPI-Kachel: nur wenn echter .home-kpi-val vorhanden (sonst Sonderkachel -> skip, kein '–').
+        const valEl = t.querySelector('.home-kpi-val');
+        if (valEl) {
+          const sub = tTxt(t, '.home-kpi-abs');
+          boxes.push({ v: richText(valEl) || '–', lbl: tTxt(t, '.home-kpi-lbl'), sub: sub || undefined, dot: tDot(t) });
+        }
       });
       return { title, boxes };
     };
@@ -1434,12 +1608,38 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
     const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovBoxH = 13;
     const GRP_H = 22; // Hoehe einer Grouped-Tile-Box (Caption + Distanz + 2 Balkenzeilen, groessere Schrift).
-    // Inhaltshoehe je Karte: normale Boxen 2 je Reihe (ovBoxH), Grouped-Tiles voll breit (GRP_H).
+    const innerW = ovCardW;   // volle Spaltenbreite -> Kacheln fluchten mit den Balkengraphen darunter
+    // Exec-/EC-Summary-Boxen sind voll breit; Zeilen umbrechen + Boxhoehe vorberechnen.
+    const EXEC_FS = 6, EXEC_LH = 3.0;
+    ovCards.forEach((c) => (c.boxes || []).forEach((b) => {
+      if (b.type === 'exec') {
+        b.wide = true;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(EXEC_FS);
+        // Pro Aussage separat umbrechen (Platz fuer Bullet + Einrueckung) -> Bullet je Aussage.
+        b._perLine = (b.lines || []).map((ln) => doc.splitTextToSize(String(ln), innerW - 7));
+        const total = b._perLine.reduce((a, w) => a + w.length, 0);
+        b._h = 5 + total * EXEC_LH + 1.5;   // Caption + gewrappte Zeilen
+      } else if (b.type === 'ecsum') {
+        b.wide = true;
+        b._h = b.arrows ? 27 : 16;   // Risk Buffer (arrows) so gross wie die Market NORMAL-RISK-Kachel
+      } else if (b.type === 'scale') {
+        b.wide = true;
+        b._h = 27;   // Caption + gerahmte Wert-Boxen + Zonen-Balken + Limit-Labels
+      } else if (b.type === 'conc') {
+        b.wide = true;
+        b._h = 27;   // gleiche Panel-Groesse wie Normal Risk / Market-Scale-Kacheln
+      } else if (b.type === 'irdur') {
+        b.wide = true;
+        b._h = 20;   // Caption + Labels + Split-Balken + Prozente + zentrierte Ø-Zeile
+      }
+    }));
+    const boxHeightOf = (b) => (b.type === 'group') ? GRP_H : (b._h != null ? b._h : ovBoxH);
+    // Inhaltshoehe je Karte: normale Boxen 2 je Reihe (ovBoxH), Wide-Boxen (Group/Exec/EC-Sum) voll breit.
     const contentHeight = (boxes) => {
       let h = 0, col = 0;
       (boxes || []).forEach((b) => {
         const isWide = b.wide || b.type === 'group';
-        if (isWide) { if (col > 0) col = 0; h += (b.type === 'group' ? GRP_H : ovBoxH) + 3; }
+        if (isWide) { if (col > 0) col = 0; h += boxHeightOf(b) + 3; }
         else if (col === 0) { h += ovBoxH + 3; col = 1; } else { col = 0; }
       });
       return Math.max(ovBoxH + 3, h);
@@ -1485,19 +1685,15 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     };
     ensurePageSpace(ovCardH + 8, `${sectionTitle} (cont.)`);
     ovCards.forEach((c, i) => {
-      const x = marginX + i * (ovCardW + ovGap), tx = x + 5;
-      // Market Risk (Current/Stressed) rahmenlos wie die Duration-Bloecke; Portfolio/Credit bleiben Karten.
-      const frameless = /MARKET RISK/i.test(String(c.title));
-      if (!frameless) {
-        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-        doc.roundedRect(x, y, ovCardW, ovCardH, 2, 2, 'FD');
-      }
+      const x = marginX + i * (ovCardW + ovGap), tx = x;   // kein Inset -> Kacheln fluchten mit den Charts
+      // Kein grosser Karten-Rahmen mehr (einheitlich wie Market Risk) — die einzelnen Kacheln/
+      // Balken tragen ihre eigenen kleinen Rahmen.
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
-      doc.setTextColor(...(frameless ? TEXT : MUTED));
+      doc.setTextColor(...TEXT);
       doc.text(String(c.title), tx, y + 7);
 
-      // Kein Hero mehr — alle Kennzahlen als normale Boxen direkt unter dem Titel.
-      const innerW = ovCardW - 10, halfW = (innerW - 3) / 2;
+      // Kein Hero mehr — alle Kennzahlen als Boxen direkt unter dem Titel.
+      const halfW = (innerW - 3) / 2;
       let byy = y + 11, col = 0;
       (c.boxes || []).forEach((b) => {
         const isWide = b.wide || b.type === 'group';
@@ -1505,6 +1701,209 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         const w = isWide ? innerW : halfW;
         const bx = tx + (isWide ? 0 : col * (halfW + 3));
         if (b.type === 'group') { drawGroup(bx, byy, w, b); byy += GRP_H + 3; col = 0; return; }
+        // Executive Summary: Box, Caption + gewrappte Zeilen. Status-Woerter farbig; Mockup-Punkt oben rechts.
+        if (b.type === 'exec') {
+          const bh = boxHeightOf(b);
+          doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+          doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+          doc.text(String(b.cap || 'EXECUTIVE SUMMARY'), bx + 3, byy + 4);
+          // Mockup-Punkt rechts oben in der Ecke.
+          doc.setFillColor(150, 150, 150); doc.circle(bx + w - 3.5, byy + 3, 1.3, 'F');
+          // Zeilen; Status-Woerter hervorheben (LOW gruen / MODERATE-ELEVATED amber / HIGH rot).
+          doc.setFontSize(EXEC_FS);
+          const STATUS_COL = { LOW: [47, 158, 91], MODERATE: [224, 165, 51], ELEVATED: [224, 165, 51], HIGH: [217, 83, 79] };
+          const textX = bx + 6;   // Text nach dem grauen Bullet
+          let li = 0;
+          (b._perLine || []).forEach((wrapLines) => {
+            wrapLines.forEach((ln, j) => {
+              const ly = byy + 8 + li * EXEC_LH;
+              // Grauer Punkt vor der ERSTEN Zeile jeder Aussage.
+              if (j === 0) { doc.setFillColor(150, 150, 150); doc.circle(bx + 3, ly - 1, 0.7, 'F'); }
+              const re = /\b(LOW|MODERATE|ELEVATED|HIGH)\b/g;
+              let last = 0, cx = textX, m; const segs = [];
+              while ((m = re.exec(ln)) !== null) {
+                if (m.index > last) segs.push({ t: ln.slice(last, m.index), c: null });
+                segs.push({ t: m[0], c: STATUS_COL[m[0]] });
+                last = m.index + m[0].length;
+              }
+              if (last < ln.length) segs.push({ t: ln.slice(last), c: null });
+              if (!segs.length) segs.push({ t: ln, c: null });
+              segs.forEach((s) => {
+                if (s.c) { doc.setFont('helvetica', 'bold'); doc.setTextColor(s.c[0], s.c[1], s.c[2]); }
+                else { doc.setFont('helvetica', 'normal'); doc.setTextColor(...TEXT); }
+                doc.text(s.t, cx, ly);
+                cx += doc.getTextWidth(s.t);
+              });
+              li++;
+            });
+          });
+          byy += bh + 3; col = 0; return;
+        }
+        // Risk-Buffer (arrows): jede Zahl in EIGENEM Rahmen, Pfeile beruehren die Rahmen.
+        // Coupon Type (kein arrows): schlichte 3 Spalten in einer Box.
+        if (b.type === 'ecsum') {
+          const bh = boxHeightOf(b);
+          const nc = (b.cols || []).length || 1;
+          if (b.arrows) {
+            // Aussenrahmen wie die Market NORMAL-RISK-Kachel (gleiche Groesse/Optik).
+            doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+            doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
+            if (b.cap) { doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED); doc.text(String(b.cap).toUpperCase(), bx + 3, byy + 4); }
+            // Spec oben rechts: Historic-PD-Titel + VaR-Konfidenz (wie die Market-Scale-Spec).
+            if (b.specTop) { doc.setFont('helvetica', 'normal'); doc.setFontSize(4.8); doc.setTextColor(...MUTED); const s = String(b.specTop); doc.text(s, bx + w - 3 - doc.getTextWidth(s), byy + 4); }
+            if (b.specConf) { doc.setFont('helvetica', 'normal'); doc.setFontSize(4.8); doc.setTextColor(...MUTED); const s = String(b.specConf); doc.text(s, bx + w - 3 - doc.getTextWidth(s), byy + 7.3); }
+            const gap = 5, pad = 4, bw = (w - pad * 2 - gap * (nc - 1)) / nc;
+            const boxH = 13, boxY = byy + 10;
+            (b.cols || []).forEach((cc, i) => {
+              const bxx = bx + pad + i * (bw + gap), midX = bxx + bw / 2;
+              doc.setDrawColor(...BORDER); doc.setFillColor(255, 255, 255);
+              doc.roundedRect(bxx, boxY, bw, boxH, 1, 1, 'FD');
+              doc.setFont('helvetica', 'normal'); doc.setFontSize(5.2); doc.setTextColor(...MUTED);
+              const nm = doc.splitTextToSize(String(cc.name || ''), bw - 1)[0] || '';
+              doc.text(nm, midX - doc.getTextWidth(nm) / 2, boxY + 3.5);
+              doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...TEXT);
+              const av = String(cc.abs || '–');
+              doc.text(av, midX - doc.getTextWidth(av) / 2, boxY + 8);
+              if (cc.rel) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...MUTED); const rv = String(cc.rel); doc.text(rv, midX - doc.getTextWidth(rv) / 2, boxY + 11); }
+              if (i < nc - 1) {
+                const ax = bxx + bw, ay = boxY + boxH / 2;
+                doc.setDrawColor(...MUTED); doc.setLineWidth(0.4); doc.line(ax, ay, ax + gap - 1.4, ay);
+                doc.setFillColor(...MUTED); doc.triangle(ax + gap - 1.4, ay - 1.1, ax + gap - 1.4, ay + 1.1, ax + gap, ay, 'F');
+              }
+            });
+          } else {
+            doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+            doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
+            if (b.cap) { doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED); doc.text(String(b.cap), bx + 3, byy + 4); }
+            const cw = (w - 6) / nc;
+            (b.cols || []).forEach((cc, i) => {
+              const cxx = bx + 3 + i * cw;
+              doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(...MUTED);
+              doc.text(doc.splitTextToSize(String(cc.name || ''), cw - 1)[0] || '', cxx, byy + 8);
+              doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...TEXT);
+              doc.text(String(cc.abs || '–'), cxx, byy + 12);
+              if (cc.rel) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(...MUTED); doc.text(String(cc.rel), cxx, byy + 15); }
+            });
+          }
+          byy += bh + 3; col = 0; return;
+        }
+        // Market Scale (NORMAL/EXTREME RISK): Caption + Spec + gerahmte Current/Stressed-Boxen
+        // + gruen/amber Zonen-Balken mit Current/Stressed-Ticks + Limit-Labels (wie in der App).
+        if (b.type === 'scale') {
+          const bh = boxHeightOf(b);
+          doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+          doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+          doc.text(String(b.cap || ''), bx + 3, byy + 4);
+          if (b.spec) { doc.setFont('helvetica', 'normal'); doc.setFontSize(4.8); doc.setTextColor(...MUTED); const sp = String(b.spec); doc.text(sp, bx + w - 3 - doc.getTextWidth(sp), byy + 4); }
+          // Gerahmte Wert-Boxen (Current/Stressed) nebeneinander.
+          const vb = b.vals || [];
+          const nb = Math.max(1, vb.length);
+          const vbGap = 3, vbW = (w - 6 - vbGap * (nb - 1)) / nb, vbY = byy + 6, vbH = 11.5;
+          vb.forEach((vv, i) => {
+            const vx = bx + 3 + i * (vbW + vbGap);
+            doc.setDrawColor(...BORDER); doc.setFillColor(255, 255, 255);
+            doc.roundedRect(vx, vbY, vbW, vbH, 1, 1, 'FD');
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(5.2); doc.setTextColor(...MUTED);
+            doc.text(String(vv.name || ''), vx + 2, vbY + 3);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...TEXT);
+            const vtxt = String(vv.val || '–') + (vv.inc ? '  ' + vv.inc : '');
+            doc.text(vtxt, vx + 2, vbY + 7.2);
+            if (vv.abs) { doc.setFont('helvetica', 'normal'); doc.setFontSize(4.8); doc.setTextColor(...MUTED); doc.text(String(vv.abs), vx + 2, vbY + 10.2); }
+          });
+          // Zonen-Balken (gruen bis Warnschwelle, amber danach) + Current/Stressed-Ticks.
+          const barX = bx + 3, barW = w - 6, barY = vbY + vbH + 2.5, barH = 2, rad = 0.8;
+          const gp = (b.greenPct != null) ? Math.max(0, Math.min(100, b.greenPct)) : 60;
+          const gW = barW * gp / 100;
+          const ZG = [47, 158, 91], ZA = [224, 165, 51];
+          if (gW <= 0.2) { doc.setFillColor(...ZA); doc.roundedRect(barX, barY, barW, barH, rad, rad, 'F'); }
+          else if (gW >= barW - 0.2) { doc.setFillColor(...ZG); doc.roundedRect(barX, barY, barW, barH, rad, rad, 'F'); }
+          else {
+            doc.setFillColor(...ZG); doc.roundedRect(barX, barY, barW, barH, rad, rad, 'F');
+            doc.setFillColor(...ZA); doc.roundedRect(barX + gW, barY, barW - gW, barH, rad, rad, 'F');
+            doc.rect(barX + gW, barY, Math.min(rad + 0.6, barW - gW), barH, 'F');
+          }
+          (b.ticks || []).forEach((tp) => {
+            const mx = barX + barW * Math.max(0, Math.min(100, tp)) / 100;
+            doc.setDrawColor(40, 40, 40); doc.setLineWidth(0.5); doc.line(mx, barY - 1, mx, barY + barH + 1);
+          });
+          if (b.limits && b.limits.length) {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(4.5); doc.setTextColor(...MUTED);
+            const lt = b.limits.join('    ');
+            doc.text(lt, barX + barW - doc.getTextWidth(lt), barY + barH + 3.2);
+          }
+          byy += bh + 3; col = 0; return;
+        }
+        // Concentration (EXTREME RISK): Titel + Status (Wort in Zonenfarbe) + 3-Zonen-Score-Balken + Marker/Pill + Skala.
+        if (b.type === 'conc') {
+          const bh = boxHeightOf(b);
+          doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+          doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+          doc.text(String(b.title || ''), bx + 3, byy + 4);
+          if (b.right) { doc.setFont('helvetica', 'normal'); doc.setFontSize(4.6); doc.setTextColor(...MUTED); const rt = String(b.right); doc.text(rt, bx + w - 3 - doc.getTextWidth(rt), byy + 4); }
+          const zc = (b.markerPct != null && b.markerPct >= 60) ? [217, 83, 79] : (b.markerPct != null && b.markerPct >= 40) ? [224, 165, 51] : [47, 158, 91];
+          const st = String(b.status || '');
+          doc.setFontSize(6.5);
+          const ci = st.lastIndexOf(':');
+          if (ci >= 0) {
+            const pre = st.slice(0, ci + 1) + ' ', word = st.slice(ci + 1).trim();
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(...MUTED); doc.text(pre, bx + 3, byy + 8);
+            doc.setFont('helvetica', 'bold'); doc.setTextColor(zc[0], zc[1], zc[2]); doc.text(word, bx + 3 + doc.getTextWidth(pre), byy + 8);
+          } else { doc.setFont('helvetica', 'normal'); doc.setTextColor(...MUTED); doc.text(st, bx + 3, byy + 8); }
+          const barX = bx + 3, barW = w - 6, barY = byy + 13, barH = 2, rad = 0.8;
+          const g40 = barW * 0.40, g60 = barW * 0.60;
+          doc.setFillColor(47, 158, 91); doc.roundedRect(barX, barY, g40, barH, rad, rad, 'F'); doc.rect(barX + g40 - 1.2, barY, 1.2, barH, 'F');
+          doc.setFillColor(224, 165, 51); doc.rect(barX + g40, barY, g60 - g40, barH, 'F');
+          doc.setFillColor(217, 83, 79); doc.roundedRect(barX + g60, barY, barW - g60, barH, rad, rad, 'F'); doc.rect(barX + g60, barY, 1.2, barH, 'F');
+          if (b.markerPct != null) {
+            const mx = barX + barW * Math.max(0, Math.min(100, b.markerPct)) / 100;
+            doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.7); doc.line(mx, barY - 0.6, mx, barY + barH + 0.6);
+            doc.setDrawColor(40, 40, 40); doc.setLineWidth(0.3); doc.line(mx, barY - 0.6, mx, barY + barH + 0.6);
+            if (b.pill) { doc.setFont('helvetica', 'bold'); doc.setFontSize(5.5); doc.setTextColor(...TEXT); const pw = doc.getTextWidth(String(b.pill)); doc.text(String(b.pill), Math.max(barX, Math.min(barX + barW - pw, mx - pw / 2)), byy + 11.5); }
+          }
+          if (b.scale && b.scale.length) {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(4.5); doc.setTextColor(...MUTED);
+            const L = b.scale;
+            if (L[0]) doc.text(L[0], barX, barY + barH + 3);
+            if (L[1]) doc.text(L[1], barX + g40 - doc.getTextWidth(L[1]) / 2, barY + barH + 3);
+            if (L[2]) doc.text(L[2], barX + g60 - doc.getTextWidth(L[2]) / 2, barY + barH + 3);
+            const last = L[L.length - 1]; if (last && L.length > 3) doc.text(last, barX + barW - doc.getTextWidth(last), barY + barH + 3);
+          }
+          byy += bh + 3; col = 0; return;
+        }
+        // Interest Rate Duration: Caption + Oe + Split-Balken (not valued | valued) + Prozente.
+        if (b.type === 'irdur') {
+          const bh = boxHeightOf(b);
+          doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
+          doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+          doc.text(String(b.cap || ''), bx + 3, byy + 4);
+          // Gleiche Dicke/Rundung wie die Risk-Panel-Balken (barH 2, rad 0.8); Uebergang buendig (nicht abgeschnuert).
+          const barX = bx + 3, barW = w - 6, barY = byy + 9, barH = 2, rad = 0.8;
+          const nvW = (b.nvPct != null) ? Math.max(0, Math.min(100, b.nvPct)) : 0;
+          const nvPx = barW * nvW / 100;
+          const NV = [154, 167, 180], V = [108, 155, 209];
+          if (nvPx <= 0.2) { doc.setFillColor(...V); doc.roundedRect(barX, barY, barW, barH, rad, rad, 'F'); }
+          else if (nvPx >= barW - 0.2) { doc.setFillColor(...NV); doc.roundedRect(barX, barY, barW, barH, rad, rad, 'F'); }
+          else {
+            doc.setFillColor(...NV); doc.roundedRect(barX, barY, barW, barH, rad, rad, 'F');            // Basis grau (runde Enden)
+            doc.setFillColor(...V); doc.roundedRect(barX + nvPx, barY, barW - nvPx, barH, rad, rad, 'F'); // valued rechts (rundes rechtes Ende)
+            doc.rect(barX + nvPx, barY, Math.min(rad + 0.6, barW - nvPx), barH, 'F');                     // Uebergang eckig auffuellen -> buendig
+          }
+          // Labels ueber dem Balken: not valued links, valued rechts.
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...MUTED);
+          if (b.nvLbl) doc.text(String(b.nvLbl), barX, byy + 7.5);
+          if (b.vLbl) { const vl = String(b.vLbl); doc.text(vl, barX + barW - doc.getTextWidth(vl), byy + 7.5); }
+          // Prozente unter dem Balken.
+          doc.setFontSize(5); doc.setTextColor(...MUTED);
+          if (b.nvPctTxt) doc.text(String(b.nvPctTxt), barX, byy + 15);
+          if (b.vPctTxt) { const vp = String(b.vPctTxt); doc.text(vp, barX + barW - doc.getTextWidth(vp), byy + 15); }
+          // Durchschnitts-Duration zentriert unten.
+          if (b.avg) { doc.setFont('helvetica', 'bold'); doc.setFontSize(6); doc.setTextColor(...TEXT); const a = String(b.avg); doc.text(a, bx + w / 2 - doc.getTextWidth(a) / 2, byy + 18.5); }
+          byy += bh + 3; col = 0; return;
+        }
         doc.setDrawColor(...BORDER); doc.setFillColor(...BOX);
         doc.roundedRect(bx, byy, w, ovBoxH, 1.5, 1.5, 'FD');
         const vs = String(b.v);
@@ -1519,20 +1918,19 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           doc.text(vs, bx + 3, byy + 10.8);
           if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 9.6, 1.1, 'F'); }
         } else {
-          doc.setTextColor(...TEXT);
-          doc.text(vs, bx + 3, byy + 5.2);
-          if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 4, 1.1, 'F'); }
-          if (b.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(String(b.sub), bx + 3, byy + 8.2); }
-          if (b.lbl) {
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
-            doc.text(String(b.lbl), bx + 3, byy + 11.2);
-          }
+          // Name oben (Zeile 1), darunter Haupt- (Zeile 2) + Sub-Wert (Zeile 3) — wie die App-KPI-Kacheln.
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
+          if (b.lbl) doc.text(String(b.lbl), bx + 3, byy + 4.2);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
+          doc.text(vs, bx + 3, byy + 9.4);
+          if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 8.2, 1.1, 'F'); }
+          if (b.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(String(b.sub), bx + 3, byy + 12.4); }
         }
         if (b.wide) { col = 0; byy += ovBoxH + 3; }
         else { col += 1; if (col >= 2) { col = 0; byy += ovBoxH + 3; } }
       });
     });
-    y += ovCardH + 8;
+    y += ovCardH + 4;
 
     // ── Risk-Slider (Interest Rate / Credit Spread) in voller Breite unter den Karten.
     //    Positionen/Zonen aus den data-Attributen der gerenderten UI-Slider -> PDF = App.
@@ -1592,55 +1990,71 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const sColM = marginX + (ovCardW + ovGap);   // Mitte = Market-Spalte
     const irMax = otxt('irScaleMax'), tsiMax = otxt('tsiScaleMax');
     const mr1Max = otxt('mr1ScaleMax'), mr2Max = otxt('mr2ScaleMax');
-    if (irMax !== '–' || tsiMax !== '–' || mr1Max !== '–' || mr2Max !== '–') {
-      ensurePageSpace(52, `${sectionTitle} (cont.)`);
-      if (irMax !== '–') {
-        // Nur zeichnen, wenn die Kachel in Customer Setup nicht ausgehakt ist (display:none im DOM).
-        const tileHidden = (key) => {
-          const el = (ctx.appRoot || document).querySelector(`[data-tile="${key}"]`);
-          return !!el && el.style.display === 'none';
-        };
+    // Slider NUR, wenn die jeweilige Kachel im Customer Setup nicht ausgehakt ist (display:none).
+    const tileHidden = (key) => {
+      const el = (ctx.appRoot || document).querySelector(`[data-tile="${key}"]`);
+      return !!el && el.style.display === 'none';
+    };
+    const showIr  = irMax !== '–' && !tileHidden('ir_duration');
+    const showCs  = otxt('homePfCsDurTotal') !== '–' && !tileHidden('cs_duration');
+    const showTsi = tsiMax !== '–' && !tileHidden('cr_tsi');
+    const showMsd = otxt('msdScaleMax') !== '–' && !tileHidden('cr_msd');
+    const showMr1 = mr1Max !== '–' && !tileHidden('mkt_mr1');
+    const showMr2 = mr2Max !== '–' && !tileHidden('mkt_mr2');
+    if (showIr || showCs || showTsi || showMsd || showMr1 || showMr2) {
+      // Nur die tatsaechlich genutzte Hoehe reservieren (kein fixer 52er-Block) -> ohne
+      // angehakte Slider ruecken die Charts hoch auf dieselbe Seite.
+      const leftH = (showIr ? 22 : 0) + (showCs ? 22 : 0);
+      const rightH = ((showTsi ? 1 : 0) + (showMsd ? 1 : 0)) * 26;
+      const midH = ((showMr1 ? 1 : 0) + (showMr2 ? 1 : 0)) * 26;
+      const blockH = Math.max(leftH, rightH, midH) + 6;
+      ensurePageSpace(blockH, `${sectionTitle} (cont.)`);
+      if (showIr || showCs) {
         let dy = y + 4;
-        if (!tileHidden('ir_duration')) {
+        if (showIr) {
           drawDurationBars(sColL, dy, sHalfW, 'Interest Rate Duration', [
             { lbl: 'Total NAV',  valTxt: otxt('homePfIrDurTotal'),  pct: barPct('homePfIrDurTotalBar') },
             { lbl: 'Valued NAV', valTxt: otxt('homePfIrDurValued'), pct: barPct('homePfIrDurValuedBar') },
-          ]);
-          dy += 22;
+          ]); dy += 22;
         }
-        if (!tileHidden('cs_duration')) {
+        if (showCs) {
           drawDurationBars(sColL, dy, sHalfW, 'Credit Spread Duration', [
             { lbl: 'Total NAV',  valTxt: otxt('homePfCsDurTotal'),  pct: barPct('homePfCsDurTotalBar') },
             { lbl: 'Valued NAV', valTxt: otxt('homePfCsDurValued'), pct: barPct('homePfCsDurValuedBar') },
           ]);
         }
       }
-      if (tsiMax !== '–') {
-        drawRiskSlider(sColR, y + 4, sHalfW, {
-          title: 'Cluster Risk (TSI)', leftLbl: 'Low cluster', rightLbl: 'High cluster',
-          gP: dnum(ds('tsiTrack', 'g')), yP: dnum(ds('tsiTrack', 'y')), oneY: null,
-          pos: dnum(ds('tsiMarker', 'pos')), state: ds('tsiMarker', 'state') || 'green',
-          durTxt: otxt('tsiMarkerVal'), maxTxt: tsiMax,
-        });
-        drawRiskSlider(sColR, y + 30, sHalfW, {
-          title: 'Market Stress (MSD)', leftLbl: 'Low stress', rightLbl: 'High stress',
-          gP: dnum(ds('msdTrack', 'g')), yP: dnum(ds('msdTrack', 'y')), oneY: null,
-          pos: dnum(ds('msdMarker', 'pos')), state: ds('msdMarker', 'state') || 'green',
-          durTxt: otxt('msdMarkerVal'), maxTxt: otxt('msdScaleMax'),
-        });
+      if (showTsi || showMsd) {
+        let dy = y + 4;
+        if (showTsi) {
+          drawRiskSlider(sColR, dy, sHalfW, {
+            title: 'Cluster Risk (TSI)', leftLbl: 'Low cluster', rightLbl: 'High cluster',
+            gP: dnum(ds('tsiTrack', 'g')), yP: dnum(ds('tsiTrack', 'y')), oneY: null,
+            pos: dnum(ds('tsiMarker', 'pos')), state: ds('tsiMarker', 'state') || 'green',
+            durTxt: otxt('tsiMarkerVal'), maxTxt: tsiMax,
+          }); dy += 26;
+        }
+        if (showMsd) {
+          drawRiskSlider(sColR, dy, sHalfW, {
+            title: 'Market Stress (MSD)', leftLbl: 'Low stress', rightLbl: 'High stress',
+            gP: dnum(ds('msdTrack', 'g')), yP: dnum(ds('msdTrack', 'y')), oneY: null,
+            pos: dnum(ds('msdMarker', 'pos')), state: ds('msdMarker', 'state') || 'green',
+            durTxt: otxt('msdMarkerVal'), maxTxt: otxt('msdScaleMax'),
+          });
+        }
       }
-      // Market-Risk-Slider (mr1/mr2) in die MITTE (Market-Spalte).
-      if (mr1Max !== '–' || mr2Max !== '–') {
-        if (mr1Max !== '–') {
-          drawRiskSlider(sColM, y + 4, sHalfW, {
+      if (showMr1 || showMr2) {
+        let dy = y + 4;
+        if (showMr1) {
+          drawRiskSlider(sColM, dy, sHalfW, {
             title: 'Market Indicator 1', leftLbl: 'Low', rightLbl: 'High',
             gP: dnum(ds('mr1Track', 'g')), yP: dnum(ds('mr1Track', 'y')), oneY: null,
             pos: dnum(ds('mr1Marker', 'pos')), state: ds('mr1Marker', 'state') || 'green',
             durTxt: otxt('mr1MarkerVal'), maxTxt: mr1Max,
-          });
+          }); dy += 26;
         }
-        if (mr2Max !== '–') {
-          drawRiskSlider(sColM, y + 30, sHalfW, {
+        if (showMr2) {
+          drawRiskSlider(sColM, dy, sHalfW, {
             title: 'Market Indicator 2', leftLbl: 'Low', rightLbl: 'High',
             gP: dnum(ds('mr2Track', 'g')), yP: dnum(ds('mr2Track', 'y')), oneY: null,
             pos: dnum(ds('mr2Marker', 'pos')), state: ds('mr2Marker', 'state') || 'green',
@@ -1648,7 +2062,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           });
         }
       }
-      y += 52;
+      y += blockH;
     }
   }
 
@@ -1659,10 +2073,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   if (composedRow) {
     // Credit-Tail-Driver-Charts NICHT in der Nebeneinander-Reihe (sie werden unten je
     // PD-Ansicht als Chart+Tabelle-Paar gezeichnet).
-    const rowCharts = (sec.enabledCharts || []).filter(ch => !CR_DRIVER_CHART_IDS.has(ch.id));
+    // Credit: NUR den Scatter (Tail loss vs EAD) aus der Nebeneinander-Reihe nehmen (kommt darunter).
+    // Loss distribution + Top tail drivers bleiben zusammen in der Reihe -> nebeneinander.
+    const rowCharts = (sec.enabledCharts || []).filter(ch => !/crTailTcmScatter/.test(ch.id));
     // Issuers/Products/Factors: 2 pro Reihe (Balken+Scatter je Metrik untereinander).
     const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar-yield', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities', 'performance', 'ts']);
-    const perRow = (FORCE_TWO_PER_ROW.has(sec.key) || sec.__composed2) ? 2 : Math.min(rowCharts.length, 3);
+    const perRow = (FORCE_TWO_PER_ROW.has(sec.key) || sec.__composed2) ? Math.min(2, rowCharts.length || 1) : Math.min(rowCharts.length, 3);
     const cgap = 6;
     const cellW = (layout.contentWidth - cgap * (perRow - 1)) / perRow;
     // Mit KPI-Baendern daruerber etwas flacher, damit Baender + Charts auf eine Seite passen.
@@ -1705,20 +2121,29 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       if (col === 0) { ensurePageSpace(cellH + 16, `${sectionTitle} (cont.)`); rowY = y; }
       const x = marginX + col * (cellW + cgap);
       drawChartCard(doc, x, rowY, cellW, cellH + 8);
-      // Overview: Chart-Ueberschrift fett/dunkel (wie in der App ueber dem Graphen).
-      if (sec.key === 'overview') { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); }
-      else { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90); }
-      doc.text(ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
+      // EC-Frage (falls vorhanden) fett/dunkel als Ueberschrift + data-label als Untertitel; sonst nur Label.
+      const cq = crQuestionFor(ch.id);
+      if (cq) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(26, 31, 41);
+        doc.text(doc.splitTextToSize(cq, cellW - 6)[0] || cq, x + cellW / 2, rowY + 4, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(110);
+        doc.text(ch.label || ch.id, x + cellW / 2, rowY + 8, { align: 'center' });
+      } else {
+        if (sec.key === 'overview') { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); }
+        else { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90); }
+        doc.text(ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
+      }
       doc.setFont('helvetica', 'normal');
       if (imgData?.dataUrl) {
         const srcW = imgData.width || 900;
         const srcH = imgData.height || 520;
-        const availH = cellH - 2;
+        const capH = cq ? 10 : 7;
+        const availH = cellH - (cq ? 3 : 2);
         const scale = Math.min(cellW / srcW, availH / srcH, 1);
         const w = srcW * scale;
         const h = srcH * scale;
         const ix = x + (cellW - w) / 2;
-        const iy = rowY + 7 + (availH - h) / 2;
+        const iy = rowY + capH + (availH - h) / 2;
         try { doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', ix, iy, w, h); } catch (e) { console.warn('[PDF] composed chart failed', ch.id, e); }
       }
       col++;
@@ -1733,46 +2158,57 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   //    Tabellen-Loop uebersprungen (CR_DRIVER_TABLE_IDS). ──
   if (sec.key === 'credit') {
     const enC = new Set((sec.enabledCharts || []).map(c => c.id));
-    const enT = new Set((sec.enabledTables || []).map(t => t.id));
-    const gap = 6;
     for (const v of CR_DRIVER_VIEWS) {
-      const showChart = enC.has(v.chartId);
-      // Tail-Driver-Tabellen sind aus dem Report entfernt (nur Charts) -> nie zeichnen.
-      const tbl = null;
-      if (!showChart) continue;
-
-      const both = showChart && tbl;
-      const chartW = both ? layout.contentWidth * 0.54 - gap / 2 : layout.contentWidth;
-      const tableX = marginX + chartW + gap;
-      const tableW = both ? layout.contentWidth - chartW - gap : layout.contentWidth;
-      const blockH = 60;
-      ensurePageSpace(blockH + 12, `${sectionTitle} (cont.)`);
-      const rowTop = y;
-
-      if (showChart) {
-        const el = ctx.getById(v.chartId);
-        const img = el ? canvasToPngData(el) : null;
-        drawChartCard(doc, marginX, rowTop, chartW, blockH + 8);
-        if (img?.dataUrl) {
-          const srcW = img.width || 900, srcH = img.height || 520;
-          const availH = blockH - 2;
-          const scale = Math.min(chartW / srcW, availH / srcH, 1);
-          const w = srcW * scale, h = srcH * scale;
-          try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', marginX + (chartW - w) / 2, rowTop + 7 + (availH - h) / 2, w, h); }
-          catch (e) { console.warn('[PDF] tail driver chart failed', v.chartId, e); }
+      // Top tail drivers steht jetzt in der composedRow (rechts neben Loss distribution) -> hier nur Scatter + TCM.
+      if (!enC.has(v.chartId)) continue;
+      // Scatter (links) + TCM-Tabelle (rechts) NEBENEINANDER — nach den Top tail drivers.
+      const scatterId = v.chartId.endsWith('Hist') ? 'crTailTcmScatterHist' : 'crTailTcmScatterNorm';
+      const tcmId = v.chartId.endsWith('Hist') ? 'crTailTcmTableHist' : 'crTailTcmTableNorm';
+      const scEl = ctx.getById(scatterId);
+      const tcmTbl = extractTableFromContainer(tcmId, { maxRows: 30, maxCols: 12, ctx });
+      const hasSc = !!(scEl && enC.has(scatterId));
+      const hasTcm = !!(tcmTbl && tcmTbl.body && tcmTbl.body.length);
+      if (hasSc || hasTcm) {
+        const gap = 6, colW = (layout.contentWidth - gap) / 2;
+        const bothCols = hasSc && hasTcm;
+        const scH = 62;
+        ensurePageSpace(scH + 16, `${sectionTitle} (cont.)`);
+        const rowTop = y;
+        let bottom = rowTop;
+        if (hasSc) {
+          const scW = bothCols ? colW : layout.contentWidth;
+          const scImg = canvasToPngData(scEl);
+          const scQ = crQuestionFor(scatterId);
+          if (scQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(scQ, scW - 4)[0] || scQ, marginX, rowTop + 4); }
+          const scTop = scQ ? rowTop + 6 : rowTop;
+          drawChartCard(doc, marginX, scTop, scW, scH + 8);
+          if (scImg?.dataUrl) {
+            const srcW = scImg.width || 900, srcH = scImg.height || 520;
+            const availH = scH - 2;
+            const scale = Math.min(scW / srcW, availH / srcH, 1);
+            const w = srcW * scale, h = srcH * scale;
+            try { doc.addImage(scImg.dataUrl, scImg.fmt || 'JPEG', marginX + (scW - w) / 2, scTop + 7 + (availH - h) / 2, w, h); }
+            catch (e) { console.warn('[PDF] EC scatter failed', scatterId, e); }
+          }
+          bottom = Math.max(bottom, scTop + scH + 8);
         }
+        if (hasTcm) {
+          const tcmX = bothCols ? marginX + colW + gap : marginX;
+          const tcmW = bothCols ? colW : layout.contentWidth;
+          const tcmQ = crQuestionFor(tcmId);
+          let ty = rowTop;
+          if (tcmQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(tcmQ, tcmW - 4)[0] || tcmQ, tcmX, rowTop + 4); ty = rowTop + 6; }
+          safeAutoTable(doc, layout, {
+            head: tcmTbl.head && tcmTbl.head.length ? [tcmTbl.head] : undefined,
+            body: tcmTbl.body, startY: ty, theme: 'grid',
+            styles: { fontSize: 7, cellPadding: 1.2 },
+            headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
+            tableWidth: tcmW, margin: { left: tcmX }, pageBreak: 'avoid',
+          });
+          bottom = Math.max(bottom, doc.lastAutoTable?.finalY || ty);
+        }
+        y = bottom + cfg.blockGap;
       }
-
-      let bottom = rowTop + (showChart ? blockH + 8 : 0);
-      if (tbl) {
-        safeAutoTable(doc, layout, {
-          html: tbl, startY: rowTop + 2, theme: 'grid',
-          styles: { fontSize: 7.5, cellPadding: 1.5 },
-          tableWidth: tableW, margin: { left: both ? tableX : marginX }, pageBreak: 'avoid',
-        });
-        bottom = Math.max(bottom, doc.lastAutoTable?.finalY || rowTop);
-      }
-      y = bottom + cfg.blockGap;
     }
   }
 
@@ -1810,19 +2246,27 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     }
     const noteHeight = noteLines.length * 4;
 
-    const blockHeight = Math.max(targetHeight, noteHeight) + 22;
+    const q = crQuestionFor(ch.id);
+    const extraQ = q ? 5 : 0;
+    const blockHeight = Math.max(targetHeight, noteHeight) + 22 + extraQ;
     ensurePageSpace(blockHeight + 10, `${sectionTitle} (cont.)`);
 
     const boxY = y;
-    const labelY = boxY + 7;
-    const imgY = boxY + 11;
+    const imgY = boxY + 11 + extraQ;
     const imgX = marginX + (chartWidth - targetWidth) / 2;
 
     drawChartCard(doc, marginX - 2, boxY, chartWidth + 4, blockHeight - 4);
 
-    doc.setFontSize(9);
-    doc.setTextColor(0);
-    doc.text(ch.label || ch.id, marginX + chartWidth / 2, labelY, { align: 'center' });
+    if (q) {
+      // EC-Frage als helle Ueberschrift + data-label als Untertitel (wie in der App).
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41);
+      doc.text(q, marginX + chartWidth / 2, boxY + 6, { align: 'center' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110);
+      doc.text(ch.label || ch.id, marginX + chartWidth / 2, boxY + 10.5, { align: 'center' });
+    } else {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(0);
+      doc.text(ch.label || ch.id, marginX + chartWidth / 2, boxY + 7, { align: 'center' });
+    }
 
     try {
       doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', imgX, imgY, targetWidth, targetHeight);

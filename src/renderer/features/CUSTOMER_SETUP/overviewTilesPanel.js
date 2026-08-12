@@ -26,7 +26,9 @@ export const OVERVIEW_TILES = [
   { key: 'pv01',            label: 'PV01' },
   { key: 'cpv01',           label: 'CPV01' },
   { key: 'vega',            label: 'Vega' },
-  { key: 'cash',            label: 'Cash (non-valued %)' },
+  { key: 'cash',            label: 'not Valued (%)' },
+  { key: 'liq_1y',          label: 'Liquidity < 1y' },
+  { key: 'coupon_type',     label: 'Coupon Type (FIX/FLOAT/STRUCTURED)' },
   { key: 'mat_split',       label: 'Maturity split (valued Ø)' },
   { key: 'largest_issuers', label: 'Largest Issuers Chart' },
 ];
@@ -48,6 +50,8 @@ export const MARKET_RISK_TILES = [
 ];
 
 export const CREDIT_RISK_TILES = [
+  { key: 'cr_exec',     label: 'Executive Summary' },
+  { key: 'cr_exec_ede', label: 'Executive Summary (EDE)' },
   { key: 'cr_var',   label: 'Normal Risk (VaR)' },
   { key: 'cr_es',    label: 'Extreme Risk (ES)' },
   { key: 'cr_tsi',   label: 'Concentration Risk (TCM)' },
@@ -61,8 +65,9 @@ export const CREDIT_RISK_TILES = [
   { key: 'cr_ec_scale',   label: 'Economic Capital scale (Historic)' },
   { key: 'cr_ec_scale_m', label: 'Economic Capital scale (Market adjusted)' },
   // Risk-Buffer-Kacheln (EL <- EC -> VaR nebeneinander) in der Overview-Credit-Karte:
-  { key: 'risk_buffer',   label: 'Risk Buffer (Historic)' },
-  { key: 'risk_buffer_m', label: 'Risk Buffer (Market adjusted)' },
+  { key: 'risk_buffer',     label: 'Risk Buffer (Historic)' },
+  { key: 'risk_buffer_m',   label: 'Risk Buffer (Market adjusted)' },
+  { key: 'risk_buffer_ede', label: 'Risk Buffer (EDE)' },
   // Credit Profit/Loss KPIs (abs/rel-Umschalter + Sichtbarkeit):
   { key: 'credit_el',       label: 'Expected Loss (P/L)' },
   { key: 'credit_var_hist', label: 'VaR historic (P/L)' },
@@ -103,6 +108,10 @@ const TILE_VALUE_MODE = {
   // Risk-Buffer-Kacheln: abs (EUR) gross ODER rel (%) gross, per Customer Setup waehlbar.
   risk_buffer:     { primaryIsAbs: true, defaultMode: 'abs' },
   risk_buffer_m:   { primaryIsAbs: true, defaultMode: 'abs' },
+  risk_buffer_ede: { primaryIsAbs: true, defaultMode: 'abs' },
+  // Portfolio not-Valued / Liquidity: primaer % (rel), abs (EUR) darunter -> Umschalter waehlt gross.
+  cash:            { primaryIsAbs: false, defaultMode: 'rel' },
+  liq_1y:          { primaryIsAbs: false, defaultMode: 'rel' },
 };
 
 // tile_key -> boolean. null = not loaded yet -> everything visible by default.

@@ -165,73 +165,150 @@ const _crLinePlugin = {
         const x = chart.scales.x.getPixelForValue(o.at);
         if (!Number.isFinite(x)) return;
         stroke(x, true, o);
-        if (o.label) vLabels.push({ label: o.label, color: o.color || '#ccc' });
+        if (o.label) vLabels.push({ label: o.label, color: o.color || '#ccc', x });
       });
       (opts.h || []).forEach(o => { const y = chart.scales.y.getPixelForValue(o.at); if (Number.isFinite(y)) stroke(y, false, o); });
     }
     const ec = (opts && opts.ec) || chart.$ecArrow;
     // EC-Band + Tail-Risk-Schattierung nur, wenn die zugehoerige (Default/Historic) Serie eingeblendet ist.
     const _ecVisible = (chart.$ecDsIdx == null) || (typeof chart.isDatasetVisible !== 'function') || chart.isDatasetVisible(chart.$ecDsIdx);
-    // Economic-Capital-Flaeche (violett) zwischen EL- und VaR-Linie. Der TEXT steht NICHT mehr
-    // hier drin (ueberlappte die Balken), sondern als Annotation unter "Tail Risk" mit Leader-Strich.
-    let ecMidX = NaN;
+    // Economic-Capital-Flaeche (violett) zwischen EL- und VaR-Linie. Die POSITION (ecMidX)
+    // wird IMMER bestimmt, auch wenn die Flaeche 0 breit ist (EL/VaR im selben Bin) -> die
+    // "Economic Capital"-Beschriftung verschwindet nie.
+    let ecMidX = NaN, ecBandXa = NaN, ecBandXb = NaN;
     const ecBandY = area.top + (area.bottom - area.top) * 0.60;
-    if (_ecVisible && ec && ec.elIdx >= 0 && ec.varIdx >= 0 && ec.elIdx !== ec.varIdx) {
+    if (_ecVisible && ec && ec.elIdx >= 0 && ec.varIdx >= 0) {
       const x1 = chart.scales.x.getPixelForValue(ec.elIdx), x2 = chart.scales.x.getPixelForValue(ec.varIdx);
       if (Number.isFinite(x1) && Number.isFinite(x2)) {
-        const xa = Math.min(x1, x2), xb = Math.max(x1, x2);
-        ecMidX = (xa + xb) / 2;
-        ctx.save();
-        ctx.fillStyle = 'rgba(150,110,220,0.20)';                     // Flaeche violett (wie TSI)
-        ctx.fillRect(xa, area.top, xb - xa, area.bottom - area.top);
-        ctx.restore();
+        ecBandXa = Math.min(x1, x2); ecBandXb = Math.max(x1, x2);
+        ecMidX = (ecBandXa + ecBandXb) / 2;
+        if (ecBandXb - ecBandXa > 1) {   // Flaeche nur fuellen, wenn sichtbar breit
+          ctx.save();
+          ctx.fillStyle = 'rgba(150,110,220,0.20)';                     // Flaeche violett (wie TSI)
+          ctx.fillRect(ecBandXa, area.top, ecBandXb - ecBandXa, area.bottom - area.top);
+          ctx.restore();
+        }
       }
     }
-    // Tail-Risk-Bereich: rechts der VaR-Linie zart rot + "Tail Risk". Darunter "Economic Capital"
-    // mit einem Strich in die EC-Flaeche (das entsprechende Gebiet).
+    // Tail-Risk-Bereich: rechts der VaR-Linie zart rot + "Tail Risk".
+    let tailMidX = (area.left + area.right) / 2;
     if (_ecVisible && ec && ec.varIdx >= 0) {
       const xv = chart.scales.x.getPixelForValue(ec.varIdx);
       if (Number.isFinite(xv) && xv < area.right - 4) {
-        const midT = (xv + area.right) / 2;
+        tailMidX = (xv + area.right) / 2;
         ctx.save();
         ctx.fillStyle = 'rgba(220,70,70,0.08)';                       // ganz zartes Rot
         ctx.fillRect(xv, area.top, area.right - xv, area.bottom - area.top);
         ctx.textAlign = 'center';
         ctx.fillStyle = 'rgba(224,120,120,0.95)';                     // dezente rote Schrift
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillText('Tail', midT, area.top + 20);
-        ctx.fillText('Risk', midT, area.top + 33);
-        // "Economic Capital" darunter + Leader-Strich in die EC-Flaeche.
-        if (Number.isFinite(ecMidX)) {
-          const ecY = area.top + 56;
-          ctx.strokeStyle = 'rgba(180,145,238,0.9)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-          ctx.beginPath(); ctx.moveTo(midT, ecY + 6); ctx.lineTo(ecMidX, ecBandY); ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.fillStyle = 'rgba(180,145,238,0.98)';                   // Text violett (wie EC-Band)
-          ctx.beginPath(); ctx.arc(ecMidX, ecBandY, 2.5, 0, Math.PI * 2); ctx.fill();
-          ctx.fillText('Economic', midT, ecY);
-          ctx.fillText('Capital', midT, ecY + 13);
-        }
+        ctx.fillText('Tail', tailMidX, area.top + 20);
+        ctx.fillText('Risk', tailMidX, area.top + 33);
         ctx.restore();
       }
     }
-    // EL/VaR/ES nebeneinander OBERHALB der Plotflaeche (in der oben reservierten Zone,
-    // layout.padding.top). Reihe von links, farbiger Marker + Text, KEIN Halo.
-    if (vLabels.length) {
+    // "Economic Capital" — WIRD IMMER GEZEICHNET (verschwindet nie):
+    //  - passt der Text zwischen EL- und VaR-Linie -> dort hinein (2-zeilig, zentriert),
+    //  - sonst unter "Tail Risk" + gestrichelter Strich auf die EC-Stelle (ecMidX).
+    if (_ecVisible && Number.isFinite(ecMidX)) {
       ctx.save();
-      ctx.font = 'bold 11px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-      const sw = 9, gap = 5, itemGap = 16;
-      const y = area.top - 11;               // mittig in der reservierten Zone oberhalb des Plots
-      let x = area.left + 2;
-      vLabels.forEach((l) => {
-        ctx.fillStyle = l.color;
-        ctx.fillRect(x, y - sw / 2, sw, sw);
-        x += sw + gap;
-        ctx.fillText(l.label, x, y);
-        x += ctx.measureText(l.label).width + itemGap;
-      });
+      ctx.font = 'bold 12px sans-serif'; ctx.textBaseline = 'alphabetic';
+      const ecCol = 'rgba(180,145,238,0.98)';                          // violett (wie EC-Band)
+      const ecTextW = Math.max(ctx.measureText('Economic').width, ctx.measureText('Capital').width);
+      const bandW = (Number.isFinite(ecBandXa) && Number.isFinite(ecBandXb)) ? (ecBandXb - ecBandXa) : 0;
+      if (bandW >= ecTextW + 8) {
+        // Passt: zwischen EL und VaR (2-zeilig, zentriert).
+        ctx.fillStyle = ecCol; ctx.textAlign = 'center';
+        ctx.fillText('Economic', ecMidX, area.top + 28);
+        ctx.fillText('Capital', ecMidX, area.top + 41);
+      } else {
+        // Passt nicht: unter "Tail Risk" + Leader-Strich auf die EC-Stelle.
+        const ecY = area.top + 56;
+        ctx.strokeStyle = 'rgba(180,145,238,0.9)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(tailMidX, ecY + 6); ctx.lineTo(ecMidX, ecBandY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = ecCol;
+        ctx.beginPath(); ctx.arc(ecMidX, ecBandY, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.textAlign = 'center';
+        ctx.fillText('Economic', tailMidX, ecY);
+        ctx.fillText('Capital', tailMidX, ecY + 13);
+      }
       ctx.restore();
     }
+    // OBERHALB der Plotflaeche (reservierte Zone = layout.padding.top), auf dem Canvas
+    // gezeichnet -> skaliert mit dem Chart, ragt NICHT in den Plot:
+    //   links  = EL/VaR/ES-Reihe,
+    //   rechts = Serien-Legende (Historic/Market/Market adjusted), gestapelt, klickbar.
+    // EL/VaR/ES OBERHALB der Plotflaeche: bevorzugt ZENTRIERT ueber der jeweiligen Linie.
+    // Wuerden sich zwei Labels ueberlappen (Linien zu nah), Fallback auf eine Reihe
+    // nebeneinander (von links).
+    const SHOW_LOSS_LINE_LABELS = true;
+    if (SHOW_LOSS_LINE_LABELS && vLabels.length) {
+      ctx.save();
+      ctx.font = 'bold 11px sans-serif'; ctx.textBaseline = 'middle';
+      const y = 13;
+      // Zentren an den Linien, in die Plotbreite geklemmt.
+      const spans = vLabels
+        .filter((l) => Number.isFinite(l.x))
+        .map((l) => {
+          const w = ctx.measureText(l.label).width;
+          const cx = Math.max(area.left + w / 2 + 1, Math.min(area.right - w / 2 - 1, l.x));
+          return { l, cx, w, left: cx - w / 2, right: cx + w / 2 };
+        })
+        .sort((a, b) => a.left - b.left);
+      let overlap = spans.length !== vLabels.length;
+      for (let i = 1; !overlap && i < spans.length; i++) {
+        if (spans[i].left < spans[i - 1].right + 4) overlap = true;
+      }
+      if (!overlap) {
+        // Ueber den Linien, zentriert.
+        ctx.textAlign = 'center';
+        spans.forEach((s) => { ctx.fillStyle = s.l.color; ctx.fillText(s.l.label, s.cx, y); });
+      } else {
+        // Fallback: Reihe nebeneinander von links (farbiger Marker + Text).
+        ctx.textAlign = 'left';
+        const sw = 9, gap = 5, itemGap = 16;
+        let x = area.left + 2;
+        vLabels.forEach((l) => {
+          ctx.fillStyle = l.color;
+          ctx.fillRect(x, y - sw / 2, sw, sw);
+          x += sw + gap;
+          ctx.fillText(l.label, x, y);
+          x += ctx.measureText(l.label).width + itemGap;
+        });
+      }
+      ctx.restore();
+    }
+    // Serien-Legende (Historic/Market/Market adjusted) AUSGEBLENDET (Code bleibt erhalten).
+    const SHOW_SERIES_LEGEND = false;
+    if (SHOW_SERIES_LEGEND) {
+      const dss = chart.data.datasets || [];
+      const boxes = [];
+      ctx.save();
+      ctx.font = '11px sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      const lsw = 10, lgap = 5, rowH = 15;
+      let maxTw = 0;
+      dss.forEach((d) => { maxTw = Math.max(maxTw, ctx.measureText(String(d.label ?? '')).width); });
+      const boxW = lsw + lgap + maxTw;
+      const bx = area.right - boxW - 6;
+      const tCol = chart.$legendTextCol || 'rgba(220,220,220,0.95)';
+      dss.forEach((d, i) => {
+        const yy = area.top + 8 + i * rowH;
+        const vis = (typeof chart.isDatasetVisible === 'function') ? chart.isDatasetVisible(i) : !d.hidden;
+        ctx.fillStyle = vis ? (d._legendColor || '#888') : 'rgba(140,140,140,0.4)';
+        ctx.fillRect(bx, yy - lsw / 2, lsw, lsw);
+        ctx.fillStyle = vis ? tCol : 'rgba(150,150,150,0.5)';
+        ctx.fillText(String(d.label ?? ''), bx + lsw + lgap, yy);
+        if (!vis) {
+          const w = ctx.measureText(String(d.label ?? '')).width;
+          ctx.strokeStyle = 'rgba(150,150,150,0.5)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(bx + lsw + lgap, yy); ctx.lineTo(bx + lsw + lgap + w, yy); ctx.stroke();
+        }
+        boxes.push({ x: bx - 2, y: yy - rowH / 2, w: boxW + 6, h: rowH, ds: i });
+      });
+      ctx.restore();
+      chart.$legendHit = boxes;
+    } else { chart.$legendHit = []; }
   },
 };
 
@@ -441,7 +518,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
     data: { labels, datasets },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: col,
-      layout: { padding: { left: 12, top: 22 } },   // links: EL-Linie (nahe 0%) nicht an der y-Achse; oben: Platz fuer die EL/VaR/ES-Reihe UEBER dem Plot
+      layout: { padding: { left: 12, top: 22 } },   // links: EL-Linie nicht an der y-Achse; oben: schmales Band fuer die EL/VaR/ES-Reihe UEBER dem Plot
       plugins: {
         legend: { display: false },   // Serien-Legende als HTML-Overlay oben rechts (renderCrLossLegend), schrumpft den Plot nicht
         subtitle: { display: false },
@@ -458,38 +535,31 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   chart.$crLossSteps = stepsByDs;
   chart.$ecArrow = { elIdx: _elIdx, varIdx: _defVarIdx };   // Economic-Capital-Flaeche (EL..VaR der Default-Serie)
   chart.$ecDsIdx = defaultIdx;   // EC-Band + Tail-Risk nur zeigen, solange DIESE Serie (Historic) eingeblendet ist
+  chart.$legendTextCol = col;    // Textfarbe fuer die Canvas-Serien-Legende (im _crLinePlugin)
   window[canvasId] = chart;
   _bindCrLossCanvasLeave(canvas);
   _bindCrLossContextDrill(canvas);
-  // Serien-Legende (Historic/Market/Market adjusted) als HTML-Overlay oben rechts.
-  const legEl = document.getElementById(canvasId === 'crLossDistChartNorm' ? 'crLossDistLegendNorm' : 'crLossDistLegend');
-  if (legEl) renderCrLossLegend(chart, legEl);
+  _bindCrLossLegendClick(canvas);   // Klick auf die (Canvas-)Serien-Legende toggelt die Serie
 }
 
-// HTML-Overlay-Legende (oben rechts UEBER der Plotflaeche, vertikal gestapelt, klickbar).
-// Schrumpft den Plot NICHT (im Gegensatz zur Chart.js-right-Legende). Toggle blendet die
-// Serie aus/ein und baut die VaR/ES-Linien passend zu den sichtbaren Serien neu.
-function renderCrLossLegend(chart, el) {
-  if (!el || !chart) return;
-  el.__chart = chart;
-  el.innerHTML = chart.data.datasets.map((ds, i) => {
-    const hidden = !chart.isDatasetVisible(i);
-    const c = ds._legendColor || (Array.isArray(ds.backgroundColor) ? ds.backgroundColor.find(x => x) : ds.backgroundColor) || '#888';
-    const label = String(ds.label ?? '').replace(/[<>&]/g, '');
-    return `<span class="closs-leg-item${hidden ? ' is-hidden' : ''}" data-ds="${i}"><span class="closs-leg-swatch" style="background:${c}"></span>${label}</span>`;
-  }).join('');
-  if (!el.dataset.bound) {
-    el.dataset.bound = '1';
-    el.addEventListener('click', (e) => {
-      const item = e.target?.closest?.('.closs-leg-item'); if (!item) return;
-      const ch = el.__chart; const i = Number(item.dataset.ds);
-      if (!ch || !Number.isInteger(i)) return;
-      ch.setDatasetVisibility(i, !ch.isDatasetVisible(i));
-      try { _crRebuildLines(ch, 'v'); } catch {}
-      ch.update();
-      renderCrLossLegend(ch, el);
-    });
-  }
+// Klick auf die auf dem Canvas gezeichnete Serien-Legende (chart.$legendHit, Canvas-Koords):
+// blendet die Serie aus/ein und baut die VaR/ES-Linien passend zu den sichtbaren Serien neu.
+function _bindCrLossLegendClick(canvas) {
+  if (!canvas || canvas.__crLegendClickBound) return;
+  canvas.__crLegendClickBound = true;
+  canvas.addEventListener('click', (e) => {
+    const ch = window[canvas.id];
+    if (!ch || !Array.isArray(ch.$legendHit)) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!(rect.width > 0) || !(rect.height > 0)) return;
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const hit = ch.$legendHit.find((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+    if (!hit) return;
+    ch.setDatasetVisibility(hit.ds, !ch.isDatasetVisible(hit.ds));
+    try { _crRebuildLines(ch, 'v'); } catch {}
+    ch.update();
+  });
 }
 
 // RECHTS: Tail-Zoom — Verlust (% vom NAV) je Quantil im Extrem-Tail (sortedLossesIssuer,
@@ -637,7 +707,7 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
 // jeweiligen pd_flags, in denen er ausfaellt; je PD auf 100 % normiert. Nur Top 8.
 // Credit-Palette (Purpur): Historic dunkelbasis, Market adjusted hell.
 const CR_TAIL_VIEWS = [
-  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', tcmTableId: 'crTailTcmTableHist', scatterId: 'crTailTcmScatterHist', title: 'Top tail drivers — Historic', fill: 'rgba(122,92,145,0.85)', border: 'rgba(122,92,145,0.95)' },
+  { flag: 'RATING', chartId: 'crTailContribChartHist', tableId: 'crTailContribTableHist', tcmTableId: 'crTailTcmTableHist', scatterId: 'crTailTcmScatterHist', title: 'Top tail drivers — Historic', fill: 'rgba(210,70,70,0.85)', border: 'rgba(210,70,70,0.95)' },
   { flag: 'NORM',   chartId: 'crTailContribChartNorm', tableId: 'crTailContribTableNorm', tcmTableId: 'crTailTcmTableNorm', scatterId: 'crTailTcmScatterNorm', title: 'Top tail drivers — Market adjusted', fill: 'rgba(178,152,200,0.85)', border: 'rgba(178,152,200,0.95)' },
 ];
 
@@ -757,13 +827,25 @@ export function renderCreditTailContributors() {
         tcmEl.innerHTML = '<table class="conc-report-table"><tbody><tr><td>No tail data.</td></tr></tbody></table>';
       } else {
         const p1 = (x) => `${Number(x).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
-        tcmEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Issuer</th><th style="text-align:right;">Tail loss</th><th style="text-align:right;">EAD</th><th style="text-align:right;" title="Tail Concentration Multiplier = Tail loss share / EAD share">TCM</th></tr></thead><tbody>${
+        tcmEl.innerHTML = `<div class="cr-tcm-scroll"><table class="conc-report-table"><thead><tr><th>Issuer</th><th style="text-align:right;">Tail loss</th><th style="text-align:right;">EAD</th><th style="text-align:right;" title="Tail Concentration Multiplier = Tail loss share / EAD share">TCM</th></tr></thead><tbody>${
           tcmRows.map((it) => {
             const tcmStyle = !Number.isFinite(it.tcm) ? '' : (it.tcm >= 1.5 ? 'color:#d9534f;font-weight:700;' : it.tcm > 1 ? 'color:#e0a533;font-weight:600;' : '');
             const tcmStr = Number.isFinite(it.tcm) ? `${it.tcm.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}×` : '–';
             return `<tr><td>${esc(it.name)}</td><td style="text-align:right;">${p1(it.pct)}</td><td style="text-align:right;">${Number.isFinite(it.eadShare) ? p1(it.eadShare) : '–'}</td><td style="text-align:right;${tcmStyle}">${tcmStr}</td></tr>`;
           }).join('')
-        }</tbody></table>`;
+        }</tbody></table></div>`;
+        // Max 5 Zeilen sichtbar; bei mehr scrollt der Container (Zeilen bereits nach TCM
+        // absteigend -> die staerksten oben). Hoehe = Kopf + 5 Zeilen (gemessen).
+        if (tcmRows.length > 5) {
+          const scroll = tcmEl.querySelector('.cr-tcm-scroll');
+          const thead = tcmEl.querySelector('thead');
+          const bodyRows = tcmEl.querySelectorAll('tbody tr');
+          if (scroll && thead && bodyRows.length > 5) {
+            let h = thead.offsetHeight || 0;
+            for (let i = 0; i < 5; i++) h += (bodyRows[i].offsetHeight || 0);
+            if (h > 0) { scroll.style.maxHeight = (h + 2) + 'px'; scroll.style.overflowY = 'auto'; }
+          }
+        }
       }
     }
     // Scatter: x = EAD-Anteil, y = Tail-Loss-Anteil; 45deg-Diagonale = TCM 1. Ueber der Linie -> TCM>1.

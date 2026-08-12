@@ -5,10 +5,11 @@ import createBarChart from '../../../charts/BarChart.js';
 
 import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../utils/trafficLight.js';
-import { renderCreditRiskDashboard, renderCreditOverviewCharts } from './creditRiskDashboard.js';
+import { renderCreditRiskDashboard, renderCreditOverviewCharts, renderCreditTsiPanel, renderCreditMsdPanel } from './creditRiskDashboard.js';
+import { renderHomeOverview } from '../../HOME/homeOverview.js';
 import { appState } from '../../../renderer.js';
 import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../SummaryBreakdown.js';
-import { renderChartLegend, sumNavForPort, _fmtLossCompact, buildPositionLoss, getRunConfQuantil, creditVarEsForFlag, setSelectedCreditConf, getSelectedCreditConf } from './LossIssuer.js';
+import { renderChartLegend, sumNavForPort, _fmtLossCompact, buildPositionLoss, getRunConfQuantil, creditVarEsForFlag, setSelectedCreditConf, getSelectedCreditConf, refreshLossDistribution } from './LossIssuer.js';
 import { crTailTopForFlag, tailConcentrationIndex } from './creditRiskDashboard.js';
 import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
 
@@ -293,8 +294,12 @@ function _bindCreditConfDropdown() {
       sel.addEventListener('change', () => {
         setSelectedCreditConf(Number(sel.value));
         try { renderCreditExpectedLoss(); } catch {}         // KPI-Kacheln + EC-Beschriftung (spiegelt beide Dropdowns)
-        try { renderCreditRiskDashboard(); } catch {}         // Tail-Concentration/TCM (confQ-abhaengig)
-        try { renderCreditOverviewCharts(); } catch {}        // Loss-Dist-Chart (VaR/ES-Linien + EC-Band)
+        try { renderCreditRiskDashboard(); } catch {}         // Limits/Concentration (confQ-abhaengig)
+        try { renderCreditOverviewCharts(); } catch {}        // Loss-Dist-Chart + Tail-Contributors/TCM
+        try { renderCreditTsiPanel(); } catch {}              // TSI-Panel (VaR/ES-Baender)
+        try { renderCreditMsdPanel(); } catch {}              // MSD-Panel (VaR/ES-Baender)
+        try { refreshLossDistribution(); } catch {}           // Trigger "Loss Distribution": VaR-Balken + Tail-Liste
+        try { renderHomeOverview(); } catch {}                // HOME-Overview: Credit-Kachel + Concentration-Slider + Exec-Summary
       });
     }
     // Auf den aktuellen Wert spiegeln (float-sicher die naechstliegende Option waehlen).
