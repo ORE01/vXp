@@ -96,6 +96,47 @@ function ensurePdHistoricalScenarioSchema(db) {
 
 // Kundenweites Default-Portfolio (eine Zeile). Idempotent; Zeilen-Ops laufen über
 // die generischen CRUD-Kanaele (update-data). port_name = NULL -> kein Default.
+// Additive Schema-Anlage für den Credit-Issuer-Szenario-Stack (Analog PD-Historical).
+// BASE = berechnete EAD-Werte (kein eigenes Basis-Table). Benannte Szenarien je
+// (Issuer, RANK) in CREDIT_ISSUER_SCENARIO_DATA (allgemein, NICHT ans Portfolio
+// gebunden); aktives Szenario in CREDIT_ISSUER_ACTIVE (eine Zeile). Idempotent.
+// Alle Zeilen-Ops laufen über die generischen CRUD-Kanäle.
+function ensureCreditIssuerScenarioSchema(db) {
+  db.serialize(() => {
+    db.run(`
+      CREATE TABLE IF NOT EXISTS CREDIT_ISSUER_SCENARIO_DATA (
+        scenario_id TEXT NOT NULL,
+        issuer      TEXT NOT NULL,
+        rnk         TEXT NOT NULL,
+        include     INTEGER DEFAULT 1,
+        ead         REAL,
+        rr          REAL,
+        rating_res  TEXT,
+        updated_at  TEXT,
+        PRIMARY KEY (scenario_id, issuer, rnk)
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure CREDIT_ISSUER_SCENARIO_DATA failed', err);
+    });
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS CREDIT_ISSUER_ACTIVE (
+        id          INTEGER PRIMARY KEY CHECK (id = 1),
+        scenario_id TEXT NOT NULL DEFAULT 'BASE'
+      )
+    `, (err) => {
+      if (err) logger.error('DB', 'ensure CREDIT_ISSUER_ACTIVE failed', err);
+    });
+
+    db.run(
+      `INSERT OR IGNORE INTO CREDIT_ISSUER_ACTIVE (id, scenario_id) VALUES (1, 'BASE')`,
+      (err) => {
+        if (err) logger.error('DB', 'seed CREDIT_ISSUER_ACTIVE failed', err);
+      }
+    );
+  });
+}
+
 function ensureCustomerDefaultPortfolioSchema(db) {
   db.serialize(() => {
     db.run(`
@@ -171,6 +212,7 @@ function initDb() {
         logToFile('Connected to the database.');
         logger.info('DB', 'connected');
         ensurePdHistoricalScenarioSchema(_db);
+        ensureCreditIssuerScenarioSchema(_db);
         ensureCustomerDefaultPortfolioSchema(_db);
         ensureScenarioDefinitionSchema(_db);
       }

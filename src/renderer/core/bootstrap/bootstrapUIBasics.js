@@ -11,6 +11,8 @@ import { enhanceIncludeCheckboxes } from '../ui/enhancers/includeToggleEnhancer.
 import {
   updateFactorMapScenarioWarningUI,
   updatePdHistScenarioWarningUI,
+  updateCreditIssuerScenarioWarningUI,
+  bindScenarioWarningNavigation,
 } from '../ui/warnings.js';
 
 // PD-Market-Implied Normalisierungs-Panel (CREDIT RISK).
@@ -66,6 +68,13 @@ export function bootstrapUIBasics(appState) {
   // PD-Historical-Szenario-Badge: initial + bei Änderung von PD_HIST_ACTIVE.
   updatePdHistScenarioWarningUI();
   document.addEventListener('pdhist:active:ready', updatePdHistScenarioWarningUI);
+
+  // Credit-Issuer-Szenario-Badge: initial + bei Änderung von CREDIT_ISSUER_ACTIVE.
+  updateCreditIssuerScenarioWarningUI();
+  document.addEventListener('creditissuer:active:ready', updateCreditIssuerScenarioWarningUI);
+
+  // Szenario-Badges klickbar machen -> zur jeweiligen "Set Scenario"-Quelle springen.
+  bindScenarioWarningNavigation();
 
   // PD-Normalisierungs-Panel: initial rendern (installiert 'pdnorm:ready'-Listener;
   // re-rendert bei Datenankunft/Save selbst).

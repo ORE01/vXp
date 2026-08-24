@@ -149,7 +149,33 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  position: relative;
 }
+/* Trend ggue. Vorperiode: kleiner Pfeil im Kreis, in Zeile 3 (unter den Werten), linksbuendig.
+   Der Kreis sitzt im .hkt-badge, damit die Trend-Zeile in den row-wrap-Kacheln voll umbrechen
+   kann. ↗ = gestiegen (gruen, 45° nach oben), ↘ = gefallen (rot, 45° nach unten). */
+/* order: 9 -> der Trend steht IMMER als letztes Element (letzte Zeile), unabhaengig davon,
+   in welcher Reihenfolge der abs/rel-Swap die Wert-Spans sortiert. */
+.home-kpi-trend { display: flex; align-items: center; justify-content: flex-start; margin-top: 3px; order: 9; }
+.hkt-badge {
+  width: 15px; height: 15px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1; font-weight: 700;
+  border: 1.3px solid currentColor;
+}
+/* Veraenderung (abs + rel) neben dem Pfeil: Overview-Stil (klein, muted) - NICHT in Trendfarbe. */
+.home-kpi-trend .hkt-chg { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-left: 6px; white-space: nowrap; }
+.home-kpi-trend.is-up   { color: #2f9e5f; }
+.home-kpi-trend.is-down { color: #d3453e; }
+.home-kpi-trend[hidden] { display: none; }
+/* In den Kacheln mit Werten nebeneinander den Trend auf eine eigene (letzte) Zeile zwingen. */
+.home-kpi[data-tile="nav"] .home-kpi-trend,
+.home-kpi[data-tile="nav_buy"] .home-kpi-trend,
+.home-kpi[data-tile="cash"] .home-kpi-trend,
+.home-kpi[data-tile="liq_1y"] .home-kpi-trend { flex-basis: 100%; }
+/* NUR das Waehrungswort "EUR" kleiner + grau schreiben (der Zahlenwert bleibt normal gross).
+   Gilt in der gesamten Overview (Portfolio / Market / Credit), gesetzt via wrapEurUnits(). */
+#HOME_Modal .cur-unit { font-size: 0.6em; font-weight: 500; color: var(--text-muted); }
 .home-kpi-val { font-size: 14px; font-weight: 600; color: var(--text-bright); }
 .home-kpi-abs { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi--wide { grid-column: 1 / -1; }
@@ -311,6 +337,18 @@
 .home-kpi.home-tile-swap .home-kpi-val { order: 1; font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi.home-tile-swap .home-kpi-lbl { order: 2; }
 
+/* Portfolio NAV / NAV (Buy): absoluten + relativen Wert NEBENEINANDER in einer Zeile
+   (Zeile 3 im Anschluss an Zeile 2). Label bekommt eine eigene Zeile oben. Die zwei Spans
+   bleiben getrennt -> der Customer-Setup-Swap oben steuert weiter gross/weiss <-> klein/grau. */
+.home-kpi[data-tile="nav"],
+.home-kpi[data-tile="nav_buy"],
+.home-kpi[data-tile="cash"],
+.home-kpi[data-tile="liq_1y"] { flex-flow: row wrap; align-items: baseline; column-gap: 6px; }
+.home-kpi[data-tile="nav"] .home-kpi-lbl,
+.home-kpi[data-tile="nav_buy"] .home-kpi-lbl,
+.home-kpi[data-tile="cash"] .home-kpi-lbl,
+.home-kpi[data-tile="liq_1y"] .home-kpi-lbl { flex-basis: 100%; order: -1; }
+
 /* Market-Kachel-Swap: standard EUR gross (.home-kpi-big) + % klein (.home-kpi-rel).
    Mit .home-tile-swap wird der %-Wert gross und der EUR-Wert klein/grau. */
 .home-kpi.home-tile-swap .home-kpi-big { font-size: 11px; font-weight: 500; color: var(--text-muted); }
@@ -326,6 +364,10 @@
 .home-chart-card.home-nav-link[data-tile="mkt_backtest"]:hover { border-color: #2A7F7F; }
 /* Credit-Risk-Kacheln (cr_*): Hover-Rand im Credit-Violett. */
 .home-kpi.home-nav-link[data-tile^="cr_"]:hover { border-color: #7A5C91; }
+/* Risk-Buffer-Summary-Kacheln (risk_buffer*): kein .home-kpi -> eigener Hover-Rahmen
+   (transparenter Basis-Rand reserviert Platz, kein Layout-Sprung beim Hover). */
+.cr-ec-summary.home-nav-link { border: 1px solid transparent; border-radius: 8px; }
+.cr-ec-summary.home-nav-link:hover { border-color: #7A5C91; }
 /* Market-Risk-Kacheln (mkt_*): Hover-Rand im Market-Teal. */
 .home-kpi.home-nav-link[data-tile^="mkt_"]:hover { border-color: #2A7F7F; }
 /* Market-Vergleichsbloecke (NORMAL/EXTREME RISK): eigene Kacheln, Hover-Rand im Market-Teal. */

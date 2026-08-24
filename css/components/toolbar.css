@@ -6,6 +6,11 @@
   padding: 4px 10px;
   min-height: 34px;
   box-sizing: border-box;
+  /* .toolbar (base) is position:fixed with z-index:100 -> it forms a stacking
+     context BELOW the slide-in panels (z-index 1100), which then cover the
+     calculator popover. Lift the whole top bar above the slide-ins (still below
+     app modals at 3000). */
+  z-index: 1200;
 }
 
 .toolbar-left,
@@ -29,4 +34,63 @@
 
 #creditWarningText {
   cursor: help;
+}
+
+/* Calculator popover (3 Calculate buttons), pinned to the far right of the bar. */
+.toolbar-calc {
+  position: relative;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+/* #toolbar .toolbar-calc-btn (id+class) beats #toolbar button (id+type),
+   otherwise height/padding from #toolbar button would win. */
+#toolbar .toolbar-calc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 36px;
+  padding: 0;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+#toolbar .toolbar-calc-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+#toolbar .toolbar-calc-btn[aria-expanded="true"] {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+}
+#toolbar .toolbar-calc-btn svg { width: 24px; height: 24px; }
+.toolbar-calc-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2000;              /* über den Slide-In-Panels (z-index 1100) */
+  padding: 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+/* .risk-select-form/.risk-calc-row are #ANALYSE_Modal-scoped → re-provide here. */
+.toolbar-calc-menu .risk-select-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 220px;
+}
+.toolbar-calc-menu .risk-calc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.toolbar-calc-menu .risk-calc-row .edit-button {
+  flex: 1 1 auto;
+  text-align: center;
 }

@@ -195,6 +195,31 @@ export function bindAppButtons({
   document.getElementById('historicMetricsAddButton')
     ?.addEventListener('click', handleHistoricMetricsAddClick);
 
+  // ---------- Toolbar calculator popover (3 Calculate buttons) ----------
+  const calcToggle = document.getElementById('toolbarCalcToggle');
+  const calcMenu   = document.getElementById('toolbarCalcMenu');
+  if (calcToggle && calcMenu) {
+    const setCalcOpen = (open) => {
+      calcMenu.hidden = !open;
+      calcToggle.setAttribute('aria-expanded', String(open));
+    };
+    calcToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setCalcOpen(calcMenu.hidden);
+    });
+    // mousedown (nicht click): der Proxy löst per .click() einen SYNTHETISCHEN
+    // Klick auf den versteckten Original-Button außerhalb des Menüs aus – der hat
+    // kein mousedown, würde als 'click' aber fälschlich als Außenklick zählen.
+    document.addEventListener('mousedown', (e) => {
+      if (!calcMenu.hidden && !calcMenu.contains(e.target) && !calcToggle.contains(e.target)) {
+        setCalcOpen(false);
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !calcMenu.hidden) setCalcOpen(false);
+    });
+  }
+
   // ---------- Excel Import ----------
   document.getElementById('importExcelButtonVXP')
     ?.addEventListener('click', handleExcelImport);
@@ -299,35 +324,51 @@ export function bindAppButtons({
   // ROLLING (immer, Baseline) + alle angehakten Stress-Szenarien (is_selected in MVaRInput)
   // werden SEQUENZIELL gerechnet: ein py-MVaR-Lauf nach dem anderen, der naechste erst nach
   // 'project-finished'. So sind stets alle ausgewaehlten Szenarien aktuell.
-  function runMvarSequence(button, intervals) {
-    const total = intervals.length;
-    let i = 0;
+  // Market-Risk Dot/Proxy für die GANZE Sequenz (bleibt busy bis fertig), damit der
+  // Status-Punkt nicht zwischen den Szenarien auf done springt.
+  function setMarketCalcStatus(state /* 'busy' | 'done' */) {
+    const dot   = document.getElementById('riskDotMarket');
+    const proxy = document.getElementById('riskCalcMarket');
+    const busy  = state === 'busy';
+    if (dot) {
+      dot.classList.toggle('is-busy', busy);
+      dot.classList.toggle('is-done', !busy);
+      dot.title = busy ? 'calculating…' : 'done';
+    }
+    if (proxy) {
+      if (busy) {
+        if (!proxy.dataset.origLabel) proxy.dataset.origLabel = proxy.textContent;
+        proxy.disabled = true;
+        proxy.textContent = 'Calculating…';
+      } else {
+        proxy.disabled = false;
+        proxy.textContent = proxy.dataset.origLabel || proxy.textContent;
+      }
+    }
+  }
 
-    // Auf den Abschluss GENAU eines py-MVaR-Laufs warten (andere Projekte ignorieren).
-    const waitForMvarFinished = (cb) => {
-      const h = (data) => {
-        if (data && data.projectName === 'py-MVaR') cb(data);
-        else window.api.once('project-finished', h);
-      };
-      window.api.once('project-finished', h);
-    };
-
-    const runNext = () => {
-      if (i >= total) {
-        // Nach dem Lauf: Ansicht auf ROLLING (Default) zuruecksetzen + einmal frisch rendern.
+  // ALLE ausgewaehlten Intervalle (ROLLING + Szenarien) in EINEM py-MVaR-Job rechnen:
+  // Python macht den teuren Setup nur einmal und schleift ueber die Szenarien. Frueher
+  // wurde pro Intervall ein eigener Lauf gestartet (sequenziell, langsam).
+  function runMvarBatch(button, intervals) {
+    // Auf den Abschluss GENAU des py-MVaR-Jobs warten (andere Projekte ignorieren).
+    const onFinished = (data) => {
+      if (data && data.projectName === 'py-MVaR') {
+        setMarketCalcStatus('done');
+        // Ansicht auf ROLLING (Default) zuruecksetzen + einmal frisch rendern.
         const rollingName = intervals.find((x) => /^ROLLING/i.test(x)) || 'ROLLING_1';
         try {
           if (window.appState) window.appState.selectedMvarInterval = rollingName;
           window.appState?.refreshMarketRiskUI?.(0);
         } catch (_) {}
-        return;
+      } else {
+        window.api.once('project-finished', onFinished);
       }
-      const interval = intervals[i];
-      waitForMvarFinished(() => { i += 1; runNext(); });
-      py.handleProjectButtonClick(button, 'py-MVaR', { intervalOverride: interval });
     };
+    window.api.once('project-finished', onFinished);
 
-    runNext();
+    // Ein einziger Aufruf mit der kompletten Intervall-Liste.
+    py.handleProjectButtonClick(button, 'py-MVaR', { intervalsOverride: intervals });
   }
 
   function setupMvarSequenceButton(buttonId) {
@@ -355,7 +396,9 @@ export function bindAppButtons({
         return;
       }
 
-      runMvarSequence(button, intervals);
+      // Dot sofort rot (busy) für den gesamten Batch-Lauf.
+      setMarketCalcStatus('busy');
+      runMvarBatch(button, intervals);
     });
   }
 

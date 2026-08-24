@@ -126,9 +126,10 @@ export function renderPerformanceDashboard() {
   // --- Report-Spiegel: KPI-Band-Tabelle (data-kpi-band) fuer Preview/PDF ---
   const kpiTbl = document.getElementById('perfKpiTable');
   if (kpiTbl) {
+    // PDF-Band an die App-Kacheln angleichen: dieselben zwei KPIs wie im Yield-Panel
+    // (Portfolio Yield + Profit / Loss in EUR).
     const kpiRows = [
-      ['Portfolio yield', _yieldTxt],
-      ['Previous period yield', _pctFrac(prevRet, 2)],
+      ['Portfolio Yield', _yieldTxt],
       ['Profit / Loss', _eur(ertrag)],
     ];
     kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${

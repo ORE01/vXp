@@ -68,7 +68,7 @@ function eadIssuerStep(name) {
 // EAD-Tabelle, pd_flag=RATING): LGD-Betrag je Position = NOTIONAL x LGD-Rate; PD/
 // PD_M/PD_M_norm direkt uebernommen. Fuer die Drill-Spalten wie im EAD-Container.
 function enrichEadDrillRows(portRows, port) {
-  const info = new Map(); // "ISSUER||RANK" -> { rate, PD, PD_M, PD_M_norm }
+  const info = new Map(); // "ISSUER||RANK" -> { rate, RATING, ead, PD, PD_M, PD_M_norm }
   for (const e of (appState.getAllEADData?.() || [])) {
     if (String(e?.port_name ?? '') !== String(port)) continue;
     if (String(e?.pd_flag ?? '').toUpperCase() !== 'RATING') continue;
@@ -77,16 +77,45 @@ function enrichEadDrillRows(portRows, port) {
     const key = `${String(e?.ISSUER ?? '').trim().toLowerCase()}||${String(e?.RANK ?? '').trim().toLowerCase()}`;
     info.set(key, {
       rate: (Number.isFinite(notion) && notion > 0 && Number.isFinite(lgd)) ? lgd / notion : null,
+      RATING: e?.RATING,
+      ead: Number.isFinite(notion) ? notion : null, // Szenario-EAD (Gruppen-Total je Issuer,Rank)
       PD: e?.PD, PD_M: e?.PD_M, PD_M_norm: e?.PD_M_norm,
     });
   }
+  // Basis-Notional-Summe je (Issuer,Rank) aus den Positionen -> um die Szenario-EAD
+  // (Gruppen-Total) anteilig auf die einzelnen Positionen zu verteilen.
+  const baseTotal = new Map();
+  for (const r of (portRows || [])) {
+    const key = `${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
+    const n = Number(r?.NOTIONAL);
+    if (Number.isFinite(n)) baseTotal.set(key, (baseTotal.get(key) || 0) + n);
+  }
+  // Wenn EAD-Daten vorliegen, spiegelt info das AKTIVE Credit-Szenario (Include /
+  // EAD / RR->LGD / RATINGres): Positionen ausgeschlossener (Issuer,Rank) sind NICHT
+  // in info -> rausfiltern; Rating + EAD (anteilig) + LGD je Position aus dem Szenario.
+  const hasEad = info.size > 0;
   return (portRows || []).map((r) => {
     const key = `${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
-    const inf = info.get(key) || {};
-    const notion = Number(r?.NOTIONAL);
-    const lgdAmt = (Number.isFinite(inf.rate) && Number.isFinite(notion)) ? notion * inf.rate : null;
-    return { ...r, __LGD: lgdAmt, __PD: inf.PD, __PD_M: inf.PD_M, __PD_M_norm: inf.PD_M_norm };
-  });
+    const inf = info.get(key);
+    if (hasEad && !inf) return null; // (Issuer,Rank) nicht im Szenario -> ausgeschlossen
+    const baseN = Number(r?.NOTIONAL);
+    const gtot = baseTotal.get(key);
+    // Positions-EAD = Basis-Notional skaliert, sodass die Gruppe die Szenario-EAD ergibt.
+    let posEad = baseN;
+    if (inf && Number.isFinite(inf.ead) && Number.isFinite(gtot) && gtot > 0 && Number.isFinite(baseN)) {
+      posEad = baseN * (inf.ead / gtot);
+    }
+    const lgdAmt = (inf && Number.isFinite(inf.rate) && Number.isFinite(posEad)) ? posEad * inf.rate : null;
+    const ratingRes = (inf && inf.RATING != null && String(inf.RATING).trim() !== '')
+      ? inf.RATING
+      : r?.RATINGres;
+    return {
+      ...r,
+      NOTIONAL: posEad,
+      RATINGres: ratingRes,
+      __LGD: lgdAmt, __PD: inf?.PD, __PD_M: inf?.PD_M, __PD_M_norm: inf?.PD_M_norm,
+    };
+  }).filter(Boolean);
 }
 function bindEadCanvasLeaveHide(canvas) {
   if (!canvas || canvas.dataset.eadLeaveBound) return;

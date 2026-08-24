@@ -325,6 +325,15 @@
 .conc-kpi__sub { font-size:11px; color: var(--text-muted); margin-top:2px; }
 .conc-kpi__lbl { font-size:10px; color: var(--text-muted); margin-top:2px; }
 
+/* Performance-Kacheln (History + Yield): der Kachelname steht in der ersten Zeile und wird
+   — wie im Economic-Capital-Panel (#panel-credit) — weiss und fett dargestellt; die Karten
+   behalten den Standard-.conc-kpi-Rahmen. */
+#panel-performance-history .conc-kpi__lbl,
+#panel-performance-dashboard .conc-kpi__lbl {
+  font-size: 12px; font-weight: 700; color: var(--text-bright);
+  margin-top: 0; margin-bottom: 5px;
+}
+
 @media (max-width: 900px) {
   .conc-dash__grid { grid-template-columns: 1fr; }
 }

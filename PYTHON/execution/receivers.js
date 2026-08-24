@@ -277,6 +277,16 @@ export function createPythonExecutionReceivers(ctx) {
 
     const cvarData = appState.getAllCvarData?.();
     handleCVaRData?.(cvarData);
+
+    // EAD/LGD/PD-Tabelle explizit neu zeichnen: nach dem Lauf spiegelt sie das aktive
+    // Credit-Szenario (Include / EAD / RR->LGD / RATINGres). Der EADData-Refresh
+    // aktualisiert den Store; hier erzwingen wir das Re-Render des offenen Panels.
+    try {
+      const port = appState.getSelectedPortTableName?.();
+      appState.updateEADDataTable?.(appState.getAllEADData?.() || [], 0, port);
+    } catch (e) {
+      console.warn('[PY RECEIVER] EAD re-render after py-CVaR failed', e);
+    }
   }
 
   function handleHistComplete(data) {

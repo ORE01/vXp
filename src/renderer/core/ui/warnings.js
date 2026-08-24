@@ -140,6 +140,71 @@ export function updatePdHistScenarioWarningUI() {
   warningText.title = showWarning ? active : "";
 }
 
+// Klick auf eine Szenario-Lampe/-Text in der Uebersichtsleiste -> zur zugehoerigen
+// "Set Scenario"-Quelle springen (Tab wechseln + Set-Panel oeffnen). Zwei Quellen:
+// Market-Data-Szenarien (Curve/CS/Vol/PD) -> MARKET DATA "Set Scenarios"; Credit-Issuer
+// -> RISK "Set Credit Scenario".
+export function bindScenarioWarningNavigation() {
+  const go = (tabId, panelSelector) => {
+    document.getElementById(tabId)?.click();
+    requestAnimationFrame(() => {
+      const trig = document.querySelector(panelSelector);
+      if (!trig) return;
+      // Sidebar-Baum zu diesem Trigger aufklappen (nicht nur das Panel oeffnen).
+      // (a) RISK-Baum (Credit): alle uebergeordneten .risk-acc-Gruppen expandieren.
+      let acc = trig.closest('.risk-acc');
+      while (acc) {
+        acc.classList.add('is-expanded');
+        acc.querySelector('.risk-acc-toggle')?.setAttribute('aria-expanded', 'true');
+        acc = acc.parentElement?.closest?.('.risk-acc');
+      }
+      // (b) MARKET-DATA-Baum: die Hauptgruppe .chart-section oeffnen, damit die
+      //     Sub-Trigger (z.B. "Set Scenarios") sichtbar werden.
+      const sec = trig.closest('.chart-section');
+      if (sec?.classList.contains('chart-section--sub')) {
+        let prev = sec.previousElementSibling;
+        while (prev && prev.classList.contains('chart-section--sub')) prev = prev.previousElementSibling;
+        if (prev?.classList.contains('chart-section')) prev.classList.add('is-open');
+      }
+      try { trig.click(); } catch (_) {}
+    });
+  };
+  const bind = (containerId, tabId, panelSelector) => {
+    const el = document.getElementById(containerId);
+    if (!el || el.dataset.navBound === '1') return;
+    el.dataset.navBound = '1';
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => go(tabId, panelSelector));
+  };
+
+  // Market-Data-Szenarien -> "Set Scenarios"-Panel im MARKET DATA-Tab.
+  ['curveWarningContainer', 'csWarningContainer', 'volWarningContainer', 'pdHistWarningContainer']
+    .forEach((id) => bind(id, 'MARKETDATA_Tab', '.section-trigger[data-panel="panel-scenarios"]'));
+
+  // Credit-Issuer-Szenario -> "Set Credit Scenario"-Panel im RISK-Tab.
+  bind('creditScenWarningContainer', 'RISK_Tab', '.section-trigger[data-panel="panel-credit-scenario-set"]');
+}
+
+export function updateCreditIssuerScenarioWarningUI() {
+  const warningContainer = document.getElementById("creditScenWarningContainer");
+  const warningLight = document.getElementById("creditScenWarning");
+  const warningText = document.getElementById("creditScenWarningText");
+
+  if (!warningContainer || !warningLight || !warningText) return;
+
+  // Aktives Credit-Issuer-Szenario aus CREDIT_ISSUER_ACTIVE (eine Zeile).
+  const activeRows = window.appState?.getCreditIssuerActive?.() || [];
+  const active = String(activeRows[0]?.scenario_id || "BASE").trim() || "BASE";
+
+  const showWarning = active !== "BASE";
+
+  warningContainer.style.display = showWarning ? "flex" : "none";
+  warningLight.style.backgroundColor = showWarning ? "red" : "transparent";
+
+  warningText.textContent = "Credit Scenario Set";
+  warningText.title = showWarning ? active : "";
+}
+
 export function updateVolScenarioWarningUI() {
   const warningContainer = document.getElementById("volWarningContainer");
   const warningLight = document.getElementById("volWarning");

@@ -148,6 +148,17 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
       document.dispatchEvent(new Event('pdhist:active:ready'));
       return;
 
+    // CREDIT ISSUER SCENARIO — Store + Ready-Events für Builder/Set-Panel.
+    case 'CREDIT_ISSUER_SCENARIO_DATAData':
+      appState?.setCreditIssuerScenarioData?.(rows);
+      document.dispatchEvent(new Event('creditissuer:scenario:ready'));
+      return;
+
+    case 'CREDIT_ISSUER_ACTIVEData':
+      appState?.setCreditIssuerActive?.(rows);
+      document.dispatchEvent(new Event('creditissuer:active:ready'));
+      return;
+
     case 'PD_NORM_SETTINGSData':
       appState?.setPdNormSettings?.(rows);
       document.dispatchEvent(new Event('pdnorm:ready'));

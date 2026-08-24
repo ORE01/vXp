@@ -243,24 +243,47 @@ export function renderChartLegend(chart, legendEl) {
 // LGD/NOTIONAL) und ist ueber alle pd_flags identisch -> pd_flag='RATING' reicht.
 // Summe der Positions-Losses eines Emittent/Rangs = dessen Szenario-Loss.
 export function buildPositionLoss(portRows, port) {
-  const rate = new Map(); // "ISSUER||RANK" -> LGD-Rate
+  const info = new Map(); // "ISSUER||RANK" -> { rate, RATING, ead }
   const ead = appState.getAllEADData?.() || [];
   for (const e of ead) {
     if (String(e?.port_name ?? '') !== String(port)) continue;
     if (String(e?.pd_flag ?? '').toUpperCase() !== 'RATING') continue;
     const notion = Number(e?.NOTIONAL);
     const lgd = Number(e?.LGD);
-    if (!Number.isFinite(notion) || notion <= 0 || !Number.isFinite(lgd)) continue;
     const key = `${String(e?.ISSUER ?? '').trim().toLowerCase()}||${String(e?.RANK ?? '').trim().toLowerCase()}`;
-    rate.set(key, lgd / notion);
+    info.set(key, {
+      rate: (Number.isFinite(notion) && notion > 0 && Number.isFinite(lgd)) ? lgd / notion : null,
+      RATING: e?.RATING,
+      ead: Number.isFinite(notion) ? notion : null, // Szenario-EAD (Gruppen-Total je Issuer,Rank)
+    });
   }
+  // Basis-Notional-Summe je (Issuer,Rank) -> Szenario-EAD anteilig auf Positionen verteilen.
+  const baseTotal = new Map();
+  for (const r of (portRows || [])) {
+    const key = `${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
+    const n = Number(r?.NOTIONAL);
+    if (Number.isFinite(n)) baseTotal.set(key, (baseTotal.get(key) || 0) + n);
+  }
+  // Wenn EAD-Daten vorliegen, spiegelt info das AKTIVE Credit-Szenario (Include / EAD /
+  // RR->LGD / RATINGres): ausgeschlossene (Issuer,Rank) rausfiltern; EAD (anteilig),
+  // RATINGres und Loss je Position aus dem Szenario -> konsistent zur EAD/LGD/PD-Tabelle.
+  const hasEad = info.size > 0;
   return (portRows || []).map((r) => {
     const key = `${String(r?.ISSUER ?? '').trim().toLowerCase()}||${String(r?.RANK ?? '').trim().toLowerCase()}`;
-    const rt = rate.get(key);
-    const notion = Number(r?.NOTIONAL);
-    const loss = (Number.isFinite(rt) && Number.isFinite(notion)) ? notion * rt : 0;
-    return { ...r, __LOSS: loss };
-  });
+    const inf = info.get(key);
+    if (hasEad && !inf) return null; // (Issuer,Rank) nicht im Szenario -> ausgeschlossen
+    const baseN = Number(r?.NOTIONAL);
+    const gtot = baseTotal.get(key);
+    let posEad = baseN;
+    if (inf && Number.isFinite(inf.ead) && Number.isFinite(gtot) && gtot > 0 && Number.isFinite(baseN)) {
+      posEad = baseN * (inf.ead / gtot);
+    }
+    const loss = (inf && Number.isFinite(inf.rate) && Number.isFinite(posEad)) ? posEad * inf.rate : 0;
+    const ratingRes = (inf && inf.RATING != null && String(inf.RATING).trim() !== '')
+      ? inf.RATING
+      : r?.RATINGres;
+    return { ...r, NOTIONAL: posEad, RATINGres: ratingRes, __LOSS: loss };
+  }).filter(Boolean);
 }
 
 // Global objects to store datasets

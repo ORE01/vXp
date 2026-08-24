@@ -73,12 +73,16 @@ export function createPythonExecutionRouter(ctx) {
     const marketRiskIntervalTouched = !!appState.marketRiskIntervalTouched;
     const fallbackInterval = appState.mvarFallbackInterval || null;
 
-    // Sequenz-Lauf ("Calculate all selected"): ein explizit uebergebenes Intervall
-    // gewinnt immer (die Schleife rechnet ROLLING + jedes ausgewaehlte Szenario einzeln).
+    // Batch-Lauf ("Calculate all selected"): eine explizit uebergebene Intervall-LISTE
+    // gewinnt immer (Python rechnet ROLLING + alle Szenarien in EINEM Job, Setup einmal).
+    // intervalOverride (Einzel) bleibt fuer die Einzel-Panel-Laeufe erhalten.
+    const intervalsOverride = Array.isArray(extraParam?.intervalsOverride) && extraParam.intervalsOverride.length
+      ? extraParam.intervalsOverride.map(String)
+      : null;
     const intervalOverride = extraParam && extraParam.intervalOverride
       ? String(extraParam.intervalOverride)
       : null;
-    const finalIntervalUsed = intervalOverride || (marketRiskIntervalTouched
+    const finalIntervalUsed = (intervalsOverride ? intervalsOverride[0] : intervalOverride) || (marketRiskIntervalTouched
       ? sessionSelectedInterval
       : (customerDefaultIntervalFromStore || fallbackInterval));
 
@@ -130,10 +134,13 @@ export function createPythonExecutionRouter(ctx) {
 
     const payload = {
       tableName: selectedTableName,
-      selectedInterval: finalIntervalUsed,
+      selectedInterval: finalIntervalUsed,          // Einzel / Back-compat
       var_days: varDays,
       confidence,
     };
+    // Batch: alle Intervalle mitgeben -> EIN py-Job. START/END pro Szenario loest
+    // Python via resolve_interval auf, daher hier keine per-Intervall-Fenster noetig.
+    if (intervalsOverride) payload.selectedIntervals = intervalsOverride;
     window.api.send('start-py-MVaR', payload);
   }
 

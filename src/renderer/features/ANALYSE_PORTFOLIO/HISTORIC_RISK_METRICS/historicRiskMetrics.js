@@ -1,5 +1,6 @@
 import { appState } from '../../../renderer.js';
 import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
+import { getPortfolioColor } from '../../../utils/colors.js';
 
 
 // HELPER: 
@@ -1088,8 +1089,10 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
         type: "line",
         label: _perf ? "Portfolio Value" : "Portfolio Value / Notional",
         data: portValuePct,
-        borderColor: "rgba(54, 162, 235, 1)",
-        backgroundColor: "rgba(54, 162, 235, 0.15)",
+        // Portfolio Value in der Portfolio-Farbe (wie der Portfolio-Punkt im Yield-vs-
+        // reference-curve-Chart, getPortfolioColor); theme-aware.
+        borderColor: _perf ? getPortfolioColor(1).borderColor : "rgba(54, 162, 235, 1)",
+        backgroundColor: _perf ? getPortfolioColor(0.15).backgroundColor : "rgba(54, 162, 235, 0.15)",
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.2,
@@ -1099,8 +1102,8 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
         type: "line",
         label: _perf ? "Portfolio Value (Buy)" : "Portfolio BUY Value / Notional",
         data: portValueBuyPct,
-        borderColor: "rgba(255, 99, 132, 1)",
-        backgroundColor: "rgba(255, 99, 132, 0.15)",
+        borderColor: _perf ? "rgba(54, 162, 235, 1)" : "rgba(255, 99, 132, 1)",
+        backgroundColor: _perf ? "rgba(54, 162, 235, 0.15)" : "rgba(255, 99, 132, 0.15)",
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.2,
@@ -1297,9 +1300,49 @@ export function renderPerformanceHistoryCopies() {
     const _navRel    = _notional ? `${_pct(_nav / _notional * 100)} ${_q("of notional")}` : "–";
     const _navBuyRel = _notional ? `${_pct(_navBuy / _notional * 100)} ${_q("of notional")}` : "–";
     const _pnlRel    = _navBuy ? `${_pct(_pnl / _navBuy * 100)} ${_q("of buy value")}` : "–";
+    // Nur der %-Wert ohne "(of notional)"-Zusatz — fuer den PDF-Mirror, wo "(of notional)"
+    // ins Kachel-Label (Zeile 1) wandert statt in die Sub-Zeile.
+    const _navPct    = _notional ? _pct(_nav / _notional * 100)    : "–";
+    const _navBuyPct = _notional ? _pct(_navBuy / _notional * 100) : "–";
 
-    _kpi("perfHistKpiNav",    "perfHistKpiNavRel",    "nav",     _eur(_nav),    _navRel);
-    _kpi("perfHistKpiNavBuy", "perfHistKpiNavBuyRel", "nav_buy", _eur(_navBuy), _navBuyRel);
+    // Performance-Historie des Portfolios, nach Datum sortiert; Vorperiode = vorletzter
+    // Eintrag. Daraus je Kennzahl die Veraenderung (relativ %, absolut EUR) ableiten.
+    const _hist = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? "").trim() === sel)
+      .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+    const _prevRow = _hist[_hist.length - 2];
+    const _sg = (v) => (v > 0 ? "+" : (v < 0 ? "-" : ""));
+    const _chg = (cur, prevRaw) => {
+      const p = _pf(prevRaw);
+      if (!Number.isFinite(p) || p === 0) return null;
+      const dAbs = cur - p, dPct = dAbs / p * 100;
+      return { rel: `${_sg(dPct)}${_pct(Math.abs(dPct))}`, abs: `${_sg(dAbs)}${_eur(Math.abs(dAbs))}` };
+    };
+
+    // Notional: Veraenderung (%, absolut) in einer Zeile.
+    const _notC = _chg(_notional, _prevRow?.PORTFOLIO_NOTIONAL ?? _prevRow?.PORTVOLIO_NOTIONAL);
+    const _notionalChg = _notC ? `${_notC.rel} · ${_notC.abs}` : "–";
+
+    // NAV: relative Veraenderung an die %-of-notional-Zeile anhaengen (1. Zeile), absolute
+    // Veraenderung in eine eigene 2. Zeile (History-Feld PORTFOLIO_VALUE = NAV je Periode).
+    // Kachel-Layout (NAV & NAV Buy), fest (kein abs/rel-Toggle):
+    //  Zeile 2 = "% of notional (Rate)" — Rate gleich gross (plain, nicht muted), in Klammer.
+    //  Zeile 3 = absoluter Wert + absolute Veraenderung dahinter.
+    const _navC = _chg(_nav, _prevRow?.PORTFOLIO_VALUE);
+    const _navLine2 = _navRel;
+    const _navLine3 = _navC ? `${_eur(_nav)} · ${_navC.abs} · (${_navC.rel})` : _eur(_nav);
+
+    // NAV (Buy): analog, History-Feld PORTFOLIO_VALUE_BUY = Einstandswert je Periode.
+    const _navBuyC = _chg(_navBuy, _prevRow?.PORTFOLIO_VALUE_BUY);
+    const _navBuyLine2 = _navBuyRel;
+    const _navBuyLine3 = _navBuyC ? `${_eur(_navBuy)} · ${_navBuyC.abs} · (${_navBuyC.rel})` : _eur(_navBuy);
+
+    _set("perfHistKpiNotional", _eur(_notional));
+    _set("perfHistKpiNotionalChg", _notionalChg);
+    _set("perfHistKpiNav",       _navLine2);
+    _set("perfHistKpiNavRel",    _navLine3);
+    _set("perfHistKpiNavBuy",    _navBuyLine2);
+    _set("perfHistKpiNavBuyRel", _navBuyLine3);
     _kpi("perfHistKpiPnl",    "perfHistKpiPnlRel",    "pnl",     _eur(_pnl),    _pnlRel);
 
     // Report-Spiegel: KPI-Band-Tabelle (data-kpi-band) fuer Preview/PDF.
@@ -1308,8 +1351,9 @@ export function renderPerformanceHistoryCopies() {
       const _esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const _strip = (s) => String(s).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
       const _rows = [
-        ["Net Asset Value", `${_eur(_nav)} · ${_strip(_navRel)}`],
-        ["Net Asset Value (Buy)", `${_eur(_navBuy)} · ${_strip(_navBuyRel)}`],
+        ["Notional", `${_eur(_notional)}${_notionalChg !== "–" ? ` · ${_strip(_notionalChg)}` : ""}`],
+        ["Net Asset Value (Buy) (of notional)", `${_strip(_navBuyLine3)} · ${_navBuyPct}`],
+        ["Net Asset Value (of notional)", `${_strip(_navLine3)} · ${_navPct}`],
         ["Profit / Loss", `${_eur(_pnl)} · ${_strip(_pnlRel)}`],
       ];
       _kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${

@@ -323,7 +323,7 @@ function drawHeaderFooter(doc, layout, { title, headerLabel, chapter, logoEl, re
   const t = String(title || 'Risk Report');
 
   // Kopf: gefuellter Navy-Balken (Farbe wie Deckblatt) ueber die volle Breite; links
-  // "vXP | <Portfolio>" (weiss, fett), rechts der Zeitraum (heller Akzent).
+  // "vXp | <Portfolio>" (weiss, fett), rechts der Zeitraum (heller Akzent).
   const bandH = 14;
   const bandTextY = 9;
   doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
@@ -553,7 +553,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   const logoEl = getById('logo');
   const reportTimeText = formatNowTimestamp();
 
-  // Kopfzeilen-Label wie VORLAGE: "vXP | <Portfolio>". Portfolio-Name aus dem
+  // Kopfzeilen-Label wie VORLAGE: "vXp | <Portfolio>". Portfolio-Name aus dem
   // (Report-)Portfolio-Dropdown; Fallback = Report-Titel.
   let portName = '';
   try {
@@ -563,7 +563,7 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       portName = String(opt?.textContent || portSel.value || '').trim();
     }
   } catch {}
-  const headerLabel = `vXP | ${portName || reportTitle}`;
+  const headerLabel = `vXp | ${portName || reportTitle}`;
 
   doc.setPage(1);
   drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText });
@@ -652,6 +652,9 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     titleByLevel[level] = title;
     titleByLevel.length = level + 1;
     const parentChapter = titleByLevel[level - 1] || '';
+    // Voller Pfad (Root -> aktuelles Blatt) als laufender Kolumnentitel in der Kopfzeile,
+    // z.B. "PORTFOLIO / PERFORMANCE / YIELD" statt nur "YIELD".
+    const chapterPath = titleByLevel.slice(1, level + 1).filter(Boolean).join(' / ');
     const hasContent =
       // Breakdown-PARENT: reine Kapitel-Ueberschrift (die Inhalte tragen die
       // Dimensions-Kinder) -> keine eigene, fast leere Divider-Seite erzeugen.
@@ -688,9 +691,10 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
       await renderPanelSectionToPDF(doc, sec, layout, ctx);
     }
 
-    // Alle von dieser Sektion belegten Seiten dem direkten Elternkapitel zuordnen.
+    // Alle von dieser Sektion belegten Seiten bekommen den vollen Pfad (Root -> Blatt)
+    // als laufenden Kolumnentitel.
     const endPage = doc.internal.getNumberOfPages();
-    for (let p = pageIndex; p <= endPage; p++) chapterByPage[p] = parentChapter;
+    for (let p = pageIndex; p <= endPage; p++) chapterByPage[p] = chapterPath || parentChapter;
   }
 
   // Gruppen-Überschriften ohne folgendes Blatt: auf die letzte Seite zeigen.
@@ -869,14 +873,14 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     items.forEach((it, i) => {
       doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
       doc.roundedRect(cx, y0, cardW, cardH, 2, 2, 'FD');
-      // Werte OBEN: Haupt-Wert, Sub.
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...TEXT);
-      doc.text(it.val, cx + 3, y0 + 7);
-      if (it.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(doc.splitTextToSize(it.sub, cardW - 6)[0] || '', cx + 3, y0 + 11); }
-      // Bezeichnung UNTEN (letzte Zeile(n)), am Boden verankert.
+      // Bezeichnung OBEN (erste Zeile(n), Caption), darunter Haupt-Wert + Sub.
       doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
       const lbl = doc.splitTextToSize(it.lbl, cardW - 6).slice(0, 2);
-      lbl.forEach((ln, j) => doc.text(ln, cx + 3, y0 + cardH - 2.5 - (lbl.length - 1 - j) * 3));
+      lbl.forEach((ln, j) => doc.text(ln, cx + 3, y0 + 4 + j * 3));
+      const yVal = y0 + 4 + lbl.length * 3 + 3;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...TEXT);
+      doc.text(it.val, cx + 3, yVal);
+      if (it.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(doc.splitTextToSize(it.sub, cardW - 6)[0] || '', cx + 3, yVal + 4); }
       if (i < n - 1) {
         const cc = it.conn === '→' ? '>' : (it.conn || '');   // "→" ist nicht in WinAnsi -> ">"
         if (cc) { doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...MUTED); doc.text(cc, cx + cardW + connW / 2 - doc.getTextWidth(cc) / 2, y0 + cardH / 2 + 1.5); }
@@ -902,6 +906,30 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const tile = el?.closest?.('.cr-tail-tile');
     const q = tile?.querySelector('div');
     return (q?.textContent || '').replace(/\s+/g, ' ').trim();
+  };
+
+  // Allgemeiner App-Chart-Titel (die "Frage"/Textbeschriftung aus der App) — ersetzt den
+  // technischen Namen im PDF. Quellen: eingefuegtes <h3> in .chart-box (z.B. Yield vs Rates,
+  // via insertHeadingIntoExistingChartBox) oder .conc-panel__title (z.B. Portfolio Value
+  // History). "Key Figures" (KPI-Band) wird ignoriert. Leer -> Fallback auf ch.label/ch.id.
+  const chartAppTitle = (id) => {
+    const el = ctx.getById(id);
+    if (!el) return '';
+    const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    // .chart-box: eingefuegtes <h3> (Titel) + optionaler Untertitel-Div (z.B. "Maturity"/
+    // "Duration") -> kombinieren, damit zwei Charts mit gleichem Titel unterscheidbar sind.
+    const h = el.closest?.('.chart-box')?.querySelector('h3');
+    if (h) {
+      const title = clean(h.textContent);
+      const sub = clean(h.nextElementSibling?.textContent);
+      if (title) return sub ? `${title} — ${sub}` : title;
+    }
+    // Sensitivities-Charts: Titel der Chart-Karte (.sens-chart-card .sens-card-title).
+    const st = clean(el.closest?.('.sens-chart-card')?.querySelector('.sens-card-title')?.textContent);
+    if (st) return st;
+    const pt = clean(el.closest?.('.conc-panel')?.querySelector('.conc-panel__title')?.textContent);
+    if (pt && pt.toLowerCase() !== 'key figures') return pt;
+    return '';
   };
 
   // ── Sonderlayout: Market-Risk-Dashboard nativ (Vektor, KEIN Bild) ──
@@ -1594,8 +1622,22 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         // Standard-KPI-Kachel: nur wenn echter .home-kpi-val vorhanden (sonst Sonderkachel -> skip, kein '–').
         const valEl = t.querySelector('.home-kpi-val');
         if (valEl) {
-          const sub = tTxt(t, '.home-kpi-abs');
-          boxes.push({ v: richText(valEl) || '–', lbl: tTxt(t, '.home-kpi-lbl'), sub: sub || undefined, dot: tDot(t) });
+          // Swap wie in der App: bei .home-tile-swap ist der RELATIVE Wert (.home-kpi-abs) gross.
+          const swap = t.classList.contains('home-tile-swap');
+          const valTxt = richText(valEl) || '';
+          const absTxt = tTxt(t, '.home-kpi-abs') || '';
+          // Veraenderung aus dem Trend-Span (data-Attribute). Richtung -> Kreis+Pfeil (kein +/-).
+          const trend = t.querySelector('.home-kpi-trend');
+          const hasChg = !!(trend && !trend.hidden && trend.dataset && trend.dataset.chgAbs);
+          boxes.push({
+            v: (swap ? absTxt : valTxt) || '–',
+            lbl: tTxt(t, '.home-kpi-lbl'),
+            sub: (swap ? valTxt : absTxt) || undefined,   // Sekundaerwert (nur ohne Aenderung gezeigt)
+            chgAbs: hasChg ? trend.dataset.chgAbs : undefined,
+            chgRel: hasChg ? trend.dataset.chgRel : undefined,
+            chgUp:  hasChg ? (trend.dataset.chgUp === '1') : undefined,
+            dot: tDot(t),
+          });
         }
       });
       return { title, boxes };
@@ -1683,6 +1725,38 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         doc.text(vt, bx + w - doc.getTextWidth(vt), ry + 2.6);
       });
     };
+    // --- "EUR" kleiner/muted (wie in der App) + Trend-Kreis mit 45°-Pfeil (statt +/-) ---
+    const UP_COL = [47, 158, 91], DOWN_COL = [217, 83, 79];
+    const eurTextWidth = (str) => {
+      const s = String(str); const i = s.indexOf('EUR');
+      if (i < 0) return doc.getTextWidth(s);
+      const size = doc.getFontSize();
+      const rest = doc.getTextWidth(s.slice(0, i)) + doc.getTextWidth(s.slice(i + 3));
+      doc.setFontSize(size * 0.62); const we = doc.getTextWidth('EUR'); doc.setFontSize(size);
+      return rest + we;
+    };
+    const drawEurText = (str, x, y, baseColor) => {
+      const s = String(str); const i = s.indexOf('EUR');
+      doc.setTextColor(...baseColor);
+      if (i < 0) { doc.text(s, x, y); return doc.getTextWidth(s); }
+      const size = doc.getFontSize(); let cx = x;
+      const before = s.slice(0, i), after = s.slice(i + 3);
+      if (before) { doc.text(before, cx, y); cx += doc.getTextWidth(before); }
+      doc.setFontSize(size * 0.62); doc.setTextColor(...MUTED);
+      doc.text('EUR', cx, y); cx += doc.getTextWidth('EUR');
+      doc.setFontSize(size); doc.setTextColor(...baseColor);
+      if (after) { doc.text(after, cx, y); cx += doc.getTextWidth(after); }
+      return cx - x;
+    };
+    const drawTrendCircle = (cx, cy, up) => {
+      const col = up ? UP_COL : DOWN_COL, r = 1.4, a = r * 0.6;
+      doc.setDrawColor(...col); doc.setLineWidth(0.25); doc.circle(cx, cy, r, 'S');
+      const tipx = cx + a, tipy = up ? cy - a : cy + a, tailx = cx - a, taily = up ? cy + a : cy - a;
+      doc.setLineWidth(0.3); doc.line(tailx, taily, tipx, tipy);
+      const hl = 0.65;
+      doc.line(tipx, tipy, tipx - hl, tipy);
+      doc.line(tipx, tipy, tipx, up ? tipy + hl : tipy - hl);
+    };
     ensurePageSpace(ovCardH + 8, `${sectionTitle} (cont.)`);
     ovCards.forEach((c, i) => {
       const x = marginX + i * (ovCardW + ovGap), tx = x;   // kein Inset -> Kacheln fluchten mit den Charts
@@ -1730,10 +1804,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
               if (last < ln.length) segs.push({ t: ln.slice(last), c: null });
               if (!segs.length) segs.push({ t: ln, c: null });
               segs.forEach((s) => {
-                if (s.c) { doc.setFont('helvetica', 'bold'); doc.setTextColor(s.c[0], s.c[1], s.c[2]); }
-                else { doc.setFont('helvetica', 'normal'); doc.setTextColor(...TEXT); }
-                doc.text(s.t, cx, ly);
-                cx += doc.getTextWidth(s.t);
+                if (s.c) { doc.setFont('helvetica', 'bold'); doc.setTextColor(s.c[0], s.c[1], s.c[2]); doc.text(s.t, cx, ly); cx += doc.getTextWidth(s.t); }
+                else { doc.setFont('helvetica', 'normal'); cx += drawEurText(s.t, cx, ly, TEXT); }  // "EUR" kleiner/muted
               });
               li++;
             });
@@ -1762,9 +1834,9 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
               doc.setFont('helvetica', 'normal'); doc.setFontSize(5.2); doc.setTextColor(...MUTED);
               const nm = doc.splitTextToSize(String(cc.name || ''), bw - 1)[0] || '';
               doc.text(nm, midX - doc.getTextWidth(nm) / 2, boxY + 3.5);
-              doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...TEXT);
+              doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
               const av = String(cc.abs || '–');
-              doc.text(av, midX - doc.getTextWidth(av) / 2, boxY + 8);
+              drawEurText(av, midX - eurTextWidth(av) / 2, boxY + 8, TEXT);
               if (cc.rel) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...MUTED); const rv = String(cc.rel); doc.text(rv, midX - doc.getTextWidth(rv) / 2, boxY + 11); }
               if (i < nc - 1) {
                 const ax = bxx + bw, ay = boxY + boxH / 2;
@@ -1781,8 +1853,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
               const cxx = bx + 3 + i * cw;
               doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(...MUTED);
               doc.text(doc.splitTextToSize(String(cc.name || ''), cw - 1)[0] || '', cxx, byy + 8);
-              doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...TEXT);
-              doc.text(String(cc.abs || '–'), cxx, byy + 12);
+              doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
+              drawEurText(String(cc.abs || '–'), cxx, byy + 12, TEXT);
               if (cc.rel) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5.5); doc.setTextColor(...MUTED); doc.text(String(cc.rel), cxx, byy + 15); }
             });
           }
@@ -1918,13 +1990,26 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           doc.text(vs, bx + 3, byy + 10.8);
           if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 9.6, 1.1, 'F'); }
         } else {
-          // Name oben (Zeile 1), darunter Haupt- (Zeile 2) + Sub-Wert (Zeile 3) — wie die App-KPI-Kacheln.
+          // Name als Caption oben, Haupt-Wert um die VERTIKALE MITTE der Kachel, Sub darunter.
+          // (Frueher feste Offsets 4,2/9,4/12,4 -> Wert/Sub sassen zu tief; jetzt am Wert zentriert,
+          // konsistent fuer 2- und 3-zeilige Kacheln.)
+          const yVal = byy + ovBoxH / 2 + 1.4;
+          const yLbl = yVal - 5.2;
+          const ySub = yVal + 3.2;
           doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
-          if (b.lbl) doc.text(String(b.lbl), bx + 3, byy + 4.2);
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
-          doc.text(vs, bx + 3, byy + 9.4);
-          if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(bx + 3 + doc.getTextWidth(vs) + 2.4, byy + 8.2, 1.1, 'F'); }
-          if (b.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(String(b.sub), bx + 3, byy + 12.4); }
+          if (b.lbl) doc.text(String(b.lbl), bx + 3, yLbl);
+          // Zeile 2: Primaerwert (fett), "EUR" kleiner/muted.
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+          let vx = bx + 3 + drawEurText(vs, bx + 3, yVal, TEXT);
+          if (b.dot) { const a = ampRgb(b.dot); doc.setFillColor(a[0], a[1], a[2]); doc.circle(vx + 2.4, yVal - 1.2, 1.1, 'F'); vx += 4.5; }
+          // Zeile 2 zusaetzlich: Sekundaerwert (muted, klein) inline dahinter — passt jetzt, da "EUR" klein ist.
+          if (b.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); drawEurText(String(b.sub), vx + 1.8, yVal, MUTED); }
+          // Zeile 3: Aenderung = kleiner Kreis+45°-Pfeil (Richtung) + "abs · rel" ohne Vorzeichen.
+          if (b.chgAbs) {
+            drawTrendCircle(bx + 3.8, ySub - 1.3, b.chgUp);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
+            drawEurText(`${b.chgAbs} · ${b.chgRel}`, bx + 6.8, ySub, MUTED);
+          }
         }
         if (b.wide) { col = 0; byy += ovBoxH + 3; }
         else { col += 1; if (col >= 2) { col = 0; byy += ovBoxH + 3; } }
@@ -2131,7 +2216,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       } else {
         if (sec.key === 'overview') { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); }
         else { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90); }
-        doc.text(ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
+        doc.text(chartAppTitle(ch.id) || ch.label || ch.id, x + cellW / 2, rowY + 5, { align: 'center' });
       }
       doc.setFont('helvetica', 'normal');
       if (imgData?.dataUrl) {
@@ -2247,6 +2332,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const noteHeight = noteLines.length * 4;
 
     const q = crQuestionFor(ch.id);
+    const appT = q ? '' : chartAppTitle(ch.id);   // App-Titel ersetzt den technischen Namen
     const extraQ = q ? 5 : 0;
     const blockHeight = Math.max(targetHeight, noteHeight) + 22 + extraQ;
     ensurePageSpace(blockHeight + 10, `${sectionTitle} (cont.)`);
@@ -2265,7 +2351,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       doc.text(ch.label || ch.id, marginX + chartWidth / 2, boxY + 10.5, { align: 'center' });
     } else {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(0);
-      doc.text(ch.label || ch.id, marginX + chartWidth / 2, boxY + 7, { align: 'center' });
+      doc.text(appT || ch.label || ch.id, marginX + chartWidth / 2, boxY + 7, { align: 'center' });
     }
 
     try {
@@ -2300,9 +2386,14 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
     ensurePageSpace(40, `${sectionTitle} (cont.)`);
 
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text(String(t.label || t.id), marginX, y);
+    // Tabellen-Titel nur zeichnen, wenn ein ECHTES data-label existiert. Ohne data-label
+    // ist t.label == t.id (technischer Name) -> weglassen.
+    const tblLabel = (t.label && t.label !== t.id) ? String(t.label) : '';
+    if (tblLabel) {
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(tblLabel, marginX, y);
+    }
 
     const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
     const cellStatus = tbl.cellStatus || [];
@@ -2313,7 +2404,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const noteX   = marginX + tableW + noteGap;
     const noteW   = Math.max(0, layout.contentWidth - tableW - noteGap);
     const noteTxt = (typeof getTableNote === 'function' ? getTableNote(t.id) : '') || '';
-    const tableTopY = y + 6;
+    const tableTopY = y + (tblLabel ? 6 : 0);
 
     safeAutoTable(doc, layout, {
       startY: tableTopY,

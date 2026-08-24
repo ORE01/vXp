@@ -571,7 +571,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
   // ===================== MVaR =====================
   ipcMain.on('start-py-MVaR', async (event, args) => {
-    const { tableName, selectedInterval, var_days, confidence } = args || {};
+    const { tableName, selectedInterval, selectedIntervals, var_days, confidence } = args || {};
 
     const tablesToRefresh = [
       'MarketVaR',
@@ -590,16 +590,27 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       return;
     }
 
-    if (!selectedInterval) {
+    // Batch: alle ausgewaehlten Intervalle werden in EINEM py-Job gerechnet
+    // (ROLLING + Szenarien). Einzel-Fallback ueber selectedInterval.
+    const intervals = Array.isArray(selectedIntervals) && selectedIntervals.length
+      ? selectedIntervals.map(String)
+      : (selectedInterval ? [String(selectedInterval)] : []);
+
+    if (!intervals.length) {
       event.reply('py-mvar-complete', {
         success: false,
         projectName: 'py-MVaR',
-        message: '"selectedInterval" is required.',
+        message: '"selectedInterval(s)" is required.',
       });
       return;
     }
 
-    const pythonArgs = ['--table', tableName, '--intervalName', selectedInterval];
+    const pythonArgs = ['--table', tableName];
+    if (intervals.length > 1) {
+      pythonArgs.push('--intervalNames', intervals.join(','));
+    } else {
+      pythonArgs.push('--intervalName', intervals[0]);
+    }
 
     // Customer risk-calc settings (VaR horizon days + confidence). Forwarded so the
     // MVaR run uses them as horizon/alpha instead of MVaRInput legacy values.

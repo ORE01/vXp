@@ -284,6 +284,24 @@ export function installMarketDataStore({ appState } = {}) {
   }
 
   // -----------------------------
+  // CREDIT ISSUER SCENARIO (Include / EAD / RR->LGD / RATINGres je Issuer+RANK)
+  // BASE = berechnete EAD-Werte; benannte Szenarien + aktives Szenario.
+  // -----------------------------
+  function setCreditIssuerScenarioData(data) {
+    appState._CREDIT_ISSUER_SCENARIO_DATA = Array.isArray(data) ? data : [];
+  }
+  function getCreditIssuerScenarioData() {
+    return appState._CREDIT_ISSUER_SCENARIO_DATA || [];
+  }
+
+  function setCreditIssuerActive(data) {
+    appState._CREDIT_ISSUER_ACTIVE = Array.isArray(data) ? data : [];
+  }
+  function getCreditIssuerActive() {
+    return appState._CREDIT_ISSUER_ACTIVE || [];
+  }
+
+  // -----------------------------
   // TS Data
   // -----------------------------
 
@@ -427,6 +445,11 @@ function getSwaptionCubeSurface() {
   appState.setPDHistActive = setPDHistActive;
   appState.getPDHistActive = getPDHistActive;
 
+  appState.setCreditIssuerScenarioData = setCreditIssuerScenarioData;
+  appState.getCreditIssuerScenarioData = getCreditIssuerScenarioData;
+  appState.setCreditIssuerActive = setCreditIssuerActive;
+  appState.getCreditIssuerActive = getCreditIssuerActive;
+
 
 
 
@@ -490,6 +513,11 @@ function getSwaptionCubeSurface() {
     getPDHistScenarioData,
     setPDHistActive,
     getPDHistActive,
+
+    setCreditIssuerScenarioData,
+    getCreditIssuerScenarioData,
+    setCreditIssuerActive,
+    getCreditIssuerActive,
 
     setTblTSData,
     getTblTSData,

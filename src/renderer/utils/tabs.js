@@ -156,9 +156,12 @@ function relocatePortfolioPanels() {
 // -> green (done). Driven by the original button's `disabled` state, which the
 // project router sets true while running and false on completion.
 function wireRiskCalcStatus() {
+  // Market Risk (mvaRDistButton) rechnet alle Szenarien als EINEN Batch-Job; Dot/Proxy
+  // werden von setMarketCalcStatus()/runMvarBatch() (bindAppButtons.js) gesteuert, damit
+  // der Punkt bis zum Ende rot bleibt statt zwischendurch auf done zu springen. Hier nur
+  // die Einzellauf-Buttons beobachten.
   const specs = [
     { proxy: 'riskCalcPortfolio', target: 'fairValueButton', dot: 'riskDotPortfolio' },
-    { proxy: 'riskCalcMarket',    target: 'mvaRDistButton',  dot: 'riskDotMarket' },
     { proxy: 'riskCalcCredit',    target: 'CVaRButton',      dot: 'riskDotCredit' },
   ];
 

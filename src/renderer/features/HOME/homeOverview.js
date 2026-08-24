@@ -37,6 +37,8 @@ const fmtPctRaw = (v) => Number.isFinite(v) ? `${fmtNum(v, 2)} %` : '–';      
 const normPort = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
 const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
 const showEl = (id, show) => { const el = document.getElementById(id); if (el) el.hidden = !show; };
+// Overview-Aenderungsdaten je Trend-Kachel { up, abs, rel } (oder null) — fuer den PDF-Mirror.
+const _ovChg = {};
 // Datenverfuegbarkeit ("wenn vorhanden") ueber CSS-Klasse statt Inline-Style, damit
 // sie sich sauber mit der Kunden-Sichtbarkeit (applyOverviewTileVisibility, Inline)
 // kombiniert: unchecked -> Inline none; checked+leer -> Klasse none; checked+Daten -> sichtbar.
@@ -338,12 +340,14 @@ function renderPortfolioCard(port) {
   const liq1yPct = notional ? (liq1yNotional / notional) * 100 : 0;
   setText('homePfLiq1yPct', notional ? fmtPctRaw(liq1yPct) : '–');
   setText('homePfLiq1yAbs', fmtEur(liq1yNotional));
+  // .home-kpi-val = absoluter Betrag, .home-kpi-abs = relativer Wert (%, OHNE "of notional").
+  // Welcher gross/weiss und welcher klein/grau ist, macht der eingebaute Customer-Setup-Swap
+  // (applyTileValueModes -> .home-tile-swap) selbst -> hier NICHT ins Format eingreifen.
+  // "EUR" wird zentral vom Nachlauf wrapEurUnits() klein/grau gesetzt (gesamte Overview).
   setText('homePfNav', fmtEur(nav));
-  // Relativ zur Nominale: NAV / Notional (in %), analog zur Portfolio-Yield-Kachel.
-  setText('homePfNavRel', notional ? `${fmtPctRaw((nav / notional) * 100)} of notional` : '–');
-  // Einstandswert (Buy): absolut + relativ (= Ø-Einstandskurs in % der Nominale).
+  setText('homePfNavRel', notional ? fmtPctRaw((nav / notional) * 100) : '–');
   setText('homePfNavBuy', fmtEur(navBuy));
-  setText('homePfNavBuyRel', notional ? `${fmtPctRaw((navBuy / notional) * 100)} of notional` : '–');
+  setText('homePfNavBuyRel', notional ? fmtPctRaw((navBuy / notional) * 100) : '–');
   // Profit/Loss = NAV - NAVBuy (absolut); relativ = (NAV - NAVBuy) / NAVBuy in %.
   const pnl = nav - navBuy;
   setText('homePfPnl', fmtEur(pnl));
@@ -351,6 +355,60 @@ function renderPortfolioCard(port) {
   // Portfolio-Yield = Σ ytmPort / Σ Notional (nominalgewichtete Kauf-Yield), konsistent
   // mit der "Portfolio Yield"-KPI im Yield-Panel. NICHT der letzte Historic-RETURN.
   setText('homePfYield', notional ? fmtPctRaw((yieldW / notional) * 100) : '–');
+
+  // Trend-Pfeil ggue. Vorperiode (vorletzter History-Eintrag): ↗ gestiegen, ↘ gefallen.
+  // Nur Notional / NAV / NAV Buy / Yield. Basis: PORTFOLIO_NOTIONAL / PORTFOLIO_VALUE /
+  // PORTFOLIO_VALUE_BUY bzw. RETURN (wie "previous period yield" im Yield-Panel).
+  try {
+    const _ph = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => !port || String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port)
+      .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+    const _prev = _ph[_ph.length - 2] || {};
+    const _prevDate = String(_prev.DATE ?? '').split(' ')[0];
+    const _setTrend = (id, cur, prev, showChange, isPct) => {
+      const el = document.getElementById(id);
+      if (!el) { _ovChg[id] = null; return; }
+      if (!Number.isFinite(cur) || !Number.isFinite(prev) || cur === prev) {
+        el.hidden = true; _ovChg[id] = null;
+        delete el.dataset.chgAbs; delete el.dataset.chgRel; delete el.dataset.chgUp;
+        return;
+      }
+      const up = cur > prev;
+      el.hidden = false;
+      let html = `<span class="hkt-badge">${up ? '↗' : '↘'}</span>`;
+      let absTxt = '', relTxt = '';
+      if (showChange && prev !== 0) {
+        // Absolute + relative Veraenderung zur Vorperiode, im Overview-Stil (kompakt, muted).
+        // Ohne "EUR" und ohne Vorzeichen (die Richtung zeigt der Pfeil). Bei %-Werten (Yield)
+        // ist die "absolute" Veraenderung eine Prozentpunkt-Differenz (kein EUR-Format).
+        const dAbs = cur - prev;
+        const dRel = (dAbs / prev) * 100;
+        absTxt = isPct ? fmtPctRaw(Math.abs(dAbs)) : fmtEurCompact(Math.abs(dAbs)).replace('EUR ', '');
+        relTxt = fmtPctRaw(Math.abs(dRel));
+        html += ` <span class="hkt-chg">${absTxt} ${relTxt}</span>`;
+      }
+      el.innerHTML = html;
+      el.classList.toggle('is-up', up);
+      el.classList.toggle('is-down', !up);
+      el.title = _prevDate ? `vs previous period (${_prevDate})` : 'vs previous period';
+      // Fuer den PDF-Renderer merken (mit Richtung, ohne Pfeil-Glyph) — als data-Attribute
+      // am Trend-Span, damit RiskPDF.js sie beim nativen Zeichnen der Overview lesen kann.
+      _ovChg[id] = absTxt ? { up, abs: absTxt, rel: relTxt } : null;
+      if (absTxt) { el.dataset.chgAbs = absTxt; el.dataset.chgRel = relTxt; el.dataset.chgUp = up ? '1' : '0'; }
+      else { delete el.dataset.chgAbs; delete el.dataset.chgRel; delete el.dataset.chgUp; }
+    };
+    const _prevRet = numOf(_prev.RETURN);
+    _setTrend('homePfNotionalTrend', notional, numOf(_prev.PORTFOLIO_NOTIONAL ?? _prev.PORTVOLIO_NOTIONAL), true, false);
+    _setTrend('homePfNavTrend',      nav,      numOf(_prev.PORTFOLIO_VALUE),      true, false);
+    _setTrend('homePfNavBuyTrend',   navBuy,   numOf(_prev.PORTFOLIO_VALUE_BUY),  true, false);
+    _setTrend('homePfYieldTrend',    notional ? (yieldW / notional) * 100 : NaN,
+              Number.isFinite(_prevRet) ? _prevRet * 100 : NaN, true, true);
+    // not Valued / Liquidity: aktuell KEINE Historie -> numOf(...) = NaN -> Aenderungszeile
+    // wird ausgeblendet (gleiche Erkennung wie bei unsaved Portfolios). Sobald die History
+    // solche Felder fuehrt, erscheint die Zeile automatisch im selben Stil.
+    _setTrend('homePfCashTrend',  cashNotional,  numOf(_prev.NOT_VALUED_NOTIONAL), true, false);
+    _setTrend('homePfLiq1yTrend', liq1yNotional, numOf(_prev.LIQ_1Y_NOTIONAL),     true, false);
+  } catch (_) {}
 
   // Sensitivitaeten: absolut (EUR) gross, relativ klein. Relativ = Wert / ΣNotional
   // × 10000 in "bp" (bp Preisaenderung je 1bp Faktor-Move), konsistent zum
@@ -1462,11 +1520,13 @@ function syncHomeReportPanel(port) {
   panel.dataset.title = 'OVERVIEW';
 
   const txt = (id) => document.getElementById(id)?.textContent?.trim() || '–';
+  // Veraenderung (abs · rel) PDF-sicher mit Vorzeichen anhaengen (kein Pfeil-Glyph im PDF-Font).
+  const chg = (id) => { const c = _ovChg[id]; if (!c || !c.abs) return ''; const s = c.up ? '+' : '-'; return `  (${s}${c.abs} · ${s}${c.rel})`; };
   const rows = [
     ['Portfolio', port],
-    ['Notional', txt('homePfNotional')],
-    ['Net Asset Value', txt('homePfNav')],
-    ['Yield', txt('homePfYield')],
+    ['Notional', `${txt('homePfNotional')}${chg('homePfNotionalTrend')}`],
+    ['Net Asset Value', `${txt('homePfNav')}${chg('homePfNavTrend')}`],
+    ['Yield', `${txt('homePfYield')}${chg('homePfYieldTrend')}`],
     ['Market — Normal Risk (VaR)', `${txt('homeMktVar')}  (${txt('homeMktVarAbs')})`],
     ['Market — Extreme Risk (ES)', `${txt('homeMktEs')}  (${txt('homeMktEsAbs')})`],
     ['Market — VaR (Stressed)', `${txt('homeMktRollVar')}  (${txt('homeMktRollVarAbs')})`],
@@ -1618,6 +1678,33 @@ function bindHomeCardLinks() {
     homeCrIco: () => tabThenPanel('RISK_Tab', 'panel-credit-dashboard'),
   };
 
+  // Alle Credit-Overview-Kacheln als klickbare Trigger -> passendes Credit-Panel.
+  // ANNAHMEN (leicht anpassbar): Historic -> panel-credit (Economic Capital, Historic PD),
+  // Market adjusted -> panel-credit-current (Economic Capital, Market adjusted PD).
+  const CREDIT_TILE_NAV = {
+    cr_exec:         'panel-credit',
+    cr_exec_ede:     'panel-credit',
+    cr_ec_el:        'panel-credit',
+    cr_ec_ede:       'panel-credit',
+    cr_ec_var:       'panel-credit',
+    cr_ec_ec:        'panel-credit',
+    risk_buffer:     'panel-credit',
+    risk_buffer_ede: 'panel-credit',
+    risk_buffer_m:   'panel-credit-current',
+    cr_ec_scale:     'panel-credit',
+    cr_ec_scale_m:   'panel-credit-current',
+  };
+  // Kacheln als klickbare Trigger markieren (Rahmen/Hover via .home-nav-link + a11y).
+  Object.keys(CREDIT_TILE_NAV).forEach((tile) => {
+    document.querySelectorAll(`[data-tile="${tile}"]`).forEach((el) => {
+      if (el.classList.contains('home-nav-link')) return;
+      el.classList.add('home-nav-link');
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      if (!el.getAttribute('title')) el.setAttribute('title', 'Open Credit Risk');
+    });
+  });
+
   const run = (e) => {
     const ico = e.target.closest?.('.home-ico--link');
     if (ico && ACTIONS[ico.id]) { e.preventDefault(); ACTIONS[ico.id](); return; }
@@ -1651,6 +1738,10 @@ function bindHomeCardLinks() {
     if (e.target.closest?.('.home-chart-card[data-tile="mkt_backtest"]')) {
       e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-portfolio-backtest'); return;
     }
+    // Credit-Overview-Kacheln -> jeweils passendes Credit-Panel (siehe CREDIT_TILE_NAV).
+    const crAnyTile = e.target.closest?.('[data-tile]');
+    const crNavPanel = crAnyTile && CREDIT_TILE_NAV[crAnyTile.dataset.tile];
+    if (crNavPanel) { e.preventDefault(); tabThenPanel('RISK_Tab', crNavPanel); return; }
     // Kachel-Navigation: Notional/NAV -> Portfolio-Panel (Tabelle + 2 Summaries),
     // Yield -> Yield-Panel. Ziel steckt in data-nav-panel.
     const nav = e.target.closest?.('.home-nav-link');
@@ -1659,6 +1750,45 @@ function bindHomeCardLinks() {
   document.addEventListener('click', run);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') run(e);
+  });
+}
+
+// Nachlauf: in der GESAMTEN Overview nur das Waehrungswort "EUR" klein/grau setzen (.cur-unit),
+// ohne jeden einzelnen Wert umzubauen. Idempotent: bereits gewickelte "EUR" werden ausgelassen,
+// ebenso der versteckte Report-Spiegel (#panel-overview). "EUR" nur als eigenstaendiges Wort.
+function wrapEurUnits(root) {
+  if (!root || typeof document.createTreeWalker !== 'function') return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const v = node.nodeValue;
+      if (!v || v.indexOf('EUR') === -1) return NodeFilter.FILTER_REJECT;
+      let p = node.parentElement;
+      while (p && p !== root) {
+        if (p.id === 'panel-overview') return NodeFilter.FILTER_REJECT;
+        if (p.classList && p.classList.contains('cur-unit')) return NodeFilter.FILTER_REJECT;
+        p = p.parentElement;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const nodes = [];
+  let n;
+  while ((n = walker.nextNode())) nodes.push(n);
+  nodes.forEach((textNode) => {
+    const parts = textNode.nodeValue.split(/(\bEUR\b)/g);
+    if (parts.length < 2) return;
+    const frag = document.createDocumentFragment();
+    parts.forEach((part) => {
+      if (part === 'EUR') {
+        const span = document.createElement('span');
+        span.className = 'cur-unit';
+        span.textContent = 'EUR';
+        frag.appendChild(span);
+      } else if (part) {
+        frag.appendChild(document.createTextNode(part));
+      }
+    });
+    textNode.parentNode.replaceChild(frag, textNode);
   });
 }
 
@@ -1695,4 +1825,7 @@ export function renderHomeOverview() {
 
   // Hide the Overview "Portfolio" tiles the customer deselected (Customer Setup).
   try { applyOverviewTileVisibility(); } catch (e) { console.warn('[home] tile visibility', e); }
+
+  // Zum Schluss: "EUR" in der gesamten Overview klein/grau setzen.
+  try { wrapEurUnits(modal); } catch (e) { console.warn('[home] EUR unit wrap', e); }
 }

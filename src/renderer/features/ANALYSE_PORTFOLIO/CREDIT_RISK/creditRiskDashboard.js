@@ -493,7 +493,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
     if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: '#f08c00', width: 2, label: `VaR ${pctLbl(varPct)}` });
     if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: '#e03131', width: 2, dash: [6, 4], label: `ES ${pctLbl(esPct)}` });
     // EL-Linie nur bei der Default-Serie dieses Charts (rating bzw. norm/market adjusted).
-    if (f.key === defaultKey && _elIdx >= 0) lines.unshift({ at: _elIdx, color: 'rgba(235,235,235,0.92)', width: 1.5, label: `EL ${pctLbl(_elPct)}` });
+    if (f.key === defaultKey && _elIdx >= 0) lines.unshift({ at: _elIdx, color: '#5a6470', width: 1.5, label: `EL ${pctLbl(_elPct)}` });
     lineMap.push(lines);
     // Drill-Steps je Bin: das Quantil-Szenario dieser Serie, dessen Loss der Bin-Hoehe
     // am naechsten kommt -> dessen ausfallende Emittenten (ISSUER_RANK).

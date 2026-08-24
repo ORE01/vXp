@@ -104,6 +104,8 @@ module.exports = function registerCrudHandlers({
     PD_RATING_HISTORICAL:  ['PD_RATING_HISTORICAL'],
     PD_HIST_SCENARIO_DATA: ['PD_HIST_SCENARIO_DATA'],
     PD_HIST_ACTIVE:        ['PD_HIST_ACTIVE'],
+    CREDIT_ISSUER_SCENARIO_DATA: ['CREDIT_ISSUER_SCENARIO_DATA'],
+    CREDIT_ISSUER_ACTIVE:        ['CREDIT_ISSUER_ACTIVE'],
     PD_NORM_SETTINGS:      ['PD_NORM_SETTINGS'],
 
     ecb:                 ['ecb'],

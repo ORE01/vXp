@@ -244,6 +244,38 @@ Feature:    Wenn es nur in einem Panel gilt
       <div id="pdHistWarning" class="warning-light"></div>
     </div>
 
+    <!-- Credit (Issuer) Scenario Warning -->
+    <div id="creditScenWarningContainer" class="warning-container">
+      <span id="creditScenWarningText" class="warning-text">Credit Scenario Set</span>
+      <div id="creditScenWarning" class="warning-light"></div>
+    </div>
+
+  </div>
+
+  <!-- Calculator: opens a popover with the 3 Calculate buttons (moved from panel-risk-calc). -->
+  <div class="toolbar-calc">
+    <button id="toolbarCalcToggle" class="toolbar-calc-btn" type="button"
+            aria-haspopup="true" aria-expanded="false" aria-label="Calculate Risk" title="Calculate Risk">
+      <!-- Taschenrechner-Icon aus dem Economic-Capital-Panel (CVaRButton) uebernommen. -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><rect x="8" y="6" width="8" height="3" rx="0.6"/><circle cx="8.5" cy="13" r="0.6" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="0.6" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13" r="0.6" fill="currentColor" stroke="none"/><circle cx="8.5" cy="17" r="0.6" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/><circle cx="15.5" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <div id="toolbarCalcMenu" class="toolbar-calc-menu" hidden>
+      <!-- aus panel-risk-calc hierher verschoben -->
+      <div class="risk-select-form">
+        <div class="risk-calc-row">
+          <button type="button" id="riskCalcPortfolio" class="edit-button">Calculate Portfolio</button>
+          <span class="risk-calc-dot" id="riskDotPortfolio" title="not calculated"></span>
+        </div>
+        <div class="risk-calc-row">
+          <button type="button" id="riskCalcMarket" class="edit-button">Calculate Market Risk</button>
+          <span class="risk-calc-dot" id="riskDotMarket" title="not calculated"></span>
+        </div>
+        <div class="risk-calc-row">
+          <button type="button" id="riskCalcCredit" class="edit-button">Calculate Credit Risk</button>
+          <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -317,17 +349,17 @@ Feature:    Wenn es nur in einem Panel gilt
           Portfolio<span class="home-card-port" id="homePfPort"></span>
         </div>
         <div class="home-kpis home-kpis--labeltop">
-          <div class="home-kpi home-nav-link" data-tile="notional" data-nav-panel="panel-concentration" role="button" tabindex="0" title="Breakdown öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-lbl">Notional</span></div>
-          <div class="home-kpi home-nav-link" data-tile="nav" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-abs" id="homePfNavRel">–</span><span class="home-kpi-lbl">Net Asset Value</span></div>
-          <div class="home-kpi home-nav-link" data-tile="nav_buy" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNavBuy">–</span><span class="home-kpi-abs" id="homePfNavBuyRel">–</span><span class="home-kpi-lbl">Net Asset Value (Buy)</span></div>
+          <div class="home-kpi home-nav-link" data-tile="notional" data-nav-panel="panel-concentration" role="button" tabindex="0" title="Breakdown öffnen"><span class="home-kpi-val" id="homePfNotional">–</span><span class="home-kpi-trend" id="homePfNotionalTrend" hidden></span><span class="home-kpi-lbl">Notional</span></div>
+          <div class="home-kpi home-nav-link" data-tile="nav" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNav">–</span><span class="home-kpi-abs" id="homePfNavRel">–</span><span class="home-kpi-trend" id="homePfNavTrend" hidden></span><span class="home-kpi-lbl">Net Asset Value</span></div>
+          <div class="home-kpi home-nav-link" data-tile="nav_buy" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Portfolio öffnen"><span class="home-kpi-val" id="homePfNavBuy">–</span><span class="home-kpi-abs" id="homePfNavBuyRel">–</span><span class="home-kpi-trend" id="homePfNavBuyTrend" hidden></span><span class="home-kpi-lbl">Net Asset Value (Buy)</span></div>
           <div class="home-kpi home-nav-link" data-tile="pnl" data-nav-panel="panel-performance-history" role="button" tabindex="0" title="Profit/Loss öffnen"><span class="home-kpi-val" id="homePfPnl">–</span><span class="home-kpi-abs" id="homePfPnlRel">–</span><span class="home-kpi-lbl">Profit/Loss</span></div>
-          <div class="home-kpi home-nav-link" data-tile="yield" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Yield öffnen"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-lbl">Yield</span></div>
+          <div class="home-kpi home-nav-link" data-tile="yield" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Yield öffnen"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-trend" id="homePfYieldTrend" hidden></span><span class="home-kpi-lbl">Yield</span></div>
           <div class="home-kpi home-nav-link" data-tile="pv01" role="button" tabindex="0" title="PV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-abs" id="homePfPv01Rel">–</span><span class="home-kpi-lbl">PV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="cpv01" role="button" tabindex="0" title="CPV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-abs" id="homePfCpv01Rel">–</span><span class="home-kpi-lbl">CPV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="vega" role="button" tabindex="0" title="Vega-Sensitivität öffnen"><span class="home-kpi-val" id="homePfVega">–</span><span class="home-kpi-abs" id="homePfVegaRel">–</span><span class="home-kpi-lbl">Vega</span></div>
-          <div class="home-kpi" data-tile="cash" title="Non-valued categories (% of notional)"><span class="home-kpi-val" id="homePfCashPct">–</span><span class="home-kpi-abs" id="homePfCashAbs">–</span><span class="home-kpi-lbl">not Valued</span></div>
+          <div class="home-kpi" data-tile="cash" title="Non-valued categories (% of notional)"><span class="home-kpi-val" id="homePfCashPct">–</span><span class="home-kpi-abs" id="homePfCashAbs">–</span><span class="home-kpi-trend" id="homePfCashTrend" hidden></span><span class="home-kpi-lbl">not Valued</span></div>
           <!-- Liquidity < 1y: Anteil (Nominale) der Produkte mit Restlaufzeit (TtM) < 1 Jahr (inkl. 0/bereits faellig). Befuellt in renderPortfolioCard. -->
-          <div class="home-kpi" data-tile="liq_1y" title="Products maturing within 1 year — incl. already matured (% of notional)"><span class="home-kpi-val" id="homePfLiq1yPct">–</span><span class="home-kpi-abs" id="homePfLiq1yAbs">–</span><span class="home-kpi-lbl">Liquidity &lt; 1y</span></div>
+          <div class="home-kpi" data-tile="liq_1y" title="Products maturing within 1 year — incl. already matured (% of notional)"><span class="home-kpi-val" id="homePfLiq1yPct">–</span><span class="home-kpi-abs" id="homePfLiq1yAbs">–</span><span class="home-kpi-trend" id="homePfLiq1yTrend" hidden></span><span class="home-kpi-lbl">Liquidity &lt; 1y</span></div>
           <!-- IR-Duration-Split-Kachel (pf-dur-Style, vollbreit): 2-Segment-Balken nach Nominale
                (nicht bewertet | bewertet). Links "not Valued 0Y", ueber dem bewerteten Segment die
                IR-Duration aufs bewertete NAV; am Balkenende Ø = IR-Duration aufs Gesamt-NAV. -->
@@ -1013,10 +1045,6 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-risk-calc" aria-controls="panel-risk-calc" aria-expanded="false">
-              <span class="section-header">Run / Calculate Risk</span>
-              <span class="chev"></span>
-            </button>
             <button id="historicMetricsAddButton" type="button" class="edit-button">
               <span class="button-label">Save to Historic Metrics</span>
             </button>
@@ -1117,6 +1145,25 @@ Feature:    Wenn es nur in einem Panel gilt
                 </button>
                 <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-credit-current" aria-controls="panel-credit-current" aria-expanded="false">
                   <span class="section-header">market adjusted PD</span>
+                  <span class="chev"></span>
+                </button>
+              </div>
+            </div>
+            <!-- Credit Scenarios (Issuer): Create + Set. Analog PD-Szenario, aber je
+                 Issuer+RANK (Include / EAD / RR->LGD / RATINGres). Vom gewaehlten
+                 Portfolio abgeleitet, aber NICHT ans Portfolio gebunden. -->
+            <div class="risk-acc">
+              <button class="section-trigger section-trigger--sub risk-acc--l3 risk-acc-toggle" type="button" aria-expanded="false">
+                <span class="section-header">Scenarios (Issuer)</span>
+                <span class="chev"></span>
+              </button>
+              <div class="risk-acc-body">
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-create-credit-scenario" aria-controls="panel-create-credit-scenario" aria-expanded="false">
+                  <span class="section-header">Create Credit Scenario</span>
+                  <span class="chev"></span>
+                </button>
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-credit-scenario-set" aria-controls="panel-credit-scenario-set" aria-expanded="false">
+                  <span class="section-header">Set Credit Scenario</span>
                   <span class="chev"></span>
                 </button>
               </div>
@@ -1358,19 +1405,24 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="conc-panel__title">Key Figures</div>
           <div class="conc-kpi-grid">
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="perfHistKpiNav">–</div>
-              <div class="conc-kpi__sub" id="perfHistKpiNavRel">–</div>
-              <div class="conc-kpi__lbl">Net Asset Value</div>
+              <div class="conc-kpi__lbl">Notional</div>
+              <div class="conc-kpi__val" id="perfHistKpiNotional">–</div>
+              <div class="conc-kpi__sub" id="perfHistKpiNotionalChg">–</div>
             </div>
             <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Net Asset Value (Buy)</div>
               <div class="conc-kpi__val" id="perfHistKpiNavBuy">–</div>
               <div class="conc-kpi__sub" id="perfHistKpiNavBuyRel">–</div>
-              <div class="conc-kpi__lbl">Net Asset Value (Buy)</div>
             </div>
             <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Net Asset Value</div>
+              <div class="conc-kpi__val" id="perfHistKpiNav">–</div>
+              <div class="conc-kpi__sub" id="perfHistKpiNavRel">–</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Profit / Loss</div>
               <div class="conc-kpi__val" id="perfHistKpiPnl">–</div>
               <div class="conc-kpi__sub" id="perfHistKpiPnlRel">–</div>
-              <div class="conc-kpi__lbl">Profit / Loss</div>
             </div>
           </div>
         </div>
@@ -1380,7 +1432,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
           <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
-            <div class="conc-panel__title">Portfolio Value History</div>
+            <div class="conc-panel__title">How has the portfolio value developed?</div>
             <!-- Fixe Hoehe + position:relative -> responsive-Chart fuellt den Container,
                  waechst NICHT bei jedem Neuzeichnen. -->
             <div style="position:relative; height:300px;">
@@ -1405,13 +1457,13 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="conc-panel__title">Key Figures</div>
           <div class="conc-kpi-grid">
             <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Portfolio Yield</div>
               <div class="conc-kpi__val" id="perfKpiReturn">–</div>
               <div class="conc-kpi__sub" id="perfKpiReturnDelta" style="display:none;">–</div>
-              <div class="conc-kpi__lbl">Portfolio Yield</div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
               <div class="conc-kpi__lbl">Profit / Loss</div>
+              <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
             </div>
           </div>
         </div>
@@ -1561,29 +1613,7 @@ Feature:    Wenn es nur in einem Panel gilt
   <div class="sub-panel-body" id="riskInputCreditHost"></div>
 </div>
 
-<!-- Panel: RISK Metrics Calculate (3 Calculate-Buttons mit Status-Punkten) -->
-<div id="panel-risk-calc" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-risk-calc-title" hidden>
-  <div class="sub-panel-header">
-    <div id="panel-risk-calc-title" class="sub-panel-title">RUN / CALCULATE RISK</div>
-    <button class="sub-panel-close" data-close="panel-risk-calc" aria-label="close">&times;</button>
-  </div>
-  <div class="sub-panel-body">
-    <div class="risk-select-form">
-      <div class="risk-calc-row">
-        <button type="button" id="riskCalcPortfolio" class="edit-button">Calculate Portfolio</button>
-        <span class="risk-calc-dot" id="riskDotPortfolio" title="not calculated"></span>
-      </div>
-      <div class="risk-calc-row">
-        <button type="button" id="riskCalcMarket" class="edit-button">Calculate Market Risk</button>
-        <span class="risk-calc-dot" id="riskDotMarket" title="not calculated"></span>
-      </div>
-      <div class="risk-calc-row">
-        <button type="button" id="riskCalcCredit" class="edit-button">Calculate Credit Risk</button>
-        <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Panel: RISK Metrics Calculate → verschoben in die Toolbar (Taschenrechner-Popover). -->
 
 <!-- Panel: Market Risk Dashboard (Current Risk Overview) -->
 <!-- Panel: Credit Risk Dashboard (analog zum Market-Risk-Dashboard) -->
@@ -2265,8 +2295,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">PV01 by Tenor</div>
-              <div class="sens-card-subtitle">Interest rate sensitivity by maturity bucket</div>
+              <div class="sens-card-title">Interest rate sensitivity by maturity bucket</div>
             </div>
           </div>
 
@@ -2308,8 +2337,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">CPV01 by Rating Bucket</div>
-              <div class="sens-card-subtitle">Credit spread sensitivity by rating bucket</div>
+              <div class="sens-card-title">Credit spread sensitivity by rating bucket</div>
             </div>
           </div>
 
@@ -2350,8 +2378,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">Vega Parallel</div>
-              <div class="sens-card-subtitle">Parallel swaption volatility sensitivity</div>
+              <div class="sens-card-title">Parallel swaption volatility sensitivity</div>
             </div>
           </div>
 
@@ -2772,6 +2799,62 @@ Feature:    Wenn es nur in einem Panel gilt
           </div><!-- /.sub-panel-body -->
           <div id="eadIssuerCardMenu" class="conc-menu" style="display:none;"></div>
         </div><!-- /#panel-EAD -->
+
+        <!-- Panel: CREATE CREDIT SCENARIO (Issuer-Ebene: Include / EAD / RR->LGD / RATINGres).
+             Vorbefuellung aus der EAD-Tabelle des gewaehlten Portfolios; Speichern je (Issuer,RANK)
+             in CREDIT_ISSUER_SCENARIO_DATA ueber die generischen CRUD-Kanaele. -->
+        <div id="panel-create-credit-scenario" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-create-credit-scenario-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-create-credit-scenario-title" class="sub-panel-title">CREATE CREDIT SCENARIO</div>
+            <button class="sub-panel-close" data-close="panel-create-credit-scenario" aria-label="close">&times;</button>
+          </div>
+          <div class="sub-panel-body">
+            <section class="table-card">
+              <h4 class="table-title">Scenario Setup</h4>
+              <div style="margin-bottom:12px;">
+                <label>Edit Existing Scenario</label><br>
+                <select id="creditIssuerScenarioSelect"><option value="">-- New Scenario --</option></select>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label>Scenario Name</label><br>
+                <input id="creditIssuerScenarioName" placeholder="new credit scenario name" />
+              </div>
+              <!-- Bulk: gleiche Werte fuer alle (angehakten) Issuer setzen. -->
+              <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                <div><label>RR for all (%)</label><br><input type="text" inputmode="decimal" id="creditIssuerBulkRR" style="width:110px;" /></div>
+                <div><label>Rating for all</label><br><input type="text" id="creditIssuerBulkRating" style="width:110px;" /></div>
+                <div><label>Rank for all</label><br><input type="text" id="creditIssuerBulkRank" style="width:150px;" /></div>
+                <div><label>EAD for all</label><br><input type="text" inputmode="decimal" id="creditIssuerBulkEAD" style="width:130px;" /></div>
+                <button id="creditIssuerApplyAllBtn" class="edit-button" type="button">Apply to all</button>
+              </div>
+            </section>
+            <section class="table-card">
+              <h4 class="table-title">Issuers (from selected portfolio) &mdash; LGD = EAD &times; (1 &minus; RR)</h4>
+              <div id="creditIssuerScenarioTableData" class="data-container"></div>
+            </section>
+            <div style="margin-top:16px;">
+              <button id="creditIssuerSaveScenarioBtn" class="edit-button">Save Credit Scenario</button>
+              <button id="creditIssuerDeleteScenarioBtn" class="edit-button delete-button">Delete Credit Scenario</button>
+            </div>
+          </div>
+        </div><!-- /#panel-create-credit-scenario -->
+
+        <!-- Panel: SET CREDIT SCENARIO (aktives Issuer-Szenario -> CREDIT_ISSUER_ACTIVE id=1). -->
+        <div id="panel-credit-scenario-set" class="sub-panel" role="dialog" aria-modal="false" aria-labelledby="panel-credit-scenario-set-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-credit-scenario-set-title" class="sub-panel-title">SET CREDIT SCENARIO</div>
+            <button class="sub-panel-close" data-close="panel-credit-scenario-set" aria-label="close">&times;</button>
+          </div>
+          <div class="sub-panel-body">
+            <section class="table-card">
+              <h4 class="table-title">Active Credit (Issuer) Scenario</h4>
+              <div id="creditIssuerScenarioSetContainer" class="data-container"></div>
+            </section>
+            <div style="margin-top:16px;">
+              <button id="applyCreditIssuerScenarioChanges" class="edit-button">Apply Credit Scenario</button>
+            </div>
+          </div>
+        </div><!-- /#panel-credit-scenario-set -->
 
 
         <!-- Panel: Credit Risk   Details -->
@@ -3451,7 +3534,7 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <div class="chart-container">
       <button id="irCurvesBtn" type="button" class="ir-curves-btn">Curves</button>
-      <canvas id="IRLineChart"></canvas>
+      <canvas id="IRLineChart" data-label="Interest rate curves"></canvas>
     </div>
 
     <!-- Drawer: mehrere Kurven für den Chart anhaken (Tabelle bleibt einkurvig) -->
@@ -3767,7 +3850,7 @@ Feature:    Wenn es nur in einem Panel gilt
       <div class="sub-panel-body">
         <div class="cs-layout-wrapper">
           <div class="chart-container cs-chart">
-            <canvas id="CS_ChartCanvas"></canvas>
+            <canvas id="CS_ChartCanvas" data-label="Credit spread curves"></canvas>
           </div>
 
           <aside class="parameters-container">
