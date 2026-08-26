@@ -18,6 +18,7 @@ import { bootstrapBridges } from './core/bootstrap/bootstrapBridges.js';
 import { bootstrapPython } from './core/bootstrap/bootstrapPython.js';
 import { bootstrapIPC } from './core/bootstrap/bootstrapIPC.js';
 import { bootstrapBindings } from './core/bootstrap/bootstrapBindings.js';
+import { initEurUnitAutoWrap } from './utils/eurUnitAutoWrap.js';
 import { handleCustomerTableLayoutsData } from './features/CUSTOMER/tableLayouts/handleCustomerTableLayoutsData.js';
 import { renderCustomerCategoryPanel, initCustomerCategoryCrud } from './features/CUSTOMER_SETUP/customerCategoryPanel.js';
 import { initOverviewTilesPanel, initMarketRiskTilesPanel, initCreditRiskTilesPanel, handleCustomerOverviewTileSettingData } from './features/CUSTOMER_SETUP/overviewTilesPanel.js';
@@ -171,6 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
   bootstrapUIBasics(appState);
   bootstrapTriggers(appState, { emitPanelOpen });
   initCreditSpreadCurveChartListener();
+
+  // Zentral: "EUR" in ALLEN KPI-Karten (.conc-kpi__val/.sub) automatisch klein setzen —
+  // panel-uebergreifend, ohne dass jedes Panel es selbst tun muss.
+  initEurUnitAutoWrap();
 
 
     if (MINIMAL_UI) {

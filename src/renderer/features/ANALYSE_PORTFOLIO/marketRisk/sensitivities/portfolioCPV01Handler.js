@@ -19,6 +19,7 @@ import {
   scheduleHideConcMenu,
 } from '../../SummaryBreakdown.js';
 import { wireSortableDetails } from './detailsTableSort.js';
+import { renderSensHistorySingle } from '../../HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 
 // Table id of the SELECT PORTFOLIO table whose header filters drive the
 // analyse sections; mirror it so CPV01 follows the same portfolio filter.
@@ -170,6 +171,19 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
 
     return;
   }
+
+  // CPV01-Verlauf (Portfolio-History, bp) unter Graph + Details zeichnen — unabhaengig vom
+  // Bar-Chart-Datenpfad (auch bei leeren CPV01-Rows aktualisieren/leeren).
+  try {
+    const _hist = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selectedPort);
+    renderSensHistorySingle('sensCpv01HistChart', _hist, {
+      keys: ['CPV01bp', 'CPV01_BP', 'CPV01_BP_BASIS'],
+      label: 'CPV01 (bp)',
+      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: 'rgba(255, 99, 132, 0.15)',
+    });
+  } catch (e) { console.warn('[CP SENS] CPV01 history chart failed', e); }
 
   // console.log('[CP SENS] selected portfolio resolved', {
   //   rawPortName,

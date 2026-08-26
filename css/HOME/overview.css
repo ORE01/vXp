@@ -88,6 +88,20 @@
 }
 .home-card-port { color: var(--text-bright); font-weight: 500; letter-spacing: .3px; }
 
+/* Ampelpunkt (Limit-Status) oben rechts im Kartenkopf. margin-left:auto schiebt ihn an
+   den rechten Rand. Default gruen; is-yellow/is-red setzt spaeter die Limit-Logik. */
+.home-limit-dot {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #2f9e5f;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+}
+.home-limit-dot.is-green  { background: #2f9e5f; }
+.home-limit-dot.is-yellow { background: #e0a533; }
+.home-limit-dot.is-red    { background: #d9534f; }
+
 /* Icon-Badge im Kartenkopf (runder Farbkreis + weisses Symbol, Vorlage-Look). */
 .home-ico {
   width: 26px;
@@ -175,7 +189,7 @@
 .home-kpi[data-tile="liq_1y"] .home-kpi-trend { flex-basis: 100%; }
 /* NUR das Waehrungswort "EUR" kleiner + grau schreiben (der Zahlenwert bleibt normal gross).
    Gilt in der gesamten Overview (Portfolio / Market / Credit), gesetzt via wrapEurUnits(). */
-#HOME_Modal .cur-unit { font-size: 0.6em; font-weight: 500; color: var(--text-muted); }
+.cur-unit { font-size: 0.6em; font-weight: 500; color: var(--text-muted); }
 .home-kpi-val { font-size: 14px; font-weight: 600; color: var(--text-bright); }
 .home-kpi-abs { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .home-kpi--wide { grid-column: 1 / -1; }
@@ -210,6 +224,7 @@
 .pf-dur-splitavg { flex: 0 0 auto; min-width: 52px; text-align: right; }
 .pf-dur-splitpcts { display: flex; justify-content: space-between; gap: 6px; margin-top: 3px; }
 .pf-dur-splitpcts span { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+.pf-dur-splitpcts b { color: var(--text-bright); font-weight: 700; }
 /* Duration-Kacheln (IR/CS): kompakt wie die Current-Market-Kachel (nicht so hoch). */
 .pf-dur-tile { padding: 10px 12px; }
 .pf-dur-cap { font-size: 12px; font-weight: 700; color: var(--text-bright); margin-bottom: 2px; }
@@ -620,23 +635,11 @@
 .cr-ec-summary .cr-ec3-rel  { order: 2; font-size: 9.5px; }
 .cr-ec-summary.home-tile-swap .cr-ec3-rel { order: 1; font-size: 14px; font-weight: 700; color: var(--text-bright); }
 .cr-ec-summary.home-tile-swap .cr-ec3-abs { order: 2; font-size: 9.5px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
-/* Pfeile: EC (Mitte) zeigt nach links auf EL bzw. nach rechts auf VaR. Schaft (::before) +
-   Pfeilspitze (::after) + senkrechter Endstrich (border-left/right) an der Spitze. */
-.cr-ec-sum-arrow { position: relative; align-self: center; height: 14px; }
-.cr-ec-sum-arrow::before {
-  content: ""; position: absolute; top: 50%; left: 0; right: 0;
-  border-top: 1.5px solid var(--text-muted);
-}
-.cr-ec-sum-arrow::after {
-  content: ""; position: absolute; top: 50%; transform: translateY(-50%);
-  border: 5px solid transparent;
-}
-/* Nach links: Endstrich links, Spitze zeigt nach links. */
-.cr-ec-sum-arrow--left { border-left: 1.5px solid var(--text-muted); }
-.cr-ec-sum-arrow--left::after { left: 0; border-right-color: var(--text-muted); border-left: 0; }
-/* Nach rechts: Endstrich rechts, Spitze zeigt nach rechts. */
-.cr-ec-sum-arrow--right { border-right: 1.5px solid var(--text-muted); }
-.cr-ec-sum-arrow--right::after { right: 0; border-left-color: var(--text-muted); border-right: 0; }
+/* Statt Pfeilen die Rechenbeziehung: EL + EC = VaR -> "+" zwischen EL/EC, "=" zwischen EC/VaR. */
+.cr-ec-sum-arrow { position: relative; align-self: center; height: 14px; display: flex; align-items: center; justify-content: center; }
+.cr-ec-sum-arrow::before { font-size: 15px; font-weight: 700; color: var(--text-muted); line-height: 1; }
+.cr-ec-sum-arrow--left::before  { content: "+"; }
+.cr-ec-sum-arrow--right::before { content: "="; }
 .conc-tcm-track {
   position: relative; height: 7px; border-radius: 4px;
   background: linear-gradient(90deg,
@@ -658,6 +661,8 @@
   position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
   white-space: nowrap; color: #fff; font-size: 10.5px; font-weight: 700;
 }
+/* Light-Theme: der %-Wert (Pille) sitzt ueber dem Balken auf hellem Grund -> dunkel statt weiss. */
+body.light-theme .conc-tcm-pill { color: #1a1f29; }
 .conc-tcm-scale { position: relative; height: 14px; margin-top: 8px; font-size: 10.5px; color: var(--text-muted); }
 .conc-tcm-scale span { position: absolute; white-space: nowrap; }
 

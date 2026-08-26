@@ -127,25 +127,9 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     ? 'New Product'
     : `Structure Timeline · ${prodId}`;
 
-    const productTypeSelectorHtml = isCreateMode
-  ? `
-    <div class="structure-product-type-row">
-      <label class="structure-drawer-label">
-        Product Type
-      </label>
-
-      <select
-        id="structureProductTypeSelect"
-        class="structure-drawer-input"
-      >
-        <option value="">-- Select Product Type --</option>
-        <option value="FIXED_BOND">Simple Fixed Bond</option>
-        <option value="FRN">Simple FRN</option>
-        <option value="COMPLEX_BOND">Complex Bond</option>
-      </select>
-    </div>
-  `
-  : '';
+    // Produkttyp wird nicht mehr im Modal gewaehlt, sondern ueber die Sidebar-Subtrigger
+    // "Products > Add Products" (options.templateName). Daher kein Dropdown mehr.
+    const productTypeSelectorHtml = '';
 
   modal.innerHTML = `
     <div class="structure-timeline-drag-bar modal-drag-handle">
@@ -327,13 +311,33 @@ export function handleStructureTimelineModal(prodId, options = {}) {
   function openProductSetupDrawer() {
     if (!productSetupDrawer) return;
 
-    renderProductSetupDrawer(productSetupDrawer, prodId, {
-      ...options,
-      onCreated: (newProdId) => reopenAfterCreate(
-        newProdId,
-        options.templateName || 'COMPLEX_BOND'
-      ),
-    });
+    // Den zum vorgewaehlten Typ passenden Drawer rendern (im Create-Mode kommt der Typ
+    // aus den Sidebar-Subtriggern via options.templateName). Nur COMPLEX/undefined nutzt
+    // den generischen Product-Setup-Drawer.
+    const tn = options.templateName || 'COMPLEX_BOND';
+    if (tn === 'FIXED_BOND') {
+      renderSimpleFixedDrawer(productSetupDrawer, prodId, {
+        ...options,
+        mode: options.mode || 'create',
+        templateName: 'FIXED_BOND',
+        onCreated: (newProdId) => reopenAfterCreate(newProdId, 'FIXED_BOND'),
+      });
+    } else if (tn === 'FRN') {
+      renderSimpleFrnDrawer(productSetupDrawer, prodId, {
+        ...options,
+        mode: options.mode || 'create',
+        templateName: 'FRN',
+        onCreated: (newProdId) => reopenAfterCreate(newProdId, 'FRN'),
+      });
+    } else {
+      renderProductSetupDrawer(productSetupDrawer, prodId, {
+        ...options,
+        onCreated: (newProdId) => reopenAfterCreate(
+          newProdId,
+          options.templateName || 'COMPLEX_BOND'
+        ),
+      });
+    }
 
     setActiveDrawer('product');
   }
@@ -461,89 +465,58 @@ export function handleStructureTimelineModal(prodId, options = {}) {
     });
 
   if (isCreateMode) {
-    const productTypeSelect = document.getElementById('structureProductTypeSelect');
+    // Typ kommt jetzt aus den Sidebar-Subtriggern (options.templateName); kein Dropdown mehr.
+    // Ohne Vorwahl (Alt-Pfad) faellt es auf Complex Bond zurueck.
+    const templateName = options.templateName || 'COMPLEX_BOND';
 
-    if (timelineContainer) {
-      timelineContainer.innerHTML = `
-        <div style="padding:16px; opacity:0.75;">
-          Select a Product Type above to start creating a new product.
-        </div>
-      `;
+    if (!productSetupDrawer) return;
+    if (modelSetupDrawer) modelSetupDrawer.style.display = 'none';
+
+    if (templateName === 'FIXED_BOND') {
+      renderSimpleFixedDrawer(productSetupDrawer, null, {
+        ...options,
+        mode: 'create',
+        templateName: 'FIXED_BOND',
+        onCreated: (newProdId) => reopenAfterCreate(newProdId, 'FIXED_BOND'),
+      });
+      if (timelineContainer) {
+        timelineContainer.innerHTML = `
+          <div style="padding:16px; opacity:0.75;">
+            Simple Fixed Bond does not require a structure timeline.
+          </div>
+        `;
+      }
+    } else if (templateName === 'FRN') {
+      renderSimpleFrnDrawer(productSetupDrawer, null, {
+        ...options,
+        mode: 'create',
+        templateName: 'FRN',
+        onCreated: (newProdId) => reopenAfterCreate(newProdId, 'FRN'),
+      });
+      if (timelineContainer) {
+        timelineContainer.innerHTML = `
+          <div style="padding:16px; opacity:0.75;">
+            Simple FRN does not require a structure timeline.
+          </div>
+        `;
+      }
+    } else {
+      renderProductSetupDrawer(productSetupDrawer, null, {
+        ...options,
+        mode: 'create',
+        templateName: 'COMPLEX_BOND',
+        onCreated: (newProdId) => reopenAfterCreate(newProdId, 'COMPLEX_BOND'),
+      });
+      if (timelineContainer) {
+        timelineContainer.innerHTML = `
+          <div style="padding:16px; opacity:0.75;">
+            Create and save the product first. The structure timeline will become available after the product exists.
+          </div>
+        `;
+      }
     }
 
-    productTypeSelect?.addEventListener('change', () => {
-      const templateName = productTypeSelect.value;
-
-      if (!templateName || !productSetupDrawer) return;
-
-      if (modelSetupDrawer) {
-        modelSetupDrawer.style.display = 'none';
-      }
-
-      if (templateName === 'FIXED_BOND') {
-        renderSimpleFixedDrawer(productSetupDrawer, null, {
-          ...options,
-          mode: 'create',
-          templateName: 'FIXED_BOND',
-          onCreated: (newProdId) => reopenAfterCreate(newProdId, 'FIXED_BOND'),
-        });
-
-        productSetupDrawer.style.display = 'block';
-
-        if (timelineContainer) {
-          timelineContainer.innerHTML = `
-            <div style="padding:16px; opacity:0.75;">
-              Simple Fixed Bond does not require a structure timeline.
-            </div>
-          `;
-        }
-
-        return;
-      }
-
-      if (templateName === 'FRN') {
-        renderSimpleFrnDrawer(productSetupDrawer, null, {
-          ...options,
-          mode: 'create',
-          templateName: 'FRN',
-          onCreated: (newProdId) => reopenAfterCreate(newProdId, 'FRN'),
-        });
-
-        productSetupDrawer.style.display = 'block';
-
-        if (timelineContainer) {
-          timelineContainer.innerHTML = `
-            <div style="padding:16px; opacity:0.75;">
-              Simple FRN does not require a structure timeline.
-            </div>
-          `;
-        }
-
-        return;
-      }
-
-      if (templateName === 'COMPLEX_BOND') {
-        renderProductSetupDrawer(productSetupDrawer, null, {
-          ...options,
-          mode: 'create',
-          templateName: 'COMPLEX_BOND',
-          onCreated: (newProdId) => reopenAfterCreate(newProdId, 'COMPLEX_BOND'),
-        });
-
-        productSetupDrawer.style.display = 'block';
-
-        if (timelineContainer) {
-          timelineContainer.innerHTML = `
-            <div style="padding:16px; opacity:0.75;">
-              Create and save the product first. The structure timeline will become available after the product exists.
-            </div>
-          `;
-        }
-      }
-    });
-
-
-
+    productSetupDrawer.style.display = 'block';
     return;
   }
 

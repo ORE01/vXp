@@ -15,6 +15,7 @@ import {
   scheduleHideConcMenu,
 } from '../../SummaryBreakdown.js';
 import { makeSortableDetailsTable } from './detailsTableSort.js';
+import { renderSensHistorySingle } from '../../HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 
 // Table id of the SELECT PORTFOLIO table whose per-column header filters drive
 // the analyse sections; mirror it here so sensitivities follow the same filter.
@@ -111,6 +112,19 @@ if (!selectedPort) {
   });
   return;
 }
+
+// PV01-Verlauf (Portfolio-History, bp) unter Graph + Details zeichnen — unabhaengig vom
+// Bar-Chart-Datenpfad (auch bei leeren PV01-Rows aktualisieren/leeren).
+try {
+  const _hist = (appState.getPortfolioHistoryData?.() || [])
+    .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selectedPort);
+  renderSensHistorySingle('sensPv01HistChart', _hist, {
+    keys: ['MDURATION', 'M_DURATION', 'MOD_DURATION'],
+    label: 'PV01 (bp)',
+    borderColor: 'rgba(54, 162, 235, 1)',
+    backgroundColor: 'rgba(54, 162, 235, 0.15)',
+  });
+} catch (e) { console.warn('[IR SENS] PV01 history chart failed', e); }
 
 // console.log('[IR SENS] selected portfolio resolved', {
 //   rawPortName,

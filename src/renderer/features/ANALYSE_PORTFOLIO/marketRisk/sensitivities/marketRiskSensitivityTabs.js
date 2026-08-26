@@ -56,6 +56,16 @@ export function setSensitivityTabGroupVisible(keys, visible) {
   const tabs = findSensTabsByKeys(keys);
   const views = findSensViewsByKeys(keys);
 
+  // Sidebar-Sub-Trigger derselben Keys mit ein-/ausblenden -> nur die, die es beim Portfolio
+  // gibt, erscheinen (wie bisher bei den Tabs).
+  keys.forEach(k => {
+    const key = String(k ?? '').trim().toLowerCase();
+    document.querySelectorAll(`[data-sens-open="${key}"]`).forEach(btn => {
+      btn.style.display = visible ? '' : 'none';
+      btn.disabled = !visible;
+    });
+  });
+
   tabs.forEach(tab => {
     tab.style.display = visible ? '' : 'none';
     tab.disabled = !visible;
@@ -121,6 +131,15 @@ export function initMarketRiskSensitivityTabs() {
       const target = tab.dataset.sensTab;
 
       activateSensTab(target);
+    });
+  });
+
+  // Sidebar-Sub-Trigger (PV01/CPV01/Vega, aus dem Panel herausgeloest): Klick aktiviert den
+  // passenden View. data-panel oeffnet panel-sensitivities separat (Panel-Open-Mechanismus).
+  document.querySelectorAll('[data-sens-open]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled || btn.style.display === 'none') return;
+      activateSensTab(btn.dataset.sensOpen);
     });
   });
 

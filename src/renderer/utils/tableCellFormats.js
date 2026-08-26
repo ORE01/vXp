@@ -110,7 +110,12 @@ export function fmtPct(value, decimals = 2) {
 //   >= 1e3 -> "EUR 260,0 Tsd."   sonst  -> "EUR 875"
 // Nachkommastellen: Mrd/Mio(Portfolio)/Tsd = 1 fest; Mio(Risiko) = max 2 (opts.risk);
 // unter 1.000 = 0. Vorzeichen steht vor EUR: "-EUR 87,6 Tsd.".
-export function fmtEurCompact(value, { risk = false, signed = false } = {}) {
+// ZENTRALE EUR-Einheit: steht immer VOR der Zahl. { html:true } wickelt "EUR" in
+// <span class="cur-unit"> -> kleinere Darstellung (Groesse zentral via CSS .cur-unit).
+// Position (vorne/hinten) und Groesse damit an EINER Stelle aenderbar.
+export const eurUnit = (html = false) => (html ? '<span class="cur-unit">EUR</span>' : 'EUR');
+
+export function fmtEurCompact(value, { risk = false, signed = false, html = false } = {}) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '–';
   const neg = n < 0 ? '-' : (signed ? '+' : '');
@@ -121,7 +126,16 @@ export function fmtEurCompact(value, { risk = false, signed = false } = {}) {
   else if (a >= 1e6) { scaled = a / 1e6; unit = ' Mio.'; opts = risk ? { maximumFractionDigits: 2 } : fixed1; }
   else if (a >= 1e3) { scaled = a / 1e3; unit = ' Tsd.'; opts = { maximumFractionDigits: 1 }; }
   else               { scaled = a;       unit = '';      opts = { maximumFractionDigits: 0 }; }
-  return `${neg}EUR ${scaled.toLocaleString(APP_LOCALE, opts)}${unit}`;
+  return `${neg}${eurUnit(html)} ${scaled.toLocaleString(APP_LOCALE, opts)}${unit}`;
+}
+
+// Voller EUR-Betrag (keine Kurzform), "EUR" VORNE, Vorzeichen davor ("-EUR 8.275").
+// { html:true } -> "EUR" klein (span.cur-unit). Zentraler Ersatz fuer lokale "X EUR"-Helfer.
+export function fmtEur(value, { html = false } = {}) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '–';
+  const neg = n < 0 ? '-' : '';
+  return `${neg}${eurUnit(html)} ${Math.round(Math.abs(n)).toLocaleString(APP_LOCALE)}`;
 }
 
 // ---- Eingabe-Pfad (Komma rein -> Punkt in die DB) ----

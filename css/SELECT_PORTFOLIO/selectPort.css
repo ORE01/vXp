@@ -273,6 +273,17 @@ body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-thumb:
   transform: translateX(0);
 }
 
+/* Spaltendrawer INNERHALB eines .sub-panel (z-index 1100) sind im Stacking-Context des
+   Panels gefangen, das UNTER der Topbar (#toolbar, z-index 1200) liegt -> bei top:0
+   verdeckt die Topbar das Schliessen-x. Daher unter die Topbar setzen (auf Panel-Hoehe),
+   damit der Header/x klickbar bleibt. Betrifft u.a. Show Portfolio (#portColumnDrawer),
+   Change Portfolio (#dealsColumnDrawer) und Products (#prodColumnDrawer). Drawer direkt
+   im Tab-Modal (z.B. Issuer) sind NICHT betroffen und bleiben unveraendert. */
+.sub-panel .column-drawer {
+  top: var(--topbar-height, 110px);
+  height: calc(100vh - var(--topbar-height, 110px));
+}
+
 .column-drawer-header {
   flex-shrink: 0;
   display: flex;

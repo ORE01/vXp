@@ -146,14 +146,19 @@ function renderKpis(rows, labels, sums) {
   const cyIdx = labels.indexOf(String(new Date().getFullYear()));
   const next12 = cyIdx >= 0 ? sums[cyIdx] : 0;
   const fmtMn = (v) => fmtEurCompact(v);
+  // Relativer Anteil am Gesamt-Notional (fuer Zeile 2). Leer bei Kennzahlen ohne sinnvollen Anteil.
+  const pct = (x) => total ? `${(x / total * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %` : '';
   const tiles = [
-    { v: fmtMn(next12), l: 'Maturing next 12 months' },
-    { v: `${labels[maxI]}: ${fmtMn(sums[maxI])}`, l: 'Largest maturity' },
-    { v: fmtMn(total), l: 'Total notional' },
-    { v: String(rows.length), l: 'Positions' },
+    { l: 'Maturing next 12 months', v: fmtMn(next12), rel: pct(next12) },
+    { l: `Largest maturity: ${labels[maxI]}`, v: fmtMn(sums[maxI]), rel: pct(sums[maxI]) },
+    { l: 'Total notional', v: fmtMn(total), rel: '' },
+    { l: 'Positions', v: String(rows.length), rel: '' },
   ];
+  // Zeile 1 = Name (Label), Zeile 2 = Wert + relative % (muted). "EUR" klein via .cur-unit
+  // (Auto-Wrap greift ebenfalls; hier direkt gesetzt -> kein Aufblitzen).
+  const _eurSmall = (s) => String(s).replace('EUR', '<span class="cur-unit">EUR</span>');
   el.innerHTML = tiles.map(t =>
-    `<div class="conc-kpi"><div class="conc-kpi__val">${t.v}</div><div class="conc-kpi__lbl">${t.l}</div></div>`
+    `<div class="conc-kpi"><div class="conc-kpi__lbl">${t.l}</div><div class="conc-kpi__val">${_eurSmall(t.v)}${t.rel ? ` <span class="conc-kpi__qual">${t.rel}</span>` : ''}</div></div>`
   ).join('');
 
   // KPI-Leiste zusaetzlich als versteckte Tabelle spiegeln, damit die Report-Erfassung
@@ -162,7 +167,7 @@ function renderKpis(rows, labels, sums) {
   if (tblEl) {
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     tblEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-      tiles.map(t => `<tr><td>${esc(t.l)}</td><td>${esc(t.v)}</td></tr>`).join('')
+      tiles.map(t => `<tr><td>${esc(t.l)}</td><td>${esc(t.rel ? `${t.v} · ${t.rel}` : t.v)}</td></tr>`).join('')
     }</tbody></table>`;
   }
 }

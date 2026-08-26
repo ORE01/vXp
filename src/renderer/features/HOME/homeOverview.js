@@ -263,7 +263,7 @@ function renderPortfolioCard(port) {
      'homePfVega', 'homePfVegaRel', 'homePfCashPct', 'homePfCashAbs',
      'homePfCpnFix', 'homePfCpnFloat', 'homePfCpnStruct', 'homePfLiq1yPct', 'homePfLiq1yAbs',
      'homePfMatSplitY', 'homePfMatSplitNvY', 'homePfMatSplitAvg',
-     'homePfMatSplitNvPct', 'homePfMatSplitVPct',
+     'homePfMatSplitVPct',
      'homePfIrDurTotal', 'homePfIrDurValued',
      'homePfCsDurTotal', 'homePfCsDurValued'].forEach((id) => setText(id, '–'));
     ['homePfMatSplitNv', 'homePfMatSplitV',
@@ -384,8 +384,8 @@ function renderPortfolioCard(port) {
         const dAbs = cur - prev;
         const dRel = (dAbs / prev) * 100;
         absTxt = isPct ? fmtPctRaw(Math.abs(dAbs)) : fmtEurCompact(Math.abs(dAbs)).replace('EUR ', '');
-        relTxt = fmtPctRaw(Math.abs(dRel));
-        html += ` <span class="hkt-chg">${absTxt} ${relTxt}</span>`;
+        relTxt = isPct ? '' : fmtPctRaw(Math.abs(dRel));   // %-Werte (Yield): keine relative Veraenderung
+        html += ` <span class="hkt-chg">${absTxt}${relTxt ? ' ' + relTxt : ''}</span>`;
       }
       el.innerHTML = html;
       el.classList.toggle('is-up', up);
@@ -394,8 +394,10 @@ function renderPortfolioCard(port) {
       // Fuer den PDF-Renderer merken (mit Richtung, ohne Pfeil-Glyph) — als data-Attribute
       // am Trend-Span, damit RiskPDF.js sie beim nativen Zeichnen der Overview lesen kann.
       _ovChg[id] = absTxt ? { up, abs: absTxt, rel: relTxt } : null;
-      if (absTxt) { el.dataset.chgAbs = absTxt; el.dataset.chgRel = relTxt; el.dataset.chgUp = up ? '1' : '0'; }
-      else { delete el.dataset.chgAbs; delete el.dataset.chgRel; delete el.dataset.chgUp; }
+      if (absTxt) {
+        el.dataset.chgAbs = absTxt; el.dataset.chgUp = up ? '1' : '0';
+        if (relTxt) el.dataset.chgRel = relTxt; else delete el.dataset.chgRel;
+      } else { delete el.dataset.chgAbs; delete el.dataset.chgRel; delete el.dataset.chgUp; }
     };
     const _prevRet = numOf(_prev.RETURN);
     _setTrend('homePfNotionalTrend', notional, numOf(_prev.PORTFOLIO_NOTIONAL ?? _prev.PORTVOLIO_NOTIONAL), true, false);
@@ -451,11 +453,11 @@ function renderPortfolioCard(port) {
   const _msV  = document.getElementById('homePfMatSplitV');
   if (_msNv) _msNv.style.width = `${nvPct}%`;
   if (_msV)  _msV.style.width  = `${100 - nvPct}%`;
-  setText('homePfMatSplitNvY', '0Y');
+  // not valued: statt "Duration 0Y" (fuer Cash sinnlos) den Nominale-Anteil (%) zeigen.
+  setText('homePfMatSplitNvY', notional ? fmtPctRaw(nvPct) : '–');
   setText('homePfMatSplitY',   Number.isFinite(irDurValued) ? `${fmtNum(irDurValued, 2)}Y` : '–');
   setText('homePfMatSplitAvg', Number.isFinite(irDurTotal)  ? `${fmtNum(irDurTotal, 2)}Y` : '–');
-  // Prozentsaetze unter dem Balken: Nominale-Anteil nicht bewertet | bewertet.
-  setText('homePfMatSplitNvPct', notional ? fmtPctRaw(nvPct) : '–');
+  // Anteil bewertet (%) steht jetzt oben rechts im "valued:"-Label; unter dem Balken links leer.
   setText('homePfMatSplitVPct',  notional ? fmtPctRaw(100 - nvPct) : '–');
 
   // Risk-Slider (versteckter IR-Slider fuer PDF + CS-Slider): Ø-Maturity (WAM) als Skala,
@@ -605,12 +607,13 @@ function renderMarketCard(port) {
     const _confPct = Number(_mr?.confidence) * 100;
     const _days = Math.trunc(Number(_mr?.var_days));
     if (Number.isFinite(_confPct) && _confPct > 0 && Number.isFinite(_days) && _days > 0) {
-      const _confTxt = `${_confPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}%`;
+      // Einheitliche Horizon-Syntax: "<pct> % · <horizon>" (de-DE), z.B. "95 % · 10 days".
+      const _confTxt = `${_confPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })} %`;
       const _daysTxt = `${_days} day${_days === 1 ? '' : 's'}`;
       const _mName = { VaR: 'Value at Risk', ES: 'Expected Shortfall' };
       document.querySelectorAll('.mkt-metric-spec').forEach((el) => {
         const _m = el.dataset.metric || 'VaR';
-        el.textContent = `${_mName[_m] || _m} ${_confTxt} ${_daysTxt}`;
+        el.textContent = `${_mName[_m] || _m} ${_confTxt} · ${_daysTxt}`;
       });
     }
   } catch (_) {}
@@ -642,7 +645,7 @@ function renderMarketCard(port) {
      'homeMktCurVarAbs', 'homeMktCurVarRel', 'homeMktCurEsAbs', 'homeMktCurEsRel',
      'homeMktStrVarAbs', 'homeMktStrVarRel', 'homeMktStrEsAbs', 'homeMktStrEsRel',
      'homeMktStrScenName',
-     'homeMktExecStatus', 'homeMktExecValued', 'homeMktExecVar', 'homeMktExecEs', 'homeMktExecTop',
+     'homeMktExecStatus', 'homeMktExecScen', 'homeMktExecValued', 'homeMktExecVar', 'homeMktExecEs', 'homeMktExecTop',
      'homeMktCurDistVar', 'homeMktCurDistEs'].forEach((id) => setText(id, '–'));
     setDot('homeMktVarDot', null);
     setDot('homeMktEsDot', null);
@@ -763,8 +766,8 @@ function renderMarketCard(port) {
     const _confPct = Number(_mr?.confidence) * 100;
     const _days = Math.trunc(Number(_mr?.var_days));
     const specTxt = (Number.isFinite(_confPct) && _confPct > 0 && Number.isFinite(_days) && _days > 0)
-      ? `${_confPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })}% ${_days} day${_days === 1 ? '' : 's'}`
-      : '95% 10 days';
+      ? `${_confPct.toLocaleString('de-DE', { maximumFractionDigits: 2 })} % · ${_days} day${_days === 1 ? '' : 's'}`
+      : '95 % · 10 days';
     const valBlock = (name, abs, rel, inc, boxStyle) => {
       const p  = _mScale === 'rel' ? rel : abs;
       const sv = _mScale === 'rel' ? abs : rel;
@@ -791,12 +794,8 @@ function renderMarketCard(port) {
       const curMark = mk(curLim);
       const strMark = mk(strLim);
       const yr = lim ? Math.max(0, Math.min(100, Number(lim.yellowRatio))) : NaN;
-      // Box-Tint in der Balken-Zonenfarbe je Markerposition (gruen unter der Warnschwelle, amber darueber).
-      const zoneTint = (mark) => {
-        if (mark == null || !Number.isFinite(yr)) return '';
-        const cc = (Number(mark) >= yr) ? '224,165,51' : '47,158,95';   // amber #e0a533 / gruen #2f9e5f
-        return ` style="border-color:rgba(${cc},0.55); background:rgba(${cc},0.12);"`;
-      };
+      // Box-Rahmen NEUTRAL lassen (kein gruen/amber-Tint) — die Zonen zeigt der Balken darunter.
+      const zoneTint = () => '';
       if (track) {
         if (!lim) { track.classList.remove('mkt-grp-track--zones'); track.innerHTML = ''; }
         else {
@@ -980,7 +979,9 @@ function renderMarketCard(port) {
       : amberN === 1 ? { w: 'MODERATE', cls: 'exec-mid' }
       :                { w: 'LOW',      cls: 'exec-lo' };
     const _scenDisp = stressRow ? (String(getMvarRowScenarioName(stressRow)).trim() || scenName) : scenName;
-    setHtml('homeMktExecStatus', `Market Risk: <b class="${mktStatus.cls}">${mktStatus.w}</b> · Stress Scenario: <b>${escE(_scenDisp)}</b>`);
+    setHtml('homeMktExecStatus', `Market Risk: <b class="${mktStatus.cls}">${mktStatus.w}</b>`);
+    // Stress-Szenario als eigene Zeile (eigener Bullet), aus der Status-Zeile herausgeloest.
+    setHtml('homeMktExecScen', `Stress scenario: <b>${escE(_scenDisp)}</b>`);
     // 2. Punkt: "Valued" = 1 - Cash-Anteil (nicht bewertete FIXED_VALUE-Kategorien) = wirklich bewerteter Anteil der Nominale.
     const _fixedCats = appState.getFixedValueCategoryNames?.() || new Set();
     let _pfNot = 0, _pfCash = 0, _pfCnt = 0, _pfCashCnt = 0;
@@ -993,12 +994,12 @@ function renderMarketCard(port) {
     const valuedPct = _pfNot ? (1 - _pfCash / _pfNot) * 100 : null;
     const valuedCntPct = _pfCnt ? (1 - _pfCashCnt / _pfCnt) * 100 : null;   // gleiche Groesse nach Produktanzahl
     setHtml('homeMktExecValued', valuedPct == null
-      ? 'Actually valued: –'
-      : `Actually valued: <b>${fmtNum(valuedPct, 1)} %</b> of notional · <b>${fmtNum(valuedCntPct, 1)} %</b> of products`);
+      ? 'Risk coverage: –'
+      : `Risk coverage: <b>${fmtNum(valuedPct, 1)} %</b> of notional · <b>${fmtNum(valuedCntPct, 1)} %</b> of products`);
     const dVar = stressRow ? pctInc(rollRow?.VaR_T_rel, stressRow?.VaR_T_rel) : null;
     const dEs  = stressRow ? pctInc(rollRow?.ES_T_rel, stressRow?.ES_T_rel) : null;
-    setHtml('homeMktExecVar', dVar == null ? 'No stress scenario for Normal Risk' : `Stress scenario increases Normal Risk by <b>${dVar} %</b>`);
-    setHtml('homeMktExecEs',  dEs == null ? 'No stress scenario for Extreme Risk'  : `Stress scenario increases Extreme Risk by <b>${dEs} %</b>`);
+    setHtml('homeMktExecVar', dVar == null ? 'No stress scenario for Normal Risk' : `Normal Risk increases by <b>${dVar} %</b> under stress`);
+    setHtml('homeMktExecEs',  dEs == null ? 'No stress scenario for Extreme Risk'  : `Extreme Risk increases by <b>${dEs} %</b> under stress`);
     const topIssuer = prodTop.length
       ? (String(portRows.find((r) => String(r?.PROD_ID ?? '') === prodTop[0].id)?.ISSUER ?? '').trim() || prodTop[0].id)
       : null;
@@ -1103,7 +1104,7 @@ function renderConcentrationRisk(port) {
 // Portfolioweiter Concentration-Risk-SCORE (Management-Score aus dem HHI der Tail-Loss-Anteile —
 // identische Rechnung wie im Limits-Panel: N = alle Emittenten mit positivem Tail-Loss,
 // HHI = Sum(share^2), eff = 1/HHI, score = ((N-eff)/(N-1))*100). Overview-Port-Konventionen.
-function crConcentrationScore(port) {
+export function crConcentrationScore(port) {
   const portRows = (appState.getAllPortfolioData?.() || []).filter((r) => normPort(r?.port_name) === port);
   if (!portRows.length) return null;
   const ead = appState.getAllEADData?.() || [];
@@ -1141,7 +1142,7 @@ function crConcentrationScore(port) {
 
 // Concentration-Risk-Score-Slider (Overview) im Stil des TCM-Sliders: Skala 0..100 %,
 // Zonen gruen <40 / gelb 40-60 / rot >60, Marker beim Score.
-const CONC_SCORE_GREEN = 40, CONC_SCORE_YELLOW = 60;
+export const CONC_SCORE_GREEN = 40, CONC_SCORE_YELLOW = 60;
 function renderConcentrationScore(port) {
   const marker = document.getElementById('crConcScoreMarker');
   const pill = document.getElementById('crConcScorePill');
@@ -1157,7 +1158,7 @@ function renderConcentrationScore(port) {
   // Status-Wort in der Balken-Zonenfarbe (rot/amber/gruen = gleiche Farben wie der Slider).
   const statusCol = c.pct >= CONC_SCORE_YELLOW ? '#d9534f' : c.pct >= CONC_SCORE_GREEN ? '#e0a533' : '#2f9e5f';
   const _subEl = document.getElementById('crConcScoreSub');
-  if (_subEl) _subEl.innerHTML = `CONCENTRATION: <b style="color:${statusCol};">${status}</b>`;
+  if (_subEl) _subEl.innerHTML = `Concentration Index: <b>${f1(c.pct)} %</b> – <b style="color:${statusCol};">${status}</b>`;
   const p = _clamp01(c.pct / 100) * 100;
   if (marker) marker.style.left = `${p}%`;
   if (pill) pill.textContent = `${f1(c.pct)}%`;
@@ -1233,17 +1234,34 @@ function renderCreditExecSummary(port, ecH) {
   // "worst 0,1 % of cases" = 100 - Konfidenz (folgt dem Confidence-Dropdown; 99,9 % -> 0,1 %).
   const _qEs = getRunConfQuantil();
   const worstStr = Number.isFinite(_qEs) ? `${(100 - _qEs).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %` : '';
+  // Konfidenzniveau (z.B. 99,9 %) fuer den Risk-Buffer-Satz.
+  const confStr = Number.isFinite(_qEs) ? `${_qEs.toLocaleString('de-DE', { maximumFractionDigits: 2 })} %` : '';
+  // Horizont (Jahre) aus der aktiven CVaR-Config (horizon_days / 256) -> "1-year" etc.
+  let horStr = '1-year';
+  try {
+    const _cfgs = appState.getCvarInput?.() || [];
+    const _sel = document.querySelector('.cvar-radio:checked')?.dataset?.name;
+    const _cfg = (_sel && _cfgs.find((c) => String(c.name) === String(_sel)))
+      || _cfgs.find((c) => Number(c.is_active) === 1) || _cfgs[_cfgs.length - 1] || null;
+    const _hd = Number(_cfg?.horizon_days);
+    if (Number.isFinite(_hd) && _hd > 0) {
+      const _y = _hd / 256, _yr = Math.round(_y);
+      horStr = (Math.abs(_y - _yr) < 0.05 && _yr >= 1)
+        ? `${_yr}-year`
+        : `${_y.toLocaleString('de-DE', { maximumFractionDigits: 1 })}-year`;
+    }
+  } catch (_) {}
   // Alle Zahlen in <b> -> weiss + fett via `.mkt-exec-list b` (wie in der Market-Exec-Summary).
   const esSentence = `Average loss in the worst <b>${worstStr}</b> of cases: <b>${vEs}</b>`;
   // Rechte Beschriftung der EXTREME-RISK-Kachel: "Worst 0,1 % · Avg. loss EUR 17,8 Mio."
   setText('crConcScoreRight', `Worst ${worstStr} · Avg. loss ${fA(ecH.es?.abs)}`);
   setHtml('homeCrExecEl',   `Reported expected loss remains low at <b>${vEl}</b>.`);
-  setHtml('homeCrExecVar',  `Economic Capital provides a <b>${vEc}</b> realistic risk buffer.`);
+  setHtml('homeCrExecVar',  `Economic Capital of <b>${vEc}</b> provides a <b>${horStr}</b> risk buffer for <b>${confStr}</b> of modeled credit risk scenarios.`);
   setHtml('homeCrExecEs',   esSentence);
   setHtml('homeCrExecConc', concSentence);
   // Kopie-Kachel (cr_exec_ede): EL-Punkt = EDE; EC-Punkt = VaR - EDE (nur hier).
   setHtml('homeCrExecEdeEl',   `Reported expected loss remains low at <b>${vEde}</b>.`);
-  setHtml('homeCrExecEdeVar',  `Economic Capital provides a <b>${vEcEde}</b> realistic risk buffer.`);
+  setHtml('homeCrExecEdeVar',  `Economic Capital of <b>${vEcEde}</b> provides a <b>${horStr}</b> risk buffer for <b>${confStr}</b> of modeled credit risk scenarios.`);
   setHtml('homeCrExecEdeEs',   esSentence);
   setHtml('homeCrExecEdeConc', concSentence);
 }
@@ -1270,7 +1288,8 @@ function creditVarConfLabel() {
       ? `${yRound}y`
       : `${years.toLocaleString('de-DE', { maximumFractionDigits: 1 })}y`;
   }
-  return ['VaR:', confStr, hStr].filter(Boolean).join(' ');
+  const _tail = [confStr, hStr].filter(Boolean).join(' · ');
+  return _tail ? `VaR: ${_tail}` : '';
 }
 
 function creditEcSet(port, eadPdField, cvarFlag) {
@@ -1509,8 +1528,8 @@ function syncHomeReportPanel(port) {
       <div class="sub-panel-body">
         <div class="data-container" id="overviewKpiTable" data-label="Overview — KPIs"></div>
         <canvas id="homePfChartR" data-label="Portfolio — largest issuers (% of notional)"></canvas>
-        <canvas id="homeMktChartR" data-label="EXTREME RISK - top tail drivers"></canvas>
-        <canvas id="homeCrChartR" data-label="EXTREME RISK - top tail drivers"></canvas>
+        <canvas id="homeMktChartR" data-label="Which positions drive Extreme Risk?"></canvas>
+        <canvas id="homeCrChartR" data-label="Which issuers drive Extreme Risk?"></canvas>
       </div>`;
     host.appendChild(panel);
   }
@@ -1730,6 +1749,10 @@ function bindHomeCardLinks() {
     // analog zu den Duration-Slidern (data-tile == data-sens-tab).
     const sensTile = e.target.closest?.('.home-kpi[data-tile="pv01"], .home-kpi[data-tile="cpv01"], .home-kpi[data-tile="vega"]');
     if (sensTile) { e.preventDefault(); openSensitivity(sensTile.dataset.tile); return; }
+    // IR-Duration-Split-Kachel (mat_split) -> Sensitivities/PV01 (wie der IR-Slider rs-card--ir).
+    if (e.target.closest?.('.home-kpi[data-tile="mat_split"]')) { e.preventDefault(); openSensitivity('pv01'); return; }
+    // "not Valued"-Kachel (cash) -> Customer Setup / Products / Category.
+    if (e.target.closest?.('.home-kpi[data-tile="cash"]')) { e.preventDefault(); tabThenPanel('CUSTOMER_SETUP_Tab', 'panel-customer-category'); return; }
     // Market-Chart "Top product contributions" -> Market Risk / Products.
     if (e.target.closest?.('.home-chart-card[data-tile="mkt_chart"]')) {
       e.preventDefault(); tabThenPanel('RISK_Tab', 'panel-mvar-products'); return;

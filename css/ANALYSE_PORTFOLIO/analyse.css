@@ -95,6 +95,31 @@
   opacity: .95;
 }
 
+/* ============================================================
+   Gleiches Accordion-Verhalten im PRODUCTS-Tab (Products > Add Products > Typen).
+   Die Collapse-Logik oben ist #ANALYSE_Modal-gescoped; ohne diese Spiegelung
+   bliebe im Products-Modal alles aufgeklappt. Per Default eingeklappt: erst
+   "Products", Klick zeigt "Add Products", dessen Klick die 3 Typen.
+   ============================================================ */
+#products_Modal .risk-acc { margin: 8px 0; }
+#products_Modal .risk-acc-body .risk-acc { margin: 0; }
+#products_Modal .risk-acc-body {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+}
+#products_Modal .risk-acc.is-expanded > .risk-acc-body { display: flex; }
+#products_Modal .section-trigger--sub.risk-acc--l3 {
+  margin-left: 36px;
+  width: calc(var(--trigger-max-width) - 36px);
+}
+#products_Modal .risk-acc.is-expanded > .risk-acc-toggle .chev::before {
+  transform: rotate(90deg);
+  opacity: .95;
+}
+
 /* RISK-view portfolio picker (mirrors createdPortDropdown0): a trigger-like
    "Select Portfolio" heading with the dropdown right below, both the same width
    as the triggers. */

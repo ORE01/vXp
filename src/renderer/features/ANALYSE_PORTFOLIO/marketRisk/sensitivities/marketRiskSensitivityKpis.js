@@ -2,6 +2,41 @@
 
 
 import { setSensitivityTabGroupVisible } from './marketRiskSensitivityTabs.js';
+import { appState } from '../../../../renderer.js';
+import { fmtEurCompact } from '../../../../utils/tableCellFormats.js';
+
+// Aenderungszeile (Zeile 3) je numerischer Sensitivities-KPI, vorbereitet fuer ALLE. Vorperiode
+// aus PortfolioHistoryMetrics (Felder PV01/CPV01/MDURATION/CPV01bp; Vega-Feld folgt). Existiert
+// das Feld (noch) nicht -> Finite-Check greift -> Zeile bleibt leer (wie not Valued/Liquidity).
+function setSensKpiChange(id, cur, prevRaw, fmtAbs) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const p = Number(prevRaw);
+  if (!Number.isFinite(cur) || !Number.isFinite(p) || p === 0 || cur === p) { el.innerHTML = ''; el.hidden = true; return; }
+  const up = cur >= p;
+  const dAbs = Math.abs(cur - p), dRel = Math.abs((cur - p) / p * 100);
+  el.hidden = false;
+  el.innerHTML =
+    `<span class="perf-chg-badge ${up ? 'is-up' : 'is-down'}">${up ? '↗' : '↘'}</span>` +
+    `${fmtAbs(dAbs)} · ${dRel.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
+// live = { pv01, cpv01, duration, csDuration, vega } (aktuelle Live-Summen, wie in den KPIs
+// angezeigt). Verglichen wird gegen die letzte reale History-Periode (vorletzter Eintrag; der
+// letzte Eintrag ist ein Tages-/Platzhalter-Snapshot). Fehlt Live- ODER History-Wert -> leer.
+function renderSensKpiChanges(selPort, live = {}) {
+  const _num = (v) => { const n = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
+  const hist = (appState.getPortfolioHistoryData?.() || [])
+    .filter(r => !selPort || String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === selPort)
+    .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+  const prev = hist[hist.length - 2] || {};
+  const fmtY = (v) => `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`;
+  setSensKpiChange('SensTotalPV01Chg',  Number(live.pv01),       _num(prev.PV01),      fmtEurCompact);
+  setSensKpiChange('SensTotalCPV01Chg', Number(live.cpv01),      _num(prev.CPV01),     fmtEurCompact);
+  setSensKpiChange('SensDurationChg',   Number(live.duration),   _num(prev.MDURATION), fmtY);
+  setSensKpiChange('SensCsDurationChg', Number(live.csDuration), _num(prev.CS_DURATION), fmtY);
+  setSensKpiChange('SensTotalVegaChg',  Number(live.vega),       _num(prev.VEGA),      fmtEurCompact);
+}
 
 const SENSITIVITY_ZERO_EPSILON = 1e-12;
 const DEBUG_SENS_KPI = true;
@@ -426,6 +461,10 @@ export function updateMarketRiskSensitivityKpis({
 } = {}) {
   const selectedPort = normalizePortName(portName);
 
+  // Live-Summen der KPIs (fuer die Aenderungszeile: Live-Wert vs. Vorperiode aus der History).
+  // Werden in den Branches unten befuellt; am Ende gerendert.
+  const liveTotals = {};
+
   const portRows = rows.filter(row => {
     const rowPort = String(row?.PORT_NAME ?? row?.port_name ?? '').trim();
 
@@ -500,6 +539,8 @@ if (hasPV01Data) {
   const totalPv01 = Object.values(pv01ByCcy).reduce((s, v) => s + (Number(v) || 0), 0);
   const duration = navTotal ? (Math.abs(totalPv01) / navTotal) * 10000 : 0;
   setText('SensDuration', duration ? `${formatNumber(duration, 2)} y` : '—');
+  liveTotals.pv01 = totalPv01;
+  liveTotals.duration = duration;
 
   // Pass 1/0 intentionally.
   // The KPI card visibility helper expects a numeric-like value, not a formatted text.
@@ -566,6 +607,8 @@ if (hasCPV01Data) {
   const totalCpv01 = Object.values(cpv01ByCcy).reduce((s, v) => s + (Number(v) || 0), 0);
   const csDuration = navTotal ? (Math.abs(totalCpv01) / navTotal) * 10000 : 0;
   setText('SensCsDuration', csDuration ? `${formatNumber(csDuration, 2)} y` : '—');
+  liveTotals.cpv01 = totalCpv01;
+  liveTotals.csDuration = csDuration;
 
   setSensitivityKpiVisible('SensTotalCPV01', hasVisibleCPV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopCreditBucket', hasVisibleCPV01 ? 1 : 0);
@@ -615,6 +658,7 @@ if (hasCPV01Data) {
       formatNumber(totalVega, 0)
     );
     setSensitivityKpiVisible('SensTotalVega', totalVega);
+    liveTotals.vega = totalVega;
 
     setSensitivityTabGroupVisible(
       ['VEGA', 'VEGA_PARALLEL', 'Vega'],
@@ -645,6 +689,9 @@ if (hasCPV01Data) {
     //   });
     // }
   }
+
+  // Vorperioden-Aenderung (Zeile 3): Live-Wert vs. letzte reale History-Periode.
+  try { renderSensKpiChanges(selectedPort, liveTotals); } catch (e) { console.warn('[SENS KPI] change line failed', e); }
 
   // Report-Spiegel: Sensitivities-KPIs als verstecktes data-kpi-band (Preview/PDF).
   fillSensReportKpiBand();

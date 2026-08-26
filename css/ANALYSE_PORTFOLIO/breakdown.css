@@ -272,6 +272,12 @@
   font-size:11px; text-transform:uppercase; letter-spacing:.06em;
   color: var(--text-muted); margin-bottom:8px;
 }
+/* Chart-Frage-Titel (wie .perf-card__title der anderen Graphen): gross, fett, weiss, gemischt.
+   Klasse .conc-panel__title bleibt erhalten, damit RiskPDF den Titel weiter ausliest. */
+.conc-panel__title.perf-q-title {
+  font-size:16px; font-weight:700; color: var(--text-bright);
+  text-transform:none; letter-spacing:normal;
+}
 /* Maturities-Karte: Titel links, "By Category"-Button oben rechts. */
 .conc-panel__title.liq-panel-head { display:flex; align-items:center; justify-content:space-between; }
 .liq-cat-btn {
@@ -329,10 +335,22 @@
    — wie im Economic-Capital-Panel (#panel-credit) — weiss und fett dargestellt; die Karten
    behalten den Standard-.conc-kpi-Rahmen. */
 #panel-performance-history .conc-kpi__lbl,
-#panel-performance-dashboard .conc-kpi__lbl {
+#panel-performance-dashboard .conc-kpi__lbl,
+#panel-performance .conc-kpi__lbl,
+#panel-liquidity-dash .conc-kpi__lbl,
+#panel-sensitivities .conc-kpi__lbl {
   font-size: 12px; font-weight: 700; color: var(--text-bright);
   margin-top: 0; margin-bottom: 5px;
 }
+/* Kreis-Pfeil-Badge am Anfang der Aenderungszeile (statt +/-): gruen hoch (↗) / rot runter (↘). */
+.perf-chg-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1.3px solid currentColor; font-size: 9px; font-weight: 700;
+  line-height: 1; vertical-align: middle; margin-right: 5px;
+}
+.perf-chg-badge.is-up   { color: #2f9e5f; }
+.perf-chg-badge.is-down { color: #d3453e; }
 
 @media (max-width: 900px) {
   .conc-dash__grid { grid-template-columns: 1fr; }

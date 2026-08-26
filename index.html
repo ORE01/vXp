@@ -274,6 +274,12 @@ Feature:    Wenn es nur in einem Panel gilt
           <button type="button" id="riskCalcCredit" class="edit-button">Calculate Credit Risk</button>
           <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
         </div>
+        <!-- Aus RISK ▸ Risk Results ▸ Risk Calculation hierher verschoben. -->
+        <div class="risk-calc-row">
+          <button id="historicMetricsAddButton" type="button" class="edit-button">
+            <span class="button-label">Save to Historic Metrics</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -357,29 +363,29 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi home-nav-link" data-tile="pv01" role="button" tabindex="0" title="PV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-abs" id="homePfPv01Rel">–</span><span class="home-kpi-lbl">PV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="cpv01" role="button" tabindex="0" title="CPV01-Sensitivität öffnen"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-abs" id="homePfCpv01Rel">–</span><span class="home-kpi-lbl">CPV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="vega" role="button" tabindex="0" title="Vega-Sensitivität öffnen"><span class="home-kpi-val" id="homePfVega">–</span><span class="home-kpi-abs" id="homePfVegaRel">–</span><span class="home-kpi-lbl">Vega</span></div>
-          <div class="home-kpi" data-tile="cash" title="Non-valued categories (% of notional)"><span class="home-kpi-val" id="homePfCashPct">–</span><span class="home-kpi-abs" id="homePfCashAbs">–</span><span class="home-kpi-trend" id="homePfCashTrend" hidden></span><span class="home-kpi-lbl">not Valued</span></div>
+          <div class="home-kpi home-nav-link" data-tile="cash" role="button" tabindex="0" title="Open Category setup"><span class="home-kpi-val" id="homePfCashPct">–</span><span class="home-kpi-abs" id="homePfCashAbs">–</span><span class="home-kpi-trend" id="homePfCashTrend" hidden></span><span class="home-kpi-lbl">not Valued</span></div>
           <!-- Liquidity < 1y: Anteil (Nominale) der Produkte mit Restlaufzeit (TtM) < 1 Jahr (inkl. 0/bereits faellig). Befuellt in renderPortfolioCard. -->
           <div class="home-kpi" data-tile="liq_1y" title="Products maturing within 1 year — incl. already matured (% of notional)"><span class="home-kpi-val" id="homePfLiq1yPct">–</span><span class="home-kpi-abs" id="homePfLiq1yAbs">–</span><span class="home-kpi-trend" id="homePfLiq1yTrend" hidden></span><span class="home-kpi-lbl">Liquidity &lt; 1y</span></div>
           <!-- IR-Duration-Split-Kachel (pf-dur-Style, vollbreit): 2-Segment-Balken nach Nominale
                (nicht bewertet | bewertet). Links "not Valued 0Y", ueber dem bewerteten Segment die
                IR-Duration aufs bewertete NAV; am Balkenende Ø = IR-Duration aufs Gesamt-NAV. -->
-          <div class="home-kpi home-kpi--wide pf-dur-tile pf-dur-split-tile" data-tile="mat_split" title="Interest rate duration — not-valued (0Y) vs. valued portion; Ø on total NAV">
+          <div class="home-kpi home-kpi--wide pf-dur-tile pf-dur-split-tile home-nav-link" data-tile="mat_split" role="button" tabindex="0" title="Open PV01 sensitivity">
             <div class="pf-dur-cap">Interest Rate Duration</div>
             <div class="pf-dur-row pf-dur-splitrow">
               <div class="pf-dur-splitcol">
                 <div class="pf-dur-splitlbls">
-                  <span class="pf-dur-splitlbl-nv">not valued: Duration <b id="homePfMatSplitNvY">0Y</b></span>
-                  <span class="pf-dur-splitlbl-v">valued: Duration <b id="homePfMatSplitY">–</b></span>
+                  <span class="pf-dur-splitlbl-nv">not valued: <b id="homePfMatSplitNvY">–</b></span>
+                  <span class="pf-dur-splitlbl-v">valued: <b id="homePfMatSplitVPct">–</b></span>
                 </div>
                 <div class="pf-dur-track pf-dur-splittrack">
                   <div class="pf-dur-seg pf-dur-seg--nv" id="homePfMatSplitNv"></div>
                   <div class="pf-dur-seg pf-dur-seg--v" id="homePfMatSplitV"></div>
                 </div>
                 <div class="pf-dur-splitpcts">
-                  <span id="homePfMatSplitNvPct">–</span>
-                  <span id="homePfMatSplitVPct">–</span>
+                  <span></span>
+                  <span>Duration: <b id="homePfMatSplitY">–</b></span>
                 </div>
-                <div class="pf-dur-splitavg-c">average Duration: <b id="homePfMatSplitAvg">–</b></div>
+                <div class="pf-dur-splitavg-c">Weighted portfolio duration: <b id="homePfMatSplitAvg">–</b></div>
               </div>
             </div>
           </div>
@@ -475,6 +481,9 @@ Feature:    Wenn es nur in einem Panel gilt
             <svg viewBox="0 0 24 24"><rect x="4" y="12" width="3.4" height="8" rx="1" fill="#fff"/><rect x="10.3" y="8" width="3.4" height="12" rx="1" fill="#fff"/><rect x="16.6" y="4" width="3.4" height="16" rx="1" fill="#fff"/></svg>
           </span>
           Market Risk<span class="home-card-port" id="homeMktPort"></span>
+          <!-- Ampelpunkt (Limit-Status) oben rechts. Default gruen; Farb-Logik (alle Limits
+               gruen -> gruen, sonst schlechteste Farbe) folgt im 2. Schritt. -->
+          <span class="home-limit-dot is-green" id="homeMktLimitDot" title="Risk limits"></span>
         </div>
         <!-- Executive Summary: Kurzfazit (Status, Stress-Anstieg VaR/ES, groesster VaR-Contributor).
              Befuellt in homeOverview.js -> renderMarketCard. -->
@@ -482,6 +491,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="mkt-grp-head"><span class="home-kpi-cap">EXECUTIVE SUMMARY</span></div>
           <ul class="mkt-exec-list">
             <li id="homeMktExecStatus">–</li>
+            <li id="homeMktExecScen">–</li>
             <li id="homeMktExecValued">–</li>
             <li id="homeMktExecVar">–</li>
             <li id="homeMktExecEs">–</li>
@@ -492,22 +502,22 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi home-nav-link" data-tile="mkt_var" role="button" tabindex="0" title="Open Profit/Loss">
             <span class="home-kpi-cap">CURRENT MARKET · Normal Risk</span>
             <span class="home-kpi-val"><span class="home-kpi-big" id="homeMktVarAbs">–</span> <span class="home-kpi-rel" id="homeMktVar">–</span> <span class="mr-amp-dot" id="homeMktVarDot" hidden></span></span>
-            <span class="home-kpi-lbl mkt-metric-spec" data-metric="VaR">Value at Risk 95% 10 days</span>
+            <span class="home-kpi-lbl mkt-metric-spec" data-metric="VaR">Value at Risk 95 % · 10 days</span>
           </div>
           <div class="home-kpi home-nav-link" data-tile="mkt_es" role="button" tabindex="0" title="Open Profit/Loss">
             <span class="home-kpi-cap">CURRENT MARKET · Extreme Risk</span>
             <span class="home-kpi-val"><span class="home-kpi-big" id="homeMktEsAbs">–</span> <span class="home-kpi-rel" id="homeMktEs">–</span> <span class="mr-amp-dot" id="homeMktEsDot" hidden></span></span>
-            <span class="home-kpi-lbl mkt-metric-spec" data-metric="ES">Expected Shortfall 95% 10 days</span>
+            <span class="home-kpi-lbl mkt-metric-spec" data-metric="ES">Expected Shortfall 95 % · 10 days</span>
           </div>
           <div class="home-kpi home-nav-link" data-tile="mkt_scen_var" role="button" tabindex="0" title="Open Profit/Loss">
             <span class="home-kpi-cap">STRESSED MARKET · Normal Risk</span>
             <span class="home-kpi-val"><span class="home-kpi-big" id="homeMktRollVarAbs">–</span> <span class="home-kpi-rel" id="homeMktRollVar">–</span></span>
-            <span class="home-kpi-lbl mkt-metric-spec" data-metric="VaR">Value at Risk 95% 10 days</span>
+            <span class="home-kpi-lbl mkt-metric-spec" data-metric="VaR">Value at Risk 95 % · 10 days</span>
           </div>
           <div class="home-kpi home-nav-link" data-tile="mkt_scen_es" role="button" tabindex="0" title="Open Profit/Loss">
             <span class="home-kpi-cap">STRESSED MARKET · Extreme Risk</span>
             <span class="home-kpi-val"><span class="home-kpi-big" id="homeMktRollEsAbs">–</span> <span class="home-kpi-rel" id="homeMktRollEs">–</span></span>
-            <span class="home-kpi-lbl mkt-metric-spec" data-metric="ES">Expected Shortfall 95% 10 days</span>
+            <span class="home-kpi-lbl mkt-metric-spec" data-metric="ES">Expected Shortfall 95 % · 10 days</span>
           </div>
         </div>
 
@@ -552,8 +562,8 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi mkt-scale-tile" data-tile="mkt_scale" title="VaR — Current & Stressed vs limit">
             <div class="mkt-grp-head mkt-scale-head">
               <span class="home-kpi-cap" id="homeMktScaleCap">NORMAL RISK</span>
-              <span class="mkt-scale-sub">Current &amp; Stressed Market</span>
-              <span class="mkt-grp-dist mkt-scale-spec" id="homeMktScaleSpec">Value at Risk<span class="mkt-scale-spec-sub">95% 10 days</span></span>
+              <span class="mkt-scale-sub">Current vs. Stress Scenario</span>
+              <span class="mkt-grp-dist mkt-scale-spec" id="homeMktScaleSpec">Value at Risk<span class="mkt-scale-spec-sub">95 % · 10 days</span></span>
             </div>
             <div class="mkt-scale-body">
               <div class="mkt-scale-vals" id="homeMktScaleVals"></div>
@@ -565,8 +575,8 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi mkt-scale-tile" data-tile="mkt_scale_es" title="ES — Current & Stressed vs limit">
             <div class="mkt-grp-head mkt-scale-head">
               <span class="home-kpi-cap" id="homeMktScaleEsCap">EXTREME RISK</span>
-              <span class="mkt-scale-sub">Current &amp; Stressed Market</span>
-              <span class="mkt-grp-dist mkt-scale-spec" id="homeMktScaleEsSpec">Expected Shortfall<span class="mkt-scale-spec-sub">95% 10 days</span></span>
+              <span class="mkt-scale-sub">Current vs. Stress Scenario</span>
+              <span class="mkt-grp-dist mkt-scale-spec" id="homeMktScaleEsSpec">Expected Shortfall<span class="mkt-scale-spec-sub">95 % · 10 days</span></span>
             </div>
             <div class="mkt-scale-body">
               <div class="mkt-scale-vals" id="homeMktScaleEsVals"></div>
@@ -590,7 +600,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="mkt-cmp-track"><div class="mkt-cmp-bar mkt-cmp-bar--str" id="mktCmpVarStrBar"></div></div>
               <span class="mkt-cmp-val" id="mktCmpVarStr">–</span>
             </div>
-            <div class="mkt-cmp-spec mkt-metric-spec" data-metric="VaR">Value at Risk 95% 10 days</div>
+            <div class="mkt-cmp-spec mkt-metric-spec" data-metric="VaR">Value at Risk 95 % · 10 days</div>
           </div>
           <div class="mkt-cmp home-nav-link" data-tile="mkt_cmp_es" role="button" tabindex="0" title="Open Profit/Loss">
             <div class="mkt-cmp-head"><span class="mkt-cmp-name">EXTREME RISK</span><span class="mkt-cmp-delta" id="mktCmpEsDelta">–</span></div>
@@ -604,7 +614,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="mkt-cmp-track"><div class="mkt-cmp-bar mkt-cmp-bar--str" id="mktCmpEsStrBar"></div></div>
               <span class="mkt-cmp-val" id="mktCmpEsStr">–</span>
             </div>
-            <div class="mkt-cmp-spec mkt-metric-spec" data-metric="ES">Expected Shortfall 95% 10 days</div>
+            <div class="mkt-cmp-spec mkt-metric-spec" data-metric="ES">Expected Shortfall 95 % · 10 days</div>
           </div>
         </div>
         <!-- Kopie des Portfolio-Backtest-Charts (tsEU1YChart) aus dem Backtest-Panel;
@@ -614,7 +624,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-chart"><canvas id="homeSynthChart"></canvas></div>
         </div>
         <div class="home-chart-card home-nav-link" data-tile="mkt_chart" role="button" tabindex="0" title="Open Market Risk / Products">
-          <div class="home-chart-cap">EXTREME RISK - top tail drivers</div>
+          <div class="home-chart-cap">Which positions drive Extreme Risk?</div>
           <div class="home-chart"><canvas id="homeMktChart"></canvas></div>
         </div>
       </section>
@@ -626,16 +636,18 @@ Feature:    Wenn es nur in einem Panel gilt
             <svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.6-8 11-4.6-2.4-8-6-8-11V5z" fill="#fff"/><path d="M12 7.5v5" stroke="#7A5C91" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="15.8" r="1.3" fill="#7A5C91"/></svg>
           </span>
           Credit Risk<span class="home-card-port" id="homeCrPort"></span>
+          <!-- Ampelpunkt (Limit-Status) oben rechts. Default gruen; Farb-Logik folgt im 2. Schritt. -->
+          <span class="home-limit-dot is-green" id="homeCrLimitDot" title="Risk limits"></span>
         </div>
         <!-- Executive Summary (Credit): dieselben Aussagen wie das Key-Figures-Fazit in
              Economic Capital. Befuellt in homeOverview.js -> renderCreditExecSummary. -->
         <div class="home-kpi mkt-exec-tile" data-tile="cr_exec">
           <div class="mkt-grp-head"><span class="home-kpi-cap">EXECUTIVE SUMMARY</span></div>
           <ul class="mkt-exec-list">
+            <li id="homeCrExecConc">–</li>
             <li id="homeCrExecEl">–</li>
             <li id="homeCrExecVar">–</li>
             <li id="homeCrExecEs">–</li>
-            <li id="homeCrExecConc">–</li>
           </ul>
         </div>
         <!-- Kopie der Executive Summary: erster Punkt zeigt EDE (Expected Default Exposure)
@@ -643,10 +655,10 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="home-kpi mkt-exec-tile" data-tile="cr_exec_ede">
           <div class="mkt-grp-head"><span class="home-kpi-cap">EXECUTIVE SUMMARY</span></div>
           <ul class="mkt-exec-list">
+            <li id="homeCrExecEdeConc">–</li>
             <li id="homeCrExecEdeEl">–</li>
             <li id="homeCrExecEdeVar">–</li>
             <li id="homeCrExecEdeEs">–</li>
-            <li id="homeCrExecEdeConc">–</li>
           </ul>
         </div>
         <!-- Kennzahlen aus dem Credit-Risk-Dashboard (getCreditDashboardModel):
@@ -719,7 +731,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="cr-ec-sum-title">Normal Risk</div>
               <div class="cr-ec-sum-subtitle">Risk Buffer (Economic Capital)</div>
             </div>
-            <div class="cr-ec-sum-pd">Historic Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumPdConf">VaR: –</span></div>
+            <div class="cr-ec-sum-pd">Historical Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumPdConf">VaR: –</span></div>
           </div>
           <div class="cr-ec-sum-col">
             <span class="cr-ec3-name">Expected Loss</span>
@@ -747,7 +759,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="cr-ec-sum-title">Normal Risk</div>
               <div class="cr-ec-sum-subtitle">Risk Buffer (Economic Capital)</div>
             </div>
-            <div class="cr-ec-sum-pd">Historic Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumEdePdConf">VaR: –</span></div>
+            <div class="cr-ec-sum-pd">Historical Probabilities of Default<span class="cr-ec-sum-pd-conf" id="homeCrSumEdePdConf">VaR: –</span></div>
           </div>
           <div class="cr-ec-sum-col">
             <span class="cr-ec3-name">Expected Loss</span>
@@ -875,7 +887,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </div>
         <div class="home-chart-card" data-tile="cr_chart">
-          <div class="home-chart-cap" id="homeCrChartCap">EXTREME RISK - top tail drivers</div>
+          <div class="home-chart-cap" id="homeCrChartCap">Which issuers drive Extreme Risk?</div>
           <div class="home-chart"><canvas id="homeCrChart"></canvas></div>
         </div>
       </section>
@@ -1004,14 +1016,30 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- Sensitivities / Scenarios: aus Risk Results -> Market Risk hierher verschoben,
          gleiche Ebene wie Breakdown/Yield (.chart-section => nur im PORTFOLIO-View). -->
-    <div class="chart-section">
-      <button class="section-trigger pf-accent"
-              data-panel="panel-sensitivities"
-              aria-controls="panel-sensitivities"
-              aria-expanded="false">
+    <div class="chart-section risk-acc">
+      <!-- Parent oeffnet das Panel NICHT (kein Auto-Slide-in mit PV01) -> nur aufklappen.
+           Erst die Sub-Trigger PV01/CPV01/Vega oeffnen panel-sensitivities mit ihrem View. -->
+      <button class="section-trigger risk-acc-toggle pf-accent" type="button" aria-expanded="false">
         <span class="section-header">Sensitivities</span>
         <span class="chev"></span>
       </button>
+      <!-- PV01/CPV01/Vega: aus dem Panel herausgeloest als Sub-Trigger. Klick oeffnet
+           panel-sensitivities und aktiviert den passenden View (data-sens-open, wiring in
+           marketRiskSensitivityTabs.js). Sichtbarkeit folgt der Datenverfuegbarkeit. -->
+      <div class="risk-acc-body">
+        <button class="section-trigger section-trigger--sub pf-accent" type="button"
+                data-panel="panel-sensitivities" data-sens-open="pv01" aria-controls="panel-sensitivities">
+          <span class="section-header">PV01</span>
+        </button>
+        <button class="section-trigger section-trigger--sub pf-accent" type="button"
+                data-panel="panel-sensitivities" data-sens-open="cpv01" aria-controls="panel-sensitivities">
+          <span class="section-header">CPV01</span>
+        </button>
+        <button class="section-trigger section-trigger--sub pf-accent" type="button"
+                data-panel="panel-sensitivities" data-sens-open="vega" aria-controls="panel-sensitivities">
+          <span class="section-header">Vega</span>
+        </button>
+      </div>
     </div>
 
     <div class="chart-section">
@@ -1038,18 +1066,8 @@ Feature:    Wenn es nur in einem Panel gilt
       </button>
       <div class="risk-acc-body">
 
-        <!-- Risk Calculation (Untergruppe, ERSTER Punkt) → Run / Calculate Risk -->
-        <div class="risk-acc">
-          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
-            <span class="section-header">Risk Calculation</span>
-            <span class="chev"></span>
-          </button>
-          <div class="risk-acc-body">
-            <button id="historicMetricsAddButton" type="button" class="edit-button">
-              <span class="button-label">Save to Historic Metrics</span>
-            </button>
-          </div>
-        </div>
+        <!-- Risk-Calculation-Untergruppe entfernt; "Save to Historic Metrics" sitzt jetzt
+             im Calculate-Popover der Topbar (bei Calculate Portfolio/Market/Credit Risk). -->
 
         <!-- Market Risk (Gruppe). Der Gruppentoggle klappt die Untertrigger auf UND
              oeffnet das Dashboard-Panel (frueher eigener "Dashboard"-Sub-Trigger). -->
@@ -1217,18 +1235,7 @@ Feature:    Wenn es nur in einem Panel gilt
         <span class="chev"></span>
       </button>
       <div class="risk-acc-body">
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="PORTFOLIO_HISTORY_Modal" aria-controls="PORTFOLIO_HISTORY_Modal" aria-expanded="false">
-          <span class="section-header">Overview</span>
-          <span class="chev"></span>
-        </button>
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-portfolio-value" aria-controls="panel-portfolio-value" aria-expanded="false">
-          <span class="section-header">Portfolio Value</span>
-          <span class="chev"></span>
-        </button>
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-hist-sensitivities" aria-controls="panel-hist-sensitivities" aria-expanded="false">
-          <span class="section-header">Sensitivities</span>
-          <span class="chev"></span>
-        </button>
+        <!-- Trigger Overview / Portfolio Value / Sensitivities entfernt (Panels bleiben bestehen). -->
         <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-market-risk" aria-controls="panel-market-risk" aria-expanded="false">
           <span class="section-header">Market Risk</span>
           <span class="chev"></span>
@@ -1431,11 +1438,11 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="data-container" id="perfHistKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
         <div style="display:flex; gap:20px; flex-wrap:wrap;">
-          <div class="conc-panel" style="flex:1 1 420px; min-width:340px; max-width:50%;">
-            <div class="conc-panel__title">How has the portfolio value developed?</div>
+          <div class="conc-panel" style="flex:1 1 100%; min-width:340px;">
+            <div class="conc-panel__title perf-q-title">How has the portfolio value developed?</div>
             <!-- Fixe Hoehe + position:relative -> responsive-Chart fuellt den Container,
                  waechst NICHT bei jedem Neuzeichnen. -->
-            <div style="position:relative; height:300px;">
+            <div style="position:relative; height:420px;">
               <canvas id="perfHistValueChart"></canvas>
             </div>
           </div>
@@ -1536,24 +1543,29 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="conc-panel__title">Key Figures</div>
           <div class="conc-kpi-grid">
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
               <div class="conc-kpi__lbl">Portfolio Yield (current)</div>
+              <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
+              <div class="conc-kpi__sub" id="yieldKpiCurrentChg"></div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
               <div class="conc-kpi__lbl">Portfolio Yield (at buy)</div>
+              <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
+              <div class="conc-kpi__sub" id="yieldKpiBuyChg"></div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="yieldKpiDelta">–</div>
               <div class="conc-kpi__lbl">&Delta; vs buy</div>
+              <div class="conc-kpi__val" id="yieldKpiDelta">–</div>
+              <div class="conc-kpi__sub" id="yieldKpiDeltaChg"></div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="yieldKpiTtm">–</div>
               <div class="conc-kpi__lbl">Time to maturity (&Oslash;)</div>
+              <div class="conc-kpi__val" id="yieldKpiTtm">–</div>
+              <div class="conc-kpi__sub" id="yieldKpiTtmChg"></div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__val" id="yieldKpiDuration">–</div>
               <div class="conc-kpi__lbl">IR duration</div>
+              <div class="conc-kpi__val" id="yieldKpiDuration">–</div>
+              <div class="conc-kpi__sub" id="yieldKpiDurationChg"></div>
             </div>
           </div>
         </div>
@@ -2220,32 +2232,37 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="conc-panel__title">Key Figures</div>
         <div class="sens-kpi-row" data-active-tab="pv01">
           <div class="conc-kpi" data-sens-kpi-for="pv01">
-            <div class="sens-kpi-value" id="SensTotalPV01">—</div>
             <div class="conc-kpi__lbl">Total PV01</div>
+            <div class="sens-kpi-value" id="SensTotalPV01">—</div>
+            <div class="sens-kpi-chg" id="SensTotalPV01Chg"></div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="cpv01">
-            <div class="sens-kpi-value" id="SensTotalCPV01">—</div>
             <div class="conc-kpi__lbl">Total CPV01</div>
+            <div class="sens-kpi-value" id="SensTotalCPV01">—</div>
+            <div class="sens-kpi-chg" id="SensTotalCPV01Chg"></div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="pv01">
-            <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
             <div class="conc-kpi__lbl">Top IR Tenor</div>
+            <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="pv01">
-            <div class="sens-kpi-value" id="SensDuration">—</div>
             <div class="conc-kpi__lbl">Duration (Years)</div>
+            <div class="sens-kpi-value" id="SensDuration">—</div>
+            <div class="sens-kpi-chg" id="SensDurationChg"></div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="cpv01">
-            <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
             <div class="conc-kpi__lbl">Top Credit Bucket</div>
+            <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="cpv01">
-            <div class="sens-kpi-value" id="SensCsDuration">—</div>
             <div class="conc-kpi__lbl">Credit Spread Duration (Years)</div>
+            <div class="sens-kpi-value" id="SensCsDuration">—</div>
+            <div class="sens-kpi-chg" id="SensCsDurationChg"></div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="vega">
-            <div class="sens-kpi-value" id="SensTotalVega">—</div>
             <div class="conc-kpi__lbl">Total Vega</div>
+            <div class="sens-kpi-value" id="SensTotalVega">—</div>
+            <div class="sens-kpi-chg" id="SensTotalVegaChg"></div>
           </div>
         </div>
       </div>
@@ -2254,7 +2271,10 @@ Feature:    Wenn es nur in einem Panel gilt
       <div class="data-container" id="sensKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
       <!-- Sensitivity Type Tabs -->
-      <div class="sens-tabs" role="tablist" aria-label="Sensitivity type">
+      <!-- Tab-Leiste ausgeblendet: die Umschaltung erfolgt jetzt ueber die Sidebar-Sub-Trigger
+           (data-sens-open). Buttons bleiben im DOM, damit activateSensTab / Sichtbarkeitslogik
+           unveraendert funktionieren. -->
+      <div class="sens-tabs" role="tablist" aria-label="Sensitivity type" style="display:none;">
         <button
           class="sens-tab is-active"
           type="button"
@@ -2315,6 +2335,20 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="data-container" id="IRSensDataContainer"></div>
         </div>
 
+        <!-- PV01-Verlauf aus der Portfolio-History (bp) — aufgeteilte Haelfte des kombinierten
+             Risk-History-Sens-Charts. Volle Breite unter Graph + Details. -->
+        <div class="sens-chart-card sens-hist-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">PV01 development</div>
+              <div class="sens-card-subtitle">Historic PV01 (bp) over time</div>
+            </div>
+          </div>
+          <div class="sens-hist-chart-container">
+            <canvas id="sensPv01HistChart" data-label="PV01 development"></canvas>
+          </div>
+        </div>
+
         <!-- Drill-down: eigene Tabelle unter Graph + PV01-Details (volle Breite).
              Erscheint erst bei Rechtsklick-Drill auf einen Balken. -->
         <div id="pv01DrillDetail" class="conc-detail" style="display:none; grid-column: 1 / -1;">
@@ -2355,6 +2389,20 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="data-container" id="CSSensDataContainer"></div>
+        </div>
+
+        <!-- CPV01-Verlauf aus der Portfolio-History (bp) — zweite Haelfte des kombinierten
+             Risk-History-Sens-Charts. Volle Breite unter Graph + Details. -->
+        <div class="sens-chart-card sens-hist-card">
+          <div class="sens-card-header">
+            <div>
+              <div class="sens-card-title">CPV01 development</div>
+              <div class="sens-card-subtitle">Historic CPV01 (bp) over time</div>
+            </div>
+          </div>
+          <div class="sens-hist-chart-container">
+            <canvas id="sensCpv01HistChart" data-label="CPV01 development"></canvas>
+          </div>
         </div>
 
         <!-- Drill-down: eigene Tabelle unter Graph + CPV01-Details (volle Breite). -->
@@ -2428,9 +2476,9 @@ Feature:    Wenn es nur in einem Panel gilt
         <label style="font-size:11px; font-weight:400; color:var(--text-muted); display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:normal;">
           Confidence
           <select id="creditConfSelectM" class="conc-select">
-            <option value="0.999">99,9 %</option>
-            <option value="0.995">99,5 %</option>
-            <option value="0.99">99,0 %</option>
+            <option value="0.999">99,90 %</option>
+            <option value="0.995">99,50 %</option>
+            <option value="0.99">99,00 %</option>
           </select>
         </label>
       </div>
@@ -2513,9 +2561,9 @@ Feature:    Wenn es nur in einem Panel gilt
         <label style="font-size:11px; font-weight:400; color:var(--text-muted); display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:normal;">
           Confidence
           <select id="creditConfSelect" class="conc-select">
-            <option value="0.999">99,9 %</option>
-            <option value="0.995">99,5 %</option>
-            <option value="0.99">99,0 %</option>
+            <option value="0.999">99,90 %</option>
+            <option value="0.995">99,50 %</option>
+            <option value="0.99">99,00 %</option>
           </select>
         </label>
       </div>
@@ -4860,13 +4908,36 @@ Feature:    Wenn es nur in einem Panel gilt
     </div>
 
     <!-- Triggers -->
-    <div class="chart-section">
-      <button class="section-trigger"
+    <!-- Products: oeffnet die Produkttabelle UND klappt die Add-Products-Gruppe auf
+         (data-panel + risk-acc-toggle, wie der Yield-Trigger). -->
+    <div class="chart-section risk-acc">
+      <button class="section-trigger risk-acc-toggle"
+              type="button"
               data-panel="panel-products-np"
               aria-controls="panel-products-np"
               aria-expanded="false">
         <span class="section-header">Products</span><span class="chev"></span>
       </button>
+      <div class="risk-acc-body">
+        <!-- Add Products: reiner Aufklapp-Trigger (kein data-panel) -> zeigt die 3 Produkttypen.
+             Klick auf einen Typ oeffnet das New-Product-Modal vorgewaehlt (Wiring: productTableController.js). -->
+        <div class="risk-acc">
+          <button class="section-trigger section-trigger--sub risk-acc-toggle" type="button" aria-expanded="false">
+            <span class="section-header">Add Products</span><span class="chev"></span>
+          </button>
+          <div class="risk-acc-body">
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-prod-add="FIXED_BOND">
+              <span class="section-header">Simple Fixed Bond</span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-prod-add="FRN">
+              <span class="section-header">Simple FRN</span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-prod-add="COMPLEX_BOND">
+              <span class="section-header">Complex Bond</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- NEW: READ OFFERS Trigger -->
@@ -4915,7 +4986,7 @@ Feature:    Wenn es nur in einem Panel gilt
 </p>
 
           <div class="button-wrapper">
-            <button id="prodAddButton" class="edit-button">ADD</button>
+            <!-- ADD-Button entfernt: Anlegen laeuft ueber die Sidebar "Products > Add Products". -->
             <button id="prodColumnsBtn" type="button" class="edit-button">Columns</button>
           </div>
         </div>

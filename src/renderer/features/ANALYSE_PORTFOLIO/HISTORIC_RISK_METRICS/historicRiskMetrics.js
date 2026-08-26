@@ -1,6 +1,7 @@
 import { appState } from '../../../renderer.js';
 import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
 import { getPortfolioColor } from '../../../utils/colors.js';
+import { fmtEur } from '../../../utils/tableCellFormats.js';
 
 
 // HELPER: 
@@ -1040,6 +1041,74 @@ function renderHistoricPortfolioSensChart(historyData) {
     console.error("💥 Fehler beim Erzeugen von historicPortfolioSensChart:", err);
   }
 }
+
+// Einzel-Serie-Zeitreihe (bp) fuer die Sensitivities-Panel-Charts: splittet den kombinierten
+// Risk-History-Sens-Chart (PV01=MDURATION | CPV01=CPV01bp) in je einen eigenen Chart. Wird aus
+// den PV01-/CPV01-Handlern beim Panel-/Portfolio-Refresh aufgerufen. Ueberspringt still, wenn
+// die Canvas (noch) nicht gemountet ist.
+const _sensPanelHistCharts = {};
+export function renderSensHistorySingle(canvasId, historyData, { keys, label, borderColor, backgroundColor } = {}) {
+  historyData = Array.isArray(historyData) ? historyData : [];
+  if (!document.getElementById(canvasId)) return;           // View nicht gemountet
+  if (historyData.length === 0) { destroyChartByCanvasId(canvasId); return; }
+
+  const sortedData = [...historyData].sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+  const labels = sortedData.map(row => row.DATE);
+
+  const readSeries = (row, ks) => {
+    for (const k of ks) {
+      if (k in row && row[k] != null && row[k] !== "") {
+        const v = parseFloat(row[k]);
+        if (!isNaN(v)) return v;
+      }
+    }
+    return null;
+  };
+  const series = sortedData.map(row => readSeries(row, keys || []));
+
+  // Alte Instanz auf dieser Canvas zerstoeren (verhindert doppelte Charts).
+  if (_sensPanelHistCharts[canvasId]) {
+    try { _sensPanelHistCharts[canvasId].destroy(); } catch {}
+    _sensPanelHistCharts[canvasId] = null;
+  }
+  destroyChartByCanvasId(canvasId);
+
+  const data = {
+    labels,
+    datasets: [{
+      label,
+      data: series,
+      borderColor,
+      backgroundColor,
+      borderWidth: 2,
+      pointRadius: 2,
+      tension: 0.2,
+    }],
+  };
+
+  // Gleiche bp-Achse/Tooltip wie der kombinierte Risk-History-Sens-Chart.
+  const options = createPercentChartOptions("Sensitivities (bp)");
+  options.scales = options.scales || {};
+  options.scales.y = options.scales.y || {};
+  options.scales.y.ticks = {
+    ...(options.scales.y.ticks || {}),
+    callback: (val) => `${Number(val).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}bp`,
+  };
+  options.plugins = options.plugins || {};
+  options.plugins.tooltip = {
+    ...(options.plugins.tooltip || {}),
+    callbacks: {
+      ...(options.plugins.tooltip?.callbacks || {}),
+      label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}bp`,
+    },
+  };
+
+  try {
+    _sensPanelHistCharts[canvasId] = createTimeSeriesChart(canvasId, data, options, "line");
+  } catch (err) {
+    console.error(`💥 Fehler beim Erzeugen von ${canvasId}:`, err);
+  }
+}
 function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPortfolioValueChart") {
   historyData = Array.isArray(historyData) ? historyData : [];
 
@@ -1149,11 +1218,10 @@ options.scales.y1 = {
   }
 };
 
-// Legende seitlich (rechts) + kleine, leicht abgerundete Symbole.
-// Legende UNTEN (nicht rechts) -> wird bei schmaler Report-Erfassung nicht mehr
-// abgeschnitten und gibt der Plot-Flaeche die volle Breite.
+// App-Chart (perfHistValueChart): Legende RECHTS. Report-Variante (schmal): weiter UNTEN,
+// damit sie nicht abgeschnitten wird und der Plot die volle Breite bekommt.
 options.plugins.legend = {
-  display: true, position: "bottom",
+  display: true, position: _perf ? "right" : "bottom",
   labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } }
 };
 // Tooltip fest in der oberen linken Ecke (nicht am Cursor).
@@ -1275,7 +1343,7 @@ export function renderPerformanceHistoryCopies() {
     // "(of notional)" etc. zarter setzen (muted, nicht fett) — wie die 2. Zeile.
     const _q = (s) => `<span class="conc-kpi__qual">(${s})</span>`;
     const _pf = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
-    const _eur = (v) => Number.isFinite(v) ? Math.round(v).toLocaleString("de-DE") + " EUR" : "–";
+    const _eur = (v) => fmtEur(v);   // zentral: "EUR" VORNE (tableCellFormats.fmtEur)
     const _pct = (v) => Number.isFinite(v) ? v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %" : "–";
     // grosser Wert + kleine 2. Zeile je nach Mode ('abs' -> abs gross, 'rel' -> rel gross).
     const _kpi = (bigId, subId, key, absStr, relStr) => {
@@ -1304,6 +1372,8 @@ export function renderPerformanceHistoryCopies() {
     // ins Kachel-Label (Zeile 1) wandert statt in die Sub-Zeile.
     const _navPct    = _notional ? _pct(_nav / _notional * 100)    : "–";
     const _navBuyPct = _notional ? _pct(_navBuy / _notional * 100) : "–";
+    // "EUR" im Wert kleiner (.cur-unit) — einheitlich in allen EUR-Zahlen dieses Panels.
+    const _eurWrap = (s) => String(s).replace("EUR", '<span class="cur-unit">EUR</span>');
 
     // Performance-Historie des Portfolios, nach Datum sortiert; Vorperiode = vorletzter
     // Eintrag. Daraus je Kennzahl die Veraenderung (relativ %, absolut EUR) ableiten.
@@ -1312,52 +1382,57 @@ export function renderPerformanceHistoryCopies() {
       .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
     const _prevRow = _hist[_hist.length - 2];
     const _sg = (v) => (v > 0 ? "+" : (v < 0 ? "-" : ""));
+    // App-Aenderungszeile: Kreis-Pfeil-Badge (Richtung) am Anfang statt +/-.
+    const _badge = (up) => `<span class="perf-chg-badge ${up ? "is-up" : "is-down"}">${up ? "↗" : "↘"}</span>`;
     const _chg = (cur, prevRaw) => {
       const p = _pf(prevRaw);
       if (!Number.isFinite(p) || p === 0) return null;
       const dAbs = cur - p, dPct = dAbs / p * 100;
-      return { rel: `${_sg(dPct)}${_pct(Math.abs(dPct))}`, abs: `${_sg(dAbs)}${_eur(Math.abs(dAbs))}` };
+      // abs/rel als Betrag (ohne Vorzeichen); Richtung via `up` -> Badge (App) bzw. +/- (PDF-Mirror).
+      return { up: dAbs >= 0, abs: _eur(Math.abs(dAbs)), rel: _pct(Math.abs(dPct)) };
     };
+    // Vorzeichen fuer den PDF-Mirror (dort kein Badge, sondern Textzeichen).
+    const _pm = (c) => (c && c.up ? "+" : "-");
 
-    // Notional: Veraenderung (%, absolut) in einer Zeile.
+    // Notional: Veraenderung (%, absolut) in einer Zeile — mit Kreis-Pfeil am Anfang.
     const _notC = _chg(_notional, _prevRow?.PORTFOLIO_NOTIONAL ?? _prevRow?.PORTVOLIO_NOTIONAL);
-    const _notionalChg = _notC ? `${_notC.rel} · ${_notC.abs}` : "–";
+    const _notionalChg = _notC ? `${_badge(_notC.up)}${_eurWrap(_notC.abs)} · ${_notC.rel}` : "–";
 
-    // NAV: relative Veraenderung an die %-of-notional-Zeile anhaengen (1. Zeile), absolute
-    // Veraenderung in eine eigene 2. Zeile (History-Feld PORTFOLIO_VALUE = NAV je Periode).
     // Kachel-Layout (NAV & NAV Buy), fest (kein abs/rel-Toggle):
-    //  Zeile 2 = "% of notional (Rate)" — Rate gleich gross (plain, nicht muted), in Klammer.
-    //  Zeile 3 = absoluter Wert + absolute Veraenderung dahinter.
+    //  Zeile 2 = "%" (gross) + absoluter Wert (muted; statt "(of notional)").
+    //  Zeile 3 = nur die Aenderungsraten: absolute · relative — OHNE Klammern.
     const _navC = _chg(_nav, _prevRow?.PORTFOLIO_VALUE);
-    const _navLine2 = _navRel;
-    const _navLine3 = _navC ? `${_eur(_nav)} · ${_navC.abs} · (${_navC.rel})` : _eur(_nav);
+    // Zeile 2: absoluter Wert (EUR klein) + relative % (muted). Zeile 3: Kreis+Pfeil + Aenderung.
+    const _navLine2 = _notional ? `${_eurWrap(_eur(_nav))} <span class="conc-kpi__qual">${_navPct}</span>` : _eurWrap(_eur(_nav));
+    const _navLine3 = _navC ? `${_badge(_navC.up)}${_eurWrap(_navC.abs)} · ${_navC.rel}` : "";
 
     // NAV (Buy): analog, History-Feld PORTFOLIO_VALUE_BUY = Einstandswert je Periode.
     const _navBuyC = _chg(_navBuy, _prevRow?.PORTFOLIO_VALUE_BUY);
-    const _navBuyLine2 = _navBuyRel;
-    const _navBuyLine3 = _navBuyC ? `${_eur(_navBuy)} · ${_navBuyC.abs} · (${_navBuyC.rel})` : _eur(_navBuy);
+    const _navBuyLine2 = _notional ? `${_eurWrap(_eur(_navBuy))} <span class="conc-kpi__qual">${_navBuyPct}</span>` : _eurWrap(_eur(_navBuy));
+    const _navBuyLine3 = _navBuyC ? `${_badge(_navBuyC.up)}${_eurWrap(_navBuyC.abs)} · ${_navBuyC.rel}` : "";
 
-    _set("perfHistKpiNotional", _eur(_notional));
+    _set("perfHistKpiNotional", _eurWrap(_eur(_notional)));
     _set("perfHistKpiNotionalChg", _notionalChg);
     _set("perfHistKpiNav",       _navLine2);
     _set("perfHistKpiNavRel",    _navLine3);
     _set("perfHistKpiNavBuy",    _navBuyLine2);
     _set("perfHistKpiNavBuyRel", _navBuyLine3);
-    _kpi("perfHistKpiPnl",    "perfHistKpiPnlRel",    "pnl",     _eur(_pnl),    _pnlRel);
+    _kpi("perfHistKpiPnl",    "perfHistKpiPnlRel",    "pnl",     _eurWrap(_eur(_pnl)),    _pnlRel);
 
     // Report-Spiegel: KPI-Band-Tabelle (data-kpi-band) fuer Preview/PDF.
     const _kpiTbl = document.getElementById("perfHistKpiTable");
     if (_kpiTbl) {
       const _esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const _strip = (s) => String(s).replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+      // [label, value, trend] — trend {up, chg} -> Kreis+Pfeil + Aenderung im PDF (drawKpiBand).
       const _rows = [
-        ["Notional", `${_eur(_notional)}${_notionalChg !== "–" ? ` · ${_strip(_notionalChg)}` : ""}`],
-        ["Net Asset Value (Buy) (of notional)", `${_strip(_navBuyLine3)} · ${_navBuyPct}`],
-        ["Net Asset Value (of notional)", `${_strip(_navLine3)} · ${_navPct}`],
-        ["Profit / Loss", `${_eur(_pnl)} · ${_strip(_pnlRel)}`],
+        ["Notional", `${_eur(_notional)}`, _notC ? { up: _notC.up, chg: `${_notC.abs} · ${_notC.rel}` } : null],
+        ["Net Asset Value (Buy) (of notional)", `${_eur(_navBuy)} · ${_navBuyPct}`, _navBuyC ? { up: _navBuyC.up, chg: `${_navBuyC.abs} · ${_navBuyC.rel}` } : null],
+        ["Net Asset Value (of notional)", `${_eur(_nav)} · ${_navPct}`, _navC ? { up: _navC.up, chg: `${_navC.abs} · ${_navC.rel}` } : null],
+        ["Profit / Loss", `${_eur(_pnl)} · ${_strip(_pnlRel)}`, null],
       ];
       _kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-        _rows.map(([k, v]) => `<tr><td>${_esc(k)}</td><td>${_esc(v)}</td></tr>`).join("")
+        _rows.map(([k, v, tr]) => `<tr><td>${_esc(k)}</td><td${tr ? ` data-up="${tr.up ? 1 : 0}" data-chg="${_esc(tr.chg)}"` : ""}>${_esc(v)}</td></tr>`).join("")
       }</tbody></table>`;
     }
   } catch (e) { console.warn("[perfHist] KPI failed", e); }

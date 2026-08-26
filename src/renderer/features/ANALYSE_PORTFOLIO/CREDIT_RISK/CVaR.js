@@ -6,7 +6,7 @@ import createBarChart from '../../../charts/BarChart.js';
 import { formatNumber, isValidNumber, formatNumberWithCommas } from '../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../utils/trafficLight.js';
 import { renderCreditRiskDashboard, renderCreditOverviewCharts, renderCreditTsiPanel, renderCreditMsdPanel } from './creditRiskDashboard.js';
-import { renderHomeOverview } from '../../HOME/homeOverview.js';
+import { renderHomeOverview, crConcentrationScore, CONC_SCORE_GREEN, CONC_SCORE_YELLOW } from '../../HOME/homeOverview.js';
 import { appState } from '../../../renderer.js';
 import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '../SummaryBreakdown.js';
 import { renderChartLegend, sumNavForPort, _fmtLossCompact, buildPositionLoss, getRunConfQuantil, creditVarEsForFlag, setSelectedCreditConf, getSelectedCreditConf, refreshLossDistribution } from './LossIssuer.js';
@@ -274,24 +274,53 @@ function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
   const summaryEl = document.getElementById('creditKpiSummary' + suffix);
   if (summaryEl) {
     if (haveEl && haveVar && haveEs) {
-      // Konzentration (K = round(Effective Tail Drivers), Top-K-Anteil) — gleiche Quelle wie der Slider.
-      const conc = tailConcentrationIndex();
-      const K = (conc && Number.isFinite(conc.eff)) ? Math.max(1, Math.round(conc.eff)) : NaN;
-      const topKShare = (conc && Array.isArray(conc.shares) && Number.isFinite(K))
-        ? conc.shares.slice(0, K).reduce((a, b) => a + b, 0) : NaN;
-      const f1 = (x) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       // rel/abs je Kennzahl nach dem Customer-Setup-Umschalter (wie die KPI-Kacheln).
       const em = (key) => { try { return getTileMode(key); } catch { return 'abs'; } };
       const vEl = em('credit_el')       === 'rel' ? fR(elRel) : fA(elSum);
       const vEc = em('credit_ec')       === 'rel' ? fR(ecRel) : fA(ecAbs);
       const vEs = em('credit_es')       === 'rel' ? fR(esRel) : fA(esAbs);
+      // Konfidenz (99,9 %), Rest-Tail (0,1 %) und Horizont ("1-year") fuer denselben Wortlaut
+      // wie die Overview-Exec-Summary (renderCreditExecSummary).
+      const _q = getRunConfQuantil();
+      const _confStr  = Number.isFinite(_q) ? `${_q.toLocaleString('de-DE', { maximumFractionDigits: 2 })} %` : '';
+      const _worstStr = Number.isFinite(_q) ? `${(100 - _q).toLocaleString('de-DE', { maximumFractionDigits: 2 })} %` : '';
+      let _horStr = '1-year';
+      try {
+        const _cfgs = appState.getCvarInput?.() || [];
+        const _selName = document.querySelector('.cvar-radio:checked')?.dataset?.name;
+        const _cfg = (_selName && _cfgs.find((c) => String(c.name) === String(_selName)))
+          || _cfgs.find((c) => Number(c.is_active) === 1) || _cfgs[_cfgs.length - 1] || null;
+        const _hd = Number(_cfg?.horizon_days);
+        if (Number.isFinite(_hd) && _hd > 0) {
+          const _y = _hd / 256, _yr = Math.round(_y);
+          _horStr = (Math.abs(_y - _yr) < 0.05 && _yr >= 1)
+            ? `${_yr}-year`
+            : `${_y.toLocaleString('de-DE', { maximumFractionDigits: 1 })}-year`;
+        }
+      } catch (_) {}
+      // 4. Punkt: Tail-Konzentration — identische Quelle/Wortlaut wie die Overview-Exec-Summary
+      // (crConcentrationScore + CONC_SCORE-Schwellen), damit beide Summaries deckungsgleich sind.
+      const _f1 = (x) => x.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      // crConcentrationScore erwartet die Overview-Port-Konvention (ohne "Portfolios_"-Prefix, UPPERCASE).
+      const _concPort = String(port ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
+      const _conc = crConcentrationScore(_concPort);
+      const _K = (_conc && Number.isFinite(_conc.eff)) ? Math.max(1, Math.round(_conc.eff)) : NaN;
+      const _topKShare = (_conc && Array.isArray(_conc.shares) && Number.isFinite(_K))
+        ? _conc.shares.slice(0, _K).reduce((a, b) => a + b, 0) : NaN;
+      const _concStatus = (_conc && Number.isFinite(_conc.pct))
+        ? (_conc.pct >= CONC_SCORE_YELLOW ? 'HIGH' : _conc.pct >= CONC_SCORE_GREEN ? 'ELEVATED' : 'LOW') : '';
+      const _concCol = (_conc && Number.isFinite(_conc.pct))
+        ? (_conc.pct >= CONC_SCORE_YELLOW ? '#d9534f' : _conc.pct >= CONC_SCORE_GREEN ? '#e0a533' : '#2f9e5f') : 'var(--text-bright)';
+      const _concSentence = (Number.isFinite(_K) && Number.isFinite(_topKShare))
+        ? `Tail risk concentration: <b style="color:${_concCol};">${_concStatus}</b>, <b>${_K}</b> issuers drive <b>${_f1(_topKShare)} %</b> of tail losses.`
+        : 'Tail risk concentration: n/a.';
+      // Wortlaut + Reihenfolge identisch zur Overview-Exec-Summary; Zahlen aus den EC-Panel-Werten.
+      // Tail-Konzentration bewusst als ERSTE Zeile.
       const items = [
+        _concSentence,
         `Reported expected loss remains low at ${vEl}.`,
-        `Economic Capital provides a ${vEc} realistic risk buffer.`,
-        `Average loss in extreme cases reaches ${vEs}.`,
-        (Number.isFinite(K) && Number.isFinite(topKShare))
-          ? `Tail risk is highly concentrated: ${K} issuers drive ${f1(topKShare)} % of tail losses.`
-          : 'Tail risk concentration: n/a.',
+        `Economic Capital of ${vEc} provides a ${_horStr} risk buffer for ${_confStr} of modeled credit risk scenarios.`,
+        `Average loss in the worst ${_worstStr} of cases: ${vEs}`,
       ];
       summaryEl.innerHTML = items.map((s) => `<li>${s}</li>`).join('');
     } else {

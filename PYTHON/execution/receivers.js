@@ -85,7 +85,17 @@ export function createPythonExecutionReceivers(ctx) {
       analyseModal.classList.contains('view-risk') &&
       analyseModal.style.visibility !== 'hidden';
 
-    if (!inRiskView) {
+    // Wurde die Berechnung aus der OVERVIEW heraus gestartet, NICHT auf die
+    // PORTFOLIO-Ansicht wegspringen (User bleibt in der Overview). Overview ist
+    // aktiv, wenn HOME_Modal sichtbar ist und NICHT als Hintergrund (home-behind)
+    // hinter dem PORTFOLIO/RISK-View liegt.
+    const homeModal = document.getElementById('HOME_Modal');
+    const onOverview =
+      !!homeModal &&
+      homeModal.style.visibility !== 'hidden' &&
+      !homeModal.classList.contains('home-behind');
+
+    if (!inRiskView && !onOverview) {
       document.getElementById('ANALYSE_Tab')?.click();
 
       // Open the Select Portfolio sub-panel (only if not already open, so a

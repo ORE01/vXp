@@ -34,6 +34,10 @@ let prodData;
 const PROD_TABLE_ID = 'prodTable0';
 
 export function renderProductTable() {
+  // Sidebar-Subtrigger "Products > Add Products" IMMER verdrahten (auch ohne Produktdaten,
+  // damit man in ein leeres Setup Produkte anlegen kann). Delegierter, idempotenter Listener.
+  bindProdAddTypeTriggersOnce();
+
   const prodDataContainer = document.getElementById('prodDataContainer');
   if (!prodDataContainer) return;
 
@@ -106,6 +110,27 @@ function bindProdAddButtonOnce() {
       mode: 'create',
       source: 'prod-add-button',
       templateName: null,
+    });
+  });
+}
+
+// Sidebar-Subtrigger "Add Products" (Simple Fixed Bond / Simple FRN / Complex Bond):
+// oeffnet das New-Product-Modal mit vorgewaehltem Typ (ersetzt das alte Typ-Dropdown).
+function bindProdAddTypeTriggersOnce() {
+  if (window.__prodAddTypeBound) return;
+  window.__prodAddTypeBound = true;
+
+  document.addEventListener('click', (event) => {
+    const btn = event.target.closest?.('[data-prod-add]');
+    if (!btn) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const templateName = btn.dataset.prodAdd || 'COMPLEX_BOND';
+    handleStructureTimelineModal(null, {
+      mode: 'create',
+      source: 'prod-add-subtrigger',
+      templateName,
     });
   });
 }

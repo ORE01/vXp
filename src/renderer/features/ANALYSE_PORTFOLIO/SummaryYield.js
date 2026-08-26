@@ -300,6 +300,25 @@ const portfolioData = appState.getPortAggData(elementId) || {};
   _set('yieldKpiTtm',      ttm == null ? '–' : `${ttm.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
   _set('yieldKpiDuration', dur == null ? '–' : `${dur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
 
+  // Aenderung zur Vorperiode (letzte Zeile) — nur wo Historie belastbar ist: der aktuelle
+  // Portfolio-Yield (History-Feld RETURN = Yield je Periode). Fuer buy-yield / TtM / IR-duration
+  // gibt es keine verlaessliche Historie -> keine Aenderungszeile ("falls wir sie haben").
+  try {
+    const _selP = port_name || appState.getSelectedPortTableName?.() || '';
+    const _hist = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? '').trim() === String(_selP).trim())
+      .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+    const _prev = _hist[_hist.length - 2] || {};
+    const _prevYFrac = _num(_prev.RETURN);
+    if (cur != null && Number.isFinite(_prevYFrac) && _prevYFrac !== 0) {
+      const _prevY = _prevYFrac * 100;
+      const _dPp = cur - _prevY, _dRel = _dPp / _prevY * 100;
+      const _sg = (v) => (v > 0 ? '+' : (v < 0 ? '-' : ''));
+      const _f2 = (v) => Math.abs(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      _set('yieldKpiCurrentChg', `${_sg(_dPp)}${_f2(_dPp)} pp · ${_sg(_dRel)}${_f2(_dRel)} %`);
+    }
+  } catch (_) {}
+
   // KPI 1 (Portfolio Yield current) und 3 (Δ vs buy) ausblenden — angezeigt bleiben nur
   // "Portfolio Yield (at buy)", "Time to maturity (Ø)" und "IR duration".
   ['yieldKpiCurrent', 'yieldKpiDelta'].forEach(id => {

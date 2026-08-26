@@ -81,11 +81,11 @@ const aggRows = enrichedData;
   }
 
   const aggData = {
-    formPortValue: formatNumberWithGrouping(PortValue) + ' EUR',
-    formPortValueBuy: formatNumberWithGrouping(PortValueBuy) + ' EUR',
-    formPortNotional: formatNumberWithGrouping(PortNotional) + ' EUR',
-    formPortPV01abs: formatNumberWithGrouping(PortPV01) + ' EUR',
-    formPortCPV01abs: formatNumberWithGrouping(PortCPV01) + ' EUR',
+    formPortValue: 'EUR ' + formatNumberWithGrouping(PortValue),
+    formPortValueBuy: 'EUR ' + formatNumberWithGrouping(PortValueBuy),
+    formPortNotional: 'EUR ' + formatNumberWithGrouping(PortNotional),
+    formPortPV01abs: 'EUR ' + formatNumberWithGrouping(PortPV01),
+    formPortCPV01abs: 'EUR ' + formatNumberWithGrouping(PortCPV01),
     formPortYield: (safeDiv(PortYield, PortNotional) * 100).toFixed(2) + '%',
     formPortYieldA: (safeDiv(PortYieldA, PortNotional) * 100).toFixed(2) + '%',
     formPortPV01: (safeDiv(PortPV01, PortNotional) * 10000).toFixed(2),

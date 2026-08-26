@@ -470,8 +470,32 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
   // — analog zu den Risk-Limit/Buffer-Karten im Dashboard.
   const valFont = opts.valueFont || 13;
   const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41];
-  // Systemweit 3-zeilig (Name / Wert / Sub-Wert) -> EINHEITLICHE Hoehe, auch wenn nur 2 Zeilen befuellt sind.
-  const tileH = Math.max(opts.tileH || 0, 22);
+  const UP = [47, 158, 91], DOWN = [217, 83, 79];
+  // Optionaler Trend (Kreis+45°-Pfeil + Aenderung) -> eine Zeile mehr -> hoehere Kachel.
+  const hasTrend = kpis.some((k) => k.trendChg);
+  const tileH = Math.max(opts.tileH || 0, hasTrend ? 23 : 22);
+  // "EUR" innerhalb eines Wertes kleiner/muted zeichnen (wie in der App). Gibt die Breite zurueck.
+  const drawEur = (str, x2, y2, baseColor) => {
+    const s = String(str); const i = s.indexOf('EUR');
+    doc.setTextColor(...baseColor);
+    if (i < 0) { doc.text(s, x2, y2); return doc.getTextWidth(s); }
+    const size = doc.getFontSize(); let cx = x2;
+    const before = s.slice(0, i), after = s.slice(i + 3);
+    if (before) { doc.text(before, cx, y2); cx += doc.getTextWidth(before); }
+    doc.setFontSize(size * 0.62); doc.setTextColor(...MUTED);
+    doc.text('EUR', cx, y2); cx += doc.getTextWidth('EUR');
+    doc.setFontSize(size); doc.setTextColor(...baseColor);
+    if (after) { doc.text(after, cx, y2); cx += doc.getTextWidth(after); }
+    return cx - x2;
+  };
+  // Kreis mit 45°-Pfeil (gruen hoch / rot runter), wie im App-Badge / Overview.
+  const drawTrendCircle = (cx, cy, up) => {
+    const col = up ? UP : DOWN, r = 1.5, a = r * 0.6;
+    doc.setDrawColor(...col); doc.setLineWidth(0.25); doc.circle(cx, cy, r, 'S');
+    const tipx = cx + a, tipy = up ? cy - a : cy + a, tailx = cx - a, taily = up ? cy + a : cy - a;
+    doc.setLineWidth(0.3); doc.line(tailx, taily, tipx, tipy);
+    const hl = 0.6; doc.line(tipx, tipy, tipx - hl, tipy); doc.line(tipx, tipy, tipx, up ? tipy + hl : tipy - hl);
+  };
   // Wert in zwei Zahlen trennen: "abs · rel" ODER "rel + EUR/USD abs" (z.B. Sensitivities "-1,02 bp" / "EUR -21.701").
   const splitVal = (v) => {
     const s = String(v ?? '').trim();
@@ -487,11 +511,22 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
     doc.text(String(k.label ?? '').toUpperCase(), x + 5, y + 5.5);
     const parts = splitVal(k.value);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(valFont); doc.setTextColor(...TEXT);
-    doc.text(parts[0] || '', x + 5, y + 12);
-    if (parts[1]) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3)); doc.setTextColor(...MUTED);
-      doc.text(parts.slice(1).join(' · '), x + 5, y + 17.5);
+    // Wert (fett), "EUR" kleiner/muted.
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(valFont);
+    const w0 = drawEur(parts[0] || '', x + 5, y + 12, TEXT);
+    if (k.trendChg) {
+      // Relative Zahl (parts[1..]) inline auf Zeile 2 (klein/muted) statt eigener Zeile.
+      if (parts[1]) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
+        drawEur(' · ' + parts.slice(1).join(' · '), x + 5 + w0 + 1, y + 12, MUTED);
+      }
+      // Zeile 3: Kreis+45°-Pfeil + Aenderung.
+      drawTrendCircle(x + 6.4, y + 19, !!k.trendUp);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
+      drawEur(String(k.trendChg), x + 9.6, y + 20, MUTED);
+    } else if (parts[1]) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
+      drawEur(parts.slice(1).join(' · '), x + 5, y + 17.5, MUTED);
     }
   });
   doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
@@ -504,7 +539,13 @@ function kpisFromTableEl(el) {
   if (!el) return kpis;
   el.querySelectorAll('tbody tr').forEach((tr) => {
     const tds = tr.querySelectorAll('td');
-    if (tds.length >= 2) kpis.push({ label: (tds[0].textContent || '').trim(), value: (tds[1].textContent || '').trim() });
+    if (tds.length >= 2) {
+      const vtd = tds[1];
+      const k = { label: (tds[0].textContent || '').trim(), value: (vtd.textContent || '').trim() };
+      // Optionaler Trend (Kreis+Pfeil): Richtung + Aenderungstext als data-Attribute am Wert-<td>.
+      if (vtd.dataset && vtd.dataset.chg) { k.trendChg = vtd.dataset.chg; k.trendUp = vtd.dataset.up === '1'; }
+      kpis.push(k);
+    }
   });
   return kpis;
 }
@@ -1839,9 +1880,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
               drawEurText(av, midX - eurTextWidth(av) / 2, boxY + 8, TEXT);
               if (cc.rel) { doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...MUTED); const rv = String(cc.rel); doc.text(rv, midX - doc.getTextWidth(rv) / 2, boxY + 11); }
               if (i < nc - 1) {
-                const ax = bxx + bw, ay = boxY + boxH / 2;
-                doc.setDrawColor(...MUTED); doc.setLineWidth(0.4); doc.line(ax, ay, ax + gap - 1.4, ay);
-                doc.setFillColor(...MUTED); doc.triangle(ax + gap - 1.4, ay - 1.1, ax + gap - 1.4, ay + 1.1, ax + gap, ay, 'F');
+                // Statt Pfeil die Rechenbeziehung: "+" (EL + EC), "=" (= VaR).
+                const sym = i === 0 ? '+' : '=';
+                const sx = bxx + bw + gap / 2, sy = boxY + boxH / 2 + 1.1;
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+                doc.text(sym, sx - doc.getTextWidth(sym) / 2, sy);
               }
             });
           } else {
@@ -1918,7 +1961,9 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           const zc = (b.markerPct != null && b.markerPct >= 60) ? [217, 83, 79] : (b.markerPct != null && b.markerPct >= 40) ? [224, 165, 51] : [47, 158, 91];
           const st = String(b.status || '');
           doc.setFontSize(6.5);
-          const ci = st.lastIndexOf(':');
+          // Nur das Status-Wort einfaerben: bevorzugt am "–" trennen ("… – HIGH"), sonst am letzten ":".
+          const _dash = st.lastIndexOf('–');
+          const ci = _dash >= 0 ? _dash : st.lastIndexOf(':');
           if (ci >= 0) {
             const pre = st.slice(0, ci + 1) + ' ', word = st.slice(ci + 1).trim();
             doc.setFont('helvetica', 'normal'); doc.setTextColor(...MUTED); doc.text(pre, bx + 3, byy + 8);
@@ -1964,12 +2009,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
             doc.setFillColor(...V); doc.roundedRect(barX + nvPx, barY, barW - nvPx, barH, rad, rad, 'F'); // valued rechts (rundes rechtes Ende)
             doc.rect(barX + nvPx, barY, Math.min(rad + 0.6, barW - nvPx), barH, 'F');                     // Uebergang eckig auffuellen -> buendig
           }
-          // Labels ueber dem Balken: not valued links, valued rechts.
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...MUTED);
+          // Labels ueber dem Balken: not valued links, valued rechts (etwas groesser: 6.5).
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
           if (b.nvLbl) doc.text(String(b.nvLbl), barX, byy + 7.5);
           if (b.vLbl) { const vl = String(b.vLbl); doc.text(vl, barX + barW - doc.getTextWidth(vl), byy + 7.5); }
-          // Prozente unter dem Balken.
-          doc.setFontSize(5); doc.setTextColor(...MUTED);
+          // Prozente unter dem Balken (etwas groesser: 6.5).
+          doc.setFontSize(6.5); doc.setTextColor(...MUTED);
           if (b.nvPctTxt) doc.text(String(b.nvPctTxt), barX, byy + 15);
           if (b.vPctTxt) { const vp = String(b.vPctTxt); doc.text(vp, barX + barW - doc.getTextWidth(vp), byy + 15); }
           // Durchschnitts-Duration zentriert unten.
@@ -1993,9 +2038,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           // Name als Caption oben, Haupt-Wert um die VERTIKALE MITTE der Kachel, Sub darunter.
           // (Frueher feste Offsets 4,2/9,4/12,4 -> Wert/Sub sassen zu tief; jetzt am Wert zentriert,
           // konsistent fuer 2- und 3-zeilige Kacheln.)
-          const yVal = byy + ovBoxH / 2 + 1.4;
-          const yLbl = yVal - 5.2;
-          const ySub = yVal + 3.2;
+          // Wert-Zeile (Mitte) etwas nach oben -> mehr Abstand zur Aenderungszeile (Kreis+Pfeil).
+          // Kachelhoehe (ovBoxH) unveraendert.
+          const yLbl = byy + 3;
+          const yVal = byy + 6.7;
+          const ySub = byy + 11.2;
           doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
           if (b.lbl) doc.text(String(b.lbl), bx + 3, yLbl);
           // Zeile 2: Primaerwert (fett), "EUR" kleiner/muted.
@@ -2008,7 +2055,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           if (b.chgAbs) {
             drawTrendCircle(bx + 3.8, ySub - 1.3, b.chgUp);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(6);
-            drawEurText(`${b.chgAbs} · ${b.chgRel}`, bx + 6.8, ySub, MUTED);
+            drawEurText(`${b.chgAbs}${b.chgRel ? ' · ' + b.chgRel : ''}`, bx + 6.8, ySub, MUTED);
           }
         }
         if (b.wide) { col = 0; byy += ovBoxH + 3; }

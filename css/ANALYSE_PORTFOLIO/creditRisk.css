@@ -540,9 +540,15 @@
 #panel-credit .conc-kpi[data-tile="credit_ec"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_ec"] .conc-kpi__lbl { color: rgba(180, 145, 238, 0.98); }
 #panel-credit .conc-kpi[data-tile="credit_var_hist"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"] .conc-kpi__lbl { color: #f08c00; }
 #panel-credit .conc-kpi[data-tile="credit_es"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_es"] .conc-kpi__lbl { color: #e03131; }
-/* KPI-Grid + Zusammenfassung NEBENEINANDER (bei zu wenig Breite bricht die Liste nach unten um). */
+/* Light-Theme: EL-Rahmen + -Name sind fuer Dark fast weiss -> auf hellem Grund unlesbar.
+   Auf das Dunkelgrau der EL-Linie in der Loss-Grafik (#5a6470) setzen. */
+body.light-theme #panel-credit .conc-kpi[data-tile="credit_el"],
+body.light-theme #panel-credit-current .conc-kpi[data-tile="credit_el"] { border-color: #5a6470; }
+body.light-theme #panel-credit .conc-kpi[data-tile="credit_el"] .conc-kpi__lbl,
+body.light-theme #panel-credit-current .conc-kpi[data-tile="credit_el"] .conc-kpi__lbl { color: #5a6470; }
+/* KPI-Grid oben, Zusammenfassung DARUNTER (volle Breite). */
 #panel-credit .cr-kpi-row, #panel-credit-current .cr-kpi-row {
-  display: flex; align-items: flex-start; gap: 24px; flex-wrap: wrap;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
 }
 #panel-credit .cr-kpi-row > .conc-kpi-grid, #panel-credit-current .cr-kpi-row > .conc-kpi-grid {
   flex: 0 0 auto; grid-template-columns: repeat(4, auto);   /* Kacheln content-breit, Grid so schmal wie noetig */
@@ -560,9 +566,10 @@
 .cr-conc-scale2 span:first-child { transform: none; }
 .cr-conc-scale2 span:last-child { transform: translateX(-100%); }
 
-/* Zusammenfassung als Bullet-Liste in umrandeter Karte (wie eine KPI), rechts neben dem Grid. */
+/* Zusammenfassung als Bullet-Liste in umrandeter Karte (wie eine KPI), UNTER dem Grid (volle Breite). */
 #panel-credit .cr-kpi-summary, #panel-credit-current .cr-kpi-summary {
-  flex: 1 1 260px; min-width: 240px; max-width: 440px; margin: 0;
+  flex: 0 0 auto; align-self: stretch; min-width: 0; max-width: none; width: 100%;
+  box-sizing: border-box; margin: 0;
   background: var(--surface-overlay);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
