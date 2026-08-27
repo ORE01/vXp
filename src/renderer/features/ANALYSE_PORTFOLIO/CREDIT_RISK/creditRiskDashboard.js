@@ -857,41 +857,51 @@ export function renderCreditTailContributors() {
   // Keine Neuberechnung, keine Tabellenaenderung.
   const _cSum = document.getElementById('crTcmSummaryHist');
   const _cFunnel = document.getElementById('crTcmFunnelHist');
+  const _cFunnelNorm = document.getElementById('crTcmFunnelNorm');
+  // Funnel/Summary je Sicht mit den DATEN DER JEWEILIGEN Simulation: Historic = pd_flag RATING,
+  // Market adjusted = pd_flag NORM. Baut {summary, funnel} fuer ein pd_flag (gleiche Schwellen
+  // wie der Concentration-Risk-Slider).
+  const _mkConcHtml = (flag) => {
+    const conc = tailConcentrationIndex(flag);
+    if (!conc || !Number.isFinite(conc.pct)) return { summary: '', funnel: '' };
+    const f1 = (v) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const status = conc.pct >= CONC_YELLOW_MAX ? 'HIGH' : conc.pct >= CONC_GREEN_MAX ? 'ELEVATED' : 'LOW';
+    const col = conc.pct >= CONC_YELLOW_MAX ? '#d9534f' : conc.pct >= CONC_GREEN_MAX ? '#e0a533' : '#2f9e5f';
+    // K aus den vorhandenen Effective Tail Drivers (NICHT aus TCM), N + topKShare dynamisch.
+    const K = Math.max(1, Math.round(conc.eff));
+    const topKShare = (conc.shares || []).slice(0, K).reduce((a, b) => a + b, 0);
+    const sentence = (Number.isFinite(conc.eff) && conc.n >= 1)
+      ? `${K} out of ${conc.n} issuers drive <b style="color:var(--text-bright);">${f1(topKShare)} %</b> of tail losses.`
+      : '';
+    const summary =
+      `<span style="color:var(--text-muted);">Portfolio concentration: <b style="color:var(--text-bright);">${f1(conc.pct)} %</b> &middot; <b style="color:${col};">${status}</b></span>` +
+      (sentence ? `<span style="color:var(--text-muted);">${sentence}</span>` : '');
+    // Funnel in EINER Kachel als 2 Spalten (issuers | iss+rank). Jede Spalte hat eigene
+    // KPI-Boxen (Label + Zahl IN der Box) und eigene ↓-Pfeile dazwischen.
+    const box = (label, v) => `<div style="border:1px solid var(--border-subtle); border-radius:6px; padding:5px 9px; background:var(--surface-overlay); text-align:center;"><div style="font-size:9.5px; color:var(--text-muted); line-height:1.2;">${label}</div><div style="font-size:17px; font-weight:700; color:var(--text-bright); line-height:1.1; margin-top:1px;">${v}</div></div>`;
+    const arrow = `<div style="color:var(--text-bright); font-size:15px; line-height:1; text-align:center; margin:2px 0;">&darr;</div>`;
+    const steps = [
+      ['total', conc.totalIssuers, conc.totalRanks],
+      ['contribute to the loss distribution', conc.defaultedIssuers, conc.defaultedRanks],
+      ['enter the extreme tail', conc.n, conc.n],
+    ];
+    // Letzte Box mit spaltenspezifischem Nomen: "issuers" links, "combinations" rechts.
+    const mkCol = (title, idx, noun) => {
+      const boxes = steps.map((s) => box(s[0], s[idx]));
+      boxes.push(box(`${noun} drive ${f1(topKShare)} % of tail loss`, K));
+      return `<div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"><div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px;">${title}</div>${boxes.join(arrow)}</div>`;
+    };
+    const funnel = `<div style="display:flex; gap:14px; flex:1; min-height:0;">${mkCol('issuers', 1, 'issuers')}${mkCol('issuer–rank combinations', 2, 'combinations')}</div>`;
+    return { summary, funnel };
+  };
   if (_cSum || _cFunnel) {
-    const conc = tailConcentrationIndex();
-    if (conc && Number.isFinite(conc.pct)) {
-      const f1 = (v) => v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-      const status = conc.pct >= CONC_YELLOW_MAX ? 'HIGH' : conc.pct >= CONC_GREEN_MAX ? 'ELEVATED' : 'LOW';
-      const col = conc.pct >= CONC_YELLOW_MAX ? '#d9534f' : conc.pct >= CONC_GREEN_MAX ? '#e0a533' : '#2f9e5f';
-      // K aus den vorhandenen Effective Tail Drivers (NICHT aus TCM), N + topKShare dynamisch.
-      const K = Math.max(1, Math.round(conc.eff));
-      const topKShare = (conc.shares || []).slice(0, K).reduce((a, b) => a + b, 0);
-      const sentence = (Number.isFinite(conc.eff) && conc.n >= 1)
-        ? `${K} out of ${conc.n} issuers drive <b style="color:var(--text-bright);">${f1(topKShare)} %</b> of tail losses.`
-        : '';
-      if (_cSum) _cSum.innerHTML =
-        `<span style="color:var(--text-muted);">Portfolio concentration: <b style="color:var(--text-bright);">${f1(conc.pct)} %</b> &middot; <b style="color:${col};">${status}</b></span>` +
-        (sentence ? `<span style="color:var(--text-muted);">${sentence}</span>` : '');
-      // Funnel in EINER Kachel als 2 Spalten (issuers | iss+rank). Jede Spalte hat eigene
-      // KPI-Boxen (Label + Zahl IN der Box) und eigene ↓-Pfeile dazwischen.
-      const box = (label, v) => `<div style="border:1px solid var(--border-subtle); border-radius:6px; padding:5px 9px; background:var(--surface-overlay); text-align:center;"><div style="font-size:9.5px; color:var(--text-muted); line-height:1.2;">${label}</div><div style="font-size:17px; font-weight:700; color:var(--text-bright); line-height:1.1; margin-top:1px;">${v}</div></div>`;
-      const arrow = `<div style="color:var(--text-bright); font-size:15px; line-height:1; text-align:center; margin:2px 0;">&darr;</div>`;
-      const steps = [
-        ['total', conc.totalIssuers, conc.totalRanks],
-        ['contribute to the loss distribution', conc.defaultedIssuers, conc.defaultedRanks],
-        ['enter the extreme tail', conc.n, conc.n],
-      ];
-      // Letzte Box mit spaltenspezifischem Nomen: "issuers" links, "combinations" rechts.
-      const mkCol = (title, idx, noun) => {
-        const boxes = steps.map((s) => box(s[0], s[idx]));
-        boxes.push(box(`${noun} drive ${f1(topKShare)} % of tail loss`, K));
-        return `<div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"><div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px;">${title}</div>${boxes.join(arrow)}</div>`;
-      };
-      if (_cFunnel) _cFunnel.innerHTML = `<div style="display:flex; gap:14px; flex:1; min-height:0;">${mkCol('issuers', 1, 'issuers')}${mkCol('issuer–rank combinations', 2, 'combinations')}</div>`;
-    } else {
-      if (_cSum) _cSum.innerHTML = '';
-      if (_cFunnel) _cFunnel.innerHTML = '';
-    }
+    const h = _mkConcHtml('RATING');   // Historic
+    if (_cSum) _cSum.innerHTML = h.summary;
+    if (_cFunnel) _cFunnel.innerHTML = h.funnel;
+  }
+  if (_cFunnelNorm) {
+    const n = _mkConcHtml('NORM');      // Market adjusted (NORM-Tail)
+    _cFunnelNorm.innerHTML = n.funnel;
   }
 }
 
@@ -1315,8 +1325,9 @@ const CONC_YELLOW_MAX = 60;   // 40..60 = elevated, >60 = high
 // "normalized HHI"). Liefert { pct: 0..100, eff: 1/HHI } oder null.
 //   tailShare_i = issuerTailLoss_i / totalTailLoss ;  HHI = Sum(tailShare_i^2) ;  eff = 1/HHI
 //   concentrationScore = ((N - eff) / (N - 1)) * 100  (0 = gleichverteilt, 100 = ein Emittent)
-export function tailConcentrationIndex() {
+export function tailConcentrationIndex(flag = 'RATING') {
   try {
+    const _flag = String(flag ?? 'RATING').toUpperCase();
     const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
     const portRows = (appState.getAllPortfolioData?.() || [])
       .filter((r) => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port);
@@ -1330,7 +1341,7 @@ export function tailConcentrationIndex() {
     }
     // Tail-Szenarien (Quantil >= Konfidenz) -> Tail-Loss je Emittent aufsummieren (ALLE Emittenten).
     const allLoss = (appState.getAllLossData?.() || []).filter((r) => String(r?.port_name ?? '') === port);
-    const rows = allLoss.filter((r) => String(r?.pd_flag ?? '').toUpperCase() === 'RATING');
+    const rows = allLoss.filter((r) => String(r?.pd_flag ?? '').toUpperCase() === _flag);
     const confQ = getRunConfQuantil();
     let tail = rows.filter((r) => Number(r.QUANTIL) >= confQ);
     if (tail.length < 3) {

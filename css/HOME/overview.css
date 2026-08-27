@@ -97,7 +97,11 @@
   border-radius: 50%;
   background: #2f9e5f;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
+.home-limit-dot:hover,
+.home-limit-dot:focus-visible { transform: scale(1.25); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35); outline: none; }
 .home-limit-dot.is-green  { background: #2f9e5f; }
 .home-limit-dot.is-yellow { background: #e0a533; }
 .home-limit-dot.is-red    { background: #d9534f; }
@@ -377,6 +381,8 @@
 /* Market-Chart-Cards (Top-Contributions + Backtest-Kopie): Hover im Market-Teal. */
 .home-chart-card.home-nav-link[data-tile="mkt_chart"]:hover,
 .home-chart-card.home-nav-link[data-tile="mkt_backtest"]:hover { border-color: #2A7F7F; }
+/* Credit-Chart-Card ("Which issuers drive Extreme Risk?"): Hover im Credit-Violett. */
+.home-chart-card.home-nav-link[data-tile="cr_chart"]:hover { border-color: #7A5C91; }
 /* Credit-Risk-Kacheln (cr_*): Hover-Rand im Credit-Violett. */
 .home-kpi.home-nav-link[data-tile^="cr_"]:hover { border-color: #7A5C91; }
 /* Risk-Buffer-Summary-Kacheln (risk_buffer*): kein .home-kpi -> eigener Hover-Rahmen

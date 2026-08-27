@@ -94,3 +94,24 @@
   flex: 1 1 auto;
   text-align: center;
 }
+/* Abschnitts-Trenner im Calc-Menue: zentrierter Text "Historic Data" mit Linie links/rechts.
+   Trennt die 3 Calculate-Buttons vom Save-to-Historic-Metrics-Button. */
+.toolbar-calc-menu .calc-menu-sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.toolbar-calc-menu .calc-menu-sep::before,
+.toolbar-calc-menu .calc-menu-sep::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--border-subtle);
+}

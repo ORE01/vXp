@@ -1103,6 +1103,18 @@ export function renderSensHistorySingle(canvasId, historyData, { keys, label, bo
     },
   };
 
+  // Explizite Puffergroesse + responsive:false, damit der Chart auch in einem VERBORGENEN
+  // View gezeichnet wird (z.B. CPV01-Development, solange PV01 der aktive View ist). Sonst
+  // haette die Canvas 0-Groesse -> leeres Bitmap -> im PDF/Report nur die "Huelle" ohne Graph.
+  // Die CSS-Regel (width/height:100%) skaliert das feste Bitmap auf die Container-Groesse.
+  const _canvas = document.getElementById(canvasId);
+  const _cont = _canvas?.parentElement;
+  const _w = Math.round(_cont?.clientWidth || 0) || 1000;   // 0 (verborgen) -> Fallback
+  const _h = Math.round(_cont?.clientHeight || 0) || 300;
+  if (_canvas) { _canvas.width = _w; _canvas.height = _h; }
+  options.responsive = false;
+  options.maintainAspectRatio = false;
+
   try {
     _sensPanelHistCharts[canvasId] = createTimeSeriesChart(canvasId, data, options, "line");
   } catch (err) {

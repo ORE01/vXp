@@ -39,24 +39,7 @@
   }
 }
 
-/* Analyse Sidebar: "Save to Historic Metrics" Button grün (scoped via ID) */
-#historicMetricsAddButton{
-  background: #2e7d32;
-  border: 1px solid var(--border);
-  color: var(--text-bright);
-}
-
-#historicMetricsAddButton:hover{
-  background: #256a2a;
-}
-
-/* Text im Button sauber weiß lassen */
-#historicMetricsAddButton .section-header{
-  color: inherit;
-}
-
-/* Plus/chev im Button (falls es nicht automatisch übernimmt) */
-#historicMetricsAddButton .chev{
-  color: inherit;
-  opacity: 0.95;
-}
+/* "Save to Historic Metrics" bekommt KEINE eigenen Farben mehr — er folgt zentral dem
+   .edit-button-Style (var(--accent) / var(--text-on-accent) / var(--accent-hover)), damit er
+   in Light UND Dark identisch zu den anderen Calc-Buttons aussieht. Frueherer ID-Override
+   (fixes Gruen #2e7d32 + var(--text-bright) -> schwarze Schrift im Light-Theme) entfernt. */

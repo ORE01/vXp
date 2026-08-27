@@ -1712,6 +1712,7 @@ function bindHomeCardLinks() {
     risk_buffer_m:   'panel-credit-current',
     cr_ec_scale:     'panel-credit',
     cr_ec_scale_m:   'panel-credit-current',
+    cr_chart:        'panel-credit',   // "Which issuers drive Extreme Risk?" -> Economic Capital
   };
   // Kacheln als klickbare Trigger markieren (Rahmen/Hover via .home-nav-link + a11y).
   Object.keys(CREDIT_TILE_NAV).forEach((tile) => {
@@ -1727,6 +1728,14 @@ function bindHomeCardLinks() {
   const run = (e) => {
     const ico = e.target.closest?.('.home-ico--link');
     if (ico && ACTIONS[ico.id]) { e.preventDefault(); ACTIONS[ico.id](); return; }
+    // Ampelpunkt (Limit-Status) oben rechts -> Limits-Ansicht im RISK-Tab.
+    const limitDot = e.target.closest?.('.home-limit-dot');
+    if (limitDot) {
+      e.preventDefault(); e.stopPropagation();
+      if (limitDot.id === 'homeCrLimitDot') tabThenPanel('RISK_Tab', 'panel-credit-dashboard');
+      else tabThenPanel('RISK_Tab', 'panel-market-dashboard');
+      return;
+    }
     // Klick auf einen Overview-Slider (nur die Overview-Instanz #homeRiskSliders):
     // Interest Rate Duration -> Sensitivities/PV01, Credit Spread Duration -> CPV01.
     if (e.target.closest?.('#homeRiskSliders')) {
@@ -1815,6 +1824,48 @@ function wrapEurUnits(root) {
   });
 }
 
+// Ampelpunkte (Limit-Status) oben rechts in Market-/Credit-Karte: schlechteste Farbe ueber
+// ALLE Limit-Kacheln des jeweiligen Dashboards (Schwellen = Customer Setup). red > yellow >
+// green; ohne Daten -> gruen ("innerhalb der Limits"). Concentration bleibt aussen vor (feste
+// 40/60-Schwellen, nicht aus Customer Setup). Klick auf den Punkt oeffnet die Limits-Ansicht.
+function _worstLimitState(states) {
+  const s = (states || []).filter((x) => x === 'green' || x === 'yellow' || x === 'red');
+  if (s.includes('red')) return 'red';
+  if (s.includes('yellow')) return 'yellow';
+  return 'green';
+}
+function _setLimitDot(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('is-green', 'is-yellow', 'is-red');
+  el.classList.add(`is-${state}`);
+  const t = { green: 'All limits within bounds', yellow: 'Limit warning', red: 'Limit breached' }[state] || 'Risk limits';
+  el.title = `${t} — open limits`;
+}
+function renderRiskLimitDots(port) {
+  let mkt = 'green', cr = 'green';
+  // Market: NUR die echten Limits VaR + ES (cards[0]/cards[1]); TSI (cards[2]) und die
+  // Limit-Buffer-Kachel (cards[3]) sind keine Limits und duerfen den Punkt nicht faerben.
+  try {
+    const mm = getMarketDashboardModel();
+    const mc = (mm && mm.hasRow) ? (mm.cards || []) : [];
+    mkt = _worstLimitState([mc[0] && mc[0].state, mc[1] && mc[1].state]);
+  } catch (_) {}
+  // Credit: VaR + ES (cards[0]/cards[1]) + Concentration-Index (40/60). TSI/MSD zaehlen hier
+  // NICHT als Limit (analog Market). Concentration aus crConcentrationScore.
+  try {
+    const cm = getCreditDashboardModel();
+    const cc = (cm && cm.hasRow) ? (cm.cards || []) : [];
+    const conc = port ? crConcentrationScore(port) : null;
+    const concState = (conc && Number.isFinite(conc.pct))
+      ? (conc.pct >= CONC_SCORE_YELLOW ? 'red' : conc.pct >= CONC_SCORE_GREEN ? 'yellow' : 'green')
+      : null;
+    cr = _worstLimitState([cc[0] && cc[0].state, cc[1] && cc[1].state, concState]);
+  } catch (_) {}
+  _setLimitDot('homeMktLimitDot', mkt);
+  _setLimitDot('homeCrLimitDot', cr);
+}
+
 export function renderHomeOverview() {
   const modal = document.getElementById('HOME_Modal');
   if (!modal) return;
@@ -1831,6 +1882,7 @@ export function renderHomeOverview() {
     renderPortfolioCard('');
     renderMarketCard('');
     renderCreditCard('');
+    try { renderRiskLimitDots(); } catch (e) { console.warn('[home] limit dots', e); }
     return;
   }
 
@@ -1840,6 +1892,7 @@ export function renderHomeOverview() {
   try { renderPortfolioCard(port); } catch (e) { console.warn('[home] portfolio card', e); }
   try { asOf = renderMarketCard(port); } catch (e) { console.warn('[home] market card', e); }
   try { renderCreditCard(port); } catch (e) { console.warn('[home] credit card', e); }
+  try { renderRiskLimitDots(port); } catch (e) { console.warn('[home] limit dots', e); }
 
   setText('homeAsOf', `Portfolio: ${port}${asOf ? `  ·  as of ${asOf}` : ''}`);
 
