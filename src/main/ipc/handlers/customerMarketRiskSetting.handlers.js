@@ -36,6 +36,7 @@ module.exports = function registerCustomerMarketRiskSettingHandlers({ ipcMain, d
   }
 
   try { ipcMain.removeHandler('customer-mr-setting.save'); } catch {}
+  try { ipcMain.removeHandler('customer-mr-setting.set-baseline-rolling'); } catch {}
   try { ipcMain.removeHandler('customer-mr-setting.get'); } catch {}
   try { ipcMain.removeHandler('customer-mr-thresholds.get'); } catch {}
   try { ipcMain.removeHandler('customer-mr-thresholds.save'); } catch {}
@@ -115,6 +116,57 @@ module.exports = function registerCustomerMarketRiskSettingHandlers({ ipcMain, d
       return { success: true };
     } catch (err) {
       console.error('[customerMarketRiskSetting] save error:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  // WRITE: das aktive Baseline-Rolling (default_mvar_interval_id/_name) umstellen. Damit
+  // laesst sich die "Always calculated"-Baseline auf ein bestehendes ROLLING_n-Szenario
+  // umschalten, ohne loeschen/neu anlegen. Die Model-Selection-Klassifizierung (Baseline vs.
+  // Szenario) leitet sich aus diesem Default ab -> nach dem Write die View mitrefreshen.
+  ipcMain.handle('customer-mr-setting.set-baseline-rolling', async (_event, payload = {}) => {
+    try {
+      const customerId = normalizeCustomerId(payload.customer_id);
+      const settingScope = String(payload.setting_scope || 'DEFAULT');
+      const intervalName = String(payload.interval_name || '').trim();
+      const intervalId = (payload.interval_id === undefined || payload.interval_id === null || payload.interval_id === '')
+        ? null : Number(payload.interval_id);
+      if (!intervalName) throw new Error('interval_name missing');
+
+      const rows = await dbApi.getAllRowsFromTable(TBL);
+      const existing = (Array.isArray(rows) ? rows : []).find(
+        (r) =>
+          String(r.setting_scope ?? 'DEFAULT') === settingScope &&
+          sameCustomer(r.customer_id, customerId)
+      );
+
+      if (existing) {
+        await dbApi.runSQL(
+          `UPDATE ${TBL}
+             SET default_mvar_interval_id = ?,
+                 default_mvar_interval_name = ?,
+                 is_active = 1,
+                 updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [intervalId, intervalName, existing.id]
+        );
+      } else {
+        await dbApi.runSQL(
+          `INSERT INTO ${TBL}
+             (customer_id, setting_scope, default_mvar_interval_id, default_mvar_interval_name, is_active, created_at, updated_at)
+           VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [customerId, settingScope, intervalId, intervalName]
+        );
+      }
+
+      // Setting zuerst re-pushen, dann die abgeleitete Model-Selection-View -> Reihenfolge
+      // sorgt dafuer, dass die Neu-Klassifizierung den neuen Default sieht.
+      refreshTable(TBL);
+      refreshTable('v_MVAR_MODEL_SELECTION_APP');
+
+      return { success: true };
+    } catch (err) {
+      console.error('[customerMarketRiskSetting] set-baseline-rolling error:', err);
       return { success: false, error: err.message };
     }
   });

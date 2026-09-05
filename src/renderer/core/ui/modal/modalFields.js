@@ -65,8 +65,111 @@ export function shouldSkipTable(tableName) {
 
 // ===================================INPUT FIELD per TABLE===================================================================
 
+// ---- MVaRInput-Edit: modusbasiertes Formular ----------------------------------------------
+// Rolling (Baseline): NUR Jahreszahl -> Name automatisch "ROLLING_n", KEIN START/END.
+// Fixed (Stress): START/END + freier Name. Confidence/VaR_Days werden hier NICHT editiert
+// (kommen aus Customer Setup). Es kann nur EIN ROLLING je Zahl geben (Kollision verhindert).
+function _mvarAttr(v) {
+  return String(v ?? '')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+export function renderMvarInputEditForm(rowData, form) {
+  const name = String(rowData.INTERVAL_NAME ?? '');
+  const m = name.match(/^ROLLING_(\d+)$/i);
+  const isRolling = !!m;
+  const curId = String(rowData.id ?? '');
+
+  const existingRolling = () => {
+    const rows = window.appState?.getMvarInputData?.() || window.appState?.mvarInputData || [];
+    return new Set(rows
+      .filter((r) => String(r.id) !== curId)
+      .map((r) => String(r.INTERVAL_NAME ?? '').trim().toUpperCase())
+      .filter((n) => /^ROLLING_\d+$/.test(n)));
+  };
+  const firstFreeN = () => { const ex = existingRolling(); let n = 1; while (ex.has(`ROLLING_${n}`)) n++; return n; };
+  let lastValidN = isRolling ? parseInt(m[1], 10) : firstFreeN();
+
+  form.innerHTML = `
+    <div class="form-row">
+      <label class="label">Type</label>
+      <div class="mvar-mode-toggle" style="display:flex; gap:16px; align-items:center;">
+        <label style="display:flex; gap:6px; align-items:center;"><input type="radio" name="mvar-mode" value="rolling" ${isRolling ? 'checked' : ''}> Rolling window (baseline)</label>
+        <label style="display:flex; gap:6px; align-items:center;"><input type="radio" name="mvar-mode" value="fixed" ${isRolling ? '' : 'checked'}> Fixed period (stress)</label>
+      </div>
+    </div>
+    <div class="form-row" data-mvar-rolling>
+      <label class="label">Years (n)</label>
+      <input type="number" min="1" step="1" class="input-field" data-role="mvar-years" value="${isRolling ? _mvarAttr(m[1]) : ''}">
+    </div>
+    <div class="form-row" data-mvar-name>
+      <label class="label">Name</label>
+      <input type="text" class="input-field" data-field="INTERVAL_NAME" value="${_mvarAttr(name)}">
+    </div>
+    <div class="form-row" data-mvar-fixed>
+      <label class="label">START</label>
+      <input type="text" class="input-field" data-field="START" placeholder="YYYY-MM-DD" value="${_mvarAttr(rowData.START ?? '')}">
+    </div>
+    <div class="form-row" data-mvar-fixed>
+      <label class="label">END</label>
+      <input type="text" class="input-field" data-field="END" placeholder="YYYY-MM-DD" value="${_mvarAttr(rowData.END ?? '')}">
+    </div>
+    <div class="form-row"><small data-mvar-hint style="color:var(--text-muted, #999);"></small></div>
+  `;
+
+  const nameInput  = form.querySelector('input[data-field="INTERVAL_NAME"]');
+  const yearsInput = form.querySelector('input[data-role="mvar-years"]');
+  const startInput = form.querySelector('input[data-field="START"]');
+  const endInput   = form.querySelector('input[data-field="END"]');
+  const hint       = form.querySelector('[data-mvar-hint]');
+  const nameRow    = form.querySelector('[data-mvar-name]');
+  const rollingRows = form.querySelectorAll('[data-mvar-rolling]');
+  const fixedRows   = form.querySelectorAll('[data-mvar-fixed]');
+  const mode = () => form.querySelector('input[name="mvar-mode"]:checked')?.value || 'fixed';
+
+  const syncRollingName = () => {
+    let n = parseInt(yearsInput.value, 10);
+    if (!Number.isInteger(n) || n < 1) {
+      hint.textContent = 'Please enter a whole number of years (≥ 1).';
+      n = lastValidN; yearsInput.value = n;
+    } else if (existingRolling().has(`ROLLING_${n}`)) {
+      hint.textContent = `ROLLING_${n} already exists — pick a different number of years.`;
+      n = lastValidN; yearsInput.value = n;
+    } else {
+      lastValidN = n;
+      hint.textContent = `Rolling window: today − ${n} year(s) … today. Name: ROLLING_${n}. (Confidence & horizon come from Customer Setup.)`;
+    }
+    nameInput.value = `ROLLING_${n}`;
+  };
+
+  const applyMode = () => {
+    const rolling = mode() === 'rolling';
+    rollingRows.forEach((el) => { el.style.display = rolling ? '' : 'none'; });
+    fixedRows.forEach((el) => { el.style.display = rolling ? 'none' : ''; });
+    if (nameRow) nameRow.style.display = rolling ? 'none' : '';   // Name im Rolling-Modus automatisch
+    nameInput.readOnly = rolling;
+    if (rolling) {
+      if (!yearsInput.value) yearsInput.value = lastValidN;
+      startInput.value = ''; endInput.value = '';
+      syncRollingName();
+    } else {
+      // Rolling->Fixed: ein ROLLING_n-Name waere falsch (wuerde als Baseline erkannt) -> leeren.
+      if (/^ROLLING_\d+$/i.test(nameInput.value)) { nameInput.value = ''; hint.textContent = 'Enter a name for the fixed scenario.'; }
+      else hint.textContent = '';
+    }
+  };
+
+  form.addEventListener('change', (e) => { if (e.target?.name === 'mvar-mode') applyMode(); });
+  yearsInput.addEventListener('input', () => { if (mode() === 'rolling') syncRollingName(); });
+  applyMode();
+}
+
 export function generateInputFields(rowData, form, uniqueIssuers, selectedTableName) {
   uniqueIssuers.sort();
+
+  // MVaRInput: eigenes modusbasiertes Formular (Rolling=Jahre / Fixed=Daten) statt der
+  // generischen Feldschleife.
+  if (selectedTableName === 'MVaRInput') { renderMvarInputEditForm(rowData, form); return; }
 
   const hiddenFields = hiddenFieldsByTable[selectedTableName];
 
@@ -259,6 +362,23 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
           const crModelsDropdown = createDropdown(fieldName, crModels, rowData[fieldName]);
           formRow.appendChild(label);
           formRow.appendChild(crModelsDropdown);
+          return true;
+        }
+
+        // Importance-Sampling-Flags als Checkbox (0/1). Speicherung: modalData.js liest
+        // type==='checkbox' -> '1'/'0'. Default 0 (aus) -> aktuelles Ergebnis unveraendert.
+        case 'use_importance_sampling':
+        case 'is_scramble': {
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.setAttribute('data-field', fieldName);
+          const v = rowData[fieldName];
+          cb.checked = (v === 1 || v === '1' || v === true);
+          const wrap = document.createElement('label');
+          wrap.style.cssText = 'display:flex; gap:8px; align-items:center;';
+          wrap.appendChild(cb);
+          formRow.appendChild(label);
+          formRow.appendChild(wrap);
           return true;
         }
 

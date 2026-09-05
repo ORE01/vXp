@@ -1748,7 +1748,7 @@ function buildPortfolioHierarchy() {
   const labels = {
     selectPort: 'Portfolio', newDeals: 'Create Portfolio', deals: 'Change Portfolio',
     concentration: 'Breakdown',
-    'performance-history': 'Profit/Loss', 'performance-dashboard': 'Yield', performance: 'Yield vs Rates',
+    'performance-history': 'Profit & Loss', 'performance-dashboard': 'Yield', performance: 'Yield vs Rates',
     sensitivities: 'Sensitivities', 'mvar-scenarios': 'Scenarios', liquidity: 'Liquidity',
   };
   return { parents, order, groupNodes, labels };
@@ -2458,9 +2458,15 @@ __riskDocDelegatedHandler = (ev) => {
   // neu gebaut -> Fokus/Eingabe verloren). Gespeichert wird ueber wireTableNotesOnce().
   if (t && t.classList && t.classList.contains('rr-note-input')) return;
 
-  // ✅ Global Buttons
-  if (t && t.id === 'rr-all-on')  { setAllRRCheckboxes(true);  return; }
-  if (t && t.id === 'rr-all-off') { setAllRRCheckboxes(false); return; }
+  // ✅ Global Buttons "Select all / Deselect all" — NUR bei ECHTEN User-Events. kick()
+  // (bei Tab-Wechsel/visibilitychange) feuert synthetische change-Events auf ALLE rr-*-
+  // Controls, INKL. rr-all-off. Ohne isTrusted-Guard wuerde daher jeder Panel-Wechsel alles
+  // abwaehlen und den gespeicherten Report-State ueberschreiben (Bug: Haekchen weg nach
+  // Zurueckspringen). Synthetische Events fallen durch -> nur Re-Render (State bleibt).
+  if (ev.isTrusted !== false) {
+    if (t && t.id === 'rr-all-on')  { setAllRRCheckboxes(true);  return; }
+    if (t && t.id === 'rr-all-off') { setAllRRCheckboxes(false); return; }
+  }
 
   const isRiskCtl = !!(t && t.id && t.id.startsWith('rr-'));
   const inRiskPanel = !!t?.closest?.('#panel-reports-risk');
@@ -2971,6 +2977,15 @@ export function getActiveRiskSectionsForPdf() {
     if (isChartEnabled('marketTraffic', 'tbl-mvar-es', chartState) && !tbls.some(x => x.id === 'MVaRDataContainer0')) {
       tbls.push({ id: 'MVaRDataContainer0', label: 'Market VaR / ES' });
     }
+  }
+  // Profit/Loss-KPI-Band (Total + Scenario VaR/ES) in die Market-Sektion aufnehmen, sobald sie
+  // aktiv ist — als data-kpi-band ueber den Charts (Dashboard-Konvention), unabhaengig von der
+  // Ampel-/Tabellen-Checkbox. Fix: die KPI-Kacheln wurden bisher gar nicht in den Report uebernommen.
+  if (isSectionOn('market') && document.getElementById('mvarPLKpiBand')) {
+    let tgt = sections.find(s => s.key === 'market');
+    if (!tgt) { tgt = { key: 'market', title: sectionTitleFromKey('market'), enabledCharts: [], enabledTables: [] }; sections.push(tgt); }
+    const tbls = tgt.enabledTables || (tgt.enabledTables = []);
+    if (!tbls.some(x => x.id === 'mvarPLKpiBand')) tbls.push({ id: 'mvarPLKpiBand', label: 'Key Figures' });
   }
 
   // 3) Nur Sektionen mit Inhalt behalten.

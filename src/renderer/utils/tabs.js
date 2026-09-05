@@ -302,6 +302,50 @@ function decorateTriggerIcons() {
   document.querySelectorAll('.section-trigger.pf-accent').forEach(portfolioAccent);
 }
 
+// ============================================================
+// Panel-Titel = voller Pfad aus dem Trigger-Baum: "<Tab> / <Gruppe> / … / <Leaf>".
+// Der Pfad ist STARR aus der DOM-Hierarchie (Portfolio -> Trigger -> Sub-Trigger). "/" INNERHALB
+// eines Namens wird zu " & " (Trenner bleibt " / "). Erster passender Trigger. Panels OHNE
+// Sidebar-Trigger behalten ihren Titel. Gilt fuer Portfolio (view-analyse) UND Risk (view-risk);
+// der Tab-Prefix richtet sich nach der aktuellen Ansicht.
+// ============================================================
+function _panelTriggerPath(panelId) {
+  const trig = document.querySelector(`.section-trigger[data-panel="${panelId}"]`);
+  if (!trig) return null;   // kein Sidebar-Trigger -> alten Titel behalten
+  const label = (el) => (el?.querySelector('.section-header')?.textContent || '').replace(/\s+/g, ' ').trim();
+  const names = [];
+  const leaf = label(trig);
+  if (leaf) names.push(leaf);
+  // Uebergeordnete .risk-acc-Gruppen einsammeln (von innen nach aussen).
+  let body = trig.closest('.risk-acc-body');
+  while (body) {
+    const acc = body.parentElement;                       // .risk-acc, das diese Body besitzt
+    const toggle = acc?.querySelector(':scope > .risk-acc-toggle');
+    const lbl = label(toggle);
+    if (lbl && lbl !== names[0]) names.unshift(lbl);
+    body = acc?.parentElement?.closest('.risk-acc-body') || null;
+  }
+  // Tab-Prefix aus der aktuellen Ansicht des ANALYSE-Modals.
+  const modal = document.getElementById(ANALYSE_MODAL_ID);
+  if (!modal || !modal.contains(trig)) return null;       // vorerst nur ANALYSE-Modal
+  const tab = modal.classList.contains('view-risk') ? 'Risk' : 'Portfolio';
+  names.unshift(tab);                                      // Portfolio UND Risk (Prefix je Ansicht)
+  return names.map((n) => n.replace(/\//g, ' & ')).join(' / ');
+}
+
+function wirePanelPathTitles() {
+  if (window.__panelPathTitlesBound) return;
+  window.__panelPathTitlesBound = true;
+  document.addEventListener('panel:opened', (e) => {
+    const panel = e?.detail?.panel, panelId = e?.detail?.panelId;
+    if (!panel || !panelId) return;
+    const titleEl = panel.querySelector('.sub-panel-title');
+    if (!titleEl) return;
+    const path = _panelTriggerPath(panelId);
+    if (path) titleEl.textContent = path;
+  });
+}
+
 export function initializeTabs() {
   const map = {
     'HOME_Tab': 'HOME_Modal',
@@ -368,6 +412,7 @@ export function initializeTabs() {
   wireRiskCalcStatus();
   bindRiskAccordion();
   decorateTriggerIcons();
+  wirePanelPathTitles();
 
   // OVERVIEW: beim Oeffnen des Home-Tabs aus den (bereits gefuellten) Stores neu rendern.
   const homeTab = document.getElementById('HOME_Tab');

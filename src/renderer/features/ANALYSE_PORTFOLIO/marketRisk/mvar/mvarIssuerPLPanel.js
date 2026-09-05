@@ -6,7 +6,7 @@
 // prod_id -> ISSUER kommt aus den Portfolio-Daten (dieselbe Quelle wie Overview/Structure).
 
 import { appState } from '../../../../renderer.js';
-import { formatNumber } from '../../../../utils/tableCellFormats.js';
+import { formatNumber, kpiValue } from '../../../../utils/tableCellFormats.js';
 
 import { getCurrentMvarContext, rowMatchesMvarContext } from './mvarSelectors.js';
 import { toNumber } from './mvarTransforms.js';
@@ -122,7 +122,7 @@ function aggregateTotalForMetric(metric) {
   const isEs = String(metric).toUpperCase() === 'ES';
   const abs = Math.abs(toNumber(row?.[isEs ? 'ES_T_abs' : 'VaR_T_abs'], 0));
   const rel = Math.abs(toNumber(row?.[isEs ? 'ES_T_rel' : 'VaR_T_rel'], 0));
-  return { abs, relStr: `${rel.toLocaleString('de-DE', { maximumFractionDigits: 3 })}%` };
+  return { abs, rel };
 }
 
 // KPI-Band ueber den Charts einer Metrik (VaR/ES): Total, Top-Emittent (% vom Total),
@@ -151,9 +151,12 @@ function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
   const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp` : '–';
 
   const aggTot = aggregateTotalForMetric(cfg.metric);
+  // Absolutzahl als Verlust (negativ) via zentraler Vorlage kpiValue: "EUR -X  -Y %".
+  // valueHtml = Karte (EUR klein, Zahl gross, rel muted); value = Plain-Text fuers PDF-Band.
+  // aggTot.rel ist Prozentzahl; totalRel (Fallback) ist Bruch -> *100.
   const totalCard = aggTot
-    ? { label: `Total ${cfg.metric}`, value: `${fmtAbs(aggTot.abs)} (${aggTot.relStr})`, sub: 'portfolio total',      desc: `Portfolio ${cfg.metric} (all issuers)` }
-    : { label: `Total ${cfg.metric}`, value: `${fmtAbs(total)} (${relPct1(totalRel)})`,  sub: 'sum of contributions', desc: `Portfolio ${cfg.metric} (all issuers)` };
+    ? { label: `Total ${cfg.metric}`, valueHtml: kpiValue(-aggTot.abs, -aggTot.rel), value: kpiValue(-aggTot.abs, -aggTot.rel, { html: false }), sub: 'portfolio total',      desc: `Portfolio ${cfg.metric} (all issuers)` }
+    : { label: `Total ${cfg.metric}`, valueHtml: kpiValue(-Math.abs(total), -Math.abs(totalRel * 100)), value: kpiValue(-Math.abs(total), -Math.abs(totalRel * 100), { html: false }), sub: 'sum of contributions', desc: `Portfolio ${cfg.metric} (all issuers)` };
   const cards = [
     totalCard,
     { label: 'Top issuer',              value: relPct1(top[cfg.relKey]), sub: top.issuer || '–',            desc: `Largest ${cfg.metric} contributor` },
@@ -165,7 +168,7 @@ function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
     host.innerHTML = cards.map((c) => `
       <div class="mr-kpi-card">
         <div class="mr-kpi-card__label">${esc(c.label)}</div>
-        <div class="mr-kpi-card__value">${esc(c.value)}</div>
+        <div class="mr-kpi-card__value">${c.valueHtml || esc(c.value)}</div>
         <div class="mr-kpi-card__sub">${esc(c.sub)}</div>
         <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
       </div>`).join('');

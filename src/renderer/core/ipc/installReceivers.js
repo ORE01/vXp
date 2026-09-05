@@ -369,6 +369,15 @@ api.receive(channel, (data) => {
   route('sortedLossesIssuerMainData');
   route('lossHistogramMainData');
 
+  // ASRF (analytisches Modell): per-Issuer-Analyse + Portfolio-Summary (nur bei ASRF-Laeufen)
+  route('ASRF_IssuerAnalysisData');
+  route('ASRF_SummaryData');
+  route('ASRF_TailCurveData');
+  route('ASRF_LossHistogramData');
+
+  // MF-GC Importance Sampling: gewichtete Tail-/ES-Contributions je Issuer (nur bei IS-Laeufen).
+  route('MFGC_IssuerTailData');
+
   // ML
 
   // TS

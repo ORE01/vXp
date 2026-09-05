@@ -338,7 +338,9 @@
 #panel-performance-dashboard .conc-kpi__lbl,
 #panel-performance .conc-kpi__lbl,
 #panel-liquidity-dash .conc-kpi__lbl,
-#panel-sensitivities .conc-kpi__lbl {
+#panel-sensitivities .conc-kpi__lbl,
+#panel-EAD .conc-kpi__lbl,
+#panel-asrf .conc-kpi__lbl {
   font-size: 12px; font-weight: 700; color: var(--text-bright);
   margin-top: 0; margin-bottom: 5px;
 }
@@ -514,6 +516,11 @@
 }
 #panel-market-dashboard .mr-kpi-card { --mr-kpi-accent: #2A7F7F; }
 #panel-credit-dashboard .mr-kpi-card { --mr-kpi-accent: #7A5C91; }
+/* Zentrale Rand-Einfaerbung je Metrik (nur der feine 1px-Rahmen, KEIN oberer
+   Akzentstreifen) - analog zu den Credit-EC-KPIs (.cr-kpi-card--* in creditRisk.css).
+   Wiederverwendbar fuer jede .mr-kpi-card. VaR orange, ES rot (wie die Chart-Serien). */
+.mr-kpi-card--var { border-color: rgba(255, 150, 0, 0.98); }
+.mr-kpi-card--es  { border-color: rgba(255, 0, 0, 0.95); }
 /* Inhalt der Dashboard-KPI-Karten etwas nach rechts geschoben. */
 #panel-market-dashboard .mr-kpi-card,
 #panel-credit-dashboard .mr-kpi-card { padding-left: 26px; }
@@ -528,11 +535,15 @@
 #panel-market-dashboard .mr-kpi-card__value,
 #panel-credit-dashboard .mr-kpi-card__value { font-size: 18px; font-weight: 600; color: var(--text-bright); }
 .mr-kpi-card__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+/* Profit/Loss-KPI-Labels sind ganze Saetze ("Market Value at Risk: <Name>") -> Normalschrift. */
+#mvarPLKpi .mr-kpi-card__label { text-transform: none; letter-spacing: normal; }
 .mr-kpi-card__value { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-top: 8px; }
 .mr-kpi-card__value .mr-amp-dot { width: 11px; height: 11px; margin-left: 8px; vertical-align: middle; }
 /* Voller Kennzahl-Name klein unter dem Wert (Value at Risk, Expected Shortfall, ...). */
 .mr-kpi-card__full { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .mr-kpi-card__sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+/* Aenderungszeile (nach abs+rel) im NAV-KPI-Stil: Kreis-Pfeil-Badge + abs.Aenderung · rel.Aenderung. */
+.mr-kpi-card__chg { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 3px; white-space: nowrap; }
 /* Zusatz-Zeilen in einer KPI-Karte (z.B. IR/CS/Vega unter dem Total) */
 .mr-kpi-card__rows { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; }
 .mr-kpi-row-line { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; color: var(--text-secondary); }

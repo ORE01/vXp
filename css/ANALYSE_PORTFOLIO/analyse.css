@@ -89,6 +89,13 @@
   width: calc(var(--trigger-max-width) - 54px);
 }
 
+/* Level-5 leaves (z.B. Credit Risk ▸ Economic Capital ▸ Internal Model · MF-GC ▸
+   historic PD / market adjusted PD / Loss Distribution): noch einen Schritt tiefer. */
+#ANALYSE_Modal .section-trigger--sub.risk-acc--l5 {
+  margin-left: 72px;
+  width: calc(var(--trigger-max-width) - 72px);
+}
+
 /* Chevron points down when a group is expanded. */
 #ANALYSE_Modal .risk-acc.is-expanded > .risk-acc-toggle .chev::before {
   transform: rotate(90deg);

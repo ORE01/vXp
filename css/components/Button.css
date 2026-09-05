@@ -43,6 +43,21 @@
   margin-bottom: 0;
 }
 
+/* Zentrale Berechnung nur noch ueber das Calculate-Menue oben rechts (toolbarCalcMenu).
+   Die Panel-Rechen-Buttons bleiben im DOM (die Menue-Buttons proxien sie per .click() an),
+   werden aber ausgeblendet. Betrifft Portfolio (fairValueButton), Market Risk (mvaRDistButton)
+   und Credit Risk (CVaRButton + market-adjusted CVaRButtonCurrent). OFFERS-Rechen-Buttons
+   (fairValueButton2/3) bleiben sichtbar. !important schlaegt das display:inline-block unten. */
+#fairValueButton,
+#mvaRDistButton,
+#CVaRButton,
+#CVaRButtonCurrent { display: none !important; }
+
+/* Der Wrapper des ausgeblendeten Recalculate-Buttons (Select Portfolio) darf keine leere
+   Luecke zwischen dem Portfolio-Dropdown und den Sub-Triggern hinterlassen -> mit ausblenden.
+   Gilt in Portfolio UND Risk (dieselbe Select-Portfolio-Gruppe). */
+.risk-select-inline:has(#fairValueButton) { display: none !important; }
+
 .edit-button {
   background-color: var(--accent);
   border: none;

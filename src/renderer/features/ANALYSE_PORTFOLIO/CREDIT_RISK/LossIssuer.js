@@ -345,12 +345,44 @@ export function getRunConfQuantil() {
 export function creditVarEsForFlag(port, flag) {
   const p = String(port ?? '').trim();
   const fl = String(flag ?? '').toUpperCase();
+
+  // Importance Sampling: unter IS sind die rohen sortedLosses stress-verschoben und die
+  // QUANTIL-Spalte ist RANG-basiert (ungewichtet). Ein Neu-Quantilen der Rohzeilen liefert
+  // dann das ~10.-groesste ROH-Szenario (massiv zu hoch, z.B. 60 Mio. statt 9 Mio.).
+  // -> Unter IS die GEWICHTETEN Werte aus der CreditVaR-Tabelle (results_rel) verwenden.
+  // Signal: MFGC_IssuerTail ist NUR bei IS-Laeufen fuer dieses Portfolio befuellt (bei
+  // Standard-Laeufen wird sie portweise geleert).
+  // Gespeicherte CreditVaR-Zeile (results_rel) fuer dieses Portfolio + Flag. Dient als
+  // schneller IS-Wert UND als robuster Fallback, falls die Loss-Verteilung (sortedLosses)
+  // (noch) nicht geladen ist (z.B. im PDF-/Report-Kontext) -> nie leere EC/VaR/ES.
+  const storedCv = () => (appState.getAllCvarData?.() || []).find(
+    r => String(r?.port_name ?? '').trim() === p &&
+         String(r?.pd_flag ?? '').toUpperCase() === fl &&
+         r?.VaR_rel != null);
+  const fromCv = (cv) => ({
+    pd_flag: fl,
+    VaR_abs: Number(cv.VaR_abs), VaR_rel: Number(cv.VaR_rel),
+    ES_abs: Number(cv.ES_abs), ES_rel: Number(cv.ES_rel),
+  });
+
+  // Importance Sampling: unter IS sind die rohen sortedLosses stress-verschoben und die
+  // QUANTIL-Spalte ist RANG-basiert -> Neu-Quantilen der Rohzeilen waere massiv zu hoch.
+  // Signal: MFGC_IssuerTail ist nur bei IS-Laeufen fuer dieses Portfolio befuellt.
+  const isActive = (appState.getMfgcIssuerTail?.() || []).some(
+    r => String(r?.port_name ?? '').trim() === p);
+  if (isActive) {
+    const cv = storedCv();
+    if (cv) return fromCv(cv);
+  }
+
   const confQ = getRunConfQuantil();
   const rows = (appState.getAllLossData?.() || []).filter(r =>
     String(r?.port_name ?? '').trim() === p &&
     String(r?.pd_flag ?? '').toUpperCase() === fl &&
     Number.isFinite(Number(r.QUANTIL)) && Number.isFinite(Number(r.LOSS)));
-  if (!rows.length) return null;
+  // Loss-Verteilung nicht (mehr) geladen -> auf die gespeicherte CreditVaR-Zeile zurueckfallen
+  // statt null (verhindert fehlende EC/VaR/ES im Panel/PDF).
+  if (!rows.length) { const cv = storedCv(); return cv ? fromCv(cv) : null; }
   let varRow = rows[0], best = Infinity;
   for (const r of rows) { const d = Math.abs(Number(r.QUANTIL) - confQ); if (d < best) { best = d; varRow = r; } }
   const varAbs = Number(varRow.LOSS);

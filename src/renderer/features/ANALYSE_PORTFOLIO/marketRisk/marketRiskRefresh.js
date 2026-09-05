@@ -21,6 +21,8 @@ import { syncMvarViewDropdowns } from './mvar/mvarViewScenario.js';
 let sensitivitiesListenerInstalled = false;
 let sensitivityTabsInitialized = false;
 let marketRiskBackingTablesFetchRequested = false;
+// Letzter geladener FactorPL-Kontext ("port|scenario") -> nur bei Wechsel neu laden.
+let _lastFactorPlFetchKey = null;
 
 function normalizePortfolioName(portName) {
   return String(portName ?? '')
@@ -123,13 +125,23 @@ export function createMarketRiskRefresh({ appState } = {}) {
     // Load backing tables from DB only once per renderer session.
     // Important: refreshMarketRiskUI is a render function. If it fetches on every render,
     // the async data response can trigger another render and create a render/fetch loop.
+    // MarketVaR_Product: einmal pro Session laden (klein).
     if (!marketRiskBackingTablesFetchRequested) {
       marketRiskBackingTablesFetchRequested = true;
-
-      window.api?.send?.('fetch-table-data', 'MarketVaR_FactorPL');
       window.api?.send?.('fetch-table-data', 'MarketVaR_Product');
+      console.log('[marketRiskRefresh] product backing table fetch requested once');
+    }
 
-      console.log('[marketRiskRefresh] backing table fetch requested once');
+    // MarketVaR_FactorPL: NUR den aktuellen (port, scenario, juengstes asof) laden statt der
+    // gesamten Tabelle (~208k Zeilen -> ~10k). Neu laden nur bei Kontextwechsel; beim selben
+    // Kontext KEIN erneuter Fetch (verhindert Fetch/Render-Loop).
+    const _facCtxKey = `${port}|${appState.selectedMvarInterval ?? ''}`;
+    if (_lastFactorPlFetchKey !== _facCtxKey) {
+      _lastFactorPlFetchKey = _facCtxKey;
+      window.api?.send?.('fetch-mvar-factorpl', {
+        port_name: port,
+        scenario_name: appState.selectedMvarInterval,
+      });
     }
 
     const allMvar = appState.getAllMvarData?.() || [];
@@ -146,30 +158,36 @@ export function createMarketRiskRefresh({ appState } = {}) {
       selectedScenario: scenario,
     });
 
+    // ZEITMESSUNG: zeigt in der Konsole, welcher Render-Schritt beim (Factors-)Panel-Open
+    // die Zeit kostet. Danach koennen wir gezielt genau den Schritt optimieren.
+    const _t = (label, fn) => { const s = performance.now(); try { fn(); } finally { console.log(`[mvarUI] ${label}: ${Math.round(performance.now() - s)}ms`); } };
+    console.time('[mvarUI] refreshMarketRiskUI total');
+
     if (Array.isArray(allMvar) && allMvar.length) {
-      handleMVaRData(allMvar, index);
+      _t('handleMVaRData (KPIs)', () => handleMVaRData(allMvar, index));
     } else {
       console.warn('[marketRiskRefresh] no aggregate MVaR data in store', {
         port,
       });
     }
 
-    handleMVaRFactorPLData(
+    _t('handleMVaRFactorPLData (Factors)', () => handleMVaRFactorPLData(
       Array.isArray(factorRows) ? factorRows : []
-    );
+    ));
 
     // Legacy / summary renderers first.
     // Important: these may touch product containers.
-    handleSummaryMarketRiskData(port, scenario, null);
+    _t('handleSummaryMarketRiskData (Dist)', () => handleSummaryMarketRiskData(port, scenario, null));
 
     // ProductPL must render LAST.
     // It owns the Product VaR detail panel chart/table after refresh.
-    handleMVaRProductPLData(
+    _t('handleMVaRProductPLData (Product)', () => handleMVaRProductPLData(
       Array.isArray(productRows) ? productRows : []
-    );
+    ));
 
     // Market-Risk-Dashboard (KPI-Karten) aus derselben Aggregat-Zeile aktualisieren.
-    try { renderMarketRiskDashboard(); } catch (e) { console.warn('[marketRiskRefresh] dashboard render failed', e); }
+    try { _t('renderMarketRiskDashboard', () => renderMarketRiskDashboard()); } catch (e) { console.warn('[marketRiskRefresh] dashboard render failed', e); }
+    console.timeEnd('[mvarUI] refreshMarketRiskUI total');
 
     // Ansichts-Szenario-Dropdowns (in jedem Panel) mit den gerechneten Szenarien
     // befuellen + auf das aktuelle View-Szenario synchronisieren (Default ROLLING_1).

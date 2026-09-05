@@ -647,11 +647,20 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
     const tablesToRefresh = [
       'EAD',
+      // MFGC_IssuerTail VOR CreditVaR refreshen: der Renderer erkennt daran den IS-Lauf und
+      // zeigt beim KPI-Render sofort die gewichteten VaR/ES statt der rohen Sorted-Loss-Quantile.
+      'MFGC_IssuerTail',
       'CreditVaR',
       'sortedLossesMain',
       'sortedLossesIssuerMain',
       'sortedLossesIndicesMain',
-      'lossHistogramMain'
+      'lossHistogramMain',
+      // ASRF-only: analytische per-Issuer-Analyse + Portfolio-Summary + Tail-Loss-Kurve.
+      // Bei MF_GC leer/ungeschrieben.
+      'ASRF_IssuerAnalysis',
+      'ASRF_Summary',
+      'ASRF_TailCurve',
+      'ASRF_LossHistogram'
     ];
 
     if (!tableName || !CSSzenario || !cvarName) {

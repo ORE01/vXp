@@ -276,19 +276,32 @@ let _riskLastData = null;
 let _riskLastOptions = null;
 
 
-let historicMarketRiskChart = null;
-let historicMarketRiskRafId = null;
-let historicCreditRiskChart = null;
+// Pro Canvas eigene Chart-Instanz + rAF-Handle -> der Market-Risk-History-Chart kann in MEHREREN
+// Panels unabhaengig laufen (Risk History + Profit/Loss-Kopie).
+const _mktRiskChartByCanvas = {};
+const _mktRiskRafByCanvas = {};
+const _creditRiskChartByCanvas = {};   // pro Canvas eigene Instanz (Risk History + EC-Kopie)
 let historicPortfolioYieldChart = null;
 let historicPortfolioSensChart = null;
 let historicPortfolioValueChart = null;
 
 
-function renderHistoricMarketRiskChart(historyData) {
+function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRiskChart", opts = {}) {
   historyData = Array.isArray(historyData) ? historyData : [];
 
+  // Der eingebettete P&L-Chart (Titel "How has market risk evolved over time?") nur zeigen,
+  // wenn fuer das AKTUELL EINGESTELLTE Portfolio ueberhaupt Market-Risk-History vorliegt
+  // (PortfolioHistoryMetrics). historyData ist bereits aufs gewaehlte Portfolio gefiltert.
+  // Die anderen Canvas-IDs (Factors/Original) haben keinen solchen Wrapper -> unberuehrt.
+  const setPanelVisible = (visible) => {
+    if (canvasId !== "plMarketRiskHistChart") return;
+    const panel = document.getElementById("plMarketRiskHistPanel");
+    if (panel) panel.style.display = visible ? "" : "none";
+  };
+
   if (historyData.length === 0) {
-    destroyChartByCanvasId("historicMarketRiskChart");
+    setPanelVisible(false);
+    destroyChartByCanvasId(canvasId);
     return;
   }
 
@@ -326,21 +339,33 @@ function renderHistoricMarketRiskChart(historyData) {
     readPctSeries(row, ["M_ES_CS_PCT", "M_ES_CS_pct", "MES_CS_PCT"])
   );
 
-  // 🔁 Falls schon ein Render-Loop läuft → abbrechen
-  if (historicMarketRiskRafId != null) {
-    cancelAnimationFrame(historicMarketRiskRafId);
-    historicMarketRiskRafId = null;
+  // P&L-Chart: Zeilen vorhanden, aber keine echten MVaR/ES-Werte fuers Portfolio -> Panel
+  // ausblenden (analog Credit-Chart). Nur fuer die eingebettete P&L-Kopie mit eigenem Wrapper.
+  if (canvasId === "plMarketRiskHistChart") {
+    const hasMarketData =
+      mvarAllPct.some(v => v != null) || mesAllPct.some(v => v != null);
+    if (!hasMarketData) {
+      setPanelVisible(false);
+      destroyChartByCanvasId(canvasId);
+      return;
+    }
+    setPanelVisible(true);
   }
 
-  // ♻️ Alte Chart-Instanz einmalig vernichten
-  if (historicMarketRiskChart) {
-    console.log("♻️ Destroy existing historicMarketRiskChart instance");
+  // 🔁 Falls schon ein Render-Loop läuft → abbrechen
+  if (_mktRiskRafByCanvas[canvasId] != null) {
+    cancelAnimationFrame(_mktRiskRafByCanvas[canvasId]);
+    _mktRiskRafByCanvas[canvasId] = null;
+  }
+
+  // ♻️ Alte Chart-Instanz (dieser Canvas) einmalig vernichten
+  if (_mktRiskChartByCanvas[canvasId]) {
     try {
-      historicMarketRiskChart.destroy();
+      _mktRiskChartByCanvas[canvasId].destroy();
     } catch (err) {
-      console.error("⚠️ Fehler beim Destroy von historicMarketRiskChart:", err);
+      console.error("⚠️ Fehler beim Destroy von", canvasId, err);
     } finally {
-      historicMarketRiskChart = null;
+      _mktRiskChartByCanvas[canvasId] = null;
     }
   }
 
@@ -407,7 +432,38 @@ function renderHistoricMarketRiskChart(historyData) {
     ]
   };
 
+  // Optionaler Serien-Filter (z.B. nur "MVaR All (%)" + "M ES All (%)" im Profit/Loss-Panel).
+  if (Array.isArray(opts.onlyLabels) && opts.onlyLabels.length) {
+    data.datasets = data.datasets.filter((ds) => opts.onlyLabels.includes(ds.label));
+  }
+
+  // Optionale Farb-Ueberschreibung je Serie (z.B. Profit/Loss: VaR rot, ES orange wie in den
+  // Verteilungscharts). Greift auf den Originalnamen (vor labelMap).
+  if (opts.colorMap && typeof opts.colorMap === "object") {
+    data.datasets.forEach((ds) => {
+      const c = opts.colorMap[ds.label];
+      if (!c) return;
+      if (c.border) ds.borderColor = c.border;
+      if ("bg" in c) ds.backgroundColor = c.bg;
+    });
+  }
+
+  // Optionale Umbenennung der Legenden-Labels (z.B. Profit/Loss-Panel: sprechende Namen
+  // "VaR 95% · 10d" statt des kryptischen "MVaR All (%)"). Greift NACH dem Filter, damit
+  // onlyLabels weiter auf den Originalnamen matcht.
+  if (opts.labelMap && typeof opts.labelMap === "object") {
+    data.datasets.forEach((ds) => {
+      if (ds.label in opts.labelMap) ds.label = opts.labelMap[ds.label];
+    });
+  }
+
   const options = createPercentChartOptions("MVaR / ES Metrics (%)");
+  // Legende nach RECHTS (untereinander) statt als Zeile oben — gilt fuer Profit/Loss- und
+  // Factors-Chart. Kleine, leicht abgerundete Symbole wie im Yield-History-Chart.
+  options.plugins.legend = {
+    display: true, position: "right",
+    labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } },
+  };
 
   _riskLastData = data;
   _riskLastOptions = options;
@@ -416,13 +472,13 @@ function renderHistoricMarketRiskChart(historyData) {
   let tries = 0;
 
   const tryRender = () => {
-    const canvas = document.getElementById("historicMarketRiskChart");
+    const canvas = document.getElementById(canvasId);
 
     if (!canvas) {
       if (++tries < maxTries) {
-        historicMarketRiskRafId = requestAnimationFrame(tryRender);
+        _mktRiskRafByCanvas[canvasId] = requestAnimationFrame(tryRender);
       } else {
-        console.warn("❌ historicMarketRiskChart canvas not found after retries");
+        console.warn("❌ canvas not found after retries:", canvasId);
       }
       return;
     }
@@ -432,9 +488,9 @@ function renderHistoricMarketRiskChart(historyData) {
 
     if (w === 0 || h === 0) {
       if (++tries < maxTries) {
-        historicMarketRiskRafId = requestAnimationFrame(tryRender);
+        _mktRiskRafByCanvas[canvasId] = requestAnimationFrame(tryRender);
       } else {
-        console.warn("❌ historicMarketRiskChart canvas has 0 size after retries", { w, h });
+        console.warn("❌ canvas has 0 size after retries:", canvasId, { w, h });
       }
       return;
     }
@@ -446,34 +502,39 @@ function renderHistoricMarketRiskChart(historyData) {
           ? window.Chart.getChart(canvas)
           : null;
 
-      if (existingChart && existingChart !== historicMarketRiskChart) {
-        console.log("♻️ Destroy chart from Chart.js registry");
+      if (existingChart && existingChart !== _mktRiskChartByCanvas[canvasId]) {
         existingChart.destroy();
       }
 
-      historicMarketRiskChart = createTimeSeriesChart(
-        "historicMarketRiskChart",
+      _mktRiskChartByCanvas[canvasId] = createTimeSeriesChart(
+        canvasId,
         data,
         options,
         "line"
       );
 
-      if (!historicMarketRiskChart) {
-        console.warn("❌ createTimeSeriesChart returned null/undefined");
+      if (!_mktRiskChartByCanvas[canvasId]) {
+        console.warn("❌ createTimeSeriesChart returned null/undefined for", canvasId);
         return;
       }
 
-      historicMarketRiskChart.resize();
-      historicMarketRiskChart.update();
+      _mktRiskChartByCanvas[canvasId].resize();
+      _mktRiskChartByCanvas[canvasId].update();
+
+      // "Reset Zoom"-Button wie bei den anderen History-Charts (Yield/Value/Credit).
+      // Zoom ist ueber createPercentChartOptions aktiv; ohne diesen Aufruf fehlt der
+      // Button. Gilt fuer alle Canvas-IDs (Original + Kopien plMarketRiskHistChart /
+      // factorsMarketRiskHistChart).
+      ensureZoomResetButton(canvasId);
     } catch (err) {
-      console.error("💥 Fehler beim Erzeugen von historicMarketRiskChart:", err);
+      console.error("💥 Fehler beim Erzeugen von", canvasId, err);
     } finally {
       // Render-Loop ist erledigt
-      historicMarketRiskRafId = null;
+      _mktRiskRafByCanvas[canvasId] = null;
     }
   };
 
-  historicMarketRiskRafId = requestAnimationFrame(tryRender);
+  _mktRiskRafByCanvas[canvasId] = requestAnimationFrame(tryRender);
 }
 
 // function renderHistoricMarketRiskChart(historyData) {
@@ -632,11 +693,23 @@ function renderHistoricMarketRiskChart(historyData) {
 // }
 
 
-function renderHistoricCreditRiskChart(historyData) {
+function renderHistoricCreditRiskChart(historyData, canvasId = "historicCreditRiskChart") {
   historyData = Array.isArray(historyData) ? historyData : [];
 
+  // Die eingebettete EC-Kopie (Titel "How has credit risk evolved over time?") nur zeigen,
+  // wenn fuer das AKTUELL EINGESTELLTE Portfolio ueberhaupt Credit-History-Daten vorliegen.
+  // historyData ist bereits auf das gewaehlte Portfolio (port_name) gefiltert -> es reicht,
+  // hier auf echte Credit-VaR/ES-Werte zu pruefen (derzeit nur UNI). Das Original in
+  // panel-credit-risk hat keinen solchen Wrapper -> dort nichts aus-/einblenden.
+  const setPanelVisible = (visible) => {
+    if (canvasId !== "plCreditRiskHistChart") return;
+    const panel = document.getElementById("plCreditRiskHistPanel");
+    if (panel) panel.style.display = visible ? "" : "none";
+  };
+
   if (historyData.length === 0) {
-    destroyChartByCanvasId("historicMarketRiskChart");
+    setPanelVisible(false);
+    destroyChartByCanvasId(canvasId);
     return;
   }
 
@@ -674,32 +747,43 @@ function renderHistoricCreditRiskChart(historyData) {
     "C_ES[0]:", cEsPct[0]
   );
 
-  if (historicCreditRiskChart) {
-    console.log("♻️ Destroy existing historicCreditRiskChart instance");
+  // Ohne echte Credit-VaR/ES-Werte fuer dieses Portfolio: Panel ausblenden (derzeit nur UNI).
+  const hasCreditData = cVarPct.some(v => v != null) || cEsPct.some(v => v != null);
+  if (!hasCreditData) {
+    setPanelVisible(false);
+    destroyChartByCanvasId(canvasId);
+    return;
+  }
+  setPanelVisible(true);
+
+  if (_creditRiskChartByCanvas[canvasId]) {
     try {
-      historicCreditRiskChart.destroy();
+      _creditRiskChartByCanvas[canvasId].destroy();
     } catch (err) {
-      console.error("⚠️ Fehler beim Destroy von historicCreditRiskChart:", err);
+      console.error("⚠️ Fehler beim Destroy von", canvasId, err);
     }
+    _creditRiskChartByCanvas[canvasId] = null;
   }
 
   const data = {
     labels: sortedData.map(row => row.DATE),
     datasets: [
       {
-        label: "C VaR (%)",
+        // VaR orange, ES rot - dieselben Farben wie im Market-Chart "How has market risk evolved
+        // over time?" und in den Verteilungscharts. Credit-Konfidenz = 99% (siehe Credit-KPIs).
+        label: "Credit VaR 99%",
         data: cVarPct,
-        borderColor: "rgba(54, 162, 235, 1)",
-        backgroundColor: "rgba(54, 162, 235, 0.15)",
+        borderColor: "rgba(255,150,0,0.98)",
+        backgroundColor: "rgba(255,150,0,0.15)",
         borderWidth: 2,
         pointRadius: 2,
         tension: 0.2
       },
       {
-        label: "C ES (%)",
+        label: "Expected Shortfall 99%",
         data: cEsPct,
-        borderColor: "rgba(54, 162, 235, 1)",
-        backgroundColor: "rgba(54, 162, 235, 0.0)",
+        borderColor: "rgba(255,0,0,0.95)",
+        backgroundColor: "rgba(255,0,0,0.15)",
         borderWidth: 2,
         pointRadius: 2,
         tension: 0.2,
@@ -709,18 +793,25 @@ function renderHistoricCreditRiskChart(historyData) {
   };
 
   const options = createPercentChartOptions("Credit VaR / ES (%)");
+  // Legende nach RECHTS (untereinander) wie im Market-Chart "How has market risk evolved over time?".
+  options.plugins.legend = {
+    display: true, position: "right",
+    labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } },
+  };
 
   try {
-    historicCreditRiskChart = createTimeSeriesChart(
-      "historicCreditRiskChart",
+    _creditRiskChartByCanvas[canvasId] = createTimeSeriesChart(
+      canvasId,
       data,
       options,
       "line"
     );
-    //console.log("✅ historicCreditRiskChart rendered with", sortedData.length, "points");
   } catch (err) {
-    console.error("💥 Fehler beim Erzeugen von historicCreditRiskChart:", err);
+    console.error("💥 Fehler beim Erzeugen von", canvasId, err);
   }
+  // "Reset Zoom"-Button wie bei den anderen History-Charts (Yield/Value). Zoom ist ueber
+  // createPercentChartOptions aktiv; ohne diesen Aufruf fehlt der Button zum Zuruecksetzen.
+  ensureZoomResetButton(canvasId);
 }
 // Vergleichs-Zinsreihe im "How is the yield developing?"-Chart (perfHistYieldChart) ist
 // per Dropdown waehlbar. Kandidaten -> nur die, die in tblTS wirklich vorhanden sind,
@@ -1323,6 +1414,104 @@ export function rerenderHistoricCharts({ keys = null } = {}) {
   renderHistoricCharts(keys, histForPort);
   try { renderPerformanceHistoryCopies(); } catch {}
 }
+
+// History-Charts ZUSAETZLICH in den Profit/Loss- bzw. Economic-Capital-Panels (eigene Canvas-IDs
+// -> keine Kollision mit den Originalen in Risk History):
+//  - panel-market  -> Market-Risk-History (MVaR/ES) unter die Verteilungscharts.
+//  - panel-credit  -> Credit-Risk-History (Credit VaR/ES) unten im EC-Panel (historic PD).
+// Beim Oeffnen mit der Portfolio-History des gewaehlten Ports fuellen.
+// Sprechende Legenden-Labels fuer die eingebetteten Market-Risk-History-Charts (statt des
+// kryptischen "MVaR All (%)"). Profit/Loss: nur Gesamt. Factors: zusaetzlich nach Risikofaktor
+// (Total = All, IR = Interest Rate, CS = Credit Spread).
+const PL_MKT_LABEL_MAP = {
+  'MVaR All (%)': 'VaR 95% · 10d',
+  'M ES All (%)': 'Expected Shortfall 95% · 10d',
+};
+// VaR orange, ES rot - dieselben Farben wie die VaR-/ES-Linien in den Verteilungscharts.
+const PL_MKT_COLOR_MAP = {
+  'MVaR All (%)': { border: 'rgba(255,150,0,0.98)', bg: 'rgba(255,150,0,0.15)' },
+  'M ES All (%)': { border: 'rgba(255,0,0,0.95)',   bg: 'rgba(255,0,0,0.15)' },
+};
+const FACTORS_MKT_LABEL_MAP = {
+  'MVaR All (%)': 'VaR 95% · 10d (Total)',
+  'MVaR IR (%)':  'VaR 95% · 10d (IR)',
+  'MVaR CS (%)':  'VaR 95% · 10d (CS)',
+  'M ES All (%)': 'Expected Shortfall 95% · 10d (Total)',
+  'M ES IR (%)':  'Expected Shortfall 95% · 10d (IR)',
+  'M ES CS (%)':  'Expected Shortfall 95% · 10d (CS)',
+};
+
+document.addEventListener('panel:opened', (e) => {
+  const pid = e?.detail?.panelId;
+  if (pid !== 'panel-market' && pid !== 'panel-credit' && pid !== 'panel-mvar') return;
+  try {
+    const sel = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const hist = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === sel);
+    if (pid === 'panel-market') {
+      // Profit/Loss: nur die Gesamt-Serien (MVaR All + M ES All).
+      renderHistoricMarketRiskChart(hist, 'plMarketRiskHistChart', {
+        onlyLabels: ['MVaR All (%)', 'M ES All (%)'],
+        labelMap: PL_MKT_LABEL_MAP,
+        colorMap: PL_MKT_COLOR_MAP,
+      });
+    } else if (pid === 'panel-mvar') {
+      // Factors: voller Chart mit ALLEN Zeitreihen (All/IR/CS je VaR + ES).
+      renderHistoricMarketRiskChart(hist, 'factorsMarketRiskHistChart', { labelMap: FACTORS_MKT_LABEL_MAP });
+    } else {
+      renderHistoricCreditRiskChart(hist, 'plCreditRiskHistChart');
+    }
+  } catch (err) { console.warn('[PL] history chart copy failed', pid, err); }
+});
+
+// Eingebettete Risk-History-Line-Charts fuer EIN Portfolio (neu) rendern:
+//   - Profit & Loss:      "How has market risk evolved over time?" (plMarketRiskHistChart)
+//   - Economic Capital:   "How has credit risk evolved over time?" (plCreditRiskHistChart)
+// Wird vom Portfolio-Orchestrator (renderPortTable) bei JEDEM Portfolio-Wechsel mit dem
+// AUTHORITATIVEN port_name aufgerufen -> zuverlaessig. (Das frueher genutzte Event
+// 'portfolio-context-changed' feuert nur bei previous!==next und war je nach Wechsel-Pfad
+// unzuverlaessig -> Sichtbarkeit hing "einen Wechsel hinterher".)
+// Nur rendern, wenn das jeweilige Panel offen ist (sonst 0-Size-Canvas). Die Render-Funktionen
+// blenden #plMarketRiskHistPanel / #plCreditRiskHistPanel je nach Datenlage selbst ein/aus.
+export function renderEmbeddedRiskHistoryCharts(portName) {
+  try {
+    const sel = String(portName ?? appState.getSelectedPortTableName?.() ?? '').trim();
+    const hist = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === sel);
+    if (document.getElementById('panel-market')?.classList.contains('open')) {
+      renderHistoricMarketRiskChart(hist, 'plMarketRiskHistChart', {
+        onlyLabels: ['MVaR All (%)', 'M ES All (%)'],
+        labelMap: PL_MKT_LABEL_MAP,
+        colorMap: PL_MKT_COLOR_MAP,
+      });
+    }
+    if (document.getElementById('panel-credit')?.classList.contains('open')) {
+      renderHistoricCreditRiskChart(hist, 'plCreditRiskHistChart');
+    }
+  } catch (e) { console.warn('[hist] embedded risk-history portfolio-switch refresh failed', e); }
+}
+
+// Nach jedem (Neu-)Laden der PortfolioHistoryMetrics (z.B. "Save to Historic Metrics")
+// ALLE darauf basierenden Charts refreshen: die Original-History-Charts (rerenderHistoricCharts,
+// inkl. Performance-Kopien) + die eingebetteten Kopien in Profit/Loss, Factors und Economic
+// Capital - letztere nur, wenn ihr Panel gerade sichtbar ist (sonst 0-Size-Render / RAF-Loop;
+// beim naechsten Oeffnen zeichnet der panel:opened-Listener ohnehin neu).
+document.addEventListener('portfolio-history-updated', () => {
+  try { rerenderHistoricCharts(); } catch (e) { console.warn('[hist] rerender originals failed', e); }
+  try {
+    const sel = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const hist = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === sel);
+    const vis = (id) => { const c = document.getElementById(id); return !!(c && c.offsetParent !== null); };
+    if (vis('plMarketRiskHistChart')) renderHistoricMarketRiskChart(hist, 'plMarketRiskHistChart', {
+      onlyLabels: ['MVaR All (%)', 'M ES All (%)'],
+      labelMap: PL_MKT_LABEL_MAP,
+      colorMap: PL_MKT_COLOR_MAP,
+    });
+    if (vis('factorsMarketRiskHistChart')) renderHistoricMarketRiskChart(hist, 'factorsMarketRiskHistChart', { labelMap: FACTORS_MKT_LABEL_MAP });
+    if (vis('plCreditRiskHistChart')) renderHistoricCreditRiskChart(hist, 'plCreditRiskHistChart');
+  } catch (e) { console.warn('[hist] embedded copy refresh failed', e); }
+});
 
 // Kopien der Yield- + Value-History-Charts fuer das Panel "Performance -> History"
 // (eigene Canvas-IDs, damit KEINE ID-Kollision mit den Originalen in Risk History).

@@ -88,8 +88,14 @@ import { handleModalAction } from './core/ui/modal/modalActions.js';
 // tsEU1YChart (createLineChart) setzen, damit ALLE Charts lesbar sind. Charts mit
 // eigener color-Angabe ueberschreiben das weiterhin. Einmalig, vor dem ersten Chart.
 try {
-  if (window.Chart?.defaults) window.Chart.defaults.color = 'rgb(161, 160, 160)';
-} catch (e) { console.warn('[renderer] Chart.defaults.color setzen fehlgeschlagen', e); }
+  if (window.Chart?.defaults) {
+    window.Chart.defaults.color = 'rgb(161, 160, 160)';
+    // Animationen global aus: bei Panels mit vielen Charts (z.B. Factors -> refreshMarketRiskUI
+    // rendert ~10 Charts auf einmal) kostet das sichtbare "Rein-Animieren" spuerbar Ladezeit.
+    // Datencharts sollen sofort stehen. (Einzelne Charts koennen es lokal wieder aktivieren.)
+    window.Chart.defaults.animation = false;
+  }
+} catch (e) { console.warn('[renderer] Chart.defaults setzen fehlgeschlagen', e); }
 
 const APP_ROOT = document.getElementById('app-root');
 const REPORT_ROOT = document.getElementById('report-root');

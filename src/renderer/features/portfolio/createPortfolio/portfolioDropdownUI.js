@@ -268,12 +268,14 @@ if (isPortfolio && (safeIndex === 1 || safeIndex === 2)) {
     updateLiquidityDataFunction(filteredData, safeIndex);
   }
 
-  if (typeof updateMvarDataFunction === 'function') {
-    const m = (appState.getAllMvarData?.() || []).filter(
-      e => String(e?.port_name) === String(dropdownElement.value)
-    );
-    updateMvarDataFunction(m, safeIndex);
-  }
+  // NICHT den MVaR-Distribution-Store beim Portfolio-Wechsel ueberschreiben!
+  // updateMvarDataFunction ist an updateMvarDistData (Distribution-Store) verdrahtet, wurde hier
+  // aber mit getAllMvarData() (AGGREGAT-Daten, ~3 Zeilen/Portfolio) gefuettert. Mit setMvarDistData
+  // = REPLACE haette das die volle Verteilung (MarketVaR_Dist, alle Portfolios) auf ein paar
+  // Aggregat-Zeilen reduziert -> beim Wechsel keine Balken. Der Distribution-Store wird korrekt nur
+  // aus MarketVaR_Dist befuellt und in handleSummaryMarketRiskData via getMvarDistData({port_name})
+  // beim Lesen nach Portfolio gefiltert. Daher: hier bewusst KEIN Dist-Store-Update.
+  void updateMvarDataFunction;
 
 if (typeof updateCvarDataFunction === 'function') {
   const c = (appState.getAllCvarData?.() || []).filter(

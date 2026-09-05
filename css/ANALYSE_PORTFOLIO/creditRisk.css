@@ -455,6 +455,35 @@
 #panel-credit .cr-tail-tile canvas,
 #panel-credit-current .cr-tail-tile canvas{ display:block; width:100% !important; height:240px !important; }
 
+/* ASRF-Panels: gleicher Kachel-Look (grau hinterlegt) fuer ALLE Kacheln. KEINE Canvas-Hoehen-
+   Ueberschreibung, da die ASRF-Charts responsive in eigenen position:relative-Wrappern sitzen. */
+#panel-asrf .cr-tail-tile,
+#panel-asrf-norm .cr-tail-tile{
+  background: var(--panel-surface, #0f0f10);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,.08));
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* ASRF-KPI: farbige Umrandungen (EL weiss, EC violett, VaR orange, ES rot) + +/=/→-Connectoren,
+   wie im Internal Model. Groesserer Grid-Gap, damit die Connectoren dazwischen passen. */
+#panel-asrf .conc-kpi-grid, #panel-asrf-norm .conc-kpi-grid { gap: 34px; }
+#panel-asrf .conc-kpi[data-conn], #panel-asrf-norm .conc-kpi[data-conn] { position: relative; }
+#panel-asrf .conc-kpi[data-conn]::after, #panel-asrf-norm .conc-kpi[data-conn]::after {
+  content: attr(data-conn);
+  position: absolute; left: 100%; top: 50%;
+  transform: translate(calc(-50% + 17px), -50%);
+  color: var(--text-bright); font-size: 20px; font-weight: 800; pointer-events: none; z-index: 1;
+}
+#panel-asrf .conc-kpi[data-tile="asrf_el"],  #panel-asrf-norm .conc-kpi[data-tile="asrf_el"]  { border-color: rgba(235,235,235,0.85); }
+#panel-asrf .conc-kpi[data-tile="asrf_ec"],  #panel-asrf-norm .conc-kpi[data-tile="asrf_ec"]  { border-color: rgba(150,110,220,0.9); }
+#panel-asrf .conc-kpi[data-tile="asrf_var"], #panel-asrf-norm .conc-kpi[data-tile="asrf_var"] { border-color: #f08c00; }
+#panel-asrf .conc-kpi[data-tile="asrf_es"],  #panel-asrf-norm .conc-kpi[data-tile="asrf_es"]  { border-color: #e03131; }
+#panel-asrf .conc-kpi[data-tile="asrf_ec"] .conc-kpi__lbl,  #panel-asrf-norm .conc-kpi[data-tile="asrf_ec"] .conc-kpi__lbl  { color: rgba(180,145,238,0.98); }
+#panel-asrf .conc-kpi[data-tile="asrf_var"] .conc-kpi__lbl, #panel-asrf-norm .conc-kpi[data-tile="asrf_var"] .conc-kpi__lbl { color: #f08c00; }
+#panel-asrf .conc-kpi[data-tile="asrf_es"] .conc-kpi__lbl,  #panel-asrf-norm .conc-kpi[data-tile="asrf_es"] .conc-kpi__lbl  { color: #e03131; }
+
 /* Canvas-Größe im Credit-Panel */
 #panel-credit .chart-box canvas{
   display:block;

@@ -165,9 +165,21 @@ const _crLinePlugin = {
         const x = chart.scales.x.getPixelForValue(o.at);
         if (!Number.isFinite(x)) return;
         stroke(x, true, o);
-        if (o.label) vLabels.push({ label: o.label, color: o.color || '#ccc', x });
+        if (o.label) vLabels.push({ label: o.label, color: o.color || '#ccc', x, isEl: !!o.isEl });
       });
-      (opts.h || []).forEach(o => { const y = chart.scales.y.getPixelForValue(o.at); if (Number.isFinite(y)) stroke(y, false, o); });
+      (opts.h || []).forEach(o => {
+        const y = chart.scales.y.getPixelForValue(o.at);
+        if (!Number.isFinite(y)) return;
+        stroke(y, false, o);
+        if (o.label) {
+          ctx.save();
+          ctx.fillStyle = o.color || '#ccc';
+          ctx.font = '11px sans-serif';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+          ctx.fillText(o.label, area.left + 6, y - 9); // links, gleicher Abstand wie im ASRF-Chart
+          ctx.restore();
+        }
+      });
     }
     const ec = (opts && opts.ec) || chart.$ecArrow;
     // EC-Band + Tail-Risk-Schattierung nur, wenn die zugehoerige (Default/Historic) Serie eingeblendet ist.
@@ -247,6 +259,8 @@ const _crLinePlugin = {
       ctx.save();
       ctx.font = 'bold 11px sans-serif'; ctx.textBaseline = 'middle';
       const y = 13;
+      // EL-Label theme-abhaengig (helleres Grau dark / schwarz light); VaR/ES behalten ihre Farbe.
+      const _labelCol = (l) => l.isEl ? _crElLabelColor() : l.color;
       // Zentren an den Linien, in die Plotbreite geklemmt.
       const spans = vLabels
         .filter((l) => Number.isFinite(l.x))
@@ -263,7 +277,7 @@ const _crLinePlugin = {
       if (!overlap) {
         // Ueber den Linien, zentriert.
         ctx.textAlign = 'center';
-        spans.forEach((s) => { ctx.fillStyle = s.l.color; ctx.fillText(s.l.label, s.cx, y); });
+        spans.forEach((s) => { ctx.fillStyle = _labelCol(s.l); ctx.fillText(s.l.label, s.cx, y); });
       } else {
         // Fallback: Reihe nebeneinander von links (farbiger Marker + Text).
         ctx.textAlign = 'left';
@@ -273,6 +287,7 @@ const _crLinePlugin = {
           ctx.fillStyle = l.color;
           ctx.fillRect(x, y - sw / 2, sw, sw);
           x += sw + gap;
+          ctx.fillStyle = _labelCol(l);
           ctx.fillText(l.label, x, y);
           x += ctx.measureText(l.label).width + itemGap;
         });
@@ -337,8 +352,11 @@ const _crBandsPlugin = {
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
       ctx.restore();
     };
-    if (chart.$showTSI) drawBand(bv.ratingVar, bv.ratingEs, 'rgba(150,110,220,0.20)', 'rgba(180,145,238,0.98)', 'TSI');
-    if (chart.$showMSD) drawBand(bv.ratingEs, bv.normEs, 'rgba(230,170,60,0.20)', 'rgba(240,185,75,0.98)', 'MSD');
+    const _fmtP = (v) => Number.isFinite(v) ? ` ${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '';
+    const _tsiP = bv.ratingVar > 0 ? (bv.ratingEs - bv.ratingVar) / bv.ratingVar * 100 : NaN;
+    const _msdP = bv.ratingEs > 0 ? (bv.normEs - bv.ratingEs) / bv.ratingEs * 100 : NaN;
+    if (chart.$showTSI) drawBand(bv.ratingVar, bv.ratingEs, 'rgba(150,110,220,0.20)', 'rgba(180,145,238,0.98)', `TSI${_fmtP(_tsiP)}`);
+    if (chart.$showMSD) drawBand(bv.ratingEs, bv.normEs, 'rgba(230,170,60,0.20)', 'rgba(240,185,75,0.98)', `MSD${_fmtP(_msdP)}`);
   },
 };
 const LINE_BLUE = 'rgba(43,108,176,0.95)';
@@ -349,6 +367,8 @@ const BAR_RED = 'rgba(210,70,70,0.85)';
 const LINE_BLUE_LIGHT = 'rgba(120,175,225,0.95)';
 const BAR_BLUE_LIGHT = 'rgba(125,180,225,0.85)';
 const BAR_RED_LIGHT = 'rgba(235,150,150,0.85)';
+const LINE_RED = 'rgba(210,60,55,0.95)';
+const LINE_RED_LIGHT = 'rgba(240,120,120,0.95)';
 // Serie "Market": eigene Palette (nicht Blau wie Historic) -> Gruen fuer die
 // normalen Saeulen, Violett fuer die ES-Saeulen (>= VaR).
 const LINE_GREEN = 'rgba(40,150,85,0.95)';
@@ -356,6 +376,11 @@ const BAR_GREEN = 'rgba(70,175,110,0.85)';
 const BAR_VIOLET = 'rgba(150,110,220,0.85)';
 function _crChartColor() {
   return (getComputedStyle(document.body).getPropertyValue('--text-primary') || '').trim() || '#333';
+}
+// EL-Label-Textfarbe: helleres Grau im Dark-Theme, Schwarz im Light-Theme (draw-time,
+// damit es beim naechsten Redraw dem aktuellen Theme folgt).
+function _crElLabelColor() {
+  return document.body.classList.contains('light-theme') ? '#000000' : '#aab2be';
 }
 function _destroyCrChart(id) {
   const c = window[id];
@@ -465,12 +490,38 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
     crTailDrill.setData(buildPositionLoss(portRows, port));
   } catch (e) { console.warn('[CreditLossDist] drill data failed', e); }
 
+  // Importance Sampling: unter IS sind die Balken gewichtet (Likelihood Weights) -> als echte
+  // Wahrscheinlichkeitsmasse darstellen und die Achse entsprechend benennen. MUSS vor der
+  // datasets-Map stehen (wird dort verwendet).
+  const _isLD = (() => {
+    try {
+      const p = String(appState.getSelectedPortTableName?.() ?? '').trim();
+      return (appState.getMfgcIssuerTail?.() || []).some(r => String(r?.port_name ?? '').trim() === p);
+    } catch { return false; }
+  })();
+  const _yTitleLD = _isLD ? 'Probability mass (log)' : 'Frequency (log)';
+  // Kompakte Log-Achsen-Ticks: nur ganze Dekaden, klein-/grosszahlig als 1e-x / kompakt
+  // (statt langer de-DE-Dezimalzahlen wie "0,0000100000" bzw. "10000000").
+  const _fmtLogTick = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    const e = Math.log10(n);
+    if (Math.abs(e - Math.round(e)) > 1e-6) return '';   // nur Dekaden beschriften
+    const r = Math.round(e);
+    if (r === 0) return '1';
+    if (r >= 1 && r <= 3) return n.toLocaleString('de-DE');   // 10 / 100 / 1.000
+    return `1e${r}`;                                          // 1e-6, 1e-3, 1e4, …
+  };
+
   // Je pd_flag eine Serie (Historic/Market/Market adjusted); nur Historic initial sichtbar.
   const lineMap = [];
   const stepsByDs = [];   // stepsByDs[dsIndex][binIndex] = Drill-Schritt (ausfallende Emittenten)
   const datasets = CR_FLAG_SERIES.map((f, di) => {
     const m = new Map(byFlag[f.key].map(r => [Number(r.bin_center), Number(r.count)]));
-    const data = base.map(r => { const c = m.get(Number(r.bin_center)); return c > 0 ? c : null; });
+    // Unter IS: Balken als echte Wahrscheinlichkeitsmasse (Anteil, Summe=1) statt roher
+    // (gewichteter) Zaehlung -> passt zur Achse "Probability mass" und haelt die Skala kompakt.
+    const _tot = _isLD ? ([...m.values()].reduce((a, b) => a + (Number(b) || 0), 0) || 1) : 1;
+    const data = base.map(r => { const c = m.get(Number(r.bin_center)); const v = (c > 0) ? c : null; return (v != null && _isLD) ? v / _tot : v; });
     const rr = cvarByFlag[f.key] || {};
     const varPct = Math.abs(num(rr.VaR_rel)) * 100;
     const esPct = Math.abs(num(rr.ES_rel)) * 100;
@@ -493,7 +544,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
     if (Number.isFinite(varPct)) lines.push({ at: nearestIdx(varPct), color: '#f08c00', width: 2, label: `VaR ${pctLbl(varPct)}` });
     if (Number.isFinite(esPct)) lines.push({ at: nearestIdx(esPct), color: '#e03131', width: 2, dash: [6, 4], label: `ES ${pctLbl(esPct)}` });
     // EL-Linie nur bei der Default-Serie dieses Charts (rating bzw. norm/market adjusted).
-    if (f.key === defaultKey && _elIdx >= 0) lines.unshift({ at: _elIdx, color: '#5a6470', width: 1.5, label: `EL ${pctLbl(_elPct)}` });
+    if (f.key === defaultKey && _elIdx >= 0) lines.unshift({ at: _elIdx, color: '#5a6470', width: 1.5, label: `EL ${pctLbl(_elPct)}`, isEl: true });
     lineMap.push(lines);
     // Drill-Steps je Bin: das Quantil-Szenario dieser Serie, dessen Loss der Bin-Hoehe
     // am naechsten kommt -> dessen ausfallende Emittenten (ISSUER_RANK).
@@ -527,7 +578,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
       },
       scales: {
         x: { title: { display: true, text: 'Loss (% of NAV)', color: col }, ticks: { color: col, maxTicksLimit: 14, autoSkip: true }, grid: { display: false } },
-        y: { type: 'logarithmic', title: { display: true, text: 'Frequency (log)', color: col }, ticks: { color: col } },
+        y: { type: 'logarithmic', title: { display: true, text: _yTitleLD, color: col }, ticks: { color: col, callback: _fmtLogTick } },
       },
     },
   });
@@ -630,11 +681,13 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
     const isNorm = f.key === 'norm';
     const barBlue = isNorm ? BAR_BLUE_LIGHT : BAR_BLUE;
     const barRed = isNorm ? BAR_RED_LIGHT : BAR_RED;
-    const lineCol = isNorm ? LINE_BLUE_LIGHT : LINE_BLUE;
+    // VaR/ES-Referenzlinien in Rot (historic) / Hellrot (market-adjusted), mit Text-Label.
+    const lineCol = isNorm ? LINE_RED_LIGHT : LINE_RED;
+    const flagName = isNorm ? 'market-adj.' : 'historic';
     const colors = data.map(v => (v != null && v >= varPct ? barRed : barBlue));
     const lines = [];
-    if (Number.isFinite(varPct)) lines.push({ at: varPct, color: lineCol, width: 2 });
-    if (Number.isFinite(esPct)) lines.push({ at: esPct, color: lineCol, width: 2, dash: [6, 4] });
+    if (Number.isFinite(varPct)) lines.push({ at: varPct, color: lineCol, width: 2, label: `VaR ${flagName}` });
+    if (Number.isFinite(esPct)) lines.push({ at: esPct, color: lineCol, width: 2, dash: [6, 4], label: `ES ${flagName}` });
     lineMap.push(lines);
     return { label: f.label, data, backgroundColor: colors, borderColor: colors, maxBarThickness: 30, hidden: _isMsd ? false : (di !== 0) };
   });
@@ -666,7 +719,7 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
             generateLabels: (ch) => {
               const items = window.Chart.defaults.plugins.legend.labels.generateLabels(ch);
               if (_bands.tsi) items.push({ text: 'TSI', fillStyle: 'rgba(150,110,220,0.9)', strokeStyle: 'rgba(150,110,220,0.9)', hidden: !ch.$showTSI, datasetIndex: -1, $band: 'tsi' });
-              if (_bands.msd) items.push({ text: 'MSD', fillStyle: 'rgba(230,170,60,0.9)', strokeStyle: 'rgba(230,170,60,0.9)', hidden: !ch.$showMSD, datasetIndex: -1, $band: 'msd' });
+              // MSD bewusst NICHT als Legenden-Eintrag (der Wert steht als Label im Band selbst).
               return items;
             },
           },
@@ -677,13 +730,13 @@ function renderCreditTailZoom(canvasId = 'crTailZoomChart') {
             _crLegendOnClick('h')(e, item, legend);
           },
         },
-        subtitle: { display: true, text: `Loss > VaR red · VaR (solid) · ES (dashed) · ${_bandTxt}`, color: col, align: 'start', font: { size: 10 } },
+        subtitle: { display: false },
         crLines: { h: _isMsd ? lineMapEs.flat() : lineMap[0] },
         tooltip: { callbacks: { title: (c) => `Quantile ${labels[c[0].dataIndex]}`, label: (c) => `${c.dataset.label}: ${Number(c.parsed.y).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% of NAV` } },
       },
       scales: {
         x: { title: { display: true, text: 'Quantile', color: col }, ticks: { color: col }, grid: { display: false } },
-        y: { beginAtZero: true, title: { display: true, text: 'Loss (% of NAV)', color: col }, ticks: { color: col } },
+        y: { beginAtZero: true, title: { display: true, text: 'Loss (% of NAV)', color: col }, ticks: { color: col }, grid: { color: 'rgba(160,160,160,0.15)' } },
       },
     },
   });
@@ -798,7 +851,28 @@ export function renderCreditTailContributors() {
   const allLoss = (appState.getAllLossData?.() || []).filter(r => String(r?.port_name ?? '') === port);
 
   for (const v of CR_TAIL_VIEWS) {
-    const top = crTailTopForFlag(v.flag, issuerLoss, issuerRating, allLoss, confQ);
+    // Importance Sampling: gewichtete Tail-/ES-Contributions je Issuer kommen fertig
+    // aus Python (MFGC_IssuerTail; VaR-Tie-Masse dort bereits proportional verteilt).
+    // Nur bei aktivem IS-Flag befuellt -> sonst exakt der bisherige (ungewichtete) Weg.
+    const isRows = (appState.getMfgcIssuerTail?.() || []).filter(r =>
+      String(r?.port_name ?? '').trim() === port &&
+      String(r?.pd_flag ?? '').toUpperCase() === v.flag);
+    let tcmRows = null;
+    let top;
+    if (isRows.length) {
+      const s = isRows.map(r => ({
+        name: String(r.ISSUER ?? '').trim(),
+        rating: issuerRating.get(String(r.ISSUER ?? '').trim().toLowerCase()) || '',
+        pct: (Number(r.ES_SHARE) || 0) * 100,
+        eadShare: (Number(r.EAD_SHARE) || 0) * 100,
+        tcm: Number(r.TCM),
+        rankKeys: new Set(),
+      })).sort((a, b) => b.pct - a.pct);
+      top = s.slice(0, 8).map(d => ({ name: d.name, rating: d.rating, pct: d.pct, rankKeys: d.rankKeys }));
+      tcmRows = s.map(d => ({ name: d.name, rating: d.rating, pct: d.pct, eadShare: d.eadShare, tcm: d.tcm, rankKeys: d.rankKeys }));
+    } else {
+      top = crTailTopForFlag(v.flag, issuerLoss, issuerRating, allLoss, confQ);
+    }
     renderCrTailContribChart(document.getElementById(v.chartId), v.chartId, top, v.title, { fill: v.fill, border: v.border });
     const tblEl = document.getElementById(v.tableId);
     if (tblEl) {
@@ -813,12 +887,14 @@ export function renderCreditTailContributors() {
 
     // Tail Concentration Multiplier: Tail-Loss-Anteil vs EAD-Anteil je Emittent.
     // TCM = Tail-Loss-% / EAD-% (>1 = ueberproportionaler Tail-Beitrag).
-    const tcmRows = top.map((it) => {
-      const ead = issuerEad.get(String(it.name).toLowerCase()) || 0;
-      const eadShare = totalEad > 0 ? ead / totalEad * 100 : NaN;
-      const tcm = (Number.isFinite(eadShare) && eadShare > 0) ? it.pct / eadShare : NaN;
-      return { name: it.name, rating: it.rating, pct: it.pct, eadShare, tcm, rankKeys: it.rankKeys };
-    });
+    if (tcmRows === null) {
+      tcmRows = top.map((it) => {
+        const ead = issuerEad.get(String(it.name).toLowerCase()) || 0;
+        const eadShare = totalEad > 0 ? ead / totalEad * 100 : NaN;
+        const tcm = (Number.isFinite(eadShare) && eadShare > 0) ? it.pct / eadShare : NaN;
+        return { name: it.name, rating: it.rating, pct: it.pct, eadShare, tcm, rankKeys: it.rankKeys };
+      });
+    }
     // Tabelle nach TCM absteigend sortieren (hoechste Schieflage zuerst; NaN ans Ende).
     tcmRows.sort((a, b) => (Number.isFinite(b.tcm) ? b.tcm : -Infinity) - (Number.isFinite(a.tcm) ? a.tcm : -Infinity));
     const tcmEl = document.getElementById(v.tcmTableId);
@@ -984,17 +1060,35 @@ const _crScatterLabelPlugin = {
       const r = ds.data[i];
       if (!r || !r.issuer) return;
       const px = el.x, py = el.y;
-      // Name: rechts vom Punkt, bei Ueberlauf am rechten Rand nach links.
+      // Name: rechts vom Punkt (bei Ueberlauf nach links). Bei dicht geclusterten Punkten
+      // wird das Label VERTIKAL verschoben, bis es nichts Bereits-Gezeichnetes ueberlappt,
+      // und mit einer duennen Leader-Linie mit seinem Punkt verbunden (keine Ueberlappung mehr).
       ctx.font = `${NAME_PX}px ${fam}`;
       const name = String(r.issuer);
       const nameW = ctx.measureText(name).width;
-      let nameX = px + PR + 4, nameAlign = 'left';
-      let nameL = nameX, nameR = nameX + nameW;
-      if (nameR > area.right - 2) { nameX = px - PR - 4; nameAlign = 'right'; nameR = nameX; nameL = nameX - nameW; }
-      const nameRect = { x1: nameL, y1: py - NAME_PX / 2, x2: nameR, y2: py + NAME_PX / 2 };
+      let nameAlign = 'left', nameX = px + PR + 4;
+      if (nameX + nameW > area.right - 2) { nameAlign = 'right'; nameX = px - PR - 4; }
+      const _offs = [0, 13, -13, 26, -26, 39, -39, 52, -52];
+      let nameCY = py, nameRect = null;
+      for (const off of _offs) {
+        const cy = Math.max(area.top + NAME_PX, Math.min(area.bottom - NAME_PX, py + off));
+        const l = (nameAlign === 'left') ? nameX : nameX - nameW;
+        const rct = { x1: l, y1: cy - NAME_PX / 2, x2: l + nameW, y2: cy + NAME_PX / 2 };
+        if (!placed.some((p) => overlaps(rct, p))) { nameCY = cy; nameRect = rct; break; }
+      }
+      if (!nameRect) {
+        const l = (nameAlign === 'left') ? nameX : nameX - nameW;
+        nameRect = { x1: l, y1: nameCY - NAME_PX / 2, x2: l + nameW, y2: nameCY + NAME_PX / 2 };
+      }
+      if (Math.abs(nameCY - py) > 1) {   // Leader-Linie nur bei Verschiebung
+        ctx.save();
+        ctx.strokeStyle = 'rgba(150,150,150,0.55)'; ctx.lineWidth = 0.75;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(nameX, nameCY); ctx.stroke();
+        ctx.restore();
+      }
       ctx.textAlign = nameAlign;
       ctx.fillStyle = nameCol;
-      ctx.fillText(name, nameX, py);
+      ctx.fillText(name, nameX, nameCY);
       placed.push(nameRect);
       if (!Number.isFinite(r.tcm) || !r.isMaxTcm) return;   // TCM nur beim groessten
       // TCM: 3 Kandidaten relativ zum Namen — unter (default) / darueber / dahinter.
@@ -1004,7 +1098,7 @@ const _crScatterLabelPlugin = {
       const cands = [
         { x: nameRect.x1, y: nameRect.y2 + GAP + TCM_PX / 2 },   // darunter (default)
         { x: nameRect.x1, y: nameRect.y1 - GAP - TCM_PX / 2 },   // darueber
-        { x: nameRect.x2 + 6, y: py },                            // dahinter
+        { x: nameRect.x2 + 6, y: nameCY },                        // dahinter
       ];
       let chosen = cands[0];
       for (const c of cands) {
@@ -1023,7 +1117,7 @@ const _crScatterLabelPlugin = {
 // Konzentrations-Scatter (wie mvarIssuerScatterChart): x = EAD-Anteil %, y = Tail-Loss-Anteil %,
 // gestrichelte 45deg-Diagonale (TCM = 1). Punkte darueber tragen ueberproportional zum Tail bei
 // (amber > 1, rot >= 1,5). Mit "Show"-Dropdown (Top-N) und Zoom.
-function renderCrTcmScatter(canvasId, rows) {
+export function renderCrTcmScatter(canvasId, rows) {
   const canvas = document.getElementById(canvasId);
   if (!canvas || !window.Chart) return;
   if (Array.isArray(rows)) _crScatterRows.set(canvasId, rows);   // volle Daten fuer Re-Render (Show)
@@ -1332,6 +1426,35 @@ export function tailConcentrationIndex(flag = 'RATING') {
     const portRows = (appState.getAllPortfolioData?.() || [])
       .filter((r) => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port);
     if (!portRows.length) return null;
+
+    // Importance Sampling: Konzentration aus den GEWICHTETEN ES-Shares (MFGC_IssuerTail),
+    // konsistent zum Tail-Driver-Chart. Ohne IS (Tabelle leer) unveraendert aus den rohen
+    // Sorted-Losses. Verhindert die Inkonsistenz "3 drive 71,5%" vs. Chart (RLB+HYPO ~96%).
+    const _isRows = (appState.getMfgcIssuerTail?.() || []).filter((r) =>
+      String(r?.port_name ?? '').trim() === port &&
+      String(r?.pd_flag ?? '').toUpperCase() === _flag);
+    if (_isRows.length) {
+      const shares = _isRows.map((r) => Math.max(0, (Number(r.ES_SHARE) || 0) * 100))
+        .filter((v) => v > 0).sort((a, b) => b - a);
+      const N = shares.length;
+      if (N < 1) return null;
+      const totalSh = shares.reduce((a, b) => a + b, 0) || 1;
+      const hhi = shares.reduce((a, v) => { const sh = v / totalSh; return a + sh * sh; }, 0);
+      const eff = hhi > 0 ? 1 / hhi : NaN;
+      const score = (N > 1 && Number.isFinite(eff)) ? ((N - eff) / (N - 1)) * 100 : 100;
+      const pct = Math.max(0, Math.min(100, score));
+      const issSet = new Set(), rankSet = new Set();
+      for (const r of portRows) {
+        const iss = String(r?.ISSUER ?? '').trim().toLowerCase(); if (!iss) continue;
+        issSet.add(iss); rankSet.add(`${iss}||${String(r?.RANK ?? '').trim().toLowerCase()}`);
+      }
+      return {
+        pct, eff, n: N, shares,
+        totalIssuers: issSet.size, defaultedIssuers: N,
+        totalRanks: rankSet.size, defaultedRanks: N,
+      };
+    }
+
     // Verlust-bei-Ausfall je Emittent (wie in der Tail-Driver-Rechnung).
     const issuerLoss = new Map();
     for (const r of buildPositionLoss(portRows, port)) {

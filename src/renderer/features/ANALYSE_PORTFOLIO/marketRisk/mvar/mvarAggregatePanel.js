@@ -1,7 +1,7 @@
 'use strict';
 
 import { appState } from '../../../../renderer.js';
-import { formatNumberWithCommas } from '../../../../utils/tableCellFormats.js';
+import { formatNumberWithCommas, fmtEur, eurUnit, kpiValue } from '../../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../../utils/trafficLight.js';
 
 import {
@@ -367,27 +367,79 @@ function bindStressKpiRerender() {
 function renderMvarPLKpis(data, varState, esState) {
   const el = document.getElementById('mvarPLKpi');
   if (!el) return;
+  // Caption "Current Market: <baseline>" dynamisch — Baseline = aktuelles Ansichts-/Rolling-
+  // Interval (appState.selectedMvarInterval, Default ROLLING_1).
+  const _cap = document.querySelector('#panel-market .mvar-summary-header .mvar-caption');
+  if (_cap) {
+    const _baseline = String(appState.selectedMvarInterval ?? '').trim() || 'ROLLING_1';
+    _cap.textContent = `Current Market: ${_baseline}`;
+  }
   if (data) _lastPLKpiArgs = { data, varState, esState };
   bindStressKpiRerender();
   if (!data) { el.innerHTML = ''; return; }
 
-  const fmtAbs = (v) => Number.isFinite(Number(v)) ? Math.abs(Number(v)).toLocaleString('de-DE', { maximumFractionDigits: 0 }) : '–';
-  const fmtRel = (v) => Number.isFinite(Number(v)) ? `${Math.abs(Number(v)).toLocaleString('de-DE', { maximumFractionDigits: 3 })}%` : '–';
+  // Zentrales Zahlenformat wie bei Net Asset Value: EUR (klein) + absolute Zahl, relative Zahl
+  // kleiner/muted. fmtEur (utils/tableCellFormats.js) haelt "EUR" vorne + .cur-unit (klein).
+  // Vorzeichen ERHALTEN: VaR/ES sind Verluste (negativ) -> Minus anzeigen. Anders als das
+  // zentrale fmtEur ("-EUR 256.349") soll das Minus hier VOR DER ZAHL stehen: "EUR -256.349".
+  // Die Aenderungszeile uebergibt weiterhin positive Betraege (Richtung zeigt der Pfeil).
+  const eurSigned = (v, html) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '–';
+    const sign = n < 0 ? '-' : '';
+    return `${eurUnit(html)} ${sign}${Math.round(Math.abs(n)).toLocaleString('de-DE')}`;
+  };
+  const eurAbs = (v) => eurSigned(v, true);    // Karten: EUR klein (.cur-unit)
+  const eurAbsPlain = (v) => eurSigned(v, false);   // Report-Band: reiner Text
+  const fmtRel = (v) => Number.isFinite(Number(v)) ? `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
   const dotColor = { green: '#4CAF50', yellow: 'yellow', red: 'red' };
   const dot = (s) => dotColor[s]
     ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotColor[s]};margin-left:8px;vertical-align:middle;"></span>`
     : '';
-  const card = (label, valueHtml, sub, desc) =>
-    `<div class="mr-kpi-card">
+  // Aenderungszeile (Zeile NACH abs+rel) im Stil der Net-Asset-Value-KPI (Portfolio/Profit-Loss):
+  // Kreis-Pfeil-Badge (Richtung) + absolute Aenderung · relative Aenderung. Vorperiode = vorletzter
+  // gespeicherter Historic-Metrics-Snapshot (PortfolioHistoryMetrics), wie die NAV-KPI.
+  const _num = (v) => { const n = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
+  // Vorperioden-Snapshot: vorletzter History-Eintrag (letzter = aktueller/Platzhalter) fuer das
+  // gewaehlte Portfolio. Die Snapshots halten nur die Gesamt-VaR/ES (M_VaR_ALL/M_ES_ALL), KEIN
+  // Stress-Szenario -> Scenario-Kacheln bekommen keine Aenderungszeile.
+  const _prevHistRow = () => {
+    const sel = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const rows = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === sel)
+      .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+    return rows.length >= 2 ? rows[rows.length - 2] : null;
+  };
+  const _fieldNum = (row, keys) => {
+    for (const k of keys) { if (row && row[k] != null && row[k] !== '') { const n = _num(row[k]); if (Number.isFinite(n)) return n; } }
+    return NaN;
+  };
+  const _chg = (cur, prevRaw) => {
+    const p = _num(prevRaw), c = Number(cur);
+    if (!Number.isFinite(c) || !Number.isFinite(p) || p === 0 || Math.abs(c) === Math.abs(p)) return null;
+    const up = Math.abs(c) >= Math.abs(p);
+    return { up, abs: Math.abs(Math.abs(c) - Math.abs(p)), rel: Math.abs((Math.abs(c) - Math.abs(p)) / Math.abs(p) * 100) };
+  };
+  // Pfeil = Wertrichtung (↗ gestiegen / ↘ gefallen). Farbe = RISIKO-Semantik: gestiegenes
+  // Risiko (VaR/ES hoeher) = rot, gesunkenes = gruen (anders als NAV, wo "hoeher" gut ist).
+  const chgLine = (chg) => chg
+    ? `<div class="mr-kpi-card__chg"><span class="perf-chg-badge ${chg.up ? 'is-down' : 'is-up'}">${chg.up ? '↗' : '↘'}</span>${eurAbs(chg.abs)} · ${chg.rel.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</div>`
+    : '';
+  // Erste Zeile = "<Metrik>: <Name>" (z.B. "Market Value at Risk: portfolio total"). Keine
+  // sub-/desc-Zeilen mehr. Rand je Metrik einfaerben ueber ZENTRALE CSS-Klassen
+  // (mr-kpi-card--var / --es in breakdown.css) - nur der feine Rahmen, KEIN oberer
+  // Akzentstreifen (wie bei den Credit-Economic-Capital-KPIs). VaR orange, ES rot.
+  const card = (label, valueHtml, chgHtml, metric) => {
+    const cls = metric === 'var' ? ' mr-kpi-card--var' : metric === 'es' ? ' mr-kpi-card--es' : '';
+    return `<div class="mr-kpi-card${cls}">
       <div class="mr-kpi-card__label">${label}</div>
       <div class="mr-kpi-card__value">${valueHtml}</div>
-      <div class="mr-kpi-card__sub">${sub}</div>
-      <div class="mr-kpi-card__desc">${desc}</div>
+      ${chgHtml || ''}
     </div>`;
+  };
 
   // Stress-Szenario (rechter Chart / Dropdown): VaR + ES daneben zu den Current-Kacheln.
   const scen = _stressScenarioRow();
-  const scenSub = scen ? _escKpi(scen.name) : 'scenario';
   // Ampel-Status fuers Szenario gegen DIESELBEN Limits (VaR-/ES-Schwellen aus Customer Setup).
   let scenVarState = null, scenEsState = null;
   if (scen) {
@@ -400,12 +452,47 @@ function renderMvarPLKpis(data, varState, esState) {
     }
   }
 
-  // Reihenfolge: erst beide Current (Total VaR, Total ES), dann beide Szenario-Kacheln.
+  // Vorperiode aus dem Historic-Metrics-Snapshot: nur Total VaR/ES (M_VaR_ALL/M_ES_ALL) haben
+  // eine gespeicherte Vorperiode; die Stress-Szenario-Werte nicht -> dort keine Aenderungszeile.
+  const _prevH = _prevHistRow();
+  const varChg = _chg(data.VaR_T_abs, _fieldNum(_prevH, ['M_VaR_ALL', 'M_VaR_All', 'MVaR_All']));
+  const esChg  = _chg(data.ES_T_abs,  _fieldNum(_prevH, ['M_ES_ALL', 'M_ES_All']));
+  const scenVarChg = null;
+  const scenEsChg  = null;
+
+  // Reihenfolge: erst beide Current (portfolio total), dann beide Szenario-Kacheln.
+  // Wert = EUR (absolut) + relative Zahl kleiner/muted (.conc-kpi__qual) + Ampelpunkt — wie NAV.
+  // Zentrale Vorlage kpiValue (EUR klein + Zahl gross mit Vorzeichen + rel muted) + Ampelpunkt.
+  const valHtml = (abs, rel, st) => `${kpiValue(abs, rel)}${dot(st)}`;
   el.innerHTML =
-    card('Total VaR', `${fmtAbs(data.VaR_T_abs)} (${fmtRel(data.VaR_T_rel)})${dot(varState)}`, 'portfolio total', 'Market Value at Risk')
-    + card('Total ES', `${fmtAbs(data.ES_T_abs)} (${fmtRel(data.ES_T_rel)})${dot(esState)}`, 'portfolio total', 'Expected Shortfall')
-    + (scen ? card('Scenario VaR', `${fmtAbs(scen.VaR_T_abs)} (${fmtRel(scen.VaR_T_rel)})${dot(scenVarState)}`, scenSub, 'Market Value at Risk') : '')
-    + (scen ? card('Scenario ES', `${fmtAbs(scen.ES_T_abs)} (${fmtRel(scen.ES_T_rel)})${dot(scenEsState)}`, scenSub, 'Expected Shortfall') : '');
+    card('Market Value at Risk: portfolio total', valHtml(data.VaR_T_abs, data.VaR_T_rel, varState), chgLine(varChg), 'var')
+    + card('Expected Shortfall: portfolio total', valHtml(data.ES_T_abs, data.ES_T_rel, esState), chgLine(esChg), 'es')
+    + (scen ? card(`Market Value at Risk: ${_escKpi(scen.name)}`, valHtml(scen.VaR_T_abs, scen.VaR_T_rel, scenVarState), chgLine(scenVarChg), 'var') : '')
+    + (scen ? card(`Expected Shortfall: ${_escKpi(scen.name)}`, valHtml(scen.ES_T_abs, scen.ES_T_rel, scenEsState), chgLine(scenEsChg), 'es') : '');
+
+  // Report-Spiegel (data-kpi-band): dieselben KPIs als schlichte 2-Spalten-Tabelle (Label | Wert)
+  // fuer den PDF-Report. drawKpiBand liest tbody-tr -> td[0]=Label, td[1]=Wert.
+  const band = document.getElementById('mvarPLKpiBand');
+  if (band) {
+    // "·" trennt abs/rel -> drawKpiBand zeichnet EUR-abs (EUR klein) + rel kleiner/muted (wie App).
+    // Kuerzere Labels als in der App (schmale PDF-Kacheln): "VaR · <Name>" / "ES · <Name>".
+    // Aenderung als data-chg (+ data-up = Pfeilrichtung, data-up-color = Farbrichtung). Risiko:
+    // gestiegen -> Pfeil hoch, Farbe ROT -> data-up=1, data-up-color=0 (im PDF via drawTrendCircle).
+    const chgAttr = (chg) => chg
+      ? ` data-chg="${_escKpi(`${eurAbsPlain(chg.abs)} · ${chg.rel.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`)}" data-up="${chg.up ? '1' : '0'}" data-up-color="${chg.up ? '0' : '1'}"`
+      : '';
+    const rows = [
+      ['VaR · portfolio total', `${eurAbsPlain(data.VaR_T_abs)} · ${fmtRel(data.VaR_T_rel)}`, varChg],
+      ['ES · portfolio total', `${eurAbsPlain(data.ES_T_abs)} · ${fmtRel(data.ES_T_rel)}`, esChg],
+    ];
+    if (scen) {
+      rows.push([`VaR · ${scen.name}`, `${eurAbsPlain(scen.VaR_T_abs)} · ${fmtRel(scen.VaR_T_rel)}`, scenVarChg]);
+      rows.push([`ES · ${scen.name}`, `${eurAbsPlain(scen.ES_T_abs)} · ${fmtRel(scen.ES_T_rel)}`, scenEsChg]);
+    }
+    band.innerHTML = `<table class="conc-report-table"><tbody>${
+      rows.map(([l, v, chg]) => `<tr><td>${_escKpi(l)}</td><td${chgAttr(chg)}>${_escKpi(v)}</td></tr>`).join('')
+    }</tbody></table>`;
+  }
 }
 
 export function getMVaRThresholdsFromInputUsingState() {

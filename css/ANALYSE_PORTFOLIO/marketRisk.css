@@ -238,18 +238,19 @@
 
 /* Szenario-Dropdown des Stress-Verteilungs-Charts: oben rechts, direkt UNTER dem
    Reset-Zoom-Button (top:6px, ~22px hoch) -> bei den Legenden-Labels. */
-#panel-market .chart-box .stress-scenario-picker{
-  position: absolute;
-  top: 34px;
-  right: 8px;
-  z-index: 5;
+/* Scenario-Picker sitzt jetzt in der .mvar-summary-header-Zeile (nicht mehr im Chart),
+   daher kein position:absolute mehr. */
+#panel-market .stress-scenario-picker{
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-secondary, #999);
+  gap: 8px;
 }
-#panel-market .chart-box .stress-scenario-picker select{
+/* "Scenario:"-Label sieht aus wie "Current Market:" (mvar-caption); im Picker keinen
+   0/4px-Rand ober-/unterhalb, damit es mit dem Select vertikal mittig sitzt. */
+#panel-market .stress-scenario-picker .mvar-caption{
+  margin: 0;
+}
+#panel-market .stress-scenario-picker select{
   font-size: 11px;
   padding: 2px 6px;
   background: var(--panel-surface, #0f0f10);
@@ -263,6 +264,16 @@
 #panel-mvar-products .chart-box canvas,
 #panel-mvar-yield .chart-box canvas,
 #panel-mvar-issuers .chart-box canvas{
+  display:block;
+  width:100% !important;
+  height:360px !important;
+}
+
+/* History-Chart-Kopien (Credit im EC-Panel, Factors im Factor-VaR-Panel): feste Anzeigehoehe
+   mit !important — sonst ueberschreibt Chart.js (maintainAspectRatio:false) die Inline-Hoehe und
+   der Canvas waechst endlos nach unten. Die !important-Regel schlaegt das Inline-Resize. */
+#plCreditRiskHistChart,
+#factorsMarketRiskHistChart{
   display:block;
   width:100% !important;
   height:360px !important;

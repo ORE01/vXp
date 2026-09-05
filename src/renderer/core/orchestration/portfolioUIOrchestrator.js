@@ -8,6 +8,7 @@ import { handleSummaryNotionalData } from '../../features/ANALYSE_PORTFOLIO/Summ
 import { handleSummaryYieldData } from '../../features/ANALYSE_PORTFOLIO/SummaryYield.js';
 import { renderPerformanceDashboard } from '../../features/ANALYSE_PORTFOLIO/performanceDashboard.js';
 import { handleSummaryMarketRiskData, handleMvarProductTable } from '../../features/ANALYSE_PORTFOLIO/SummaryMarketRisk.js';
+import { renderEmbeddedRiskHistoryCharts } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 
 import {
   handleMVaRData,
@@ -429,6 +430,12 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
       },
 
       () => handleSummaryMarketRiskData(port_name, scenario_name, '2021-01-03'),
+
+      // Eingebettete History-Line-Charts (P&L "How has market risk evolved over time?" +
+      // Economic Capital "How has credit risk evolved over time?") beim Portfolio-Wechsel
+      // ZUVERLAESSIG mit dem aktuellen port_name neu rendern -> blenden sich je nach
+      // Datenlage selbst ein/aus (kein Verlass mehr auf 'portfolio-context-changed').
+      () => renderEmbeddedRiskHistoryCharts(port_name),
 
       () => handleMvarProductTable(port_name, scenario_name, null),
 

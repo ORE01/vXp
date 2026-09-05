@@ -12,6 +12,7 @@ const HOME_RELEVANT_CHANNELS = new Set([
   'PortfolioRiskSensitivitiesData',
   'MarketVaRData',
   'CreditVaRData',
+  'MFGC_IssuerTailData',   // IS: gewichtete Tail-Contributions -> Overview-Credit-Chart aktualisieren
   'CustomerDefaultPortfolioData',
 ]);
 let _homeRenderTimer = null;
@@ -297,6 +298,36 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'lossHistogramMainData':
       appState?.setLossHistogram?.(rows);
       document.dispatchEvent(new Event('losshist:ready'));
+      return;
+
+    // ASRF (analytisches Modell): per-Issuer-Analyse. Eigener Store + Event; MF_GC
+    // befuellt diese Tabelle nicht -> bleibt leer, kein Einfluss auf den MF_GC-Pfad.
+    case 'ASRF_IssuerAnalysisData':
+      appState?.setAsrfIssuerAnalysis?.(rows);
+      document.dispatchEvent(new Event('asrf:ready'));
+      return;
+
+    case 'ASRF_SummaryData':
+      appState?.setAsrfSummary?.(rows);
+      document.dispatchEvent(new Event('asrf:ready'));
+      return;
+
+    case 'ASRF_TailCurveData':
+      appState?.setAsrfTailCurve?.(rows);
+      document.dispatchEvent(new Event('asrf:ready'));
+      return;
+
+    case 'ASRF_LossHistogramData':
+      appState?.setAsrfLossHistogram?.(rows);
+      document.dispatchEvent(new Event('asrf:ready'));
+      return;
+
+    // MF-GC Importance Sampling: gewichtete Tail-/ES-Contributions je Issuer. Nur bei
+    // aktivem IS-Flag befuellt -> Standard-MF_GC bleibt unberuehrt. Re-Render der
+    // Tail-Contributors/TCM anstossen (kommt getrennt von CreditVaRData an).
+    case 'MFGC_IssuerTailData':
+      appState?.setMfgcIssuerTail?.(rows);
+      document.dispatchEvent(new Event('credit:is:ready'));
       return;
 
     case 'CreditVaRInputData':

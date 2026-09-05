@@ -61,6 +61,18 @@ export function getUniqueIdentifier(newData, selectedTableName) {
         uniqueIdentifierColumn = 'id';
         break;
 
+      case 'PortfolioHistoryMetrics':
+      case 'PortfolioHistoryMetricsCopy':
+        // Kein Einzel-PK: eindeutig ueber (port_name, DATE). Ohne diesen case landete
+        // das Ueberschreiben ("Save to Historic Metrics" fuer ein bereits vorhandenes
+        // Datum) im default -> null -> updateRecord derefereziert uniqueIdentifier.column
+        // -> "Cannot read properties of null (reading 'column')". updateRecord kennt den
+        // composite-Zweig (uniqueIdentifier.composite + .columns).
+        return {
+          composite: true,
+          columns: { port_name: newData.port_name, DATE: newData.DATE },
+        };
+
       default:
         console.error('Unknown table:', selectedTableName);
         return null;

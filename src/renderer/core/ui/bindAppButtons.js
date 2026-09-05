@@ -351,9 +351,20 @@ export function bindAppButtons({
   // Python macht den teuren Setup nur einmal und schleift ueber die Szenarien. Frueher
   // wurde pro Intervall ein eigener Lauf gestartet (sequenziell, langsam).
   function runMvarBatch(button, intervals) {
+    // Waehrend des Laufs die per-Tabelle-Re-Renders der Pipeline unterdruecken (Daten werden
+    // trotzdem gesetzt). Gerendert wird EINMAL am Ende via refreshMarketRiskUI() -> kein 3x-
+    // Flackern. Sicherheitsnetz: Flag nach 5 min sicher freigeben, falls project-finished
+    // ausbleibt (Crash), damit spaetere Daten-Updates wieder rendern.
+    if (window.appState) window.appState._suppressMvarPipelineRender = true;
+    const _safetyClear = setTimeout(() => {
+      if (window.appState) window.appState._suppressMvarPipelineRender = false;
+    }, 5 * 60 * 1000);
+
     // Auf den Abschluss GENAU des py-MVaR-Jobs warten (andere Projekte ignorieren).
     const onFinished = (data) => {
       if (data && data.projectName === 'py-MVaR') {
+        clearTimeout(_safetyClear);
+        if (window.appState) window.appState._suppressMvarPipelineRender = false;
         setMarketCalcStatus('done');
         // Ansicht auf ROLLING (Default) zuruecksetzen + einmal frisch rendern.
         const rollingName = intervals.find((x) => /^ROLLING/i.test(x)) || 'ROLLING_1';

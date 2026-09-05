@@ -13,6 +13,7 @@ const CVAR_CONFIG_COLUMNS = [
   'n_simulations',
   'description',
   'cr_model',
+  'use_importance_sampling',
 ];
 
 // Table name in the generic table-/form-system (Edit/Add modal field set).
@@ -90,7 +91,7 @@ export function handleCvarInput() {
 
   const headers = [
     'Select', 'Customer Default', 'name', 'conf_level', 'corr', 'recovery_rate',
-    'horizon_days', 'n_simulations', 'description', 'cr_model', 'Edit',
+    'horizon_days', 'n_simulations', 'description', 'cr_model', 'IS', 'Edit',
   ];
 
   let html = '<table id="dataTable"><thead><tr>';
@@ -120,6 +121,9 @@ export function handleCvarInput() {
     html += `<td>${fmtNum(r.n_simulations)}</td>`;
     html += `<td>${escapeHtml(r.description ?? '')}</td>`;
     html += `<td>${escapeHtml(r.cr_model ?? '')}</td>`;
+    // Importance-Sampling-Flag (Haken = aktiv). Nur Anzeige; Bearbeitung ueber Edit-Modal.
+    const isOn = r.use_importance_sampling === 1 || r.use_importance_sampling === '1' || r.use_importance_sampling === true;
+    html += `<td style="text-align:center;">${isOn ? '✓' : '–'}</td>`;
     // Edit operates on the CreditVaRInput row at this index (unchanged modal flow).
     html += `<td><button class="edit-button" data-row="${i}">Edit</button></td>`;
     html += '</tr>';

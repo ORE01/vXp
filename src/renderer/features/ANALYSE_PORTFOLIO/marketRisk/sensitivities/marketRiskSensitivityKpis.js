@@ -11,10 +11,13 @@ import { fmtEurCompact } from '../../../../utils/tableCellFormats.js';
 function setSensKpiChange(id, cur, prevRaw, fmtAbs) {
   const el = document.getElementById(id);
   if (!el) return;
-  const p = Number(prevRaw);
-  if (!Number.isFinite(cur) || !Number.isFinite(p) || p === 0 || cur === p) { el.innerHTML = ''; el.hidden = true; return; }
-  const up = cur >= p;
-  const dAbs = Math.abs(cur - p), dRel = Math.abs((cur - p) / p * 100);
+  // Beide auf BETRAG bringen: die History speichert vorzeichenbehaftet (PV01/MDURATION negativ),
+  // die Live-Duration ist abs -> sonst entsteht ein Schein-Delta von ~2x Wert / ~200 %.
+  const p = Math.abs(Number(prevRaw));
+  const c = Math.abs(Number(cur));
+  if (!Number.isFinite(c) || !Number.isFinite(p) || p === 0 || c === p) { el.innerHTML = ''; el.hidden = true; return; }
+  const up = c >= p;
+  const dAbs = Math.abs(c - p), dRel = Math.abs((c - p) / p * 100);
   el.hidden = false;
   el.innerHTML =
     `<span class="perf-chg-badge ${up ? 'is-up' : 'is-down'}">${up ? '↗' : '↘'}</span>` +

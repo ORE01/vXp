@@ -86,6 +86,13 @@ const aggRows = enrichedData;
     formPortNotional: 'EUR ' + formatNumberWithGrouping(PortNotional),
     formPortPV01abs: 'EUR ' + formatNumberWithGrouping(PortPV01),
     formPortCPV01abs: 'EUR ' + formatNumberWithGrouping(PortCPV01),
+    // Rohe Zahlenwerte parallel zum formatierten String (format-once): "Save to Historic
+    // Metrics" liest diese direkt, statt den de-DE-String ("212.380.052") zurueckzuparsen.
+    formPortValueRaw: PortValue,
+    formPortValueBuyRaw: PortValueBuy,
+    formPortNotionalRaw: PortNotional,
+    formPortPV01absRaw: PortPV01,
+    formPortCPV01absRaw: PortCPV01,
     formPortYield: (safeDiv(PortYield, PortNotional) * 100).toFixed(2) + '%',
     formPortYieldA: (safeDiv(PortYieldA, PortNotional) * 100).toFixed(2) + '%',
     formPortPV01: (safeDiv(PortPV01, PortNotional) * 10000).toFixed(2),

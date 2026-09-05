@@ -4,6 +4,9 @@ import { bindDealsUIOnce, renderDealsPanel, renderDealsTable } from '../../featu
 import { renderPerformanceHistoryCopies } from '../../features/ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 import { renderPerformanceDashboard } from '../../features/ANALYSE_PORTFOLIO/performanceDashboard.js';
 import { renderCreditTsiPanel, renderCreditMsdPanel } from '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
+// Side-effect: registriert die ASRF-Panel-Listener (asrf:ready / portfolio-context-changed /
+// panel:opened). Rein additiv, ASRF-guarded -> MF_GC unberuehrt.
+import '../../features/ANALYSE_PORTFOLIO/CREDIT_RISK/asrfPanel.js';
 
 // ------------------------------------------------------------
 // Panel open hook registry (fix for installReceivers warning)
@@ -141,7 +144,11 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
     if (panelId === 'panel-mvar' || panelId === 'panel-portfolio-backtest') {
       // console.log('[TRIGGER]', panelId, 'opened → refreshMarketRiskUI');
 
-      requestAnimationFrame(() => {
+      // Render ERST NACH der Slide-in-Animation (Panel-Transition: right .25s ease). Das schwere
+      // refreshMarketRiskUI (~10 Charts) laeuft sonst im selben Frame und blockiert die Slide-in
+      // (~3s bis das Panel ueberhaupt reinkommt). Mit dem Delay kommt das Panel SOFORT rein, die
+      // Inhalte fuellen sich unmittelbar danach.
+      setTimeout(() => {
         if (typeof window.appState?.refreshMarketRiskUI === 'function') {
           window.appState.refreshMarketRiskUI(0);
         } else if (typeof appState?.refreshMarketRiskUI === 'function') {
@@ -149,7 +156,7 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
         } else {
           console.warn('[TRIGGER] refreshMarketRiskUI not available');
         }
-      });
+      }, 300);
     }
 
     // Performance -> History: Kopien der Yield-/Value-History-Charts zeichnen, sobald

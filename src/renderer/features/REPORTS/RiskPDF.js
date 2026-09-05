@@ -489,8 +489,8 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
     return cx - x2;
   };
   // Kreis mit 45°-Pfeil (gruen hoch / rot runter), wie im App-Badge / Overview.
-  const drawTrendCircle = (cx, cy, up) => {
-    const col = up ? UP : DOWN, r = 1.5, a = r * 0.6;
+  const drawTrendCircle = (cx, cy, up, colorUp = up) => {
+    const col = colorUp ? UP : DOWN, r = 1.5, a = r * 0.6;
     doc.setDrawColor(...col); doc.setLineWidth(0.25); doc.circle(cx, cy, r, 'S');
     const tipx = cx + a, tipy = up ? cy - a : cy + a, tailx = cx - a, taily = up ? cy + a : cy - a;
     doc.setLineWidth(0.3); doc.line(tailx, taily, tipx, tipy);
@@ -520,8 +520,8 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
         drawEur(' · ' + parts.slice(1).join(' · '), x + 5 + w0 + 1, y + 12, MUTED);
       }
-      // Zeile 3: Kreis+45°-Pfeil + Aenderung.
-      drawTrendCircle(x + 6.4, y + 19, !!k.trendUp);
+      // Zeile 3: Kreis+45°-Pfeil (Richtung) + Aenderung; Farbe optional entkoppelt (Risiko).
+      drawTrendCircle(x + 6.4, y + 19, !!k.trendUp, k.trendColorUp);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
       drawEur(String(k.trendChg), x + 9.6, y + 20, MUTED);
     } else if (parts[1]) {
@@ -543,7 +543,13 @@ function kpisFromTableEl(el) {
       const vtd = tds[1];
       const k = { label: (tds[0].textContent || '').trim(), value: (vtd.textContent || '').trim() };
       // Optionaler Trend (Kreis+Pfeil): Richtung + Aenderungstext als data-Attribute am Wert-<td>.
-      if (vtd.dataset && vtd.dataset.chg) { k.trendChg = vtd.dataset.chg; k.trendUp = vtd.dataset.up === '1'; }
+      if (vtd.dataset && vtd.dataset.chg) {
+        k.trendChg = vtd.dataset.chg;
+        k.trendUp = vtd.dataset.up === '1';
+        // Optionale ENTKOPPLUNG Pfeilrichtung/Farbe (Risiko: Anstieg = rot, aber Pfeil hoch).
+        // Ohne data-up-color faellt die Farbe auf die Pfeilrichtung zurueck (bisheriges Verhalten).
+        k.trendColorUp = (vtd.dataset.upColor != null) ? (vtd.dataset.upColor === '1') : k.trendUp;
+      }
       kpis.push(k);
     }
   });
@@ -897,7 +903,16 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     if (!panel) return y0;
     const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
     const items = Array.from(panel.querySelectorAll('.conc-kpi-grid .conc-kpi')).map((c) => ({
-      val: clean((c.querySelector('.conc-kpi__val')?.childNodes?.[0]?.textContent) || c.querySelector('.conc-kpi__val')?.textContent),
+      // Vollen Wert-Text lesen (inkl. evtl. "EUR" im cur-unit-Span) OHNE die val-2nd-Zweitzahl.
+      // Frueher: childNodes[0] -> lieferte bei EC/ES (Wert direkt im .conc-kpi__val-Div, EUR im
+      // eigenen Span) nur "EUR". cloneNode + val-2nd entfernen ist robust fuer beide Strukturen.
+      val: (() => {
+        const valEl = c.querySelector('.conc-kpi__val');
+        if (!valEl) return '';
+        const clone = valEl.cloneNode(true);
+        clone.querySelector('.conc-kpi__val-2nd')?.remove();
+        return clean(clone.textContent);
+      })(),
       val2: clean(c.querySelector('.conc-kpi__val-2nd')?.textContent),
       sub: clean(c.querySelector('.conc-kpi__sub')?.textContent),
       lbl: clean(c.querySelector('.conc-kpi__lbl')?.textContent),

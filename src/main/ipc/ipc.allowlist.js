@@ -36,6 +36,7 @@ module.exports = {
 
     // Tables / CRUD
     'fetch-table-data',
+    'fetch-mvar-factorpl',
     'update-data',
     'erase-data',
     'add-new-row',
@@ -120,6 +121,7 @@ module.exports = {
 
     // Customer Setup -> Risk -> Market Risk -> Interval
     'customer-mr-setting.save',
+    'customer-mr-setting.set-baseline-rolling',
     'customer-mr-setting.get',
     'customer-mr-thresholds.get',
     'customer-mr-thresholds.save',
@@ -164,6 +166,7 @@ module.exports = {
 
     // generic table helpers
     'fetch-table-data',
+    'fetch-mvar-factorpl',
 
     'update-product-cs-spread-override',
 

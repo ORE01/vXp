@@ -70,6 +70,10 @@ export function createAnalysePortfolioHandlers({
   // ---------- Portfolio history ----------
   function handlePortfolioHistoryData(receivedData) {
     appState.setPortfolioHistoryData?.(receivedData);
+    // Nach jedem (Neu-)Laden der PortfolioHistoryMetrics (u.a. nach "Save to Historic
+    // Metrics" -> requestTableRefreshAfterMutation -> fetch-table-data) alle darauf
+    // basierenden Charts refreshen. Entkoppelt via Event -> historicRiskMetrics.js.
+    try { document.dispatchEvent(new CustomEvent('portfolio-history-updated')); } catch {}
   }
 
   return {

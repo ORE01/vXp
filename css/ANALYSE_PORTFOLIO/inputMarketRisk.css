@@ -21,17 +21,28 @@
 }
 
 /* Tabelle mit Intervallen */
+/* Wrapper: kein eigener Rahmen/Scroll mehr -> die beiden Bloecke sind eigene Boxen. */
 #inputMvarContainer{
   flex: 1 1 auto;
   min-width: 320px;
-  max-height: 260px;
-  overflow: auto;
-
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+/* Beide Boxen: Rahmen/Hintergrund wie zuvor der Container. */
+#inputMvarContainer .mvar-baseline-block,
+#inputMvarContainer .mvar-scenarios-block{
   background: var(--panel-surface, #0f0f10);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
+}
+/* Baseline: nur 1 Zeile -> keine Scrollbar. Stress scenarios: scrollbar. */
+#inputMvarContainer .mvar-scenarios-block{
+  max-height: 260px;
+  overflow: auto;
 }
 
 /* Tabellen im Input-Container */
@@ -77,9 +88,15 @@
 /* Caption + Profit/Loss Dist – links nebeneinander */
 #panel-market .mvar-summary-header{
   display: flex;
-  flex-direction: column;   /* Überschrift oben, Button darunter */
-  align-items: flex-start;  /* links ausrichten */
-  gap: 4px;                 /* kleiner Abstand zwischen Text und Button */
+  flex-direction: row;          /* Caption links, Scenario-Picker ab der Mitte */
+  align-items: center;
+  gap: 0;
+}
+/* Caption belegt die linke Haelfte -> der Scenario-Picker startet ab der Mitte der Seite
+   (Anfang der 3. KPI-Karte, wo der Szenario-Teil beginnt). Nur im Header, nicht die
+   uebrigen .mvar-caption-Ueberschriften im Panel. */
+#panel-market .mvar-summary-header > .mvar-caption{
+  flex: 0 0 50%;
 }
 
 
@@ -281,14 +298,61 @@
   gap: 16px;
   align-items: stretch;
 }
-#mvarFactorChartHost .mvar-factor-list {
-  flex: 0 0 180px;
-  max-height: 320px;
-  overflow: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 8px 10px;
+/* Links: Risk Factor Selection als EIGENE Kachel (Titel + scrollbare Liste). */
+#mvarFactorChartHost .mvar-factor-selection {
+  flex: 0 0 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+#mvarFactorChartHost .mvar-factor-selection-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+/* Filter-Chips (Typ IR/CS/VEGA + Waehrung EUR/…) ueber der Faktor-Liste. */
+#mvarFactorChartHost .mvar-factor-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+#mvarFactorChartHost .mvar-factor-chip {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+#mvarFactorChartHost .mvar-factor-chip:hover { border-color: var(--accent); }
+#mvarFactorChartHost .mvar-factor-chip.is-active {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-color: var(--accent);
+}
+/* Liste OHNE eigenen Rahmen -> die Kachel drumherum ist die Box. */
+#mvarFactorChartHost .mvar-factor-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+/* Rechts: EIGENE Kachel mit Chart oben, Correlation darunter. */
+#mvarFactorChartHost .mvar-factor-right {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px;
 }
 #mvarFactorChartHost .mvar-factor-item {
   display: block;

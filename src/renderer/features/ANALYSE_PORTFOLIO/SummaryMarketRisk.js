@@ -225,13 +225,28 @@ function populateStressScenarioSelect(port_name) {
   // aelteren asof-Daten.
   const prev = sel.value;
   const all = appState.getMvarDistData() || [];
-  // ALLE Szenarien inkl. ROLLING_1 (rechts soll Rolling ebenfalls waehlbar sein).
-  const scenarios = [...new Set(
+  // Nur Szenarien, die aktuell FUER DIE BERECHNUNG ausgewaehlt sind (is_selected=1) ODER das
+  // Rolling-Baseline-Fenster. Grund: nicht gemeinsam gerechnete Szenarien duerfen nicht
+  // verglichen werden (waere ein anderer Lauf/Portfolio-Zustand). Ausgehaktes verschwindet
+  // damit aus dem Dropdown, auch wenn noch alte Ergebniszeilen existieren.
+  const cfgRows = appState.getMvarModelSelectionAppRows?.() || [];
+  // Immer erlaubt: das EINE Baseline-Rolling (Customer-Default). Weitere Rollings (z.B.
+  // ROLLING_4) sind normale Szenarien und folgen is_selected.
+  const baselineRolling = String(appState.getCustomerMarketRiskSetting?.()?.default_mvar_interval_name ?? '').trim();
+  const allowed = new Set();
+  cfgRows.forEach(r => {
+    const nm = String(r?.INTERVAL_NAME ?? '').trim();
+    if (!nm) return;
+    if (Number(r?.is_selected) === 1 || nm === baselineRolling) allowed.add(nm);
+  });
+  let scenarios = [...new Set(
     all
       .filter(r => r && (!port || r.port_name === port))
       .map(r => String(r?.scenario_name ?? r?.SCENARIO_NAME ?? '').trim())
       .filter(Boolean)
   )].sort();
+  // Nur filtern, wenn die Konfiguration geladen ist (sonst Fallback: alle anzeigen).
+  if (allowed.size) scenarios = scenarios.filter(s => allowed.has(s));
 
   sel.innerHTML = scenarios.length
     ? scenarios.map(s => `<option value="${s}">${s}</option>`).join('')
@@ -326,7 +341,7 @@ function _drawMainDist(range = null) {
 
   if (window.plMvarDistChartInstance) { try { window.plMvarDistChartInstance.destroy(); } catch (_) {} }
 
-  const { data, options, veLines } = drawMvarHistogram(a.plValues, a.portValueRel, a.varTRel, a.esTRel, {
+  const { data, options, veLines, tickMap } = drawMvarHistogram(a.plValues, a.portValueRel, a.varTRel, a.esTRel, {
     overlay: a.overlay,
     mainLabel: a.mainLabel,
     horizonDays: a.horizonDays,
@@ -334,6 +349,7 @@ function _drawMainDist(range = null) {
   });
   const chart = new Chart(canvas.getContext('2d'), { type: 'bar', data, options, plugins: [_mvarVELinePlugin, _distYSyncPlugin] });
   chart.$veLines = veLines;
+  chart.$distTickMap = tickMap;
   // Standard: Rolling (Overlay) samt VaR UND ES sichtbar -> nichts ausgeblendet.
   chart.$hiddenGroups = new Set();
   chart.$hiddenMetrics = new Set();
@@ -364,18 +380,16 @@ function _drawStressDist(stress, range) {
     return;
   }
   if (window.plMvarStressDistChartInstance) { try { window.plMvarStressDistChartInstance.destroy(); } catch (_) {} }
-  const { data, options, veLines } = drawMvarHistogram(stress.plValues, stress.portValueRel, stress.varTRel, stress.esTRel, {
+  const { data, options, veLines, tickMap } = drawMvarHistogram(stress.plValues, stress.portValueRel, stress.varTRel, stress.esTRel, {
     mainLabel: stress.scenario_name,
     horizonDays: stress.horizonDays,
     range,
   });
   const chart = new Chart(canvas.getContext('2d'), { type: 'bar', data, options, plugins: [_mvarVELinePlugin, _distYSyncPlugin] });
   chart.$veLines = veLines;
-  // Wie beim Haupt-Histogramm: ES-Linien starten abgewaehlt (per Legende zuschaltbar).
-  chart.$hiddenMetrics = new Set(['es']);
-  chart.data.datasets.forEach((d, i) => {
-    if (d.metricToggle === 'es') chart.setDatasetVisibility(i, false);
-  });
+  chart.$distTickMap = tickMap;
+  // ES ist standardmaessig EINGESCHALTET (VaR + ES sichtbar); per Legende abschaltbar.
+  chart.$hiddenMetrics = new Set();
   try { chart.update(); } catch {}
   window.plMvarStressDistChartInstance = chart;
   chart.$distRole = 'stress';
@@ -389,7 +403,7 @@ function _updateMainDistRange(range) {
   const a = __mainDistArgs;
   const chart = window.plMvarDistChartInstance;
   if (!a || !chart) return;
-  const { data, veLines } = drawMvarHistogram(a.plValues, a.portValueRel, a.varTRel, a.esTRel, {
+  const { data, veLines, tickMap } = drawMvarHistogram(a.plValues, a.portValueRel, a.varTRel, a.esTRel, {
     overlay: a.overlay,
     mainLabel: a.mainLabel,
     horizonDays: a.horizonDays,
@@ -400,6 +414,7 @@ function _updateMainDistRange(range) {
     if (chart.data.datasets[i]) chart.data.datasets[i].data = ds.data;
   });
   chart.$veLines = veLines;
+  chart.$distTickMap = tickMap; // Achsenbereich hat sich ggf. geaendert -> neue Tick-Positionen
   try { chart.update(); } catch (_) {}
 }
 
@@ -516,7 +531,13 @@ const _mvarVELinePlugin = {
       ctx.setLineDash(ln.dash || []);
       ctx.lineWidth = 2;
       ctx.strokeStyle = ln.color || 'rgba(255,0,0,0.95)';
-      ctx.moveTo(x, chartArea.top);
+      // ES-Linie (gestrichelt) NICHT ganz nach oben ziehen, sondern nur bis zur Oberkante
+      // ihres Labels (z.B. "ES ROLLING_1"). VaR-Linien weiterhin ueber die volle Hoehe.
+      // Label-Baseline liegt bei chartArea.top + ln.dy; ~9px darueber ist die Text-Oberkante.
+      const topY = (ln.metric === 'es')
+        ? Math.max(chartArea.top, chartArea.top + (ln.dy || 11) - 9)
+        : chartArea.top;
+      ctx.moveTo(x, topY);
       ctx.lineTo(x, chartArea.bottom);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -594,6 +615,42 @@ function createHistogramDataAdjusted(values, portValueRel = 1, numBins = 50, inc
   const centers = bins.map((_, i) => min + (i + 0.5) * binWidth);
 
   return { labels, bins, min, binWidth, mu, sigma, centers, total: adjusted.length };
+}
+
+// Wenige, klare X-Achsen-Beschriftungen fuer die Verteilungs-Histogramme: statt der feinen
+// Bin-Range-Texte ("-0,52% - -0,49%") nur ~7 gleichmaessig verteilte, gerundete Prozentwerte
+// (z.B. -0,6 % | -0,4 % | ... | 0,6 %) an den Bin-Positionen, deren Zentrum dem "netten" Wert
+// am naechsten liegt. Die Bins bleiben intern unveraendert (numBins=50); nur die Achsen-Ticks
+// werden ausgeduennt und gerundet. Rueckgabe: Map(binIndex -> formatiertes Label).
+function _distNiceTickMap(histogram, target = 7) {
+  const map = new Map();
+  const min = histogram?.min;
+  const binWidth = histogram?.binWidth;
+  const n = Array.isArray(histogram?.bins) ? histogram.bins.length : 0;
+  if (!Number.isFinite(min) || !(binWidth > 0) || n <= 0) return map;
+
+  const axisMax = min + binWidth * n;
+  const range = axisMax - min;
+  if (!(range > 0)) return map;
+
+  // "Nette" Schrittweite: 1/2/5 * 10^k, sodass ~target Ticks entstehen.
+  const rawStep = range / target;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const dec = Math.min(2, Math.max(0, -Math.floor(Math.log10(step) + 1e-9)));
+
+  const fmt = (v) => {
+    const val = Math.abs(v) < step / 2 ? 0 : v; // "-0,0 %" vermeiden
+    return val.toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' %';
+  };
+
+  const first = Math.ceil((min - 1e-9) / step) * step;
+  for (let v = first; v <= axisMax + 1e-9; v += step) {
+    const idx = Math.round((v - min) / binWidth - 0.5); // Bin, dessen Zentrum v am naechsten liegt
+    if (idx >= 0 && idx < n && !map.has(idx)) map.set(idx, fmt(v));
+  }
+  return map;
 }
 
 function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overlay = null, mainLabel = 'Frequency', horizonDays = 1, range = null } = {}) {
@@ -678,20 +735,20 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
   const veLines = [];
   const scenTag = String(mainLabel || '').trim();
   if (thresholdBinIndex !== -1 && Number.isFinite(varTRel) && varTRel !== 0) {
-    veLines.push({ at: thresholdBinIndex, label: scenTag ? `VaR ${scenTag}` : 'VaR', value: varTRel, color: 'rgba(255,0,0,0.95)', dash: [], group: 'main', metric: 'var' });
+    veLines.push({ at: thresholdBinIndex, label: scenTag ? `VaR ${scenTag}` : 'VaR', value: varTRel, color: 'rgba(255,150,0,0.98)', dash: [], group: 'main', metric: 'var' });
   }
   if (esBinIndex !== -1 && Number.isFinite(esTRel) && esTRel !== 0) {
-    veLines.push({ at: esBinIndex, label: scenTag ? `ES ${scenTag}` : 'ES', value: esTRel, color: 'rgba(255,150,0,0.98)', dash: [6, 4], group: 'main', metric: 'es' });
+    veLines.push({ at: esBinIndex, label: scenTag ? `ES ${scenTag}` : 'ES', value: esTRel, color: 'rgba(255,0,0,0.95)', dash: [6, 4], group: 'main', metric: 'es' });
   }
   if (overlay) {
     const rollTag = String(overlay.label || 'ROLLING_1');
     const rollVarIdx = binIndexOf(overlay.varTRel);
     const rollEsIdx = binIndexOf(overlay.esTRel);
     if (rollVarIdx !== -1 && Number.isFinite(overlay.varTRel) && overlay.varTRel !== 0) {
-      veLines.push({ at: rollVarIdx, label: `VaR ${rollTag}`, value: overlay.varTRel, color: 'rgba(185,25,45,0.95)', dash: [], group: 'overlay', metric: 'var' });
+      veLines.push({ at: rollVarIdx, label: `VaR ${rollTag}`, value: overlay.varTRel, color: 'rgba(205,105,0,0.98)', dash: [], group: 'overlay', metric: 'var' });
     }
     if (rollEsIdx !== -1 && Number.isFinite(overlay.esTRel) && overlay.esTRel !== 0) {
-      veLines.push({ at: rollEsIdx, label: `ES ${rollTag}`, value: overlay.esTRel, color: 'rgba(205,105,0,0.98)', dash: [6, 4], group: 'overlay', metric: 'es' });
+      veLines.push({ at: rollEsIdx, label: `ES ${rollTag}`, value: overlay.esTRel, color: 'rgba(185,25,45,0.95)', dash: [6, 4], group: 'overlay', metric: 'es' });
     }
   }
   // Jeder Eintrag (Label + Wert darunter) in eigener vertikaler Staffel.
@@ -785,13 +842,15 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
   // Legenden-Schalter fuer die VaR-/ES-Linien: leere Dummy-Datasets, deren
   // Legenden-Klick ALLE VaR- bzw. ES-Linien (beider Szenarien) togglet.
   if (veLines.some((l) => l.metric === 'var')) {
-    datasets.push({ type: 'line', label: 'VaR', data: [], borderColor: 'rgba(255,0,0,0.95)', backgroundColor: 'rgba(255,0,0,0.95)', pointRadius: 0, metricToggle: 'var' });
+    datasets.push({ type: 'line', label: 'VaR', data: [], borderColor: 'rgba(255,150,0,0.98)', backgroundColor: 'rgba(255,150,0,0.98)', pointRadius: 0, metricToggle: 'var' });
   }
   if (veLines.some((l) => l.metric === 'es')) {
-    datasets.push({ type: 'line', label: 'ES', data: [], borderColor: 'rgba(255,150,0,0.98)', backgroundColor: 'rgba(255,150,0,0.98)', pointRadius: 0, metricToggle: 'es' });
+    datasets.push({ type: 'line', label: 'ES', data: [], borderColor: 'rgba(255,0,0,0.95)', backgroundColor: 'rgba(255,0,0,0.95)', pointRadius: 0, metricToggle: 'es' });
   }
 
   const col = _chartTextColor();
+  // Nur wenige, klare %-Werte auf der X-Achse (statt Range-Texte je Bin).
+  const _distTickMap = _distNiceTickMap(histogram, 7);
   return {
     data: {
       labels: histogram.labels,
@@ -805,7 +864,23 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
       scales: {
         x: {
           title: { display: true, text: horizonDays > 1 ? `P/L as % of NAV (${horizonDays}d horizon)` : 'P/L as % of NAV', color: col },
-          ticks: { color: col, maxRotation: 90, minRotation: 90, autoSkip: true, maxTicksLimit: 16 }
+          // Keine vertikalen Gitterlinien je Bin (waeren bei 50 Bins zu dicht).
+          grid: { display: false },
+          // Nur ~7 gleichmaessig verteilte, gerundete %-Werte statt Range-Texten (horizontal).
+          ticks: {
+            color: col,
+            autoSkip: false,
+            maxRotation: 0,
+            minRotation: 0,
+            // Tick-Map liegt an der Chart-Instanz (chart.$distTickMap), damit In-Place-Updates
+            // (_updateMainDistRange bei Achsenbereich-Wechsel) die Labels mitziehen. Reguläre
+            // Funktion (kein Arrow), um ueber `this.chart` an die Instanz zu kommen.
+            callback: function (value) {
+              const m = this.chart && this.chart.$distTickMap;
+              const lbl = m ? m.get(value) : null;
+              return lbl == null ? '' : lbl;
+            },
+          },
         },
         y: {
           beginAtZero: true,
@@ -903,6 +978,7 @@ function drawMvarHistogram(plValues, portValueRel, varTRel, esTRel = 0, { overla
       }
     },
     veLines,
+    tickMap: _distTickMap,
   };
 }
 

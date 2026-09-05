@@ -435,6 +435,16 @@ module.exports = function registerCrudHandlers({
         return;
       }
 
+      // MVaR-Szenario-Kaskade: den scenario_name (INTERVAL_NAME) VOR dem Loeschen der
+      // MVaRInput-Zeile merken, um danach die berechneten Ergebnisse mitzuloeschen.
+      let mvarScenarioName = null;
+      if (tableName === 'MVaRInput' && uniqueIdentifier?.column === 'id' && typeof dbApi.selectAll === 'function') {
+        try {
+          const r = await dbApi.selectAll('SELECT INTERVAL_NAME FROM MVaRInput WHERE id = ?', [uniqueIdentifier.value]);
+          mvarScenarioName = r?.[0]?.INTERVAL_NAME ?? null;
+        } catch (e) { console.warn('[erase-data] MVaRInput name lookup failed:', e?.message || e); }
+      }
+
       await eraseRowFromDB(cleanTableName, uniqueIdentifier);
 
       // Provider-Kaskade: zugehörige tblTS-Spalte (Name = ID) mitlöschen.
@@ -464,7 +474,34 @@ module.exports = function registerCrudHandlers({
         }
       }
 
-      const refreshList = computeRefreshList(cleanTableName, uniqueIdentifier || {});
+      // MVaR-Szenario-Kaskade: alle berechneten Ergebnisse dieses Szenarios aus den
+      // MarketVaR*-Tabellen (Spalte scenario_name) loeschen. Sonst bliebe das geloeschte
+      // Szenario im Profit/Loss-Dropdown (das aus MarketVaR_Dist gespeist wird). Nur Tabellen
+      // mit LIKE 'MarketVaR%' + vorhandener scenario_name-Spalte -> keine Fremd-Tabellen.
+      let mvarPurged = null;
+      if (mvarScenarioName && typeof dbApi.selectAll === 'function' && typeof dbApi.runSQL === 'function') {
+        try {
+          const tabs = await dbApi.selectAll("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'MarketVaR%'");
+          for (const t of (tabs || [])) {
+            const tn = String(t.name).replace(/"/g, '""');
+            const cols = await dbApi.selectAll(`PRAGMA table_info("${tn}")`);
+            if ((cols || []).some((c) => String(c.name).toLowerCase() === 'scenario_name')) {
+              await dbApi.runSQL(`DELETE FROM "${tn}" WHERE scenario_name = ?`, [mvarScenarioName]);
+            }
+          }
+          mvarPurged = mvarScenarioName;
+          console.log('[erase-data] MVaR scenario results purged:', mvarScenarioName);
+        } catch (e) {
+          console.warn('[erase-data] MVaR scenario cascade failed:', e?.message || e);
+        }
+      }
+
+      let refreshList = computeRefreshList(cleanTableName, uniqueIdentifier || {});
+      if (mvarPurged) {
+        // Result-Tabellen mitrefreshen -> Dropdown/KPIs aktualisieren sich sofort.
+        refreshList = [...new Set([...refreshList,
+          'MarketVaR', 'MarketVaR_Dist', 'MarketVaR_Product', 'MarketVaR_FactorPL', 'MarketVaR_FactorReturns'])];
+      }
 
       await refreshWithOptionalLock(refreshList);
 
@@ -473,6 +510,7 @@ module.exports = function registerCrudHandlers({
         uniqueIdentifier,
         refreshList,
         tsColDropped,
+        mvarPurged,
       });
     } catch (error) {
       event.reply(

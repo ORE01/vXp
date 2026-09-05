@@ -47,6 +47,10 @@ function redraw() {
 // zusaetzlich zu den angehakten Szenarien — im Chart schattiert.
 let __clickedInterval = null;
 
+// Aktive Filter-Tokens der Risk-Factor-Selection (Typen IR/CS/VEGA und/oder Waehrungen EUR/…).
+// Leer = kein Filter (alle Faktoren sichtbar).
+let __factorFilter = new Set();
+
 // Zeitraum der geklickten Szenario-Zeile im Chart hervorheben (aus mvarInputPanel aufgerufen).
 export function highlightScenarioRow(interval) {
   __clickedInterval = interval ? String(interval).trim() : null;
@@ -68,10 +72,15 @@ function getSelectedScenarioRanges() {
       out.push({ start: row.START, end: row.END, label: name });
     }
   };
-  container.querySelectorAll('input.scenario-checkbox:checked').forEach((cb) => {
+  // Die im Scenario-Period-Table ANGEHAKTEN Stress-Szenarien (Klasse scenario-calc-cb) —
+  // deren START..END wird im Chart schattiert. (Die Rolling-Radios scenario-checkbox haben
+  // kein START/END und werden von pushRow ohnehin uebersprungen; der Vollstaendigkeit halber
+  // mitgelesen.)
+  container.querySelectorAll('input.scenario-calc-cb:checked, input.scenario-checkbox:checked').forEach((cb) => {
     pushRow(byId.get(String(cb.dataset.id ?? '')) || byName.get(String(cb.dataset.interval ?? '')));
   });
-  if (__clickedInterval) pushRow(byName.get(__clickedInterval));
+  // Bewusst KEIN __clickedInterval mehr: nur ANGEHAKTE (fuer Berechnung ausgewaehlte) Szenarien
+  // werden schattiert. Ausgehaktes soll verschwinden - ein Zeilenklick darf es nicht zurueckholen.
   return out;
 }
 
@@ -247,7 +256,8 @@ export function renderMvarFactorChart() {
     const selHost = document.getElementById('inputMvarContainer');
     if (selHost) {
       selHost.addEventListener('change', (e) => {
-        if (e.target?.classList?.contains('scenario-checkbox')) redraw();
+        const cl = e.target?.classList;
+        if (cl?.contains('scenario-calc-cb') || cl?.contains('scenario-checkbox')) redraw();
       });
     }
   }
@@ -266,10 +276,16 @@ export function renderMvarFactorChart() {
         </div>
       </div>
       <div class="mvar-factor-cols">
-        <div class="mvar-factor-list" id="mvarFactorList"></div>
-        <div class="mvar-factor-chart-wrap"><canvas id="${CANVAS_ID}"></canvas></div>
+        <div class="mvar-factor-selection">
+          <div class="mvar-factor-selection-title">Risk Factor Selection</div>
+          <div class="mvar-factor-filter" id="mvarFactorFilter"></div>
+          <div class="mvar-factor-list" id="mvarFactorList"></div>
+        </div>
+        <div class="mvar-factor-right">
+          <div class="mvar-factor-chart-wrap"><canvas id="${CANVAS_ID}"></canvas></div>
+          <div class="mvar-factor-corr" id="mvarFactorCorr"></div>
+        </div>
       </div>
-      <div class="mvar-factor-corr" id="mvarFactorCorr"></div>
     </section>`;
 
   // Zeitintervall-Buttons (1Y/5Y/10Y/Max) + Reset-Zoom.
@@ -299,22 +315,67 @@ export function renderMvarFactorChart() {
     });
   }
 
-  const list = host.querySelector('#mvarFactorList');
-  factors.forEach((f) => {
-    const label = document.createElement('label');
-    label.className = 'mvar-factor-item';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = __selected.has(f);
-    cb.addEventListener('change', () => {
-      if (cb.checked) __selected.add(f); else __selected.delete(f);
-      drawChart(rows, dateKey, factors);
-    });
-    const m = __ctx.factorMap.get(f);
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(m ? ` ${f} → ${m.col}` : ` ${f}`));
-    list.appendChild(label);
+  // --- Filter-Chips: Typ (IR/CS/VEGA) + Waehrung (EUR/…) aus dem Key TYPE:CCY:… ---
+  const tokType = (f) => String(f).split(':')[0] || '';
+  const tokCcy  = (f) => String(f).split(':')[1] || '';
+  const TYPE_SET = new Set(factors.map(tokType).filter(Boolean));
+  const CCY_SET  = new Set(factors.map(tokCcy).filter(Boolean));
+  const typeOrder = ['IR', 'CS', 'VEGA'];
+  const TYPES = [...TYPE_SET].sort((a, b) => {
+    const ia = typeOrder.indexOf(a), ib = typeOrder.indexOf(b);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
   });
+  const CCYS = [...CCY_SET].sort();
+
+  // Verwaiste Filter-Tokens entfernen (Szenario/Map kann gewechselt haben).
+  [...__factorFilter].forEach((t) => { if (!TYPE_SET.has(t) && !CCY_SET.has(t)) __factorFilter.delete(t); });
+
+  // Faktor sichtbar, wenn er zu den aktiven Typ- UND Waehrungs-Filtern passt (leer = alle).
+  const passesFilter = (f) => {
+    const activeTypes = [...__factorFilter].filter((t) => TYPE_SET.has(t));
+    const activeCcys  = [...__factorFilter].filter((t) => CCY_SET.has(t));
+    const ty = tokType(f), cc = tokCcy(f);
+    return (!activeTypes.length || activeTypes.includes(ty)) &&
+           (!activeCcys.length  || activeCcys.includes(cc));
+  };
+
+  const listHost = host.querySelector('#mvarFactorList');
+  const rebuildList = () => {
+    if (!listHost) return;
+    listHost.innerHTML = '';
+    factors.filter(passesFilter).forEach((f) => {
+      const label = document.createElement('label');
+      label.className = 'mvar-factor-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = __selected.has(f);
+      cb.addEventListener('change', () => {
+        if (cb.checked) __selected.add(f); else __selected.delete(f);
+        drawChart(rows, dateKey, factors);
+      });
+      const m = __ctx.factorMap.get(f);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(m ? ` ${f} → ${m.col}` : ` ${f}`));
+      listHost.appendChild(label);
+    });
+  };
+
+  const filterHost = host.querySelector('#mvarFactorFilter');
+  if (filterHost) {
+    filterHost.innerHTML = [...TYPES, ...CCYS].map((t) =>
+      `<button type="button" class="mvar-factor-chip${__factorFilter.has(t) ? ' is-active' : ''}" data-token="${t}">${t}</button>`
+    ).join('');
+    filterHost.querySelectorAll('.mvar-factor-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const t = chip.dataset.token;
+        if (__factorFilter.has(t)) __factorFilter.delete(t); else __factorFilter.add(t);
+        chip.classList.toggle('is-active', __factorFilter.has(t));
+        rebuildList();
+      });
+    });
+  }
+
+  rebuildList();
 
   drawChart(rows, dateKey, factors);
 }

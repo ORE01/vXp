@@ -96,9 +96,11 @@ function setIRSensData(rows) {
 
   // Dist cache
   function setMvarDistData(rows) {
-    const arr = Array.isArray(rows) ? rows : [];
-    if (!Array.isArray(appState.mvarDistDataAll)) appState.mvarDistDataAll = [];
-    appState.mvarDistDataAll = appState.mvarDistDataAll.concat(arr);
+    // ERSETZEN, nicht anhaengen: der Data-Pump sendet bei jedem Refresh die VOLLE Tabelle.
+    // Mit .concat() akkumulierten sich sonst Duplikate ueber alle Refreshes -> die
+    // Verteilungs-Histogramme (Profit/Loss) zeigten je nach Cache-Zeitpunkt unterschiedlich
+    // viele Datenpunkte (linker vs. rechter Chart nicht identisch). Wie setAllMvarData.
+    appState.mvarDistDataAll = Array.isArray(rows) ? rows : [];
   }
 
   function getMvarDistData({ port_name, scenario_name, asof_date } = {}) {

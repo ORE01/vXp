@@ -82,7 +82,9 @@ function scenarioRowHtml(r, mode, scenarioSet) {
     + `<td>${fmtLossPct(r.var_red_loss_limit)}</td>`
     + `<td>${fmtLossPct(r.es_yellow_loss_limit)}</td>`
     + `<td>${fmtLossPct(r.es_red_loss_limit)}</td>`
-    + `<td><button class="edit-button" data-id="${escapeHtml(idAttr)}">Edit</button></td>`
+    + `<td>${(mode === 'scenario' && /^ROLLING/i.test(String(r.INTERVAL_NAME ?? '').trim()))
+        ? `<button class="edit-button mvar-set-baseline" data-id="${escapeHtml(idAttr)}" data-interval="${interval}" title="Make this the always-calculated baseline">Set as baseline</button> `
+        : ''}<button class="edit-button" data-id="${escapeHtml(idAttr)}">Edit</button></td>`
     + '</tr>';
 }
 
@@ -121,20 +123,34 @@ export function renderModelSelectionTable() {
     return;
   }
 
-  const isRolling = (r) => /^ROLLING/i.test(String(r.INTERVAL_NAME ?? '').trim());
-  const rollingRows = rows.filter(isRolling);
-  const scenarioRows = rows.filter((r) => !isRolling(r));
+  // Es gibt genau EINE "Always calculated"-Baseline = das Customer-Default-Rolling-Interval
+  // (default_mvar_interval_name). Alle anderen Zeilen - auch WEITERE ROLLING_n - gehoeren zu
+  // den Szenarien (auswaehlbar). Fallback, falls kein Default gesetzt/kein Rolling: das erste
+  // Rolling (kleinstes n).
+  const isRollingName = (r) => /^ROLLING/i.test(String(r.INTERVAL_NAME ?? '').trim());
+  const nOf = (r) => { const x = String(r.INTERVAL_NAME ?? '').match(/(\d+)/); return x ? parseInt(x[1], 10) : Number.MAX_SAFE_INTEGER; };
+  const custDefaultRolling = String(appState.getCustomerMarketRiskSetting?.()?.default_mvar_interval_name ?? '').trim();
+  const allRolling = rows.filter(isRollingName);
+  const baselineRow =
+    allRolling.find((r) => String(r.INTERVAL_NAME ?? '').trim() === custDefaultRolling) ||
+    allRolling.slice().sort((a, b) => nOf(a) - nOf(b))[0] ||
+    null;
+  const baselineName = baselineRow ? String(baselineRow.INTERVAL_NAME ?? '').trim() : null;
+  const rollingRows = baselineRow ? [baselineRow] : [];
+  const scenarioRows = rows.filter((r) => String(r.INTERVAL_NAME ?? '').trim() !== baselineName);
 
   const scenarioSet = ensureSessionScenarioSet(scenarioRows);
 
+  // Zwei getrennte Boxen: Baseline (1 Zeile, NICHT scrollbar) + Stress scenarios (scrollbar).
   container.innerHTML =
-    scenarioTableHtml('Rolling window', 'Always calculated (baseline).', rollingRows, 'rolling', 'View', null) +
-    scenarioTableHtml('Stress scenarios', 'Select scenarios to calculate, then Save.', scenarioRows, 'scenario', 'Calculate', scenarioSet);
+    `<div class="mvar-baseline-block">${scenarioTableHtml('Rolling window', 'Always calculated (baseline).', rollingRows, 'rolling', 'View', null)}</div>` +
+    `<div class="mvar-scenarios-block">${scenarioTableHtml('Stress scenarios', 'Select scenarios to calculate, then Save.', scenarioRows, 'scenario', 'Calculate', scenarioSet)}</div>`;
 
   wireSelection(container);
   wireScenarioCalcSelection(container);
   wireSaveSelection(container, scenarioRows);
   wireEditButtons(container);
+  wireBaselineButtons(container);
   wireRowHighlight(container);
 
   // Risk-Factor-Viewer (Checklist + Multi-Line-Chart aus tblTS) unter der Tabelle.
@@ -278,7 +294,9 @@ function wireSelection(container) {
 
 // Edit buttons -> edit the matching MVaRInput row (model params only).
 function wireEditButtons(container) {
-  container.querySelectorAll('.edit-button[data-id]').forEach((button) => {
+  // :not(.mvar-set-baseline) -> der "Set as baseline"-Button (auch .edit-button) wird separat
+  // in wireBaselineButtons verdrahtet, nicht als Edit.
+  container.querySelectorAll('.edit-button[data-id]:not(.mvar-set-baseline)').forEach((button) => {
     button.onclick = (event) => {
       const id = button.getAttribute('data-id');
       const mvarRows = appState.getMvarInputData?.() || appState.mvarInputData || [];
@@ -297,6 +315,38 @@ function wireEditButtons(container) {
         'edit',
         { modalId: 'editModal', onReload: reloadMVar },
       );
+    };
+  });
+}
+
+// "Set as baseline": ein bestehendes ROLLING_n-Szenario zur "Always calculated"-Baseline
+// machen -> setzt das Customer-Default-Rolling (default_mvar_interval_id/_name). Die alte
+// Baseline wandert dadurch automatisch zu den Szenarien (Klassifizierung ueber den Default).
+// Kein Loeschen/Neuanlegen noetig. Der Handler re-pusht Setting + View -> Tabelle rendert neu.
+function wireBaselineButtons(container) {
+  container.querySelectorAll('.mvar-set-baseline[data-id]').forEach((button) => {
+    button.onclick = async () => {
+      const id = button.getAttribute('data-id');
+      const intervalName = button.getAttribute('data-interval');
+      const setting = appState.getCustomerMarketRiskSetting?.() || {};
+      button.disabled = true;
+      try {
+        const res = await window.api.invoke('customer-mr-setting.set-baseline-rolling', {
+          customer_id: setting.customer_id ?? null,
+          setting_scope: setting.setting_scope || 'DEFAULT',
+          interval_id: id,
+          interval_name: intervalName,
+        });
+        if (!res?.success) {
+          console.error('[MVaR] set baseline failed', res?.error);
+          button.disabled = false;
+        }
+        // Bei Erfolg re-pusht der Handler CustomerMarketRiskSetting + v_MVAR_MODEL_SELECTION_APP
+        // -> renderModelSelectionTable laeuft erneut und klassifiziert mit dem neuen Default.
+      } catch (e) {
+        console.error('[MVaR] set baseline invoke failed', e);
+        button.disabled = false;
+      }
     };
   });
 }

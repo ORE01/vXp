@@ -934,8 +934,8 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Select Portfolio (VALUATION + RISK IDENTISCH): aufklappbare Gruppe mit
      Inline-Portfolio-Dropdown + "Portfolio"-Sub-Trigger (öffnet das SELECT-PORTFOLIO-
      Panel). KEIN .risk-section → in beiden Views sichtbar, ganz oben. -->
-<div class="risk-acc is-expanded">
-  <button class="section-trigger risk-acc-toggle no-accent" type="button" aria-expanded="true">
+<div class="risk-acc">
+  <button class="section-trigger risk-acc-toggle select-portfolio-head" type="button" aria-expanded="false">
     <span class="section-header">Select Portfolio</span>
     <span class="chev"></span>
   </button>
@@ -994,7 +994,7 @@ Feature:    Wenn es nur in einem Panel gilt
              Risk-History-Charts (Overview-Yield + Portfolio Value) nebeneinander.
              Eigene Canvas-IDs (perfHist*), kein ID-Konflikt mit den Originalen. -->
         <button class="section-trigger section-trigger--sub pf-accent" type="button" data-panel="panel-performance-history" aria-controls="panel-performance-history" aria-expanded="false">
-          <span class="section-header">Profit/Loss</span>
+          <span class="section-header">Profit &amp; Loss</span>
           <span class="chev"></span>
         </button>
         <!-- Yield (Untergruppe): klappt auf UND oeffnet Portfolio Yield
@@ -1062,7 +1062,7 @@ Feature:    Wenn es nur in einem Panel gilt
            gleiches .risk-acc-System wie Risk Configuration (Haupt → Sub → Sub-Sub). -->
     <div class="risk-acc risk-section">
       <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
-        <span class="section-header">Risk Results</span>
+        <span class="section-header">Risk Analysis</span>
         <span class="chev"></span>
       </button>
       <div class="risk-acc-body">
@@ -1078,7 +1078,42 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
-            <!-- Risk Configuration (Untergruppe, ERSTER Punkt): Scenario Period + Factor Mapping. -->
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
+              <span class="section-header">Profit &amp; Loss</span>
+              <span class="chev"></span>
+            </button>
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-portfolio-backtest" aria-controls="panel-portfolio-backtest" aria-expanded="false">
+              <span class="section-header">Portfolio Backtest</span>
+              <span class="chev"></span>
+            </button>
+
+            <!-- Risk Breakdown (Untergruppe): Factors / Issuers / Products / Yield. -->
+            <div class="risk-acc">
+              <button class="section-trigger section-trigger--sub risk-acc--l3 risk-acc-toggle" type="button" aria-expanded="false">
+                <span class="section-header">Risk Breakdown</span>
+                <span class="chev"></span>
+              </button>
+              <div class="risk-acc-body">
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-mvar" aria-controls="panel-mvar" aria-expanded="false">
+                  <span class="section-header">Factors</span>
+                  <span class="chev"></span>
+                </button>
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-mvar-issuers" aria-controls="panel-mvar-issuers" aria-expanded="false">
+                  <span class="section-header">Issuers</span>
+                  <span class="chev"></span>
+                </button>
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
+                  <span class="section-header">Products</span>
+                  <span class="chev"></span>
+                </button>
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-mvar-yield" aria-controls="panel-mvar-yield" aria-expanded="false">
+                  <span class="section-header">Yield</span>
+                  <span class="chev"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Risk Configuration (Untergruppe, zuletzt): Limits + Scenario Period + Factor Mapping. -->
             <div class="risk-acc">
               <button class="section-trigger section-trigger--sub risk-acc--l3 risk-acc-toggle" type="button" aria-expanded="false">
                 <span class="section-header">Risk Configuration</span>
@@ -1099,30 +1134,6 @@ Feature:    Wenn es nur in einem Panel gilt
                 </button>
               </div>
             </div>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-portfolio-backtest" aria-controls="panel-portfolio-backtest" aria-expanded="false">
-              <span class="section-header">Portfolio Backtest</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-market" aria-controls="panel-market" aria-expanded="false">
-              <span class="section-header">Profit/Loss</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar" aria-controls="panel-mvar" aria-expanded="false">
-              <span class="section-header">Factors</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-issuers" aria-controls="panel-mvar-issuers" aria-expanded="false">
-              <span class="section-header">Issuers</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-products" aria-controls="panel-mvar-products" aria-expanded="false">
-              <span class="section-header">Products</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-mvar-yield" aria-controls="panel-mvar-yield" aria-expanded="false">
-              <span class="section-header">Yield</span>
-              <span class="chev"></span>
-            </button>
           </div>
         </div>
 
@@ -1134,38 +1145,57 @@ Feature:    Wenn es nur in einem Panel gilt
             <span class="chev"></span>
           </button>
           <div class="risk-acc-body">
-            <!-- Risk Configuration (Untergruppe, ERSTER Punkt): Credit-Risk-Konfiguration. -->
-            <div class="risk-acc">
-              <button class="section-trigger section-trigger--sub risk-acc--l3 risk-acc-toggle" type="button" aria-expanded="false">
-                <span class="section-header">Risk Configuration</span>
-                <span class="chev"></span>
-              </button>
-              <div class="risk-acc-body">
-                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
-                  <span class="section-header">Model &amp; Thresholds</span>
-                  <span class="chev"></span>
-                </button>
-                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-credit-dashboard" aria-controls="panel-credit-dashboard" aria-expanded="false">
-                  <span class="section-header">Limits</span>
-                  <span class="chev"></span>
-                </button>
-              </div>
-            </div>
-            <!-- Economic Capital (Gruppe): historic PD (bestehendes Panel) + market adjusted PD. -->
+            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-EAD" aria-controls="panel-EAD" aria-expanded="false">
+              <span class="section-header">EAD, LGD &amp; PD</span>
+              <span class="chev"></span>
+            </button>
+            <!-- Economic Capital (Gruppe): historic PD + market adjusted PD + Loss Distribution. -->
             <div class="risk-acc">
               <button class="section-trigger section-trigger--sub risk-acc--l3 risk-acc-toggle" type="button" aria-expanded="false">
                 <span class="section-header">Economic Capital</span>
                 <span class="chev"></span>
               </button>
               <div class="risk-acc-body">
-                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
-                  <span class="section-header">historic PD</span>
-                  <span class="chev"></span>
-                </button>
-                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-credit-current" aria-controls="panel-credit-current" aria-expanded="false">
-                  <span class="section-header">market adjusted PD</span>
-                  <span class="chev"></span>
-                </button>
+                <!-- Regulatory Benchmark: analytisches ASRF-Modell, zwei PD-Sichten
+                     (historic / market-adjusted) -> Vergleichspaar zu Internal Model. -->
+                <div class="risk-acc">
+                  <button class="section-trigger section-trigger--sub risk-acc--l4 risk-acc-toggle" type="button" aria-expanded="false">
+                    <span class="section-header">Regulatory</span>
+                    <span class="chev"></span>
+                  </button>
+                  <div class="risk-acc-body">
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-asrf" aria-controls="panel-asrf" aria-expanded="false">
+                      <span class="section-header">historic PD</span>
+                      <span class="chev"></span>
+                    </button>
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-asrf-norm" aria-controls="panel-asrf-norm" aria-expanded="false">
+                      <span class="section-header">market adjusted PD</span>
+                      <span class="chev"></span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Internal Model: MF-GC (Multi-Factor Gaussian Copula) mit den PD-Sichten
+                     historic / market adjusted + Loss Distribution. -->
+                <div class="risk-acc">
+                  <button class="section-trigger section-trigger--sub risk-acc--l4 risk-acc-toggle" type="button" aria-expanded="false">
+                    <span class="section-header">Internal Model</span>
+                    <span class="chev"></span>
+                  </button>
+                  <div class="risk-acc-body">
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-credit" aria-controls="panel-credit" aria-expanded="false">
+                      <span class="section-header">historic PD</span>
+                      <span class="chev"></span>
+                    </button>
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-credit-current" aria-controls="panel-credit-current" aria-expanded="false">
+                      <span class="section-header">market adjusted PD</span>
+                      <span class="chev"></span>
+                    </button>
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-cvar" aria-controls="panel-cvar" aria-expanded="false">
+                      <span class="section-header">Loss Distribution</span>
+                      <span class="chev"></span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <!-- Credit Scenarios (Issuer): Create + Set. Analog PD-Szenario, aber je
@@ -1187,14 +1217,6 @@ Feature:    Wenn es nur in einem Panel gilt
                 </button>
               </div>
             </div>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-EAD" aria-controls="panel-EAD" aria-expanded="false">
-              <span class="section-header">EAD/LGD/PD</span>
-              <span class="chev"></span>
-            </button>
-            <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-cvar" aria-controls="panel-cvar" aria-expanded="false">
-              <span class="section-header">Loss Distribution</span>
-              <span class="chev"></span>
-            </button>
             <button class="section-trigger section-trigger--sub risk-acc--l3" type="button" data-panel="panel-credit-tsi" aria-controls="panel-credit-tsi" aria-expanded="false">
               <span class="section-header">TSI</span>
               <span class="chev"></span>
@@ -1203,6 +1225,23 @@ Feature:    Wenn es nur in einem Panel gilt
               <span class="section-header">MSD</span>
               <span class="chev"></span>
             </button>
+            <!-- Risk Configuration (Untergruppe, zuletzt): Credit-Risk-Konfiguration. -->
+            <div class="risk-acc">
+              <button class="section-trigger section-trigger--sub risk-acc--l3 risk-acc-toggle" type="button" aria-expanded="false">
+                <span class="section-header">Risk Configuration</span>
+                <span class="chev"></span>
+              </button>
+              <div class="risk-acc-body">
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-risk-input-credit" aria-controls="panel-risk-input-credit" aria-expanded="false">
+                  <span class="section-header">Model &amp; Thresholds</span>
+                  <span class="chev"></span>
+                </button>
+                <button class="section-trigger section-trigger--sub risk-acc--l4" type="button" data-panel="panel-credit-dashboard" aria-controls="panel-credit-dashboard" aria-expanded="false">
+                  <span class="section-header">Limits</span>
+                  <span class="chev"></span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1229,24 +1268,9 @@ Feature:    Wenn es nur in einem Panel gilt
       </div>
     </div>
 
-    <!--   Risk History (Gruppe) → historische Risk-Ansichten -->
-    <div class="risk-acc risk-section">
-      <button class="section-trigger risk-acc-toggle" type="button" aria-expanded="false">
-        <span class="section-header">Risk History</span>
-        <span class="chev"></span>
-      </button>
-      <div class="risk-acc-body">
-        <!-- Trigger Overview / Portfolio Value / Sensitivities entfernt (Panels bleiben bestehen). -->
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-market-risk" aria-controls="panel-market-risk" aria-expanded="false">
-          <span class="section-header">Market Risk</span>
-          <span class="chev"></span>
-        </button>
-        <button class="section-trigger section-trigger--sub" type="button" data-panel="panel-credit-risk" aria-controls="panel-credit-risk" aria-expanded="false">
-          <span class="section-header">Credit Risk</span>
-          <span class="chev"></span>
-        </button>
-      </div>
-    </div>
+    <!-- "Risk History"-Gruppe entfernt: die History-Charts (Market/Credit Risk over time) sind
+         jetzt direkt in Profit/Loss, Economic Capital und Factors eingebettet. Die zugehoerigen
+         Panels (panel-market-risk / panel-credit-risk / …) bleiben im DOM (Registry/Rendering). -->
 
     <!--   Risk Configuration wurde aufgeloest: die Market-Risk-Config (Scenario Period +
            Factor Mapping) und die Credit-Risk-Config (Model & Thresholds) sitzen jetzt als
@@ -1752,13 +1776,22 @@ Feature:    Wenn es nur in einem Panel gilt
     <!-- 2) MVaR/ES: Caption + Profit/Loss Dist oben, darunter Tabelle + Ampel nebeneinander -->
     <div class="mvar-summary">
       <div class="mvar-summary-header">
-        <p class="mvar-caption">Market Value at Risk / Expected Shortfall:</p>
+        <p class="mvar-caption">Current Market:</p>
+        <!-- Scenario-Dropdown aus dem Stress-Chart hierher hochgezogen (rechts, ueber den
+             Szenario-Karten / dem Stress-Chart). -->
+        <div class="stress-scenario-picker">
+          <label class="mvar-caption" for="mvarStressScenarioSelect">Scenario:</label>
+          <select id="mvarStressScenarioSelect"></select>
+        </div>
         <button id="mvaRDistButton" class="edit-button">Profit/Loss Dist</button>
       </div>
 
       <!-- KPI-Kacheln (Total VaR/ES, abs + rel, mit Ampel-Punkt) — ersetzen die VaR/ES-Tabelle
            in der Ansicht. Die Tabelle bleibt (hidden) im DOM fuer den Report/die Ampel-Logik. -->
       <div id="mvarPLKpi" class="mr-kpi-row" style="margin-bottom:12px;"></div>
+      <!-- Report-Spiegel (unsichtbar): dieselben Profit/Loss-KPIs als data-kpi-band fuer den
+           PDF-Report (Total VaR/ES + Scenario VaR/ES). Befuellt in renderMvarPLKpis. -->
+      <div class="data-container" id="mvarPLKpiBand" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
       <div class="mvar-summary-row" style="display:none;">
         <div class="data-container" id="MVaRDataContainer0"></div>
@@ -1786,19 +1819,24 @@ Feature:    Wenn es nur in einem Panel gilt
          Panel #panel-portfolio-backtest ausgelagert. -->
     <div class="chart-2x1-row">
       <div class="chart-box">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">What is the current 10-day distribution of potential portfolio P/L?</div>
         <canvas id="plMvarDistChart"></canvas>
       </div>
       <div class="chart-box">
-        <div class="stress-scenario-picker">
-          <label for="mvarStressScenarioSelect">Scenario</label>
-          <select id="mvarStressScenarioSelect"></select>
-        </div>
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How does the portfolio P/L distribution change under the selected stress scenario?</div>
         <canvas id="plMvarStressDistChart"></canvas>
       </div>
     </div>
 
-
-
+    <!-- Market-Risk-History (MVaR / ES ueber Zeit) — Kopie aus Risk History/Market Risk, unter
+         den beiden Verteilungscharts. Nur Gesamt-Serien (MVaR All + M ES All; Filter in JS).
+         Volle Groesse wie die oberen Charts via .chart-2x1-row (Einzel-Box, kein 550px-Deckel). -->
+    <div class="chart-2x1-row" id="plMarketRiskHistPanel">
+      <div class="chart-box">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How has market risk evolved over time?</div>
+        <canvas id="plMarketRiskHistChart" data-label="Market risk over time (MVaR / ES)"></canvas>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -1945,6 +1983,14 @@ Feature:    Wenn es nur in einem Panel gilt
 
   <div id="mrFactorVarCardMenu" class="conc-menu" style="display:none;"></div>
   <div id="mrFactorEsCardMenu" class="conc-menu" style="display:none;"></div>
+
+  <!-- Market-Risk-History mit ALLEN Zeitreihen (All/IR/CS je VaR + ES) — Kopie aus Risk History/
+       Market Risk. Eigene Canvas-ID; Rendering: historicRiskMetrics.js (panel:opened). Explizite
+       Groesse (panel-mvar hat keine .chart-box-canvas-Hoehenregel). -->
+  <div class="conc-panel__title" style="margin:16px 0 6px;">Market risk over time — all factors (MVaR / ES)</div>
+  <div class="chart-box" style="max-width:none;">
+    <canvas id="factorsMarketRiskHistChart" data-label="Market risk over time — all factors (MVaR / ES)" style="display:block; width:100%; height:360px;"></canvas>
+  </div>
 </div>
 
 
@@ -2766,6 +2812,14 @@ Feature:    Wenn es nur in einem Panel gilt
     <!--   ENDE BLOCK 3.5/3.6 -->
     <!-- BLOCK 4/5 entfernt: Total/Tail Loss Distribution + Loss Frequency Histogram
          waren redundant zu den oberen Charts (Loss Distribution + Tail Zoom). -->
+
+    <!-- Credit-Risk-History (Credit VaR / ES ueber Zeit) — Kopie aus Risk History/Credit Risk,
+         ganz unten im EC-Panel (historic PD). Eigene Canvas-ID; Rendering: historicRiskMetrics.js. -->
+    <div id="plCreditRiskHistPanel" class="conc-panel" style="margin-top:20px;">
+      <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How has credit risk evolved over time?</div>
+      <!-- Feste Hoehe: sonst waechst der Chart mit maintainAspectRatio:false endlos nach unten. -->
+      <canvas id="plCreditRiskHistChart" data-label="Credit risk over time (Credit VaR / ES)" style="display:block; width:100%; height:360px;"></canvas>
+    </div>
   </div>
 </div>
 
@@ -2777,12 +2831,44 @@ Feature:    Wenn es nur in einem Panel gilt
     <button class="sub-panel-close" data-close="panel-credit-tsi" aria-label="close">&times;</button>
   </div>
   <div class="sub-panel-body">
-    <p>Tail Severity Index (TSI):</p>
-    <div class="data-container" id="creditTsiTablePanel" style="max-width:380px;"></div>
-    <div class="conc-panel" style="margin-top:20px; max-width:560px;">
-      <div class="conc-panel__title">Tail zoom: quantiles, VaR and ES</div>
-      <canvas id="crTailZoomChartTsi" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
+    <!-- Zwei KPI-Bloecke: ASRF Benchmark (analytisch) vs MF-GC Internal Model (simuliert).
+         TSI = Tail-Severity historic: ES Historic ueber VaR Historic hinaus.
+         Werte: renderAsrfTsiCompare() (ASRF aus ASRF_Summary; MF-GC aus CreditVaR). -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+      <div class="conc-panel" data-tile="asrf_bench">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">ASRF Benchmark</div>
+        <div class="mvar-caption" style="line-height:1.8;">
+          TSI: <b id="asrfTsiVal">&ndash;</b><br>
+          Historic VaR: <b id="asrfTsiVar">&ndash;</b><br>
+          Historic ES: <b id="asrfTsiEs">&ndash;</b>
+        </div>
+      </div>
+      <div class="conc-panel" data-tile="mfgc_internal">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">MF-GC Internal Model</div>
+        <div class="mvar-caption" style="line-height:1.8;">
+          TSI: <b id="mfgcTsiVal">&ndash;</b><br>
+          Historic VaR: <b id="mfgcTsiVar">&ndash;</b><br>
+          Historic ES: <b id="mfgcTsiEs">&ndash;</b>
+        </div>
+      </div>
     </div>
+
+    <!-- Zwei Charts nebeneinander: links analytische ASRF-Tail-Kurve (historic), rechts MF-GC-Verteilung. -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div class="chart-box">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:2px;">How severe is the ASRF tail beyond VaR?</div>
+        <div class="mvar-caption" style="margin-bottom:6px;">Analytical loss by confidence level (historic PD)</div>
+        <div style="position:relative; height:340px;"><canvas id="asrfTsiChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:2px;">How severe is the MF-GC tail beyond VaR?</div>
+        <div class="mvar-caption" style="margin-bottom:6px;">Simulated loss distribution by quantile</div>
+        <canvas id="crTailZoomChartTsi" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
+      </div>
+    </div>
+
+    <p style="margin-top:16px;">Tail Severity Index (TSI):</p>
+    <div class="data-container" id="creditTsiTablePanel" style="max-width:380px;"></div>
     <!-- Drill-down (Rechtsklick auf ein Quantil): Positionen der ausfallenden Emittenten. -->
     <div id="crTailDetailTsi" class="conc-detail" style="display:none; margin-top:12px;">
       <div class="conc-detail__head">
@@ -2803,12 +2889,43 @@ Feature:    Wenn es nur in einem Panel gilt
     <button class="sub-panel-close" data-close="panel-credit-msd" aria-label="close">&times;</button>
   </div>
   <div class="sub-panel-body">
-    <p>Market Stress Divergence (MSD):</p>
-    <div class="data-container" id="creditMsdTablePanel" style="max-width:380px;"></div>
-    <div class="conc-panel" style="margin-top:20px; max-width:560px;">
-      <div class="conc-panel__title">Tail zoom: quantiles, VaR and ES</div>
-      <canvas id="crTailZoomChartMsd" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
+    <!-- Zwei KPI-Bloecke: ASRF Benchmark (analytisch) vs MF-GC Internal Model (simuliert).
+         Werte: renderAsrfMsdCompare() in asrfPanel.js (ASRF aus ASRF_Summary; MF-GC aus CreditVaR). -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+      <div class="conc-panel" data-tile="asrf_bench">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">ASRF Benchmark</div>
+        <div class="mvar-caption" style="line-height:1.8;">
+          MSD: <b id="asrfMsdVal">&ndash;</b><br>
+          Historic ES: <b id="asrfMsdEsHist">&ndash;</b><br>
+          Market-adjusted ES: <b id="asrfMsdEsNorm">&ndash;</b>
+        </div>
+      </div>
+      <div class="conc-panel" data-tile="mfgc_internal">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">MF-GC Internal Model</div>
+        <div class="mvar-caption" style="line-height:1.8;">
+          MSD: <b id="mfgcMsdVal">&ndash;</b><br>
+          Historic ES: <b id="mfgcMsdEsHist">&ndash;</b><br>
+          Market-adjusted ES: <b id="mfgcMsdEsNorm">&ndash;</b>
+        </div>
+      </div>
     </div>
+
+    <!-- Zwei Charts nebeneinander: links analytische ASRF-Tail-Kurve, rechts simulierte MF-GC-Verteilung. -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div class="chart-box">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:2px;">How does market stress affect ASRF tail risk?</div>
+        <div class="mvar-caption" style="margin-bottom:6px;">Analytical loss by confidence level</div>
+        <div style="position:relative; height:340px;"><canvas id="asrfTailChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="conc-panel__title perf-q-title" style="margin-bottom:2px;">How does market stress affect MF-GC tail risk?</div>
+        <div class="mvar-caption" style="margin-bottom:6px;">Simulated loss distribution by quantile</div>
+        <canvas id="crTailZoomChartMsd" width="560" height="300" data-label="Tail zoom: quantiles, VaR and ES"></canvas>
+      </div>
+    </div>
+
+    <p style="margin-top:16px;">Market Stress Divergence (MSD):</p>
+    <div class="data-container" id="creditMsdTablePanel" style="max-width:380px;"></div>
     <!-- Drill-down (Rechtsklick auf ein Quantil): Positionen der ausfallenden Emittenten. -->
     <div id="crTailDetailMsd" class="conc-detail" style="display:none; margin-top:12px;">
       <div class="conc-detail__head">
@@ -2831,8 +2948,41 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="sub-panel-body">
+            <!-- KPI-Band (4 Cards): beantwortet vor dem Chart die 4 Kernfragen -
+                 Wie viel Credit-Exposure ist modelliert? / Verlust bei Default? /
+                 Ausfallwahrscheinlichkeit? / Wo konzentriert sich das Exposure?
+                 Werte: renderEadKpis() in CVaR.js (je Portfolio, pd_flag='RATING'). -->
+            <div class="conc-kpi-grid" style="margin-bottom:14px;">
+                <div class="conc-kpi" data-tile="ead_coverage" title="Modelled (rated) EAD vs. total portfolio notional">
+                  <div class="conc-kpi__lbl">Exposure at Default (EAD)</div>
+                  <div class="conc-kpi__val" id="eadKpiCoverageVal">&ndash;</div>
+                  <div class="conc-kpi__sub" id="eadKpiCoverageSub"></div>
+                </div>
+                <div class="conc-kpi" data-tile="portfolio_lgd" title="Portfolio loss severity: &Sigma; LGD / &Sigma; EAD">
+                  <div class="conc-kpi__lbl">Loss Given Default (LGD)</div>
+                  <div class="conc-kpi__val" id="eadKpiLgdVal">&ndash;</div>
+                  <div class="conc-kpi__sub" id="eadKpiLgdSub"></div>
+                </div>
+                <div class="conc-kpi" data-tile="weighted_pd" title="EAD-weighted PD: &Sigma;(EAD &times; PD) / &Sigma; EAD">
+                  <div class="conc-kpi__lbl">Probability of Default (PD)</div>
+                  <div class="conc-kpi__val" id="eadKpiPdVal">&ndash;</div>
+                  <div class="conc-kpi__sub" id="eadKpiPdSub"></div>
+                </div>
+                <div class="conc-kpi" data-tile="ead_concentration" title="Issuer EAD concentration (share of modelled EAD)">
+                  <div class="conc-kpi__lbl">EAD Concentration</div>
+                  <div class="conc-kpi__val" id="eadKpiConcVal">&ndash;</div>
+                  <div class="conc-kpi__sub" id="eadKpiConcSub"></div>
+                </div>
+            </div>
+
+            <!-- Report-Spiegel (unsichtbar): EAD-KPIs als KPI-Band fuer Preview/PDF
+                 (das conc-kpi-Grid ist ein <div>-Grid und wird nicht erfasst). Befuellt
+                 in renderEadKpis(). Analog zu crLossKpiTable im Economic-Capital-Panel. -->
+            <div class="data-container" id="eadKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+
             <!-- Ganz oben, volle Breite: EAD/LGD-Chart (Emittent je Balken). -->
             <div class="chart-container-inner" id="LGDChartContainer">
+              <div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">Which issuers account for the largest EAD and Loss Exposure?</div>
               <!-- Sticky HTML-Legende (gleiches Styling wie Loss-Chart), bleibt beim Scrollen sichtbar -->
               <div id="eadChartLegend" class="closs-chart-legend"></div>
               <canvas id="LGDChart"></canvas>
@@ -2924,6 +3074,22 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
 
           <div class="sub-panel-body">
+            <!-- 2-up Verlustverteilung (historic PD): ASRF analytisch (links) vs MF-GC
+                 simuliert (rechts), beide mit Tail-Highlight + VaR/ES-Linien.
+                 Rendering: renderAsrfLossDistCompare() in asrfPanel.js. -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+              <div class="chart-box">
+                <div class="conc-panel__title perf-q-title" style="margin-bottom:2px;">Where are the largest losses located? (ASRF)</div>
+                <div class="mvar-caption" style="margin-bottom:6px;">Analytical loss distribution with tail highlight</div>
+                <div style="position:relative; height:300px;"><canvas id="asrfLossHistChart"></canvas></div>
+              </div>
+              <div class="chart-box">
+                <div class="conc-panel__title perf-q-title" style="margin-bottom:2px;">Where are the largest losses located? (MF-GC)</div>
+                <div class="mvar-caption" style="margin-bottom:6px;">Simulated loss distribution with tail highlight</div>
+                <div style="position:relative; height:300px;"><canvas id="mfgcLossHistChart"></canvas></div>
+              </div>
+            </div>
+
             <!-- Ganz oben, volle Breite: Loss-Chart (3 Serien) + Drill-down-Tabelle. -->
             <!-- Rating/Market/Norm Losses zusammengefasst in EINER Chart (3 Serien) -->
             <div class="chart-container-inner" id="LossIssuerChartContainerCombined">
@@ -2970,6 +3136,134 @@ Feature:    Wenn es nur in einem Panel gilt
           </div><!-- /.sub-panel-body -->
           <div id="clossIssuerCardMenu" class="conc-menu" style="display:none;"></div>
         </div><!-- /#panel-cvar -->
+
+        <!-- ASRF-Analyse (Regulatory Benchmark). ZWEI Instanzen: historic PD (pd_flag=RATING)
+             und market-adjusted PD (pd_flag=NORM). Beide identisch aufgebaut (klassenbasiert,
+             root-scoped) -> gerendert von asrfPanel.js (renderAsrfInstance, liest data-asrf-pdflag).
+             Rein additiv: nur bei ASRF-Daten befuellt; MF_GC bleibt unberuehrt. -->
+        <div id="panel-asrf" class="sub-panel asrf-panel-root" data-asrf-pdflag="RATING" role="dialog" aria-modal="false" aria-labelledby="panel-asrf-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-asrf-title" class="sub-panel-title">ASRF Analysis &mdash; Historic PD</div>
+            <button class="sub-panel-close" data-close="panel-asrf" aria-label="close">&times;</button>
+          </div>
+          <div class="sub-panel-body">
+            <div class="asrf-empty mvar-caption" style="display:none; padding:16px 0;">
+              No ASRF results for the selected portfolio. Run Credit VaR to populate this panel.
+            </div>
+            <div class="asrf-content" style="display:none;">
+              <div class="conc-kpi-grid" style="margin-bottom:12px;">
+                <div class="conc-kpi" data-tile="asrf_el" data-conn="+"><div class="conc-kpi__lbl">Expected Loss (EL)</div><div class="conc-kpi__val asrf-kpi-el-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-el-sub"></div></div>
+                <div class="conc-kpi" data-tile="asrf_ec" data-conn="="><div class="conc-kpi__lbl">Economic Capital</div><div class="conc-kpi__val asrf-kpi-ec-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-ec-sub"></div></div>
+                <div class="conc-kpi" data-tile="asrf_var" data-conn="&rarr;"><div class="conc-kpi__lbl">Value at Risk (VaR)</div><div class="conc-kpi__val asrf-kpi-var-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-var-sub"></div></div>
+                <div class="conc-kpi" data-tile="asrf_es"><div class="conc-kpi__lbl">Expected Shortfall (ES)</div><div class="conc-kpi__val asrf-kpi-es-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-es-sub"></div></div>
+              </div>
+              <ul class="asrf-bullets mvar-caption" style="margin:0 0 16px 0; padding:11px 16px 11px 30px; line-height:1.5; background:var(--surface-overlay); border:1px solid var(--border-subtle); border-radius:8px; list-style:disc;"></ul>
+              <!-- Erste Reihe: analytische ASRF-Verteilung (breiter) + Top tail drivers.
+                   Design/Abmessungen wie Internal Model / historic PD (1.5fr/1fr, cr-tail-tile). -->
+              <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:20px; margin-bottom:20px; align-items:stretch;">
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Where are the largest losses located?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Analytical loss distribution with tail highlight</div>
+                  <div style="position:relative; height:300px;"><canvas class="asrf-lossdist-chart"></canvas></div>
+                </div>
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers drive the largest share of tail losses?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Top tail drivers</div>
+                  <div style="position:relative; height:260px;"><canvas class="asrf-taildrivers-chart"></canvas></div>
+                </div>
+              </div>
+              <!-- Reihe 2 (gespiegelt aus MF-GC Internal Model): Concentration funnel |
+                   Tail loss vs EAD scatter | TCM-Tabelle. Quelle: ES_SHARE + EAD (analytisch). -->
+              <div style="display:grid; grid-template-columns:0.8fr 1fr 1fr; gap:14px;">
+                <div class="cr-tail-tile" style="display:flex; flex-direction:column;">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How does tail risk concentrate?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:10px; color:var(--text-muted); font-weight:600;">Concentration funnel</div>
+                  <div class="asrf-tcm-funnel" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"></div>
+                </div>
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers contribute disproportionately to tail losses?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Tail loss vs EAD share</div>
+                  <div class="cr-scatter-box" style="position:relative;"><canvas class="asrf-tcm-scatter" id="asrfTcmScatterHist" width="520" height="360" style="width:100%; height:auto;" data-label="Tail loss vs EAD share &mdash; ASRF historic"></canvas></div>
+                </div>
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How strongly does tail loss exceed the issuer's exposure share?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:2px; color:var(--text-muted); font-weight:600;">Tail Concentration Multiplier (TCM = tail loss share / EAD share)</div>
+                  <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">TCM &gt; 1&times; = tail loss share exceeds EAD share</div>
+                  <div class="asrf-tcm-table"></div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:14px;">
+                <div class="cr-tail-tile"><div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How do issuer default probabilities change under stress?</div><div style="position:relative; height:300px;"><canvas class="asrf-condpd-chart"></canvas></div></div>
+                <div class="cr-tail-tile"><div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How is Economic Capital distributed across issuers?</div><div style="position:relative; height:300px;"><canvas class="asrf-pareto-chart"></canvas></div><div class="asrf-pareto-note mvar-caption" style="margin-top:6px; font-weight:600;"></div></div>
+                <div class="cr-tail-tile"><div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How do Expected Loss and VaR contributions compare by issuer?</div><div style="position:relative; height:300px;"><canvas class="asrf-elvar-chart"></canvas></div></div>
+              </div>
+              <div class="conc-detail" style="margin-top:14px;"><div class="conc-detail__head"><span class="conc-detail__title">Which issuers contribute disproportionately to ASRF risk?</span></div><div class="asrf-share-table conc-detail__table"></div></div>
+              <div class="conc-detail" style="margin-top:14px; margin-bottom:16px;"><div class="conc-detail__head"><span class="conc-detail__title">All issuers</span></div><div class="asrf-all-table conc-detail__table"></div></div>
+            </div>
+          </div>
+        </div><!-- /#panel-asrf (historic) -->
+
+        <div id="panel-asrf-norm" class="sub-panel asrf-panel-root" data-asrf-pdflag="NORM" role="dialog" aria-modal="false" aria-labelledby="panel-asrf-norm-title" hidden>
+          <div class="sub-panel-header">
+            <div id="panel-asrf-norm-title" class="sub-panel-title">ASRF Analysis &mdash; Market-adjusted PD</div>
+            <button class="sub-panel-close" data-close="panel-asrf-norm" aria-label="close">&times;</button>
+          </div>
+          <div class="sub-panel-body">
+            <div class="asrf-empty mvar-caption" style="display:none; padding:16px 0;">
+              No ASRF results for the selected portfolio. Run Credit VaR to populate this panel.
+            </div>
+            <div class="asrf-content" style="display:none;">
+              <div class="conc-kpi-grid" style="margin-bottom:12px;">
+                <div class="conc-kpi" data-tile="asrf_el" data-conn="+"><div class="conc-kpi__lbl">Expected Loss (EL)</div><div class="conc-kpi__val asrf-kpi-el-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-el-sub"></div></div>
+                <div class="conc-kpi" data-tile="asrf_ec" data-conn="="><div class="conc-kpi__lbl">Economic Capital</div><div class="conc-kpi__val asrf-kpi-ec-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-ec-sub"></div></div>
+                <div class="conc-kpi" data-tile="asrf_var" data-conn="&rarr;"><div class="conc-kpi__lbl">Value at Risk (VaR)</div><div class="conc-kpi__val asrf-kpi-var-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-var-sub"></div></div>
+                <div class="conc-kpi" data-tile="asrf_es"><div class="conc-kpi__lbl">Expected Shortfall (ES)</div><div class="conc-kpi__val asrf-kpi-es-val">&ndash;</div><div class="conc-kpi__sub asrf-kpi-es-sub"></div></div>
+              </div>
+              <ul class="asrf-bullets mvar-caption" style="margin:0 0 16px 0; padding:11px 16px 11px 30px; line-height:1.5; background:var(--surface-overlay); border:1px solid var(--border-subtle); border-radius:8px; list-style:disc;"></ul>
+              <!-- Erste Reihe: analytische ASRF-Verteilung (breiter) + Top tail drivers.
+                   Design/Abmessungen wie Internal Model / historic PD (1.5fr/1fr, cr-tail-tile). -->
+              <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:20px; margin-bottom:20px; align-items:stretch;">
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Where are the largest losses located?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Analytical loss distribution with tail highlight</div>
+                  <div style="position:relative; height:300px;"><canvas class="asrf-lossdist-chart"></canvas></div>
+                </div>
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers drive the largest share of tail losses?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Top tail drivers</div>
+                  <div style="position:relative; height:260px;"><canvas class="asrf-taildrivers-chart"></canvas></div>
+                </div>
+              </div>
+              <!-- Reihe 2 (gespiegelt aus MF-GC Internal Model): Concentration funnel |
+                   Tail loss vs EAD scatter | TCM-Tabelle. Quelle: ES_SHARE + EAD (analytisch). -->
+              <div style="display:grid; grid-template-columns:0.8fr 1fr 1fr; gap:14px;">
+                <div class="cr-tail-tile" style="display:flex; flex-direction:column;">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How does tail risk concentrate?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:10px; color:var(--text-muted); font-weight:600;">Concentration funnel</div>
+                  <div class="asrf-tcm-funnel" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"></div>
+                </div>
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">Which issuers contribute disproportionately to tail losses?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:6px; color:var(--text-muted); font-weight:600;">Tail loss vs EAD share</div>
+                  <div class="cr-scatter-box" style="position:relative;"><canvas class="asrf-tcm-scatter" id="asrfTcmScatterNorm" width="520" height="360" style="width:100%; height:auto;" data-label="Tail loss vs EAD share &mdash; ASRF market-adjusted"></canvas></div>
+                </div>
+                <div class="cr-tail-tile">
+                  <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How strongly does tail loss exceed the issuer's exposure share?</div>
+                  <div class="conc-panel__title" style="font-size:11px; margin-bottom:2px; color:var(--text-muted); font-weight:600;">Tail Concentration Multiplier (TCM = tail loss share / EAD share)</div>
+                  <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">TCM &gt; 1&times; = tail loss share exceeds EAD share</div>
+                  <div class="asrf-tcm-table"></div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-top:14px;">
+                <div class="cr-tail-tile"><div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How do issuer default probabilities change under stress?</div><div style="position:relative; height:300px;"><canvas class="asrf-condpd-chart"></canvas></div></div>
+                <div class="cr-tail-tile"><div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How is Economic Capital distributed across issuers?</div><div style="position:relative; height:300px;"><canvas class="asrf-pareto-chart"></canvas></div><div class="asrf-pareto-note mvar-caption" style="margin-top:6px; font-weight:600;"></div></div>
+                <div class="cr-tail-tile"><div class="conc-panel__title perf-q-title" style="margin-bottom:6px;">How do Expected Loss and VaR contributions compare by issuer?</div><div style="position:relative; height:300px;"><canvas class="asrf-elvar-chart"></canvas></div></div>
+              </div>
+              <div class="conc-detail" style="margin-top:14px;"><div class="conc-detail__head"><span class="conc-detail__title">Which issuers contribute disproportionately to ASRF risk?</span></div><div class="asrf-share-table conc-detail__table"></div></div>
+              <div class="conc-detail" style="margin-top:14px; margin-bottom:16px;"><div class="conc-detail__head"><span class="conc-detail__title">All issuers</span></div><div class="asrf-all-table conc-detail__table"></div></div>
+            </div>
+          </div>
+        </div><!-- /#panel-asrf-norm (market-adjusted) -->
 
     <!-- Panel: Liquidity Dashboard (Faelligkeiten-Balken + KPI-Band). Rendering:
          liquidityDashboard.js. Cashflows/Kupons + Reserve/Limit folgen spaeter. -->

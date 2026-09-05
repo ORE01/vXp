@@ -3,7 +3,7 @@
 'use strict';
 
 import { appState } from '../../../../renderer.js';
-import { formatNumber, formatNumberWithCommas } from '../../../../utils/tableCellFormats.js';
+import { formatNumber, formatNumberWithCommas, kpiValue } from '../../../../utils/tableCellFormats.js';
 
 import {
   getAvailableMvarPorts,
@@ -531,7 +531,7 @@ function renderFactorKpis(riskTypeRows) {
     const line = (nm, r) => `<div class="mr-kpi-row-line"><span>${nm}</span><span>${r ? relPct(r[relKey]) : '0%'}</span></div>`;
     return `<div class="mr-kpi-card">
       <div class="mr-kpi-card__label">${label}</div>
-      <div class="mr-kpi-card__value">${fmtAbs(Math.abs(Number(T[absKey]) || 0))} (${relPct(T[relKey])})</div>
+      <div class="mr-kpi-card__value">${kpiValue(-Math.abs(Number(T[absKey]) || 0), -Math.abs(Number(T[relKey]) || 0))}</div>
       <div class="mr-kpi-card__rows">
         ${line('IR', byType.IR)}
         ${line('CS', byType.CS)}

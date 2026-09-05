@@ -1,6 +1,6 @@
 'use strict';
 
-module.exports = function registerDbHandlers({ ipcMain, refreshTable }) {
+module.exports = function registerDbHandlers({ ipcMain, refreshTable, dbApi }) {
   if (!ipcMain) {
     throw new Error('[db.handlers] ipcMain missing');
   }
@@ -36,6 +36,35 @@ module.exports = function registerDbHandlers({ ipcMain, refreshTable }) {
     });
 
     refreshTable(safeTableName);
+  });
+
+  // Gefilterter Fetch fuer die grosse MarketVaR_FactorPL-Zeitreihe: NUR die Zeilen des
+  // aktuellen (port, scenario, juengstes asof) laden statt der ganzen Tabelle (~208k Zeilen).
+  // Antwort geht ueber den bestehenden Kanal 'MarketVaR_FactorPLData' zurueck -> gleicher
+  // Renderer-Flow (dataRouter -> setMvarFactorPLData).
+  ipcMain.on('fetch-mvar-factorpl', async (event, { port_name, scenario_name } = {}) => {
+    try {
+      const port = String(port_name || '').trim();
+      const scen = String(scenario_name || '').trim();
+      if (!port || !scen || !dbApi || typeof dbApi.selectAll !== 'function') {
+        event.sender.send('MarketVaR_FactorPLData', []);
+        return;
+      }
+      const rows = await dbApi.selectAll(
+        `SELECT * FROM MarketVaR_FactorPL
+         WHERE port_name = ? AND scenario_name = ?
+           AND asof_date = (
+             SELECT MAX(asof_date) FROM MarketVaR_FactorPL
+             WHERE port_name = ? AND scenario_name = ?
+           )`,
+        [port, scen, port, scen]
+      );
+      console.log('[DB HANDLER] fetch-mvar-factorpl', { port, scen, rows: Array.isArray(rows) ? rows.length : 0 });
+      event.sender.send('MarketVaR_FactorPLData', Array.isArray(rows) ? rows : []);
+    } catch (e) {
+      console.warn('[DB HANDLER] fetch-mvar-factorpl failed:', e?.message || e);
+      try { event.sender.send('MarketVaR_FactorPLData', []); } catch {}
+    }
   });
 
   // Optional stubs for older channels.

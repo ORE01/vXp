@@ -138,6 +138,27 @@ export function fmtEur(value, { html = false } = {}) {
   return `${neg}${eurUnit(html)} ${Math.round(Math.abs(n)).toLocaleString(APP_LOCALE)}`;
 }
 
+// ZENTRALE KPI-Wert-Vorlage (Factors / Issuer / Products / Profit&Loss):
+//   "EUR" klein (.cur-unit)  +  Absolutzahl GROSS mit Vorzeichen VOR der Zahl (gerundet, de-DE)
+//   +  relative Zahl klein/muted (.conc-kpi__qual).
+// Beispiel: kpiValue(-256349, -0.122) -> `EUR -256.349  -0,12 %` (HTML).
+// `abs`/`rel` werden mit ihrem UEBERGEBENEN Vorzeichen dargestellt (Aufrufer entscheidet, ob
+// Verlust = negativ). `rel` ist eine Prozentzahl (z.B. -0,12 = -0,12 %); null/NaN -> nur Abs.
+// { html:false } -> reiner Text ("EUR -256.349 · -0,12 %") fuer PDF-/Report-Baender.
+export function kpiValue(abs, rel = null, { relDigits = 2, html = true } = {}) {
+  const n = Number(abs);
+  const eurTxt = html ? eurUnit(true) : 'EUR';
+  const absPart = Number.isFinite(n)
+    ? `${eurTxt} ${n < 0 ? '-' : ''}${Math.round(Math.abs(n)).toLocaleString(APP_LOCALE)}`
+    : '–';
+  const r = Number(rel);
+  if (!Number.isFinite(r)) return absPart;
+  const relStr = `${r.toLocaleString(APP_LOCALE, { minimumFractionDigits: relDigits, maximumFractionDigits: relDigits })} %`;
+  return html
+    ? `${absPart} <span class="conc-kpi__qual">${relStr}</span>`
+    : `${absPart} · ${relStr}`;
+}
+
 // ---- Eingabe-Pfad (Komma rein -> Punkt in die DB) ----
 // parseDeNumber: de-DE-tolerante Nutzereingabe -> echte number (Punkt).
 //   - Komma vorhanden  -> Komma = Dezimal, Punkte = Tausender (entfernt): "1.234,56" -> 1234.56

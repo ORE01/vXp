@@ -1035,6 +1035,22 @@ function crTailTopIssuers(port) {
     issuerLoss.set(key, cur);
     if (!issuerRating.get(key)) issuerRating.set(key, String(r?.RATINGres ?? r?.RATING ?? '').trim());
   }
+  // Importance Sampling: die gewichteten Tail-/ES-Contributions je Issuer kommen aus MFGC
+  // (MFGC_IssuerTail, RATING) — konsistent zum Internal-Model-Chart. Nur bei IS befuellt,
+  // sonst der bisherige (ungewichtete) Weg aus den rohen Sorted-Losses.
+  const isRows = (appState.getMfgcIssuerTail?.() || []).filter((r) =>
+    normPort(r?.port_name) === port && String(r?.pd_flag ?? '').toUpperCase() === 'RATING');
+  if (isRows.length) {
+    return isRows
+      .map((r) => {
+        const name = String(r.ISSUER ?? '').trim();
+        return { name, rating: issuerRating.get(name.toLowerCase()) || '', pct: (Number(r.ES_SHARE) || 0) * 100, rankKeys: new Set() };
+      })
+      .filter((it) => it.name && it.pct > 0)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 3);
+  }
+
   const allLoss = (appState.getAllLossData?.() || []).filter((r) => normPort(r?.port_name) === port);
   return crTailTopForFlag('RATING', issuerLoss, issuerRating, allLoss, getRunConfQuantil()).slice(0, 3);
 }
@@ -1107,6 +1123,25 @@ function renderConcentrationRisk(port) {
 export function crConcentrationScore(port) {
   const portRows = (appState.getAllPortfolioData?.() || []).filter((r) => normPort(r?.port_name) === port);
   if (!portRows.length) return null;
+
+  // Importance Sampling: Konzentration aus den GEWICHTETEN ES-Shares (MFGC_IssuerTail, RATING),
+  // konsistent zum Tail-Driver-Chart. Ohne IS (Tabelle leer) unveraendert aus den rohen
+  // Sorted-Losses. Verhindert "3 issuers drive 71,5%" waehrend der Chart RLB+HYPO ~96% zeigt.
+  const isRows = (appState.getMfgcIssuerTail?.() || []).filter((r) =>
+    normPort(r?.port_name) === port && String(r?.pd_flag ?? '').toUpperCase() === 'RATING');
+  if (isRows.length) {
+    const shares = isRows.map((r) => Math.max(0, (Number(r.ES_SHARE) || 0) * 100))
+      .filter((v) => v > 0).sort((a, b) => b - a);
+    const N = shares.length;
+    if (N >= 1) {
+      const totalSh = shares.reduce((a, b) => a + b, 0) || 1;
+      const hhi = shares.reduce((a, v) => { const sh = v / totalSh; return a + sh * sh; }, 0);
+      const eff = hhi > 0 ? 1 / hhi : NaN;
+      const score = (N > 1 && Number.isFinite(eff)) ? ((N - eff) / (N - 1)) * 100 : 100;
+      return { pct: Math.max(0, Math.min(100, score)), eff, shares };
+    }
+  }
+
   const ead = appState.getAllEADData?.() || [];
   const rawPort = ead.find((r) => normPort(r?.port_name) === port)?.port_name ?? port;
   const issuerLoss = new Map();
@@ -1343,8 +1378,10 @@ function renderCreditScale(port, ids, eadPdField, cvarFlag) {
   const warn = varR, limit = esR * 1.2;          // ANNAHME: Warn = VaR, Limit = 1,2 x ES
   const pct = (v) => Math.max(0, Math.min(100, (v / limit) * 100));
   const yr = pct(warn);
-  const fR = (x) => Number.isFinite(x) ? `${(x * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
-  const fA = (x) => Number.isFinite(x) ? fmtEur(x) : '–';
+  // Verluste (EDE/VaR/ES + Limits): Minus VOR DER ZAHL (nach "EUR").
+  const _mnsS = (x) => (Number.isFinite(x) && x !== 0) ? '-' : '';
+  const fR = (x) => Number.isFinite(x) ? `${_mnsS(x)}${(Math.abs(x) * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
+  const fA = (x) => Number.isFinite(x) ? fmtEur(Math.abs(x)).replace(/EUR\s/, `EUR ${_mnsS(x)}`) : '–';
   // abs oder rel gross je Customer-Setup-Umschalter (beide Schieber teilen die Einstellung).
   const mode = (() => { try { return getTileMode('cr_ec_scale'); } catch { return 'abs'; } })();
   const posStyle = (l) => { const L = Math.max(0, Math.min(100, l)); return L <= 12 ? 'left:0;' : L >= 88 ? 'left:100%;transform:translateX(-100%);' : `left:${L}%;transform:translateX(-50%);`; };
@@ -1444,15 +1481,18 @@ function renderCreditCard(port) {
   const ecH = creditEcSet(port, 'PD', 'RATING');
   const ecC = creditEcSet(port, 'PD_M_norm', 'NORM');
   renderCreditExecSummary(port, ecH);   // Executive Summary aus den Historic-EC-Werten
-  const fAbs = (x) => Number.isFinite(x) ? fmtEur(x) : '–';
-  const fRel = (x) => Number.isFinite(x) ? `${(x * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
+  // Verluste (EL/EDE/VaR/EC) als Verlust anzeigen: Minus VOR DER ZAHL (nach "EUR"),
+  // also "EUR -9,03 Mio." (nicht "-EUR 9,03 Mio."). Werte kommen als positive Betraege.
+  const _mns = (x) => (Number.isFinite(x) && x !== 0) ? '-' : '';
+  const fAbs = (x) => Number.isFinite(x) ? fmtEur(Math.abs(x)).replace(/EUR\s/, `EUR ${_mns(x)}`) : '–';
+  const fRel = (x) => Number.isFinite(x) ? `${_mns(x)}${(Math.abs(x) * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
   const setEc = (base, o) => { setText(base + 'Abs', fAbs(o.abs)); setText(base + 'Rel', fRel(o.rel)); };
   // Kompaktes EUR-Format mit 2 Nachkommastellen — nur fuer die Risk-Buffer-Summary-Kacheln
   // (Credit Risk / Normal Risk), inkl. der EDE-Kopie.
   const fAbs2 = (x) => {
     const n = Number(x);
     if (!Number.isFinite(n)) return '–';
-    const neg = n < 0 ? '-' : '';
+    const neg = (n !== 0) ? '-' : '';   // Verlust: Minus VOR DER ZAHL (nach "EUR")
     const a = Math.abs(n);
     const o2 = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
     let s, u;
@@ -1460,7 +1500,7 @@ function renderCreditCard(port) {
     else if (a >= 1e6) { s = a / 1e6; u = ' Mio.'; }
     else if (a >= 1e3) { s = a / 1e3; u = ' Tsd.'; }
     else               { s = a;       u = ''; }
-    return `${neg}EUR ${s.toLocaleString('de-DE', o2)}${u}`;
+    return `EUR ${neg}${s.toLocaleString('de-DE', o2)}${u}`;
   };
   const setEc2 = (base, o) => { setText(base + 'Abs', fAbs2(o.abs)); setText(base + 'Rel', fRel(o.rel)); };
   setEc('homeCrEcElH',  ecH.el);  setEc('homeCrEcElM',  ecC.el);

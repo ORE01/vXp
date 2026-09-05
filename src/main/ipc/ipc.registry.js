@@ -15,9 +15,10 @@ module.exports = [
   {
   name: 'db',
   register: require('./handlers/db.handlers'),
-  getCtx: ({ ipcMain, refreshTable }) => ({
+  getCtx: ({ ipcMain, refreshTable, mainFct }) => ({
     ipcMain,
     refreshTable,
+    dbApi: { selectAll: mainFct.selectAll },
   }),
 },
 

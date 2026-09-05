@@ -52,7 +52,7 @@ const _eadDrillCfg = {
     { key: 'RANK', label: 'Rank' },
     { key: 'RATINGres', label: 'Rating' },
     { key: 'NOTIONAL', label: 'Notional', align: 'right', fmt: 'num' },
-    { key: '__LGD', label: 'LGD', align: 'right', fmt: 'num' },
+    { key: '__LGD', label: 'Loss Exposure', align: 'right', fmt: 'num' },
     { key: '__PD', label: 'PD-Historic', align: 'right', fmt: 'pct' },
     { key: '__PD_M', label: 'PD-MARKET', align: 'right', fmt: 'pct' },
     { key: '__PD_M_norm', label: 'PD-MARKET ADJUSTED', align: 'right', fmt: 'pct' },
@@ -136,7 +136,7 @@ function renderEadAllIssuers() {
     { key: 'RANK', label: 'Rank' },
     { key: 'RATING', label: 'Rating' },
     { key: 'NOTIONAL', label: 'Notional', align: 'right', fmt: 'num' },
-    { key: 'LGD', label: 'LGD', align: 'right', fmt: 'num' },
+    { key: 'LGD', label: 'Loss Exposure', align: 'right', fmt: 'num' },
     { key: 'PD', label: 'PD-Historic', align: 'right', fmt: 'pct' },
     { key: 'PD_M', label: 'PD-MARKET', align: 'right', fmt: 'pct' },
     { key: 'PD_M_norm', label: 'PD-MARKET ADJUSTED', align: 'right', fmt: 'pct' },
@@ -386,6 +386,111 @@ document.addEventListener('panel:opened', (e) => {
   }
 });
 
+// Importance-Sampling-Daten (MFGC_IssuerTail) treffen NACH CreditVaRData ein. Erst jetzt
+// weiss der Renderer, dass der Lauf IS ist -> KPI-Kacheln (VaR/ES/EC) UND Tail-Charts mit
+// den GEWICHTETEN Werten neu rendern. Ohne das renderten die KPIs noch aus den rohen
+// (stress-verschobenen) sortedLosses -> zu hoher VaR/ES.
+document.addEventListener('credit:is:ready', () => {
+  try { renderCreditExpectedLoss(); } catch {}
+  try { renderCreditOverviewCharts(); } catch {}
+});
+
+// Theme-Wechsel: Credit-Charts sofort neu zeichnen, damit theme-abhaengige Farben
+// (z.B. das EL-Label im Loss-Distribution-Chart) UNMITTELBAR die richtige Farbe haben —
+// nicht erst beim naechsten datengetriebenen Redraw. Gleiche Konvention wie die anderen
+// Feature-Dashboards (historicRiskMetrics, performanceDashboard, …).
+document.addEventListener('theme:changed', () => {
+  try { renderCreditOverviewCharts(); } catch {}
+  try { renderCreditRiskDashboard(); } catch {}
+});
+
+// KPI-Band oben im EAD-Panel (4 Cards). Basis: die auf Portfolio + pd_flag='RATING'
+// gefilterten Zeilen ("modelliertes"/rated EAD). NOTIONAL = EAD (EUR), LGD = absoluter
+// Loss-Betrag (EUR), PD/PD_M/PD_M_norm = Brueche. Kennzahlen:
+//   - EAD Coverage:   Sigma EAD (modelliert) und Anteil am GESAMTEN Portfolio-Notional (roh).
+//   - Portfolio LGD:  Loss Severity = Sigma LGD / Sigma EAD  (+ absoluter Loss-Betrag).
+//   - Weighted PD:    EAD-gewichtet Sigma(EAD*PD)/Sigma EAD je Sicht (adjusted/historic/market).
+//   - Concentration:  Issuer-EAD / Sigma modelliertes EAD (Top-3 + groesster Einzel-Issuer).
+function renderEadKpis(filtered, port_name) {
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const eurMio = (v) => `EUR ${_fmtKpiCompact.format(v)}`;                    // z.B. "EUR 150,00 Mio."
+  const pct = (frac, dec = 1) =>                                             // Bruch -> "x,x %"
+    `${(frac * 100).toLocaleString('de-DE', { minimumFractionDigits: dec, maximumFractionDigits: dec })} %`;
+
+  const rows = Array.isArray(filtered) ? filtered : [];
+  if (!rows.length) {
+    ['eadKpiCoverageVal', 'eadKpiLgdVal', 'eadKpiPdVal', 'eadKpiConcVal'].forEach(id => set(id, '–'));
+    ['eadKpiCoverageSub', 'eadKpiLgdSub', 'eadKpiPdSub', 'eadKpiConcSub'].forEach(id => set(id, ''));
+    return;
+  }
+
+  let eadSum = 0, lgdSum = 0, pdW = 0, pdMW = 0, pdMnW = 0;
+  const issuerEad = new Map();
+  for (const r of rows) {
+    const ead = num(r.NOTIONAL);
+    if (ead <= 0) continue;
+    eadSum += ead;
+    lgdSum += num(r.LGD);
+    pdW   += ead * num(r.PD);
+    pdMW  += ead * num(r.PD_M);
+    pdMnW += ead * num(r.PD_M_norm);
+    const iss = String(r.ISSUER ?? '').trim() || '—';
+    issuerEad.set(iss, (issuerEad.get(iss) || 0) + ead);
+  }
+
+  // Gesamt-Portfolio-Notional (ALLE Positionen, ROHwert) fuer die Coverage-Quote.
+  const portNotional = (appState.getAllPortfolioData?.() || [])
+    .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port_name)
+    .reduce((s, r) => s + num(r.NOTIONAL), 0);
+
+  // 1) EAD Coverage
+  set('eadKpiCoverageVal', eurMio(eadSum));
+  set('eadKpiCoverageSub', portNotional > 0 ? `${pct(eadSum / portNotional, 1)} of portfolio` : '');
+
+  // 2) Portfolio LGD (Loss Severity)
+  set('eadKpiLgdVal', eadSum > 0 ? pct(lgdSum / eadSum, 1) : '–');
+  set('eadKpiLgdSub', `${eurMio(lgdSum)} loss exposure`);
+
+  // 3) Weighted PD (EAD-gewichtet), je Sicht separat
+  if (eadSum > 0) {
+    set('eadKpiPdVal', `${pct(pdMnW / eadSum, 2)} Market-adjusted`);
+    set('eadKpiPdSub', `Historic ${pct(pdW / eadSum, 2)} · Market ${pct(pdMW / eadSum, 2)}`);
+  } else {
+    set('eadKpiPdVal', '–'); set('eadKpiPdSub', '');
+  }
+
+  // 4) EAD Concentration (auf Sigma MODELLIERTES EAD bezogen, nicht auf Portfolio-Notional)
+  const sorted = [...issuerEad.entries()].sort((a, b) => b[1] - a[1]);
+  if (sorted.length && eadSum > 0) {
+    const top3 = sorted.slice(0, 3).reduce((s, [, v]) => s + v, 0) / eadSum;
+    const [topName, topVal] = sorted[0];
+    set('eadKpiConcVal', `Top 3: ${pct(top3, 1)}`);
+    set('eadKpiConcSub', `Largest: ${topName} ${pct(topVal / eadSum, 1)}`);
+  } else {
+    set('eadKpiConcVal', '–'); set('eadKpiConcSub', '');
+  }
+
+  // Report-Spiegel (data-kpi-band): dieselben 4 KPIs als Tabelle fuer Preview/PDF, da
+  // das conc-kpi-<div>-Grid nicht erfasst wird. Werte aus den gerade gesetzten Karten.
+  try {
+    const tbl = document.getElementById('eadKpiTable');
+    if (tbl) {
+      const _esc = (s) => String(s ?? '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+      const g = (id) => (document.getElementById(id)?.textContent || '').trim();
+      const items = [
+        ['Exposure at Default (EAD)', g('eadKpiCoverageVal'), g('eadKpiCoverageSub')],
+        ['Loss Given Default (LGD)', g('eadKpiLgdVal'), g('eadKpiLgdSub')],
+        ['Probability of Default (PD)', g('eadKpiPdVal'), g('eadKpiPdSub')],
+        ['EAD Concentration', g('eadKpiConcVal'), g('eadKpiConcSub')],
+      ];
+      tbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+        items.map(([k, v, s]) => `<tr><td>${_esc(k)}</td><td>${_esc(s ? `${v} (${s})` : v)}</td></tr>`).join('')
+      }</tbody></table>`;
+    }
+  } catch (_) {}
+}
+
 export function handleEADData(receivedData, index = 0, port_nameArg) {
   const port_name = String(
     port_nameArg ?? appState.getSelectedPortTableName?.() ?? ''
@@ -410,6 +515,7 @@ export function handleEADData(receivedData, index = 0, port_nameArg) {
         LGDChart = null;
       }
     } catch {}
+    try { renderEadKpis([], port_name); } catch {}
     return;
   }
 
@@ -429,6 +535,7 @@ export function handleEADData(receivedData, index = 0, port_nameArg) {
         LGDChart = null;
       }
     } catch {}
+    try { renderEadKpis([], port_name); } catch {}
     return;
   }
 
@@ -439,7 +546,7 @@ export function handleEADData(receivedData, index = 0, port_nameArg) {
     RANK: 'RANK',
     RATING: 'RATING',
     NOTIONAL: 'NOTIONAL',
-    LGD: 'LGD',
+    LGD: 'Loss Exposure',
     PD: 'PD-Historic',
     PD_M: 'PD-Market Implied',
     PD_M_norm: 'PD-Risk Adjusted',
@@ -464,6 +571,9 @@ export function handleEADData(receivedData, index = 0, port_nameArg) {
   // Standardansicht: beim Laden/Oeffnen der Seite direkt die "All issuers"-Tabelle
   // (= EAD-Daten) im Drill-Fenster zeigen.
   try { renderEadAllIssuers(); } catch (e) { console.warn('[EAD] All-issuers default failed', e); }
+
+  // KPI-Band (EAD Coverage / Portfolio LGD / Weighted PD / EAD Concentration) aktualisieren.
+  try { renderEadKpis(filtered, port_name); } catch (e) { console.warn('[EAD] KPI render failed', e); }
 }
 
 
@@ -551,7 +661,7 @@ export function renderLGDChart() {
       ...commonBarOptions,
     },
     {
-      label: 'LGD',
+      label: 'Loss Exposure',
       data: LGDValues,
       backgroundColor: 'rgba(255, 0, 0, 0.7)',
       borderColor: 'rgba(255, 0, 0, 1)',

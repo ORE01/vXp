@@ -449,7 +449,7 @@ function ensureCreditRiskThresholds(db, resolve, reject) {
     let si = 0;
     const runNextSeed = () => {
       if (si >= seeds.length) {
-        resolve();
+        ensureCvarInputColumns(db, resolve);
         return;
       }
       const [metric, yellow, red, desc, sort] = seeds[si++];
@@ -464,6 +464,23 @@ function ensureCreditRiskThresholds(db, resolve, reject) {
 
     runNextMigration();
   });
+}
+
+// Importance-Sampling-Flags an der bestehenden Risk-Config-Tabelle CreditVaRInput.
+// CreditVaRInput wird NICHT hier erstellt (liegt bereits in UNI.db) -> nur additive
+// Spalten. Idempotent: ADD COLUMN ignoriert Duplikat-/Fehlt-Tabelle-Fehler.
+// Default 0 -> das aktuelle Ergebnis (IS aus) bleibt unveraendert.
+function ensureCvarInputColumns(db, resolve) {
+  const migrations = [
+    "ALTER TABLE CreditVaRInput ADD COLUMN use_importance_sampling INTEGER DEFAULT 0",
+    "ALTER TABLE CreditVaRInput ADD COLUMN is_scramble INTEGER DEFAULT 1",
+  ];
+  let mi = 0;
+  const runNext = () => {
+    if (mi >= migrations.length) { resolve(); return; }
+    db.run(migrations[mi++], () => runNext()); // ignore duplicate-column / missing-table errors
+  };
+  runNext();
 }
 
 module.exports = {

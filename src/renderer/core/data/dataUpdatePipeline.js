@@ -133,9 +133,14 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
   // -----------------------------
   // MVaR / CVaR / EAD
   // -----------------------------
+  // Waehrend "Calculate Market Risk" werden mehrere Result-Tabellen nacheinander refreshed.
+  // Daten IMMER setzen, aber das Re-Render buendeln: solange _suppressMvarPipelineRender
+  // gesetzt ist (Flag aus bindAppButtons), NICHT je Tabelle neu zeichnen -> stattdessen genau
+  // EINMAL am Ende via refreshMarketRiskUI() (project-finished). Vermeidet 3x Flackern.
   const updateMvarDataTable = (receivedData, index) => {
     appState.setMvarData?.(receivedData);
     appState.setAllMvarData?.(receivedData);
+    if (appState._suppressMvarPipelineRender) return;
 
     const mvarData = appState.getAllMvarData?.() || [];
     try { window.handleMVaRData?.(mvarData, index); }
@@ -144,6 +149,7 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
 
   const updateMvarDistData = (receivedData, index, port_name) => {
     appState.setMvarDistData?.(receivedData);
+    if (appState._suppressMvarPipelineRender) return;
     const scenario_name = appState.selectedMvarInterval ?? null;
     try { window.handleSummaryMarketRiskData?.(port_name, scenario_name); }
     catch (e) { console.error('[PIPELINE] handleSummaryMarketRiskData failed:', e); }
@@ -151,6 +157,7 @@ const updateDealsDataTableCore = (receivedData, { isFull = false } = {}) => {
 
   const updateMvarProductData = (receivedData, index, port_name) => {
     appState.setMvarProductData?.(receivedData);
+    if (appState._suppressMvarPipelineRender) return;
     const scenario_name = appState.selectedMvarInterval ?? null;
     try { window.handleMvarProductTable?.(port_name, scenario_name); }
     catch (e) { console.error('[PIPELINE] handleMvarProductTable failed:', e); }
