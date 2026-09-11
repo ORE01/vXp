@@ -6,7 +6,8 @@
 // prod_id -> ISSUER kommt aus den Portfolio-Daten (dieselbe Quelle wie Overview/Structure).
 
 import { appState } from '../../../../renderer.js';
-import { formatNumber, kpiValue } from '../../../../utils/tableCellFormats.js';
+import { formatNumber } from '../../../../utils/tableCellFormats.js';
+import { kpiCard, kpiPlainCompact } from '../../../../utils/kpiCard.js';
 
 import { getCurrentMvarContext, rowMatchesMvarContext } from './mvarSelectors.js';
 import { toNumber } from './mvarTransforms.js';
@@ -151,27 +152,30 @@ function renderIssuerKpis(issuerRows, cfg, hostId, tableId) {
   const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp` : '–';
 
   const aggTot = aggregateTotalForMetric(cfg.metric);
-  // Absolutzahl als Verlust (negativ) via zentraler Vorlage kpiValue: "EUR -X  -Y %".
+  // Absolutzahl als Verlust (negativ) via zentraler Vorlage kpiPlainCompact: "EUR -X Tsd. · -Y %".
   // valueHtml = Karte (EUR klein, Zahl gross, rel muted); value = Plain-Text fuers PDF-Band.
   // aggTot.rel ist Prozentzahl; totalRel (Fallback) ist Bruch -> *100.
+  // Total-Karte mit abs/rel -> kompaktes Zahlenformat wie ueberall (EUR -253,8 Tsd. statt -253.805).
+  // value (Plain) bleibt fuers PDF-Band.
   const totalCard = aggTot
-    ? { label: `Total ${cfg.metric}`, valueHtml: kpiValue(-aggTot.abs, -aggTot.rel), value: kpiValue(-aggTot.abs, -aggTot.rel, { html: false }), sub: 'portfolio total',      desc: `Portfolio ${cfg.metric} (all issuers)` }
-    : { label: `Total ${cfg.metric}`, valueHtml: kpiValue(-Math.abs(total), -Math.abs(totalRel * 100)), value: kpiValue(-Math.abs(total), -Math.abs(totalRel * 100), { html: false }), sub: 'sum of contributions', desc: `Portfolio ${cfg.metric} (all issuers)` };
+    ? { label: `Total ${cfg.metric}`, abs: -aggTot.abs, rel: -aggTot.rel, value: kpiPlainCompact(-aggTot.abs, -aggTot.rel), sub: 'portfolio total',      desc: `Portfolio ${cfg.metric} (all issuers)` }
+    : { label: `Total ${cfg.metric}`, abs: -Math.abs(total), rel: -Math.abs(totalRel * 100), value: kpiPlainCompact(-Math.abs(total), -Math.abs(totalRel * 100)), sub: 'sum of contributions', desc: `Portfolio ${cfg.metric} (all issuers)` };
   const cards = [
     totalCard,
-    { label: 'Top issuer',              value: relPct1(top[cfg.relKey]), sub: top.issuer || '–',            desc: `Largest ${cfg.metric} contributor` },
-    { label: 'Top-5 concentration',     value: relPct1(top5),            sub: `of total ${cfg.metric}`,     desc: '5 largest issuers combined' },
-    { label: 'Highest risk vs. weight', value: overVal,                  sub: over ? over.issuer : '–',     desc: 'Contribution above NAV weight' },
+    { label: 'Top issuer',            value: relPct1(top[cfg.relKey]), sub: top.issuer || '–',        desc: `Largest ${cfg.metric} contributor` },
+    { label: 'Top-5 concentration',   value: relPct1(top5),            sub: `of total ${cfg.metric}`, desc: '5 largest issuers combined' },
+    { label: 'Largest risk overweight', value: overVal,                sub: over ? over.issuer : '–', desc: 'Risk contribution above portfolio weight' },
   ];
 
   if (host) {
-    host.innerHTML = cards.map((c) => `
-      <div class="mr-kpi-card">
-        <div class="mr-kpi-card__label">${esc(c.label)}</div>
-        <div class="mr-kpi-card__value">${c.valueHtml || esc(c.value)}</div>
-        <div class="mr-kpi-card__sub">${esc(c.sub)}</div>
-        <div class="mr-kpi-card__desc">${esc(c.desc)}</div>
-      </div>`).join('');
+    // Look wie Factors: Name (label) OBEN als Ueberschrift, darunter Wert + Sub. Rahmen/Label
+    // metrik-farbig (VaR orange, ES rot). Die desc-Kopfzeile entfaellt. cards-Daten bleiben fuers PDF-Band.
+    const _bc = cfg.metric === 'ES' ? 'rgba(224,49,49,0.95)' : 'rgba(240,140,0,0.95)';
+    host.innerHTML = '<div class="conc-kpi-grid" style="width:100%">' + cards.map((c) => kpiCard(
+      Number.isFinite(c.abs)
+        ? { label: c.label, subText: c.sub, abs: c.abs, rel: c.rel, pairInline: true, borderColor: _bc }
+        : { label: c.label, subText: c.sub, valueHtml: c.valueHtml || esc(c.value), borderColor: _bc }
+    )).join('') + '</div>';
   }
 
   // Gespiegelte Label/Wert-Tabelle fuer Preview/PDF (data-kpi-band -> Kachel-Band).
@@ -339,11 +343,11 @@ function renderIssuerChart(rows, cfg) {
       datasets: [
         // Palette: Portfolio-Anteil = Portfolio-Blau; Risiko-Beitrag = Market-Teal
         // (VaR) bzw. gelblichere Nuance (ES), damit beide Metriken unterscheidbar sind.
-        { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 1, maxBarThickness: 10 },
+        { label: 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 0, maxBarThickness: 10 },
         { label: `Risk contribution (${cfg.metric})`, data: contribPct,
-          backgroundColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
-          borderColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
-          borderWidth: 1, maxBarThickness: 10 },
+          backgroundColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.9)' : 'rgba(240,140,0,0.95)',
+          borderColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.9)' : 'rgba(240,140,0,0.95)',
+          borderWidth: 0, maxBarThickness: 10 },
       ],
     },
     options: {
@@ -415,7 +419,10 @@ function renderIssuerScatter(rows, cfg) {
     data: {
       datasets: [
         { type: 'line', label: 'proportional', data: [{ x: 0, y: 0 }, { x: axMax, y: axMax }], borderColor: 'rgba(150,165,185,0.7)', borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false, order: 2 },
-        { label: 'Issuers', data: pts, backgroundColor: 'rgba(46,88,130,0.75)', borderColor: 'rgba(46,88,130,0.9)', pointRadius: 6, pointHoverRadius: 7, order: 1 },
+        { label: 'Issuers', data: pts,
+          backgroundColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.75)' : 'rgba(240,140,0,0.85)',
+          borderColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.95)' : 'rgba(240,140,0,0.95)',
+          pointRadius: 6, pointHoverRadius: 7, order: 1 },
       ],
     },
     options: {
@@ -432,6 +439,7 @@ function renderIssuerScatter(rows, cfg) {
         datalabels: window.ChartDataLabels ? {
           align: 'right', anchor: 'center', offset: 6, color: chartColor,
           font: { family: chartFont, size: 10 },
+          display: 'auto',   // ueberlappende Labels automatisch ausblenden; voller Name im Hover-Tooltip
           formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : ''),
         } : undefined,
         // Zoom/Box-Zoom (chartjs-plugin-zoom, global geladen): Ziehen = Rechteck-Auswahl,

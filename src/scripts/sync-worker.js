@@ -43,6 +43,24 @@ if (code >= 8) {
   console.error(`[sync:worker] robocopy FEHLGESCHLAGEN (exit ${code})`);
   process.exit(1);
 }
+
+// --- Pflicht-Check: die scipy-Sobol-Datendatei MUSS im gebundelten _internal liegen,
+//     sonst faellt scipy.stats.qmc.Sobol (scrambled Sobol / Importance Sampling) in der
+//     EXE aus und die CreditVaR-Ergebnisse weichen von der unverpackten Version ab.
+//     Fehlt sie -> Build HART abbrechen (kein stiller Fehlbuild). ---
+const sobolNpz = path.join(dst, '_internal', 'scipy', 'stats', '_sobol_direction_numbers.npz');
+if (!fs.existsSync(sobolNpz)) {
+  console.error(
+    `[sync:worker] ABBRUCH: fehlende Datendatei im Build:\n  ${sobolNpz}\n` +
+    `scipy.stats.qmc.Sobol (scrambled Sobol / Importance Sampling) wuerde in der EXE ` +
+    `fehlschlagen. Bitte main.spec pruefen (collect_data_files('scipy')) und PyInstaller ` +
+    `neu bauen:\n  cd ..\\PycharmProjects\\Risk\n` +
+    `  C:\\Python312\\python.exe -m PyInstaller main.spec --clean --noconfirm`
+  );
+  process.exit(1);
+}
+console.log(`[sync:worker] OK: ${path.relative(dst, sobolNpz)} vorhanden (scrambled Sobol lauffaehig).`);
+
 console.log(
   `[sync:worker] OK (robocopy exit ${code}) - bin/main ist jetzt ein exaktes ` +
   `Spiegelbild von dist/main (keine Alt-Dateien).`

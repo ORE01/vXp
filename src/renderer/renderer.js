@@ -94,6 +94,17 @@ try {
     // rendert ~10 Charts auf einmal) kostet das sichtbare "Rein-Animieren" spuerbar Ladezeit.
     // Datencharts sollen sofort stehen. (Einzelne Charts koennen es lokal wieder aktivieren.)
     window.Chart.defaults.animation = false;
+    // ── Zentrale, einheitlich KLEINE Typografie fuer ALLE Charts ──────────────────
+    // Basis 11px -> Tick-Labels (10-11), Achsentitel (11-12) und Legende (11-12) liegen
+    // damit in den Zielbereichen. Chart-Titel 15px. Charts mit eigener font-Angabe
+    // ueberschreiben das weiterhin (dann dort separat verkleinern).
+    window.Chart.defaults.font.size = 11;
+    if (window.Chart.defaults.plugins?.title) {
+      window.Chart.defaults.plugins.title.font = { ...(window.Chart.defaults.plugins.title.font || {}), size: 15, weight: '600' };
+    }
+    if (window.Chart.defaults.plugins?.legend?.labels) {
+      window.Chart.defaults.plugins.legend.labels.font = { ...(window.Chart.defaults.plugins.legend.labels.font || {}), size: 11 };
+    }
   }
 } catch (e) { console.warn('[renderer] Chart.defaults setzen fehlgeschlagen', e); }
 

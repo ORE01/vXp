@@ -3,6 +3,7 @@
 import { appState } from '../../../../renderer.js';
 import { formatNumberWithCommas, fmtEur, eurUnit, kpiValue } from '../../../../utils/tableCellFormats.js';
 import { updateTrafficLight } from '../../../../utils/trafficLight.js';
+import { kpiCard } from '../../../../utils/kpiCard.js';
 
 import {
   getAvailableMvarPorts,
@@ -365,18 +366,27 @@ function bindStressKpiRerender() {
 // KPI-Kacheln fuer Profit/Loss: Total VaR + Total ES (Current, mit Ampel-Punkt) sowie die
 // VaR-/ES-Werte des gewaehlten Stress-Szenarios daneben (Scenario VaR / Scenario ES).
 function renderMvarPLKpis(data, varState, esState) {
-  const el = document.getElementById('mvarPLKpi');
-  if (!el) return;
-  // Caption "Current Market: <baseline>" dynamisch — Baseline = aktuelles Ansichts-/Rolling-
-  // Interval (appState.selectedMvarInterval, Default ROLLING_1).
+  // Zwei Vergleichskacheln: links Current Market, rechts Stress-Szenario (je 2 KPIs + Chart).
+  const curEl = document.getElementById('mvarPLKpiCur');
+  const strEl = document.getElementById('mvarPLKpiStr');
+  if (!curEl || !strEl) return;
+  // Ausgewaehltes Stress-Szenario einmal berechnen (fuer Caption + Scenario-Kacheln unten).
+  const scen = _stressScenarioRow();
+  // Caption in EINER Zeile: "Current Market: <baseline>   Stress scenario: <name>".
+  // Baseline = aktuelles Ansichts-/Rolling-Interval (appState.selectedMvarInterval, Default ROLLING_1).
   const _cap = document.querySelector('#panel-market .mvar-summary-header .mvar-caption');
   if (_cap) {
     const _baseline = String(appState.selectedMvarInterval ?? '').trim() || 'ROLLING_1';
-    _cap.textContent = `Current Market: ${_baseline}`;
+    _cap.textContent = `Current Market: ${_baseline}`
+      + (scen?.name ? ` Stress scenario: ${scen.name}` : '');
   }
   if (data) _lastPLKpiArgs = { data, varState, esState };
   bindStressKpiRerender();
-  if (!data) { el.innerHTML = ''; return; }
+  // Kachel-Titel (Vergleich): links Baseline, rechts das gewaehlte Stress-Szenario.
+  const _baseTitle = String(appState.selectedMvarInterval ?? '').trim() || 'ROLLING_1';
+  const _tc = document.getElementById('plCompareTitleCur');
+  if (_tc) _tc.textContent = `Current Market: ${_baseTitle}`;
+  if (!data) { curEl.innerHTML = ''; strEl.innerHTML = ''; return; }
 
   // Zentrales Zahlenformat wie bei Net Asset Value: EUR (klein) + absolute Zahl, relative Zahl
   // kleiner/muted. fmtEur (utils/tableCellFormats.js) haelt "EUR" vorne + .cur-unit (klein).
@@ -389,13 +399,8 @@ function renderMvarPLKpis(data, varState, esState) {
     const sign = n < 0 ? '-' : '';
     return `${eurUnit(html)} ${sign}${Math.round(Math.abs(n)).toLocaleString('de-DE')}`;
   };
-  const eurAbs = (v) => eurSigned(v, true);    // Karten: EUR klein (.cur-unit)
   const eurAbsPlain = (v) => eurSigned(v, false);   // Report-Band: reiner Text
   const fmtRel = (v) => Number.isFinite(Number(v)) ? `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
-  const dotColor = { green: '#4CAF50', yellow: 'yellow', red: 'red' };
-  const dot = (s) => dotColor[s]
-    ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotColor[s]};margin-left:8px;vertical-align:middle;"></span>`
-    : '';
   // Aenderungszeile (Zeile NACH abs+rel) im Stil der Net-Asset-Value-KPI (Portfolio/Profit-Loss):
   // Kreis-Pfeil-Badge (Richtung) + absolute Aenderung · relative Aenderung. Vorperiode = vorletzter
   // gespeicherter Historic-Metrics-Snapshot (PortfolioHistoryMetrics), wie die NAV-KPI.
@@ -420,26 +425,7 @@ function renderMvarPLKpis(data, varState, esState) {
     const up = Math.abs(c) >= Math.abs(p);
     return { up, abs: Math.abs(Math.abs(c) - Math.abs(p)), rel: Math.abs((Math.abs(c) - Math.abs(p)) / Math.abs(p) * 100) };
   };
-  // Pfeil = Wertrichtung (↗ gestiegen / ↘ gefallen). Farbe = RISIKO-Semantik: gestiegenes
-  // Risiko (VaR/ES hoeher) = rot, gesunkenes = gruen (anders als NAV, wo "hoeher" gut ist).
-  const chgLine = (chg) => chg
-    ? `<div class="mr-kpi-card__chg"><span class="perf-chg-badge ${chg.up ? 'is-down' : 'is-up'}">${chg.up ? '↗' : '↘'}</span>${eurAbs(chg.abs)} · ${chg.rel.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</div>`
-    : '';
-  // Erste Zeile = "<Metrik>: <Name>" (z.B. "Market Value at Risk: portfolio total"). Keine
-  // sub-/desc-Zeilen mehr. Rand je Metrik einfaerben ueber ZENTRALE CSS-Klassen
-  // (mr-kpi-card--var / --es in breakdown.css) - nur der feine Rahmen, KEIN oberer
-  // Akzentstreifen (wie bei den Credit-Economic-Capital-KPIs). VaR orange, ES rot.
-  const card = (label, valueHtml, chgHtml, metric) => {
-    const cls = metric === 'var' ? ' mr-kpi-card--var' : metric === 'es' ? ' mr-kpi-card--es' : '';
-    return `<div class="mr-kpi-card${cls}">
-      <div class="mr-kpi-card__label">${label}</div>
-      <div class="mr-kpi-card__value">${valueHtml}</div>
-      ${chgHtml || ''}
-    </div>`;
-  };
-
-  // Stress-Szenario (rechter Chart / Dropdown): VaR + ES daneben zu den Current-Kacheln.
-  const scen = _stressScenarioRow();
+  // Stress-Szenario (scen wurde oben fuer die Caption bereits berechnet): VaR + ES daneben.
   // Ampel-Status fuers Szenario gegen DIESELBEN Limits (VaR-/ES-Schwellen aus Customer Setup).
   let scenVarState = null, scenEsState = null;
   if (scen) {
@@ -462,13 +448,27 @@ function renderMvarPLKpis(data, varState, esState) {
 
   // Reihenfolge: erst beide Current (portfolio total), dann beide Szenario-Kacheln.
   // Wert = EUR (absolut) + relative Zahl kleiner/muted (.conc-kpi__qual) + Ampelpunkt — wie NAV.
-  // Zentrale Vorlage kpiValue (EUR klein + Zahl gross mit Vorzeichen + rel muted) + Ampelpunkt.
-  const valHtml = (abs, rel, st) => `${kpiValue(abs, rel)}${dot(st)}`;
-  el.innerHTML =
-    card('Market Value at Risk: portfolio total', valHtml(data.VaR_T_abs, data.VaR_T_rel, varState), chgLine(varChg), 'var')
-    + card('Expected Shortfall: portfolio total', valHtml(data.ES_T_abs, data.ES_T_rel, esState), chgLine(esChg), 'es')
-    + (scen ? card(`Market Value at Risk: ${_escKpi(scen.name)}`, valHtml(scen.VaR_T_abs, scen.VaR_T_rel, scenVarState), chgLine(scenVarChg), 'var') : '')
-    + (scen ? card(`Expected Shortfall: ${_escKpi(scen.name)}`, valHtml(scen.ES_T_abs, scen.ES_T_rel, scenEsState), chgLine(scenEsChg), 'es') : '');
+  // KPI-Kacheln zentral ueber die kpiCard-Komponente (conc-kpi) — identischer Aufbau/Format wie
+  // die Credit-EC-Kacheln: EUR klein vorne, kompakt (Tsd./Mio.), Rahmenfarbe je Metrik, Ampelpunkt
+  // (dot) + Trendzeile (chg) aus kpiCard. Report-Band (mvarPLKpiBand) unten bleibt unveraendert.
+  // WICHTIG: KEIN tileKey/data-tile 'mkt_var'/'mkt_es' setzen — das sind Overview-Tile-Keys, die
+  // applyOverviewTileVisibility/applyTileValueModes anfassen (display:none + home-tile-swap) und
+  // die P&L-Kacheln sonst verstecken/flackern lassen wuerden. abs gross + rel als Sub (kein Swap).
+  const plCard = (metric, label, r, st, chg) => kpiCard({
+    metric, label, abs: r.abs, rel: r.rel, dot: st || null, chg: chg || null, reserveChg: true,
+    pairInline: true,   // relative Zahl klein INLINE hinter dem Absolutwert (wie Credit VaR)
+  });
+  const _grid = (inner) => `<div class="conc-kpi-grid" style="width:100%">${inner}</div>`;
+  // Kachel LINKS: die 2 Current-KPIs (VaR + ES). Der Kachel-Titel oben nennt "Current Market".
+  curEl.innerHTML = _grid(
+    plCard('var', 'Market Value at Risk (VaR)', { abs: data.VaR_T_abs, rel: data.VaR_T_rel }, varState, varChg)
+    + plCard('es', 'Expected Shortfall (ES)', { abs: data.ES_T_abs, rel: data.ES_T_rel }, esState, esChg));
+  // Kachel RECHTS: die 2 KPIs des gewaehlten Stress-Szenarios (oder Hinweis, wenn keins gewaehlt).
+  strEl.innerHTML = scen
+    ? _grid(
+        plCard('var', 'Market Value at Risk (VaR)', { abs: scen.VaR_T_abs, rel: scen.VaR_T_rel }, scenVarState, scenVarChg)
+        + plCard('es', 'Expected Shortfall (ES)', { abs: scen.ES_T_abs, rel: scen.ES_T_rel }, scenEsState, scenEsChg))
+    : '<div class="mvar-caption" style="padding:8px 2px;">No stress scenario selected.</div>';
 
   // Report-Spiegel (data-kpi-band): dieselben KPIs als schlichte 2-Spalten-Tabelle (Label | Wert)
   // fuer den PDF-Report. drawKpiBand liest tbody-tr -> td[0]=Label, td[1]=Wert.

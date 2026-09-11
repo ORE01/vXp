@@ -483,6 +483,12 @@
 #panel-asrf .conc-kpi[data-tile="asrf_ec"] .conc-kpi__lbl,  #panel-asrf-norm .conc-kpi[data-tile="asrf_ec"] .conc-kpi__lbl  { color: rgba(180,145,238,0.98); }
 #panel-asrf .conc-kpi[data-tile="asrf_var"] .conc-kpi__lbl, #panel-asrf-norm .conc-kpi[data-tile="asrf_var"] .conc-kpi__lbl { color: #f08c00; }
 #panel-asrf .conc-kpi[data-tile="asrf_es"] .conc-kpi__lbl,  #panel-asrf-norm .conc-kpi[data-tile="asrf_es"] .conc-kpi__lbl  { color: #e03131; }
+/* ASRF (Historic + Market adjusted): Name (conc-kpi__lbl) GANZ NACH OBEN — kpiCard rendert das
+   Label sonst unten. Reihenfolge per Flex-order, analog zu den PD-Panels. */
+#panel-asrf .conc-kpi-grid .conc-kpi[data-tile],
+#panel-asrf-norm .conc-kpi-grid .conc-kpi[data-tile] { display: flex; flex-direction: column; }
+#panel-asrf .conc-kpi-grid .conc-kpi[data-tile] .conc-kpi__lbl,
+#panel-asrf-norm .conc-kpi-grid .conc-kpi[data-tile] .conc-kpi__lbl { order: -1; margin-top: 0; margin-bottom: 6px; }
 
 /* Canvas-Größe im Credit-Panel */
 #panel-credit .chart-box canvas{
@@ -569,6 +575,16 @@
 #panel-credit .conc-kpi[data-tile="credit_ec"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_ec"] .conc-kpi__lbl { color: rgba(180, 145, 238, 0.98); }
 #panel-credit .conc-kpi[data-tile="credit_var_hist"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"] .conc-kpi__lbl { color: #f08c00; }
 #panel-credit .conc-kpi[data-tile="credit_es"] .conc-kpi__lbl, #panel-credit-current .conc-kpi[data-tile="credit_es"] .conc-kpi__lbl { color: #e03131; }
+/* ZENTRALE Rahmen-/Namensfarbe je Metrik (kpiCard metric=...): panel-unabhaengig wiederverwendbar.
+   Ohne metric bleibt der neutrale .conc-kpi-Rahmen. Deckt sich fuer Credit mit den data-tile-Regeln. */
+.conc-kpi--el  { border-color: rgba(235, 235, 235, 0.85); }
+.conc-kpi--ec  { border-color: rgba(150, 110, 220, 0.9); }
+.conc-kpi--var { border-color: #f08c00; }
+.conc-kpi--es  { border-color: #e03131; }
+.conc-kpi--el  .conc-kpi__lbl { color: rgba(235, 235, 235, 0.92); }
+.conc-kpi--ec  .conc-kpi__lbl { color: rgba(180, 145, 238, 0.98); }
+.conc-kpi--var .conc-kpi__lbl { color: #f08c00; }
+.conc-kpi--es  .conc-kpi__lbl { color: #e03131; }
 /* Light-Theme: EL-Rahmen + -Name sind fuer Dark fast weiss -> auf hellem Grund unlesbar.
    Auf das Dunkelgrau der EL-Linie in der Loss-Grafik (#5a6470) setzen. */
 body.light-theme #panel-credit .conc-kpi[data-tile="credit_el"],
@@ -621,6 +637,15 @@ body.light-theme #panel-credit-current .conc-kpi[data-tile="credit_el"] .conc-kp
 #panel-credit .conc-kpi[data-tile="credit_ec"]:not([data-desc])::before, #panel-credit-current .conc-kpi[data-tile="credit_ec"]:not([data-desc])::before { content: "Risk buffer"; }
 #panel-credit .conc-kpi[data-tile="credit_var_hist"]::before, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"]::before { content: "Realistic loss threshold"; }
 #panel-credit .conc-kpi[data-tile="credit_es"]::before, #panel-credit-current .conc-kpi[data-tile="credit_es"]::before { content: "Average loss in extreme cases"; }
+/* Historic PD + Market adjusted PD: Name (conc-kpi__lbl) GANZ NACH OBEN, Kurzbeschreibung
+   (::before) nach UNTEN (Zeile 1 <-> Zeile 4 getauscht). Reihenfolge per Flex-order; das
+   Styling der Elemente bleibt unveraendert. Text bleibt zentriert (align-items default stretch). */
+#panel-credit .conc-kpi-grid .conc-kpi[data-tile],
+#panel-credit-current .conc-kpi-grid .conc-kpi[data-tile] { display: flex; flex-direction: column; }
+#panel-credit .conc-kpi-grid .conc-kpi[data-tile] .conc-kpi__lbl,
+#panel-credit-current .conc-kpi-grid .conc-kpi[data-tile] .conc-kpi__lbl { order: -1; margin-top: 0; margin-bottom: 6px; }
+#panel-credit .conc-kpi-grid .conc-kpi[data-tile]::before,
+#panel-credit-current .conc-kpi-grid .conc-kpi[data-tile]::before { order: 1; margin-top: 6px; margin-bottom: 0; }
 /* Serien-Legende (Historic/Market/Market adjusted) als Overlay oben rechts UEBER dem
    Loss-Dist-Chart (absolut positioniert -> schrumpft den Plot nicht), vertikal gestapelt. */
 .cr-loss-legend { position: absolute; top: 4px; right: 8px; display: flex; flex-direction: column; gap: 3px; align-items: flex-end; z-index: 2; }

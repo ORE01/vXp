@@ -4,6 +4,7 @@
 
 import { appState } from '../../../../renderer.js';
 import { formatNumber, formatNumberWithCommas, kpiValue } from '../../../../utils/tableCellFormats.js';
+import { kpiCard } from '../../../../utils/kpiCard.js';
 
 import {
   getAvailableMvarPorts,
@@ -446,8 +447,8 @@ function renderFactorBar(rows, cfg) {
   const chart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Portfolio share (exposure)', data: sharePct, backgroundColor: 'rgba(88,121,160,0.85)', borderColor: 'rgba(88,121,160,0.85)', borderWidth: 1, maxBarThickness: 10 },
-      { label: `Risk contribution (${cfg.metric})`, data: contribPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 10 },
+      { label: 'Portfolio share (exposure)', data: sharePct, backgroundColor: 'rgba(88,121,160,0.85)', borderColor: 'rgba(88,121,160,0.85)', borderWidth: 0, maxBarThickness: 10 },
+      { label: `Risk contribution (${cfg.metric})`, data: contribPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 0, maxBarThickness: 10 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -519,41 +520,76 @@ function relPct(v) {
   const n = Number(v);
   return Number.isFinite(n) ? `${n.toLocaleString('de-DE', { maximumFractionDigits: 4 })}%` : '–';
 }
+// Farbe je Risikotyp + Metrik (VaR = HELLER, ES = DUNKLER). EINE Quelle fuer KPI-Raender UND
+// Chart-Balken: Total orange/rot, IR gruen, CS blau, Vega violett.
+const FAC_COLORS = {
+  TOTAL: { var: 'rgba(240,140,0,0.95)',  es: 'rgba(224,49,49,0.95)' },   // orange / rot (Total bleibt getrennt)
+  IR:    { var: 'rgba(80,200,120,0.9)',  es: 'rgba(80,200,120,0.9)' },   // gruen (VaR = ES)
+  CS:    { var: 'rgba(95,165,225,0.9)',  es: 'rgba(95,165,225,0.9)' },   // blau (VaR = ES)
+  VEGA:  { var: 'rgba(190,150,225,0.9)', es: 'rgba(190,150,225,0.9)' },  // violett (VaR = ES)
+};
+const _facColor = (t, m) => (FAC_COLORS[t]?.[m] || FAC_COLORS[t]?.var || 'rgba(120,130,145,0.85)');
+
 function renderFactorKpis(riskTypeRows) {
   const el = document.getElementById('mvarFactorKpi');
   if (!el) return;
   const byType = {};
   (Array.isArray(riskTypeRows) ? riskTypeRows : []).forEach(r => { byType[String(r.risk_type || '').toUpperCase()] = r; });
-  // Erste KPI = Gesamt-VaR/ES ABSOLUT + relativ (wie in Products/Issuers), darunter die
-  // IR/CS/Vega-Zerlegung (relativ).
-  const card = (label, relKey, absKey) => {
-    const T = byType.TOTAL || {};
-    const line = (nm, r) => `<div class="mr-kpi-row-line"><span>${nm}</span><span>${r ? relPct(r[relKey]) : '0%'}</span></div>`;
-    return `<div class="mr-kpi-card">
-      <div class="mr-kpi-card__label">${label}</div>
-      <div class="mr-kpi-card__value">${kpiValue(-Math.abs(Number(T[absKey]) || 0), -Math.abs(Number(T[relKey]) || 0))}</div>
-      <div class="mr-kpi-card__rows">
-        ${line('IR', byType.IR)}
-        ${line('CS', byType.CS)}
-        ${line('Vega', byType.VEGA)}
-      </div>
-    </div>`;
-  };
-  // Dritte Karte "Core reading": erklaert die Zerlegung + dynamische VaR-Formel.
-  let coreCard = '';
-  const dec = computeDecomposition(riskTypeRows, 'var_rel');
-  if (dec) {
-    const parts = dec.comp.map(c => `${c.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`).join(' + ');
-    const divPart = dec.div < 0 ? `- ${Math.abs(dec.div).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : `+ ${dec.div.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
-    coreCard = `<div class="mr-kpi-card mvar-core-card">
-      <div class="mr-kpi-card__label">Core reading</div>
-      <div class="mvar-core-text">IR and CS create gross risk contributions that can exceed 100%. Diversification is a benefit, not an additional risk driver.</div>
-      <div class="mvar-core-text"><b>${parts} ${divPart} = 100.0%</b> Total VaR.</div>
-      <div class="mvar-core-text">Therefore diversification is shown as a negative adjustment.</div>
-    </div>`;
-  }
 
-  el.innerHTML = card('Total VaR', 'var_rel', 'var_abs') + card('Total ES', 'es_rel', 'es_abs') + coreCard;
+  // Zwei Reihen: VaR (oben) + ES (unten), jede mit eigener Ueberschrift. Karten je Reihe:
+  // Total, IR, CS, Vega, ... (dynamisch) ueber die zentrale kpiCard-Komponente. Alle mit
+  // ABSOLUT + relativ INLINE (pairInline) wie die anderen KPIs. abs als Verlust negativ; rel ist
+  // bereits in Prozent-Einheiten (KEIN *100).
+  const KNOWN = ['IR', 'CS', 'VEGA'];
+  // Einen Faktor NUR zeigen, wenn er wirklich existiert (mind. ein endlicher, von 0 verschiedener
+  // Wert). Bei diesem Portfolio z.B. kein Vega -> Vega-Kachel entfaellt.
+  const _hasData = (t) => {
+    const r = byType[t]; if (!r) return false;
+    return ['var_abs', 'var_rel', 'es_abs', 'es_rel'].some(k => { const n = Number(r[k]); return Number.isFinite(n) && n !== 0; });
+  };
+  const _factorTypes = [...KNOWN.filter(_hasData),
+                        ...Object.keys(byType).filter(t => t !== 'TOTAL' && !KNOWN.includes(t) && _hasData(t))];
+  const _order = ['TOTAL', ..._factorTypes];
+  const _nice = { TOTAL: 'Total', IR: 'Interest Rate (IR)', CS: 'Credit Spread (CS)', VEGA: 'Volatility (Vega)' };
+  const _label = (t) => _nice[t] || (t.charAt(0) + t.slice(1).toLowerCase());
+
+  // Vorperiode (vorletzter Historic-Snapshot des gewaehlten Portfolios) -> Aenderungszeile wie P&L.
+  const _prevRow = (() => {
+    const sel = String(appState.getSelectedPortTableName?.() ?? '').trim();
+    const rows = (appState.getPortfolioHistoryData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === sel)
+      .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+    return rows.length >= 2 ? rows[rows.length - 2] : null;
+  })();
+  const _num = (v) => { const n = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
+  const _fieldNum = (row, keys) => { for (const k of keys) { if (row && row[k] != null && row[k] !== '') { const n = _num(row[k]); if (Number.isFinite(n)) return n; } } return NaN; };
+  const _chg = (cur, prevRaw) => {
+    const p = _num(prevRaw), c = Number(cur);
+    if (!Number.isFinite(c) || !Number.isFinite(p) || p === 0 || Math.abs(c) === Math.abs(p)) return null;
+    const up = Math.abs(c) >= Math.abs(p);
+    return { up, abs: Math.abs(Math.abs(c) - Math.abs(p)), rel: Math.abs((Math.abs(c) - Math.abs(p)) / Math.abs(p) * 100) };
+  };
+  // Historic-Feld je Risikotyp/Metrik (Total -> ALL), mehrere Schreibweisen tolerieren.
+  const _histKeys = (t, m) => { const suf = t === 'TOTAL' ? 'ALL' : t; return [`M_${m}_${suf}`, `M${m}_${suf}`, `M_${m}_${suf.toLowerCase()}`]; };
+
+  const _card = (t, absKey, relKey, metric, mName) => {
+    const r = byType[t] || {};
+    const chg = _prevRow ? _chg(Number(r[absKey]), _fieldNum(_prevRow, _histKeys(t, mName))) : null;
+    return kpiCard({
+      borderColor: _facColor(t, metric), label: _label(t), pairInline: true, reserveChg: true, chg,
+      relDigits: 3,   // kleine %-Werte klar unterscheidbar (z.B. -0,122 % vs -0,125 %)
+      abs: -Math.abs(Number(r[absKey]) || 0),
+      rel: Number(r[relKey]),
+    });
+  };
+  const _rowHtml = (heading, absKey, relKey, metric, mName) =>
+    `<div class="mvar-fac-rowtitle">${heading}</div>`
+    + '<div class="conc-kpi-grid" style="width:100%">'
+    + _order.map(t => _card(t, absKey, relKey, metric, mName)).join('')
+    + '</div>';
+
+  el.innerHTML = _rowHtml('Value at Risk (VaR)', 'var_abs', 'var_rel', 'var', 'VaR')
+    + _rowHtml('Expected Shortfall (ES)', 'es_abs', 'es_rel', 'es', 'ES');
 }
 
 // Datenmodell der Factor-KPIs (MVaR / ES MVaR, Total + IR/CS/Vega, relativ) fuer den
@@ -596,8 +632,8 @@ function renderFactorEntriesChart(riskTypeRows) {
   _mvarFactorEntriesChart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: { labels: spec.map(([, l]) => l), datasets: [
-      { label: 'VaR %', data: varPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 1, maxBarThickness: 14 },
-      { label: 'ES %',  data: esPct,  backgroundColor: 'rgba(224,176,0,0.85)',  borderColor: 'rgba(224,176,0,0.85)',  borderWidth: 1, maxBarThickness: 14 },
+      { label: 'VaR %', data: varPct, backgroundColor: 'rgba(46,204,113,0.85)', borderColor: 'rgba(46,204,113,0.85)', borderWidth: 0, maxBarThickness: 14 },
+      { label: 'ES %',  data: esPct,  backgroundColor: 'rgba(224,176,0,0.85)',  borderColor: 'rgba(224,176,0,0.85)',  borderWidth: 0, maxBarThickness: 14 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -642,12 +678,15 @@ function renderRiskTypeBar(riskTypeRows, cfg) {
   if (!canvas || !window.Chart) return;
   const byType = {};
   (Array.isArray(riskTypeRows) ? riskTypeRows : []).forEach(r => { byType[String(r.risk_type || '').toUpperCase()] = r; });
-  const spec = [['TOTAL', 'Total'], ['IR', 'IR'], ['CS', 'CS'], ['VEGA', 'Vega']];
+  // Nur existierende Risikotypen (Total + Faktoren mit endlichem, von 0 verschiedenem Wert).
+  const spec = [['TOTAL', 'Total'], ['IR', 'IR'], ['CS', 'CS'], ['VEGA', 'Vega']]
+    .filter(([t]) => t === 'TOTAL' || (byType[t] && Number.isFinite(Number(byType[t][cfg.relKey])) && Number(byType[t][cfg.relKey]) !== 0));
   // rel ist bereits in Prozent-Einheiten -> KEIN *100.
   const vals = spec.map(([t]) => +Math.abs(toNumber(byType[t]?.[cfg.relKey], 0)).toFixed(4));
   if (!vals.some(v => v > 0)) { canvas.style.display = 'none'; return; }
-  // Total-Balken blau wie im Decomposition-Waterfall; Risikotypen in Metrik-Farbe.
-  const barColors = spec.map(([t]) => (t === 'TOTAL' ? 'rgba(46,88,130,0.9)' : cfg.color));
+  // Balkenfarbe je Risikotyp (Total orange/rot, IR gruen, CS blau) + Metrik (VaR heller, ES dunkler).
+  const _m = cfg.metric === 'ES' ? 'es' : 'var';
+  const barColors = spec.map(([t]) => _facColor(t, _m));
   canvas.style.display = 'block';
   canvas.width = 520; canvas.height = 300;
   const bodyCss = getComputedStyle(document.body);
@@ -657,7 +696,7 @@ function renderRiskTypeBar(riskTypeRows, cfg) {
     type: 'bar',
     plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
     data: { labels: spec.map(([, l]) => l), datasets: [
-      { label: `${cfg.metric} %`, data: vals, backgroundColor: barColors, borderColor: barColors, borderWidth: 1, maxBarThickness: 18 },
+      { label: `${cfg.metric} %`, data: vals, backgroundColor: barColors, borderColor: barColors, borderWidth: 0, maxBarThickness: 18 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -686,9 +725,12 @@ function computeDecomposition(riskTypeRows, relKey) {
   (Array.isArray(riskTypeRows) ? riskTypeRows : []).forEach(r => { byType[String(r.risk_type || '').toUpperCase()] = r; });
   const total = Math.abs(toNumber(byType.TOTAL?.[relKey], 0));
   if (!(total > 0)) return null;
-  const comp = [['IR', 'IR'], ['CS', 'CS'], ['VEGA', 'Vega']].map(([t, lab]) => ({
-    label: lab, pct: +(Math.abs(toNumber(byType[t]?.[relKey], 0)) / total * 100).toFixed(1),
-  }));
+  // Nur existierende Faktoren (endlicher, von 0 verschiedener Wert) -> z.B. kein Vega bei diesem Portfolio.
+  const comp = [['IR', 'IR'], ['CS', 'CS'], ['VEGA', 'Vega']]
+    .filter(([t]) => { const n = Number(byType[t]?.[relKey]); return Number.isFinite(n) && n !== 0; })
+    .map(([t, lab]) => ({
+      type: t, label: lab, pct: +(Math.abs(toNumber(byType[t]?.[relKey], 0)) / total * 100).toFixed(1),
+    }));
   const gross = +comp.reduce((s, c) => s + c.pct, 0).toFixed(1);
   const div = +(100 - gross).toFixed(1);   // negativ = Diversifikationsvorteil
   return { comp, gross, div };
@@ -705,16 +747,20 @@ function renderDiversificationBar(riskTypeRows, cfg) {
   if (!dec) { canvas.style.display = 'none'; return; }
   const { comp, gross, div } = dec;
 
-  const blue = 'rgba(46,88,130,0.9)', gray = 'rgba(150,150,150,0.85)', green = cfg.color;
-  const labels = ['Total', ...comp.map(c => c.label), 'Diversification benefit'];
+  const gray = 'rgba(150,150,150,0.85)';
+  const _m = cfg.metric === 'ES' ? 'es' : 'var';   // VaR heller / ES dunkler
+  // Echter Waterfall (oben->unten): IR (0->x) -> +CS (gestuft) -> -Diversification (Abwaerts-Stufe)
+  // -> Total (0->100) als Endbalken.
+  const labels = [...comp.map(c => c.label), 'Diversification benefit', '', 'Total'];
   const segs = [];      // [start,end] je Balken (floating bars)
   const colors = [];
   const dl = [];        // Datalabel-Texte je Balken
-  segs.push([0, 100]); colors.push(blue); dl.push('100,0%');
   let cum = 0;
-  comp.forEach(c => { segs.push([cum, cum + c.pct]); colors.push(green); dl.push(`+${c.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`); cum += c.pct; });
+  comp.forEach(c => { segs.push([cum, cum + c.pct]); colors.push(_facColor(c.type, _m)); dl.push(`+${c.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`); cum += c.pct; });
   // Diversifikation: von gross zurueck auf 100 -> Segment [min,max], Label = div (negativ).
   segs.push([Math.min(100, gross), Math.max(100, gross)]); colors.push(gray); dl.push(`${div.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`);
+  segs.push([0, 0]); colors.push('rgba(0,0,0,0)'); dl.push('');   // leere Kategorie = kleiner Abstand vor Total
+  segs.push([0, 100]); colors.push(_facColor('TOTAL', _m)); dl.push('100,0%');
 
   canvas.style.display = 'block';
   canvas.width = 520; canvas.height = 300;
@@ -725,7 +771,7 @@ function renderDiversificationBar(riskTypeRows, cfg) {
     type: 'bar',
     plugins: [window.ChartDataLabels, _vline100Plugin].filter(Boolean),
     data: { labels, datasets: [
-      { label: `${cfg.metric} decomposition`, data: segs, backgroundColor: colors, borderColor: colors, borderWidth: 1, maxBarThickness: 22 },
+      { label: `${cfg.metric} decomposition`, data: segs, backgroundColor: colors, borderColor: colors, borderWidth: 0, maxBarThickness: 22 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -750,10 +796,10 @@ function renderDiversificationBar(riskTypeRows, cfg) {
 function renderFactorContribCharts(riskTypeRows) {
   // Palette: VaR = Market-Teal, ES = gelblichere Nuance (olive) — wie in den
   // Issuer-/Product-Beitragscharts.
-  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorVarContribChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(42,127,127,0.9)', title: 'VaR Contribution by Risk Type', subtitle: '% of portfolio value' });
-  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorVarScatterChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(42,127,127,0.9)', title: 'VaR Decomposition — % of Total VaR', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
-  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorEsContribChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(122,158,74,0.9)', title: 'ES Contribution by Risk Type', subtitle: '% of portfolio value' });
-  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorEsScatterChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(122,158,74,0.9)', title: 'ES Decomposition — % of Total ES', subtitle: 'Waterfall: gross risk minus diversification benefit equals total' });
+  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorVarContribChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(80,200,120,0.85)', totalColor: 'rgba(240,140,0,0.95)', title: 'Standalone VaR by Risk Type', subtitle: '% of portfolio value' });
+  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorVarScatterChart', relKey: 'var_rel', metric: 'VaR', color: 'rgba(80,200,120,0.85)', totalColor: 'rgba(240,140,0,0.95)', title: 'VaR Decomposition — % of Total VaR', subtitle: 'Standalone risk components and diversification effect' });
+  renderRiskTypeBar(riskTypeRows, { canvasId: 'mvarFactorEsContribChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(40,90,145,0.95)', totalColor: 'rgba(224,49,49,0.95)', title: 'Standalone ES by Risk Type', subtitle: '% of portfolio value' });
+  renderDiversificationBar(riskTypeRows, { canvasId: 'mvarFactorEsScatterChart', relKey: 'es_rel', metric: 'ES', color: 'rgba(40,90,145,0.95)', totalColor: 'rgba(224,49,49,0.95)', title: 'ES Decomposition — % of Total ES', subtitle: 'Standalone risk components and diversification effect' });
 }
 
 // Cache der Faktor-Auswertung pro (port, scenario, asof, settings, rowcount). buildDistributions

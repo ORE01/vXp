@@ -333,6 +333,17 @@ function _sharedDistRange(valuesA, valuesB, marks) {
 
 // Linker (Haupt-)Chart aus __mainDistArgs zeichnen; optional mit erzwungenem x-Achsen-
 // Bereich (gemeinsame Achse mit dem Stress-Chart).
+// Wie das History-Chart ("How has market risk evolved over time?", jetzt scharf): festes Bitmap
+// in EXAKTER Containergroesse + responsive:false. Zusammen mit der CSS-Regel (Canvas 1:1 = intrinsische
+// Groesse) -> keine CSS-Streckung, keine Verzerrung, kein Slide-in/Grid-Timing-Problem.
+function _fixDistCanvas(canvas, options) {
+  const cont = canvas.parentElement;
+  canvas.width = Math.round(cont?.clientWidth || 0) || 600;
+  canvas.height = Math.round(cont?.clientHeight || 0) || 240;
+  options.responsive = false;
+  options.maintainAspectRatio = false;
+}
+
 function _drawMainDist(range = null) {
   const a = __mainDistArgs;
   if (!a) return;
@@ -347,6 +358,7 @@ function _drawMainDist(range = null) {
     horizonDays: a.horizonDays,
     range,
   });
+  _fixDistCanvas(canvas, options);
   const chart = new Chart(canvas.getContext('2d'), { type: 'bar', data, options, plugins: [_mvarVELinePlugin, _distYSyncPlugin] });
   chart.$veLines = veLines;
   chart.$distTickMap = tickMap;
@@ -385,6 +397,7 @@ function _drawStressDist(stress, range) {
     horizonDays: stress.horizonDays,
     range,
   });
+  _fixDistCanvas(canvas, options);
   const chart = new Chart(canvas.getContext('2d'), { type: 'bar', data, options, plugins: [_mvarVELinePlugin, _distYSyncPlugin] });
   chart.$veLines = veLines;
   chart.$distTickMap = tickMap;

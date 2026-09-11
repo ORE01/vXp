@@ -12,6 +12,7 @@ import { createContribDrill, scheduleHideConcMenu, bindRightClickDrill } from '.
 import { renderChartLegend, sumNavForPort, _fmtLossCompact, buildPositionLoss, getRunConfQuantil, creditVarEsForFlag, setSelectedCreditConf, getSelectedCreditConf, refreshLossDistribution } from './LossIssuer.js';
 import { crTailTopForFlag, tailConcentrationIndex } from './creditRiskDashboard.js';
 import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
+import { kpiCard } from '../../../utils/kpiCard.js';
 
 // KPI-Betragsformat: kompakt (Tsd./Mio.) mit 2 Nachkommastellen (eigener Formatter,
 // damit die geteilte Bar-/Tooltip-Formatierung _fmtLossCompact unveraendert bleibt).
@@ -221,7 +222,10 @@ function riskBufferDescFromConfig() {
 }
 
 function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
-  if (!document.getElementById('creditELBig' + suffix)) return;
+  // Beide Varianten werden zentral via kpiCard() ins jeweilige Grid gerendert (keine statischen
+  // creditELBig-Kacheln mehr): Historic ('') -> #creditKpiGridHist, Market adjusted ('M') -> #creditKpiGridMadj.
+  const _gridId = suffix === '' ? 'creditKpiGridHist' : 'creditKpiGridMadj';
+  if (!document.getElementById(_gridId)) return;
   const eadRows = Array.isArray(rowsOverride) ? rowsOverride : (appState.getAllEADData?.() || []);
   let elSum = 0, elCnt = 0, edeSum = 0;
   for (const r of eadRows) {
@@ -270,6 +274,37 @@ function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
   const edeExtraSub = document.getElementById('creditELDESub' + suffix);
   if (edeExtra) edeExtra.textContent = haveEl ? `(${_emode === 'rel' ? fR(edeRel) : fA(edeSum)})` : '';
   if (edeExtraSub) edeExtraSub.textContent = haveEl ? `(${_emode === 'rel' ? fA(edeSum) : fR(edeRel)})` : '';
+
+  // --- KPI-Kacheln zentral ueber die kpiCard-Komponente rendern (Zahl + Aufbau an EINER Stelle):
+  //     abs/rel-Umschalter, EUR-klein-vorne, kompakt (Tsd./Mio.), Rahmenfarbe je Metrik, Ampelpunkt.
+  //     conc-kpi-Markup bleibt -> PDF-Report unveraendert. Market adjusted ('M') zeigt zusaetzlich
+  //     das EDE als Zweitwert in der EL-Kachel. (Die obigen setKpi/EDE/EC-desc sind jetzt No-ops.) ---
+  {
+    const _grid = document.getElementById(_gridId);
+    if (_grid) {
+      const _q = getRunConfQuantil();
+      const _confTxt = (Number.isFinite(_q) && _q > 0)
+        ? `${_q.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '';
+      const _cvarState = creditCvarStateForLevel(varRel);
+      const _isMadj = suffix === 'M';
+      // Die Credit-Rels (elRel/ecRel/varRel/esRel/edeRel) sind BRUECHE (z.B. 0,1234); kpiCard
+      // erwartet Prozent -> hier *100 (entspricht dem frueheren fR = (x*100) %).
+      const _pct = (x) => (Number.isFinite(x) ? x * 100 : x);
+      _grid.innerHTML = [
+        kpiCard({ tileKey: 'credit_el', metric: 'el', connector: '+', label: 'Expected Loss (EL)', pairInline: true,
+                  label2: _isMadj ? '(Expected Default Exposure)' : null, title: '= EAD × LGD × PD',
+                  abs: haveEl ? elSum : null, rel: _pct(elRel),
+                  value2: (_isMadj && haveEl) ? { abs: edeSum, rel: _pct(edeRel) } : null }),
+        kpiCard({ tileKey: 'credit_ec', metric: 'ec', connector: '=', label: 'Economic Capital (EC)', pairInline: true,
+                  title: '= VaR − EL', desc: riskBufferDescFromConfig(), abs: ecAbs, rel: _pct(ecRel) }),
+        kpiCard({ tileKey: 'credit_var_hist', metric: 'var', connector: '→', label: 'Value at Risk (VaR)', pairInline: true,
+                  title: `Credit VaR${_confTxt ? ' · ' + _confTxt : ''}`, dot: _cvarState || null,
+                  abs: haveVar ? varAbs : null, rel: _pct(varRel) }),
+        kpiCard({ tileKey: 'credit_es', metric: 'es', label: 'Expected Shortfall (ES)', pairInline: true,
+                  title: 'Credit ES · beyond VaR', abs: haveEs ? esAbs : null, rel: _pct(esRel) }),
+      ].join('');
+    }
+  }
   // Zusammenfassung als Bullet-Liste (je Panel aus dessen EC/VaR/ES-Werten), rechts neben/unter den KPIs.
   const summaryEl = document.getElementById('creditKpiSummary' + suffix);
   if (summaryEl) {
@@ -371,8 +406,12 @@ function _bindCreditConfDropdown() {
 export function renderCreditExpectedLoss(rowsOverride) {
   const port = String(appState.getSelectedPortTableName?.() ?? '').trim();
   _bindCreditConfDropdown();
-  renderCreditKpiSet(port, '',  { eadPdField: 'PD',   cvarFlag: 'RATING', methodLabel: 'Historic' }, rowsOverride);
-  renderCreditKpiSet(port, 'M', { eadPdField: 'PD_M_norm', cvarFlag: 'NORM', methodLabel: 'Market adjusted' }, rowsOverride);
+  // Beide Varianten unabhaengig rendern: ein Fehler im Historic-Block darf den Market-adjusted-
+  // Block (eigenes Grid) NICHT ueberspringen -> sonst bliebe dessen Grid leer (rahmenlos).
+  try { renderCreditKpiSet(port, '',  { eadPdField: 'PD',        cvarFlag: 'RATING', methodLabel: 'Historic' }, rowsOverride); }
+  catch (e) { console.error('[credit] Historic KPI render failed:', e); }
+  try { renderCreditKpiSet(port, 'M', { eadPdField: 'PD_M_norm', cvarFlag: 'NORM',   methodLabel: 'Market adjusted' }, rowsOverride); }
+  catch (e) { console.error('[credit] Market-adjusted KPI render failed:', e); }
 }
 
 // Beim Oeffnen des Profit/Loss-Panels das KPI aus dem Store neu rechnen.
@@ -485,7 +524,7 @@ function renderEadKpis(filtered, port_name) {
         ['EAD Concentration', g('eadKpiConcVal'), g('eadKpiConcSub')],
       ];
       tbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-        items.map(([k, v, s]) => `<tr><td>${_esc(k)}</td><td>${_esc(s ? `${v} (${s})` : v)}</td></tr>`).join('')
+        items.map(([k, v, s]) => `<tr><td>${_esc(k)}</td><td${s ? ` data-sub="${_esc(s)}"` : ''}>${_esc(v)}</td></tr>`).join('')
       }</tbody></table>`;
     }
   } catch (_) {}

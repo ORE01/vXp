@@ -980,8 +980,9 @@ function renderMarketCard(port) {
       :                { w: 'LOW',      cls: 'exec-lo' };
     const _scenDisp = stressRow ? (String(getMvarRowScenarioName(stressRow)).trim() || scenName) : scenName;
     setHtml('homeMktExecStatus', `Market Risk: <b class="${mktStatus.cls}">${mktStatus.w}</b>`);
-    // Stress-Szenario als eigene Zeile (eigener Bullet), aus der Status-Zeile herausgeloest.
-    setHtml('homeMktExecScen', `Stress scenario: <b>${escE(_scenDisp)}</b>`);
+    // Current Market (Baseline) + Stress-Szenario in EINER Zeile (wie die P&L-Caption).
+    const _mktBaseline = String(appState.selectedMvarInterval ?? '').trim() || 'ROLLING_1';
+    setHtml('homeMktExecScen', `Current Market: <b>${escE(_mktBaseline)}</b> — Stress scenario: <b>${escE(_scenDisp)}</b>`);
     // 2. Punkt: "Valued" = 1 - Cash-Anteil (nicht bewertete FIXED_VALUE-Kategorien) = wirklich bewerteter Anteil der Nominale.
     const _fixedCats = appState.getFixedValueCategoryNames?.() || new Set();
     let _pfNot = 0, _pfCash = 0, _pfCnt = 0, _pfCashCnt = 0;
@@ -1378,10 +1379,8 @@ function renderCreditScale(port, ids, eadPdField, cvarFlag) {
   const warn = varR, limit = esR * 1.2;          // ANNAHME: Warn = VaR, Limit = 1,2 x ES
   const pct = (v) => Math.max(0, Math.min(100, (v / limit) * 100));
   const yr = pct(warn);
-  // Verluste (EDE/VaR/ES + Limits): Minus VOR DER ZAHL (nach "EUR").
-  const _mnsS = (x) => (Number.isFinite(x) && x !== 0) ? '-' : '';
-  const fR = (x) => Number.isFinite(x) ? `${_mnsS(x)}${(Math.abs(x) * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
-  const fA = (x) => Number.isFinite(x) ? fmtEur(Math.abs(x)).replace(/EUR\s/, `EUR ${_mnsS(x)}`) : '–';
+  const fR = (x) => Number.isFinite(x) ? `${(x * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
+  const fA = (x) => Number.isFinite(x) ? fmtEur(x) : '–';
   // abs oder rel gross je Customer-Setup-Umschalter (beide Schieber teilen die Einstellung).
   const mode = (() => { try { return getTileMode('cr_ec_scale'); } catch { return 'abs'; } })();
   const posStyle = (l) => { const L = Math.max(0, Math.min(100, l)); return L <= 12 ? 'left:0;' : L >= 88 ? 'left:100%;transform:translateX(-100%);' : `left:${L}%;transform:translateX(-50%);`; };
@@ -1481,18 +1480,15 @@ function renderCreditCard(port) {
   const ecH = creditEcSet(port, 'PD', 'RATING');
   const ecC = creditEcSet(port, 'PD_M_norm', 'NORM');
   renderCreditExecSummary(port, ecH);   // Executive Summary aus den Historic-EC-Werten
-  // Verluste (EL/EDE/VaR/EC) als Verlust anzeigen: Minus VOR DER ZAHL (nach "EUR"),
-  // also "EUR -9,03 Mio." (nicht "-EUR 9,03 Mio."). Werte kommen als positive Betraege.
-  const _mns = (x) => (Number.isFinite(x) && x !== 0) ? '-' : '';
-  const fAbs = (x) => Number.isFinite(x) ? fmtEur(Math.abs(x)).replace(/EUR\s/, `EUR ${_mns(x)}`) : '–';
-  const fRel = (x) => Number.isFinite(x) ? `${_mns(x)}${(Math.abs(x) * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
+  const fAbs = (x) => Number.isFinite(x) ? fmtEur(x) : '–';
+  const fRel = (x) => Number.isFinite(x) ? `${(x * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '–';
   const setEc = (base, o) => { setText(base + 'Abs', fAbs(o.abs)); setText(base + 'Rel', fRel(o.rel)); };
   // Kompaktes EUR-Format mit 2 Nachkommastellen — nur fuer die Risk-Buffer-Summary-Kacheln
   // (Credit Risk / Normal Risk), inkl. der EDE-Kopie.
   const fAbs2 = (x) => {
     const n = Number(x);
     if (!Number.isFinite(n)) return '–';
-    const neg = (n !== 0) ? '-' : '';   // Verlust: Minus VOR DER ZAHL (nach "EUR")
+    const neg = n < 0 ? '-' : '';
     const a = Math.abs(n);
     const o2 = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
     let s, u;
@@ -1500,7 +1496,7 @@ function renderCreditCard(port) {
     else if (a >= 1e6) { s = a / 1e6; u = ' Mio.'; }
     else if (a >= 1e3) { s = a / 1e3; u = ' Tsd.'; }
     else               { s = a;       u = ''; }
-    return `EUR ${neg}${s.toLocaleString('de-DE', o2)}${u}`;
+    return `${neg}EUR ${s.toLocaleString('de-DE', o2)}${u}`;
   };
   const setEc2 = (base, o) => { setText(base + 'Abs', fAbs2(o.abs)); setText(base + 'Rel', fRel(o.rel)); };
   setEc('homeCrEcElH',  ecH.el);  setEc('homeCrEcElM',  ecC.el);
@@ -1741,6 +1737,8 @@ function bindHomeCardLinks() {
   // ANNAHMEN (leicht anpassbar): Historic -> panel-credit (Economic Capital, Historic PD),
   // Market adjusted -> panel-credit-current (Economic Capital, Market adjusted PD).
   const CREDIT_TILE_NAV = {
+    cr_var:          'panel-credit',   // Normal Risk (VaR)  -> Tooltip/Hover wie alle Credit-Kacheln
+    cr_es:           'panel-credit',   // Extreme Risk (ES)   -> Tooltip/Hover wie alle Credit-Kacheln
     cr_exec:         'panel-credit',
     cr_exec_ede:     'panel-credit',
     cr_ec_el:        'panel-credit',
@@ -1755,13 +1753,16 @@ function bindHomeCardLinks() {
     cr_chart:        'panel-credit',   // "Which issuers drive Extreme Risk?" -> Economic Capital
   };
   // Kacheln als klickbare Trigger markieren (Rahmen/Hover via .home-nav-link + a11y).
+  // KEIN Early-Return bei bereits vorhandener .home-nav-link-Klasse: sonst bekommen
+  // Kacheln, die die Klasse schon aus dem statischen HTML tragen (cr_var/cr_es), ihren
+  // Tooltip NICHT per JS gesetzt und haengen allein am statischen title -> Rahmen da,
+  // aber kein Tooltip. Titel deshalb fuer ALLE Credit-Nav-Kacheln einheitlich per JS.
   Object.keys(CREDIT_TILE_NAV).forEach((tile) => {
     document.querySelectorAll(`[data-tile="${tile}"]`).forEach((el) => {
-      if (el.classList.contains('home-nav-link')) return;
       el.classList.add('home-nav-link');
       el.setAttribute('role', 'button');
       el.setAttribute('tabindex', '0');
-      if (!el.getAttribute('title')) el.setAttribute('title', 'Open Credit Risk');
+      el.setAttribute('title', 'Open Credit Risk');
     });
   });
 

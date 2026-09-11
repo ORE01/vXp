@@ -17,7 +17,6 @@ import { getActiveRiskSectionsForPdf, RISK_CONFIG, getTableNote } from './RiskPD
 // go through the capture adapter — see captureAdapter.js for the rationale.
 import { getInAppById } from './captureAdapter.js';
 import { getMarketDashboardModel } from '../ANALYSE_PORTFOLIO/marketRisk/marketRiskDashboard.js';
-import { getFactorKpiModel } from '../ANALYSE_PORTFOLIO/marketRisk/mvar/mvarFactorPLPanel.js';
 import { getCreditDashboardModel } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
 
 // =====================================================================
@@ -460,76 +459,140 @@ function renderConcCompactColumn(doc, sec, layout, ctx, state) {
   return { col: col + 1, top };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ZENTRALE KPI-KACHEL (jsPDF-Gegenstueck zu utils/kpiCard.js): EINE Quelle fuer das
+// Aussehen ALLER Report-Kacheln (KPI-Baender, P&L, Factors). readConcKpiTile liest eine
+// gerenderte conc-kpi-Karte aus dem DOM; drawKpiTile zeichnet eine Kachel einheitlich:
+// farbiger Rahmen/Label je Metrik/Faktor, EUR klein + Wert (fett), rel muted, optional
+// Ampelpunkt + Trendzeile.
+// ─────────────────────────────────────────────────────────────────────────────
+const TILE_COL = {
+  CARD: [247, 248, 250], BORDER: [226, 230, 236], TEXT: [26, 31, 41], MUTED: [107, 120, 136],
+  RED: [217, 83, 79], GREEN: [47, 158, 91],
+  METRIC: { el: [90, 100, 112], ec: [150, 110, 220], var: [240, 140, 0], es: [224, 49, 49] },
+};
+function _tileToRgb(c) {
+  if (!c) return null;
+  let m = String(c).match(/^#([0-9a-f]{6})$/i);
+  if (m) { const n = parseInt(m[1], 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+  m = String(c).match(/rgba?\(([^)]+)\)/i);
+  if (m) { const p = m[1].split(',').map((x) => parseInt(x, 10)); return [p[0], p[1], p[2]]; }
+  return null;
+}
+// "EUR" im Wert kleiner/muted zeichnen; gibt die gezeichnete Breite zurueck.
+function _tileDrawEur(doc, str, x, y, size, baseCol) {
+  const s = String(str); const i = s.indexOf('EUR');
+  doc.setFontSize(size); doc.setTextColor(...baseCol);
+  if (i < 0) { doc.text(s, x, y); return doc.getTextWidth(s); }
+  let cx = x; const before = s.slice(0, i), after = s.slice(i + 3);
+  if (before) { doc.text(before, cx, y); cx += doc.getTextWidth(before); }
+  doc.setFontSize(size * 0.6); doc.setTextColor(...TILE_COL.MUTED); doc.text('EUR', cx, y); cx += doc.getTextWidth('EUR');
+  doc.setFontSize(size); doc.setTextColor(...baseCol);
+  if (after) { doc.text(after, cx, y); cx += doc.getTextWidth(after); }
+  return cx - x;
+}
+// Kreis + 45°-Pfeil. dirUp = Pfeilrichtung; red = Farbe (Risiko gestiegen = rot, sonst gruen).
+function _tileDrawTrend(doc, cx, cy, dirUp, red) {
+  const col = red ? TILE_COL.RED : TILE_COL.GREEN, r = 1.4, a = r * 0.6;
+  doc.setDrawColor(...col); doc.setLineWidth(0.25); doc.circle(cx, cy, r, 'S');
+  const tipx = cx + a, tipy = dirUp ? cy - a : cy + a, tailx = cx - a, taily = dirUp ? cy + a : cy - a;
+  doc.setLineWidth(0.3); doc.line(tailx, taily, tipx, tipy);
+  const hl = 0.55; doc.line(tipx, tipy, tipx - hl, tipy); doc.line(tipx, tipy, tipx, dirUp ? tipy + hl : tipy - hl);
+}
+// Wert-String in [abs, rel...] trennen: "abs · rel" ODER "rel + EUR/USD abs".
+function _tileSplitValue(v) {
+  const s = String(v ?? '').trim();
+  if (s.includes('·')) return s.split('·').map((x) => x.trim()).filter(Boolean);
+  const m = s.match(/^(.+?\S)\s*((?:EUR|USD)\s+-?[\d.,].*)$/);
+  if (m && m[1].trim()) return [m[1].trim(), m[2].trim()];
+  return s ? [s] : [];
+}
+// Eine gerenderte conc-kpi-Karte (App) -> Tile-Objekt fuer drawKpiTile.
+function readConcKpiTile(cardEl) {
+  const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+  const valEl = cardEl.querySelector('.conc-kpi__val');
+  let abs = '', rel = '';
+  if (valEl) {
+    const cl = valEl.cloneNode(true);
+    cl.querySelectorAll('.cr-kpi-dot, .conc-kpi__val-2nd').forEach((n) => n.remove());
+    const q = cl.querySelector('.conc-kpi__qual');
+    rel = clean(q?.textContent); if (q) q.remove();
+    abs = clean(cl.textContent);
+  }
+  const label = clean(cardEl.querySelector('.conc-kpi__lbl')?.textContent);
+  const sub = clean(cardEl.querySelector('.conc-kpi__sub')?.textContent);
+  const dotEl = cardEl.querySelector('.cr-kpi-dot');
+  const dotRgb = dotEl ? _tileToRgb(((dotEl.getAttribute('style') || '').match(/background:\s*([^;]+)/)?.[1] || '')) : null;
+  const chgEl = cardEl.querySelector('.conc-kpi__chg');
+  let chg = null;
+  if (chgEl && clean(chgEl.textContent)) {
+    const up = /↗/.test(chgEl.textContent);   // Risiko gestiegen -> rot
+    const c2 = chgEl.cloneNode(true); c2.querySelector('.perf-chg-badge')?.remove();
+    chg = { text: clean(c2.textContent), dirUp: up, red: up };
+  }
+  // Rahmenfarbe: Metrik-Klasse (conc-kpi--el/ec/var/es) ODER Inline border-color (Factors).
+  let borderRgb = null;
+  for (const mk of ['el', 'ec', 'var', 'es']) { if (cardEl.classList.contains(`conc-kpi--${mk}`)) { borderRgb = TILE_COL.METRIC[mk]; break; } }
+  if (!borderRgb) borderRgb = _tileToRgb(((cardEl.getAttribute('style') || '').match(/border-color:\s*([^;]+)/)?.[1] || ''));
+  return { label, abs, rel, sub, dotRgb, borderRgb, chg };
+}
+// ZENTRALE Kachel zeichnen. tile: { label, abs, rel?, sub?, dotRgb?, borderRgb?, chg?:{text,dirUp,red} }.
+function drawKpiTile(doc, x, y, w, h, tile) {
+  const bcol = tile.borderRgb || TILE_COL.BORDER;
+  const lblCol = tile.borderRgb || TILE_COL.MUTED;
+  doc.setDrawColor(...bcol); doc.setLineWidth(0.4); doc.setFillColor(...TILE_COL.CARD);
+  doc.roundedRect(x, y, w, h, 1.8, 1.8, 'FD');
+  // Label (zentriert, in Rahmenfarbe/muted)
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...lblCol);
+  const lbl = String(tile.label || '');
+  doc.text(doc.splitTextToSize(lbl, w - 4)[0] || lbl, x + w / 2, y + 4.5, { align: 'center' });
+  // Wert (abs gross + rel klein muted + optional Ampelpunkt), zentriert. Schriftgroesse an die
+  // Kachelbreite anpassen (Auto-Fit) -> laufen NIE aus der Kachel (z.B. lange EAD-Werte).
+  const abs = String(tile.abs || ''), rel = String(tile.rel || ''), sub = String(tile.sub || '');
+  const dotR = tile.dotRgb ? 1.1 : 0, dotGap = tile.dotRgb ? 2.2 : 0;
+  const maxW = w - 4;
+  let vFont = 10;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(vFont); let wAbs = doc.getTextWidth(abs);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(vFont * 0.7); let wRel = rel ? doc.getTextWidth(' ' + rel) : 0;
+  let groupW = wAbs + wRel + dotGap + dotR * 2;
+  if (groupW > maxW && groupW > 0) {
+    vFont = Math.max(6.5, vFont * maxW / groupW);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(vFont); wAbs = doc.getTextWidth(abs);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(vFont * 0.7); wRel = rel ? doc.getTextWidth(' ' + rel) : 0;
+    groupW = wAbs + wRel + dotGap + dotR * 2;
+  }
+  let vx = x + (w - groupW) / 2; const vy = y + 10.5;
+  doc.setFont('helvetica', 'bold'); vx += _tileDrawEur(doc, abs, vx, vy, vFont, TILE_COL.TEXT);
+  if (rel) { doc.setFont('helvetica', 'normal'); doc.setFontSize(vFont * 0.7); doc.setTextColor(...TILE_COL.MUTED); doc.text(' ' + rel, vx, vy); vx += wRel; }
+  if (tile.dotRgb) { doc.setFillColor(...tile.dotRgb); doc.circle(vx + dotGap / 2 + dotR, vy - 1.2, dotR, 'F'); }
+  // Sub-Zeile (beschreibend, klein/muted, zentriert) — z.B. EAD "98,1 % of portfolio".
+  if (sub) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...TILE_COL.MUTED);
+    doc.text(doc.splitTextToSize(sub, w - 4)[0] || sub, x + w / 2, y + 15, { align: 'center' });
+  }
+  // Trendzeile
+  if (tile.chg && tile.chg.text) {
+    _tileDrawTrend(doc, x + 3.4, y + h - 3.2, !!tile.chg.dirUp, !!tile.chg.red);
+    doc.setFont('helvetica', 'normal'); _tileDrawEur(doc, tile.chg.text, x + 6, y + h - 2.4, 6.5, TILE_COL.MUTED);
+  }
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(0); doc.setLineWidth(0.2);
+}
+
+// KPI-Band (data-kpi-band-Spiegeltabellen): fertige Label/Wert-Strings -> zentrale Kacheln.
 function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
   if (!Array.isArray(kpis) || !kpis.length) return y;
-  const n = kpis.length;
-  const tileGap = 4;
-  const tileW = (contentW - tileGap * (n - 1)) / n;
-  // Einheitlicher KPI-Karten-Stil fuer ALLE Report-Sektionen: abgerundete Box mit Rahmen,
-  // oben kleines GROSSGESCHRIEBENES muted Label, darunter fetter dunkler Wert (linksbuendig)
-  // — analog zu den Risk-Limit/Buffer-Karten im Dashboard.
-  const valFont = opts.valueFont || 13;
-  const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41];
-  const UP = [47, 158, 91], DOWN = [217, 83, 79];
-  // Optionaler Trend (Kreis+45°-Pfeil + Aenderung) -> eine Zeile mehr -> hoehere Kachel.
+  const n = kpis.length, tileGap = 4, tileW = (contentW - tileGap * (n - 1)) / n;
   const hasTrend = kpis.some((k) => k.trendChg);
   const tileH = Math.max(opts.tileH || 0, hasTrend ? 23 : 22);
-  // "EUR" innerhalb eines Wertes kleiner/muted zeichnen (wie in der App). Gibt die Breite zurueck.
-  const drawEur = (str, x2, y2, baseColor) => {
-    const s = String(str); const i = s.indexOf('EUR');
-    doc.setTextColor(...baseColor);
-    if (i < 0) { doc.text(s, x2, y2); return doc.getTextWidth(s); }
-    const size = doc.getFontSize(); let cx = x2;
-    const before = s.slice(0, i), after = s.slice(i + 3);
-    if (before) { doc.text(before, cx, y2); cx += doc.getTextWidth(before); }
-    doc.setFontSize(size * 0.62); doc.setTextColor(...MUTED);
-    doc.text('EUR', cx, y2); cx += doc.getTextWidth('EUR');
-    doc.setFontSize(size); doc.setTextColor(...baseColor);
-    if (after) { doc.text(after, cx, y2); cx += doc.getTextWidth(after); }
-    return cx - x2;
-  };
-  // Kreis mit 45°-Pfeil (gruen hoch / rot runter), wie im App-Badge / Overview.
-  const drawTrendCircle = (cx, cy, up, colorUp = up) => {
-    const col = colorUp ? UP : DOWN, r = 1.5, a = r * 0.6;
-    doc.setDrawColor(...col); doc.setLineWidth(0.25); doc.circle(cx, cy, r, 'S');
-    const tipx = cx + a, tipy = up ? cy - a : cy + a, tailx = cx - a, taily = up ? cy + a : cy - a;
-    doc.setLineWidth(0.3); doc.line(tailx, taily, tipx, tipy);
-    const hl = 0.6; doc.line(tipx, tipy, tipx - hl, tipy); doc.line(tipx, tipy, tipx, up ? tipy + hl : tipy - hl);
-  };
-  // Wert in zwei Zahlen trennen: "abs · rel" ODER "rel + EUR/USD abs" (z.B. Sensitivities "-1,02 bp" / "EUR -21.701").
-  const splitVal = (v) => {
-    const s = String(v ?? '').trim();
-    if (s.includes('·')) return s.split('·').map((x) => x.trim()).filter(Boolean);
-    const m = s.match(/^(.+?\S)\s*((?:EUR|USD)\s+-?[\d.,].*)$/);
-    if (m && m[1].trim()) return [m[1].trim(), m[2].trim()];
-    return s ? [s] : [];
-  };
   kpis.forEach((k, idx) => {
-    const x = marginX + idx * (tileW + tileGap);
-    doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-    doc.roundedRect(x, y, tileW, tileH, 2, 2, 'FD');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...MUTED);
-    doc.text(String(k.label ?? '').toUpperCase(), x + 5, y + 5.5);
-    const parts = splitVal(k.value);
-    // Wert (fett), "EUR" kleiner/muted.
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(valFont);
-    const w0 = drawEur(parts[0] || '', x + 5, y + 12, TEXT);
-    if (k.trendChg) {
-      // Relative Zahl (parts[1..]) inline auf Zeile 2 (klein/muted) statt eigener Zeile.
-      if (parts[1]) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
-        drawEur(' · ' + parts.slice(1).join(' · '), x + 5 + w0 + 1, y + 12, MUTED);
-      }
-      // Zeile 3: Kreis+45°-Pfeil (Richtung) + Aenderung; Farbe optional entkoppelt (Risiko).
-      drawTrendCircle(x + 6.4, y + 19, !!k.trendUp, k.trendColorUp);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
-      drawEur(String(k.trendChg), x + 9.6, y + 20, MUTED);
-    } else if (parts[1]) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(Math.max(7, valFont - 3));
-      drawEur(parts.slice(1).join(' · '), x + 5, y + 17.5, MUTED);
-    }
+    const parts = _tileSplitValue(k.value);
+    // trendColorUp: true = gruen (App-Konvention) -> red = !trendColorUp.
+    const tile = {
+      label: k.label, abs: parts[0] || '', rel: parts.slice(1).join(' · '), sub: k.sub || '',
+      chg: k.trendChg ? { text: String(k.trendChg), dirUp: !!k.trendUp, red: !k.trendColorUp } : null,
+    };
+    drawKpiTile(doc, marginX + idx * (tileW + tileGap), y, tileW, tileH, tile);
   });
-  doc.setFont('helvetica', 'normal'); doc.setTextColor(0);
   return y + tileH + (opts.gapAfter ?? 6);
 }
 
@@ -542,6 +605,8 @@ function kpisFromTableEl(el) {
     if (tds.length >= 2) {
       const vtd = tds[1];
       const k = { label: (tds[0].textContent || '').trim(), value: (vtd.textContent || '').trim() };
+      // Optionale beschreibende Sub-Zeile (z.B. EAD "98,1 % of portfolio") als data-sub am Wert-<td>.
+      if (vtd.dataset && vtd.dataset.sub) k.sub = vtd.dataset.sub;
       // Optionaler Trend (Kreis+Pfeil): Richtung + Aenderungstext als data-Attribute am Wert-<td>.
       if (vtd.dataset && vtd.dataset.chg) {
         k.trendChg = vtd.dataset.chg;
@@ -902,51 +967,35 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const panel = ctx.getById(panelId) || (ctx.appRoot || document).getElementById(panelId);
     if (!panel) return y0;
     const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
-    const items = Array.from(panel.querySelectorAll('.conc-kpi-grid .conc-kpi')).map((c) => ({
-      // Vollen Wert-Text lesen (inkl. evtl. "EUR" im cur-unit-Span) OHNE die val-2nd-Zweitzahl.
-      // Frueher: childNodes[0] -> lieferte bei EC/ES (Wert direkt im .conc-kpi__val-Div, EUR im
-      // eigenen Span) nur "EUR". cloneNode + val-2nd entfernen ist robust fuer beide Strukturen.
-      val: (() => {
-        const valEl = c.querySelector('.conc-kpi__val');
-        if (!valEl) return '';
-        const clone = valEl.cloneNode(true);
-        clone.querySelector('.conc-kpi__val-2nd')?.remove();
-        return clean(clone.textContent);
-      })(),
-      val2: clean(c.querySelector('.conc-kpi__val-2nd')?.textContent),
-      sub: clean(c.querySelector('.conc-kpi__sub')?.textContent),
-      lbl: clean(c.querySelector('.conc-kpi__lbl')?.textContent),
-      conn: c.getAttribute('data-conn') || '',
-    })).filter((it) => it.val && it.val !== '–' && it.val !== '—');
+    // Karten LIVE ueber die zentrale Kachel lesen (Rahmenfarbe je Metrik el/ec/var/es, Wert, rel,
+    // Ampelpunkt) + Connector (+/=/→) und optionaler EDE-Zweitwert (val-2nd) als Sub-Zeile.
+    const items = Array.from(panel.querySelectorAll('.conc-kpi-grid .conc-kpi')).map((c) => {
+      const t = readConcKpiTile(c);
+      t.conn = c.getAttribute('data-conn') || '';
+      const v2 = clean(c.querySelector('.conc-kpi__val-2nd')?.textContent);
+      if (v2 && !t.sub) t.sub = v2;
+      return t;
+    }).filter((t) => t.abs && t.abs !== '–' && t.abs !== '—');
     if (!items.length) return y0;
     const contentW = layout.contentWidth;
-    const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41];
     const sumLis = Array.from(panel.querySelectorAll('.cr-kpi-summary li')).map((li) => clean(li.textContent)).filter(Boolean);
     // Karten VOLL breit; die Summary kommt DARUNTER.
     const n = items.length, connW = 6, cardW = (contentW - connW * (n - 1)) / n, cardH = 24;
     ensurePageSpace(cardH + 4, `${sectionTitle} (cont.)`);
-    let cx = marginX;
     items.forEach((it, i) => {
-      doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-      doc.roundedRect(cx, y0, cardW, cardH, 2, 2, 'FD');
-      // Bezeichnung OBEN (erste Zeile(n), Caption), darunter Haupt-Wert + Sub.
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED);
-      const lbl = doc.splitTextToSize(it.lbl, cardW - 6).slice(0, 2);
-      lbl.forEach((ln, j) => doc.text(ln, cx + 3, y0 + 4 + j * 3));
-      const yVal = y0 + 4 + lbl.length * 3 + 3;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...TEXT);
-      doc.text(it.val, cx + 3, yVal);
-      if (it.sub) { doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...MUTED); doc.text(doc.splitTextToSize(it.sub, cardW - 6)[0] || '', cx + 3, yVal + 4); }
-      if (i < n - 1) {
-        const cc = it.conn === '→' ? '>' : (it.conn || '');   // "→" ist nicht in WinAnsi -> ">"
-        if (cc) { doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...MUTED); doc.text(cc, cx + cardW + connW / 2 - doc.getTextWidth(cc) / 2, y0 + cardH / 2 + 1.5); }
+      const x = marginX + i * (cardW + connW);
+      drawKpiTile(doc, x, y0, cardW, cardH, it);
+      // Connector (→/+/=) zwischen den Karten.
+      if (i < n - 1 && it.conn) {
+        const cc = it.conn === '→' ? '>' : it.conn;   // "→" ist nicht in WinAnsi -> ">"
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(107, 120, 136);
+        doc.text(cc, x + cardW + connW / 2 - doc.getTextWidth(cc) / 2, y0 + cardH / 2 + 1.5);
       }
-      cx += cardW + connW;
     });
     // Executive Summary UNTER den Karten (voll breit, Bullet je Aussage).
     let ny = y0 + cardH + 5;
     sumLis.forEach((s) => {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...TEXT);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(26, 31, 41);
       const lines = doc.splitTextToSize(s, contentW - 6);
       ensurePageSpace(lines.length * 4 + 2, `${sectionTitle} (cont.)`);
       doc.setFillColor(150, 150, 150); doc.circle(marginX + 1.5, ny - 1.2, 0.7, 'F');
@@ -954,6 +1003,233 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       ny += 1.5;
     });
     return ny + 3;
+  };
+
+  // Concentration-Funnel (Credit Tail): 2 Spalten (issuers | issuer–rank), je 4 Boxen
+  // (Label + Zahl) mit Abwaerts-Pfeilen. Liest die gerenderte Funnel-DOM (#crTcmFunnel*) und
+  // zeichnet sie nativ als 1. Kachel der Tail-Zeile (wie die App).
+  const drawTailFunnel = (funnelEl, x, top, w, h) => {
+    if (!funnelEl) return false;
+    const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    const cols = Array.from(funnelEl.querySelectorAll(':scope > div > div')).map((colEl) => {
+      let title = ''; const boxes = [];
+      Array.from(colEl.children).forEach((k) => {
+        if (k.children && k.children.length === 2) boxes.push({ label: clean(k.children[0].textContent), value: clean(k.children[1].textContent) });
+        else if (!title && clean(k.textContent) && !/[↓↑]/.test(k.textContent)) title = clean(k.textContent);
+      });
+      return { title, boxes };
+    }).filter((c) => c.boxes.length);
+    if (!cols.length) return false;
+
+    const MUTED = [107, 120, 136], TEXT = [26, 31, 41], BORDER = [226, 230, 236], BOX = [247, 248, 250];
+    drawChartCard(doc, x, top, w, h);
+    const nCol = cols.length, cGap = 4, colW = (w - 6 - cGap * (nCol - 1)) / nCol;
+    const nBox = Math.max(...cols.map((c) => c.boxes.length));
+    const titleH = 5, arrowH = 3.2;
+    const innerTop = top + 2 + titleH;
+    const boxH = Math.max(7, (h - 4 - titleH - arrowH * (nBox - 1)) / nBox);
+    cols.forEach((c, ci) => {
+      const cx = x + 3 + ci * (colW + cGap);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(5.5); doc.setTextColor(...MUTED);
+      doc.text(doc.splitTextToSize((c.title || '').toUpperCase(), colW)[0] || '', cx + colW / 2, top + 4.5, { align: 'center' });
+      let by = innerTop;
+      c.boxes.forEach((b, bi) => {
+        doc.setDrawColor(...BORDER); doc.setFillColor(...BOX); doc.setLineWidth(0.3);
+        doc.roundedRect(cx, by, colW, boxH, 1.2, 1.2, 'FD');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(5); doc.setTextColor(...MUTED);
+        const lbl = doc.splitTextToSize(b.label, colW - 2).slice(0, 2);
+        lbl.forEach((ln, j) => doc.text(ln, cx + colW / 2, by + 2.6 + j * 2.1, { align: 'center' }));
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+        doc.text(String(b.value), cx + colW / 2, by + boxH - 1.6, { align: 'center' });
+        by += boxH;
+        if (bi < c.boxes.length - 1) {
+          const ax = cx + colW / 2, ay = by + arrowH - 1;
+          doc.setDrawColor(...MUTED); doc.setLineWidth(0.3);
+          doc.line(ax - 1.1, ay - 1.1, ax, ay); doc.line(ax + 1.1, ay - 1.1, ax, ay);
+          by += arrowH;
+        }
+      });
+    });
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(0); doc.setLineWidth(0.2);
+    return true;
+  };
+
+  // ── Sonderlayout Market Risk / Profit & Loss: 2-Spalten-Vergleich (Current vs. Stress).
+  //    KPIs werden LIVE aus den App-Karten (#mvarPLKpiCur / #mvarPLKpiStr) gelesen -> Zahlen-
+  //    format (kompakt), Labels, Ampelpunkt und Trend stimmen automatisch mit der App ueberein.
+  //    Darunter je Spalte die zugehoerige P/L-Verteilung, dann die Market-Risk-History (volle
+  //    Breite). Ersetzt fuer die 'market'-Sektion das flache KPI-Band + die generische Reihe.
+  const drawProfitLossCompare = () => {
+    const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    const readCards = (hostId) => {
+      const host = ctx.getById(hostId);
+      return host ? Array.from(host.querySelectorAll('.conc-kpi')).map(readConcKpiTile).filter((c) => c.abs) : [];
+    };
+
+    const curCards = readCards('mvarPLKpiCur');
+    const strCards = readCards('mvarPLKpiStr');
+    if (!curCards.length && !strCards.length) return;
+
+    const contentW = layout.contentWidth;
+    const colGap = 8, colW = (contentW - colGap) / 2;
+    const strSel = ctx.getById('mvarStressScenarioSelect');
+    const strName = (strSel && strSel.options && strSel.selectedIndex >= 0)
+      ? clean(strSel.options[strSel.selectedIndex].textContent) : '';
+    const cols = [
+      { x: marginX, title: clean(ctx.getById('plCompareTitleCur')?.textContent) || 'Current Market', cards: curCards, chartId: 'plMvarDistChart' },
+      { x: marginX + colW + colGap, title: strName ? `Stress Scenario: ${strName}` : 'Stress Scenario', cards: strCards, chartId: 'plMvarStressDistChart' },
+    ];
+
+    const hasTrend = [...curCards, ...strCards].some((c) => c.chg);
+    const cardH = hasTrend ? 22 : 17;
+    const distCapH = 9, distImgH = 46, distBlockH = distCapH + distImgH;
+
+    // Titel + KPI-Karten + Verteilung als EINEN Block zusammenhalten.
+    ensurePageSpace(7 + cardH + 4 + distBlockH + 8, `${sectionTitle} (cont.)`);
+    const top = y;
+
+    cols.forEach((colDef) => {
+      const cx0 = colDef.x;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41);
+      doc.text(doc.splitTextToSize(colDef.title, colW)[0] || colDef.title, cx0, top + 4);
+
+      const cards = colDef.cards.slice(0, 2);
+      const cardsTop = top + 7;
+      if (cards.length) {
+        const cGap = 4, cW = (colW - cGap * (cards.length - 1)) / cards.length;
+        cards.forEach((c, i) => drawKpiTile(doc, cx0 + i * (cW + cGap), cardsTop, cW, cardH, c));
+      } else {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(107, 120, 136);
+        doc.text('No stress scenario selected.', cx0 + 2, cardsTop + 8);
+      }
+
+      // Verteilungs-Chart unter der Spalte (Frage-Titel aus dem App-DOM).
+      const distTop = cardsTop + cardH + 4;
+      const qTxt = clean(ctx.getById(colDef.chartId)?.closest?.('.chart-box')?.querySelector?.('.conc-panel__title')?.textContent);
+      drawChartCard(doc, cx0, distTop, colW, distBlockH);
+      if (qTxt) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(26, 31, 41);
+        doc.text(doc.splitTextToSize(qTxt, colW - 6).slice(0, 2), cx0 + colW / 2, distTop + 3.5, { align: 'center' });
+      }
+      const cEl = ctx.getById(colDef.chartId);
+      const img = cEl && cEl.tagName === 'CANVAS' ? canvasToPngData(cEl) : null;
+      if (img?.dataUrl) {
+        const sw = img.width || 900, sh = img.height || 400, availH = distImgH - 2;
+        const sc = Math.min(colW / sw, availH / sh, 1), w = sw * sc, h = sh * sc;
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', cx0 + (colW - w) / 2, distTop + distCapH + (availH - h) / 2, w, h); }
+        catch (e) { console.warn('[PDF] PL dist chart failed', colDef.chartId, e); }
+      }
+    });
+
+    y = top + 7 + cardH + 4 + distBlockH + 6;
+
+    // Market-Risk-History volle Breite darunter. In den RESTPLATZ der aktuellen Seite
+    // einpassen (zur Not kleiner zeichnen) statt umzubrechen; nur bei zu wenig Platz neue Seite.
+    const hEl = ctx.getById('plMarketRiskHistChart');
+    if (hEl && hEl.tagName === 'CANVAS') {
+      const img = canvasToPngData(hEl);
+      if (img?.dataUrl) {
+        const cw = contentW, sw = img.width || 900, sh = img.height || 360;
+        const qTxt = clean(hEl.closest?.('.chart-box')?.querySelector?.('.conc-panel__title')?.textContent) || 'How has market risk evolved over time?';
+        const CAP_H = 12, MAX_IMG_H = 60, MIN_IMG_H = 24;
+        let imgMaxH = MAX_IMG_H;
+        const avail = layout.bottomSafe - y - 6;   // Restplatz der aktuellen Seite
+        if (avail < MAX_IMG_H + CAP_H) imgMaxH = avail - CAP_H;   // auf Restplatz schrumpfen
+        if (imgMaxH < MIN_IMG_H) { ensurePageSpace(MAX_IMG_H + CAP_H + 6, `${sectionTitle} (cont.)`); imgMaxH = MAX_IMG_H; }
+        const sc = Math.min(cw / sw, imgMaxH / sh, 1), w = sw * sc, h = sh * sc;
+        const blockH = h + CAP_H + 2;
+        const bY = y;
+        drawChartCard(doc, marginX - 2, bY, cw + 4, blockH - 2);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41);
+        doc.text(qTxt, marginX + cw / 2, bY + 6, { align: 'center' });
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', marginX + (cw - w) / 2, bY + 10, w, h); }
+        catch (e) { console.warn('[PDF] market history chart failed', e); }
+        y = bY + blockH + cfg.blockGap;
+      }
+    }
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(0); doc.setLineWidth(0.2);
+  };
+
+  // ── Sonderlayout Market Risk / Risk Breakdown / Factors (panel-mvar): 2 KPI-Zeilen
+  //    (VaR: Total/IR/CS, ES: Total/IR/CS) LIVE aus #mvarFactorKpi + die 4 Balkencharts als
+  //    2x2-Raster (Titel/Untertitel sind IN den Canvas eingebrannt -> nur Bild) + Factor-
+  //    Market-Risk-History (volle Breite). Ersetzt das alte 2-Karten-Modell (getFactorKpiModel).
+  const drawFactorSection = () => {
+    const host = ctx.getById('mvarFactorKpi');
+    const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+    const contentW = layout.contentWidth;
+
+    // ── KPI-Zeilen (aus #mvarFactorKpi: je .mvar-fac-rowtitle + .conc-kpi-grid) ──
+    if (host) {
+      const titles = Array.from(host.querySelectorAll('.mvar-fac-rowtitle')).map((t) => clean(t.textContent));
+      const grids = Array.from(host.querySelectorAll('.conc-kpi-grid'));
+      grids.forEach((g, ri) => {
+        const cards = Array.from(g.querySelectorAll('.conc-kpi')).map(readConcKpiTile).filter((c) => c.abs);
+        if (!cards.length) return;
+        const n = cards.length, cGap = 6, cW = (contentW - cGap * (n - 1)) / n, cardH = 22;
+        ensurePageSpace(6 + cardH + 5, `${sectionTitle} (cont.)`);
+        if (titles[ri]) { doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41); doc.text(titles[ri], marginX, y + 4); }
+        const top = y + 7;
+        cards.forEach((c, i) => drawKpiTile(doc, marginX + i * (cW + cGap), top, cW, cardH, c));
+        y = top + cardH + 5;
+      });
+    }
+
+    // ── Chart-Bild zeichnen (Titel/Untertitel sind bereits im Canvas) ──
+    const drawChartImg = (id, x, top, w, h) => {
+      const el = ctx.getById(id);
+      if (!el || el.tagName !== 'CANVAS') return false;
+      drawChartCard(doc, x, top, w, h);
+      const img = canvasToPngData(el);
+      if (img?.dataUrl) {
+        const sw = img.width || 520, sh = img.height || 300, availH = h - 4;
+        const sc = Math.min((w - 4) / sw, availH / sh, 1), iw = sw * sc, ih = sh * sc;
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', x + (w - iw) / 2, top + 2 + (availH - ih) / 2, iw, ih); }
+        catch (e) { console.warn('[PDF] factor chart failed', id, e); }
+      }
+      return true;
+    };
+    // ── Chart-Paare (Standalone + Decomposition) je Metrik, mit Section-Caption ──
+    const pairs = [
+      ['mvarFactorVarContribChart', 'mvarFactorVarScatterChart'],
+      ['mvarFactorEsContribChart', 'mvarFactorEsScatterChart'],
+    ];
+    const cgap = 6, cellW = (contentW - cgap) / 2, cellH = 64;
+    pairs.forEach((pair) => {
+      if (!pair.some((id) => { const el = ctx.getById(id); return el && el.tagName === 'CANVAS'; })) return;
+      // Section-Ueberschrift (z.B. "Value at Risk (VaR) — by risk type (left) & diversification (right)").
+      const split = ctx.getById(pair[0])?.closest?.('.mvar-prod-split');
+      const capEl = split?.previousElementSibling;
+      const cap = (capEl && capEl.classList?.contains('mvar-caption')) ? clean(capEl.textContent) : '';
+      const headH = cap ? 5 : 0;
+      ensurePageSpace(headH + cellH + 6, `${sectionTitle} (cont.)`);
+      if (cap) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(26, 31, 41); doc.text(cap, marginX, y + 3.5); }
+      const top = y + headH;
+      pair.forEach((id, i) => drawChartImg(id, marginX + i * (cellW + cgap), top, cellW, cellH));
+      y = top + cellH + cgap;
+    });
+
+    // ── Factor-Market-Risk-History volle Breite ──
+    const hEl = ctx.getById('factorsMarketRiskHistChart');
+    if (hEl && hEl.tagName === 'CANVAS') {
+      const img = canvasToPngData(hEl);
+      if (img?.dataUrl) {
+        const cw = contentW, sw = img.width || 900, sh = img.height || 360;
+        const sc = Math.min(cw / sw, 60 / sh, 1), w = sw * sc, h = sh * sc;
+        const qTxt = clean(hEl.closest?.('.chart-box')?.previousElementSibling?.textContent)
+          || 'Market risk over time — all factors (MVaR / ES)';
+        const blockH = h + 14;
+        ensurePageSpace(blockH + 6, `${sectionTitle} (cont.)`);
+        const bY = y;
+        drawChartCard(doc, marginX - 2, bY, cw + 4, blockH - 2);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41);
+        doc.text(qTxt, marginX + cw / 2, bY + 6, { align: 'center' });
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', marginX + (cw - w) / 2, bY + 10, w, h); }
+        catch (e) { console.warn('[PDF] factor history chart failed', e); }
+        y = bY + blockH + cfg.blockGap;
+      }
+    }
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(0); doc.setLineWidth(0.2);
   };
 
   // Frage-Ueberschrift eines EC-Charts/Tabelle (heller Titel = 1. <div> in .cr-tail-tile).
@@ -1499,6 +1775,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const el = ctx.getById(t.id);
     if (!el || !el.dataset || !el.dataset.kpiBand) continue;
     if (ecPanelId) continue;   // EC-Story ersetzt JEDES KPI-Band in dieser Sektion (altes VaR/ES/TSI/MSD-Band raus)
+    if (el.id === 'mvarPLKpiBand') continue;   // Market P&L: nativer 2-Spalten-Block ersetzt das flache Band (drawProfitLossCompare)
     const kpis = kpisFromTableEl(el);
     if (!kpis.length) continue;
     ensurePageSpace(bandCompact ? 30 : 34, `${sectionTitle} (cont.)`);
@@ -1508,37 +1785,18 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     y += bandCompact ? 4 : cfg.blockGap;
   }
 
+  // Market Risk / Profit & Loss: KPIs (Current + Stress) + Verteilungen + History nativ als
+  // 2-Spalten-Vergleich (wie App), LIVE aus den conc-kpi-Karten gelesen.
+  if (sec.key === 'market') drawProfitLossCompare();
+
   // ── Komponiertes Layout: Charts NEBENEINANDER in einer Zeile (Dashboard-Stil)
   //    fuer Structure + Market-Risk-Seiten; Tabellen laufen danach im Standard-
   //    Tabellen-Loop full-width darunter. Andere Sektionen bleiben linear. ──
   // Factors-Sektion: KPI-Karten (MVaR / ES MVaR mit IR/CS/Vega) wie im Dashboard,
   // ueber den Charts (die HTML-Karten werden sonst nicht erfasst).
-  if (sec.key === 'mvar') {
-    const km = (() => { try { return getFactorKpiModel(); } catch { return null; } })();
-    if (km) {
-      const gap = 6, cardW = (layout.contentWidth - gap) / 2, cardH = 30;
-      ensurePageSpace(cardH + 8, `${sectionTitle} (cont.)`);
-      const MUTED = [107, 120, 136], CARD = [247, 248, 250], BORDER = [226, 230, 236], TEXT = [26, 31, 41], SUB = [58, 65, 80];
-      [['MVaR', km.var], ['ES MVaR', km.es]].forEach(([label, m], i) => {
-        const x = marginX + i * (cardW + gap);
-        doc.setDrawColor(...BORDER); doc.setFillColor(...CARD);
-        doc.roundedRect(x, y, cardW, cardH, 2, 2, 'FD');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-        doc.text(String(label).toUpperCase(), x + 6, y + 6.5);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(...TEXT);
-        doc.text(String(m.total), x + 6, y + 15);
-        let ry = y + 21;
-        (m.rows || []).forEach((rr) => {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
-          doc.text(String(rr.nm), x + 6, ry);
-          doc.setTextColor(...SUB);
-          doc.text(String(rr.v), x + cardW - 6, ry, { align: 'right' });
-          ry += 4;
-        });
-      });
-      y += cardH + 8;
-    }
-  }
+  // Market Risk / Risk Breakdown / Factors: KPI-Zeilen (VaR/ES x Total/IR/CS) + 2x2-Charts +
+  // History nativ wie App, LIVE aus #mvarFactorKpi + den Canvas gelesen.
+  if (sec.key === 'mvar') drawFactorSection();
 
   // ── Sonderlayout: HOME-Overview als KPI-Karten wie in der App (3 Karten
   //    nebeneinander: Portfolio / Market Risk / Credit Risk), nativ als Vektor.
@@ -1698,10 +1956,17 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       });
       return { title, boxes };
     };
+    // Limit-Ampel (home-limit-dot) je Risk-Karte: is-green/is-yellow/is-red -> Status.
+    const limitDot = (id) => {
+      const el = ctx.getById(id);
+      if (!el) return null;
+      for (const s of ['green', 'yellow', 'red']) if (el.classList?.contains(`is-${s}`)) return s;
+      return null;
+    };
     const ovCards = [
       cardFrom(`PORTFOLIO${portSuffix}`, 'homePfNotional'),
-      cardFrom(`MARKET RISK${portSuffix}`, 'homeMktVar'),
-      cardFrom(`CREDIT RISK${portSuffix}`, 'homeCrVar'),
+      { ...cardFrom(`MARKET RISK${portSuffix}`, 'homeMktVar'), dot: limitDot('homeMktLimitDot') },
+      { ...cardFrom(`CREDIT RISK${portSuffix}`, 'homeCrVar'), dot: limitDot('homeCrLimitDot') },
     ];
 
     const ovGap = 6, ovCardW = (layout.contentWidth - ovGap * 2) / 3, ovBoxH = 13;
@@ -1821,6 +2086,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5);
       doc.setTextColor(...TEXT);
       doc.text(String(c.title), tx, y + 7);
+      // Limit-Ampel (Punkt) rechts neben dem Titel — wie in der App-Overview-Karte.
+      if (c.dot) {
+        const tw = doc.getTextWidth(String(c.title));
+        doc.setFillColor(...ampRgb(c.dot));
+        doc.circle(tx + tw + 2.4, y + 5.6, 1.1, 'F');
+      }
 
       // Kein Hero mehr — alle Kennzahlen als Boxen direkt unter dem Titel.
       const halfW = (innerW - 3) / 2;
@@ -1838,8 +2109,6 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           doc.roundedRect(bx, byy, w, bh, 1.5, 1.5, 'FD');
           doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
           doc.text(String(b.cap || 'EXECUTIVE SUMMARY'), bx + 3, byy + 4);
-          // Mockup-Punkt rechts oben in der Ecke.
-          doc.setFillColor(150, 150, 150); doc.circle(bx + w - 3.5, byy + 3, 1.3, 'F');
           // Zeilen; Status-Woerter hervorheben (LOW gruen / MODERATE-ELEVATED amber / HIGH rot).
           doc.setFontSize(EXEC_FS);
           const STATUS_COL = { LOW: [47, 158, 91], MODERATE: [224, 165, 51], ELEVATED: [224, 165, 51], HIGH: [217, 83, 79] };
@@ -2222,7 +2491,14 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     // PD-Ansicht als Chart+Tabelle-Paar gezeichnet).
     // Credit: NUR den Scatter (Tail loss vs EAD) aus der Nebeneinander-Reihe nehmen (kommt darunter).
     // Loss distribution + Top tail drivers bleiben zusammen in der Reihe -> nebeneinander.
-    const rowCharts = (sec.enabledCharts || []).filter(ch => !/crTailTcmScatter/.test(ch.id));
+    // Scatter UND Credit-Risk-History aus der composedRow ausschliessen: Scatter kommt in den
+    // 2-up-Block (mit der TCM-Tabelle), die History wird ZULETZT gezeichnet (Folgeseite).
+    // Nativ gezeichnete Market-Risk-Charts (P&L + Factors) NICHT zusaetzlich generisch zeichnen.
+    const PL_NATIVE_CHART_IDS = new Set([
+      'plMvarDistChart', 'plMvarStressDistChart', 'plMarketRiskHistChart',
+      'mvarFactorVarContribChart', 'mvarFactorVarScatterChart', 'mvarFactorEsContribChart', 'mvarFactorEsScatterChart', 'factorsMarketRiskHistChart',
+    ]);
+    const rowCharts = (sec.enabledCharts || []).filter(ch => !/crTailTcmScatter/.test(ch.id) && ch.id !== 'plCreditRiskHistChart' && !PL_NATIVE_CHART_IDS.has(ch.id));
     // Issuers/Products/Factors: 2 pro Reihe (Balken+Scatter je Metrik untereinander).
     const FORCE_TWO_PER_ROW = new Set(['mvar-issuers', 'mvar-products', 'mvar-yield', 'mvar', 'credit', 'sensitivities', 'hist-sensitivities', 'performance', 'ts']);
     const perRow = (FORCE_TWO_PER_ROW.has(sec.key) || sec.__composed2) ? Math.min(2, rowCharts.length || 1) : Math.min(rowCharts.length, 3);
@@ -2312,49 +2588,92 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       const scatterId = v.chartId.endsWith('Hist') ? 'crTailTcmScatterHist' : 'crTailTcmScatterNorm';
       const tcmId = v.chartId.endsWith('Hist') ? 'crTailTcmTableHist' : 'crTailTcmTableNorm';
       const scEl = ctx.getById(scatterId);
-      const tcmTbl = extractTableFromContainer(tcmId, { maxRows: 30, maxCols: 12, ctx });
+      const tcmTbl = extractTableFromContainer(tcmId, { maxRows: 8, maxCols: 12, ctx });
       const hasSc = !!(scEl && enC.has(scatterId));
       const hasTcm = !!(tcmTbl && tcmTbl.body && tcmTbl.body.length);
       if (hasSc || hasTcm) {
-        const gap = 6, colW = (layout.contentWidth - gap) / 2;
-        const bothCols = hasSc && hasTcm;
-        const scH = 62;
+        const gap = 6, scH = 62;
+        // Concentration-Funnel ("How does tail risk concentrate?") als 1. Spalte -> 3 Spalten
+        // (0.8 / 1 / 1) wie in der App. Fehlt der Funnel, bleibt es beim 2-Spalten-Layout.
+        const funnelId = v.chartId.endsWith('Hist') ? 'crTcmFunnelHist' : 'crTcmFunnelNorm';
+        const funnelEl = ctx.getById(funnelId);
+        const hasFunnel = !!(funnelEl && funnelEl.querySelectorAll(':scope > div > div').length);
         ensurePageSpace(scH + 16, `${sectionTitle} (cont.)`);
         const rowTop = y;
         let bottom = rowTop;
+        // Spaltengeometrie
+        let funnelX = marginX, funnelW = 0, scX, scW, tcmX, tcmW;
+        if (hasFunnel) {
+          const usable = layout.contentWidth - 2 * gap;
+          funnelW = usable * 0.8 / 2.8; scW = usable / 2.8; tcmW = usable / 2.8;
+          scX = marginX + funnelW + gap; tcmX = scX + scW + gap;
+        } else {
+          const bothCols = hasSc && hasTcm;
+          scW = bothCols ? (layout.contentWidth - gap) / 2 : layout.contentWidth;
+          scX = marginX; tcmW = scW; tcmX = bothCols ? marginX + scW + gap : marginX;
+        }
+        // Funnel (1. Spalte)
+        if (hasFunnel) {
+          const fq = 'How does tail risk concentrate?';
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41);
+          doc.text(doc.splitTextToSize(fq, funnelW - 2)[0] || fq, funnelX, rowTop + 4);
+          if (drawTailFunnel(funnelEl, funnelX, rowTop + 6, funnelW, scH + 8)) bottom = Math.max(bottom, rowTop + 6 + scH + 8);
+        }
         if (hasSc) {
-          const scW = bothCols ? colW : layout.contentWidth;
           const scImg = canvasToPngData(scEl);
           const scQ = crQuestionFor(scatterId);
-          if (scQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(scQ, scW - 4)[0] || scQ, marginX, rowTop + 4); }
+          if (scQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(scQ, scW - 4)[0] || scQ, scX, rowTop + 4); }
           const scTop = scQ ? rowTop + 6 : rowTop;
-          drawChartCard(doc, marginX, scTop, scW, scH + 8);
+          drawChartCard(doc, scX, scTop, scW, scH + 8);
           if (scImg?.dataUrl) {
             const srcW = scImg.width || 900, srcH = scImg.height || 520;
             const availH = scH - 2;
             const scale = Math.min(scW / srcW, availH / srcH, 1);
             const w = srcW * scale, h = srcH * scale;
-            try { doc.addImage(scImg.dataUrl, scImg.fmt || 'JPEG', marginX + (scW - w) / 2, scTop + 7 + (availH - h) / 2, w, h); }
+            try { doc.addImage(scImg.dataUrl, scImg.fmt || 'JPEG', scX + (scW - w) / 2, scTop + 7 + (availH - h) / 2, w, h); }
             catch (e) { console.warn('[PDF] EC scatter failed', scatterId, e); }
           }
           bottom = Math.max(bottom, scTop + scH + 8);
         }
         if (hasTcm) {
-          const tcmX = bothCols ? marginX + colW + gap : marginX;
-          const tcmW = bothCols ? colW : layout.contentWidth;
           const tcmQ = crQuestionFor(tcmId);
           let ty = rowTop;
           if (tcmQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(tcmQ, tcmW - 4)[0] || tcmQ, tcmX, rowTop + 4); ty = rowTop + 6; }
           safeAutoTable(doc, layout, {
             head: tcmTbl.head && tcmTbl.head.length ? [tcmTbl.head] : undefined,
             body: tcmTbl.body, startY: ty, theme: 'grid',
-            styles: { fontSize: 7, cellPadding: 1.2 },
-            headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
+            styles: { fontSize: 6, cellPadding: 0.8 },
+            headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220], fontSize: 6 },
             tableWidth: tcmW, margin: { left: tcmX }, pageBreak: 'avoid',
           });
           bottom = Math.max(bottom, doc.lastAutoTable?.finalY || ty);
         }
         y = bottom + cfg.blockGap;
+      }
+    }
+
+    // Credit-Risk-History ("How has credit risk evolved over time?") ZULETZT — nach Scatter+TCM,
+    // damit die 4 Tail-Kacheln (Loss-Dist, Top tail drivers, Scatter, TCM) zusammen auf einer
+    // Seite stehen und die History auf die Folgeseite rueckt.
+    const _histCh = (sec.enabledCharts || []).find(c => c.id === 'plCreditRiskHistChart');
+    const _histEl = _histCh ? ctx.getById('plCreditRiskHistChart') : null;
+    if (_histEl && _histEl.tagName === 'CANVAS') {
+      const _himg = canvasToPngData(_histEl);
+      if (_himg?.dataUrl) {
+        const _cw = layout.contentWidth;
+        const _srcW = _himg.width || 900, _srcH = _himg.height || 360;
+        const _scale = Math.min(_cw / _srcW, 70 / _srcH, 1);
+        const _w = _srcW * _scale, _h = _srcH * _scale;
+        const _q = crQuestionFor('plCreditRiskHistChart') || 'How has credit risk evolved over time?';
+        const _blockH = _h + 16;
+        ensurePageSpace(_blockH + 6, `${sectionTitle} (cont.)`);
+        const _boxY = y;
+        drawChartCard(doc, marginX - 2, _boxY, _cw + 4, _blockH - 2);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41);
+        doc.text(_q, marginX + _cw / 2, _boxY + 6, { align: 'center' });
+        try { doc.addImage(_himg.dataUrl, _himg.fmt || 'JPEG', marginX + (_cw - _w) / 2, _boxY + 11, _w, _h); }
+        catch (e) { console.warn('[PDF] credit history chart failed', e); }
+        y = _boxY + _blockH + cfg.blockGap;
       }
     }
   }

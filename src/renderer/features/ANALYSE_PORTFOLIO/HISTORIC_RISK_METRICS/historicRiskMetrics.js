@@ -1,7 +1,7 @@
 import { appState } from '../../../renderer.js';
 import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
 import { getPortfolioColor } from '../../../utils/colors.js';
-import { fmtEur } from '../../../utils/tableCellFormats.js';
+import { kpiPlainCompact } from '../../../utils/kpiCard.js';
 
 
 // HELPER: 
@@ -43,7 +43,9 @@ import { fmtEur } from '../../../utils/tableCellFormats.js';
 
           scales: {
             x: {
-              title: { display: true, text: "Date" }
+              title: { display: true, text: "Date" },
+              // Datumsachse: hoechstens ~8-10 sichtbare Labels, Rest ueberspringen; Rotation bis 45°.
+              ticks: { maxTicksLimit: 9, autoSkip: true, maxRotation: 45 }
             },
             y: {
               position: "left",
@@ -377,57 +379,63 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
         data: mvarAllPct,
         borderColor: "rgba(54, 162, 235, 1)",
         backgroundColor: "rgba(54, 162, 235, 0.15)",
-        borderWidth: 2,
-        pointRadius: 2,
-        tension: 0.2
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.25
       },
       {
         label: "MVaR IR (%)",
         data: mvarIrPct,
         borderColor: "rgba(0, 200, 83, 1)",
         backgroundColor: "rgba(0, 200, 83, 0.15)",
-        borderWidth: 2,
-        pointRadius: 2,
-        tension: 0.2
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.25
       },
       {
         label: "MVaR CS (%)",
         data: mvarCsPct,
         borderColor: "rgba(255, 159, 64, 1)",
         backgroundColor: "rgba(255, 159, 64, 0.15)",
-        borderWidth: 2,
-        pointRadius: 2,
-        tension: 0.2
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.25
       },
       {
         label: "M ES All (%)",
         data: mesAllPct,
         borderColor: "rgba(54, 162, 235, 1)",
         backgroundColor: "rgba(54, 162, 235, 0.0)",
-        borderWidth: 2,
-        pointRadius: 2,
-        tension: 0.2,
-        borderDash: [6, 4]
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.25,
+        borderDash: [5, 4]
       },
       {
         label: "M ES IR (%)",
         data: mesIrPct,
         borderColor: "rgba(0, 200, 83, 1)",
         backgroundColor: "rgba(0, 200, 83, 0.0)",
-        borderWidth: 2,
-        pointRadius: 2,
-        tension: 0.2,
-        borderDash: [6, 4]
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.25,
+        borderDash: [5, 4]
       },
       {
         label: "M ES CS (%)",
         data: mesCsPct,
         borderColor: "rgba(255, 159, 64, 1)",
         backgroundColor: "rgba(255, 159, 64, 0.0)",
-        borderWidth: 2,
-        pointRadius: 2,
-        tension: 0.2,
-        borderDash: [6, 4]
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        tension: 0.25,
+        borderDash: [5, 4]
       }
     ]
   };
@@ -1473,19 +1481,26 @@ document.addEventListener('panel:opened', (e) => {
 // unzuverlaessig -> Sichtbarkeit hing "einen Wechsel hinterher".)
 // Nur rendern, wenn das jeweilige Panel offen ist (sonst 0-Size-Canvas). Die Render-Funktionen
 // blenden #plMarketRiskHistPanel / #plCreditRiskHistPanel je nach Datenlage selbst ein/aus.
-export function renderEmbeddedRiskHistoryCharts(portName) {
+export function renderEmbeddedRiskHistoryCharts(portName, opts = {}) {
+  // opts.force = true -> ohne .open-Guard rendern (Report-Warmup: die eingebetteten
+  // History-Charts sollen auch ohne geoeffnetes Panel erfasst werden).
+  const force = !!opts.force;
   try {
     const sel = String(portName ?? appState.getSelectedPortTableName?.() ?? '').trim();
     const hist = (appState.getPortfolioHistoryData?.() || [])
       .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === sel);
-    if (document.getElementById('panel-market')?.classList.contains('open')) {
+    if (force || document.getElementById('panel-market')?.classList.contains('open')) {
       renderHistoricMarketRiskChart(hist, 'plMarketRiskHistChart', {
         onlyLabels: ['MVaR All (%)', 'M ES All (%)'],
         labelMap: PL_MKT_LABEL_MAP,
         colorMap: PL_MKT_COLOR_MAP,
       });
     }
-    if (document.getElementById('panel-credit')?.classList.contains('open')) {
+    // Factors-Panel: "Market risk over time - all factors" (voller Chart, alle Zeitreihen).
+    if (force || document.getElementById('panel-mvar')?.classList.contains('open')) {
+      renderHistoricMarketRiskChart(hist, 'factorsMarketRiskHistChart', { labelMap: FACTORS_MKT_LABEL_MAP });
+    }
+    if (force || document.getElementById('panel-credit')?.classList.contains('open')) {
       renderHistoricCreditRiskChart(hist, 'plCreditRiskHistChart');
     }
   } catch (e) { console.warn('[hist] embedded risk-history portfolio-switch refresh failed', e); }
@@ -1544,7 +1559,7 @@ export function renderPerformanceHistoryCopies() {
     // "(of notional)" etc. zarter setzen (muted, nicht fett) — wie die 2. Zeile.
     const _q = (s) => `<span class="conc-kpi__qual">(${s})</span>`;
     const _pf = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
-    const _eur = (v) => fmtEur(v);   // zentral: "EUR" VORNE (tableCellFormats.fmtEur)
+    const _eur = (v) => kpiPlainCompact(v);   // zentral kompakt: "EUR 1,2 Mio." / "EUR 253,8 Tsd." (wie ueberall)
     const _pct = (v) => Number.isFinite(v) ? v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %" : "–";
     // grosser Wert + kleine 2. Zeile je nach Mode ('abs' -> abs gross, 'rel' -> rel gross).
     const _kpi = (bigId, subId, key, absStr, relStr) => {

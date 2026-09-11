@@ -15,6 +15,7 @@ import { appState } from '../../../renderer.js';
 // Scatter (Tail loss vs EAD share) aus dem MF-GC-Dashboard wiederverwenden — ID-basiert,
 // generische Tools (Zoom/Show-N/Label-Kollision). Nur Wiederverwendung, kein MF-GC-Eingriff.
 import { renderCrTcmScatter } from './creditRiskDashboard.js';
+import { kpiCard } from '../../../utils/kpiCard.js';
 
 const TOP_N = 8; // Charts: Top-N Issuer + "Others"-Bucket
 
@@ -102,14 +103,21 @@ function _renderKpis(root, summary, issuerRows) {
   const relEC = summary ? _num(summary.EC_rel) : NaN;
   const relES = summary ? _num(summary.ES_rel) : NaN;
 
-  set('asrf-kpi-el-val', smartEur(EL));
-  set('asrf-kpi-el-sub', Number.isFinite(relEL) ? `${pct(relEL, 2)} of NAV` : 'Expected Loss');
-  set('asrf-kpi-ec-val', smartEur(EC));
-  set('asrf-kpi-ec-sub', Number.isFinite(relEC) ? `${pct(relEC, 2)} of NAV` : 'VaR − EL');
-  set('asrf-kpi-var-val', smartEur(VaR));
-  set('asrf-kpi-var-sub', Number.isFinite(relVaR) ? `${pct(relVaR, 2)} of NAV` : 'Value at Risk');
-  set('asrf-kpi-es-val', smartEur(ES));
-  set('asrf-kpi-es-sub', Number.isFinite(relES) ? `${pct(relES, 2)} of NAV` : 'systemic tail');
+  // KPI-Kacheln zentral ueber die kpiCard-Komponente rendern (wie Credit Historic/Market adjusted):
+  // "EUR" klein vorne + kompakt (Tsd./Mio.), Rahmenfarbe je Metrik, Connector; Sub = "% of NAV".
+  // conc-kpi-Markup bleibt -> gleiche Optik/Rahmen wie die MF-GC-Kacheln.
+  const _sub = (rel, fb) => (Number.isFinite(rel) ? `${pct(rel, 2)} of NAV` : fb);
+  const _card = (tile, metric, conn, label, abs, rel, fb) => kpiCard({
+    tileKey: tile, metric, connector: conn, label, single: 'abs', abs, subText: _sub(rel, fb),
+  });
+  const grid = root.querySelector('.asrf-kpi-grid');
+  if (grid) {
+    grid.innerHTML =
+      _card('asrf_el',  'el',  '+',  'Expected Loss (EL)',      EL,  relEL,  'Expected Loss')
+      + _card('asrf_ec',  'ec',  '=',  'Economic Capital (EC)',   EC,  relEC,  'VaR − EL')
+      + _card('asrf_var', 'var', '→',  'Value at Risk (VaR)',     VaR, relVaR, 'Value at Risk')
+      + _card('asrf_es',  'es',  null, 'Expected Shortfall (ES)', ES,  relES,  'systemic tail');
+  }
 
   const ul = root.querySelector('.asrf-bullets');
   if (ul) {

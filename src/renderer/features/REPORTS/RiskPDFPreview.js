@@ -18,6 +18,9 @@ import { prepareLiquidityDashboardForReport } from '../ANALYSE_PORTFOLIO/liquidi
 // Credit-Overview-Charts (Loss distribution + Tail zoom) vor der Erfassung rendern,
 // damit sie im Report erscheinen, ohne dass man das Overview-Panel vorher oeffnet.
 import { renderCreditOverviewCharts } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
+// Eingebetteter Credit-Risk-History-Chart ("How has credit risk evolved over time?") —
+// im Report OHNE geoeffnetes Panel rendern (force), sonst bleibt das Canvas leer.
+import { renderEmbeddedRiskHistoryCharts } from '../ANALYSE_PORTFOLIO/HISTORIC_RISK_METRICS/historicRiskMetrics.js';
 import { renderPerformanceDashboard } from '../ANALYSE_PORTFOLIO/performanceDashboard.js';
 
 // Materialisiert ALLE Report-Quellen aus dem Store, ohne dass Tabs/Panels offen
@@ -89,40 +92,79 @@ function syncReportPortfolioSelectionToMain() {
   return true;
 }
 
-function warmUpReportSources() {
+function warmUpReportSources(opts = {}) {
+  const { chunked = false, onDone } = opts;
   const as = window.appState;
-  // 1) Lazy-Panels (Market Data, Historic) materialisieren.
-  try { renderAllRegisteredPanels(); } catch (e) { console.warn('[RiskPreview] warmup panels failed', e); }
-  // 2) Market-VaR (Factors/Products) aus dem Store rendern.
-  try { as?.refreshMarketRiskUI?.(0); } catch (e) { console.warn('[RiskPreview] warmup market risk failed', e); }
-  // 3) Credit-Risk (EAD/LGD, CVaR/ES) aus dem Store rendern — die Credit-Handler
-  //    haben keinen eigenen Store-Refresh, daher hier aus den Stores einspeisen.
-  try {
-    const ead = as?.getAllEADData?.();
-    if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead);
-  } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); }
-  try {
-    const cvar = as?.getCvarData?.();
-    if (cvar && cvar.length) (as?.handleCVaRData || window.handleCVaRData)?.(cvar, 0);
-  } catch (e) { console.warn('[RiskPreview] warmup CVaR failed', e); }
-
-  console.log('[RiskPreview warmup]', {
-    hasAppState: !!window.appState,
-    hasRefreshMarketRiskUI: typeof window.appState?.refreshMarketRiskUI,
-    reportPortfolioValue: document.getElementById('createdPortDropdownReport')?.value,
-    mainPortfolioValue: document.getElementById('createdPortDropdown0')?.value,
-    marketPanel: !!getMarketPanel?.(),
-    creditPanel: !!getCreditPanel?.(),
-    marketSummaryRow: !!getMarketPanel?.()?.querySelector?.('.mvar-summary-row'),
-    creditTrafficRow: !!getCreditPanel?.()?.querySelector?.('.cvar-pair'),
-    mvarContainer: !!document.getElementById('MVaRDataContainer0'),
-    cvarContainer: !!document.getElementById('CVaRDataContainer0'),
-    irSens: !!document.getElementById('IRSensDataContainer'),
-    csSens: !!document.getElementById('CSSensDataContainer'),
-  });
+  // Einzelne (jeweils schwere) Warmup-Schritte: Lazy-Panels materialisieren, Market-VaR
+  // (Factors/Products), Credit-Risk (EAD/LGD + CVaR/ES) aus den Stores rendern. Im
+  // chunked-Modus wird zwischen den Schritten per rAF geyieldet -> die UI bleibt beim
+  // Reports-Wechsel responsiv (kein ~5s-Freeze in einem Tick).
+  const steps = [
+    () => { try { renderAllRegisteredPanels(); } catch (e) { console.warn('[RiskPreview] warmup panels failed', e); } },
+    () => { try { as?.refreshMarketRiskUI?.(0); } catch (e) { console.warn('[RiskPreview] warmup market risk failed', e); } },
+    () => { try { const ead = as?.getAllEADData?.(); if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead); } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); } },
+    () => { try { const cvar = as?.getCvarData?.(); if (cvar && cvar.length) (as?.handleCVaRData || window.handleCVaRData)?.(cvar, 0); } catch (e) { console.warn('[RiskPreview] warmup CVaR failed', e); } },
+  ];
+  if (!chunked) { steps.forEach((fn) => fn()); if (typeof onDone === 'function') onDone(); return; }
+  let i = 0;
+  const runNext = () => {
+    if (i >= steps.length) { if (typeof onDone === 'function') onDone(); return; }
+    steps[i++]();
+    requestAnimationFrame(runNext);
+  };
+  runNext();
 }
 
 
+
+// --- SELEKTIVER Warmup: nur die Domaenen materialisieren, deren Sektionen im Report
+//     ausgewaehlt sind. Jede Domaene laeuft pro Reports-Session hoechstens einmal (idempotent).
+//     Domaenen: 'credit' (EAD/LGD + CVaR/ES), 'market' (MVaR Factors/Products), 'panels'
+//     (alle uebrigen Lazy-Panels: Rates/Curves, Historic, Liquidity, Performance, Overview …). ---
+let _rrWarmedDomains = { panels: false, market: false, credit: false };
+function resetReportWarmup() { _rrWarmedDomains = { panels: false, market: false, credit: false }; }
+function markAllReportWarmup() { _rrWarmedDomains = { panels: true, market: true, credit: true }; }
+
+function _rrSelectedDomains() {
+  let onKeys = [];
+  try {
+    const st = loadChartToggleState() || {};
+    onKeys = Object.keys(st)
+      .filter((k) => /:__section__$/.test(k) && st[k] === true)
+      .map((k) => k.replace(/:__section__$/, ''));
+  } catch {}
+  const isCredit = (k) => /credit/i.test(k);
+  const isMarket = (k) => /market|mvar/i.test(k) && !/credit/i.test(k);
+  return {
+    credit: onKeys.some(isCredit),
+    market: onKeys.some(isMarket),
+    panels: onKeys.some((k) => !isCredit(k) && !isMarket(k)),
+  };
+}
+
+// Warmt die benoetigten, noch nicht warmen Domaenen (chunked; yieldet per rAF dazwischen,
+// damit die UI responsiv bleibt) und ruft danach `done`. Bereits warme/nicht benoetigte
+// Domaenen werden uebersprungen -> z.B. Credit-only-Report materialisiert NICHT alle Panels.
+function ensureReportWarmupForSelection(done) {
+  const as = window.appState;
+  const need = _rrSelectedDomains();
+  const jobs = [];
+  if (need.panels && !_rrWarmedDomains.panels) jobs.push(() => { _rrWarmedDomains.panels = true; try { renderAllRegisteredPanels(); } catch (e) { console.warn('[RiskPreview] warmup panels failed', e); } });
+  if (need.market && !_rrWarmedDomains.market) jobs.push(() => { _rrWarmedDomains.market = true; try { as?.refreshMarketRiskUI?.(0); } catch (e) { console.warn('[RiskPreview] warmup market risk failed', e); } });
+  if (need.credit && !_rrWarmedDomains.credit) jobs.push(() => {
+    _rrWarmedDomains.credit = true;
+    try { const ead = as?.getAllEADData?.(); if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead); } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); }
+    try { const cvar = as?.getCvarData?.(); if (cvar && cvar.length) (as?.handleCVaRData || window.handleCVaRData)?.(cvar, 0); } catch (e) { console.warn('[RiskPreview] warmup CVaR failed', e); }
+  });
+  if (!jobs.length) { if (typeof done === 'function') done(); return; }
+  let i = 0;
+  const step = () => {
+    if (i >= jobs.length) { if (typeof done === 'function') done(); return; }
+    jobs[i++]();
+    requestAnimationFrame(step);
+  };
+  step();
+}
 
 // ==== oben ins Modul (Modul-Scope-Variablen) ====
 let __riskWired = false;
@@ -1156,7 +1198,11 @@ function scheduleRiskPreviewRender() {
     __riskRaf = 0;
     __riskIdle = 0;
     __riskScheduled = false;
-    try { renderRiskPreview(); } catch (e) { console.error('[risk] render error', e); }
+    // Vor dem Render NUR die Domaenen der aktuell ausgewaehlten Sektionen materialisieren
+    // (selektiver, on-demand Warmup) -> spart bei kleinen Reports die schwere Voll-Materialisierung.
+    ensureReportWarmupForSelection(() => {
+      try { renderRiskPreview(); } catch (e) { console.error('[risk] render error', e); }
+    });
   };
 
   // Watchdog (falls rAF/idle nicht feuern)
@@ -1973,6 +2019,7 @@ function renderRiskPreview() {
     // damit Preview/PDF immer die by-category-Ansicht inkl. Cash-Flow-Tabelle zeigen.
     try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPreview] liquidity dashboard prep failed', e); }
     try { renderCreditOverviewCharts(); } catch (e) { console.warn('[RiskPreview] credit overview charts prep failed', e); }
+    try { renderEmbeddedRiskHistoryCharts(undefined, { force: true }); } catch (e) { console.warn('[RiskPreview] credit risk history chart prep failed', e); }
     try { renderPerformanceDashboard(); } catch (e) { console.warn('[RiskPreview] yield dashboard prep failed', e); }
     // HOME-Overview rendern -> befuellt das versteckte Report-Panel #panel-overview.
     try { window.renderHomeOverview?.(); } catch (e) { console.warn('[RiskPreview] home overview prep failed', e); }
@@ -2868,13 +2915,24 @@ document.addEventListener('reports:enter', () => {
     try { appState?.setActiveCustomerReportName?.(''); } catch {}
   }
 
+  // Bei jedem Eintritt Warmup-Status zuruecksetzen -> der naechste Render materialisiert
+  // die Domaenen der AKTUELL ausgewaehlten Sektionen frisch aus den Stores.
+  resetReportWarmup();
+
   try { wireRiskPreview(); } catch (e) { console.error(e); }
 
-  // Lazy-Panels (Market Data, Historic, …) beim Öffnen AUTOMATISCH aus dem Store
-  // materialisieren, damit ihre Charts in Preview/PDF erscheinen, OHNE dass man die
-  // Panels manuell öffnet. Loop-sicher: renderRiskPreview ruft den Warmup NICHT auf;
-  // der Warmup-Ping löst nur ein normales Neuzeichnen der Preview aus.
-  try { warmUpReportSources(); } catch (e) { console.warn('[reports:enter] warmup failed', e); }
+  // Panel SOFORT sichtbar: Ladehinweis, bevor der (selektive) Warmup+Render laeuft. Frueher
+  // lief ein voller Warmup SYNCHRON -> ~5s Freeze, bevor ueberhaupt etwas erschien.
+  try {
+    const wrap = document.getElementById('reportsRiskPreview');
+    if (wrap && !wrap.firstElementChild) {
+      wrap.innerHTML = '<div class="rr-preview-loading" style="padding:48px 16px; text-align:center; color:var(--text-muted); font-size:14px;">Preparing report preview…</div>';
+    }
+  } catch {}
+
+  // Deferred Render -> ensureReportWarmupForSelection materialisiert NUR die ausgewaehlten
+  // Domaenen (chunked) und zeichnet danach. Kein blockierender Voll-Warmup im Klick-Tick.
+  try { scheduleRiskPreviewRender(); } catch {}
 });
 
 document.addEventListener('reports:leave', () => {
@@ -2915,6 +2973,7 @@ export function getActiveRiskSectionsForPdf() {
   // (Chart + Cash-Flow-Pivot) im DOM steht, bevor die Sektionen erfasst werden.
   try { prepareLiquidityDashboardForReport(); } catch (e) { console.warn('[RiskPdf] liquidity dashboard prep failed', e); }
   try { renderCreditOverviewCharts(); } catch (e) { console.warn('[RiskPdf] credit overview charts prep failed', e); }
+  try { renderEmbeddedRiskHistoryCharts(undefined, { force: true }); } catch (e) { console.warn('[RiskPdf] credit risk history chart prep failed', e); }
   try { renderPerformanceDashboard(); } catch (e) { console.warn('[RiskPdf] yield dashboard prep failed', e); }
   // HOME-Overview rendern -> befuellt das versteckte Report-Panel #panel-overview.
   try { window.renderHomeOverview?.(); } catch (e) { console.warn('[RiskPdf] home overview prep failed', e); }
@@ -3103,6 +3162,8 @@ export async function handleRefreshThumbnailsClick(e) {
     // vorher manuell öffnen muss.
     syncReportPortfolioSelectionToMain();
     warmUpReportSources();
+    // Voll materialisiert -> der Folge-Render braucht keinen selektiven Nach-Warmup.
+    markAllReportWarmup();
 
     // Daten holen (aus State)
     const portMainData =

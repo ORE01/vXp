@@ -1,7 +1,8 @@
 'use strict';
 
 import { appState } from '../../../../renderer.js';
-import { formatNumber, formatNumberWithCommas, kpiValue } from '../../../../utils/tableCellFormats.js';
+import { formatNumber, formatNumberWithCommas } from '../../../../utils/tableCellFormats.js';
+import { kpiCard, kpiPlainCompact } from '../../../../utils/kpiCard.js';
 import { attachIdLinks } from '../../../../utils/linksToTables.js';
 
 import {
@@ -578,7 +579,7 @@ function renderProductPdfCanvas(labels, values) {
   const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
   mvarProdIdVarContribChart = new window.Chart(canvas.getContext('2d'), {
     type: 'bar',
-    data: { labels, datasets: [{ data: values, backgroundColor: 'rgba(42,127,127,0.9)', borderColor: 'rgba(42,127,127,0.9)', borderWidth: 1, maxBarThickness: 16 }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: 'rgba(42,127,127,0.9)', borderColor: 'rgba(42,127,127,0.9)', borderWidth: 0, maxBarThickness: 16 }] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
       plugins: { legend: { display: false } },
@@ -840,12 +841,13 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
   const overVal = over ? `${over.d >= 0 ? '+' : ''}${(over.d * 100).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pp` : '–';
 
   const aggTot = aggregateTotalForMetric(cfg.metric);
-  // Absolutzahl als Verlust (negativ) via zentraler Vorlage kpiValue: "EUR -X  -Y %".
+  // Absolutzahl als Verlust (negativ) via zentraler Vorlage kpiPlainCompact: "EUR -X Tsd. · -Y %".
   // valueHtml = Karte (EUR klein, Zahl gross, rel muted); value = Plain-Text fuers PDF-Band.
   // aggTot.rel ist Prozentzahl; totalRel (Fallback) ist Bruch -> *100.
+  // Total-Karte mit abs/rel -> kompaktes Zahlenformat wie ueberall. value (Plain) bleibt fuers PDF-Band.
   const totalCard = aggTot
-    ? { label: `Total ${cfg.metric}`, valueHtml: kpiValue(-aggTot.abs, -aggTot.rel), value: kpiValue(-aggTot.abs, -aggTot.rel, { html: false }), sub: 'portfolio total',        desc: `Portfolio ${cfg.metric} (all products)` }
-    : { label: `Total ${cfg.metric}`, valueHtml: kpiValue(-Math.abs(total), -Math.abs(totalRel * 100)), value: kpiValue(-Math.abs(total), -Math.abs(totalRel * 100), { html: false }), sub: 'sum of contributions',   desc: `Portfolio ${cfg.metric} (all products)` };
+    ? { label: `Total ${cfg.metric}`, abs: -aggTot.abs, rel: -aggTot.rel, value: kpiPlainCompact(-aggTot.abs, -aggTot.rel), sub: 'portfolio total',        desc: `Portfolio ${cfg.metric} (all products)` }
+    : { label: `Total ${cfg.metric}`, abs: -Math.abs(total), rel: -Math.abs(totalRel * 100), value: kpiPlainCompact(-Math.abs(total), -Math.abs(totalRel * 100)), sub: 'sum of contributions',   desc: `Portfolio ${cfg.metric} (all products)` };
   const cards = [
     totalCard,
     { label: 'Top product',             value: relPct1(top[cfg.relKey]), sub: top.label || '–',         desc: `Largest ${cfg.metric} contributor` },
@@ -854,13 +856,14 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
   ];
 
   if (host) {
-    host.innerHTML = cards.map((c) => `
-      <div class="mr-kpi-card">
-        <div class="mr-kpi-card__label">${escKpi(c.label)}</div>
-        <div class="mr-kpi-card__value">${c.valueHtml || escKpi(c.value)}</div>
-        <div class="mr-kpi-card__sub">${escKpi(c.sub)}</div>
-        <div class="mr-kpi-card__desc">${escKpi(c.desc)}</div>
-      </div>`).join('');
+    // Zentrale kpiCard-Komponente: beschreibende letzte Zeile (c.desc) als Kopfzeile (caption),
+    // c.sub als freie Sub-Zeile, Wert unveraendert (valueHtml). cards-Daten bleiben fuers PDF-Band.
+    const _bc = cfg.metric === 'ES' ? 'rgba(224,49,49,0.95)' : 'rgba(240,140,0,0.95)';
+    host.innerHTML = '<div class="conc-kpi-grid" style="width:100%">' + cards.map((c) => kpiCard(
+      Number.isFinite(c.abs)
+        ? { label: c.label, subText: c.sub, abs: c.abs, rel: c.rel, pairInline: true, borderColor: _bc }
+        : { label: c.label, subText: c.sub, valueHtml: c.valueHtml || escKpi(c.value), borderColor: _bc }
+    )).join('') + '</div>';
   }
 
   // Gespiegelte Label/Wert-Tabelle fuer Preview/PDF (data-kpi-band -> Kachel-Band).
@@ -873,8 +876,8 @@ function renderProductKpis(chartRows, cfg, hostId, tableId) {
 
 // shareKey/-Labels bestimmen die Vergleichsachse (x): Products = NAV-Anteil,
 // Yield = Anteil an der Portfolio-Yield (buy, ytmPortA-basiert). drill = Drill-Kontext.
-const PROD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarProductVarContribChart', scatterId: 'mvarProductVarScatterChart', shareKey: 'nav_rel', shareLabel: 'Portfolio share (NAV)', shareAxisTitle: 'Portfolio share % (NAV)', shareShort: 'NAV', overLabel: 'Highest risk vs. weight', overDesc: 'Contribution above NAV weight', drill: productDrill };
-const PROD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarProductEsContribChart',  scatterId: 'mvarProductEsScatterChart',  shareKey: 'nav_rel', shareLabel: 'Portfolio share (NAV)', shareAxisTitle: 'Portfolio share % (NAV)', shareShort: 'NAV', overLabel: 'Highest risk vs. weight', overDesc: 'Contribution above NAV weight', drill: productDrill };
+const PROD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarProductVarContribChart', scatterId: 'mvarProductVarScatterChart', shareKey: 'nav_rel', shareLabel: 'Portfolio share (NAV)', shareAxisTitle: 'Portfolio share % (NAV)', shareShort: 'NAV', overLabel: 'Largest risk overweight', overDesc: 'Risk contribution above portfolio weight', drill: productDrill };
+const PROD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarProductEsContribChart',  scatterId: 'mvarProductEsScatterChart',  shareKey: 'nav_rel', shareLabel: 'Portfolio share (NAV)', shareAxisTitle: 'Portfolio share % (NAV)', shareShort: 'NAV', overLabel: 'Largest risk overweight', overDesc: 'Risk contribution above portfolio weight', drill: productDrill };
 
 const YIELD_VAR_CFG = { kind: 'var', absKey: 'var_abs', relKey: 'var_rel', metric: 'VaR', barId: 'mvarYieldVarContribChart', scatterId: 'mvarYieldVarScatterChart', shareKey: 'yield_rel', shareLabel: 'Yield share (buy)', shareAxisTitle: 'Yield share % (buy)', shareShort: 'Yield', overLabel: 'Highest risk vs. yield share', overDesc: 'Contribution above yield share', drill: yieldDrill };
 const YIELD_ES_CFG  = { kind: 'es',  absKey: 'es_abs',  relKey: 'es_rel',  metric: 'ES',  barId: 'mvarYieldEsContribChart',  scatterId: 'mvarYieldEsScatterChart',  shareKey: 'yield_rel', shareLabel: 'Yield share (buy)', shareAxisTitle: 'Yield share % (buy)', shareShort: 'Yield', overLabel: 'Highest risk vs. yield share', overDesc: 'Contribution above yield share', drill: yieldDrill };
@@ -906,11 +909,11 @@ function renderProductContribChart(rows, cfg) {
     data: { labels, datasets: [
       // Palette: Portfolio-Anteil = Portfolio-Blau; Risiko-Beitrag = Market-Teal
       // (VaR) bzw. gelblichere Nuance (ES), damit beide Metriken unterscheidbar sind.
-      { label: cfg.shareLabel || 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 1, maxBarThickness: 10 },
+      { label: cfg.shareLabel || 'Portfolio share (NAV)', data: navPct, backgroundColor: 'rgba(108,155,209,0.9)', borderColor: 'rgba(108,155,209,0.9)', borderWidth: 0, maxBarThickness: 10 },
       { label: `Risk contribution (${cfg.metric})`, data: contribPct,
-        backgroundColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
-        borderColor: cfg.metric === 'ES' ? 'rgba(122,158,74,0.9)' : 'rgba(42,127,127,0.9)',
-        borderWidth: 1, maxBarThickness: 10 },
+        backgroundColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.9)' : 'rgba(240,140,0,0.95)',
+        borderColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.9)' : 'rgba(240,140,0,0.95)',
+        borderWidth: 0, maxBarThickness: 10 },
     ] },
     options: {
       indexAxis: 'y', responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -972,7 +975,10 @@ function renderProductScatter(rows, cfg) {
     plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
     data: { datasets: [
       { type: 'line', label: 'proportional', data: [{ x: 0, y: 0 }, { x: axMax, y: axMax }], borderColor: 'rgba(150,165,185,0.7)', borderDash: [6, 6], borderWidth: 1.5, pointRadius: 0, fill: false, order: 2 },
-      { label: 'Products', data: pts, backgroundColor: 'rgba(46,88,130,0.75)', borderColor: 'rgba(46,88,130,0.9)', pointRadius: 6, pointHoverRadius: 7, order: 1 },
+      { label: 'Products', data: pts,
+        backgroundColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.75)' : 'rgba(240,140,0,0.85)',
+        borderColor: cfg.metric === 'ES' ? 'rgba(224,49,49,0.95)' : 'rgba(240,140,0,0.95)',
+        pointRadius: 6, pointHoverRadius: 7, order: 1 },
     ] },
     options: {
       responsive: false, maintainAspectRatio: false, animation: false, color: chartColor,
@@ -985,7 +991,7 @@ function renderProductScatter(rows, cfg) {
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.raw?.issuer ?? ''}: ${cfg.shareShort || 'NAV'} ${ctx.raw?.x}% / ${cfg.metric} ${ctx.raw?.y}%` } },
-        datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: chartColor, font: { family: chartFont, size: 10 }, formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : '') } : undefined,
+        datalabels: window.ChartDataLabels ? { align: 'right', anchor: 'center', offset: 6, color: chartColor, font: { family: chartFont, size: 10 }, display: 'auto', formatter: (v) => (v && labelSet.has(v.issuer) ? v.issuer : '') } : undefined,
         // Zoom/Box-Zoom (chartjs-plugin-zoom, global geladen): Ziehen = Rechteck-Auswahl,
         // Wheel = Zoom, Ctrl+Ziehen = Pan. Reset ueber den Button (ensureProdScatterZoomTools).
         zoom: {
