@@ -3,6 +3,20 @@ import { saveTrendlines, loadTrendlines } from '../features/MARKET_DATA/HISTORIC
 //import { saveTrendlines, loadTrendlines } from '../renderer/MARKET_DATA/HISTORIC_DATA/TS.js';
 
 
+// Gemeinsamer, durchsichtiger (theme-abhaengiger) Tooltip-Stil statt dem schwarzen
+// Chart.js-Default. Wird beim Zeichnen ausgewertet -> greift nach Theme-Wechsel beim
+// naechsten Neuzeichnen.
+export function themedTooltipStyle() {
+  const light = typeof document !== 'undefined' && document.body.classList.contains('light-theme');
+  return {
+    backgroundColor: light ? 'rgba(255,255,255,0.78)' : 'rgba(30,30,30,0.72)',
+    titleColor: light ? '#1a1f29' : '#e8e8e8',
+    bodyColor:  light ? '#1a1f29' : '#e8e8e8',
+    borderColor: light ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)',
+    borderWidth: 1,
+  };
+}
+
 const chartsByCanvasId = new Map();
 // Gewählter Zeitbereich je TS-Modal (1/5/10/'max'), damit ein Live-Redraw
 // (SMA/Normalization/Select Data) den aktuellen Zoombereich NICHT auf 5Y zurücksetzt.
@@ -854,6 +868,11 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
     },
     options: {
       responsive: true,
+      // Stabil: feste Container-/Canvas-Hoehe fuellen, kein Aspect-Feedback (Zittern).
+      maintainAspectRatio: false,
+      resizeDelay: 200,
+      animation: { duration: 0 },
+      interaction: { mode: 'index', intersect: false },
 
       scales: {
         x: {
@@ -898,6 +917,10 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
 
       plugins: {
         annotation: {},
+        tooltip: {
+          ...themedTooltipStyle(),
+          callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(3)} %` },
+        },
         zoom: {
           pan: { enabled: true, mode: "x" },
           zoom: {
@@ -1032,6 +1055,11 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
     },
     options: {
       responsive: true,
+      // Stabil: feste Container-/Canvas-Hoehe fuellen, kein Aspect-Feedback (Zittern).
+      maintainAspectRatio: false,
+      resizeDelay: 200,
+      animation: { duration: 0 },
+      interaction: { mode: 'index', intersect: false },
 
       scales: {
         x: {
@@ -1067,6 +1095,10 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
       },
 
       plugins: {
+        tooltip: {
+          ...themedTooltipStyle(),
+          callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(3)} %` },
+        },
         zoom: {
           pan: { enabled: true, mode: "x" },
           zoom: {
@@ -1136,7 +1168,7 @@ try {
           backgroundColor: isOriginalCurve
             ? eusw.backgroundColor
             : undefined,
-          tension: 0.1,
+          tension: dataset.tension ?? 0.1,
           pointRadius: pointRadius,
           borderWidth: 1,
           spanGaps: true,   // über fehlende Laufzeiten hinweg durchzeichnen
@@ -1148,10 +1180,19 @@ try {
       resizeDelay: 150,
       animation: { duration: 0 },
       normalized: true,
+      // Tooltip auch ohne sichtbare Punkte (pointRadius 0) entlang der x-Achse zeigen.
+      interaction: { mode: 'index', intersect: false },
 
       plugins: {
         annotation: false,
         decimation: { enabled: true, algorithm: "min-max" },
+        tooltip: {
+          ...themedTooltipStyle(),
+          callbacks: {
+            title: (items) => (items && items[0] != null ? `${items[0].parsed.x}Y` : ''),
+            label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(3)}%`,
+          },
+        },
         zoom: {
           pan: { enabled: true, mode: "x", threshold: 10 },
           zoom: {
@@ -1166,9 +1207,18 @@ try {
 
       scales: {
         x: {
+          type: 'linear',
           display: true,
           title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
-          ticks: { color: "rgb(161, 160, 160)" },
+          // Saubere Tenor-Ticks statt fraktionaler Auto-Werte.
+          afterBuildTicks: (axis) => {
+            const min = axis.min ?? 0;
+            const max = axis.max ?? 30;
+            axis.ticks = [1, 5, 10, 15, 20, 25, 30]
+              .filter(v => v >= min - 0.001 && v <= max + 0.001)
+              .map(value => ({ value }));
+          },
+          ticks: { color: "rgb(161, 160, 160)", autoSkip: false, callback: (v) => `${v}Y` },
           grid: {
             color: "rgba(255, 255, 255, 0.2)",
             lineWidth: 0.4,

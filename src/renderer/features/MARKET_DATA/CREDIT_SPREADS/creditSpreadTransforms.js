@@ -117,7 +117,7 @@ export function buildCreditSpreadCurveChartData(rows, tenors, getCSColors) {
         backgroundColor: cs.backgroundColor,
         borderWidth: 1,
         fill: false,
-        hidden: !['AAA', 'AA', 'A', 'BBB', 'BB'].includes(rating),
+        hidden: !['AAA', 'AA', 'BB'].includes(rating),
       };
     }),
   };

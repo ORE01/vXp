@@ -3892,6 +3892,13 @@ Feature:    Wenn es nur in einem Panel gilt
           <label for="fwdCurveSelector">Select Curve:</label>
           <select id="fwdCurveSelector" class="fwd-select"></select>
         </div>
+        <div class="fwd-row">
+          <label for="fwdCurveMethodSelector">Curve method:</label>
+          <select id="fwdCurveMethodSelector" class="fwd-select">
+            <option value="haganwest">Hagan-West (Monotone Convex)</option>
+            <option value="pchip">PCHIP (Monotone Cubic)</option>
+          </select>
+        </div>
       </div>
 
       <div class="data-container" id="FWDDataContainer"></div>

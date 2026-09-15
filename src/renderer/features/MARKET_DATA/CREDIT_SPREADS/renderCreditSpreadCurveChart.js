@@ -1,4 +1,4 @@
-﻿import { createCSLineChart } from '../../../charts/LineChart.js';
+﻿import { createCSLineChart, themedTooltipStyle } from '../../../charts/LineChart.js';
 import { getCSColors } from '../../../utils/colors.js';
 
 import {
@@ -93,12 +93,28 @@ const rankLabel =
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    // Tooltip auch ohne sichtbare Punkte entlang der x-Achse zeigen.
+    interaction: { mode: 'index', intersect: false },
     plugins: {
       title: {
         display: true,
         text: `Credit Spreads in Basis Points (${ccy} · ${scenarioLabel} · ${rankLabel})`,
       },
+      // Legende rechts (untereinander) mit kleineren Farbkaestchen.
+      legend: {
+        position: 'right',
+        labels: { boxWidth: 12, boxHeight: 8, font: { size: 10 }, padding: 6 },
+      },
+      // Durchsichtiger Tooltip (gleicher Stil wie IR-Chart).
+      tooltip: {
+        ...themedTooltipStyle(),
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(1)} bp`,
+        },
+      },
     },
+    // Keine Punkte an den Kurven.
+    elements: { point: { radius: 0 } },
     scales: {
       x: { beginAtZero: true },
       y: {

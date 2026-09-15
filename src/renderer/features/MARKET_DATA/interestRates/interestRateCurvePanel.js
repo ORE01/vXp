@@ -248,9 +248,11 @@ export function renderInterestRateCurvePanel() {
     ratesSelector.appendChild(option);
   });
 
+  // Default-Kurve: 6M (EUR:SWAP:6M) bevorzugen, sonst erste verfuegbare.
+  const prefer6M = curves.find(c => /(?:^|:)6M$/i.test(String(c)));
   selectedCurveId = curves.includes(selectedCurveId)
     ? selectedCurveId
-    : curves[0];
+    : (prefer6M || curves[0]);
 
   ratesSelector.value = selectedCurveId;
 

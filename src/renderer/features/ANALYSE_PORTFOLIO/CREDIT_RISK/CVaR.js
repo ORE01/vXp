@@ -641,7 +641,14 @@ export function renderLGDChart() {
     LGDChart = null;
   }
 
-  const labels = filteredEADMainData.map(row => String(row.ISSUER ?? '').trim());
+  // Im Report (Reports-Tab aktiv) nur die groessten 10 Emittenten zeichnen;
+  // filteredEADMainData ist bereits absteigend nach EAD (NOTIONAL) sortiert.
+  const _activeTabId = document.querySelector('.tablinks.active')?.id
+    || document.querySelector('.tablinks[aria-selected="true"]')?.id || '';
+  const inReports = _activeTabId === 'REPORTS_Tab';
+  const chartRows = inReports ? filteredEADMainData.slice(0, 10) : filteredEADMainData;
+
+  const labels = chartRows.map(row => String(row.ISSUER ?? '').trim());
   const rowCount = labels.length;
 
   /*
@@ -672,13 +679,13 @@ export function renderLGDChart() {
     canvas.parentElement.style.minHeight = '';
   }
 
-  const EADValues = filteredEADMainData.map(row => {
+  const EADValues = chartRows.map(row => {
     const raw = (row.NOTIONAL || '').toString().replace(/\s/g, '');
     const v = parseFloat(raw);
     return Number.isFinite(v) ? v : 0;
   });
 
-  const LGDValues = filteredEADMainData.map(row => {
+  const LGDValues = chartRows.map(row => {
     const raw = (row.LGD || '').toString().replace(/\s/g, '');
     const v = parseFloat(raw);
     return Number.isFinite(v) ? v : 0;

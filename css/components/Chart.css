@@ -47,6 +47,13 @@
   max-width:100%;
 }
 
+/* Forward-Charts: FESTE Canvas-Hoehe (ueberschreibt height:auto) + maintainAspectRatio:false
+   in den Chart-Optionen -> stabile Groesse, kein Resize-Feedback (Zittern). */
+.chart-container canvas.forward-line-chart,
+.chart-container canvas.forward-swap-chart{
+  height:340px !important;
+}
+
 /* 3) Optional: Wenn du EINIGE Charts wirklich fix “flächenfüllend” willst,
       gib dem Container eine echte Höhe (z.B. style="height:400px")
       und setze dann diese Klasse am Container:

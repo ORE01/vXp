@@ -2,9 +2,30 @@
 import { createFWDLineChart, createForwardSwapChart } from '../../../charts/LineChart.js';
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 import { getInterestRateCurveData } from '../interestRates/interestRateCurveData.js';
+import { buildDiscountCurve, parRateFromDF, parForwardSwapRate } from './curveConstruction.js';
 
 let FWDlineChart;
 let forwardSwapChart;
+
+// Kurven-Interpolationsmethode fuer die Forward-Anzeige: Hagan-West Monotone Convex
+// (Default) oder 'pchip' (Option). Setter fuer eine spaetere UI-Umschaltung.
+let FWD_CURVE_METHOD = 'haganwest';
+export function setForwardCurveMethod(m) { FWD_CURVE_METHOD = (m === 'pchip') ? 'pchip' : 'haganwest'; }
+function getForwardCurveMethod() { return FWD_CURVE_METHOD; }
+
+// Numerische Par-Kurve (ganzzahlige Jahres-Tenors + Dezimal-Rates) direkt aus den
+// normalisierten Forward-Daten (kein DOM-Reparse). Dedupliziert + aufsteigend sortiert.
+function parCurveFromData(dataToUse) {
+  const seen = new Set(); const rows = [];
+  for (const r of (dataToUse || [])) {
+    const y = parseInt(String(r.YEAR).replace(/[^\d.-]/g, ''), 10);
+    const v = Number(r.RATES);
+    if (!Number.isFinite(y) || !Number.isFinite(v) || seen.has(y)) continue;
+    seen.add(y); rows.push([y, v]);
+  }
+  rows.sort((a, b) => a[0] - b[0]);
+  return { marketTenors: rows.map(r => r[0]), parRates: rows.map(r => r[1]) };
+}
 
 // Forwards hat eine EIGENE Auswahl, unabhängig von Interest Rates.
 let fwdSelectedCurrency = 'EUR';
@@ -49,6 +70,17 @@ function populateForwardSelectors() {
     fwdSelectedCurveId = e.target.value;
     handleFWDData();
   };
+
+  // Kurven-Methode Hagan-West <-> PCHIP: Auswahl uebernehmen + beide Charts neu zeichnen.
+  const methodSel = document.getElementById('fwdCurveMethodSelector');
+  if (methodSel) {
+    methodSel.value = getForwardCurveMethod();
+    methodSel.onchange = (e) => {
+      setForwardCurveMethod(e.target.value);
+      handleFWDData();
+      if (window.forwardSwapChartInstance) { try { handleSwapForwardCurve(); } catch (_) {} }
+    };
+  }
 }
 
 
@@ -488,7 +520,7 @@ export function renderFWDChart(datasets) {
     datasets,
     'FWDlineChart',
     'Interest Rates and Forwards',
-    3
+    0
   );
   FWDlineChart.update();
 }
@@ -517,50 +549,28 @@ export function handleFWDData(receivedData, applyCubicSpline) {
   const table = renderForwardBaseTable(FWDDataContainer, dataToUse);
   if (!table) return;
 
-  // 4) Swap-Kurve aus Tabelle ziehen
-  let { swapRates, swapYears } = extractSwapCurveFromTable(table);
-  if (!swapRates.length || !swapYears.length) return;
+  // 4) Par-Kurve numerisch aus dataToUse (kein DOM-Reparse) + fachlich korrekte
+  //    Kurven-Konstruktion (einmaliger Bootstrap + gekoppelter Gap-Root-Find,
+  //    Hagan-West/PCHIP). Ersetzt extractSwapCurveFromTable + interpolateSwapCurve.
+  const { marketTenors, parRates } = parCurveFromData(dataToUse);
+  if (marketTenors.length < 2) return;
 
-  // 5) Interpolation + optional Spline
-  //({ swapRates, swapYears } = enrichSwapCurve(swapRates, swapYears, true));
-  //swapRates = interpolateSwapCurve(swapYears, swapRates, 30);
+  const maxYear = 30;
+  const { DF } = buildDiscountCurve(marketTenors, parRates, { method: getForwardCurveMethod(), maxYear });
 
-  ({ swapYears, swapRates } = interpolateSwapCurve(swapYears, swapRates, 30));
+  const swapYears = Array.from({ length: maxYear }, (_, i) => i + 1);
+  const swapRates = swapYears.map(y => parRateFromDF(DF, y) * 100);                     // Par-Kurve in %
+  const cms = (L) => swapYears.map(Y => (Y + L <= maxYear) ? parForwardSwapRate(DF, Y, Y + L) * 100 : null);
+  const forwardRatesCMS1 = cms(cms1Length);
+  const forwardRatesCMS2 = cms(cms2Length);
 
-  swapYears = Array.from({ length: 30 }, (_, i) => i + 1);
+  // 5) Tabelle inkl. CMS-Spalten neu aufbauen
+  rebuildForwardTableWithCms(table, swapYears, swapRates, forwardRatesCMS1, forwardRatesCMS2, cms1Length, cms2Length);
 
-  // 6) CMS-Forwards berechnen
-  const { forwardRatesCMS1, forwardRatesCMS2 } = computeCmsForwards(
-    swapRates,
-    cms1Length,
-    cms2Length
-  );
-
-  // 7) Tabelle inkl. CMS-Spalten neu aufbauen
-  rebuildForwardTableWithCms(
-    table,
-    swapYears,
-    swapRates,
-    forwardRatesCMS1,
-    forwardRatesCMS2,
-    cms1Length,
-    cms2Length
-  );
-
-  // 8) Datasets fÃ¼r Chart erstellen
-  const datasets = createForwardDatasets(
-    swapYears,
-    swapRates,
-    forwardRatesCMS1,
-    forwardRatesCMS2,
-    cms1Length,
-    cms2Length
-  );
-
-  // 9) Chart rendern
+  // 6) Datasets + Chart
+  const datasets = createForwardDatasets(swapYears, swapRates, forwardRatesCMS1, forwardRatesCMS2, cms1Length, cms2Length);
   renderFWDChart(datasets);
 
-  // 10) Preview informieren
   notifyRiskPreview();
 }
 
@@ -584,6 +594,11 @@ function linearInterpolateRates(swapRates, startYear, endYear, startIndex, endIn
   return interpolatedRates;
 }
 
+// DEPRECATED / nicht mehr aufgerufen: ersetzt durch curveConstruction.buildDiscountCurve
+// (fachlich korrekter Bootstrap + Hagan-West/PCHIP). Ehemals log-lineare DF-Interpolation
+// mit Par/Zero-Vermischung -> kuenstliche Sprünge/Plateaus, kein exaktes Repricing.
+// Ebenfalls abgeloest und ungenutzt: extractSwapCurveFromTable, computeCmsForwards,
+// calculateSwapForwardCurve. (Bewusst nicht geloescht, um den Diff klein zu halten.)
 function interpolateSwapCurve(swapYears, swapRates, maxYear = 30) {
   const years = swapYears.filter(y => y <= maxYear);
   const rates = swapRates.slice(0, years.length);
@@ -825,69 +840,37 @@ export function handleSwapForwardCurve() {
     return;
   }
 
-  const container = document.getElementById('FWDDataContainer');
-  if (!container) {
-    console.warn('handleSwapForwardCurve: #FWDDataContainer not found');
-    return;
-  }
+  // Kurve aus der AKTUELLEN Auswahl fachlich korrekt konstruieren (kein DOM-Reparse,
+  // kein Doppel-Bootstrap). Ersetzt calculateSwapForwardCurve.
+  const dataToUse = prepareForwardData();
+  if (!dataToUse) return;
+  const { marketTenors, parRates } = parCurveFromData(dataToUse);
+  if (marketTenors.length < 2) return;
 
-  const table = container.querySelector('#dataTable');
-  if (!table) {
-    console.warn('handleSwapForwardCurve: #dataTable not found in FWDDataContainer');
-    return;
-  }
-
-  const rows = Array.from(table.rows);
-  if (rows.length < 2) {
-    console.warn('handleSwapForwardCurve: no data rows in table');
-    return;
-  }
-
-  // swapRates aus Spalte 3, swapYears aus Spalte 2
-  const swapRates = rows.slice(1).map(row => {
-    const rowData = Array.from(row.cells).map(c => c.textContent.trim());
-    return parseFloat(rowData[2].replace('%', ''));
-  });
-
-  const swapYears = rows.slice(1).map(row => {
-    const rowData = Array.from(row.cells).map(c => c.textContent.trim());
-    return rowData[1]; // e.g. "1Y", "2Y"
-  });
-
-  if (swapRates.length !== swapYears.length) {
-    console.error('handleSwapForwardCurve: Mismatch between swap rates and years.');
-    return;
-  }
-
-  const forwardRates = calculateSwapForwardCurve(swapRates, yearsForwardValue);
-  if (!Array.isArray(forwardRates) || !forwardRates.length) {
-    console.warn('handleSwapForwardCurve: no forwardRates calculated');
-    return;
-  }
-
-  const forwardSwapDataset = {
-    label: `Forward Swap Rates (from year ${yearsForwardValue})`,
-    data: forwardRates.map((rate, index) => ({
-      x: swapYears[index + yearsForwardValue],  // align to forward years
-      y: rate,
-    })),
-    fill: false,
-    borderColor: 'rgba(255, 159, 64, 1)',
-    tension: 0,
-  };
+  const maxYear = 30;
+  const { DF } = buildDiscountCurve(marketTenors, parRates, { method: getForwardCurveMethod(), maxYear });
+  const swapYears = Array.from({ length: maxYear }, (_, i) => i + 1);
 
   const originalSwapDataset = {
     label: 'Original Swap Rates',
-    data: swapRates.map((rate, index) => ({
-      x: swapYears[index],
-      y: rate,
-    })),
+    data: swapYears.map(y => ({ x: `${y}Y`, y: parRateFromDF(DF, y) * 100 })),
     fill: false,
     borderColor: 'rgba(75, 192, 192, 1)',
     tension: 0,
   };
 
-  // alten Chart ggf. zerstÃ¶ren
+  const fwdData = [];
+  for (let m = yearsForwardValue + 1; m <= maxYear; m++) {
+    fwdData.push({ x: `${m}Y`, y: parForwardSwapRate(DF, yearsForwardValue, m) * 100 });
+  }
+  const forwardSwapDataset = {
+    label: `Forward Swap Rates (from year ${yearsForwardValue})`,
+    data: fwdData,
+    fill: false,
+    borderColor: 'rgba(255, 159, 64, 1)',
+    tension: 0,
+  };
+
   if (typeof forwardSwapChart !== 'undefined' && forwardSwapChart) {
     forwardSwapChart.destroy();
   }
@@ -896,7 +879,7 @@ export function handleSwapForwardCurve() {
     [originalSwapDataset, forwardSwapDataset],
     'FWDforwardCurveChart',
     'Swap and Forward Curves',
-    3
+    0
   );
 
   notifyRiskPreview('forwardCurve');

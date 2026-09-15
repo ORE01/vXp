@@ -35,7 +35,7 @@ export const REPORT_DEFAULTS = {
 function formatNowTimestamp() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 // =====================================================================
@@ -1238,6 +1238,15 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const tile = el?.closest?.('.cr-tail-tile');
     const q = tile?.querySelector('div');
     return (q?.textContent || '').replace(/\s+/g, ' ').trim();
+  };
+
+  // Gedaempfter Untertitel (.conc-panel__title) einer Tail-Kachel — die "Erläuterung"
+  // unter dem Titel, die in der App steht (z.B. "Tail loss vs EAD share").
+  const crSubtitleFor = (id) => {
+    const el = ctx.getById(id);
+    const tile = el?.closest?.('.cr-tail-tile');
+    const sub = tile?.querySelector('.conc-panel__title');
+    return (sub?.textContent || '').replace(/\s+/g, ' ').trim();
   };
 
   // Allgemeiner App-Chart-Titel (die "Frage"/Textbeschriftung aus der App) — ersetzt den
@@ -2598,9 +2607,28 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         const funnelId = v.chartId.endsWith('Hist') ? 'crTcmFunnelHist' : 'crTcmFunnelNorm';
         const funnelEl = ctx.getById(funnelId);
         const hasFunnel = !!(funnelEl && funnelEl.querySelectorAll(':scope > div > div').length);
-        ensurePageSpace(scH + 16, `${sectionTitle} (cont.)`);
+        ensurePageSpace(scH + 24, `${sectionTitle} (cont.)`);
         const rowTop = y;
         let bottom = rowTop;
+        // Titel (fett) + Untertitel (gedaempft, max. 2 Zeilen) einer Tail-Kachel zeichnen;
+        // liefert die y-Position, an der der Kachel-Inhalt (Karte/Tabelle) beginnen soll.
+        const drawTileHead = (question, subtitle, x, w) => {
+          let by = rowTop + 4;
+          let has = false;
+          if (question) {
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41);
+            doc.text(doc.splitTextToSize(question, w - 2)[0] || question, x, by);
+            has = true;
+          }
+          if (subtitle) {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(120, 120, 120);
+            const lines = doc.splitTextToSize(subtitle, w - 2).slice(0, 2);
+            lines.forEach((ln, i) => doc.text(ln, x, by + 3 + i * 2.6));
+            by += 3 + Math.max(0, lines.length - 1) * 2.6;
+            has = true;
+          }
+          return has ? by + 2 : rowTop;
+        };
         // Spaltengeometrie
         let funnelX = marginX, funnelW = 0, scX, scW, tcmX, tcmW;
         if (hasFunnel) {
@@ -2621,9 +2649,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         }
         if (hasSc) {
           const scImg = canvasToPngData(scEl);
-          const scQ = crQuestionFor(scatterId);
-          if (scQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(scQ, scW - 4)[0] || scQ, scX, rowTop + 4); }
-          const scTop = scQ ? rowTop + 6 : rowTop;
+          const scTop = drawTileHead(crQuestionFor(scatterId), crSubtitleFor(scatterId), scX, scW);
           drawChartCard(doc, scX, scTop, scW, scH + 8);
           if (scImg?.dataUrl) {
             const srcW = scImg.width || 900, srcH = scImg.height || 520;
@@ -2636,9 +2662,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
           bottom = Math.max(bottom, scTop + scH + 8);
         }
         if (hasTcm) {
-          const tcmQ = crQuestionFor(tcmId);
-          let ty = rowTop;
-          if (tcmQ) { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 31, 41); doc.text(doc.splitTextToSize(tcmQ, tcmW - 4)[0] || tcmQ, tcmX, rowTop + 4); ty = rowTop + 6; }
+          const ty = drawTileHead(crQuestionFor(tcmId), crSubtitleFor(tcmId), tcmX, tcmW);
           safeAutoTable(doc, layout, {
             head: tcmTbl.head && tcmTbl.head.length ? [tcmTbl.head] : undefined,
             body: tcmTbl.body, startY: ty, theme: 'grid',
