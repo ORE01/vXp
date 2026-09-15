@@ -53,6 +53,13 @@ export function bindTradeButtons({ dealsActions, py } = {}) {
   document.getElementById('portfolioDealsAddButton')
     ?.addEventListener('click', dealsActions.handleAddTradeToNewPortfolio);
 
+  // Beim Hineinklicken ins Namensfeld die Vorschlagsliste (vorhandene Portfolios) aktualisieren.
+  const _portNameInput = document.getElementById('PortfolioNameInput');
+  if (_portNameInput && typeof dealsActions.refreshPortfolioNameSuggestions === 'function') {
+    _portNameInput.addEventListener('focus', dealsActions.refreshPortfolioNameSuggestions);
+    dealsActions.refreshPortfolioNameSuggestions();
+  }
+
   // Edit Portfolio: öffnet den Drawer (Formular bleibt im DOM, Handler unverändert).
   document.getElementById('editPortfolioButton')
     ?.addEventListener('click', openEditPortfolioDrawer);

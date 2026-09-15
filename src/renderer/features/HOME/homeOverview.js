@@ -258,7 +258,7 @@ function renderPortfolioCard(port) {
 
   if (!rows.length) {
     ['homePfNotional', 'homePfNav', 'homePfNavRel', 'homePfNavBuy', 'homePfNavBuyRel',
-     'homePfPnl', 'homePfPnlRel', 'homePfYield',
+     'homePfPnl', 'homePfPnlRel', 'homePfYield', 'homePfAvgRating', 'homePfAvgRatingNavBuy', 'homePfAvgRatingNav',
      'homePfPv01', 'homePfPv01Rel', 'homePfCpv01', 'homePfCpv01Rel',
      'homePfVega', 'homePfVegaRel', 'homePfCashPct', 'homePfCashAbs',
      'homePfCpnFix', 'homePfCpnFloat', 'homePfCpnStruct', 'homePfLiq1yPct', 'homePfLiq1yAbs',
@@ -286,6 +286,10 @@ function renderPortfolioCard(port) {
   let liq1yNotional = 0, liq1yCount = 0;         // Nominale/Anzahl mit Restlaufzeit (TtM) < 1 Jahr.
   const fixedCats = appState.getFixedValueCategoryNames?.() || new Set();
   const byIssuer = new Map();
+  // Average Rating (nominalgewichtet): Notch-Summe + gewichtete Nominale ueber die zentrale Skala.
+  let ratingNotchW = 0, ratingNotionalW = 0;
+  let ratingNotchBuyW = 0, ratingBuyW = 0, ratingNotchNavW = 0, ratingNavW = 0;
+  const _ratingOrder = appState.ratingOrder || [];
   for (const r of enriched) {
     const n = numOf(r.NOTIONAL);
     notional += Number.isFinite(n) ? n : 0;
@@ -320,6 +324,16 @@ function renderPortfolioCard(port) {
     if (ttm != null && ttm < 1) { liq1yNotional += _nn; liq1yCount += 1; }
     const iss = String(r.ISSUER ?? '–').trim() || '–';
     byIssuer.set(iss, (byIssuer.get(iss) || 0) + (Number.isFinite(n) ? n : 0));
+    // Average Rating: Notch aus RATINGres (Fallback RATING) x Notional; ungeratete/NR ausgeklammert.
+    const _rt = String(r.RATINGres ?? r.RATING ?? '').trim().toUpperCase();
+    const _notch = _ratingOrder.indexOf(_rt);
+    if (_notch >= 0) {
+      if (Number.isFinite(n) && n > 0) { ratingNotchW += _notch * n; ratingNotionalW += n; }
+      const _navBuyPos = (numOf(r.PRICE_BUY) / 100) * (Number.isFinite(n) ? n : 0);
+      if (_navBuyPos > 0) { ratingNotchBuyW += _notch * _navBuyPos; ratingBuyW += _navBuyPos; }
+      const _navPos = numOf(r.NAV);
+      if (Number.isFinite(_navPos) && _navPos > 0) { ratingNotchNavW += _notch * _navPos; ratingNavW += _navPos; }
+    }
     if (isCash) {
       if (Number.isFinite(n)) cashNotional += n;
       navCash += numOf(r.NAV) || 0;
@@ -327,6 +341,13 @@ function renderPortfolioCard(port) {
   }
 
   setText('homePfNotional', fmtEur(notional));
+  // Average Rating: nominalgewichteter Notch-Durchschnitt -> naechstes Rating-Label der zentralen Skala.
+  const _avgRatingOf = (notchW, wSum) => (wSum > 0 && _ratingOrder.length)
+    ? _ratingOrder[Math.max(0, Math.min(_ratingOrder.length - 1, Math.round(notchW / wSum)))]
+    : '–';
+  setText('homePfAvgRating',       _avgRatingOf(ratingNotchW, ratingNotionalW));
+  setText('homePfAvgRatingNavBuy', _avgRatingOf(ratingNotchBuyW, ratingBuyW));
+  setText('homePfAvgRatingNav',    _avgRatingOf(ratingNotchNavW, ratingNavW));
   // Cash-Kachel: Anteil der nicht bewerteten Kategorien an der Gesamt-Nominale (ein Balken).
   const cashPct = notional ? (cashNotional / notional) * 100 : 0;
   setText('homePfCashPct', notional ? fmtPctRaw(cashPct) : '–');

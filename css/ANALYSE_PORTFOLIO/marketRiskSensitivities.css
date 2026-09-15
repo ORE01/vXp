@@ -51,10 +51,11 @@
   line-height: 1.2;
   color: var(--text-bright);
   font-weight: 700;
-  /* abs + rel NEBENEINANDER in einer Zeile (Zeile 2 der Kachel). */
+  /* abs + rel NEBENEINANDER in einer Zeile (Zeile 2 der Kachel), zentriert wie Label/Trendzeile. */
   display: flex;
   flex-flow: row wrap;
   align-items: baseline;
+  justify-content: center;
   column-gap: 6px;
   min-width: 0;
   white-space: nowrap;

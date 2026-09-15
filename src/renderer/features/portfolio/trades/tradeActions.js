@@ -220,6 +220,34 @@ export function createTradeActions({
     openFillTradeDetailsDrawer({ appState, api, portName: port });
   }
 
+  // Vorhandene Portfolio-Namen (Namensliste + Portfoliodaten), dedupliziert.
+  function getExistingPortfolioNames() {
+    const out = new Set();
+    try {
+      (appState.getPortNameList?.() || []).forEach((t) => {
+        const n = String(t?.table_name ?? t?.port_name ?? '').trim();
+        if (n) out.add(n);
+      });
+    } catch {}
+    try {
+      (appState.getAllPortfolioData?.() || []).forEach((r) => {
+        const n = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
+        if (n) out.add(n);
+      });
+    } catch {}
+    return [...out];
+  }
+
+  // Vorschlagsliste (<datalist>) des Create-Namensfelds mit vorhandenen Namen fuellen.
+  function refreshPortfolioNameSuggestions() {
+    const dl = document.getElementById('existingPortfolioNames');
+    if (!dl) return;
+    dl.innerHTML = getExistingPortfolioNames()
+      .sort((a, b) => a.localeCompare(b))
+      .map((n) => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`)
+      .join('');
+  }
+
   function handleAddTradeToNewPortfolio(event) {
     const port_name = getPortfolioCreationName();
 
@@ -227,6 +255,18 @@ export function createTradeActions({
       showInfo('Please enter a portfolio name first.', () => {
         focusPortfolioCreationName();
       });
+      return;
+    }
+
+    // Duplikat verhindern (case-insensitive): ein bestehendes Portfolio muss erst
+    // geloescht werden, bevor der Name neu vergeben werden kann.
+    const existing = getExistingPortfolioNames();
+    const dup = existing.find((n) => n.toLowerCase() === port_name.toLowerCase());
+    if (dup) {
+      showInfo(
+        `A portfolio named "${dup}" already exists. Please delete the existing portfolio first, then create it again.`,
+        () => { focusPortfolioCreationName(); }
+      );
       return;
     }
 
@@ -246,5 +286,6 @@ export function createTradeActions({
     handleFillDetailsChange,
     prepareCalculateCreate,
     handleAddTradeToNewPortfolio,
+    refreshPortfolioNameSuggestions,
   };
 }

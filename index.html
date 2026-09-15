@@ -361,12 +361,16 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="home-kpi home-nav-link" data-tile="nav_buy" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Open Portfolio"><span class="home-kpi-val" id="homePfNavBuy">–</span><span class="home-kpi-abs" id="homePfNavBuyRel">–</span><span class="home-kpi-trend" id="homePfNavBuyTrend" hidden></span><span class="home-kpi-lbl">Net Asset Value (Buy)</span></div>
           <div class="home-kpi home-nav-link" data-tile="pnl" data-nav-panel="panel-performance-history" role="button" tabindex="0" title="Open Profit/Loss"><span class="home-kpi-val" id="homePfPnl">–</span><span class="home-kpi-abs" id="homePfPnlRel">–</span><span class="home-kpi-lbl">Profit/Loss</span></div>
           <div class="home-kpi home-nav-link" data-tile="yield" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Open Yield"><span class="home-kpi-val" id="homePfYield">–</span><span class="home-kpi-trend" id="homePfYieldTrend" hidden></span><span class="home-kpi-lbl">Yield</span></div>
+          <!-- Average Rating: nominalgewichtetes Durchschnitts-Rating (RATINGres, Fallback RATING); befuellt in renderPortfolioCard. -->
+          <div class="home-kpi home-nav-link" data-tile="avg_rating" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Open Yield"><span class="home-kpi-val" id="homePfAvgRating">–</span><span class="home-kpi-lbl">Average Rating (Notional)</span></div>
+          <div class="home-kpi home-nav-link" data-tile="avg_rating_nav_buy" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Open Yield"><span class="home-kpi-val" id="homePfAvgRatingNavBuy">–</span><span class="home-kpi-lbl">Average Rating (NAV buy)</span></div>
+          <div class="home-kpi home-nav-link" data-tile="avg_rating_nav" data-nav-panel="panel-performance-dashboard" role="button" tabindex="0" title="Open Yield"><span class="home-kpi-val" id="homePfAvgRatingNav">–</span><span class="home-kpi-lbl">Average Rating (NAV)</span></div>
           <div class="home-kpi home-nav-link" data-tile="pv01" role="button" tabindex="0" title="Open PV01 sensitivity"><span class="home-kpi-val" id="homePfPv01">–</span><span class="home-kpi-abs" id="homePfPv01Rel">–</span><span class="home-kpi-lbl">PV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="cpv01" role="button" tabindex="0" title="Open CPV01 sensitivity"><span class="home-kpi-val" id="homePfCpv01">–</span><span class="home-kpi-abs" id="homePfCpv01Rel">–</span><span class="home-kpi-lbl">CPV01</span></div>
           <div class="home-kpi home-nav-link" data-tile="vega" role="button" tabindex="0" title="Open Vega sensitivity"><span class="home-kpi-val" id="homePfVega">–</span><span class="home-kpi-abs" id="homePfVegaRel">–</span><span class="home-kpi-lbl">Vega</span></div>
           <div class="home-kpi home-nav-link" data-tile="cash" role="button" tabindex="0" title="Open Category setup"><span class="home-kpi-val" id="homePfCashPct">–</span><span class="home-kpi-abs" id="homePfCashAbs">–</span><span class="home-kpi-trend" id="homePfCashTrend" hidden></span><span class="home-kpi-lbl">not Valued</span></div>
           <!-- Liquidity < 1y: Anteil (Nominale) der Produkte mit Restlaufzeit (TtM) < 1 Jahr (inkl. 0/bereits faellig). Befuellt in renderPortfolioCard. -->
-          <div class="home-kpi" data-tile="liq_1y" title="Products maturing within 1 year — incl. already matured (% of notional)"><span class="home-kpi-val" id="homePfLiq1yPct">–</span><span class="home-kpi-abs" id="homePfLiq1yAbs">–</span><span class="home-kpi-trend" id="homePfLiq1yTrend" hidden></span><span class="home-kpi-lbl">Liquidity &lt; 1y</span></div>
+          <div class="home-kpi home-nav-link" data-tile="liq_1y" data-nav-panel="panel-liquidity-dash" role="button" tabindex="0" title="Products maturing within 1 year — incl. already matured (% of notional)"><span class="home-kpi-val" id="homePfLiq1yPct">–</span><span class="home-kpi-abs" id="homePfLiq1yAbs">–</span><span class="home-kpi-trend" id="homePfLiq1yTrend" hidden></span><span class="home-kpi-lbl">Liquidity &lt; 1y</span></div>
           <!-- IR-Duration-Split-Kachel (pf-dur-Style, vollbreit): 2-Segment-Balken nach Nominale
                (nicht bewertet | bewertet). Links "not Valued 0Y", ueber dem bewerteten Segment die
                IR-Duration aufs bewertete NAV; am Balkenende Ø = IR-Duration aufs Gesamt-NAV. -->
@@ -391,7 +395,7 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
           </div>
           <!-- Coupon-Type-Verteilung (nach Nominale): FIX / FLOAT (FLOATER) / STRUCTURED (Rest, z.B. CUSTOM). -->
-          <div class="home-kpi home-kpi--wide pf-cpn-tile" data-tile="coupon_type" title="Coupon type breakdown (% of notional)">
+          <div class="home-kpi home-kpi--wide pf-cpn-tile home-nav-link" data-tile="coupon_type" data-nav-panel="panel-selectPort" role="button" tabindex="0" title="Coupon type breakdown (% of notional)">
             <div class="pf-dur-cap">Coupon Type</div>
             <div class="pf-cpn-row">
               <div class="pf-cpn-cell"><span class="pf-cpn-val" id="homePfCpnFix">–</span><span class="pf-cpn-lbl">FIX</span></div>
@@ -1496,6 +1500,18 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="conc-kpi">
               <div class="conc-kpi__lbl">Profit / Loss</div>
               <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Avg Rating · Notional</div>
+              <div class="conc-kpi__val" id="perfKpiAvgRatingNotional">–</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Avg Rating · NAV buy</div>
+              <div class="conc-kpi__val" id="perfKpiAvgRatingNavBuy">–</div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Avg Rating · NAV</div>
+              <div class="conc-kpi__val" id="perfKpiAvgRatingNav">–</div>
             </div>
           </div>
         </div>
@@ -3442,7 +3458,8 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="cp-form-grid">
             <label for="PortfolioNameInput">New Portfolio Name:</label>
             <div class="cp-field">
-              <input type="text" id="PortfolioNameInput" class="input-field" />
+              <input type="text" id="PortfolioNameInput" class="input-field" list="existingPortfolioNames" autocomplete="off" />
+              <datalist id="existingPortfolioNames"></datalist>
             </div>
 
             <label for="PortfolioTagInputField">Tag selection <small>(optional)</small>:</label>

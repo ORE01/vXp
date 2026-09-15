@@ -21,6 +21,9 @@ export const OVERVIEW_TILES = [
   { key: 'nav_buy',         label: 'Net Asset Value (Buy)' },
   { key: 'pnl',             label: 'Profit/Loss' },
   { key: 'yield',           label: 'Yield' },
+  { key: 'avg_rating',         label: 'Average Rating (Notional)' },
+  { key: 'avg_rating_nav_buy', label: 'Average Rating (NAV buy)' },
+  { key: 'avg_rating_nav',     label: 'Average Rating (NAV)' },
   { key: 'ir_duration',     label: 'Interest Rate Duration' },
   { key: 'cs_duration',     label: 'Credit Spread Duration' },
   { key: 'pv01',            label: 'PV01' },
@@ -119,9 +122,12 @@ let _visible = null;
 // tile_key -> 'abs' | 'rel'. null = not loaded yet -> 'abs' default.
 let _mode = null;
 
+// Kacheln, die standardmaessig AUS sind (opt-in), solange der Kunde nichts gespeichert hat.
+const DEFAULT_HIDDEN_TILES = new Set(['avg_rating_nav_buy', 'avg_rating_nav']);
+
 function isVisible(key) {
-  if (!_visible) return true;
-  return _visible.get(key) !== false; // default visible when a key is missing
+  if (_visible && _visible.has(key)) return _visible.get(key) !== false;
+  return !DEFAULT_HIDDEN_TILES.has(key); // ungespeichert: nur opt-in-Kacheln sind aus
 }
 
 function currentMode(key) {

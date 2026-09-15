@@ -271,6 +271,52 @@ function ensureZoomResetButton(canvasId) {
   box.appendChild(btn);
 }
 
+// Perioden-Buttons (1Y/5Y/10Y) fuer datumsbasierte Charts: zoomen die x-Achse auf die
+// letzten N Jahre der vorhandenen Labels. Stil wie in "Product Yield vs reference curve",
+// links neben dem "Reset Zoom" (= alles anzeigen). Idempotent.
+function ensurePerfValuePeriodButtons(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const box = canvas?.parentElement;
+  if (!box) return;
+  if (getComputedStyle(box).position === "static") box.style.position = "relative";
+  if (box.querySelector(".perf-val-period")) return;
+
+  const bar = document.createElement("div");
+  bar.className = "perf-val-period";
+  bar.style.cssText = "position:absolute;top:4px;right:84px;z-index:6;display:flex;gap:3px;";
+
+  const applyYears = (yrs) => {
+    try {
+      const ch = window.Chart.getChart(document.getElementById(canvasId));
+      const labels = ch?.data?.labels || [];
+      if (!ch || !labels.length) return;
+      const lastD = new Date(labels[labels.length - 1]);
+      if (isNaN(lastD)) return;
+      const cutoff = new Date(lastD);
+      cutoff.setFullYear(cutoff.getFullYear() - yrs);
+      let idx = 0;
+      for (let i = 0; i < labels.length; i++) { if (new Date(labels[i]) >= cutoff) { idx = i; break; } }
+      ch.zoomScale?.("x", { min: idx, max: labels.length - 1 }, "default");
+    } catch {}
+  };
+
+  const mkBtn = (label, yrs, title) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.title = title;
+    b.style.cssText =
+      "font-size:10px;padding:2px 7px;border:1px solid #cbd5e1;border-radius:4px;" +
+      "background:#f8fafc;color:#334155;cursor:pointer;";
+    b.addEventListener("click", () => applyYears(yrs));
+    return b;
+  };
+
+  [[1, "1Y"], [5, "5Y"], [10, "10Y"]].forEach(([yrs, lbl]) =>
+    bar.appendChild(mkBtn(lbl, yrs, `Show last ${yrs} year${yrs > 1 ? "s" : ""}`)));
+  box.appendChild(bar);
+}
+
 
 // HISORIC CHARTS:      
 
@@ -1220,10 +1266,107 @@ export function renderSensHistorySingle(canvasId, historyData, { keys, label, bo
     console.error(`💥 Fehler beim Erzeugen von ${canvasId}:`, err);
   }
 }
+// Ohne gespeicherte History kann der Performance-Value-Chart (perfHistValueChart)
+// trotzdem gezeichnet werden — allein aus der Backtest-Synth-Kurve. Die Achse nutzt
+// MONATLICHE Stuetzpunkte (jeweils Monatsletzter) ueber die Synth-Spanne, damit der
+// Chart dem normalen aehnlich sieht. Value = Synth-Rohwert(~100)/100 (Verhaeltnis,
+// endet am aktuellen Wert, da die Kurve darauf normiert ist), Buy = konstant 100 %,
+// P&L-Balken = Value - Buy. Gibt true zurueck, wenn tatsaechlich gezeichnet wurde.
+function _drawSyntheticOnlyValueChart(canvasId) {
+  const synth = window.__synthPortfolioCurve;
+  const raw = Array.isArray(synth?.points) ? synth.points : [];
+  const sel = String(appState.getSelectedPortTableName?.() ?? "").trim();
+  if (!raw.length) return false;
+  if (synth.portName && String(synth.portName).trim() !== sel) return false;
+
+  const pts = raw
+    .map(p => ({ t: new Date(p.x).getTime(), y: Number(p.y) }))
+    .filter(p => Number.isFinite(p.t) && Number.isFinite(p.y))
+    .sort((a, b) => a.t - b.t);
+  if (pts.length < 2) return false;
+  const tMin = pts[0].t, tMax = pts[pts.length - 1].t;
+
+  // Monatsletzte ueber die Synth-Spanne (new Date(y, m+1, 0) = letzter Tag von Monat m).
+  const _eom = (y, m) => new Date(y, m + 1, 0);
+  const first = new Date(tMin), lastEom = _eom(new Date(tMax).getFullYear(), new Date(tMax).getMonth());
+  const months = [];
+  let cur = _eom(first.getFullYear(), first.getMonth());
+  while (cur.getTime() <= lastEom.getTime()) {
+    months.push(new Date(cur));
+    cur = _eom(cur.getFullYear(), cur.getMonth() + 1);
+  }
+  if (!months.length) return false;
+
+  // Lineare Interpolation des Synth-Rohwerts auf ein Datum; ausserhalb -> Randwert.
+  const interp = (lt) => {
+    if (lt <= tMin) return pts[0].y;
+    if (lt >= tMax) return pts[pts.length - 1].y;
+    let hi = 1;
+    while (hi < pts.length && pts[hi].t < lt) hi++;
+    const a = pts[hi - 1], b = pts[hi];
+    const span = (b.t - a.t) || 1;
+    return a.y + (lt - a.t) / span * (b.y - a.y);
+  };
+
+  const labels      = months.map(d => d.toISOString().slice(0, 10));
+  const valueSeries = months.map(d => interp(d.getTime()) / 100);   // Verhaeltnis ~1.0
+  const buySeries   = months.map(() => 1);                          // 100 %
+  const pnlSeries   = valueSeries.map(v => v - 1);                  // Value - Buy
+
+  destroyChartByCanvasId(canvasId);
+  const data = {
+    labels,
+    datasets: [
+      { type: "line", label: "Current Portfolio Backtest", data: valueSeries,
+        borderColor: getPortfolioColor(1).borderColor, backgroundColor: "transparent",
+        borderDash: [6, 4], fill: false,
+        borderWidth: 2, pointRadius: 0, tension: 0.2, yAxisID: "y" },
+      { type: "line", label: "Portfolio Value (Buy)", data: buySeries,
+        borderColor: "rgba(54, 162, 235, 1)", backgroundColor: "rgba(54, 162, 235, 0.15)",
+        borderWidth: 2, pointRadius: 0, tension: 0.2, yAxisID: "y" },
+      { type: "bar", label: "Profit/Loss", data: pnlSeries, yAxisID: "y1",
+        backgroundColor: pnlSeries.map(v => (Number(v) >= 0 ? "rgba(46,204,113,0.6)" : "rgba(211,70,70,0.6)")),
+        borderColor: pnlSeries.map(v => (Number(v) >= 0 ? "rgba(46,204,113,1)" : "rgba(211,70,70,1)")),
+        borderWidth: 1 },
+    ],
+  };
+
+  const options = createPercentChartOptions("Portfolio Value / Notional (%)");
+  // Oberes Band reservieren, damit die Zoom-/Perioden-Buttons nicht die (rechte) Achse verdecken.
+  options.layout = { padding: { top: 28 } };
+  const finiteVals = valueSeries.filter(v => Number.isFinite(v));
+  const dataMin = finiteVals.length ? Math.min(...finiteVals) : 0.9;
+  options.scales.y = { ...options.scales.y, min: Math.min(0.9, dataMin - 0.02), beginAtZero: false, title: { display: false } };
+  options.scales.y1 = {
+    position: "right", title: { display: false },
+    ticks: { callback: (val) => { const n = Number(val); return isNaN(n) ? "" : (n * 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %"; } },
+    grid: { drawOnChartArea: false }
+  };
+  options.plugins.legend = { display: true, position: "right", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 10, boxHeight: 10, font: { size: 10 } } };
+  ensureFixedTooltipPositioner();
+  options.plugins.tooltip.position = "histFixedCorner";
+  options.plugins.tooltip.caretSize = 0;
+  ensureHistCrosshairPlugin();
+  options.plugins.histCrosshair = { enabled: true };
+
+  createTimeSeriesChart(canvasId, data, options, "bar");
+  ensureZoomResetButton(canvasId);
+  ensurePerfValuePeriodButtons(canvasId);
+  return true;
+}
+
 function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPortfolioValueChart") {
   historyData = Array.isArray(historyData) ? historyData : [];
 
   if (historyData.length === 0) {
+    // Ohne History: normalerweise nichts. Ausnahme perfHistValueChart mit Synth-Kurve
+    // -> vollen Chart allein aus der Synth-Kurve zeichnen (uebrige Linien = 100 %/abgeleitet).
+    if (canvasId === "perfHistValueChart") {
+      try { if (_drawSyntheticOnlyValueChart(canvasId)) return; }
+      catch (e) { console.warn("[perfHistValue] synthetic-only draw failed", e); }
+      destroyChartByCanvasId(canvasId);
+      return;
+    }
     destroyChartByCanvasId("historicMarketRiskChart");
     return;
   }
@@ -1302,7 +1445,67 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
     ]
   };
 
+// Synthetic Portfolio Value (Backtest-Kurve) als ZUSAETZLICHE Linie — nur im
+// Performance-Panel-Value-Chart. Bestehende Datasets/Achsen/Optionen bleiben
+// unangetastet; es wird ausschliesslich ein weiteres Dataset angehaengt.
+// Variante B: Synth-Werte werden auf die vorhandenen History-Stichtage interpoliert
+// (ausserhalb der Synth-Spanne -> null, keine irrefuehrende flache Linie) und mit
+// EINEM Endwert-Faktor skaliert, sodass der letzte gezeigte Punkt exakt auf dem
+// aktuellen Portfolio-Wert (Value/Notional) sitzt.
+if (_perf) {
+  try {
+    const synth = window.__synthPortfolioCurve;
+    const raw = Array.isArray(synth?.points) ? synth.points : [];
+    const curPort = String(appState.getSelectedPortTableName?.() ?? "").trim();
+    if (raw.length && (!synth.portName || String(synth.portName).trim() === curPort)) {
+      const pts = raw
+        .map(p => ({ t: new Date(p.x).getTime(), y: Number(p.y) }))
+        .filter(p => Number.isFinite(p.t) && Number.isFinite(p.y))
+        .sort((a, b) => a.t - b.t);
+      if (pts.length >= 2) {
+        const tMin = pts[0].t, tMax = pts[pts.length - 1].t;
+        // lineare Interpolation des Synth-Rohwerts (~100) auf ein Datum; ausserhalb -> null.
+        const interp = (lt) => {
+          if (!Number.isFinite(lt) || lt < tMin || lt > tMax) return null;
+          let hi = 1;
+          while (hi < pts.length && pts[hi].t < lt) hi++;
+          const a = pts[hi - 1], b = pts[hi] || a;
+          const span = (b.t - a.t) || 1;
+          return a.y + (lt - a.t) / span * (b.y - a.y);
+        };
+        // Synth-Rohwert je Chart-Stichtag.
+        const synthRaw = labels.map(d => interp(new Date(d).getTime()));
+        const _lastOf = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { const v = arr[i]; if (v != null && Number.isFinite(v)) return v; } return null; };
+        const anchor    = _lastOf(portValuePct);   // aktueller Value/Notional (letzter echter Punkt)
+        const synthLast = _lastOf(synthRaw);        // letzter gezeigter Synth-Rohwert
+        const ratio = (anchor != null && synthLast) ? (anchor / synthLast) : null;
+        if (ratio != null) {
+          const synthSeries = synthRaw.map(v => (v == null ? null : v * ratio));
+          data.datasets.push({
+            type: "line",
+            label: "Current Portfolio Backtest",
+            data: synthSeries,
+            borderColor: getPortfolioColor(1).borderColor,
+            backgroundColor: "transparent",
+            borderDash: [6, 4],
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            yAxisID: "y",
+            spanGaps: true,
+          });
+        }
+      }
+    }
+  } catch (e) { console.warn("[perfHistValue] synthetic overlay failed", e); }
+}
+
 const options = createPercentChartOptions("Portfolio Value / Notional (%)");
+
+// Oberes Band reservieren (nur Performance-Panel), damit die Zoom-/Perioden-Buttons
+// nicht die (rechte) Achse verdecken.
+if (_perf) options.layout = { padding: { top: 28 } };
 
 // linke Y-Achse explizit überschreiben/nachschärfen
 options.scales.y = {
@@ -1346,6 +1549,7 @@ options.plugins.histCrosshair = { enabled: true };
 const _valueChart = createTimeSeriesChart(canvasId, data, options, "bar");
 if (canvasId === "historicPortfolioValueChart") historicPortfolioValueChart = _valueChart;
 ensureZoomResetButton(canvasId);
+if (canvasId === "perfHistValueChart") ensurePerfValuePeriodButtons(canvasId);
 
 }
 
@@ -1659,13 +1863,25 @@ export function renderPerformanceHistoryCopies() {
   const hist = Array.isArray(all)
     ? all.filter(r => String(r?.port_name ?? "").trim() === sel)
     : [];
-  if (!sel || !hist.length) {
+  if (!sel) {
     destroyChartByCanvasId("perfHistYieldChart");
     destroyChartByCanvasId("perfHistValueChart");
     return;
   }
   ensurePerfHistCompareDropdown();   // Vergleichs-Zins-Dropdown befuellen/binden
-  renderHistoricPortfolioYieldChart(hist, "perfHistYieldChart");
+
+  // Synth-Backtest-Kurve fuers AKTUELLE Portfolio sicherstellen (ohne Neuberechnung):
+  // beim reinen Portfolio-Wechsel laeuft handleSummaryMarketRiskData nicht, die gecachte
+  // Kurve waere sonst veraltet -> Value-Chart (v.a. der Synth-only-Fall) bliebe leer.
+  try {
+    const c = window.__synthPortfolioCurve;
+    if (!c || String(c.portName ?? "").trim() !== sel) window.__ensureSyntheticCurve?.(sel);
+  } catch (e) { console.warn("[perfHist] ensure synthetic curve failed", e); }
+
+  // Yield-Chart nur mit History (keine Synth-Linie); Value-Chart auch OHNE History,
+  // dann zeichnet er sich allein aus der Backtest-Synth-Kurve (Synth-only, monatlich).
+  if (hist.length) renderHistoricPortfolioYieldChart(hist, "perfHistYieldChart");
+  else destroyChartByCanvasId("perfHistYieldChart");
   renderHistoricPortfolioValueChart(hist, "perfHistValueChart");
 }
 

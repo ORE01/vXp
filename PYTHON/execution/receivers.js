@@ -95,7 +95,15 @@ export function createPythonExecutionReceivers(ctx) {
       homeModal.style.visibility !== 'hidden' &&
       !homeModal.classList.contains('home-behind');
 
-    if (!inRiskView && !onOverview) {
+    // Auch in der VALUATION-Ansicht (z.B. Performance / Profit & Loss) NICHT auf die
+    // Select-Portfolio-Uebersicht wegspringen: der User bleibt auf seinem aktuellen
+    // Panel, es refresht nur mit den neuen Zahlen.
+    const inValuationView =
+      !!analyseModal &&
+      analyseModal.classList.contains('view-analyse') &&
+      analyseModal.style.visibility !== 'hidden';
+
+    if (!inRiskView && !inValuationView && !onOverview) {
       document.getElementById('ANALYSE_Tab')?.click();
 
       // Open the Select Portfolio sub-panel (only if not already open, so a

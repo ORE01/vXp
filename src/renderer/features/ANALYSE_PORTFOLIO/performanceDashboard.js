@@ -103,20 +103,48 @@ export function renderPerformanceDashboard() {
   const portYield = sumNotional ? (sumYtmPort / sumNotional) : null;
   const _yieldTxt = portYield != null ? `${fmtNum(portYield * 100, 2)} %` : '–';
 
+  // Average Rating je Gewichtung (Notional / NAV buy / NAV): Notch aus RATINGres
+  // (Fallback RATING) ueber appState.ratingOrder; NR/ungeratet ausgeklammert.
+  const _ratingOrder = appState.ratingOrder || [];
+  let _rnNot = 0, _wNot = 0, _rnBuy = 0, _wBuy = 0, _rnNav = 0, _wNav = 0;
+  for (const r of (Array.isArray(posRows) ? posRows : [])) {
+    const p = String(r?.port_name ?? r?.PORT_NAME ?? '').trim();
+    if (port && p && p !== port) continue;
+    const notch = _ratingOrder.indexOf(String(r.RATINGres ?? r.RATING ?? '').trim().toUpperCase());
+    if (notch < 0) continue;
+    const notional = _num(r.NOTIONAL ?? r.notional);
+    const priceBuy = _num(r.PRICE_BUY ?? r.price_buy);
+    const nav      = _num(r.NAV ?? r.nav ?? r.NAV_BASE);
+    const navBuy   = (Number.isFinite(notional) && Number.isFinite(priceBuy)) ? (priceBuy / 100) * notional : null;
+    if (Number.isFinite(notional) && notional > 0) { _rnNot += notch * notional; _wNot += notional; }
+    if (Number.isFinite(navBuy)   && navBuy   > 0) { _rnBuy += notch * navBuy;   _wBuy += navBuy; }
+    if (Number.isFinite(nav)      && nav      > 0) { _rnNav += notch * nav;      _wNav += nav; }
+  }
+  const _avgRatingLabel = (notchW, wSum) => (wSum > 0 && _ratingOrder.length)
+    ? _ratingOrder[Math.max(0, Math.min(_ratingOrder.length - 1, Math.round(notchW / wSum)))]
+    : '–';
+  const _avgRatingNotional = _avgRatingLabel(_rnNot, _wNot);
+  const _avgRatingNavBuy   = _avgRatingLabel(_rnBuy, _wBuy);
+  const _avgRatingNav      = _avgRatingLabel(_rnNav, _wNav);
+
   // --- KPIs ---
   // PORTFOLIO YIELD = live gewichtete Yield (ytmPortA/Notional). Alles in EINER Kachel:
   // gross der aktuelle Yield, darunter bp-Aenderung ggü. Vorperiode + deren Yield + Datum.
   _setText('perfKpiReturn', _yieldTxt);
   _setText('perfKpiErtrag', _eur(ertrag));
-  // 2. Zeile der Portfolio-Yield-Kachel, z.B. "↑ 9 bp vs previous yield 1.89 % (2025-10-31)".
+  _setText('perfKpiAvgRatingNotional', _avgRatingNotional);
+  _setText('perfKpiAvgRatingNavBuy',   _avgRatingNavBuy);
+  _setText('perfKpiAvgRatingNav',      _avgRatingNav);
+  // bp-Aenderung ggue. Vorperiode (fuer App-Kachel + PDF-Spiegel).
+  const _retChg = (portYield != null && prevRet != null)
+    ? { up: (portYield - prevRet) >= 0, bp: Math.abs(Math.round((portYield - prevRet) * 10000)) }
+    : null;
+  // 2. Zeile der Portfolio-Yield-Kachel: Kreis-Pfeil-Badge + Aenderung in bp (ohne Datum).
   const retDelta = document.getElementById('perfKpiReturnDelta');
   if (retDelta) {
-    if (portYield != null && prevRet != null) {
-      const dBp = (portYield - prevRet) * 10000;
-      const prevDate = String((hist[hist.length - 2] || {}).DATE ?? '').split(' ')[0];
-      const dateStr = prevDate ? ` (${prevDate})` : '';
-      retDelta.textContent =
-        `${dBp >= 0 ? '↑' : '↓'} ${Math.abs(Math.round(dBp))} bp vs previous yield ${fmtNum(prevRet * 100, 2)} %${dateStr}`;
+    if (_retChg) {
+      retDelta.innerHTML =
+        `<span class="perf-chg-badge ${_retChg.up ? 'is-up' : 'is-down'}">${_retChg.up ? '↗' : '↘'}</span> ${_retChg.bp} bp`;
       retDelta.style.display = '';
     } else {
       retDelta.style.display = 'none';
@@ -129,11 +157,14 @@ export function renderPerformanceDashboard() {
     // PDF-Band an die App-Kacheln angleichen: dieselben zwei KPIs wie im Yield-Panel
     // (Portfolio Yield + Profit / Loss in EUR).
     const kpiRows = [
-      ['Portfolio Yield', _yieldTxt],
-      ['Profit / Loss', _eur(ertrag)],
+      ['Portfolio Yield', _yieldTxt, _retChg ? { up: _retChg.up, chg: `${_retChg.bp} bp` } : null],
+      ['Profit / Loss', _eur(ertrag), null],
+      ['Avg Rating · Notional', _avgRatingNotional, null],
+      ['Avg Rating · NAV buy',  _avgRatingNavBuy,   null],
+      ['Avg Rating · NAV',      _avgRatingNav,      null],
     ];
     kpiTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-      kpiRows.map(([k, v]) => `<tr><td>${_esc(k)}</td><td>${_esc(v)}</td></tr>`).join('')
+      kpiRows.map(([k, v, tr]) => `<tr><td>${_esc(k)}</td><td${tr ? ` data-up="${tr.up ? 1 : 0}" data-chg="${_esc(tr.chg)}"` : ''}>${_esc(v)}</td></tr>`).join('')
     }</tbody></table>`;
   }
 

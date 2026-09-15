@@ -1363,6 +1363,33 @@ function drawSynthVarChart(labels, impBond, impPort, bondLabel, portLabel, bondC
   ensureDistZoomTools(canvas, 'synthVarChartInstance');
 }
 
+// Stellt sicher, dass die Synth-Backtest-Kurve fuer das aktuelle Portfolio berechnet und
+// gecacht ist (window.__synthPortfolioCurve), OHNE Python-Neuberechnung: nutzt die
+// Portfolio-Aggregate (getPortAggData) fuer PV01/CPV01/Value. Wird vom Performance-Panel
+// beim Portfolio-Wechsel aufgerufen, weil handleSummaryMarketRiskData dort nicht laeuft.
+// Ueber window bereitgestellt, um einen Import-Zyklus mit historicRiskMetrics.js zu vermeiden.
+export function ensureSyntheticCurve(port_name) {
+  const portfolioData = appState.getPortAggData('portDataContainer0') || {};
+  const num = (x) => Number(String(x ?? '').replace(/[^\d.-]/g, '').replace(',', ''));
+  const portValue    = num(portfolioData.formPortValue);
+  const portNotional = num(portfolioData.formPortNotional);
+  const portPV01     = num(portfolioData.formPortPV01);
+  const portCPV01    = num(portfolioData.formPortCPV01);
+  let portfolioEndValue = 100;
+  if (Number.isFinite(portValue) && Number.isFinite(portNotional) && portNotional !== 0) {
+    portfolioEndValue = (portValue / portNotional) * 100;
+  }
+  if (!Number.isFinite(portPV01)) return false;
+  try {
+    drawSyntheticPortfolioChart(portfolioEndValue, portPV01, 5, Number.isFinite(portCPV01) ? portCPV01 : 0, port_name);
+    return true;
+  } catch (e) {
+    console.warn('[SYNTH CHART] ensureSyntheticCurve failed:', e);
+    return false;
+  }
+}
+try { window.__ensureSyntheticCurve = ensureSyntheticCurve; } catch (_) {}
+
 function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM = 5, portCPV01 = 0, portName = null) {
   // Fuer Re-Renders durch Dropdown-/Factor-Map-Aenderungen merken.
   __synthChartArgs = { targetEndValue, portPV01, testTtM, portCPV01, portName };
@@ -1437,6 +1464,9 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
 
   const syntheticData = normalizeCurveToEndValue(rawSynthetic, targetEndValue);
   const portfolioData = normalizeCurveToEndValue(rawPortfolio, targetEndValue);
+  // Synth-Portfolio-Wertkurve fuer die Wiederverwendung im Performance-Value-Chart
+  // (perfHistValueChart) cachen. Normiert auf portfolioEndValue (~100) -> dort /100.
+  try { window.__synthPortfolioCurve = { portName, label: portLabel, points: portfolioData }; } catch {}
 
   const cmbValueDataset = {
     label: `Synthetic Portfolio (${ttm}Y ${rating})`,

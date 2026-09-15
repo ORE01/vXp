@@ -203,6 +203,30 @@ function wireRiskCalcStatus() {
   });
 }
 
+// Beim Wechsel des Analyse-Portfolios sind die „fertig gerechnet"-Punkte nicht
+// mehr aussagekräftig (sie gehören zum vorher gewählten Portfolio). Auf neutral
+// (grau) zurücksetzen. Ein laufender Lauf (is-busy) wird NICHT angetastet.
+function resetRiskCalcDotsOnPortfolioChange() {
+  if (window.__riskCalcDotsResetBound) return;
+  window.__riskCalcDotsResetBound = true;
+
+  const resetDots = () => {
+    ['riskDotPortfolio', 'riskDotMarket', 'riskDotCredit'].forEach((id) => {
+      const dot = document.getElementById(id);
+      if (!dot || dot.classList.contains('is-busy')) return; // laufenden Lauf nicht stören
+      dot.classList.remove('is-done');
+      dot.title = 'not calculated';
+    });
+  };
+
+  // Nur die Haupt-Analyse-Auswahl (Slot 0) steuert die Punkte; die RISK/VALUATION-
+  // Picker spiegeln auf createdPortDropdown0 und feuern dort ein change-Event.
+  // Delegation auf document, weil das Dropdown ggf. erst spaeter aufgebaut wird.
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.id === 'createdPortDropdown0') resetDots();
+  });
+}
+
 // Nested accordion for the RISK "Risk Metrics Input" group. A group toggle
 // (.risk-acc-toggle, no data-panel) just expands/collapses its OWN next level;
 // the leaf triggers (with data-panel) open a slide-in via bootstrapTriggers.
@@ -410,6 +434,7 @@ export function initializeTabs() {
   bindRiskCalcProxies();
   relocateRiskInputs();
   wireRiskCalcStatus();
+  resetRiskCalcDotsOnPortfolioChange();
   bindRiskAccordion();
   decorateTriggerIcons();
   wirePanelPathTitles();
