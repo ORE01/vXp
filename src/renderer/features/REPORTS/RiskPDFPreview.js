@@ -102,7 +102,7 @@ function warmUpReportSources(opts = {}) {
   const steps = [
     () => { try { renderAllRegisteredPanels(); } catch (e) { console.warn('[RiskPreview] warmup panels failed', e); } },
     () => { try { as?.refreshMarketRiskUI?.(0); } catch (e) { console.warn('[RiskPreview] warmup market risk failed', e); } },
-    () => { try { const ead = as?.getAllEADData?.(); if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead); } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); } },
+    () => { try { window.__eadReportMode = true; const ead = as?.getAllEADData?.(); if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead); } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); } finally { window.__eadReportMode = false; } },
     () => { try { const cvar = as?.getCvarData?.(); if (cvar && cvar.length) (as?.handleCVaRData || window.handleCVaRData)?.(cvar, 0); } catch (e) { console.warn('[RiskPreview] warmup CVaR failed', e); } },
   ];
   if (!chunked) { steps.forEach((fn) => fn()); if (typeof onDone === 'function') onDone(); return; }
@@ -153,7 +153,7 @@ function ensureReportWarmupForSelection(done) {
   if (need.market && !_rrWarmedDomains.market) jobs.push(() => { _rrWarmedDomains.market = true; try { as?.refreshMarketRiskUI?.(0); } catch (e) { console.warn('[RiskPreview] warmup market risk failed', e); } });
   if (need.credit && !_rrWarmedDomains.credit) jobs.push(() => {
     _rrWarmedDomains.credit = true;
-    try { const ead = as?.getAllEADData?.(); if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead); } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); }
+    try { window.__eadReportMode = true; const ead = as?.getAllEADData?.(); if (ead && ead.length) (as?.handleEADData || window.handleEADData)?.(ead); } catch (e) { console.warn('[RiskPreview] warmup EAD failed', e); } finally { window.__eadReportMode = false; }
     try { const cvar = as?.getCvarData?.(); if (cvar && cvar.length) (as?.handleCVaRData || window.handleCVaRData)?.(cvar, 0); } catch (e) { console.warn('[RiskPreview] warmup CVaR failed', e); }
   });
   if (!jobs.length) { if (typeof done === 'function') done(); return; }

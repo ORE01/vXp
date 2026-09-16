@@ -94,7 +94,7 @@ export function setSensitivityTabGroupVisible(keys, visible) {
     }
   }
 
-  console.log('[SENS TABS] group visibility:', {
+  if (false) console.log('[SENS TABS] group visibility:', {
     keys,
     visible,
     matchedTabs: tabs.map(t => t.dataset.sensTab),

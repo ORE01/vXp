@@ -108,7 +108,7 @@ const {
   ES_YELLOW_THRESHOLD,
 } = thresholds;
 
-console.log('[MVAR TRAFFIC LIGHT INPUT CHECK]', {
+if (false) console.log('[MVAR TRAFFIC LIGHT INPUT CHECK]', {
   selectedMvarInterval: appState.selectedMvarInterval,
   selectedMvarId: appState.selectedMvarId,
 
@@ -163,7 +163,7 @@ const state = trafficLightStateForMVaR(
   // KPI-Kacheln (Total VaR/ES abs + rel, mit Ampel-Punkt) — ersetzen die Tabelle in der Ansicht.
   renderMvarPLKpis(filteredData, state, esState);
 
-  console.log('[MVaR Aggregate] rendered', {
+  if (false) console.log('[MVaR Aggregate] rendered', {
     portName,
     scenarioName,
     selectedAsofDate: getMvarRowAsofDate(filteredData),
@@ -549,7 +549,7 @@ export function getMVaRThresholdsFromInputUsingState() {
   const esRedOk = Number.isFinite(esRedRel);
   const esYellowOk = Number.isFinite(esYellowRel);
 
-  console.log('[MVAR THRESHOLD ROW USED]', {
+  if (false) console.log('[MVAR THRESHOLD ROW USED]', {
     source: 'v_MVAR_MODEL_SELECTION_APP / getMvarModelSelectionAppRows',
     selectedMvarInterval: appState.selectedMvarInterval,
     selectedMvarId: appState.selectedMvarId,

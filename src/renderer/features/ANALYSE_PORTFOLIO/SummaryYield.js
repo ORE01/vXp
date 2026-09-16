@@ -246,7 +246,7 @@ export function handleSummaryYieldData(filteredData, index, port_name) {
   lastSummaryYieldArgs = { filteredData, index, port_name };
   bindSummaryYieldRatesRefresh();
 
-  console.log('[SUMMARY YIELD CALLED]', {
+  if (false) console.log('[SUMMARY YIELD CALLED]', {
     index,
     port_name,
     filteredRows: Array.isArray(filteredData) ? filteredData.length : null,
@@ -360,7 +360,7 @@ const rawTSData = appState.getTblTSData();
 
   const activeScenario = activeRow?.scenario_id || 'BASE';
 
-console.log('[YIELD CHART RATE SOURCES CHECK]', {
+if (false) console.log('[YIELD CHART RATE SOURCES CHECK]', {
   activeScenario,
   curveId,
   baseRows: rawBaseRates.length,
@@ -439,7 +439,7 @@ const EUSWData = dedupedRates.map(r => {
   };
 }).filter(Boolean);
 
-console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
+if (false) console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
   currency,
   curveId,
   activeScenario,
@@ -495,7 +495,7 @@ console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
     : portfolioData.formPortYield;
   const portTtM = parseFloat(portfolioData.formPortTtM);
 
-  console.log('[YIELD CHART GATE]', {
+  if (false) console.log('[YIELD CHART GATE]', {
   portfolioYield,
   portTtM,
   baseRatesRows: rawBaseRates?.length,
@@ -605,7 +605,7 @@ const productDurationPoints = filteredData.map(entry => {
 
 let duration = parseNumberLike(entry.IR_DURATION);
 
-console.log('[SUMMARY YIELD PRODUCT IR_DURATION]', {
+if (false) console.log('[SUMMARY YIELD PRODUCT IR_DURATION]', {
   TRADE_ID: entry.TRADE_ID,
   PROD_ID: entry.PROD_ID,
   IR_DURATION_raw: entry.IR_DURATION,
@@ -616,7 +616,7 @@ console.log('[SUMMARY YIELD PRODUCT IR_DURATION]', {
 });
 
 if (!Number.isFinite(duration) || !Number.isFinite(ytm)) {
-  console.log('[SUMMARY YIELD PRODUCT SKIPPED]', {
+  if (false) console.log('[SUMMARY YIELD PRODUCT SKIPPED]', {
     TRADE_ID: entry.TRADE_ID,
     PROD_ID: entry.PROD_ID,
     IR_DURATION: entry.IR_DURATION,
@@ -643,7 +643,7 @@ return {
 
 }).filter(Boolean);
 
-console.log('[PRODUCT DURATION POINTS CHECK]', {
+if (false) console.log('[PRODUCT DURATION POINTS CHECK]', {
   filteredRows: filteredData.length,
   productDurationPointsRows: productDurationPoints.length,
   samplePoints: productDurationPoints.slice(0, 10),

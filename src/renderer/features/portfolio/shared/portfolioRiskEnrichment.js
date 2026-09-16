@@ -237,7 +237,7 @@ export function enrichPortfolioRowsWithRisk(receivedData, portName) {
   });
 
   if (DEBUG_PORT_RISK_ENRICHMENT) {
-    console.log('[PORT RISK ENRICHMENT] start', {
+    if (false) console.log('[PORT RISK ENRICHMENT] start', {
       portName,
       normalizedPortName: normalizePortName(portName),
       portfolioRows: receivedData.length,

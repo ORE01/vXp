@@ -33,7 +33,7 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
   // only needs the time series (tblTS) + portfolio PV01, NOT the MVaR distribution.
   // Previously it sat after the '[DIST] No distribution' return, so it stayed blank on
   // initial open (no dist rows yet) and only appeared after a recalc.
-  console.log('[TS EU1Y CHART] reached synthetic-chart gate (early)', {
+  if (false) console.log('[TS EU1Y CHART] reached synthetic-chart gate (early)', {
     portPV01,
     portPV01IsFinite: Number.isFinite(portPV01),
   });
@@ -1397,7 +1397,7 @@ function drawSyntheticPortfolioChart(targetEndValue = 100, portPV01 = 1, testTtM
 
   const tsData = appState.getTblTSData();
 
-  console.log('[TS EU1Y CHART] drawSyntheticPortfolioChart called', {
+  if (false) console.log('[TS EU1Y CHART] drawSyntheticPortfolioChart called', {
     tsDataLen: Array.isArray(tsData) ? tsData.length : null,
     targetEndValue,
     portPV01,

@@ -818,6 +818,11 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
   const ctx = newCanvas.getContext("2d");
   Chart.defaults.font.color = "rgb(161, 160, 160)";
 
+  // Theme-aware Gitter-/Textfarben (wie die anderen Charts).
+  const _fcs  = getComputedStyle(document.body);
+  const _grid = (_fcs.getPropertyValue('--chart-grid') || 'rgba(120,120,120,0.25)').trim();
+  const _text = (_fcs.getPropertyValue('--chart-text') || 'rgb(161,160,160)').trim();
+
   const euswColor = getEuswCurveColor(1);
   // Start bei 1: Palette-Index 0 ist Blau und kollidiert mit der blauen
   // Original-Kurve (euswColor). So werden CMS-Kurven Orange/Grün -> klar getrennt.
@@ -880,12 +885,12 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
           title: {
             display: true,
             text: "Year",
-            color: "rgb(161, 160, 160)",
+            color: _text,
           },
-          ticks: { color: "rgb(161, 160, 160)" },
+          ticks: { color: _text },
           grid: {
-            color: "rgba(255, 255, 255, 0.2)",
-            lineWidth: 0.4,
+            color: _grid,
+            lineWidth: 1,
             drawBorder: false,
             drawTicks: false,
           },
@@ -897,15 +902,15 @@ export function createFWDLineChart(datasets, chartName, chartTitle, pointRadius)
           title: {
             display: true,
             text: "Rate (%)",
-            color: "rgb(161, 160, 160)"
+            color: _text
           },
           ticks: {
-            color: "rgb(161, 160, 160)",
+            color: _text,
             callback: value => value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           },
           grid: {
-            color: "rgba(255, 255, 255, 0.2)",
-            lineWidth: 0.4,
+            color: _grid,
+            lineWidth: 1,
             drawBorder: false,
             drawTicks: false,
           },
@@ -1007,6 +1012,11 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
 
   Chart.defaults.font.color = "rgb(161, 160, 160)";
 
+  // Theme-aware Gitter-/Textfarben (wie die anderen Charts).
+  const _fcs  = getComputedStyle(document.body);
+  const _grid = (_fcs.getPropertyValue('--chart-grid') || 'rgba(120,120,120,0.25)').trim();
+  const _text = (_fcs.getPropertyValue('--chart-text') || 'rgb(161,160,160)').trim();
+
   const euswColor = getEuswCurveColor(1);
   // Start bei 1: Palette-Index 0 (Blau) kollidiert sonst mit der blauen
   // Original-Kurve (euswColor).
@@ -1064,11 +1074,11 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
       scales: {
         x: {
           display: true,
-          title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
-          ticks: { color: "rgb(161, 160, 160)" },
+          title: { display: true, text: "Year", color: _text },
+          ticks: { color: _text },
           grid: {
-            color: "rgba(255, 255, 255, 0.2)",
-            lineWidth: 0.4,
+            color: _grid,
+            lineWidth: 1,
             drawBorder: false,
             drawTicks: false
           },
@@ -1077,14 +1087,14 @@ export function createForwardSwapChart(datasets, chartName, chartTitle, pointRad
 
         y: {
           display: true,
-          title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
+          title: { display: true, text: "Rate (%)", color: _text },
           ticks: {
-            color: "rgb(161, 160, 160)",
+            color: _text,
             callback: v => v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
           },
           grid: {
-            color: "rgba(255, 255, 255, 0.2)",
-            lineWidth: 0.4,
+            color: _grid,
+            lineWidth: 1,
             drawBorder: false,
             drawTicks: false
           },
@@ -1144,6 +1154,11 @@ export function createRatesLineChart(datasets, chartName, chartTitle, pointRadiu
 
   Chart.defaults.font.color = "rgb(161, 160, 160)";
   const xValues = datasets?.[0]?.data?.map(dp => dp.x) ?? [];
+  // Theme-aware Gitter-/Textfarben (wie die anderen Charts): Light = zartes Grau,
+  // Dark = dezentes Grau. Tokens aus themes.css (--chart-grid / --chart-text).
+  const _rcs  = getComputedStyle(document.body);
+  const _grid = (_rcs.getPropertyValue('--chart-grid') || 'rgba(120,120,120,0.25)').trim();
+  const _text = (_rcs.getPropertyValue('--chart-text') || 'rgb(161,160,160)').trim();
   // Palette-Index nur fÃ¼r Nicht-Original-Serien hochzÃ¤hlen (damit nach der blauen Kurve sauber weitergezÃ¤hlt wird)
   let paletteIndex = 0;
 
@@ -1168,7 +1183,10 @@ try {
           backgroundColor: isOriginalCurve
             ? eusw.backgroundColor
             : undefined,
-          tension: dataset.tension ?? 0.1,
+          // Monotone kubische Interpolation: glatt OHNE Ueberschwingen/Ausbeulen
+          // (der fruehere tension-Bezier verzog die Kurve an den weiten Long-End-Punkten).
+          cubicInterpolationMode: 'monotone',
+          tension: 0,
           pointRadius: pointRadius,
           borderWidth: 1,
           spanGaps: true,   // über fehlende Laufzeiten hinweg durchzeichnen
@@ -1209,7 +1227,7 @@ try {
         x: {
           type: 'linear',
           display: true,
-          title: { display: true, text: "Year", color: "rgb(161, 160, 160)" },
+          title: { display: true, text: "Year", color: _text },
           // Saubere Tenor-Ticks statt fraktionaler Auto-Werte.
           afterBuildTicks: (axis) => {
             const min = axis.min ?? 0;
@@ -1218,10 +1236,10 @@ try {
               .filter(v => v >= min - 0.001 && v <= max + 0.001)
               .map(value => ({ value }));
           },
-          ticks: { color: "rgb(161, 160, 160)", autoSkip: false, callback: (v) => `${v}Y` },
+          ticks: { color: _text, autoSkip: false, callback: (v) => `${v}Y` },
           grid: {
-            color: "rgba(255, 255, 255, 0.2)",
-            lineWidth: 0.4,
+            color: _grid,
+            lineWidth: 1,
             drawBorder: false,
             drawTicks: false,
           },
@@ -1230,14 +1248,14 @@ try {
 
         y: {
           display: true,
-          title: { display: true, text: "Rate (%)", color: "rgb(161, 160, 160)" },
+          title: { display: true, text: "Rate (%)", color: _text },
           ticks: {
-            color: "rgb(161, 160, 160)",
+            color: _text,
             callback: value => value.toFixed?.(2) + '%' ?? value
           },
           grid: {
-            color: "rgba(255, 255, 255, 0.2)",
-            lineWidth: 0.4,
+            color: _grid,
+            lineWidth: 1,
             drawBorder: false,
             drawTicks: false,
           },

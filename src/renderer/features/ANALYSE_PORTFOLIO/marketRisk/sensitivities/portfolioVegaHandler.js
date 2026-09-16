@@ -144,7 +144,7 @@ export function handleVegaSensData(appState, forcedPortName = null, holdingsOver
     return;
   }
 
-  console.log('[VEGA SENS] selected portfolio resolved', {
+  if (false) console.log('[VEGA SENS] selected portfolio resolved', {
     rawPortName,
     selectedPort,
     availablePorts,
@@ -192,7 +192,7 @@ export function handleVegaSensData(appState, forcedPortName = null, holdingsOver
     }
 
     if (!Array.isArray(vegaRows) || vegaRows.length === 0) {
-      console.warn('[VEGA SENS] no VEGA_PARALLEL rows for selected portfolio', {
+      if (false) console.warn('[VEGA SENS] no VEGA_PARALLEL rows for selected portfolio', {
         selectedPort,
         storeRows: riskRowsAll.length,
         availablePorts,

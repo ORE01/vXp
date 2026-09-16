@@ -535,6 +535,38 @@ function latestMarketDataDate() {
   return max || null;
 }
 
+// Market-Data-Datum = juengstes asof_date der Zinskurven (RATES_BASE-Cache, alle ccy).
+function latestRatesDate() {
+  const cache = appState?._RATESDataCacheByCcy || {};
+  let max = '';
+  for (const ccy of Object.keys(cache)) {
+    for (const r of (cache[ccy] || [])) {
+      const d = String(r?.asof_date ?? r?.updated_at ?? '').slice(0, 10);
+      if (d > max) max = d;
+    }
+  }
+  return max || null;
+}
+
+// App-Meta-Zeitstempel (Import/Berechnung) einmal laden + cachen (per IPC aus Main).
+let _appMeta = null;
+async function loadAppMeta() {
+  try { _appMeta = await window.api?.invoke?.('meta:get'); } catch { _appMeta = null; }
+  return _appMeta;
+}
+
+// Fallback ohne IPC: juengstes created_at direkt aus den geladenen Store-Zeilen
+// (MarketVaR/CreditVaR). Greift auch, wenn der Main-Prozess (meta:get) noch nicht
+// neu gestartet wurde.
+function latestCreatedAtOf(rows) {
+  let max = '';
+  for (const r of (Array.isArray(rows) ? rows : [])) {
+    const d = String(r?.created_at ?? '').slice(0, 10);
+    if (d && d > max) max = d;
+  }
+  return max || null;
+}
+
 // MARKET-STRESS-Buffer-Ampel (HOME-Market-Karte): Buffer = Abstand des aktuellen
 // Markts (ROLLING_1) zum Stress-Szenario, relativ zum Rolling-Wert.
 // Schwellen aus dem Customer Setup (CustomerMarketRiskThresholdSetting,
@@ -1956,7 +1988,30 @@ export function renderHomeOverview() {
   try { renderCreditCard(port); } catch (e) { console.warn('[home] credit card', e); }
   try { renderRiskLimitDots(port); } catch (e) { console.warn('[home] limit dots', e); }
 
-  setText('homeAsOf', `Portfolio: ${port}${asOf ? `  ·  as of ${asOf}` : ''}`);
+  // Kopfzeile mit vier Daten: Portfolio-Import (Excel), Berechnung, Market Data
+  // (Zinskurven), Historic Data (tblTS). Import-/Berechnungsdatum kommen aus AppMeta
+  // (per IPC); sofort mit gecachtem Wert rendern, dann nach dem async-Load erneut.
+  const buildAsOfHeader = () => {
+    const day = (v) => (v ? String(v).slice(0, 10) : null);
+    const parts = [];
+    // Meta bevorzugt aus meta:get (_appMeta), sonst aus dem Pump-Store (window.__appMetaPump),
+    // der beim Import/Lauf ueber den normalen Tabellen-Pump geliefert wird (ohne IPC-Handler).
+    const _pump = (typeof window !== 'undefined' && window.__appMetaPump) || {};
+    const imp  = day(_appMeta?.portfolio_import_at || _pump.portfolio_import_at);
+    // MVaR/CVaR: bevorzugt AppMeta, sonst Pump, sonst created_at aus den geladenen Stores.
+    const mvar = day(_appMeta?.mvar_calculation_at || _pump.mvar_calculation_at) || latestCreatedAtOf(appState.getAllMvarData?.());
+    const cvar = day(_appMeta?.cvar_calculation_at || _pump.cvar_calculation_at) || latestCreatedAtOf(appState.getAllCvarData?.());
+    const mkt  = latestRatesDate();
+    const hist = latestMarketDataDate();
+    if (imp)  parts.push(`Deals update ${imp}`);
+    if (mvar) parts.push(`MVaR ${mvar}`);
+    if (cvar) parts.push(`CVaR ${cvar}`);
+    if (mkt)  parts.push(`Market Data ${mkt}`);
+    if (hist) parts.push(`Historic Data ${hist}`);
+    return `Portfolio: ${port}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;
+  };
+  setText('homeAsOf', buildAsOfHeader());
+  loadAppMeta().then(() => { try { setText('homeAsOf', buildAsOfHeader()); } catch {} });
 
   // Report-Spiegel (Preview/PDF) mit den frisch gerenderten Werten befuellen.
   try { syncHomeReportPanel(port); } catch (e) { console.warn('[home] report panel sync', e); }

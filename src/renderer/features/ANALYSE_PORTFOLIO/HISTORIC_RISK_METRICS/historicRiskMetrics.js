@@ -933,6 +933,30 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
   const labels = sortedData.map(row => row.DATE);
   const returns = sortedData.map(row => parseFloat(row.RETURN));
 
+  // Live-Punkt (heute) ans Ende anfuegen — nur im Performance-Panel — mit dem aktuellen
+  // Portfolio-Yield (Σ ytmPort / Σ Notional), identisch zum KPI "Portfolio Yield".
+  if (canvasId === "perfHistYieldChart") {
+    try {
+      const sel = String(appState.getSelectedPortTableName?.() ?? "").trim();
+      const pf = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+      let sy = 0, sn = 0;
+      for (const r of (appState.getAllPortfolioData?.() || [])) {
+        if (String(r?.port_name ?? r?.PORT_NAME ?? "").trim() !== sel) continue;
+        sy += pf(r.ytmPort ?? r.ytmport ?? r.YTMPORT);
+        sn += pf(r.NOTIONAL ?? r.notional);
+      }
+      if (sn > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        const liveYield = sy / sn;
+        if (normalizeDateStr(String(labels[labels.length - 1] ?? "")) !== today) {
+          labels.push(today); returns.push(liveYield);
+        } else {
+          returns[returns.length - 1] = liveYield;
+        }
+      }
+    } catch (e) { console.warn("[perfHistYield] live point append failed", e); }
+  }
+
   // Vergleichsreihe: im "How is the yield developing?"-Chart die per Dropdown gewaehlte
   // Zinsspalte, sonst (Risk-History) fest EU_1Y.
   const _compareCol = (canvasId === "perfHistYieldChart") ? _perfHistCompareCol : "EU_1Y";
@@ -1400,6 +1424,37 @@ function renderHistoricPortfolioValueChart(historyData, canvasId = "historicPort
     return isNaN(v) ? null : v;
   });
 
+  // Live-Punkt (heute) ans Ende anfuegen — nur im Performance-Panel — mit denselben
+  // Live-Zahlen, die das KPI-Band nutzt (NAV/NAVbuy/Notional aus v_Portfolios_enriched).
+  // So endet der Chart auf den KPI-Werten und der Tooltip stimmt mit den KPIs ueberein.
+  if (canvasId === "perfHistValueChart") {
+    try {
+      const sel = String(appState.getSelectedPortTableName?.() ?? "").trim();
+      const pf = (v) => { const n = parseFloat(String(v ?? "").replace(/\s/g, "").replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+      let _nav = 0, _navBuy = 0, _noti = 0;
+      for (const r of (appState.getAllPortfolioData?.() || [])) {
+        if (String(r?.port_name ?? r?.PORT_NAME ?? "").trim() !== sel) continue;
+        const n = pf(r.NOTIONAL ?? r.notional);
+        _noti += n; _nav += pf(r.NAV ?? r.nav); _navBuy += (pf(r.PRICE_BUY ?? r.price_buy) / 100) * n;
+      }
+      if (_noti > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        // Falls der juengste History-Stichtag bereits heute ist, den Live-Punkt NICHT doppeln.
+        if (String(labels[labels.length - 1] ?? "").slice(0, 10) !== today) {
+          labels.push(today);
+          portValuePct.push(_nav / _noti);
+          portValueBuyPct.push(_navBuy / _noti);
+          profitLossPct.push((_nav - _navBuy) / _noti);
+        } else {
+          const i = labels.length - 1;
+          portValuePct[i] = _nav / _noti;
+          portValueBuyPct[i] = _navBuy / _noti;
+          profitLossPct[i] = (_nav - _navBuy) / _noti;
+        }
+      }
+    } catch (e) { console.warn("[perfHistValue] live point append failed", e); }
+  }
+
   destroyChartByCanvasId(canvasId);
 
   // Verschobener Value-History-Chart (#perfHistValueChart) -> kuerzere, Kachel-konsistente
@@ -1464,9 +1519,12 @@ if (_perf) {
         .sort((a, b) => a.t - b.t);
       if (pts.length >= 2) {
         const tMin = pts[0].t, tMax = pts[pts.length - 1].t;
-        // lineare Interpolation des Synth-Rohwerts (~100) auf ein Datum; ausserhalb -> null.
+        // lineare Interpolation des Synth-Rohwerts (~100) auf ein Datum; vor Backtest-Start
+        // -> null, HINTER dem Backtest-Ende (z.B. der heutige Live-Punkt) -> letzter Wert
+        // (klemmen), damit die Backtest-Linie bis zum aktuellen Punkt reicht.
         const interp = (lt) => {
-          if (!Number.isFinite(lt) || lt < tMin || lt > tMax) return null;
+          if (!Number.isFinite(lt) || lt < tMin) return null;
+          if (lt >= tMax) return pts[pts.length - 1].y;
           let hi = 1;
           while (hi < pts.length && pts[hi].t < lt) hi++;
           const a = pts[hi - 1], b = pts[hi] || a;
@@ -1475,12 +1533,16 @@ if (_perf) {
         };
         // Synth-Rohwert je Chart-Stichtag.
         const synthRaw = labels.map(d => interp(new Date(d).getTime()));
-        const _lastOf = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { const v = arr[i]; if (v != null && Number.isFinite(v)) return v; } return null; };
-        const anchor    = _lastOf(portValuePct);   // aktueller Value/Notional (letzter echter Punkt)
-        const synthLast = _lastOf(synthRaw);        // letzter gezeigter Synth-Rohwert
-        const ratio = (anchor != null && synthLast) ? (anchor / synthLast) : null;
+        const _lastIdxOf = (arr) => { for (let i = arr.length - 1; i >= 0; i--) { const v = arr[i]; if (v != null && Number.isFinite(v)) return i; } return -1; };
+        // Anker = aktueller Value/Notional am LETZTEN Punkt (Live-Punkt); Synth-Endwert exakt
+        // darauf skalieren -> Backtest endet auf dem aktuellen NAV (= "Current Portfolio").
+        const anchorIdx = _lastIdxOf(portValuePct);
+        const anchor    = anchorIdx >= 0 ? portValuePct[anchorIdx] : null;
+        const synthLast = anchorIdx >= 0 ? synthRaw[anchorIdx] : null;
+        const ratio = (anchor != null && Number.isFinite(synthLast) && synthLast) ? (anchor / synthLast) : null;
         if (ratio != null) {
           const synthSeries = synthRaw.map(v => (v == null ? null : v * ratio));
+          if (anchorIdx >= 0) synthSeries[anchorIdx] = anchor;   // Endpunkt exakt = Live-NAV
           data.datasets.push({
             type: "line",
             label: "Current Portfolio Backtest",

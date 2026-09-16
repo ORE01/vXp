@@ -254,6 +254,12 @@ module.exports = [
   },
 
   {
+    name: 'appMeta',
+    register: require('./handlers/appMeta.handlers'),
+    getCtx: ({ ipcMain }) => ({ ipcMain }),
+  },
+
+  {
     name: 'csParameter',
     register: require('./handlers/csParameter.handlers'),
     getCtx: ({ ipcMain, mainFct, refreshTable }) => ({

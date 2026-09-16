@@ -1757,13 +1757,13 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   const tablesAll = sec.enabledTables || [];
 
   // Normal sections
-  // Overview NICHT straffen -> die urspruenglichen Abstaende kompensieren (headerGap 12->6, sectionTitleSpacing 10->6).
-  if (sec.key === 'overview') y += 6;
+  if (sec.key === 'overview') y += 2;
   doc.setFontSize(14);
   doc.setTextColor(0);
   doc.text(sectionTitle, marginX, y);
-  y += cfg.sectionTitleSpacing;
-  if (sec.key === 'overview') y += 4;
+  // Abstand NACH dem Titel: bei der Overview deutlich kleiner, damit die Karten hoch-
+  // ruecken und die 3 Balkencharts unten mit auf die Seite passen.
+  y += (sec.key === 'overview') ? Math.max(2, cfg.sectionTitleSpacing - 6) : cfg.sectionTitleSpacing;
 
   // Economic-Capital-KPI-Story (App-Panel) VOR den Charts, wenn die Sektion EC-Charts hat.
   // Historic (…Hist) -> panel-credit; market adjusted (…Norm) -> panel-credit-current.
@@ -2518,7 +2518,7 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     // Overview-Charts sind flache Balken-Diagramme -> kompaktere Kachel (kein grosser
     // Leerraum ueber/unter den Balken) und weniger Gesamthoehe, damit KPIs + Slider +
     // Charts auf EINE Seite passen.
-    let cellH = (sec.key === 'overview') ? 44 : (perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84));
+    let cellH = (sec.key === 'overview') ? 48 : (perRow >= 3 ? 70 : (hasKpiBand ? 74 : 84));
     const composedRows = Math.ceil(rowCharts.length / perRow);
     if (composedRows > 1) {
       // Bevorzugt auf den RESTPLATZ der aktuellen Seite quetschen (z.B. KPI-Band + Charts
@@ -2540,9 +2540,10 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       // belegen, die Charts NICHT auf Seite 2 umbrechen, sondern auf den Restplatz der
       // aktuellen Seite verkleinern (bis zu einer Mindesthoehe) -> alles auf 1 Seite.
       const remaining = layout.bottomSafe - y - 16;   // -16 = Reserve wie ensurePageSpace unten
-      // Aggressiv: solange noch mind. ~22 Rest ist, die Charts in den Restplatz der
-      // aktuellen Seite quetschen (statt umzubrechen) -> Overview bleibt auf 1 Seite.
-      if (remaining >= 22) cellH = Math.min(cellH, remaining);
+      // Aggressiv: solange noch etwas Rest da ist, die (flachen) Charts in den Restplatz
+      // der aktuellen Seite quetschen (statt umzubrechen) -> Overview bleibt auf 1 Seite.
+      // Sicherheitsabzug 2, damit ensurePageSpace(cellH+16) unten sicher noch passt.
+      if (remaining >= 18) cellH = Math.min(cellH, remaining - 2);
     }
     let col = 0;
     let rowY = y;
@@ -2722,8 +2723,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     const srcW = imgData.width || 900;
     const srcH = imgData.height || 520;
 
-    const maxH = 90;
-    const scale = Math.min(chartWidth / srcW, maxH / srcH, 1);
+    // EAD/LGD-Chart groesser darstellen: volle Inhaltsbreite + hoeher (nur 10 Balken
+    // -> Balken und Beschriftung deutlich besser lesbar). Andere Charts unveraendert.
+    const isEad = ch.id === 'LGDChart';
+    const cW = isEad ? layout.contentWidth : chartWidth;
+    const maxH = isEad ? 95 : 90;
+    const scale = Math.min(cW / srcW, maxH / srcH, 1);
     const targetWidth = srcW * scale;
     const targetHeight = srcH * scale;
 
@@ -2744,19 +2749,19 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
 
     const boxY = y;
     const imgY = boxY + 11 + extraQ;
-    const imgX = marginX + (chartWidth - targetWidth) / 2;
+    const imgX = marginX + (cW - targetWidth) / 2;
 
-    drawChartCard(doc, marginX - 2, boxY, chartWidth + 4, blockHeight - 4);
+    drawChartCard(doc, marginX - 2, boxY, cW + 4, blockHeight - 4);
 
     if (q) {
       // EC-Frage als helle Ueberschrift + data-label als Untertitel (wie in der App).
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 31, 41);
-      doc.text(q, marginX + chartWidth / 2, boxY + 6, { align: 'center' });
+      doc.text(q, marginX + cW / 2, boxY + 6, { align: 'center' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110);
-      doc.text(ch.label || ch.id, marginX + chartWidth / 2, boxY + 10.5, { align: 'center' });
+      doc.text(ch.label || ch.id, marginX + cW / 2, boxY + 10.5, { align: 'center' });
     } else {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(0);
-      doc.text(appT || ch.label || ch.id, marginX + chartWidth / 2, boxY + 7, { align: 'center' });
+      doc.text(appT || ch.label || ch.id, marginX + cW / 2, boxY + 7, { align: 'center' });
     }
 
     try {
@@ -2765,8 +2770,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       console.warn('[PDF] addImage failed for', ch.id, e);
     }
 
-    // Notiz rechts neben der Graphik.
-    if (noteLines.length) {
+    // Notiz rechts neben der Graphik (nicht beim vollbreiten EAD-Chart).
+    if (noteLines.length && !isEad) {
       doc.setFontSize(9);
       doc.setTextColor(90);
       doc.text(noteLines, noteXC, imgY + 3);

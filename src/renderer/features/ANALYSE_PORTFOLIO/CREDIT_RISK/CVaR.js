@@ -645,7 +645,8 @@ export function renderLGDChart() {
   // filteredEADMainData ist bereits absteigend nach EAD (NOTIONAL) sortiert.
   const _activeTabId = document.querySelector('.tablinks.active')?.id
     || document.querySelector('.tablinks[aria-selected="true"]')?.id || '';
-  const inReports = _activeTabId === 'REPORTS_Tab';
+  // Report-Modus: Tab aktiv ODER expliziter Warmup-Flag (zuverlaessig zur PDF-Erzeugung).
+  const inReports = _activeTabId === 'REPORTS_Tab' || window.__eadReportMode === true;
   const chartRows = inReports ? filteredEADMainData.slice(0, 10) : filteredEADMainData;
 
   const labels = chartRows.map(row => String(row.ISSUER ?? '').trim());
@@ -658,7 +659,9 @@ export function renderLGDChart() {
     - Balkendicke bleibt stabil
   */
   const minChartHeight = 180;
-  const rowSlotHeight = 24;
+  // Im Report etwas groessere Zeilen -> gut lesbar, aber so kompakt, dass KPIs + Chart
+  // zusammen auf EINE Seite passen (nur 10 Emittenten).
+  const rowSlotHeight = inReports ? 30 : 24;
   const chartPadding = 90;
   const dynamicHeight = Math.max(
     minChartHeight,
@@ -692,7 +695,7 @@ export function renderLGDChart() {
   });
 
   const commonBarOptions = {
-    maxBarThickness: 12,
+    maxBarThickness: inReports ? 15 : 12,
     categoryPercentage: 0.65,
     barPercentage: 0.75,
   };
@@ -761,7 +764,9 @@ export function renderLGDChart() {
     // Breite = Container-Innenbreite; Höhe = dynamicHeight -> bei vielen Emittenten
     // hoeher als die (fixe) Karte, die Karte scrollt (overflow-y in CSS).
     const padX = 24; // .chart-container-inner padding links+rechts
-    cv.width = Math.max(320, Math.floor((cv.parentNode.clientWidth || 800) - padX));
+    // Im Report feste, groessere Canvas-Breite -> scharfe Balken/Schrift im PDF
+    // (unabhaengig von der Container-Breite). App: Container-Innenbreite wie bisher.
+    cv.width = inReports ? 1200 : Math.max(320, Math.floor((cv.parentNode.clientWidth || 800) - padX));
     cv.height = dynamicHeight;
 
     // Fuer die Balken-Labels (Wert kompakt + rel % vom NAV, wie beim Loss-Chart).
@@ -791,7 +796,7 @@ export function renderLGDChart() {
           datalabels: window.ChartDataLabels ? {
             anchor: 'end', align: 'right', clamp: true,
             color: labelColor,
-            font: { size: 10 },
+            font: { size: inReports ? 12 : 10 },
             formatter: (value) => {
               const v = Number(value) || 0;
               if (!v) return '';
@@ -800,7 +805,10 @@ export function renderLGDChart() {
             },
           } : undefined,
         },
-        scales: { y: { beginAtZero: true, ticks: { autoSkip: false } }, x: { beginAtZero: true, grace: '5%' } },
+        scales: {
+          y: { beginAtZero: true, ticks: { autoSkip: false, font: { size: inReports ? 12 : undefined } } },
+          x: { beginAtZero: true, grace: '5%', ticks: { font: { size: inReports ? 10 : undefined } } },
+        },
       },
     });
 
@@ -843,7 +851,7 @@ export function handleCVaRData(receivedData, index, port_nameArg) {
     norm:   filteredByPort.filter(x => String(x?.pd_flag ?? '').toLowerCase() === 'norm'),
   };
 
-  console.log('combinedRelData:', combinedRelData)
+  // console.log('combinedRelData:', combinedRelData)
 
   renderCombinedCVaRRelTable(combinedRelData, safeIndex);
 
@@ -1158,7 +1166,7 @@ function renderCombinedCVaRRelTable(allFilteredDataByPdFlag, index) {
 
   // Credit-risk thresholds now come from the customer store
   // (CustomerCreditRiskThresholdSetting), not the legacy CreditVaRInputThreshold.
-  console.log('[CREDIT RISK SETTING THRESHOLDS USED]', {
+  if (false) console.log('[CREDIT RISK SETTING THRESHOLDS USED]', {
     source: 'CustomerCreditRiskThresholdSetting/appState',
     CVAR: appState.getCustomerCreditRiskThreshold?.('CVAR'),
     TSI: appState.getCustomerCreditRiskThreshold?.('TSI'),
@@ -1295,7 +1303,7 @@ function trafficLightStateForMsd(allFilteredDataByPdFlag, _flags) {
     ? appState.getCustomerCreditRiskThreshold('MSD')
     : null;
 
-  console.warn('[MSD THRESHOLD USED IN TRAFFIC LIGHT]', {
+  if (false) console.warn('[MSD THRESHOLD USED IN TRAFFIC LIGHT]', {
     threshold: appState.getCustomerCreditRiskThreshold?.('MSD'),
     red: appState.getCustomerCreditRiskThreshold?.('MSD')?.red_threshold,
   });

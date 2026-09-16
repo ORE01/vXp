@@ -65,6 +65,7 @@ module.exports = {
   invoke: [
     // Meta
     'ipc:get-allowlist',
+    'meta:get',
 
     // -------------------------------------------------
     // Bond Prospectus Finder

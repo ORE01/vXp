@@ -275,6 +275,9 @@ api.receive(channel, (data) => {
       { required }
     );
 
+  // App-Meta (Import-/Berechnungs-Zeitstempel) fuer die Overview-Kopfzeile.
+  route('AppMetaData');
+
   // CUSTOMER
   route('CustomerData', { required: true });
   route('CustomerTSSelectionData');

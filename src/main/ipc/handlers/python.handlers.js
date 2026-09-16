@@ -6,6 +6,8 @@ const pathMod = require('path');
 const { dialog } = require('electron');
 const { getFilesBaseDir, getExcelPath, getDatabasePath, getExcelEnvOverrides, getEffectiveExcelPath } = require('../../main.path');
 const { resolveOneShotCommand } = require('../../services/python.service');
+const { setMeta: setAppMeta } = require('./appMeta.handlers');
+const { getDb } = require('../../services/db.service');
 
 // ---- ERSTE-Zieldatei (vom User per "Browse" wählbar, persistiert) ----
 function _ersteTargetFile() {
@@ -448,6 +450,9 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // Tabelle nach Abschluss aktualisieren
       try { refreshTable('Portfolios'); } catch {}
 
+      // Berechnungsdatum (Portfolio-Revaluation) festhalten.
+      try { setAppMeta('last_calculation_at', new Date().toISOString()); } catch {}
+
       event.reply('py-fairValue-complete', {
         success: true,
         projectName: 'py-fairValue',
@@ -631,6 +636,13 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // im Renderer rechnet ROLLING ohnehin explizit als Baseline mit.)
       try { await pruneMvarToLatestAsof(dbApi); } catch (e) { console.warn('[MVaR] prune failed', e?.message || e); }
 
+      // Berechnungsdatum in MarketVaR.created_at (Zeilen ohne Stempel) + AppMeta festhalten.
+      const _nowMv = new Date().toISOString();
+      try { getDb().prepare(`UPDATE MarketVaR SET created_at = ? WHERE created_at IS NULL`).run(_nowMv); }
+      catch (e) { console.warn('[MVaR] stamp created_at failed', e?.message || e); }
+      try { setAppMeta('mvar_calculation_at', _nowMv); } catch {}
+      try { refreshTable('AppMeta'); } catch {}
+
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
 
       event.reply('py-mvar-complete', { success: true, projectName: 'py-MVaR' });
@@ -676,6 +688,17 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
 
     try {
       await startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs);
+
+      // Berechnungsdatum in CreditVaR.created_at (Spalte ggf. anlegen) + AppMeta festhalten.
+      const _nowCv = new Date().toISOString();
+      try {
+        const db = getDb();
+        try { db.prepare(`ALTER TABLE CreditVaR ADD COLUMN created_at TEXT`).run(); } catch (_) { /* Spalte existiert schon */ }
+        db.prepare(`UPDATE CreditVaR SET created_at = ? WHERE created_at IS NULL`).run(_nowCv);
+      } catch (e) { console.warn('[CVaR] stamp created_at failed', e?.message || e); }
+      try { setAppMeta('cvar_calculation_at', _nowCv); } catch {}
+      try { refreshTable('AppMeta'); } catch {}
+
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
 
       event.reply('py-cvar-complete', { success: true, projectName: 'py-CVaR' });
@@ -740,6 +763,12 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
 
       event.sender.send('py-excel-progress', { provider: mode, progress: 100, message: `Excel import completed (${mode}).` });
+
+      // Portfolio-Import-Datum festhalten, wenn Deals (bzw. der Sammel-Import ALL) importiert wurden.
+      if (mode === 'DEALS' || mode === 'ALL') {
+        try { setAppMeta('portfolio_import_at', new Date().toISOString()); } catch {}
+        try { refreshTable('AppMeta'); } catch {}
+      }
 
       event.reply('py-excel-complete', { success: true, projectName: 'py-excel', mode, result });
       event.reply('project-finished', { success: true, projectName: 'py-excel', mode });

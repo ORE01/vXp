@@ -9,6 +9,8 @@
 // + Default-Portfolio). Deferred, damit der Store-Update davor durch ist.
 const HOME_RELEVANT_CHANNELS = new Set([
   'PortfoliosData',
+  'AppMetaData',     // App-Meta-Zeitstempel (Import/Berechnung) -> Overview-Kopfzeile sofort auffrischen
+  'DealsMainData',   // Trades-Update (Portfolio-Import) -> Overview-Kopfzeile (Deals-update-Datum) sofort auffrischen
   'PortfolioRiskSensitivitiesData',
   'MarketVaRData',
   'CreditVaRData',
@@ -33,6 +35,17 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
   if (HOME_RELEVANT_CHANNELS.has(channel)) scheduleHomeOverviewRender();
 
   switch (channel) {
+    // App-Meta (Import-/Berechnungs-Zeitstempel): als {key:value}-Map global ablegen,
+    // damit die Overview-Kopfzeile das Trade-/Berechnungsdatum auch OHNE meta:get zeigt.
+    case 'AppMetaData': {
+      try {
+        const map = {};
+        for (const r of rows) { const k = r?.key; if (k) map[k] = r?.value; }
+        window.__appMetaPump = map;
+      } catch (_) {}
+      return;
+    }
+
     // CUSTOMER
     case 'CustomerData':
       return handlers.handleCustomerData?.(rows);
