@@ -540,7 +540,8 @@ function readConcKpiTile(cardEl) {
 function drawKpiTile(doc, x, y, w, h, tile) {
   const bcol = tile.borderRgb || TILE_COL.BORDER;
   const lblCol = tile.borderRgb || TILE_COL.MUTED;
-  doc.setDrawColor(...bcol); doc.setLineWidth(0.4); doc.setFillColor(...TILE_COL.CARD);
+  // Farbrahmen (z.B. EAD/Loss-Balkenfarbe) kraeftiger zeichnen als den Standard-Rahmen.
+  doc.setDrawColor(...bcol); doc.setLineWidth(tile.borderRgb ? 0.9 : 0.4); doc.setFillColor(...TILE_COL.CARD);
   doc.roundedRect(x, y, w, h, 1.8, 1.8, 'FD');
   // Label (zentriert, in Rahmenfarbe/muted)
   doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...lblCol);
@@ -590,6 +591,7 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
     const tile = {
       label: k.label, abs: parts[0] || '', rel: parts.slice(1).join(' · '), sub: k.sub || '',
       chg: k.trendChg ? { text: String(k.trendChg), dirUp: !!k.trendUp, red: !k.trendColorUp } : null,
+      borderRgb: k.frameRgb || null,   // optionaler Farbrahmen (z.B. EAD/Loss-Balkenfarbe)
     };
     drawKpiTile(doc, marginX + idx * (tileW + tileGap), y, tileW, tileH, tile);
   });
@@ -607,6 +609,11 @@ function kpisFromTableEl(el) {
       const k = { label: (tds[0].textContent || '').trim(), value: (vtd.textContent || '').trim() };
       // Optionale beschreibende Sub-Zeile (z.B. EAD "98,1 % of portfolio") als data-sub am Wert-<td>.
       if (vtd.dataset && vtd.dataset.sub) k.sub = vtd.dataset.sub;
+      // Optionaler Farbrahmen (data-frame="r,g,b") -> Kachel in dieser Farbe umrandet.
+      if (vtd.dataset && vtd.dataset.frame) {
+        const rgb = String(vtd.dataset.frame).split(',').map((n) => parseInt(n, 10)).filter((n) => Number.isFinite(n));
+        if (rgb.length === 3) k.frameRgb = rgb;
+      }
       // Optionaler Trend (Kreis+Pfeil): Richtung + Aenderungstext als data-Attribute am Wert-<td>.
       if (vtd.dataset && vtd.dataset.chg) {
         k.trendChg = vtd.dataset.chg;
@@ -2572,11 +2579,22 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         const srcH = imgData.height || 520;
         const capH = cq ? 10 : 7;
         const availH = cellH - (cq ? 3 : 2);
-        const scale = Math.min(cellW / srcW, availH / srcH, 1);
-        const w = srcW * scale;
-        const h = srcH * scale;
-        const ix = x + (cellW - w) / 2;
-        const iy = rowY + capH + (availH - h) / 2;
+        let w, h, ix, iy;
+        if (sec.key === 'overview') {
+          // Overview-Balkendiagramme: Kachel VOLL ausfuellen (die Quell-Canvas ist schmal,
+          // aspektgetreu bliebe sonst viel Leerraum -> kleine Balken). Balkencharts
+          // vertragen das Fuellen gut; Balken werden gross und lesbar.
+          w = cellW;
+          h = availH - capH;
+          ix = x;
+          iy = rowY + capH;
+        } else {
+          const scale = Math.min(cellW / srcW, availH / srcH, 1);
+          w = srcW * scale;
+          h = srcH * scale;
+          ix = x + (cellW - w) / 2;
+          iy = rowY + capH + (availH - h) / 2;
+        }
         try { doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', ix, iy, w, h); } catch (e) { console.warn('[PDF] composed chart failed', ch.id, e); }
       }
       col++;

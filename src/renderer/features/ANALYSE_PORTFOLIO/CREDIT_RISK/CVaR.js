@@ -510,6 +510,19 @@ function renderEadKpis(filtered, port_name) {
     set('eadKpiConcVal', '–'); set('eadKpiConcSub', '');
   }
 
+  // KPI-Kacheln in den Balkenfarben des LGD-Charts umrahmen (wie die MVaR-Factor-KPIs):
+  // EAD-Balken (hellblau) fuer EAD/Konzentration, Loss-Exposure-Balken (rot) fuer LGD.
+  // PD hat keinen Balken -> dezenter Standardrahmen.
+  try {
+    const EAD_COL = 'rgba(70, 192, 230, 0.9)', LOSS_COL = 'rgba(255, 0, 0, 0.85)';
+    const frame = { ead_coverage: EAD_COL, portfolio_lgd: LOSS_COL, ead_concentration: EAD_COL };
+    document.querySelectorAll('[data-tile="ead_coverage"], [data-tile="portfolio_lgd"], [data-tile="weighted_pd"], [data-tile="ead_concentration"]').forEach((el) => {
+      const c = frame[el.dataset.tile];
+      if (c) { el.style.borderColor = c; el.style.borderWidth = '2px'; }
+      else { el.style.borderColor = ''; el.style.borderWidth = ''; }
+    });
+  } catch (_) {}
+
   // Report-Spiegel (data-kpi-band): dieselben 4 KPIs als Tabelle fuer Preview/PDF, da
   // das conc-kpi-<div>-Grid nicht erfasst wird. Werte aus den gerade gesetzten Karten.
   try {
@@ -517,14 +530,17 @@ function renderEadKpis(filtered, port_name) {
     if (tbl) {
       const _esc = (s) => String(s ?? '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
       const g = (id) => (document.getElementById(id)?.textContent || '').trim();
+      // Rahmenfarben passend zu den Balken des LGD-Charts: EAD-Balken (hellblau) fuer
+      // EAD-/Konzentrations-KPIs, Loss-Exposure-Balken (rot) fuer LGD. PD ohne Rahmen.
+      const EAD_RGB = '70,192,230', LOSS_RGB = '255,0,0';
       const items = [
-        ['Exposure at Default (EAD)', g('eadKpiCoverageVal'), g('eadKpiCoverageSub')],
-        ['Loss Given Default (LGD)', g('eadKpiLgdVal'), g('eadKpiLgdSub')],
-        ['Probability of Default (PD)', g('eadKpiPdVal'), g('eadKpiPdSub')],
-        ['EAD Concentration', g('eadKpiConcVal'), g('eadKpiConcSub')],
+        ['Exposure at Default (EAD)', g('eadKpiCoverageVal'), g('eadKpiCoverageSub'), EAD_RGB],
+        ['Loss Given Default (LGD)', g('eadKpiLgdVal'), g('eadKpiLgdSub'), LOSS_RGB],
+        ['Probability of Default (PD)', g('eadKpiPdVal'), g('eadKpiPdSub'), ''],
+        ['EAD Concentration', g('eadKpiConcVal'), g('eadKpiConcSub'), EAD_RGB],
       ];
       tbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-        items.map(([k, v, s]) => `<tr><td>${_esc(k)}</td><td${s ? ` data-sub="${_esc(s)}"` : ''}>${_esc(v)}</td></tr>`).join('')
+        items.map(([k, v, s, f]) => `<tr><td>${_esc(k)}</td><td${s ? ` data-sub="${_esc(s)}"` : ''}${f ? ` data-frame="${f}"` : ''}>${_esc(v)}</td></tr>`).join('')
       }</tbody></table>`;
     }
   } catch (_) {}
@@ -788,9 +804,12 @@ export function renderLGDChart() {
         layout: { padding: { right: 96 } },
         // Drill per RECHTSKLICK (bindRightClickDrill nach der Chart-Erzeugung).
         plugins: {
-          // Canvas-Legende aus: sticky HTML-Legende (renderChartLegend) bleibt beim
-          // Scrollen sichtbar, gleiches Styling wie beim Loss-Chart.
-          legend: { display: false },
+          // App: Canvas-Legende aus (sticky HTML-Legende renderChartLegend bleibt beim
+          // Scrollen sichtbar). Report/PDF: Canvas-Legende AN, damit sie im erfassten
+          // Bild erscheint (die HTML-Legende wird nicht mitgerendert).
+          legend: inReports
+            ? { display: true, position: 'top', labels: { usePointStyle: true, boxWidth: 10, boxHeight: 10, font: { size: 12 } } }
+            : { display: false },
           annotation: false,
           // Wert (kompakt) + rel % vom NAV rechts neben jedem Balken.
           datalabels: window.ChartDataLabels ? {

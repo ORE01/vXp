@@ -2003,11 +2003,11 @@ export function renderHomeOverview() {
     const cvar = day(_appMeta?.cvar_calculation_at || _pump.cvar_calculation_at) || latestCreatedAtOf(appState.getAllCvarData?.());
     const mkt  = latestRatesDate();
     const hist = latestMarketDataDate();
-    if (imp)  parts.push(`Deals update ${imp}`);
-    if (mvar) parts.push(`MVaR ${mvar}`);
-    if (cvar) parts.push(`CVaR ${cvar}`);
+    if (imp)  parts.push(`Portfolio Trades ${imp}`);
     if (mkt)  parts.push(`Market Data ${mkt}`);
     if (hist) parts.push(`Historic Data ${hist}`);
+    if (mvar) parts.push(`Market Risk ${mvar}`);
+    if (cvar) parts.push(`Credit Risk ${cvar}`);
     return `Portfolio: ${port}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;
   };
   setText('homeAsOf', buildAsOfHeader());

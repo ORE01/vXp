@@ -2929,7 +2929,9 @@ Feature:    Wenn es nur in einem Panel gilt
                  Wie viel Credit-Exposure ist modelliert? / Verlust bei Default? /
                  Ausfallwahrscheinlichkeit? / Wo konzentriert sich das Exposure?
                  Werte: renderEadKpis() in CVaR.js (je Portfolio, pd_flag='RATING'). -->
-            <div class="conc-kpi-grid" style="margin-bottom:14px;">
+            <div class="conc-panel" style="margin-bottom:14px;">
+              <div class="conc-panel__title">Key Figures</div>
+              <div class="conc-kpi-grid">
                 <div class="conc-kpi" data-tile="ead_coverage" title="Modelled (rated) EAD vs. total portfolio notional">
                   <div class="conc-kpi__lbl">Exposure at Default (EAD)</div>
                   <div class="conc-kpi__val" id="eadKpiCoverageVal">&ndash;</div>
@@ -2950,6 +2952,7 @@ Feature:    Wenn es nur in einem Panel gilt
                   <div class="conc-kpi__val" id="eadKpiConcVal">&ndash;</div>
                   <div class="conc-kpi__sub" id="eadKpiConcSub"></div>
                 </div>
+              </div>
             </div>
 
             <!-- Report-Spiegel (unsichtbar): EAD-KPIs als KPI-Band fuer Preview/PDF

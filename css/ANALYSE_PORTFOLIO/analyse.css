@@ -2,6 +2,19 @@
    analyse.css
    ============================================================ */
 
+/* RISK/VALUATION-View: der Sidebar-Tree soll FIX bleiben und NICHT das ganze Dokument
+   scrollen. Der Content-Bereich bekommt die feste Resthoehe unter der Topbar und scrollt
+   nur intern, falls der Tree laenger als der Bildschirm ist -> Topbar/Tabs/Sidebar
+   bleiben stehen (kein aeusserer Seiten-Scrollbalken mehr). */
+#ANALYSE_Modal > .table-content {
+  height: calc(100vh - var(--topbar-height));
+  min-height: 0;
+  /* WICHTIG: padding (u.a. padding-top:48px) MUSS in die Hoehe eingerechnet werden,
+     sonst ragt der Content 48px ueber den Viewport -> Dokument-Scrollbalken bleibt. */
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
 /* ============================================================
    ANALYSE vs RISK views (same #ANALYSE_Modal, toggled by class in tabs.js).
    ANALYSE view: hide the Market/Credit risk triggers.
