@@ -2006,10 +2006,19 @@ export function renderHomeOverview() {
     const cvar = day(_appMeta?.cvar_calculation_at || _pump.cvar_calculation_at) || latestCreatedAtOf(appState.getAllCvarData?.());
     const mkt  = latestRatesDate();
     const hist = latestMarketDataDate();
+    // Historic Risk Data = juengster "Save to Historic Metrics"-Eintrag (PortfolioHistoryMetrics)
+    // fuer das gewaehlte Portfolio.
+    let histRisk = '';
+    for (const r of (appState.getPortfolioHistoryData?.() || [])) {
+      if (String(r?.port_name ?? r?.PORT_NAME ?? '').trim() !== port) continue;
+      const d = String(r?.DATE ?? '').slice(0, 10);
+      if (d && d > histRisk) histRisk = d;
+    }
     if (pcalc) parts.push(`Portfolio ${pcalc}`);
     if (imp)  parts.push(`Portfolio Trades ${imp}`);
     if (mkt)  parts.push(`Market Data ${mkt}`);
     if (hist) parts.push(`Historic Data ${hist}`);
+    if (histRisk) parts.push(`Historic Risk Data ${histRisk}`);
     if (mvar) parts.push(`Market Risk ${mvar}`);
     if (cvar) parts.push(`Credit Risk ${cvar}`);
     return `Portfolio: ${port}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;

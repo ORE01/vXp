@@ -160,8 +160,10 @@ export function createMarketRiskRefresh({ appState } = {}) {
 
     // ZEITMESSUNG: zeigt in der Konsole, welcher Render-Schritt beim (Factors-)Panel-Open
     // die Zeit kostet. Danach koennen wir gezielt genau den Schritt optimieren.
-    const _t = (label, fn) => { const s = performance.now(); try { fn(); } finally { console.log(`[mvarUI] ${label}: ${Math.round(performance.now() - s)}ms`); } };
-    console.time('[mvarUI] refreshMarketRiskUI total');
+    // Timing-Logs standardmaessig AUS. Zum Profilen: window.__MVAR_TIMING = true setzen.
+    const _MVAR_TIMING = (typeof window !== 'undefined' && window.__MVAR_TIMING === true);
+    const _t = (label, fn) => { const s = performance.now(); try { fn(); } finally { if (_MVAR_TIMING) console.log(`[mvarUI] ${label}: ${Math.round(performance.now() - s)}ms`); } };
+    if (_MVAR_TIMING) console.time('[mvarUI] refreshMarketRiskUI total');
 
     if (Array.isArray(allMvar) && allMvar.length) {
       _t('handleMVaRData (KPIs)', () => handleMVaRData(allMvar, index));
@@ -187,7 +189,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
 
     // Market-Risk-Dashboard (KPI-Karten) aus derselben Aggregat-Zeile aktualisieren.
     try { _t('renderMarketRiskDashboard', () => renderMarketRiskDashboard()); } catch (e) { console.warn('[marketRiskRefresh] dashboard render failed', e); }
-    console.timeEnd('[mvarUI] refreshMarketRiskUI total');
+    if (_MVAR_TIMING) console.timeEnd('[mvarUI] refreshMarketRiskUI total');
 
     // Ansichts-Szenario-Dropdowns (in jedem Panel) mit den gerechneten Szenarien
     // befuellen + auf das aktuelle View-Szenario synchronisieren (Default ROLLING_1).

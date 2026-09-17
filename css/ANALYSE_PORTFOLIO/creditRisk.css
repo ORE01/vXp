@@ -630,13 +630,12 @@ body.light-theme #panel-credit-current .conc-kpi[data-tile="credit_el"] .conc-kp
   display: block; text-align: left; font-size: 9px; line-height: 1.2;
   color: var(--text-bright); margin-bottom: 6px; white-space: nowrap;
 }
-#panel-credit .conc-kpi[data-tile="credit_el"]::before, #panel-credit-current .conc-kpi[data-tile="credit_el"]::before { content: "Reported expected loss"; }
-/* Text kommt aus data-desc (dynamisch aus der Credit-VaR-Config: conf_level + horizon),
-   gesetzt in renderCreditKpiSet. Fallback bis JS laeuft: "Risk buffer". */
-#panel-credit .conc-kpi[data-tile="credit_ec"]::before, #panel-credit-current .conc-kpi[data-tile="credit_ec"]::before { content: attr(data-desc); }
-#panel-credit .conc-kpi[data-tile="credit_ec"]:not([data-desc])::before, #panel-credit-current .conc-kpi[data-tile="credit_ec"]:not([data-desc])::before { content: "Risk buffer"; }
-#panel-credit .conc-kpi[data-tile="credit_var_hist"]::before, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"]::before { content: "Realistic loss threshold"; }
-#panel-credit .conc-kpi[data-tile="credit_es"]::before, #panel-credit-current .conc-kpi[data-tile="credit_es"]::before { content: "Average loss in extreme cases"; }
+/* Beschreibungstext (Zeile 3/4) entfernt: die Aenderungsrate (VaR/ES) bzw. nichts (EL/EC)
+   ersetzt ihn. content:none -> das ::before-Pseudoelement entsteht gar nicht (kein Leerraum). */
+#panel-credit .conc-kpi[data-tile="credit_el"]::before, #panel-credit-current .conc-kpi[data-tile="credit_el"]::before { content: none; }
+#panel-credit .conc-kpi[data-tile="credit_ec"]::before, #panel-credit-current .conc-kpi[data-tile="credit_ec"]::before { content: none; }
+#panel-credit .conc-kpi[data-tile="credit_var_hist"]::before, #panel-credit-current .conc-kpi[data-tile="credit_var_hist"]::before { content: none; }
+#panel-credit .conc-kpi[data-tile="credit_es"]::before, #panel-credit-current .conc-kpi[data-tile="credit_es"]::before { content: none; }
 /* Historic PD + Market adjusted PD: Name (conc-kpi__lbl) GANZ NACH OBEN, Kurzbeschreibung
    (::before) nach UNTEN (Zeile 1 <-> Zeile 4 getauscht). Reihenfolge per Flex-order; das
    Styling der Elemente bleibt unveraendert. Text bleibt zentriert (align-items default stretch). */

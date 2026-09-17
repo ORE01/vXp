@@ -290,18 +290,31 @@ function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
       // Die Credit-Rels (elRel/ecRel/varRel/esRel/edeRel) sind BRUECHE (z.B. 0,1234); kpiCard
       // erwartet Prozent -> hier *100 (entspricht dem frueheren fR = (x*100) %).
       const _pct = (x) => (Number.isFinite(x) ? x * 100 : x);
+      // Aenderung ggue. Vorperiode im P&L-Stil (Kreis-Pfeil + abs·rel). NUR VaR & ES:
+      // die History (PortfolioHistoryMetrics) fuehrt C_VaR/C_ES; EL/EC haben keine History.
+      const _histCr = (appState.getPortfolioHistoryData?.() || [])
+        .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port)
+        .slice().sort((a, b) => new Date(a.DATE) - new Date(b.DATE));
+      const _prevCr = _histCr[_histCr.length - 2] || {};
+      const _numCr = (v) => { const n = parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : NaN; };
+      const _chgOf = (cur, prevRaw) => {
+        const p = Math.abs(_numCr(prevRaw)), c = Math.abs(Number(cur));
+        if (!Number.isFinite(c) || !Number.isFinite(p) || p === 0 || c === p) return null;
+        return { abs: Math.abs(c - p), rel: Math.abs((c - p) / p * 100), up: c >= p };
+      };
+      const _varChg = haveVar ? _chgOf(varAbs, _prevCr.C_VaR) : null;
+      const _esChg  = haveEs  ? _chgOf(esAbs,  _prevCr.C_ES)  : null;
       _grid.innerHTML = [
         kpiCard({ tileKey: 'credit_el', metric: 'el', connector: '+', label: 'Expected Loss (EL)', pairInline: true,
-                  label2: _isMadj ? '(Expected Default Exposure)' : null, title: '= EAD × LGD × PD',
-                  abs: haveEl ? elSum : null, rel: _pct(elRel),
-                  value2: (_isMadj && haveEl) ? { abs: edeSum, rel: _pct(edeRel) } : null }),
+                  title: '= EAD × LGD × PD',
+                  abs: haveEl ? elSum : null, rel: _pct(elRel) }),
         kpiCard({ tileKey: 'credit_ec', metric: 'ec', connector: '=', label: 'Economic Capital (EC)', pairInline: true,
-                  title: '= VaR − EL', desc: riskBufferDescFromConfig(), abs: ecAbs, rel: _pct(ecRel) }),
+                  title: '= VaR − EL', abs: ecAbs, rel: _pct(ecRel) }),
         kpiCard({ tileKey: 'credit_var_hist', metric: 'var', connector: '→', label: 'Value at Risk (VaR)', pairInline: true,
                   title: `Credit VaR${_confTxt ? ' · ' + _confTxt : ''}`, dot: _cvarState || null,
-                  abs: haveVar ? varAbs : null, rel: _pct(varRel) }),
+                  abs: haveVar ? varAbs : null, rel: _pct(varRel), chg: _varChg }),
         kpiCard({ tileKey: 'credit_es', metric: 'es', label: 'Expected Shortfall (ES)', pairInline: true,
-                  title: 'Credit ES · beyond VaR', abs: haveEs ? esAbs : null, rel: _pct(esRel) }),
+                  title: 'Credit ES · beyond VaR', abs: haveEs ? esAbs : null, rel: _pct(esRel), chg: _esChg }),
       ].join('');
     }
   }

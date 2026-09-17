@@ -136,10 +136,10 @@ function setIRSensData(rows) {
   function setMvarProductData(rows) {
     appState.mvarProductDataAll = Array.isArray(rows) ? rows : [];
 
-    console.log('[marketRiskStore] setMvarProductData REPLACED', {
-      rows: appState.mvarProductDataAll.length,
-      sample: appState.mvarProductDataAll[0],
-    });
+    // console.log('[marketRiskStore] setMvarProductData REPLACED', {
+    //   rows: appState.mvarProductDataAll.length,
+    //   sample: appState.mvarProductDataAll[0],
+    // });
   }
 
   function getMvarProductData({ port_name, scenario_name, asof_date } = {}) {
