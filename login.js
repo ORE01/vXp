@@ -1,7 +1,7 @@
-console.log('[LOGIN] root login.js loaded');
+// console.log('[LOGIN] root login.js loaded');
 
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('[LOGIN] DOMContentLoaded');
+  // console.log('[LOGIN] DOMContentLoaded');
 
   const loginPage  = document.querySelector('.login-page');
   const appRoot    = document.querySelector('#app-root');

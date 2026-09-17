@@ -423,8 +423,8 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
       {
         label: "MVaR All (%)",
         data: mvarAllPct,
-        borderColor: "rgba(54, 162, 235, 1)",
-        backgroundColor: "rgba(54, 162, 235, 0.15)",
+        borderColor: "rgba(211, 47, 47, 1)",
+        backgroundColor: "rgba(211, 47, 47, 0.15)",
         borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 3,
@@ -443,8 +443,8 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
       {
         label: "MVaR CS (%)",
         data: mvarCsPct,
-        borderColor: "rgba(255, 159, 64, 1)",
-        backgroundColor: "rgba(255, 159, 64, 0.15)",
+        borderColor: "rgba(54, 162, 235, 1)",
+        backgroundColor: "rgba(54, 162, 235, 0.15)",
         borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 3,
@@ -453,8 +453,8 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
       {
         label: "M ES All (%)",
         data: mesAllPct,
-        borderColor: "rgba(54, 162, 235, 1)",
-        backgroundColor: "rgba(54, 162, 235, 0.0)",
+        borderColor: "rgba(211, 47, 47, 1)",
+        backgroundColor: "rgba(211, 47, 47, 0.0)",
         borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 3,
@@ -475,8 +475,8 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
       {
         label: "M ES CS (%)",
         data: mesCsPct,
-        borderColor: "rgba(255, 159, 64, 1)",
-        backgroundColor: "rgba(255, 159, 64, 0.0)",
+        borderColor: "rgba(54, 162, 235, 1)",
+        backgroundColor: "rgba(54, 162, 235, 0.0)",
         borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 3,

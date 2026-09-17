@@ -2579,22 +2579,12 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
         const srcH = imgData.height || 520;
         const capH = cq ? 10 : 7;
         const availH = cellH - (cq ? 3 : 2);
-        let w, h, ix, iy;
-        if (sec.key === 'overview') {
-          // Overview-Balkendiagramme: Kachel VOLL ausfuellen (die Quell-Canvas ist schmal,
-          // aspektgetreu bliebe sonst viel Leerraum -> kleine Balken). Balkencharts
-          // vertragen das Fuellen gut; Balken werden gross und lesbar.
-          w = cellW;
-          h = availH - capH;
-          ix = x;
-          iy = rowY + capH;
-        } else {
-          const scale = Math.min(cellW / srcW, availH / srcH, 1);
-          w = srcW * scale;
-          h = srcH * scale;
-          ix = x + (cellW - w) / 2;
-          iy = rowY + capH + (availH - h) / 2;
-        }
+        // Aspektgetreu skalieren (kein Fuellen/Verzerren) -> Balken nicht gestreckt.
+        const scale = Math.min(cellW / srcW, availH / srcH, 1);
+        const w = srcW * scale;
+        const h = srcH * scale;
+        const ix = x + (cellW - w) / 2;
+        const iy = rowY + capH + (availH - h) / 2;
         try { doc.addImage(imgData.dataUrl, imgData.fmt || 'JPEG', ix, iy, w, h); } catch (e) { console.warn('[PDF] composed chart failed', ch.id, e); }
       }
       col++;
@@ -2744,8 +2734,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
     // EAD/LGD-Chart groesser darstellen: volle Inhaltsbreite + hoeher (nur 10 Balken
     // -> Balken und Beschriftung deutlich besser lesbar). Andere Charts unveraendert.
     const isEad = ch.id === 'LGDChart';
-    const cW = isEad ? layout.contentWidth : chartWidth;
-    const maxH = isEad ? 95 : 90;
+    // "How has the portfolio value developed?" steht allein auf seiner Seite -> gross:
+    // volle Inhaltsbreite + deutlich mehr Hoehe.
+    const isBigSolo = ch.id === 'perfHistValueChart';
+    const cW = (isEad || isBigSolo) ? layout.contentWidth : chartWidth;
+    const maxH = isBigSolo ? 150 : (isEad ? 95 : 90);
     const scale = Math.min(cW / srcW, maxH / srcH, 1);
     const targetWidth = srcW * scale;
     const targetHeight = srcH * scale;
@@ -2788,8 +2781,8 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       console.warn('[PDF] addImage failed for', ch.id, e);
     }
 
-    // Notiz rechts neben der Graphik (nicht beim vollbreiten EAD-Chart).
-    if (noteLines.length && !isEad) {
+    // Notiz rechts neben der Graphik (nicht bei vollbreiten Charts).
+    if (noteLines.length && !isEad && !isBigSolo) {
       doc.setFontSize(9);
       doc.setTextColor(90);
       doc.text(noteLines, noteXC, imgY + 3);

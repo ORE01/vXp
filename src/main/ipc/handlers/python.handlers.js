@@ -450,8 +450,16 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // Tabelle nach Abschluss aktualisieren
       try { refreshTable('Portfolios'); } catch {}
 
-      // Berechnungsdatum (Portfolio-Revaluation) festhalten.
-      try { setAppMeta('last_calculation_at', new Date().toISOString()); } catch {}
+      // Berechnungsdatum (Portfolio-Revaluation) festhalten: global + PRO Portfolio-Name,
+      // damit die Overview-Kopfzeile "Portfolio <Datum>" fuer genau das gewaehlte Portfolio
+      // zeigen kann.
+      try {
+        const _nowFv = new Date().toISOString();
+        setAppMeta('last_calculation_at', _nowFv);
+        const _pn = String(tableName || '').trim();
+        if (_pn) setAppMeta(`portfolio_calc_at:${_pn}`, _nowFv);
+        try { refreshTable('AppMeta'); } catch {}
+      } catch {}
 
       event.reply('py-fairValue-complete', {
         success: true,
@@ -636,9 +644,11 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // im Renderer rechnet ROLLING ohnehin explizit als Baseline mit.)
       try { await pruneMvarToLatestAsof(dbApi); } catch (e) { console.warn('[MVaR] prune failed', e?.message || e); }
 
-      // Berechnungsdatum in MarketVaR.created_at (Zeilen ohne Stempel) + AppMeta festhalten.
+      // Berechnungsdatum in MarketVaR.created_at + AppMeta festhalten. ALLE Zeilen neu
+      // stempeln (nicht nur NULL): nach dem Lauf gehoeren sie komplett zu DIESEM Lauf
+      // (pruneMvarToLatestAsof haelt nur den juengsten asof) -> Datum bleibt aktuell.
       const _nowMv = new Date().toISOString();
-      try { getDb().prepare(`UPDATE MarketVaR SET created_at = ? WHERE created_at IS NULL`).run(_nowMv); }
+      try { getDb().prepare(`UPDATE MarketVaR SET created_at = ?`).run(_nowMv); }
       catch (e) { console.warn('[MVaR] stamp created_at failed', e?.message || e); }
       try { setAppMeta('mvar_calculation_at', _nowMv); } catch {}
       try { refreshTable('AppMeta'); } catch {}
@@ -694,7 +704,8 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       try {
         const db = getDb();
         try { db.prepare(`ALTER TABLE CreditVaR ADD COLUMN created_at TEXT`).run(); } catch (_) { /* Spalte existiert schon */ }
-        db.prepare(`UPDATE CreditVaR SET created_at = ? WHERE created_at IS NULL`).run(_nowCv);
+        // ALLE Zeilen neu stempeln (nicht nur NULL) -> Datum bleibt bei jedem Lauf aktuell.
+        db.prepare(`UPDATE CreditVaR SET created_at = ?`).run(_nowCv);
       } catch (e) { console.warn('[CVaR] stamp created_at failed', e?.message || e); }
       try { setAppMeta('cvar_calculation_at', _nowCv); } catch {}
       try { refreshTable('AppMeta'); } catch {}

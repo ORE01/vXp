@@ -73,7 +73,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
     initMarketRiskSensitivityTabs();
     sensitivityTabsInitialized = true;
 
-    console.log('[marketRiskRefresh] sensitivity tabs initialized');
+    // console.log('[marketRiskRefresh] sensitivity tabs initialized');
   }
 
   function resolveSelectedPortfolioForSensitivities() {
@@ -332,7 +332,7 @@ document.addEventListener('portfolio-context-changed', (event) => {
   // Sensitivities use their own Risk rows and handlers.
   refreshMarketRiskSensitivitiesUI('portfolio-context-changed');
 });
-    console.log('[marketRiskRefresh] sensitivity refresh listener installed');
+    // console.log('[marketRiskRefresh] sensitivity refresh listener installed');
   }
 
   return {

@@ -114,7 +114,7 @@ const REPORT_ROOT = document.getElementById('report-root');
 if (!APP_ROOT) throw new Error('[renderer] #app-root missing');
 
 const MINIMAL_UI = document.body?.dataset?.minimalUi === '1';
-console.log('[BOOT] MINIMAL_UI =', MINIMAL_UI);
+// console.log('[BOOT] MINIMAL_UI =', MINIMAL_UI);
 
 
 

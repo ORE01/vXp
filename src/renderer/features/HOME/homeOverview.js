@@ -1998,11 +1998,15 @@ export function renderHomeOverview() {
     // der beim Import/Lauf ueber den normalen Tabellen-Pump geliefert wird (ohne IPC-Handler).
     const _pump = (typeof window !== 'undefined' && window.__appMetaPump) || {};
     const imp  = day(_appMeta?.portfolio_import_at || _pump.portfolio_import_at);
+    // Portfolio-Berechnungsdatum (Fair-Value-Lauf) fuer GENAU das gewaehlte Portfolio.
+    const _pcKey = `portfolio_calc_at:${port}`;
+    const pcalc = day(_appMeta?.[_pcKey] || _pump[_pcKey]);
     // MVaR/CVaR: bevorzugt AppMeta, sonst Pump, sonst created_at aus den geladenen Stores.
     const mvar = day(_appMeta?.mvar_calculation_at || _pump.mvar_calculation_at) || latestCreatedAtOf(appState.getAllMvarData?.());
     const cvar = day(_appMeta?.cvar_calculation_at || _pump.cvar_calculation_at) || latestCreatedAtOf(appState.getAllCvarData?.());
     const mkt  = latestRatesDate();
     const hist = latestMarketDataDate();
+    if (pcalc) parts.push(`Portfolio ${pcalc}`);
     if (imp)  parts.push(`Portfolio Trades ${imp}`);
     if (mkt)  parts.push(`Market Data ${mkt}`);
     if (hist) parts.push(`Historic Data ${hist}`);

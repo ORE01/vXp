@@ -152,5 +152,5 @@ export function initMarketRiskSensitivityTabs() {
 
   initialized = true;
 
-  console.log('[SENS TABS] initialized');
+  // console.log('[SENS TABS] initialized');
 }

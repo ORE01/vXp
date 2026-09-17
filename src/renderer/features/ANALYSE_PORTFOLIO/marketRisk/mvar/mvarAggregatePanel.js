@@ -506,7 +506,7 @@ export function getMVaRThresholdsFromInputUsingState() {
     ) || [];
 
   if (!Array.isArray(modelSelectionRows) || modelSelectionRows.length === 0) {
-    console.warn('[MVaR Aggregate] no model-selection rows in state');
+    // console.warn('[MVaR Aggregate] no model-selection rows in state');
     return null;
   }
 

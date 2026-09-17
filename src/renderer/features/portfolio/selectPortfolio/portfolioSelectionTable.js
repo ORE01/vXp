@@ -206,7 +206,7 @@ function renderPortTableOnly(portData, index) {
 // 🔹 MAIN TABLE HANDLER
 // =============================
 
-console.log('[PORT MODULE] loaded');
+// console.log('[PORT MODULE] loaded');
 
 // Display-only enrichment helper: keep the existing portfolio row value if it is
 // already present; otherwise take the first non-empty candidate from product data.

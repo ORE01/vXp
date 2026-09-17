@@ -379,19 +379,34 @@ function fillSensReportKpiBand() {
   const tbl = document.getElementById('sensKpiTable');
   if (!tbl) return;
   const esc = (s) => String(s ?? '').replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]));
+  // [label, Wert-Element-ID, Change-Element-ID?] — die Change-ID (…Chg) traegt den
+  // Kreis-Pfeil (Richtung + Aenderungstext); fuer PV01/CPV01 in Preview/PDF spiegeln.
   const defs = [
-    ['Total PV01', 'SensTotalPV01'],
-    ['Total CPV01', 'SensTotalCPV01'],
-    ['Top IR Tenor', 'SensTopIRTenor'],
-    ['Top Credit Bucket', 'SensTopCreditBucket'],
-    ['Total Vega', 'SensTotalVega'],
+    ['Total PV01', 'SensTotalPV01', 'SensTotalPV01Chg'],
+    ['Total CPV01', 'SensTotalCPV01', 'SensTotalCPV01Chg'],
+    ['Top IR Tenor', 'SensTopIRTenor', null],
+    ['Top Credit Bucket', 'SensTopCreditBucket', null],
+    ['Total Vega', 'SensTotalVega', 'SensTotalVegaChg'],
   ];
+  // Aenderung (Richtung + Text) aus dem …Chg-Element lesen -> als data-up/data-chg
+  // an die Wert-Zelle, damit RiskPDF den Kreis-Pfeil zeichnet (wie im App-KPI).
+  const chgOf = (chgId) => {
+    if (!chgId) return null;
+    const el = document.getElementById(chgId);
+    if (!el || el.hidden) return null;
+    const badge = el.querySelector('.perf-chg-badge');
+    const up = badge ? badge.classList.contains('is-up') : null;
+    // Text ohne das Pfeilzeichen (Badge-Inhalt) -> "1,2 Mio. · 3,4 %".
+    const txt = (el.textContent || '').replace(/[↗↘]/g, '').trim();
+    if (up == null || !txt) return null;
+    return { up, txt };
+  };
   const rows = defs
-    .map(([label, id]) => [label, (document.getElementById(id)?.textContent || '').trim()])
+    .map(([label, id, chgId]) => [label, (document.getElementById(id)?.textContent || '').trim(), chgOf(chgId)])
     .filter(([, v]) => v && v !== '—' && v !== '-');
   tbl.innerHTML = rows.length
     ? `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-        rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')
+        rows.map(([k, v, chg]) => `<tr><td>${esc(k)}</td><td${chg ? ` data-up="${chg.up ? 1 : 0}" data-chg="${esc(chg.txt)}"` : ''}>${esc(v)}</td></tr>`).join('')
       }</tbody></table>`
     : '';
 }

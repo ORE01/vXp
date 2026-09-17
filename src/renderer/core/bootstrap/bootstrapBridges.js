@@ -18,7 +18,7 @@ export function bootstrapBridges(appState, deps = {}) {
 
   // SOFORT setzen, bevor irgendetwas anderes potenziell crasht
   window.appState = appState;
-  console.log('[bootstrapBridges] window.appState set:', window.appState);
+  // console.log('[bootstrapBridges] window.appState set:', window.appState);
 
   if (!ratesHandlers || typeof ratesHandlers !== 'object') {
     console.error('[bootstrapBridges] ratesHandlers missing/invalid:', ratesHandlers);

@@ -121,8 +121,8 @@ try {
   renderSensHistorySingle('sensPv01HistChart', _hist, {
     keys: ['MDURATION', 'M_DURATION', 'MOD_DURATION'],
     label: 'PV01 (bp)',
-    borderColor: 'rgba(54, 162, 235, 1)',
-    backgroundColor: 'rgba(54, 162, 235, 0.15)',
+    borderColor: 'rgba(0, 200, 83, 1)',
+    backgroundColor: 'rgba(0, 200, 83, 0.15)',
   });
 } catch (e) { console.warn('[IR SENS] PV01 history chart failed', e); }
 
@@ -617,6 +617,8 @@ function createPV01Chart({
       return {
         label: `${ccy} PV01 Weight by Tenor (%)`,
         data: fullLabels.map((_, index) => Number(weights[index] || 0)),
+        borderColor: 'rgba(0, 200, 83, 1)',
+        backgroundColor: 'rgba(0, 200, 83, 0.6)',
         borderWidth: 1,
       };
     });

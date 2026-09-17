@@ -180,8 +180,8 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
     renderSensHistorySingle('sensCpv01HistChart', _hist, {
       keys: ['CPV01bp', 'CPV01_BP', 'CPV01_BP_BASIS'],
       label: 'CPV01 (bp)',
-      borderColor: 'rgba(255, 99, 132, 1)',
-      backgroundColor: 'rgba(255, 99, 132, 0.15)',
+      borderColor: 'rgba(54, 162, 235, 1)',
+      backgroundColor: 'rgba(54, 162, 235, 0.15)',
     });
   } catch (e) { console.warn('[CP SENS] CPV01 history chart failed', e); }
 
@@ -656,6 +656,8 @@ function createCPV01Chart({
           const value = Number(valueByBucket[bucket] || 0);
           return totalForCcy ? (value / totalForCcy) * 100 : 0;
         }),
+        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
         borderWidth: 1,
       };
     });

@@ -87,20 +87,6 @@ export function installReceivers(deps = {}) {
     renderDealsPanel,
   } = deps;
 
-  console.log('[BOOT RECEIVERS] installReceivers called');
-  console.log('[BOOT RECEIVERS] handleSwaptionAtmScenarioData:', typeof handleSwaptionAtmScenarioData);
-  console.log('[BOOT RECEIVERS] handleSwaptionSmileScenarioData:', typeof handleSwaptionSmileScenarioData);
-  console.log('[BOOT RECEIVERS] handleSwaptionActiveData:', typeof handleSwaptionActiveData);
-  console.log(
-    '[BOOT RECEIVERS] handleCustomerTableLayoutsData:',
-    typeof handleCustomerTableLayoutsData
-  );
-
-  console.log(
-  '[BOOT RECEIVERS] handlePortfolioRiskSensitivitiesData:',
-  typeof handlePortfolioRiskSensitivitiesData
-);
-
   if (!api) throw new Error('[installReceivers] api missing');
 
   // hard "bind once"

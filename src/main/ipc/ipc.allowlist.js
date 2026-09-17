@@ -254,6 +254,12 @@ module.exports = {
     // ✅ add-new-row dynamic reply channels
     'add-new-row-success:',
     'add-new-row-error:',
+
+    // TS-Trendlinien: dynamische Reply-Kanaele (load_<modal>_<ts>_<rand>).
+    'ts-trendlines:load-success:',
+    'ts-trendlines:load-error:',
+    'ts-trendlines:save-success:',
+    'ts-trendlines:save-error:',
   ],
 
   // =====================================================
