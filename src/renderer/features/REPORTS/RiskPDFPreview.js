@@ -1446,7 +1446,7 @@ function safeThumb(id, label, w = 160) {
 
 function buildMarketTrafficLightsSection(chartState = {}) {
   const marketPanel = getMarketPanel();
-  console.log('[RiskPreview marketTraffic]', {
+  if (false) console.log('[RiskPreview marketTraffic]', {
     marketPanel,
     marketPanelId: marketPanel?.id,
     hasSummaryRow: !!marketPanel?.querySelector?.('.mvar-summary-row'),
@@ -1554,7 +1554,7 @@ const sectionControls = buildSectionControlsHTML('market', chartState);
 
 function buildCreditTrafficLightsSection(chartState = {}) {
   const creditPanel = getCreditPanel();
-  console.log('[RiskPreview creditTraffic]', {
+  if (false) console.log('[RiskPreview creditTraffic]', {
     creditPanel,
     creditPanelId: creditPanel?.id,
     hasCvarPair: !!creditPanel?.querySelector?.('.cvar-pair'),

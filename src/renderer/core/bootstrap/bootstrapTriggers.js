@@ -65,7 +65,9 @@ export function bootstrapTriggers(appState, { emitPanelOpen } = {}) {
 
     const panelId = btn.dataset.panel || btn.getAttribute('aria-controls');
     if (!panelId) {
-      console.warn('[TRIGGER] missing data-panel / aria-controls', btn);
+      // Manche section-trigger (z. B. reine Accordion-Toggles) haben legitim kein Panel.
+      // Deshalb stumm, ausser window.__TRIGGER_DEBUG = true. Nicht geloescht.
+      if (typeof window !== 'undefined' && window.__TRIGGER_DEBUG) console.warn('[TRIGGER] missing data-panel / aria-controls', btn);
       return;
     }
 

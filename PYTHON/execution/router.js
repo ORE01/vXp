@@ -1,5 +1,10 @@
 // PYTHON/execution/router.js
 
+// Debug-Logs zentral stummschaltbar. In der DevTools-Konsole `window.__EXEC_DEBUG = true`
+// setzen, um die Ablauf-Logs (FV/MVaR/Excel/Response) wieder einzuschalten. Nicht geloescht,
+// nur stummgeschaltet. console.warn/console.error bleiben immer sichtbar.
+const execLog = (...a) => { if (typeof window !== 'undefined' && window.__EXEC_DEBUG) console.log(...a); };
+
 export function createPythonExecutionRouter(ctx) {
   const { appState, once, setLastHistButton } = ctx;
 
@@ -55,8 +60,8 @@ export function createPythonExecutionRouter(ctx) {
     };
 
    
-    console.log('[FV] selectedCurve =', selectedCurve);
-    console.log('[FV] payload =', payload);
+    execLog('[FV] selectedCurve =', selectedCurve);
+    execLog('[FV] payload =', payload);
 
     window.api?.send?.('start-py-fairValue', payload);
   }
@@ -114,7 +119,7 @@ export function createPythonExecutionRouter(ctx) {
     const start = intervalRow ? (intervalRow.START ?? null) : null;
     const end = intervalRow ? (intervalRow.END ?? null) : null;
 
-    console.log('[MVAR RUN CONFIG - BEFORE SPAWN]', {
+    execLog('[MVAR RUN CONFIG - BEFORE SPAWN]', {
       finalIntervalUsed,
       start,
       end,
@@ -203,7 +208,7 @@ export function createPythonExecutionRouter(ctx) {
       mode: 'BASE',
     };
 
-    console.log('[py-cspar] BASE rebuild payload =', payload);
+    execLog('[py-cspar] BASE rebuild payload =', payload);
 
     window.api.send('start-py-cspar', payload);
   }
@@ -225,7 +230,7 @@ export function createPythonExecutionRouter(ctx) {
   }
 
   function handleProjectResponse(buttonElement, projectName, response) {
-    console.log('handleProjectResponse: wird ausgeführt')
+    execLog('handleProjectResponse: wird ausgeführt')
     const projectLabels = {
       'py-fairValue':    'Fair Value',
       'py-MVaR':         'P/L Dist',
@@ -313,8 +318,8 @@ export function createPythonExecutionRouter(ctx) {
 
           const mode = modeMap[buttonElement.id] || 'ALL';
 
-          console.log('[PY EXCEL] button id =', buttonElement.id);
-          console.log('[PY EXCEL] mode =', mode);
+          execLog('[PY EXCEL] button id =', buttonElement.id);
+          execLog('[PY EXCEL] mode =', mode);
 
           sendPayloadToAPI(projectName, mode, extraParam);
           break;

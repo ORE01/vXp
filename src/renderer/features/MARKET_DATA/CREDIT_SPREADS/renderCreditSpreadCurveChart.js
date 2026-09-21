@@ -57,7 +57,7 @@ export function renderCreditSpreadCurveChart() {
   const { rows, scenarioLabel, reason, ccy } = getCreditSpreadCurveData(appState);
 
   if (!rows.length) {
-    console.log('[CS CHART] skip:', reason || 'NO_ROWS');
+    if (false) console.log('[CS CHART] skip:', reason || 'NO_ROWS');
     return;
   }
 

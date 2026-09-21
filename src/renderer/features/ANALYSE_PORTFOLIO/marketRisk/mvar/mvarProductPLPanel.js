@@ -1109,7 +1109,7 @@ export function renderMvarProductPLPanel() {
     try { yieldDrill.setData([]); } catch {}
     renderProductContribCharts([]);
 
-    console.warn('[MVaR ProductPL] no rows for current context', {
+    if (false) console.warn('[MVaR ProductPL] no rows for current context', {
       portName,
       scenarioName,
       storeRows: appState.getMvarProductData?.()?.length || 0,

@@ -55,7 +55,7 @@ export function handleSummaryMarketRiskData(port_name, scenario_name, asof_date 
     .reduce((sum, item) => sum + num(item.NAV), 0);
 
   if (!Number.isFinite(portNav) || portNav === 0) {
-    console.warn(`Invalid or zero NAV for port_name=${port_name}; cannot compute P/L%`, { portNav });
+    if (false) console.warn(`Invalid or zero NAV for port_name=${port_name}; cannot compute P/L%`, { portNav });
     return;
   }
 
@@ -1171,6 +1171,15 @@ function bindSynthBondControls() {
     const a = __synthChartArgs;
     drawSyntheticPortfolioChart(a.targetEndValue, a.portPV01, a.testTtM, a.portCPV01, a.portName);
   };
+  // Entprellter Redraw: der Backtest-Chart ist teuer (Schleife ueber die ganze tägliche
+  // Zeitreihe). 'mvar:factor-map-changed' feuert waehrend eines Refreshs oft in Serie —
+  // debounce kollabiert die Serie zu EINEM Redraw und entkoppelt die schwere Berechnung
+  // vom Event-Dispatch (kein 'handler took Xms' mehr auf dem Event).
+  let _redrawTimer = null;
+  const redrawDebounced = () => {
+    if (_redrawTimer) clearTimeout(_redrawTimer);
+    _redrawTimer = setTimeout(() => { _redrawTimer = null; redraw(); }, 80);
+  };
   ttmSel?.addEventListener('change', redraw);
   ratingSel?.addEventListener('change', redraw);
   // Zeitraum-Buttons (1Y/3Y/5Y/10Y/Max) wie im Scenario-Period-Chart.
@@ -1182,7 +1191,7 @@ function bindSynthBondControls() {
       redraw();
     });
   });
-  document.addEventListener('mvar:factor-map-changed', redraw);
+  document.addEventListener('mvar:factor-map-changed', redrawDebounced);
   __synthControlsBound = true;
 }
 

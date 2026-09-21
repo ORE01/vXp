@@ -121,7 +121,7 @@ export function renderConfigurableTable({
   const tableContainer =
     document.getElementById(tableContainerId);
 
-console.log('[CONFIG TABLE]', {
+if (false) console.log('[CONFIG TABLE]', {
   tableId,
   tableContainerId,
   selectorContainerId,

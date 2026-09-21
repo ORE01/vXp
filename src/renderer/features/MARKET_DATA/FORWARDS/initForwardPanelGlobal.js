@@ -4,7 +4,7 @@ import { handleFWDData } from "./forwardCurvePanel.js";
 import { handleSwapForwardCurve } from "./forwardCurvePanel.js";
 
 function renderForwardPanelNow(reason = "manual") {
-  console.log(`[FORWARDS] renderForwardPanelNow reason=${reason}`);
+  if (false) console.log(`[FORWARDS] renderForwardPanelNow reason=${reason}`);
 
   try {
     handleFWDData();
@@ -38,7 +38,7 @@ export function initForwardPanelGlobalOnce() {
 
   root.dataset.bound = "1";
 
-  console.log("[FORWARDS INIT] binding forward panel");
+  if (false) console.log("[FORWARDS INIT] binding forward panel");
 
   const btnCMS1 = root.querySelector("#CMSButton1");
   const btnCMS2 = root.querySelector("#CMSButton2");

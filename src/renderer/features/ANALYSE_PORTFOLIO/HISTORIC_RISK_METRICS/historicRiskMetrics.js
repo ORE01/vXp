@@ -3,6 +3,13 @@ import { getTileMode } from '../../CUSTOMER_SETUP/overviewTilesPanel.js';
 import { getPortfolioColor } from '../../../utils/colors.js';
 import { kpiPlainCompact } from '../../../utils/kpiCard.js';
 
+// Zentrale Debug-Schalter fuer die Historic-Risk-Metrics-Logs: standardmaessig AUS.
+// Zum Aktivieren in der Konsole: window.__HRM_DEBUG = true  (dann Panel neu rendern).
+const _HRM_DEBUG = () => (typeof window !== 'undefined' && window.__HRM_DEBUG === true);
+const hrmLog  = (...a) => { if (_HRM_DEBUG()) console.log(...a); };
+const hrmInfo = (...a) => { if (_HRM_DEBUG()) console.info(...a); };
+const hrmWarn = (...a) => { if (_HRM_DEBUG()) console.warn(...a); };
+
 
 // HELPER: 
 
@@ -81,7 +88,7 @@ import { kpiPlainCompact } from '../../../utils/kpiCard.js';
   // 🔹 1) Canvas robust holen
   const canvas = document.getElementById(canvasId);
   if (!canvas) {
-    console.info(
+    hrmInfo(
       `[HistoricCharts] Canvas #${canvasId} wurde nicht gefunden – Panel vermutlich nicht gemountet, Chart wird übersprungen.`
     );
     return null;
@@ -89,7 +96,7 @@ import { kpiPlainCompact } from '../../../utils/kpiCard.js';
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
-    console.info(
+    hrmInfo(
       `[HistoricCharts] Konnte 2D-Context von #${canvasId} nicht holen – Chart wird übersprungen.`
     );
     return null;
@@ -770,7 +777,7 @@ function renderHistoricCreditRiskChart(historyData, canvasId = "historicCreditRi
   const sortedData = [...historyData].sort(
     (a, b) => new Date(a.DATE) - new Date(b.DATE)
   );
-  console.log(
+  hrmLog(
     "📅 [CREDIT] First DATE:",
     sortedData[0]?.DATE,
     "Last DATE:",
@@ -795,7 +802,7 @@ function renderHistoricCreditRiskChart(historyData, canvasId = "historicCreditRi
     readPctSeries(row, ["C_ES_PCT", "C_ES_pct", "CES_PCT"])
   );
 
-  console.log(
+  hrmLog(
     "✅ [CREDIT] Sample values:",
     "C_VaR[0]:", cVarPct[0],
     "C_ES[0]:", cEsPct[0]
@@ -917,7 +924,7 @@ function renderHistoricPortfolioYieldChart(historyData, canvasId = "historicPort
   //console.log('EU_1Y', tsData)
 
   if (!Array.isArray(historyData) || historyData.length === 0) {
-    console.warn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
+    hrmWarn("⚠️ Keine PortfolioHistoryMetrics zum Plotten vorhanden.");
     return;
   }
 

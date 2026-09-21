@@ -1,5 +1,9 @@
 // PYTHON/execution/fetch.js
 
+// Debug-Logs zentral stummschaltbar via window.__EXEC_DEBUG (siehe router.js).
+// Nicht geloescht, nur stummgeschaltet. console.warn/console.error bleiben sichtbar.
+const execLog = (...a) => { if (typeof window !== 'undefined' && window.__EXEC_DEBUG) console.log(...a); };
+
 export function createPythonExecutionFetch(ctx) {
   const {
     appState,
@@ -12,7 +16,7 @@ export function createPythonExecutionFetch(ctx) {
   } = ctx;
 
   function fetchAndUpdateFairValueData(port_name) {
-    console.log('[FETCH] fetchAndUpdateFairValueData START', {
+    execLog('[FETCH] fetchAndUpdateFairValueData START', {
       port_name,
       hasHandlePortfolioRiskSensitivitiesData:
         typeof handlePortfolioRiskSensitivitiesData === 'function',
@@ -21,7 +25,7 @@ export function createPythonExecutionFetch(ctx) {
     const onData = (receivedData) => {
       const enhancedData = Array.isArray(receivedData) ? receivedData : [];
 
-      console.log('[FETCH] PortfoliosData received in fetchAndUpdateFairValueData', {
+      execLog('[FETCH] PortfoliosData received in fetchAndUpdateFairValueData', {
         rows: enhancedData.length,
         port_name,
         sample: enhancedData[0],
@@ -44,7 +48,7 @@ export function createPythonExecutionFetch(ctx) {
       appState.setSelectedPortTableName?.(port_name);
       appState.setSelectedDealsTableName?.(port_name);
 
-      console.log('[FETCH] Portfolio context set before PRS reload', {
+      execLog('[FETCH] Portfolio context set before PRS reload', {
         port_name,
         selectedPort: appState.getSelectedPortTableName?.(),
         filteredRows: filteredData.length,
@@ -56,7 +60,7 @@ export function createPythonExecutionFetch(ctx) {
       // portfolioUIOrchestrator und damit PV01/CPV01/Vega triggert.
       fetchAndUpdatePortfolioRiskSensitivitiesData({
         afterStoreUpdate: () => {
-          console.log('[FETCH] PRS store update completed -> now rendering portfolio UI', {
+          execLog('[FETCH] PRS store update completed -> now rendering portfolio UI', {
             port_name,
             selectedPort: appState.getSelectedPortTableName?.(),
             filteredRows: filteredData.length,
@@ -86,7 +90,7 @@ export function createPythonExecutionFetch(ctx) {
   function fetchAndUpdatePortfolioRiskSensitivitiesData(options = {}) {
     const { afterStoreUpdate } = options;
 
-    console.log('[FETCH] requesting PortfolioRiskSensitivitiesData', {
+    execLog('[FETCH] requesting PortfolioRiskSensitivitiesData', {
       selectedPort: appState.getSelectedPortTableName?.(),
       hasHandlePortfolioRiskSensitivitiesData:
         typeof handlePortfolioRiskSensitivitiesData === 'function',
@@ -95,7 +99,7 @@ export function createPythonExecutionFetch(ctx) {
     once('PortfolioRiskSensitivitiesData', (rows) => {
       const safeRows = Array.isArray(rows) ? rows : [];
 
-      console.log('[FETCH] PortfolioRiskSensitivitiesData received after python run', {
+      execLog('[FETCH] PortfolioRiskSensitivitiesData received after python run', {
         rows: safeRows.length,
         sample: safeRows[0],
         selectedPort: appState.getSelectedPortTableName?.(),
@@ -202,7 +206,7 @@ export function createPythonExecutionFetch(ctx) {
       if (!receivedData || receivedData.length === 0) return;
 
       const latest = receivedData[receivedData.length - 1];
-      console.log('📊 Latest HIST row:', latest);
+      execLog('📊 Latest HIST row:', latest);
     });
 
     window.api.send('fetch-table-data', 'tblTS');

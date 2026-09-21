@@ -442,9 +442,23 @@ document.addEventListener('panel:opened', (e) => {
 // weiss der Renderer, dass der Lauf IS ist -> KPI-Kacheln (VaR/ES/EC) UND Tail-Charts mit
 // den GEWICHTETEN Werten neu rendern. Ohne das renderten die KPIs noch aus den rohen
 // (stress-verschobenen) sortedLosses -> zu hoher VaR/ES.
+// Entprellt + je Render in eigenem requestAnimationFrame-Frame (statt beide synchron in
+// EINEM Handler -> Long-Task-Violation ~150ms). UI bleibt responsiv, Mehrfach-Trigger
+// kollabieren zu einem Lauf.
+let _creditIsTimer = null;
 document.addEventListener('credit:is:ready', () => {
-  try { renderCreditExpectedLoss(); } catch {}
-  try { renderCreditOverviewCharts(); } catch {}
+  if (_creditIsTimer) clearTimeout(_creditIsTimer);
+  _creditIsTimer = setTimeout(() => {
+    _creditIsTimer = null;
+    const steps = [renderCreditExpectedLoss, renderCreditOverviewCharts];
+    let i = 0;
+    const run = () => {
+      if (i >= steps.length) return;
+      try { steps[i++](); } catch {}
+      requestAnimationFrame(run);
+    };
+    run();
+  }, 40);
 });
 
 // Theme-Wechsel: Credit-Charts sofort neu zeichnen, damit theme-abhaengige Farben
@@ -504,12 +518,14 @@ function renderEadKpis(filtered, port_name) {
   set('eadKpiLgdVal', eadSum > 0 ? pct(lgdSum / eadSum, 1) : '–');
   set('eadKpiLgdSub', `${eurMio(lgdSum)} loss exposure`);
 
-  // 3) Weighted PD (EAD-gewichtet), je Sicht separat
+  // 3) Weighted PD (EAD-gewichtet), je Sicht separat. Der Wert ist ein Durchschnitt
+  //    -> Ø-Zeichen als Kennzeichnung. Zeile 1 (fett/gross) = Historic, Zeile 2 = Market.
   if (eadSum > 0) {
-    set('eadKpiPdVal', `${pct(pdMnW / eadSum, 2)} Market-adjusted`);
-    set('eadKpiPdSub', `Historic ${pct(pdW / eadSum, 2)} · Market ${pct(pdMW / eadSum, 2)}`);
+    set('eadKpiPdVal', `Ø ${pct(pdW / eadSum, 2)} Historic`);
+    set('eadKpiPdSub', `Ø Market ${pct(pdMW / eadSum, 2)}`);
+    set('eadKpiPdSub2', `Ø Market-adjusted ${pct(pdMnW / eadSum, 2)}`);
   } else {
-    set('eadKpiPdVal', '–'); set('eadKpiPdSub', '');
+    set('eadKpiPdVal', '–'); set('eadKpiPdSub', ''); set('eadKpiPdSub2', '');
   }
 
   // 4) EAD Concentration (auf Sigma MODELLIERTES EAD bezogen, nicht auf Portfolio-Notional)
@@ -549,7 +565,7 @@ function renderEadKpis(filtered, port_name) {
       const items = [
         ['Exposure at Default (EAD)', g('eadKpiCoverageVal'), g('eadKpiCoverageSub'), EAD_RGB],
         ['Loss Given Default (LGD)', g('eadKpiLgdVal'), g('eadKpiLgdSub'), LOSS_RGB],
-        ['Probability of Default (PD)', g('eadKpiPdVal'), g('eadKpiPdSub'), ''],
+        ['Probability of Default (PD)', g('eadKpiPdVal'), [g('eadKpiPdSub'), g('eadKpiPdSub2')].filter(Boolean).join(' · '), ''],
         ['EAD Concentration', g('eadKpiConcVal'), g('eadKpiConcSub'), EAD_RGB],
       ];
       tbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
@@ -798,8 +814,7 @@ export function renderLGDChart() {
     cv.width = inReports ? 1200 : Math.max(320, Math.floor((cv.parentNode.clientWidth || 800) - padX));
     cv.height = dynamicHeight;
 
-    // Fuer die Balken-Labels (Wert kompakt + rel % vom NAV, wie beim Loss-Chart).
-    const sumNav = sumNavForPort(appState.getSelectedPortTableName?.());
+    // Balken-Labels: Wert kompakt + Anteil am Dataset-Gesamtwert (siehe formatter unten).
     const bodyCss = getComputedStyle(document.body);
     const labelColor = (bodyCss.getPropertyValue('--text-primary') || '').trim() || '#ddd';
 
@@ -824,15 +839,19 @@ export function renderLGDChart() {
             ? { display: true, position: 'top', labels: { usePointStyle: true, boxWidth: 10, boxHeight: 10, font: { size: 12 } } }
             : { display: false },
           annotation: false,
-          // Wert (kompakt) + rel % vom NAV rechts neben jedem Balken.
+          // Wert (kompakt) + Anteil am DATASET-Gesamtwert (EAD-Balken: Anteil an Σ EAD ->
+          // matcht die KPI "EAD Concentration"; Loss-Exposure-Balken: Anteil an Σ Loss
+          // Exposure). Frueher / Σ NAV -> wich vom KPI-Wert ab (Notional/EAD vs NAV).
           datalabels: window.ChartDataLabels ? {
             anchor: 'end', align: 'right', clamp: true,
             color: labelColor,
             font: { size: inReports ? 12 : 10 },
-            formatter: (value) => {
+            formatter: (value, context) => {
               const v = Number(value) || 0;
               if (!v) return '';
-              const rel = sumNav > 0 ? (v / sumNav * 100) : 0;
+              const dsData = context?.dataset?.data || [];
+              const total = dsData.reduce((s, x) => s + (Number(x) || 0), 0);
+              const rel = total > 0 ? (v / total * 100) : 0;
               return `${_fmtLossCompact.format(v)} · ${rel.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
             },
           } : undefined,

@@ -116,7 +116,7 @@ export function renderModelSelectionTable() {
   const rows = appState.getMvarModelSelectionAppRows?.() || [];
 
   if (!rows.length) {
-    console.log('[MVAR MODEL SELECTION UI] no view rows available');
+    if (false) console.log('[MVAR MODEL SELECTION UI] no view rows available');
     container.innerHTML =
       '<table id="dataTable"><thead><tr><th>No data available</th></tr></thead><tbody></tbody></table>';
     try { renderMvarFactorChart(); } catch (e) { console.warn('[mvarFactorChart] render failed', e); }
@@ -156,7 +156,7 @@ export function renderModelSelectionTable() {
   // Risk-Factor-Viewer (Checklist + Multi-Line-Chart aus tblTS) unter der Tabelle.
   try { renderMvarFactorChart(); } catch (e) { console.warn('[mvarFactorChart] render failed', e); }
 
-  console.log('[MVAR MODEL SELECTION UI]', {
+  if (false) console.log('[MVAR MODEL SELECTION UI]', {
     source: 'v_MVAR_MODEL_SELECTION_APP',
     rolling: rollingRows.length,
     scenarios: scenarioRows.length,
@@ -303,7 +303,7 @@ function wireEditButtons(container) {
       const rowIndex = mvarRows.findIndex((r) => String(r.id) === String(id));
 
       if (rowIndex < 0) {
-        console.warn('[MVAR MODEL SELECTION UI] MVaRInput row not found for id', id);
+        if (false) console.warn('[MVAR MODEL SELECTION UI] MVaRInput row not found for id', id);
         return;
       }
 

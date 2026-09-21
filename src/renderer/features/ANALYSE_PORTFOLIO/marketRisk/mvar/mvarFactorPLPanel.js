@@ -887,7 +887,7 @@ export function renderMVaRFactorPLPanel() {
 
     renderFactorContribCharts([]);
 
-    console.warn('[MVaR FactorPL] no rows for current context', {
+    if (false) console.warn('[MVaR FactorPL] no rows for current context', {
       portName,
       scenarioName,
       storeRows: appState.getMvarFactorPLData?.()?.length || 0,

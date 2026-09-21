@@ -648,8 +648,12 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // stempeln (nicht nur NULL): nach dem Lauf gehoeren sie komplett zu DIESEM Lauf
       // (pruneMvarToLatestAsof haelt nur den juengsten asof) -> Datum bleibt aktuell.
       const _nowMv = new Date().toISOString();
-      try { getDb().prepare(`UPDATE MarketVaR SET created_at = ?`).run(_nowMv); }
-      catch (e) { console.warn('[MVaR] stamp created_at failed', e?.message || e); }
+      // node-sqlite3 ist async: db.run(...) mit Callback, kein synchrones .prepare().run().
+      try {
+        getDb().run(`UPDATE MarketVaR SET created_at = ?`, [_nowMv], (e) => {
+          if (e) console.warn('[MVaR] stamp created_at failed', e?.message || e);
+        });
+      } catch (e) { console.warn('[MVaR] stamp created_at failed', e?.message || e); }
       try { setAppMeta('mvar_calculation_at', _nowMv); } catch {}
       try { refreshTable('AppMeta'); } catch {}
 
@@ -700,12 +704,24 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       await startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs);
 
       // Berechnungsdatum in CreditVaR.created_at (Spalte ggf. anlegen) + AppMeta festhalten.
+      // node-sqlite3 ist async: der ALTER-Fehler kommt im Callback, nicht synchron -> ein
+      // try/catch faengt ihn NICHT. Deshalb per PRAGMA pruefen, ob die Spalte schon existiert,
+      // und nur bei Bedarf anlegen (verhindert den "duplicate column"-Uncaught).
       const _nowCv = new Date().toISOString();
       try {
         const db = getDb();
-        try { db.prepare(`ALTER TABLE CreditVaR ADD COLUMN created_at TEXT`).run(); } catch (_) { /* Spalte existiert schon */ }
-        // ALLE Zeilen neu stempeln (nicht nur NULL) -> Datum bleibt bei jedem Lauf aktuell.
-        db.prepare(`UPDATE CreditVaR SET created_at = ?`).run(_nowCv);
+        const stampAll = () => db.run(`UPDATE CreditVaR SET created_at = ?`, [_nowCv], (uErr) => {
+          if (uErr) console.warn('[CVaR] stamp created_at failed', uErr?.message || uErr);
+        });
+        db.all(`PRAGMA table_info(CreditVaR)`, [], (pErr, cols) => {
+          if (pErr) { console.warn('[CVaR] stamp created_at failed', pErr?.message || pErr); return; }
+          const hasCol = Array.isArray(cols) && cols.some((c) => c && c.name === 'created_at');
+          if (hasCol) { stampAll(); return; }
+          db.run(`ALTER TABLE CreditVaR ADD COLUMN created_at TEXT`, (aErr) => {
+            if (aErr) console.warn('[CVaR] add created_at failed', aErr?.message || aErr);
+            stampAll();
+          });
+        });
       } catch (e) { console.warn('[CVaR] stamp created_at failed', e?.message || e); }
       try { setAppMeta('cvar_calculation_at', _nowCv); } catch {}
       try { refreshTable('AppMeta'); } catch {}

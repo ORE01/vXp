@@ -323,7 +323,7 @@ const filteredDataWithRisk = filteredData.map(row => {
 // Risk-merged rows narrowed by the header filters (for the yield/summary view).
 const analyseDataWithRisk = applyColumnFilters(filteredDataWithRisk, PORT_TABLE_ID);
 
-console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
+if (false) console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
   port_name,
   filteredRows: filteredData.length,
   pv01Rows: pv01Rows.length,
@@ -336,7 +336,7 @@ console.log('[PORTFOLIO ORCHESTRATOR YIELD RISK MERGE]', {
 
     if (!filteredData.length) return;
 
-    console.log('[RENDER PORT TABLE FILTERED DATA CHECK]', {
+    if (false) console.log('[RENDER PORT TABLE FILTERED DATA CHECK]', {
   port_name,
   rows: filteredData.length,
   frn001: filteredData.find(r => r.PROD_ID === 'FRN001'),

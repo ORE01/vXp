@@ -39,7 +39,7 @@ export function createIssuerProductHandlers({ appState } = {}) {
       };
     }
 
-    console.log('[ISSUER RANK RATINGS] loaded', rows.length);
+    if (false) console.log('[ISSUER RANK RATINGS] loaded', rows.length);
   }
 
   function handleCountryLookupDataInit(receivedData) {
@@ -122,7 +122,7 @@ export function createIssuerProductHandlers({ appState } = {}) {
 
     appState.setActiveTable?.('prod');
 
-console.log('[PRODUCT HANDLER SET PROD DATA]', {
+if (false) console.log('[PRODUCT HANDLER SET PROD DATA]', {
   rows: updatedData.length,
   fix007: updatedData.find(
     r => String(r.PROD_ID ?? '').trim() === 'FIX007'

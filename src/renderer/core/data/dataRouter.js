@@ -187,12 +187,12 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     // PRODUCTS
     case 'v_PRODUCTS_CANONICALData':
       window.__canonicalProductsLoaded = true;
-      console.log('[dataRouter] v_PRODUCTS_CANONICAL loaded', rows.length);
+      if (false) console.log('[dataRouter] v_PRODUCTS_CANONICAL loaded', rows.length);
       return;
 
     case 'v_PRODUCTS_APPData':
       window.__productsAppLoaded = true;
-      console.log('[dataRouter] v_PRODUCTS_APP loaded', rows.length);
+      if (false) console.log('[dataRouter] v_PRODUCTS_APP loaded', rows.length);
       return handlers.renderProductTableInit(rows);
 
     case 'PRODUCT_STRUCTUREData':
@@ -205,7 +205,7 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
           };
         }
 
-        console.log('[dataRouter] PRODUCT_STRUCTURE loaded', rows.length);
+        if (false) console.log('[dataRouter] PRODUCT_STRUCTURE loaded', rows.length);
         return;
       }
 
@@ -230,7 +230,7 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     case 'PortfolioRiskSensitivitiesData': {
       const rows = Array.isArray(data) ? data : [];
 
-      console.log('[DATA ROUTER] PortfolioRiskSensitivitiesData received', {
+      if (false) console.log('[DATA ROUTER] PortfolioRiskSensitivitiesData received', {
         rows: rows.length,
         hasHandler: typeof handlers.handlePortfolioRiskSensitivitiesData === 'function',
         sample: rows[0],
@@ -263,7 +263,7 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
     // MVaR
 
     case 'MarketVaR_FactorSeriesMapData':
-      console.log('[dataRouter] MarketVaR_FactorSeriesMapData received', {
+      if (false) console.log('[dataRouter] MarketVaR_FactorSeriesMapData received', {
         rows: rows.length,
         hasStore: typeof appState?.setMarketVarFactorSeriesMap === 'function',
         hasHandler: typeof handlers.handleMarketVarFactorSeriesMapData === 'function',
@@ -290,7 +290,7 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
       return handlers.handleMvarDistData?.(data);
 
     case 'MarketVaR_FactorPLData':
-      console.log('[dataRouter] MarketVaR_FactorPLData received', {
+      if (false) console.log('[dataRouter] MarketVaR_FactorPLData received', {
         rows: rows.length,
         hasStore: typeof appState?.setMvarFactorPLData === 'function',
         hasHandler: typeof handlers.handleMVaRFactorPLData === 'function',

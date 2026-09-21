@@ -4,6 +4,12 @@ import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 import { getInterestRateCurveData } from '../interestRates/interestRateCurveData.js';
 import { buildDiscountCurve, parRateFromDF, parForwardSwapRate } from './curveConstruction.js';
 
+// Zentrale Debug-Schalter fuer die Forward-Panel-Logs: standardmaessig AUS.
+// Zum Aktivieren in der Konsole: window.__FWD_DEBUG = true  (dann Panel neu rendern).
+const _FWD_DEBUG = () => (typeof window !== 'undefined' && window.__FWD_DEBUG === true);
+const fwdLog   = (...a) => { if (_FWD_DEBUG()) console.log(...a); };
+const fwdTable = (...a) => { if (_FWD_DEBUG()) console.table(...a); };
+
 let FWDlineChart;
 let forwardSwapChart;
 
@@ -121,7 +127,7 @@ function getActiveScenarioForCurve(appState, selectedCurrency, selectedCurveId) 
 }
 
 function prepareForwardData(receivedData) {
-  console.log("========== [FWD prepareForwardData] ==========");
+  fwdLog("========== [FWD prepareForwardData] ==========");
 
   // Eigene Forwards-Auswahl (unabhängig von Interest Rates).
   const selectedCurrency =
@@ -135,9 +141,9 @@ function prepareForwardData(receivedData) {
 
   const domSelectedCurve = selectedCurveId;
 
-  console.log("[FWD] selectedCurrency:", selectedCurrency);
-  console.log("[FWD] selectedCurveId:", selectedCurveId);
-  console.log("[FWD] domSelectedCurve:", domSelectedCurve);
+  fwdLog("[FWD] selectedCurrency:", selectedCurrency);
+  fwdLog("[FWD] selectedCurveId:", selectedCurveId);
+  fwdLog("[FWD] domSelectedCurve:", domSelectedCurve);
 
   // --------------------------------------------------
   // WICHTIG:
@@ -154,9 +160,9 @@ function prepareForwardData(receivedData) {
     domSelectedCurve
   );
 
-  console.log("[FWD] resolved curve:", curve);
-  console.log("[FWD] IRData len:", IRData?.length);
-  console.table(IRData?.slice?.(0, 10));
+  fwdLog("[FWD] resolved curve:", curve);
+  fwdLog("[FWD] IRData len:", IRData?.length);
+  fwdTable(IRData?.slice?.(0, 10));
 
   if (!Array.isArray(IRData) || IRData.length === 0) {
     console.error("[FWD] No valid active IRData found for forward calculation.");
@@ -196,8 +202,8 @@ function prepareForwardData(receivedData) {
       Number.isFinite(r.RATES)
     );
 
-  console.log("[FWD] normalized dataToUse len:", dataToUse.length);
-  console.table(dataToUse.slice(0, 10));
+  fwdLog("[FWD] normalized dataToUse len:", dataToUse.length);
+  fwdTable(dataToUse.slice(0, 10));
 
   if (dataToUse.length === 0) {
     console.error("[FWD] No usable rows after normalization.");

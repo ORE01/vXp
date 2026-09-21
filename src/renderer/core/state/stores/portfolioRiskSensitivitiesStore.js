@@ -42,7 +42,7 @@ const portfolioRiskSensitivitiesStore = {
       source: meta.source ?? 'portfolioRiskSensitivitiesStore.setRows',
     };
 
-    console.log('[PRS STORE] rows replaced', detail);
+    if (false) console.log('[PRS STORE] rows replaced', detail);
 
     document.dispatchEvent(
       new CustomEvent('portfolio-risk-sensitivities-data-refreshed', {

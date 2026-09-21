@@ -106,7 +106,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
       const factorRows = appState.getMvarFactorPLData?.() || [];
       const productRows = appState.getMvarProductData?.() || [];
 
-      console.log('[MVAR CHART REHYDRATE CHECK]', {
+      if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[MVAR CHART REHYDRATE CHECK]', {
         selectedPort: appState.getSelectedPortTableName?.(),
         selectedScenario: appState.selectedMvarInterval,
         factorRows: factorRows?.length,
@@ -129,7 +129,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
     if (!marketRiskBackingTablesFetchRequested) {
       marketRiskBackingTablesFetchRequested = true;
       window.api?.send?.('fetch-table-data', 'MarketVaR_Product');
-      console.log('[marketRiskRefresh] product backing table fetch requested once');
+      if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] product backing table fetch requested once');
     }
 
     // MarketVaR_FactorPL: NUR den aktuellen (port, scenario, juengstes asof) laden statt der
@@ -149,7 +149,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
     const productRows = appState.getMvarProductData?.() || [];
     const scenario = appState.selectedMvarInterval ?? null;
 
-    console.log('[marketRiskRefresh] refreshMarketRiskUI START', {
+    if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] refreshMarketRiskUI START', {
       port,
       index,
       allMvarRows: Array.isArray(allMvar) ? allMvar.length : 0,
@@ -195,7 +195,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
     // befuellen + auf das aktuelle View-Szenario synchronisieren (Default ROLLING_1).
     try { syncMvarViewDropdowns(); } catch (e) { console.warn('[marketRiskRefresh] view dropdown sync failed', e); }
 
-    console.log('[marketRiskRefresh] refreshMarketRiskUI DONE', {
+    if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] refreshMarketRiskUI DONE', {
       port,
       scenario,
     });
@@ -223,7 +223,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
       const prodBox = prodCanvas?.parentElement || null;
       const prodBoxRect = prodBox?.getBoundingClientRect?.() || {};
 
-      console.log('[MVAR FINAL DOM SNAPSHOT]', {
+      if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[MVAR FINAL DOM SNAPSHOT]', {
         panelMvarHidden: document.getElementById('panel-mvar')?.hidden ?? null,
         panelProductsHidden: document.getElementById('panel-mvar-products')?.hidden ?? null,
 
@@ -244,7 +244,8 @@ export function createMarketRiskRefresh({ appState } = {}) {
     }, 300);
   }
 
-  function refreshMarketRiskSensitivitiesUI(reason = 'manual') {
+  // Fuehrt das eigentliche Sensitivities-Rendering sofort aus (drei Chart-Handler).
+  function renderMarketRiskSensitivitiesNow(reason = 'manual') {
     ensureSensitivityTabsInitialized();
 
     const riskRows = getRiskRows(appState);
@@ -254,7 +255,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
     const port = resolveSelectedPortfolioForSensitivities();
 
     if (!port) {
-      console.warn('[marketRiskRefresh] sensitivities skipped: no selected portfolio', {
+      if (false) console.warn('[marketRiskRefresh] sensitivities skipped: no selected portfolio', {
         reason,
         availablePorts,
         storeRows: riskRows.length,
@@ -264,7 +265,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
       return;
     }
 
-    console.log('[marketRiskRefresh] refresh sensitivities UI START', {
+    if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] refresh sensitivities UI START', {
       reason,
       port,
       storeRows: riskRows.length,
@@ -282,10 +283,36 @@ export function createMarketRiskRefresh({ appState } = {}) {
     handleCSSensData(appState, port);
     handleVegaSensData(appState, port);
 
-    console.log('[marketRiskRefresh] refresh sensitivities UI DONE', {
+    if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] refresh sensitivities UI DONE', {
       reason,
       port,
     });
+  }
+
+  // Debounce + rAF-Coalescing: die Fair-Value->MVaR-Refresh-Kaskade ruft diese
+  // Funktion in schneller Folge mehrfach auf (Request + Receive * mehrere Laeufe).
+  // Ohne Bündelung fuehrt jeder Aufruf zu drei Chart-Redraws -> rAF-Violations.
+  // Hier wird auf genau EINEN Redraw pro Ruhephase (~60ms) zusammengefasst.
+  let _sensDebounceTimer = null;
+  let _sensRafId = null;
+  let _sensPendingReason = 'manual';
+
+  function refreshMarketRiskSensitivitiesUI(reason = 'manual') {
+    _sensPendingReason = reason;
+
+    if (_sensDebounceTimer) clearTimeout(_sensDebounceTimer);
+    _sensDebounceTimer = setTimeout(() => {
+      _sensDebounceTimer = null;
+      if (_sensRafId) cancelAnimationFrame(_sensRafId);
+      _sensRafId = requestAnimationFrame(() => {
+        _sensRafId = null;
+        try {
+          renderMarketRiskSensitivitiesNow(_sensPendingReason);
+        } catch (e) {
+          console.warn('[marketRiskRefresh] sensitivities render failed', e);
+        }
+      });
+    }, 60);
   }
 
   function installMarketRiskSensitivityRefreshListener() {
@@ -302,7 +329,7 @@ export function createMarketRiskRefresh({ appState } = {}) {
       const availablePorts = getAvailablePorts(riskRows);
       const availableRiskTypes = getAvailableRiskTypes(riskRows);
 
-      console.log('[marketRiskRefresh] portfolio-risk-sensitivities-data-refreshed received', {
+      if (false) console.log('[marketRiskRefresh] portfolio-risk-sensitivities-data-refreshed received', {
         detail: event?.detail,
         selectedPort: appState.getSelectedPortTableName?.(),
         storeRows: riskRows.length,
@@ -318,7 +345,7 @@ document.addEventListener('portfolio-context-changed', (event) => {
   const availablePorts = getAvailablePorts(riskRows);
   const availableRiskTypes = getAvailableRiskTypes(riskRows);
 
-  console.log('[marketRiskRefresh] portfolio-context-changed received', {
+  if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] portfolio-context-changed received', {
     detail: event?.detail,
     selectedPort: appState.getSelectedPortTableName?.(),
     selectedScenario: appState.selectedMvarInterval,

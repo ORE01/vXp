@@ -260,6 +260,12 @@ module.exports = {
     'ts-trendlines:load-error:',
     'ts-trendlines:save-success:',
     'ts-trendlines:save-error:',
+
+    // TS-Auswahl (Select Data): dynamische Reply-Kanaele (save_<modal>_<ts>_<rand>).
+    'ts-selection:load-success:',
+    'ts-selection:load-error:',
+    'ts-selection:save-success:',
+    'ts-selection:save-error:',
   ],
 
   // =====================================================

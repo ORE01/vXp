@@ -18,7 +18,7 @@ export function handleProductRiskSensitivitiesData(rows, { appState } = {}) {
 
   setRows(safeRows, { source: 'ProductRiskSensitivitiesData' });
 
-  console.log('[PROD RS HANDLER] ProductRiskSensitivitiesData handled', {
+  if (false) console.log('[PROD RS HANDLER] ProductRiskSensitivitiesData handled', {
     incomingRows: safeRows.length,
     storeRows: productRiskSensitivitiesStore.getRows().length,
     products: productRiskSensitivitiesStore.getProducts().length,

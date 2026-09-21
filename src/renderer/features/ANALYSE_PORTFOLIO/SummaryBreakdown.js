@@ -7,6 +7,27 @@ import { makeSortableDetailsTable } from './marketRisk/sensitivities/detailsTabl
 
 const { jsPDF } = window.jspdf;
 
+// Plotly wird NICHT mehr synchron im index.html-Head geladen (schwere ~3MB-Lib, die den
+// App-Start blockierte). Stattdessen on-demand: erst wenn die Concentration-Treemaps oder
+// der Report sie brauchen. Das Ergebnis wird als Promise gecached (nur EIN Netzwerk-Load).
+// CSP: index.html script-src erlaubt cdn.jsdelivr.net, dynamisch injizierte Scripts also ok.
+let _plotlyPromise = null;
+function ensurePlotly() {
+  if (typeof window !== 'undefined' && window.Plotly) return Promise.resolve(window.Plotly);
+  if (_plotlyPromise) return _plotlyPromise;
+  _plotlyPromise = new Promise((resolve, reject) => {
+    try {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/plotly.js-dist@2.35.2/plotly.min.js';
+      s.async = true;
+      s.onload = () => resolve(window.Plotly);
+      s.onerror = (e) => { _plotlyPromise = null; reject(e); };
+      document.head.appendChild(s);
+    } catch (e) { _plotlyPromise = null; reject(e); }
+  });
+  return _plotlyPromise;
+}
+
 let tableName = 'Portfolio';
 
 function focusBreakdownGroup(group) {
@@ -771,7 +792,9 @@ function renderConcReportCharts(key, m) {
 // bekommen. staticPlot: keine Interaktion (reines Report-Bild).
 function renderConcReportTreemap(key, m) {
   const el = document.getElementById(`concTreemap__${key}`);
-  if (!el || !window.Plotly) return;
+  if (!el) return;
+  // Plotly on-demand: beim ersten Bedarf laden, dann diese Funktion einmal neu aufrufen.
+  if (!window.Plotly) { ensurePlotly().then(() => { try { renderConcReportTreemap(key, m); } catch {} }).catch(() => {}); return; }
   if (!m || !Array.isArray(m.items) || !m.items.length) { try { window.Plotly.purge(el); } catch {} return; }
 
   const N = 15;
@@ -853,7 +876,9 @@ function __concTreemapStep(name) {
 // Top 15 einzeln + "Others (n)"-Kachel fuer den Rest. Klick -> Drill zu Positionen.
 function renderConcTreemap(items, host) {
   const el = document.getElementById('concCards');
-  if (!el || !window.Plotly) return;
+  if (!el) return;
+  // Plotly on-demand: beim ersten Bedarf laden, dann diese Funktion einmal neu aufrufen.
+  if (!window.Plotly) { ensurePlotly().then(() => { try { renderConcTreemap(items, host); } catch {} }).catch(() => {}); return; }
   if (host && host.offsetParent === null) return;   // Panel nicht sichtbar -> Groesse 0
   el.style.display = 'block';   // .conc-cards ist flex -> fuer Plotly-Breitenmessung auf block
 

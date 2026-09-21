@@ -2,6 +2,11 @@
 import { calculateSMA, calculateRSI } from './ChartAnalyses.js';
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
+// Zentrale Debug-Schalter fuer die TS-Logs: standardmaessig AUS.
+// Zum Aktivieren in der Konsole: window.__TS_DEBUG = true  (dann Panel neu rendern).
+const _TS_DEBUG = () => (typeof window !== 'undefined' && window.__TS_DEBUG === true);
+const tsLog  = (...a) => { if (_TS_DEBUG()) console.log(...a); };
+const tsWarn = (...a) => { if (_TS_DEBUG()) console.warn(...a); };
 
 // Store chart instances in an object with modalIndex as key
 const chartInstances = {};
@@ -273,10 +278,10 @@ newLoadButton.onclick = async () => {
   // ein Frame warten, damit Chart.js Zeit hat, den Canvas zu zeichnen
   requestAnimationFrame(() => {
     try {
-      console.log('[TS] notifyRiskPreview for modal', modalIndex);
+      tsLog('[TS] notifyRiskPreview for modal', modalIndex);
       notifyRiskPreview('historicTS'); // Label ist egal, dient nur dem Logging
     } catch (e) {
-      console.warn('[TS] notifyRiskPreview failed', e);
+      tsWarn('[TS] notifyRiskPreview failed', e);
     }
   });
 };
@@ -413,7 +418,7 @@ function deriveTsChartLabel(keys) {
     // 1) Globaler Thumbnail-Refresh
     document.dispatchEvent(new Event('risk:refresh-thumbnails'));
   } catch (e) {
-    console.warn('[TS] risk:refresh-thumbnails dispatch failed', e);
+    tsWarn('[TS] risk:refresh-thumbnails dispatch failed', e);
   }
 
   try {
@@ -421,7 +426,7 @@ function deriveTsChartLabel(keys) {
     //    den du in RiskPDFPreview fÃ¼r HISTORIC DATA verwendest!
     notifyRiskPreview('historicData'); // oder z.B. 'historicTS' / 'PORTFOLIO_HISTORY_TS'
   } catch (e) {
-    console.warn('[TS] notifyRiskPreview(historicData) failed', e);
+    tsWarn('[TS] notifyRiskPreview(historicData) failed', e);
   }
 
 
@@ -516,7 +521,7 @@ function deriveTsChartLabel(keys) {
       
         // If no valid data points, return the dataset as-is
         if (firstValidIndex === -1) {
-          console.warn("No valid data found for normalization.");
+          tsWarn("No valid data found for normalization.");
           return dataset;
         }
       
@@ -524,7 +529,7 @@ function deriveTsChartLabel(keys) {
       
         // If the starting value is 0, return the dataset as-is
         if (startingValue === 0) {
-          console.warn("Starting value for normalization is 0, skipping normalization.");
+          tsWarn("Starting value for normalization is 0, skipping normalization.");
           return dataset;
         }
       
@@ -685,8 +690,8 @@ function normalizeTSModalPayload(data, sectionCount) {
   if (Array.isArray(data) && data.length && Array.isArray(data[0])) {
     for (let i = 1; i <= sectionCount; i++) out[i] = data[i - 1] || [];
 
-    console.log('[TS normalize] detected [rows1..] -> distributed by index');
-    console.log('[TS normalize] perModal lengths:', Object.fromEntries(
+    tsLog('[TS normalize] detected [rows1..] -> distributed by index');
+    tsLog('[TS normalize] perModal lengths:', Object.fromEntries(
       Object.keys(out).map(k => [k, out[k]?.length ?? 0])
     ));
 
@@ -699,15 +704,15 @@ function normalizeTSModalPayload(data, sectionCount) {
       out[i] = data[i] || data[String(i)] || data[`section${i}`] || [];
     }
 
-    console.log('[TS normalize] detected object-of-modals -> extracted by keys');
-    console.log('[TS normalize] perModal lengths:', Object.fromEntries(
+    tsLog('[TS normalize] detected object-of-modals -> extracted by keys');
+    tsLog('[TS normalize] perModal lengths:', Object.fromEntries(
       Object.keys(out).map(k => [k, out[k]?.length ?? 0])
     ));
 
     return out;
   }
 
-  console.warn('[TS normalize] could not classify payload -> returning empty perModal');
+  tsWarn('[TS normalize] could not classify payload -> returning empty perModal');
   return out;
 }
 
@@ -988,13 +993,13 @@ export function loadTrendlines(modalIndex, chartName) {
     window.api.once(okCh, (payload) => {
       //console.log('[TS-TL][LOAD<-RAW]', payload);
       const lines = Array.isArray(payload?.lines) ? payload.lines : [];
-      console.log(`[TS-TL][LOAD<-OK] req=${requestId} | lines.count=${lines.length} | sample=${lines.length ? JSON.stringify(lines[0]) : 'null'}`);
+      tsLog(`[TS-TL][LOAD<-OK] req=${requestId} | lines.count=${lines.length} | sample=${lines.length ? JSON.stringify(lines[0]) : 'null'}`);
       resolve(lines);
     });
 
     // â¬‡ï¸ hier auch nur EIN Argument (msg)
     window.api.once(errCh, (msg) => {
-      console.warn(`[TS-TL][LOAD<-ERR] req=${requestId} | ${msg}`);
+      tsWarn(`[TS-TL][LOAD<-ERR] req=${requestId} | ${msg}`);
       resolve([]);
     });
 
@@ -1015,17 +1020,17 @@ export function loadTrendlines(modalIndex, chartName) {
 export function saveTrendlines(modalIndex, chartName, lines) {
   return new Promise((resolve) => {
     const requestId = `save_${modalIndex}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    console.log(
+    tsLog(
       `[TS-TL][SAVE->SEND] req=%s modal_index=%s chart_name=%s lines.count=%d sample=%o`,
       requestId, Number(modalIndex), chartName, Array.isArray(lines) ? lines.length : -1, lines?.[0] ?? null
     );
 
     window.api.once(`ts-trendlines:save-success:${requestId}`, () => {
-      console.log(`[TS-TL][SAVE<-OK] req=%s`, requestId);
+      tsLog(`[TS-TL][SAVE<-OK] req=%s`, requestId);
       resolve(true);
     });
     window.api.once(`ts-trendlines:save-error:${requestId}`, (_e, msg) => {
-      console.warn(`[TS-TL][SAVE<-ERR] req=%s msg=%s`, requestId, msg);
+      tsWarn(`[TS-TL][SAVE<-ERR] req=%s msg=%s`, requestId, msg);
       resolve(false);
     });
 

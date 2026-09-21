@@ -14,7 +14,7 @@ export function installProductsStore({ appState } = {}) {
     }
     appState.prodById = m;
 
-    console.log('[SET] prodData len=', arr.length, 'prodById=', m.size);
+    if (false) console.log('[SET] prodData len=', arr.length, 'prodById=', m.size);
   }
 
   function getProdData() {

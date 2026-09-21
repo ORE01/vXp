@@ -20,7 +20,7 @@ export function handleCustomerMarketRiskSettingData(rows) {
 
   appState.setCustomerMarketRiskSetting(setting);
 
-  console.log('[CUSTOMER MR SETTING STATE]', {
+  if (false) console.log('[CUSTOMER MR SETTING STATE]', {
     default_market_risk_interval_code: setting?.default_market_risk_interval_code ?? null,
     risk_warning_profile: setting?.risk_warning_profile ?? null,
   });
@@ -51,7 +51,7 @@ export function handleCustomerMarketRiskThresholdSettingData(rows) {
 
   appState.setCustomerMarketRiskThresholds(list);
 
-  console.log('[CUSTOMER MR THRESHOLDS STATE]', {
+  if (false) console.log('[CUSTOMER MR THRESHOLDS STATE]', {
     count: list.length,
     profiles: [...new Set(list.map((r) => r.risk_warning_profile))],
     metrics: [...new Set(list.map((r) => r.metric_code))],

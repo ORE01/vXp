@@ -489,7 +489,7 @@ export function renderMvarFactorSeriesMapPanel(appState) {
 export function handleMarketVarFactorSeriesMapData(rows, appState) {
   const safeRows = Array.isArray(rows) ? rows : [];
 
-  console.log('[MVAR FACTOR MAP] handler called', {
+  if (false) console.log('[MVAR FACTOR MAP] handler called', {
     rows: safeRows.length,
     sample: safeRows[0],
     storeRows: appState?.getMarketVarFactorSeriesMap?.()?.length,

@@ -544,7 +544,9 @@ function renderIRSensTableAndChart(data, portName) {
 
   requestAnimationFrame(() => {
     if (renderToken !== PV01RenderToken) {
-      console.warn('[PV01 CHART] skipped stale RAF render', {
+      // Stale-RAF-Skip ist normaler Churn bei schnellen Re-Renders -> stumm, ausser
+      // window.__PV01_DEBUG = true. Nicht geloescht.
+      if (typeof window !== 'undefined' && window.__PV01_DEBUG) console.warn('[PV01 CHART] skipped stale RAF render', {
         renderToken,
         currentToken: PV01RenderToken,
       });

@@ -295,7 +295,7 @@ function setIRSensData(rows) {
       ).filter(Boolean)
     );
 
-    console.log('[marketRiskStore] setMvarFactorPLData UPSERTED', {
+    if (false) console.log('[marketRiskStore] setMvarFactorPLData UPSERTED', {
       receivedRows: arr.length,
       inserted,
       updated,
@@ -363,7 +363,7 @@ function setIRSensData(rows) {
   function setMarketVarFactorSeriesMap(rows) {
     appState.marketVarFactorSeriesMap = Array.isArray(rows) ? rows : [];
 
-    console.log('[marketRiskStore] setMarketVarFactorSeriesMap', {
+    if (false) console.log('[marketRiskStore] setMarketVarFactorSeriesMap', {
       rows: appState.marketVarFactorSeriesMap.length,
       sample: appState.marketVarFactorSeriesMap[0],
     });

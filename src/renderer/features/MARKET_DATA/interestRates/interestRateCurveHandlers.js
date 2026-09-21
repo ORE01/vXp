@@ -13,9 +13,9 @@ export function createRatesHandlers({ appState } = {}) {
   function handleRATES_BASEData(data) {
     const rows = Array.isArray(data) ? data : [];
 
-    console.log('🔥 RATES HANDLER CALLED');
-    console.log('rows:', rows.length);
-    console.log('scenarios:', [...new Set(rows.map(r => r.scenario_id))]);
+    if (false) console.log('🔥 RATES HANDLER CALLED');
+    if (false) console.log('rows:', rows.length);
+    if (false) console.log('scenarios:', [...new Set(rows.map(r => r.scenario_id))]);
 
     appState.setRATESData(rows);
 
@@ -29,9 +29,9 @@ export function createRatesHandlers({ appState } = {}) {
   function handleRatesScenarioData(data) {
     const rows = Array.isArray(data) ? data : [];
 
-    console.log('🔥 RATES SCENARIO DATA HANDLER CALLED');
-    console.log('scenario rows:', rows.length);
-    console.log('scenario ids:', [...new Set(rows.map(r => r.scenario_id))]);
+    if (false) console.log('🔥 RATES SCENARIO DATA HANDLER CALLED');
+    if (false) console.log('scenario rows:', rows.length);
+    if (false) console.log('scenario ids:', [...new Set(rows.map(r => r.scenario_id))]);
 
     appState.setRatesScenarioData(rows);
 

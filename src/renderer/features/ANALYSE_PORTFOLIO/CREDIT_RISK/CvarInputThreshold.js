@@ -38,7 +38,7 @@ export function handleCvarInputThresholdView() {
   // (decimal -> e.g. 0.04 -> 4.00%) is handled by the existing format rules.
   const customerThresholds = appState.getCustomerCreditRiskThresholds?.() || [];
 
-  console.warn('[CREDIT RISK THRESHOLD DISPLAY SOURCE]', {
+  if (false) console.warn('[CREDIT RISK THRESHOLD DISPLAY SOURCE]', {
     source: 'CustomerCreditRiskThresholdSetting/appState',
     thresholds: customerThresholds,
   });
@@ -50,7 +50,7 @@ export function handleCvarInputThresholdView() {
     description: row.description ?? '',
   }));
 
-  console.warn('[CVAR THRESHOLD TABLE RENDER]', {
+  if (false) console.warn('[CVAR THRESHOLD TABLE RENDER]', {
   customerThresholdCount: customerThresholds.length,
   tableDataCount: tableData.length,
   tableData,

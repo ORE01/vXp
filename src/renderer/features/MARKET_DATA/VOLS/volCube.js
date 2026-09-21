@@ -1,9 +1,15 @@
 import { notifyRiskPreview } from '../../REPORTS/RiskPDFPreview.js';
 
+// Zentrale Debug-Schalter fuer die VolCube-Logs: standardmaessig AUS.
+// Zum Aktivieren in der Konsole: window.__VOLCUBE_DEBUG = true  (dann Panel neu rendern).
+const _VC_DEBUG = () => (typeof window !== 'undefined' && window.__VOLCUBE_DEBUG === true);
+const vcLog  = (...a) => { if (_VC_DEBUG()) console.log(...a); };
+const vcWarn = (...a) => { if (_VC_DEBUG()) console.warn(...a); };
+
 // Legacy-compatible helper, falls noch irgendwo alte Node-Struktur kommt
 export function buildCubeSurfaceGrid(cubeSurfaceFixedK) {
   if (!cubeSurfaceFixedK || !Array.isArray(cubeSurfaceFixedK.nodes)) {
-    console.warn('[buildCubeSurfaceGrid] Keine nodes in cubeSurfaceFixedK.');
+    vcWarn('[buildCubeSurfaceGrid] Keine nodes in cubeSurfaceFixedK.');
     return null;
   }
 
@@ -114,12 +120,12 @@ export function populateSwaptionCubeSelectors() {
       return;
     }
 
-  console.log('--- populateSwaptionCubeSelectors ---');
-  console.log(
+  vcLog('--- populateSwaptionCubeSelectors ---');
+  vcLog(
     'panel exists:',
     !!document.getElementById('panel-swaption-cube')
   );
-  console.log(
+  vcLog(
     'select exists:',
     !!document.getElementById('swaptionCubeStrikeSelect')
   );
@@ -127,20 +133,20 @@ export function populateSwaptionCubeSelectors() {
   const cube = getCubeState();
 
   if (!cube) {
-    console.warn('[populateSwaptionCubeSelectors] Kein Cube im State.');
+    vcWarn('[populateSwaptionCubeSelectors] Kein Cube im State.');
     return;
   }
 
   const strikeSel = document.getElementById('swaptionCubeStrikeSelect');
 
   if (!strikeSel) {
-    console.warn('[populateSwaptionCubeSelectors] Strike-Select nicht gefunden.');
+    vcWarn('[populateSwaptionCubeSelectors] Strike-Select nicht gefunden.');
     return;
   }
 
   const surfaces = getAvailableSurfaces(cube);
 
-  console.log('[CUBE SELECTOR DEBUG]', {
+  vcLog('[CUBE SELECTOR DEBUG]', {
     cube,
     surfaces,
     strikes: surfaces.map(s => ({
@@ -176,7 +182,7 @@ export function renderSwaptionCubeHeatmap() {
   const el = document.getElementById(targetId);
 
   if (!el) {
-    console.warn(`[renderSwaptionCubeHeatmap] Element mit id="${targetId}" nicht gefunden.`);
+    vcWarn(`[renderSwaptionCubeHeatmap] Element mit id="${targetId}" nicht gefunden.`);
     return;
   }
 
@@ -334,7 +340,7 @@ export function renderSwaptionCubeSummary() {
   const summaryEl = document.getElementById('SwaptionCubeSummaryContainer');
 
   if (!summaryEl) {
-    console.warn('[renderSwaptionCubeSummary] Summary-Container nicht gefunden.');
+    vcWarn('[renderSwaptionCubeSummary] Summary-Container nicht gefunden.');
     return;
   }
 

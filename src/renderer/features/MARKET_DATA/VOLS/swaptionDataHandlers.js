@@ -16,7 +16,7 @@ function schedulePopulateSwaptionCubeSelectors() {
     try {
       populateSwaptionCubeSelectors();
     } catch (e) {
-      console.warn('[swaptionDataHandlers] populateSwaptionCubeSelectors failed', e);
+      if (false) console.warn('[swaptionDataHandlers] populateSwaptionCubeSelectors failed', e);
     }
   }, 0);
 }
@@ -272,7 +272,7 @@ function buildCubeSurfaceGridFromActiveRows(atmRows, smileRows, meta = {}) {
 
 export function createSwaptionDataHandlers({ appState } = {}) {
   if (!appState) {
-    console.warn('[swaptionDataHandlers] createSwaptionDataHandlers called without appState.');
+    if (false) console.warn('[swaptionDataHandlers] createSwaptionDataHandlers called without appState.');
   }
 
   function getActiveSwaptionRow() {
@@ -317,12 +317,12 @@ export function createSwaptionDataHandlers({ appState } = {}) {
           );
 
     if (!selectedAtmRows.length) {
-      console.info('[swaptionDataHandlers] ATM data not ready yet:', activeScenario);
+      if (false) console.info('[swaptionDataHandlers] ATM data not ready yet:', activeScenario);
       return;
     }
 
     if (!selectedSmileRows.length) {
-      console.info('[swaptionDataHandlers] Smile data not ready yet:', activeScenario);
+      if (false) console.info('[swaptionDataHandlers] Smile data not ready yet:', activeScenario);
       return;
     }
 
@@ -375,7 +375,7 @@ export function createSwaptionDataHandlers({ appState } = {}) {
     if (!appState) return;
 
     // 🔍 DEBUG: was kommt wirklich rein?
-    console.log('[ATM BASE RAW]', {
+    if (false) console.log('[ATM BASE RAW]', {
       len: rows?.length,
       sample: rows?.[0],
     });
@@ -383,14 +383,14 @@ export function createSwaptionDataHandlers({ appState } = {}) {
     const safeRows = normalizeAtmRows(rows);
 
     // 🔍 DEBUG: nach Normalisierung
-    console.log('[ATM BASE NORMALIZED]', {
+    if (false) console.log('[ATM BASE NORMALIZED]', {
       len: safeRows.length,
       sample: safeRows[0],
     });
 
     // 🚨 HARTE VALIDIERUNG (kein stilles Failen mehr)
     if (!safeRows.length) {
-      console.warn('[ATM BASE] ❌ EMPTY AFTER NORMALIZE');
+      if (false) console.warn('[ATM BASE] ❌ EMPTY AFTER NORMALIZE');
       return;
     }
 
@@ -399,7 +399,7 @@ export function createSwaptionDataHandlers({ appState } = {}) {
 
     const { optionTenors, swapTenors } = extractUniqueSortedTenors(safeRows);
 
-    console.log('[ATM BASE TENORS]', {
+    if (false) console.log('[ATM BASE TENORS]', {
       optionTenors,
       swapTenors,
     });
@@ -419,22 +419,22 @@ export function createSwaptionDataHandlers({ appState } = {}) {
   function handleSwaptionSmileBaseData(rows) {
     if (!appState) return;
 
-    console.log('[SMILE BASE RAW]', {
+    if (false) console.log('[SMILE BASE RAW]', {
       len: rows?.length,
       sample: rows?.[0],
     });
 
     const safeRows = normalizeSmileRows(rows);
 
-    console.log('[SMILE NORMALIZED CHECK]', safeRows.slice(0, 5));
+    if (false) console.log('[SMILE NORMALIZED CHECK]', safeRows.slice(0, 5));
 
-    console.log('[SMILE BASE NORMALIZED]', {
+    if (false) console.log('[SMILE BASE NORMALIZED]', {
       len: safeRows.length,
       sample: safeRows[0],
     });
 
     if (!safeRows.length) {
-      console.warn('[SMILE BASE] ❌ EMPTY AFTER NORMALIZE');
+      if (false) console.warn('[SMILE BASE] ❌ EMPTY AFTER NORMALIZE');
       return;
     }
 
@@ -450,7 +450,7 @@ export function createSwaptionDataHandlers({ appState } = {}) {
 
   function handleSwaptionAtmScenarioData(rows) {
     if (!appState?.setSwaptionAtmScenarioData) {
-      console.warn('[handleSwaptionAtmScenarioData] appState fehlt');
+      if (false) console.warn('[handleSwaptionAtmScenarioData] appState fehlt');
       return;
     }
 
@@ -467,7 +467,7 @@ export function createSwaptionDataHandlers({ appState } = {}) {
 
   function handleSwaptionSmileScenarioData(rows) {
     if (!appState?.setSwaptionSmileScenarioData) {
-      console.warn('[handleSwaptionSmileScenarioData] appState fehlt');
+      if (false) console.warn('[handleSwaptionSmileScenarioData] appState fehlt');
       return;
     }
 
@@ -484,7 +484,7 @@ export function createSwaptionDataHandlers({ appState } = {}) {
 
   function handleSwaptionActiveData(rows) {
     if (!appState?.setSwaptionActive) {
-      console.warn('[handleSwaptionActiveData] appState fehlt');
+      if (false) console.warn('[handleSwaptionActiveData] appState fehlt');
       return;
     }
 

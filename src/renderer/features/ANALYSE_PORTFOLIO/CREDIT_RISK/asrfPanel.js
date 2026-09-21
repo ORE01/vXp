@@ -861,9 +861,29 @@ export function renderAsrfLossDistCompare() {
   _drawLossHist(document.getElementById('mfgcLossHistChart'), mfRows, cvR ? _num(cvR.VaR_rel) : NaN, cvR ? _num(cvR.ES_rel) : NaN);
 }
 
+// Die vier ASRF-Renders sind zusammen teuer (~270ms). Statt sie synchron in EINEM
+// Handler zu fahren (Long-Task-Violation), werden sie entprellt und je Render in einem
+// eigenen requestAnimationFrame-Frame ausgefuehrt -> kein Einzel-Handler >50ms, UI bleibt
+// responsiv. Mehrfach-Trigger (asrf:ready + portfolio-context-changed) kollabieren zu einem Lauf.
+let _asrfRenderTimer = null;
+function scheduleAsrfRenders() {
+  if (_asrfRenderTimer) clearTimeout(_asrfRenderTimer);
+  _asrfRenderTimer = setTimeout(() => {
+    _asrfRenderTimer = null;
+    const steps = [renderAsrfPanels, renderAsrfMsdCompare, renderAsrfTsiCompare, renderAsrfLossDistCompare];
+    let i = 0;
+    const run = () => {
+      if (i >= steps.length) return;
+      try { steps[i++](); } catch (_) {}
+      requestAnimationFrame(run);
+    };
+    run();
+  }, 40);
+}
+
 // Neu rendern bei: ASRF-Daten-Eingang, Portfolio-Wechsel, Oeffnen eines ASRF-/MSD-/TSI-/Loss-Panels.
-document.addEventListener('asrf:ready', () => { try { renderAsrfPanels(); renderAsrfMsdCompare(); renderAsrfTsiCompare(); renderAsrfLossDistCompare(); } catch (_) {} });
-document.addEventListener('portfolio-context-changed', () => { try { renderAsrfPanels(); renderAsrfMsdCompare(); renderAsrfTsiCompare(); renderAsrfLossDistCompare(); } catch (_) {} });
+document.addEventListener('asrf:ready', scheduleAsrfRenders);
+document.addEventListener('portfolio-context-changed', scheduleAsrfRenders);
 document.addEventListener('losshist:ready', () => { try { renderAsrfLossDistCompare(); } catch (_) {} });
 document.addEventListener('panel:opened', (e) => {
   const id = e?.detail?.panelId;

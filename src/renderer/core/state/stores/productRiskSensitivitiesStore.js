@@ -75,7 +75,7 @@ const productRiskSensitivitiesStore = {
       source: meta.source ?? 'productRiskSensitivitiesStore.setRows',
     };
 
-    console.log('[PROD RS STORE] rows replaced', detail);
+    if (false) console.log('[PROD RS STORE] rows replaced', detail);
 
     document.dispatchEvent(
       new CustomEvent('product-risk-sensitivities-data-refreshed', { detail })

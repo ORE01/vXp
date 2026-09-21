@@ -15,7 +15,7 @@ function getCurvePackage(ccy, rank = 'senior_unsecured') {
 }
 
 export function renderCSScenarioPanel() {
-  console.log('🔥 renderCSScenarioPanel CALLED');
+  if (false) console.log('🔥 renderCSScenarioPanel CALLED');
 
   if (!csScenarioPanelListenersInstalled) {
     document.addEventListener('cs:scenario:ready', renderCSScenarioPanel);

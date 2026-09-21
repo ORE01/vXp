@@ -119,15 +119,15 @@ Feature:    Wenn es nur in einem Panel gilt
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
-  <!-- Math.js -->
-  <script src="https://cdn.jsdelivr.net/npm/mathjs/lib/browser/math.js"></script>
+  <!-- Math.js entfernt: app-weit ungenutzt (kein math.*-Aufruf irgendwo) -> spart Startup-Parse. -->
 
   <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Plotly von jsDelivr (CSP-kompatibel) -->
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist@2.35.2/plotly.min.js"></script>
+  <!-- Plotly wird NICHT mehr synchron im Head geladen (schwere ~3MB-Lib, blockierte den
+       App-Start). On-demand via ensurePlotly() in SummaryBreakdown.js, sobald die
+       Concentration-Treemaps / der Report sie brauchen. CSP script-src erlaubt jsdelivr. -->
 
 
 
@@ -2946,6 +2946,7 @@ Feature:    Wenn es nur in einem Panel gilt
                   <div class="conc-kpi__lbl">Probability of Default (PD)</div>
                   <div class="conc-kpi__val" id="eadKpiPdVal">&ndash;</div>
                   <div class="conc-kpi__sub" id="eadKpiPdSub"></div>
+                  <div class="conc-kpi__sub" id="eadKpiPdSub2"></div>
                 </div>
                 <div class="conc-kpi" data-tile="ead_concentration" title="Issuer EAD concentration (share of modelled EAD)">
                   <div class="conc-kpi__lbl">EAD Concentration</div>

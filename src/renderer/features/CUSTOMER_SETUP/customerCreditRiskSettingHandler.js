@@ -25,13 +25,13 @@ export function handleCustomerCreditRiskSettingData(rows) {
 
   appState.setCustomerCreditRiskSetting(setting);
 
-  console.log('[CUSTOMER CR SETTING HANDLER]', {
+  if (false) console.log('[CUSTOMER CR SETTING HANDLER]', {
     rowCount: list.length,
     firstRow: list[0],
     storeValue: appState.getCustomerCreditRiskSetting?.(),
   });
 
-  console.log('[CUSTOMER CR SETTING STATE]', {
+  if (false) console.log('[CUSTOMER CR SETTING STATE]', {
     default_credit_config_name: setting?.default_credit_config_name ?? null,
     conf_level: setting?.conf_level ?? null,
     corr: setting?.corr ?? null,
@@ -49,7 +49,7 @@ export function handleCustomerCreditRiskSettingData(rows) {
   try {
     handleCvarInput();
   } catch (e) {
-    console.warn('[CUSTOMER CR SETTING] general-settings display refresh failed', e);
+    if (false) console.warn('[CUSTOMER CR SETTING] general-settings display refresh failed', e);
   }
 }
 
@@ -64,7 +64,7 @@ export function handleCustomerCreditRiskThresholdSettingData(rows) {
 
   appState.setCustomerCreditRiskThresholds(list);
 
-  console.log('[CUSTOMER CR THRESHOLDS STATE]', {
+  if (false) console.log('[CUSTOMER CR THRESHOLDS STATE]', {
     count: list.length,
     metrics: [...new Set(list.map((r) => r.metric_code))],
   });
@@ -74,7 +74,7 @@ export function handleCustomerCreditRiskThresholdSettingData(rows) {
   try {
     handleCvarInputThresholdView();
   } catch (e) {
-    console.warn('[CUSTOMER CR THRESHOLDS] effective threshold display refresh failed', e);
+    if (false) console.warn('[CUSTOMER CR THRESHOLDS] effective threshold display refresh failed', e);
   }
 
   // Re-render the Credit-Risk analyse traffic lights so they use the new
@@ -82,6 +82,6 @@ export function handleCustomerCreditRiskThresholdSettingData(rows) {
   try {
     refreshCreditRiskTrafficLights();
   } catch (e) {
-    console.warn('[CUSTOMER CR THRESHOLDS] traffic-light refresh failed', e);
+    if (false) console.warn('[CUSTOMER CR THRESHOLDS] traffic-light refresh failed', e);
   }
 }

@@ -28,7 +28,7 @@ const categorySetupStore = {
         .filter(Boolean)
     );
 
-    console.log('[CATEGORY STORE] rows set', {
+    if (false) console.log('[CATEGORY STORE] rows set', {
       rows: this.rows.length,
       fixedValueNames: [...this.fixedValueNames],
     });

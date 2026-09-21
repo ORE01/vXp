@@ -2,6 +2,12 @@
 
 import { renderIRScenarioBuilder } from './IRScenarioBuilder.js';
 
+// Zentrale Debug-Schalter fuer die ScenarioPanel-Logs: standardmaessig AUS.
+// Zum Aktivieren in der Konsole: window.__SCENARIO_DEBUG = true  (dann Panel neu rendern).
+const _SP_DEBUG = () => (typeof window !== 'undefined' && window.__SCENARIO_DEBUG === true);
+const spLog  = (...a) => { if (_SP_DEBUG()) console.log(...a); };
+const spWarn = (...a) => { if (_SP_DEBUG()) console.warn(...a); };
+
 export function renderIRScenarioPanel() {
 
   const container = document.getElementById("ScenarioMappingContainer");
@@ -18,7 +24,7 @@ export function renderIRScenarioPanel() {
     !appState._RATESDataCacheByCcy ||
     Object.keys(appState._RATESDataCacheByCcy).length === 0
   ) {
-    console.log('[ScenarioPanel] waiting for rates data');
+    spLog('[ScenarioPanel] waiting for rates data');
 
     container.innerHTML = "<p>Loading market data...</p>";
     return;
@@ -33,12 +39,12 @@ export function renderIRScenarioPanel() {
 
   if (!window.__scenarioPanelListenerInstalled) {
     document.addEventListener('rates:data:ready', () => {
-      console.log('[ScenarioPanel] re-render after data');
+      spLog('[ScenarioPanel] re-render after data');
       renderIRScenarioPanel();
     });
 
     document.addEventListener('rates:snapshots:ready', () => {
-      console.log('[ScenarioPanel] re-render after snapshots');
+      spLog('[ScenarioPanel] re-render after snapshots');
       renderIRScenarioPanel();
     });
     window.__scenarioPanelListenerInstalled = true;
@@ -75,7 +81,7 @@ export function renderIRScenarioPanel() {
       return a.localeCompare(b);
     });
 
-    console.log(`[ScenarioPanel] ${ccy} ${curveId} scenarios:`, result);
+    spLog(`[ScenarioPanel] ${ccy} ${curveId} scenarios:`, result);
 
     return result;
   }
@@ -151,7 +157,7 @@ export function renderIRScenarioPanel() {
 
   container.innerHTML = html;
 
-  console.log("[ScenarioPanel] rendered", rows.length, "curves");
+  spLog("[ScenarioPanel] rendered", rows.length, "curves");
 }
 
 
@@ -189,7 +195,7 @@ if (applyBtn) {
         })[0];
 
         if (!latest) {
-          console.warn("[ScenarioPanel] No snapshot rows for scenario:", {
+          spWarn("[ScenarioPanel] No snapshot rows for scenario:", {
             ccy,
             curve_id,
             scenario_id
@@ -201,7 +207,7 @@ if (applyBtn) {
         active_run_id = latest.run_id;
       }
 
-      console.log("Applying scenario:", {
+      spLog("Applying scenario:", {
         ccy,
         curve_id,
         scenario_id,

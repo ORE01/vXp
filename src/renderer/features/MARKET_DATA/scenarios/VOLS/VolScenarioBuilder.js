@@ -10,7 +10,7 @@ import {
 } from './VolSmileScenarioBuilder.js';
 
 export function renderVolScenarioBuilder() {
-  console.log('🔥 VOL BUILDER RENDER');
+  if (false) console.log('🔥 VOL BUILDER RENDER');
 
   const appState = window.appState;
   if (!appState) return;

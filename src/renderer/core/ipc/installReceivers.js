@@ -130,7 +130,7 @@ export function installReceivers(deps = {}) {
 
 api.receive(channel, (data) => {
 
-  if (channel === 'CustomerTableLayoutsData') {
+  if (false && channel === 'CustomerTableLayoutsData') {
     console.log(
       '[RECEIVER] CustomerTableLayoutsData received raw:',
       data

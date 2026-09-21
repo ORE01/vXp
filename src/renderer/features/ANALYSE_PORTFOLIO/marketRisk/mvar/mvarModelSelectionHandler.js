@@ -20,7 +20,7 @@ export function handleMvarModelSelectionAppData(rows) {
   appState.setMvarModelSelectionAppRows?.(normalized);
 
   const defaultRow = normalized.find((r) => r.is_customer_default === 1) || null;
-  console.log('[MVAR MODEL SELECTION APP STATE]', {
+  if (false) console.log('[MVAR MODEL SELECTION APP STATE]', {
     count: normalized.length,
     customerDefaultInterval: defaultRow ? defaultRow.INTERVAL_NAME : null,
     riskWarningProfile: normalized[0]?.risk_warning_profile ?? null,

@@ -6,10 +6,10 @@ import {
 
 export function handleCustomerTableLayoutsData(rows) {
  
-    console.log('[CustomerTableLayoutsData received]', rows);
+    if (false) console.log('[CustomerTableLayoutsData received]', rows);
 
   if (!Array.isArray(rows)) {
-    console.warn('[CustomerTableLayouts] expected rows array');
+    if (false) console.warn('[CustomerTableLayouts] expected rows array');
     return;
   }
 

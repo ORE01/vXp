@@ -7,7 +7,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const appRoot    = document.querySelector('#app-root');
   const loginButton = document.querySelector('.login-button');
 
-  console.log('[LOGIN] found:', { loginPage: !!loginPage, appRoot: !!appRoot, loginButton: !!loginButton });
+  // console.log('[LOGIN] found:', { loginPage: !!loginPage, appRoot: !!appRoot, loginButton: !!loginButton });
 
   if (!loginPage || !appRoot || !loginButton) {
     console.warn('Login-Layout nicht vollständig gefunden.');
@@ -15,10 +15,10 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   loginButton.addEventListener('click', () => {
-    console.log('[LOGIN] click');
+    // console.log('[LOGIN] click');
     loginPage.remove();
     appRoot.classList.remove('app-hidden');
-    console.log('[LOGIN] appRoot classes:', appRoot.className);
+    // console.log('[LOGIN] appRoot classes:', appRoot.className);
   });
 });
 

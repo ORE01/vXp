@@ -10,7 +10,7 @@ let csScenarioBuilderListenersInstalled = false;
 let fillRightBound = false;
 
 export function renderCSScenarioBuilder() {
-  console.log('🔥 CS BUILDER RENDER');
+  if (false) console.log('🔥 CS BUILDER RENDER');
 
   if (!csScenarioBuilderListenersInstalled) {
     document.addEventListener('cs:scenario:ready', () => {

@@ -49,7 +49,7 @@ export function handleLiquidityData(filteredData, { appState } = {}) {
   const chartCanvas        = $('#liquChart');
 
   if (!liquRoot || !liquDataContainer || !chartCanvas) {
-    console.warn('[Liquidity] Panel-DOM nicht bereit - Rendering Ã¼bersprungen.');
+    if (false) console.warn('[Liquidity] Panel-DOM nicht bereit - Rendering uebersprungen.');
     return;
   }
 

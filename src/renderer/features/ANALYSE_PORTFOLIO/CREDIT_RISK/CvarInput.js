@@ -46,7 +46,7 @@ function fmtNum(value) {
 export function handleCvarInput() {
   const container = document.getElementById(CONTAINER_ID);
   if (!container) {
-    console.warn('⚠️ Container #inputCreditVaRConfigContainer nicht gefunden.');
+    if (false) console.warn('⚠️ Container #inputCreditVaRConfigContainer nicht gefunden.');
     return;
   }
 
@@ -72,12 +72,12 @@ export function handleCvarInput() {
 
   const selectedConfigName = activeIndex >= 0 ? (rows[activeIndex]?.name ?? null) : null;
 
-  console.log('[CVAR GENERAL SETTINGS RENDER]', {
+  if (false) console.log('[CVAR GENERAL SETTINGS RENDER]', {
     customerSetting: appState.getCustomerCreditRiskSetting?.(),
     tableDataCount: rows.length,
   });
 
-  console.log('[CREDIT RISK GENERAL SETTINGS DISPLAY]', {
+  if (false) console.log('[CREDIT RISK GENERAL SETTINGS DISPLAY]', {
     selectedConfigName,
     customerDefaultConfigName,
     rows,

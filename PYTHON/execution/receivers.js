@@ -2,6 +2,10 @@
 
 import { showMessageBox } from '../../src/renderer/core/ui/dialogs/confirm.js';
 
+// Debug-Logs zentral stummschaltbar via window.__EXEC_DEBUG (siehe router.js).
+// Nicht geloescht, nur stummgeschaltet. console.error/echte Fehler bleiben sichtbar.
+const execLog = (...a) => { if (typeof window !== 'undefined' && window.__EXEC_DEBUG) console.log(...a); };
+
 export function createPythonExecutionReceivers(ctx) {
   const {
     appState,
@@ -160,7 +164,7 @@ export function createPythonExecutionReceivers(ctx) {
     const now = Date.now();
 
     if (now - _lastFairValueRefreshAt < 1000) {
-      console.warn('[PY RECEIVER] duplicate py-fairValue refresh skipped', {
+      execLog('[PY RECEIVER] duplicate py-fairValue refresh skipped', {
         projectName: data.projectName,
         source: data.source,
         success: data.success,
@@ -205,7 +209,7 @@ export function createPythonExecutionReceivers(ctx) {
 
     const isOffer = triggeredFromOffers || /^OFFERS?_/i.test(String(port_name || ''));
 
-    console.log('[PY RECEIVER] py-fairValue complete -> refresh start', {
+    execLog('[PY RECEIVER] py-fairValue complete -> refresh start', {
       projectName: data.projectName,
       source: data.source,
       success: data.success,
@@ -228,7 +232,7 @@ export function createPythonExecutionReceivers(ctx) {
 
     activatePortfolioResultTab(port_name);
 
-    console.log('[PY RECEIVER] calling fetchAndUpdateFairValueData', {
+    execLog('[PY RECEIVER] calling fetchAndUpdateFairValueData', {
       port_name,
       hasFetch: !!fetch,
       hasFetchAndUpdateFairValueData: typeof fetch.fetchAndUpdateFairValueData === 'function',
@@ -368,7 +372,7 @@ export function createPythonExecutionReceivers(ctx) {
   }
 
   function handleAIColumnComplete(data) {
-    console.log('[AIColumnComplete]', data);
+    execLog('[AIColumnComplete]', data);
   }
 
   function handleErsteComplete(data) {
@@ -392,7 +396,7 @@ export function createPythonExecutionReceivers(ctx) {
     // Deshalb darf py-fairValue hier NICHT nur den Button fertigsetzen.
     // Es muss denselben Refresh-Pfad auslösen wie py-fairValue-complete.
     if (data.projectName === 'py-fairValue') {
-      console.log('[PY RECEIVER] project-finished py-fairValue received', {
+      execLog('[PY RECEIVER] project-finished py-fairValue received', {
         projectName: data.projectName,
         source: data.source,
         success: data.success,
@@ -404,7 +408,7 @@ export function createPythonExecutionReceivers(ctx) {
     }
 
     if (data.projectName === 'py-MVaR') {
-      console.log('[PY RECEIVER] project-finished py-MVaR received', {
+      execLog('[PY RECEIVER] project-finished py-MVaR received', {
         projectName: data.projectName,
         success: data.success,
         selectedPort: appState.getSelectedPortTableName?.(),

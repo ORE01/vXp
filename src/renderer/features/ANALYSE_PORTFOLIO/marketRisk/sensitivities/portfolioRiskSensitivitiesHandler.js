@@ -34,7 +34,7 @@ export function handlePortfolioRiskSensitivitiesData(rows, { appState } = {}) {
     source: 'PortfolioRiskSensitivitiesData',
   });
 
-  console.log('[PRS HANDLER] PortfolioRiskSensitivitiesData handled', {
+  if (false) console.log('[PRS HANDLER] PortfolioRiskSensitivitiesData handled', {
     incomingRows: safeRows.length,
     storeRows: getRows().length,
     ports: portfolioRiskSensitivitiesStore.getPorts(),
