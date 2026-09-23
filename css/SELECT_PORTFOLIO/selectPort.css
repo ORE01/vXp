@@ -253,7 +253,8 @@ body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-thumb:
   position: fixed;
   top: 0;
   right: 0;
-  width: min(460px, 94vw);
+  /* Breiter, damit Spaltenauswahl und "Column Order" nebeneinander Platz haben. */
+  width: min(900px, 96vw);
   height: 100vh;
   padding: 22px;
   display: flex;
@@ -327,6 +328,25 @@ body.light-theme #panel-selectPort #portDataContainer0::-webkit-scrollbar-thumb:
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* Zweispaltiges Layout im Column-Selection-Drawer: links die Auswahl (Gruppen),
+   rechts "Column Order". Auf schmalen Breiten untereinander (umbrechend). */
+.column-selector-split {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.column-selector-split > .column-selector {
+  flex: 1 1 58%;
+  min-width: 260px;
+}
+.column-selector-split > .column-order-section {
+  flex: 1 1 34%;
+  min-width: 220px;
+  position: sticky;
+  top: 0;
 }
 
 /* Market-Data-Drawer: Währungs-Gruppen mit Konventions-Checkboxen */

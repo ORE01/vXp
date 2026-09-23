@@ -7,7 +7,10 @@ import processData, {
 import {
   ensureTableLayout,
   getVisibleColumns,
+  setVisibleColumns,
 } from '../../../features/CUSTOMER/tableLayouts/tableLayoutStore.js';
+
+import { attachHeaderColumnDnd } from './attachHeaderColumnDnd.js';
 
 import {
   renderTableColumnSelector,
@@ -112,6 +115,14 @@ export function renderConfigurableTable({
   // (they are not offered in the selector)
   lockedColumns = [],
 
+  // Optional: [{ title, keys: [...] }] -> unterteilt die Spalten-Checkboxen im
+  // Selector in benannte Gruppen (an renderTableColumnSelector durchgereicht).
+  columnGroups = null,
+
+  // Optional: Keys, die komplett aus der Tabelle/dem Selector ausgeblendet werden
+  // (weder angezeigt noch auswaehlbar) — z. B. redundante/interne Spalten.
+  excludeColumns = [],
+
   mapDisplayRows,
 
   afterRender,
@@ -152,7 +163,7 @@ if (false) console.log('[CONFIG TABLE]', {
   const allColumns = createColumnsFromRows(
     rows,
     effectiveColumnLabelMap
-  );
+  ).filter((c) => !(excludeColumns || []).includes(c.key));
 
   const allColumnKeys = allColumns.map((col) => col.key);
 
@@ -187,6 +198,7 @@ if (false) console.log('[CONFIG TABLE]', {
         containerId: features.columns.selectorContainerId,
         columns: selectableColumns,
         defaultVisibleColumns: defaultVisible,
+        groups: columnGroups,
       });
 
       bindTableColumnSelector({
@@ -301,6 +313,21 @@ if (false) console.log('[CONFIG TABLE]', {
       })),
       allRows: rows,
       onChange: onFilterChange ?? features.columns.onChange,
+    });
+  }
+
+  // Header-Drag&Drop: nur die sichtbaren, nicht-gelockten Spalten sind umsortierbar.
+  // Reihenfolge lebt in visibleColumns -> setVisibleColumns + Layout-Re-Render.
+  if (features.columns.enabled) {
+    attachHeaderColumnDnd({
+      tableContainer,
+      movableKeys: visibleColumns.filter((k) => !lockedKeys.includes(k)),
+      onReorder: (nextOrder) => {
+        setVisibleColumns(tableId, nextOrder);
+        if (typeof features.columns.onChange === 'function') {
+          features.columns.onChange();
+        }
+      },
     });
   }
 }

@@ -373,42 +373,63 @@ function clearAndHideSensitivityKpi(valueElementId) {
   setSensitivityKpiVisible(valueElementId, 0);
 }
 
-// Spiegelt die 5 Sensitivities-KPIs in eine versteckte data-kpi-band-Tabelle (#sensKpiTable),
-// damit Preview/PDF sie oberhalb der Charts als KPI-Band zeichnen (KPIs-zuerst-Logik).
+// Spiegelt die Sensitivities-KPIs in DREI versteckte data-kpi-band-Tabellen (PV01 / CPV01 /
+// Vega), damit Preview/PDF sie je Seite als KPI-Band zeichnen. Enthaelt jetzt auch die neuen
+// 2-Balken-Karten (IR/CS Duration, Average Maturity, Weighted Rating).
 function fillSensReportKpiBand() {
-  const tbl = document.getElementById('sensKpiTable');
-  if (!tbl) return;
   const esc = (s) => String(s ?? '').replace(/[<>&]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch]));
-  // [label, Wert-Element-ID, Change-Element-ID?] — die Change-ID (…Chg) traegt den
-  // Kreis-Pfeil (Richtung + Aenderungstext); fuer PV01/CPV01 in Preview/PDF spiegeln.
-  const defs = [
-    ['Total PV01', 'SensTotalPV01', 'SensTotalPV01Chg'],
-    ['Total CPV01', 'SensTotalCPV01', 'SensTotalCPV01Chg'],
-    ['Top IR Tenor', 'SensTopIRTenor', null],
-    ['Top Credit Bucket', 'SensTopCreditBucket', null],
-    ['Total Vega', 'SensTotalVega', 'SensTotalVegaChg'],
-  ];
-  // Aenderung (Richtung + Text) aus dem …Chg-Element lesen -> als data-up/data-chg
-  // an die Wert-Zelle, damit RiskPDF den Kreis-Pfeil zeichnet (wie im App-KPI).
+
+  // Aenderung (Richtung + Text) aus dem …Chg-Element lesen -> data-up/data-chg fuer den Pfeil.
   const chgOf = (chgId) => {
     if (!chgId) return null;
     const el = document.getElementById(chgId);
     if (!el || el.hidden) return null;
     const badge = el.querySelector('.perf-chg-badge');
     const up = badge ? badge.classList.contains('is-up') : null;
-    // Text ohne das Pfeilzeichen (Badge-Inhalt) -> "1,2 Mio. · 3,4 %".
     const txt = (el.textContent || '').replace(/[↗↘]/g, '').trim();
     if (up == null || !txt) return null;
     return { up, txt };
   };
-  const rows = defs
-    .map(([label, id, chgId]) => [label, (document.getElementById(id)?.textContent || '').trim(), chgOf(chgId)])
-    .filter(([, v]) => v && v !== '—' && v !== '-');
-  tbl.innerHTML = rows.length
-    ? `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-        rows.map(([k, v, chg]) => `<tr><td>${esc(k)}</td><td${chg ? ` data-up="${chg.up ? 1 : 0}" data-chg="${esc(chg.txt)}"` : ''}>${esc(v)}</td></tr>`).join('')
-      }</tbody></table>`
-    : '';
+
+  // defs: [label, Wert-Element-ID, Change-Element-ID?] -> eine KPI-Band-Tabelle.
+  const buildBand = (tblId, defs) => {
+    const tbl = document.getElementById(tblId);
+    if (!tbl) return;
+    const rows = defs
+      .map(([label, id, chgId]) => [label, (document.getElementById(id)?.textContent || '').trim(), chgOf(chgId)])
+      .filter(([, v]) => v && v !== '—' && v !== '-' && v !== '–');
+    tbl.innerHTML = rows.length
+      ? `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
+          rows.map(([k, v, chg]) => `<tr><td>${esc(k)}</td><td${chg ? ` data-up="${chg.up ? 1 : 0}" data-chg="${esc(chg.txt)}"` : ''}>${esc(v)}</td></tr>`).join('')
+        }</tbody></table>`
+      : '';
+  };
+
+  // PV01-Seite
+  buildBand('sensKpiTablePv01', [
+    ['Total PV01', 'SensTotalPV01', 'SensTotalPV01Chg'],
+    ['Top IR Tenor', 'SensTopIRTenor', null],
+    ['Duration (Years)', 'SensDuration', 'SensDurationChg'],
+    ['IR Duration (Total NAV)', 'sensIrDurTotal', null],
+    ['IR Duration (Valued NAV)', 'sensIrDurValued', null],
+    ['Average Maturity (Total NAV)', 'sensWamTotal', null],
+    ['Average Maturity (Valued NAV)', 'sensWamValued', null],
+  ]);
+
+  // CPV01-Seite
+  buildBand('sensKpiTableCpv01', [
+    ['Total CPV01', 'SensTotalCPV01', 'SensTotalCPV01Chg'],
+    ['Top Credit Bucket', 'SensTopCreditBucket', null],
+    ['Weighted Rating (Total NAV)', 'sensWRatingTotal', null],
+    ['Weighted Rating (Valued NAV)', 'sensWRatingValued', null],
+    ['CS Duration (Total NAV)', 'sensCsDurTotal', null],
+    ['CS Duration (Valued NAV)', 'sensCsDurValued', null],
+  ]);
+
+  // Vega-Seite
+  buildBand('sensKpiTableVega', [
+    ['Total Vega', 'SensTotalVega', 'SensTotalVegaChg'],
+  ]);
 }
 
 // Σ NOTIONAL per CCY over the (filtered) holdings — denominator for the relative
@@ -427,6 +448,19 @@ export function notionalByCcyFromHoldings(holdings) {
 // Σ NAV over the (filtered) holdings — denominator for the interest-rate duration.
 export function navTotalFromHoldings(holdings) {
   return (Array.isArray(holdings) ? holdings : []).reduce((s, h) => {
+    const n = Number(h.NAV ?? h.nav ?? h.NAV_BASE ?? h.nav_base);
+    return s + (Number.isFinite(n) ? n : 0);
+  }, 0);
+}
+
+// Σ NAV over the VALUED holdings only — excludes cash / non-valued (FIXED_VALUE)
+// categories. Denominator for the "Valued NAV" duration, matching the Overview
+// "Interest Rate Duration" card (nav - navCash).
+export function navValuedFromHoldings(holdings, fixedCats) {
+  const cats = fixedCats instanceof Set ? fixedCats : new Set(fixedCats || []);
+  return (Array.isArray(holdings) ? holdings : []).reduce((s, h) => {
+    const cat = String(h.CATEGORY ?? h.category ?? '').trim();
+    if (cat && cats.has(cat)) return s; // cash / non-valued -> excluded
     const n = Number(h.NAV ?? h.nav ?? h.NAV_BASE ?? h.nav_base);
     return s + (Number.isFinite(n) ? n : 0);
   }, 0);
@@ -476,6 +510,7 @@ export function updateMarketRiskSensitivityKpis({
   vegaCalcData = null,
   notionalByCcy = {},
   navTotal = 0,
+  navValued = 0,
 } = {}) {
   const selectedPort = normalizePortName(portName);
 
@@ -556,9 +591,14 @@ if (hasPV01Data) {
   // "Interest Rate Duration" slider.
   const totalPv01 = Object.values(pv01ByCcy).reduce((s, v) => s + (Number(v) || 0), 0);
   const duration = navTotal ? (Math.abs(totalPv01) / navTotal) * 10000 : 0;
+  // Valued-NAV duration (same |PV01|, denominator excludes cash) -- for the blue
+  // chart marker; kept in sync with the KPI so a portfolio switch never shows a
+  // stale value (it used to be read from the card DOM, which lagged the switch).
+  const durationValued = navValued ? (Math.abs(totalPv01) / navValued) * 10000 : 0;
   setText('SensDuration', duration ? `${formatNumber(duration, 2)} y` : '—');
   liveTotals.pv01 = totalPv01;
   liveTotals.duration = duration;
+  liveTotals.durationValued = durationValued;
 
   // Pass 1/0 intentionally.
   // The KPI card visibility helper expects a numeric-like value, not a formatted text.
@@ -713,4 +753,8 @@ if (hasCPV01Data) {
 
   // Report-Spiegel: Sensitivities-KPIs als verstecktes data-kpi-band (Preview/PDF).
   fillSensReportKpiBand();
+
+  // Bereits berechnete Totals (u.a. .duration, .pv01) zurueckgeben, damit z.B. der
+  // PV01-Chart die IDENTISCHE Duration einzeichnen kann statt sie neu zu rechnen.
+  return liveTotals;
 }

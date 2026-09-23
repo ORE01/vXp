@@ -28,6 +28,16 @@
   justify-content: start;
 }
 
+/* Kompakte 2-Balken-Kacheln (Interest Rate Duration + Average Maturity): passen jetzt in
+   eine Einzelspalte (kein grid-column: span 2 mehr) -> Label/Value/Track verkleinert, damit
+   sie groessengleich zu den uebrigen conc-kpi-Kacheln sind. */
+.conc-kpi--dur2 .pf-dur-cap { font-size: 11px; margin-bottom: 2px; }
+.conc-kpi--dur2 .pf-dur2 { gap: 5px; margin-top: 3px; }
+.conc-kpi--dur2 .pf-dur-row { gap: 6px; }
+.conc-kpi--dur2 .pf-dur-lbl { flex-basis: 56px; font-size: 10px; }
+.conc-kpi--dur2 .pf-dur-track { height: 6px; }
+.conc-kpi--dur2 .pf-dur-val { flex-basis: 38px; font-size: 11px; }
+
 .sens-kpi-card {
   background: var(--panel-surface, #101011);
   border: 1px solid var(--border-subtle);

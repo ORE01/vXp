@@ -463,6 +463,10 @@ function renderPortfolioCard(port) {
   };
   setDurBar('homePfIrDurTotalBar', 'homePfIrDurTotal', irDurTotal);
   setDurBar('homePfIrDurValuedBar', 'homePfIrDurValued', irDurValued);
+  // Die Sensitivities-Panel-Karten (sensIrDur* / sensWam*) werden NICHT mehr hier
+  // gespiegelt: sie muessen dem Header-Filter der Sensitivities-Ansicht folgen und
+  // werden daher im Sensitivities-Render (handleIRSensData) aus den GEFILTERTEN
+  // Holdings gesetzt. Hier bleibt nur die Overview-Karte (homePf*).
   setDurBar('homePfCsDurTotalBar', 'homePfCsDurTotal', csDurTotal);
   setDurBar('homePfCsDurValuedBar', 'homePfCsDurValued', csDurValued);
 

@@ -7,6 +7,7 @@ import {
   updateMarketRiskSensitivityKpis,
   notionalByCcyFromHoldings,
   navTotalFromHoldings,
+  navValuedFromHoldings,
 } from './marketRiskSensitivityKpis.js';
 import { applyColumnFilters } from '../../../CUSTOMER/tableLayouts/tableColumnFilters.js';
 import {
@@ -54,6 +55,61 @@ function resetPv01Drill() {
 
 let PV01Chart;
 let PV01RenderToken = 0;
+
+// Schwelle fuer "keine echte IR-Sensitivitaet" (Σ|PV01| je CCY). Floater-Rauschen liegt bei
+// ~1e-5 EUR, reale Positionen bei >= ~100 EUR -> 1e-3 trennt sauber. Darunter -> Gewichte 0
+// (sonst ergibt winziges Rauschen / winzige Summe irrefuehrende 36%/36%/...).
+const PV01_NO_SENS_EPS = 1e-3;
+
+/**
+ * Sets the two 2-bar cards in the Sensitivities panel ("Interest Rate Duration" and
+ * "Average Maturity") from the CURRENTLY FILTERED holdings, so both follow the header
+ * filter. IR duration arrives already filtered via kpiTotals; the maturity is the
+ * NAV-weighted mean TtM over the valued (non-cash) holdings, using the SAME NAV
+ * denominators as the duration -> Total/Valued ratios line up between the two cards.
+ */
+function updateSensDurationMaturityCards({
+  holdings,
+  fixedCats,
+  navTotal,
+  navValued,
+  irDurTotal,
+  irDurValued,
+} = {}) {
+  const cats = fixedCats instanceof Set ? fixedCats : new Set(fixedCats || []);
+
+  // WAM numerator: Σ(TtM · NAV) over valued (non-cash) holdings with TtM >= 0.
+  let ttmNavValued = 0;
+  (Array.isArray(holdings) ? holdings : []).forEach((h) => {
+    const cat = String(h.CATEGORY ?? h.category ?? '').trim();
+    if (cat && cats.has(cat)) return; // cash / non-valued
+    const ttm = Number(h.TtM ?? h.ttm);
+    if (!Number.isFinite(ttm) || ttm < 0) return;
+    const nav = Number(h.NAV ?? h.nav ?? h.NAV_BASE ?? h.nav_base) || 0;
+    ttmNavValued += ttm * nav;
+  });
+
+  const dT = Number.isFinite(irDurTotal) ? irDurTotal : null;
+  const dV = Number.isFinite(irDurValued) ? irDurValued : null;
+  const wT = navTotal  ? ttmNavValued / navTotal  : null;
+  const wV = navValued ? ttmNavValued / navValued : null;
+
+  // Per-card scale (larger of the two bars = 100%), wie zuvor in homeOverview.
+  const durScale = Math.max(dT || 0, dV || 0) || 1;
+  const wamScale = Math.max(wT || 0, wV || 0) || 1;
+
+  const setBar = (barId, valId, v, scale) => {
+    const bar = document.getElementById(barId);
+    if (bar) bar.style.width = `${Number.isFinite(v) ? Math.max(0, Math.min(100, (v / scale) * 100)) : 0}%`;
+    const el = document.getElementById(valId);
+    if (el) el.textContent = Number.isFinite(v) ? `${v.toFixed(2).replace('.', ',')}Y` : '–';
+  };
+
+  setBar('sensIrDurTotalBar', 'sensIrDurTotal', dT, durScale);
+  setBar('sensIrDurValuedBar', 'sensIrDurValued', dV, durScale);
+  setBar('sensWamTotalBar', 'sensWamTotal', wT, wamScale);
+  setBar('sensWamValuedBar', 'sensWamValued', wV, wamScale);
+}
 
 /**
  * Render PV01 sensitivity view for the currently selected portfolio.
@@ -230,18 +286,55 @@ if (!calcData || !calcData.filteredRowsCount) {
     );
   }
 
-  updateMarketRiskSensitivityKpis({
-    rows: portfolioRows,
-    portName: selectedPort,
-    pv01CalcData: calcData,
-    notionalByCcy: notionalByCcyFromHoldings(holdings),
-    navTotal: navTotalFromHoldings(holdings),
-  });
+  // NAV-Basen einmal aus den GEFILTERTEN Holdings bestimmen (Nenner fuer Duration + WAM).
+  const fixedCats = appState.getFixedValueCategoryNames?.();
+  const navTotal = navTotalFromHoldings(holdings);
+  const navValued = navValuedFromHoldings(holdings, fixedCats);
+
+  // KPI-Update ISOLIERT: wirft es (z. B. im gemeinsamen KPI-Schwanz), darf das
+  // NICHT den Chart/Tabellen-Render darunter verhindern. Frueher blockierte ein
+  // KPI-Fehler den ganzen Sensitivities-Refresh -> Chart/Tabelle blieben stehen,
+  // obwohl die KPIs schon aktualisiert waren.
+  let kpiTotals;
+  try {
+    kpiTotals = updateMarketRiskSensitivityKpis({
+      rows: portfolioRows,
+      portName: selectedPort,
+      pv01CalcData: calcData,
+      notionalByCcy: notionalByCcyFromHoldings(holdings),
+      navTotal,
+      navValued,
+    });
+  } catch (e) {
+    console.error('[IR SENS] KPI update threw — chart/table still rendered', e);
+  }
+
+  // "Interest Rate Duration" + "Average Maturity"-Kacheln des Sensitivities-Panels aus den
+  // GEFILTERTEN Holdings setzen -> sie folgen jetzt dem Header-Filter (frueher aus dem vollen
+  // Portfolio via homeOverview -> blieben beim Filtern konstant). Duration kommt gefiltert aus
+  // kpiTotals.
+  try {
+    updateSensDurationMaturityCards({
+      holdings,
+      fixedCats,
+      navTotal,
+      navValued,
+      irDurTotal: kpiTotals?.duration,
+      irDurValued: kpiTotals?.durationValued,
+    });
+  } catch (e) { console.warn('[IR SENS] duration/maturity cards failed', e); }
 
   // Feed the right-click drill (empty on the legacy fallback path).
   _pv01DrillRows = Array.isArray(calcData.drillRows) ? calcData.drillRows : [];
 
-  return renderIRSensTableAndChart(calcData, selectedPort);
+  return renderIRSensTableAndChart(
+    {
+      ...calcData,
+      duration: kpiTotals?.duration,
+      durationValued: kpiTotals?.durationValued,
+    },
+    selectedPort
+  );
 }
 
 /**
@@ -337,9 +430,11 @@ function calculateIRSensitivityFromHoldings(holdings, productSens, portName, app
   Object.entries(irSensitivityByCcy).forEach(([ccy, tenorValues]) => {
     const total = tenorValues.reduce((sum, value) => sum + value, 0);
     pv01TotalByCcy[ccy] = total;
-    pv01PartialPctByCcy[ccy] = tenorValues.map(value =>
-      total ? Number(((value / total) * 100).toFixed(2)) : 0
-    );
+    // Keine echte IR-Sensitivitaet (z. B. Floater): |PV01| vernachlaessigbar -> Gewichte 0.
+    const sumAbs = tenorValues.reduce((s, v) => s + Math.abs(v), 0);
+    pv01PartialPctByCcy[ccy] = (!total || sumAbs < PV01_NO_SENS_EPS)
+      ? tenorValues.map(() => 0)
+      : tenorValues.map(value => Number(((value / total) * 100).toFixed(2)));
   });
 
   return {
@@ -411,10 +506,11 @@ function calculateIRSensitivity(rows, portName) {
 
     pv01TotalByCcy[ccy] = total;
 
-    pv01PartialPctByCcy[ccy] = tenorValues.map(value => {
-      if (!total) return 0;
-      return Number(((value / total) * 100).toFixed(2));
-    });
+    // Keine echte IR-Sensitivitaet (z. B. Floater): |PV01| vernachlaessigbar -> Gewichte 0.
+    const sumAbs = tenorValues.reduce((s, v) => s + Math.abs(v), 0);
+    pv01PartialPctByCcy[ccy] = (!total || sumAbs < PV01_NO_SENS_EPS)
+      ? tenorValues.map(() => 0)
+      : tenorValues.map(value => Number(((value / total) * 100).toFixed(2)));
   });
 
   // console.log('[IR SENS] FILTER CHECK:', {
@@ -467,6 +563,8 @@ function renderIRSensTableAndChart(data, portName) {
     irSensitivityByCcy = {},
     pv01TotalByCcy = {},
     pv01PartialPctByCcy = {},
+    duration = 0,
+    durationValued = 0,
   } = data;
 
   const wrapper = document.createElement('div');
@@ -567,6 +665,8 @@ function renderIRSensTableAndChart(data, portName) {
     createPV01Chart({
       irSensitivityByCcy,
       pv01PartialPctByCcy,
+      duration,
+      durationValued,
       expectedRenderToken: renderToken,
     });
   });
@@ -586,6 +686,8 @@ function renderIRSensTableAndChart(data, portName) {
 function createPV01Chart({
   irSensitivityByCcy = {},
   pv01PartialPctByCcy = {},
+  duration = 0,
+  durationValued = 0,
   expectedRenderToken = PV01RenderToken,
 } = {}) {
   if (expectedRenderToken !== PV01RenderToken) {
@@ -681,7 +783,122 @@ function createPV01Chart({
     datasets,
   };
 
-  PV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x', { interactive: true });
+  // --------------------------------------------------
+  // Three vertical markers + the gap band. Passed at construction time
+  // (chartjs-plugin-annotation ignores options set after new Chart()).
+  //  - RED   "Total NAV Duration"  = |PV01| / Total NAV  * 10000 (`duration`).
+  //  - BLUE  "Valued NAV Duration" = |PV01| / Valued NAV * 10000 (NAV without
+  //           cash / non-valued positions) (`durationValued`).
+  //          Both arrive fresh from the KPI computation in the SAME render cycle
+  //          (kpiTotals) -- previously read from the card DOM, which lagged on a
+  //          portfolio switch and left stale red/blue lines. Duration = effective
+  //          rate sensitivity to a parallel move ("zero-bond-equivalent maturity").
+  //  - ORANGE "PV01 Weighted Tenor" = PV01-weighted mean tenor, same signed
+  //           weights as the bars: Sum(tenor*PV01) / Sum(PV01). Shows WHERE on
+  //           the curve the key-rate sensitivity is concentrated.
+  // The lines carry no own labels; all three values are shown as labels placed
+  // laterally over the line/region they belong to, each on its own vertical row
+  // (top to bottom) so they never overlap. Red is painted last so it covers the
+  // blue line where the two coincide.
+  // --------------------------------------------------
+  const pv01Annotations = {};
+  {
+    // Durations arrive fresh from the KPI computation (same render cycle) -- NOT
+    // read from the card DOM, which lagged on a portfolio switch and left stale
+    // red/blue lines until the next recompute.
+    const durTotal  = duration > 0 ? duration : null;
+    const durValued = durationValued > 0 ? durationValued : null;
+
+    const inRange = (cv) => cv != null && cv >= -0.5 && cv <= labels.length - 0.5;
+    const toChartValue = (y) => (y != null && y > 0) ? (y - 1 - startIndex) : null;
+
+    const durTotalCV  = toChartValue(durTotal);
+    const durValuedCV = toChartValue(durValued);
+
+    // Orange: PV01-weighted mean tenor (signed weights = the bars).
+    let wNum = 0;
+    let wDen = 0;
+    let wAbs = 0;
+    for (let i = 0; i < fullLabels.length; i += 1) {
+      let netAtTenor = 0;
+      Object.values(irSensitivityByCcy).forEach((tenorValues) => {
+        netAtTenor += Number(tenorValues?.[i]) || 0;
+      });
+      wNum += (i + 1) * netAtTenor;
+      wDen += netAtTenor;
+      wAbs += Math.abs(netAtTenor);
+    }
+    // Keine echte IR-Sensitivitaet (z. B. Floater): keine Ø-Tenor-Linie (waere aus Rauschen).
+    const wavgTenor = (Math.abs(wDen) > 1e-9 && wAbs >= PV01_NO_SENS_EPS) ? wNum / wDen : null;
+    const avgCV = wavgTenor != null ? wavgTenor - 1 - startIndex : null;
+
+    const RED = 'rgba(211, 47, 47, 0.95)';
+    const BLUE = 'rgba(33, 150, 243, 0.95)';
+    const ORANGE = 'rgba(245, 130, 32, 0.95)';
+    const fmtY = (v) => `${v.toFixed(2).replace('.', ',')}Y`;
+
+    // Bare dashed line (no own label -- labels live in the vertical stack below).
+    const mkLine = (value, color) => ({
+      type: 'line',
+      scaleID: 'x',
+      value,
+      borderColor: color,
+      borderWidth: 2,
+      borderDash: [6, 4],
+      drawTime: 'afterDatasetsDraw',
+    });
+
+    // Order matters within the same drawTime: later keys paint on top -> blue
+    // first, then RED LAST so the red line covers the blue one when they coincide.
+    // (Gap band / shaded area entfernt auf Wunsch.)
+    if (inRange(durValuedCV)) pv01Annotations.durationValuedLine = mkLine(durValuedCV, BLUE);
+    if (inRange(avgCV))       pv01Annotations.wavgLine           = mkLine(avgCV, ORANGE);
+    if (inRange(durTotalCV))  pv01Annotations.durationTotalLine  = mkLine(durTotalCV, RED); // last -> on top
+
+    // Label stack: one row per metric (top to bottom, never overlapping), but each
+    // shifted LATERALLY to sit over the line / region it belongs to. Anchored near
+    // the top of the plot; x-anchor keeps it inside the area (extends left near the
+    // right edge, right near the left edge).
+    let yTop = 0;
+    datasets.forEach((ds) => (ds.data || []).forEach((v) => {
+      const n = Number(v) || 0;
+      if (n > yTop) yTop = n;
+    }));
+    if (!(yTop > 0)) yTop = 100;
+
+    const stack = [];
+    if (inRange(durTotalCV))  stack.push([`Total NAV Duration ${fmtY(durTotal)}`, RED, durTotalCV]);
+    if (inRange(durValuedCV)) stack.push([`Valued NAV Duration ${fmtY(durValued)}`, BLUE, durValuedCV]);
+    if (inRange(avgCV))       stack.push([`PV01 Weighted Tenor ${fmtY(wavgTenor)}`, ORANGE, avgCV]);
+    // (Gap-Label sitzt zentriert in der Fläche, siehe Box oben -- nicht im Stapel.)
+
+    const span = Math.max(1, labels.length - 1);
+    stack.forEach(([content, color, cv], i) => {
+      const f = cv / span;
+      const xPos = f > 0.6 ? 'end' : (f < 0.4 ? 'start' : 'center');
+      pv01Annotations[`lbl${i}`] = {
+        type: 'label',
+        xValue: cv,                       // lateral: over its own line/region
+        yValue: yTop,
+        position: { x: xPos, y: 'start' },
+        xAdjust: xPos === 'end' ? -4 : (xPos === 'start' ? 4 : 0),
+        yAdjust: 6 + i * 21,              // vertical: own row -> no overlap
+        content,
+        backgroundColor: color,
+        color: '#fff',
+        borderRadius: 3,
+        font: { size: 10, weight: 'bold' },
+        padding: { top: 3, bottom: 3, left: 6, right: 6 },
+        textAlign: 'left',
+        drawTime: 'afterDatasetsDraw',
+      };
+    });
+  }
+
+  PV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x', {
+    interactive: true,
+    annotations: Object.keys(pv01Annotations).length ? pv01Annotations : undefined,
+  });
 
   if (!PV01Chart) {
     console.warn('[PV01 CHART] createBarChart returned null', {

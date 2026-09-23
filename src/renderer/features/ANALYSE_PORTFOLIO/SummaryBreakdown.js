@@ -1,4 +1,11 @@
 ﻿import { getColorForPieChart, getContrastColorForPieChart } from '../../utils/colors.js';
+import { formatRankLabel } from '../../utils/tableCellFormats.js';
+
+// Dimensionswert nur fuer die ANZEIGE aufbereiten: bei Dimension RANK (Capital
+// Structure) underscore -> Leerzeichen ("senior preferred"). Alle anderen Dimensionen
+// unveraendert (sonst wuerden z. B. Kategorien mit Unterstrich falsch umgeschrieben).
+// Der Rohwert (name / data-drill-value) bleibt IMMER underscore fuer Drill/Filter.
+const _concDispName = (name, dimKey) => (dimKey === 'RANK' ? formatRankLabel(name) : name);
 import { setupHiDPICanvas } from './SummaryYield.js';
 import { getFormatRules } from '../../utils/tableCellFormats.js';
 import { attachIdLinks } from '../../utils/linksToTables.js';
@@ -7,25 +14,19 @@ import { makeSortableDetailsTable } from './marketRisk/sensitivities/detailsTabl
 
 const { jsPDF } = window.jspdf;
 
-// Plotly wird NICHT mehr synchron im index.html-Head geladen (schwere ~3MB-Lib, die den
-// App-Start blockierte). Stattdessen on-demand: erst wenn die Concentration-Treemaps oder
-// der Report sie brauchen. Das Ergebnis wird als Promise gecached (nur EIN Netzwerk-Load).
-// CSP: index.html script-src erlaubt cdn.jsdelivr.net, dynamisch injizierte Scripts also ok.
-let _plotlyPromise = null;
-function ensurePlotly() {
-  if (typeof window !== 'undefined' && window.Plotly) return Promise.resolve(window.Plotly);
-  if (_plotlyPromise) return _plotlyPromise;
-  _plotlyPromise = new Promise((resolve, reject) => {
-    try {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/plotly.js-dist@2.35.2/plotly.min.js';
-      s.async = true;
-      s.onload = () => resolve(window.Plotly);
-      s.onerror = (e) => { _plotlyPromise = null; reject(e); };
-      document.head.appendChild(s);
-    } catch (e) { _plotlyPromise = null; reject(e); }
-  });
-  return _plotlyPromise;
+// Chart.js-Treemap-Controller sicherstellen. chartjs-chart-treemap wird in index.html
+// synchron nach Chart.js geladen und registriert sich i.d.R. selbst; falls nicht, hier
+// aus dem UMD-Global nachregistrieren. Ersetzt die fruehere Plotly-Treemap (Plotly raus).
+function __ensureTreemapController() {
+  const C = (typeof window !== 'undefined') ? window.Chart : null;
+  if (!C) return false;
+  try { if (C.registry?.controllers?.get?.('treemap')) return true; } catch {}
+  const g = window.ChartTreemap || window['chartjs-chart-treemap'] || window.chartjsChartTreemap;
+  try {
+    if (g && (g.TreemapController || g.TreemapElement)) C.register(g.TreemapController, g.TreemapElement);
+    else if (g && g.default) C.register(g.default);
+  } catch {}
+  try { return !!C.registry?.controllers?.get?.('treemap'); } catch { return false; }
 }
 
 let tableName = 'Portfolio';
@@ -160,6 +161,7 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
   // UNABHAENGIG vom (entfernten) Pie-Grid des alten Breakdown-Panels.
   try { renderConcentrationDashboard(filteredData, { dataField: _concDimension }); } catch (e) { console.warn('[conc] render failed', e); }
   try { ensureConcReportPanels(); fillConcReportPanels(filteredData); } catch (e) { console.warn('[conc] report panels failed', e); }
+  try { ensureBreakdownDimTriggers(); } catch (e) { console.warn('[conc] dim triggers failed', e); }
   if (!_concHookBound) {
     _concHookBound = true;
     try {
@@ -189,10 +191,25 @@ export function handleSummaryNotionalData(filteredData, index, port_name) {
         });
       });
     } catch {}
+    // Dimension VOR dem Panel-Open setzen (capture), damit ein evtl. feuernder
+    // Open-Hook bereits die richtige Dimension nimmt.
     document.addEventListener('click', (e) => {
       const btn = e.target?.closest?.('button.section-trigger[data-panel="panel-concentration"]');
       if (btn && btn.dataset.dimension) _concDimension = btn.dataset.dimension;
     }, true);
+    // Robuster Dimensionswechsel per Sidebar-Sub-Trigger: unabhaengig vom Open-Hook
+    // direkt neu rendern. bootstrapTriggers oeffnet das Panel (data-panel); im naechsten
+    // Frame ist es sichtbar -> die Treemap kann ihre Breite messen. Deckt den Fall ab,
+    // dass der Panel-Open-Hook bei bereits offenem Panel nicht erneut rendert.
+    document.addEventListener('click', (e) => {
+      const btn = e.target?.closest?.('button.section-trigger[data-dimension][data-panel="panel-concentration"]');
+      if (!btn || !btn.dataset.dimension) return;
+      _concDimension = btn.dataset.dimension;
+      try { ensureBreakdownDimTriggers(); } catch {}
+      requestAnimationFrame(() => {
+        try { renderConcentrationDashboard(_lastBreakdownArgs?.filteredData, { dataField: _concDimension }); } catch {}
+      });
+    });
   }
 
   const elementId      = `portDataContainer${0}`;
@@ -624,6 +641,46 @@ function ensureConcDimensionUI() {
   if (sel.value !== _concDimension) sel.value = _concDimension;
 }
 
+// Dimension-Sub-Trigger in der Sidebar (Breakdown-Accordion), gruppiert in eine
+// Zwischenebene: ENTITY / RATINGS / PRODUCT / GEOGRAPHY. Jede Gruppe ist ein
+// verschachteltes .risk-acc (reiner Aufklapp-Toggle, kein data-panel); die Blaetter
+// setzen die Dimension (data-dimension) und oeffnen panel-concentration. Labels aus
+// BREAKDOWN_CONFIG (Quelle der Wahrheit). Idempotent. Portfolio-Akzent (#6C9BD1) inline,
+// da decorateTriggerIcons() bereits vor dem dynamischen Aufbau gelaufen ist.
+const BREAKDOWN_NAV_GROUPS = [
+  { title: 'ENTITY',    keys: ['ISSUER', 'RANK', 'Depotbank'] },
+  { title: 'RATINGS',   keys: ['RATING', 'RATING_PROD', 'RATINGres'] },
+  { title: 'PRODUCT',   keys: ['CATEGORY', 'CouponType'] },
+  { title: 'GEOGRAPHY', keys: ['IssuerRegion', 'IssuerCountryName', 'IssuerIsEU', 'IssuerIsEuro'] },
+];
+function ensureBreakdownDimTriggers() {
+  const host = document.getElementById('breakdownDimTriggers');
+  if (!host || host.dataset.filled) return;
+  const labelByKey = Object.fromEntries(
+    BREAKDOWN_CONFIG.flatMap(g => g.columns).map(c => [c.key, c.label])
+  );
+  const ACCENT = '#6C9BD1';
+  // Blatt-Trigger (Dimension): oeffnet panel-concentration + setzt Dimension. Einrueckung l3.
+  const leaf = (key) => {
+    const label = labelByKey[key] || key;
+    return `<button class="section-trigger section-trigger--sub risk-acc--l3 has-accent" type="button"` +
+      ` data-panel="panel-concentration" aria-controls="panel-concentration"` +
+      ` data-dimension="${__concEsc(key)}" aria-expanded="false" style="--trigger-accent:${ACCENT}">` +
+      `<span class="section-header">${__concEsc(label)}</span></button>`;
+  };
+  // Gruppen-Header (reiner Aufklapp-Toggle, KEIN data-panel -> oeffnet kein Panel).
+  host.innerHTML = BREAKDOWN_NAV_GROUPS.map(grp =>
+    `<div class="risk-acc">` +
+      `<button class="section-trigger section-trigger--sub risk-acc-toggle has-accent" type="button"` +
+      ` aria-expanded="false" style="--trigger-accent:${ACCENT}">` +
+        `<span class="section-header">${__concEsc(grp.title)}</span><span class="chev"></span>` +
+      `</button>` +
+      `<div class="risk-acc-body">${grp.keys.map(leaf).join('')}</div>` +
+    `</div>`
+  ).join('');
+  host.dataset.filled = '1';
+}
+
 // Reine Konzentrations-Kennzahlen fuer EINE Dimension. Eine Quelle der Wahrheit
 // fuer das Live-Dashboard UND die versteckten Report-Panels je Dimension.
 function computeConcentration(filteredData, dimKey, valueType) {
@@ -675,7 +732,7 @@ function renderConcReportTables(kfEl, tiEl, m) {
   if (tiEl) {
     tiEl.dataset.label = `Top ${m.dimLabel}`;
     tiEl.innerHTML = `<table class="conc-report-table"><thead><tr><th>${__concEsc(m.dimLabel)}</th><th>Share (${__concEsc(m.valueType)})</th></tr></thead><tbody>${
-      m.items.slice(0, 10).map(it => `<tr><td>${__concEsc(it.name)}</td><td>${__concPct(it.share)}</td></tr>`).join('')
+      m.items.slice(0, 10).map(it => `<tr><td>${__concEsc(_concDispName(it.name, m.key))}</td><td>${__concPct(it.share)}</td></tr>`).join('')
     }</tbody></table>`;
   }
 }
@@ -686,7 +743,7 @@ function __concAllDims() {
 }
 
 // Chart.js-Instanzen der Report-Panels je Dimension (zum Zerstoeren vor Neuzeichnen).
-let __concReportCharts = {};   // { [dimKey]: { top10, donut } }
+let __concReportCharts = {};   // { [dimKey]: { top10, tree } }
 
 // Versteckte Report-Panels je Dimension: erlauben, im PDF ALLE Konzentrations-
 // Dashboards einzeln zu waehlen — unabhaengig von der live gewaehlten Dimension.
@@ -712,7 +769,7 @@ function ensureConcReportPanels() {
       `<div class="sub-panel-header"><div class="sub-panel-title">${__concEsc(label)}</div></div>` +
       `<div class="sub-panel-body">` +
         `<div class="conc-report-charts" style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px;">` +
-          `<div id="concTreemap__${key}" data-label="Breakdown — ${__concEsc(label)}" style="width:520px; height:300px;"></div>` +
+          `<canvas id="concTreemap__${key}" width="520" height="300" data-label="Breakdown — ${__concEsc(label)}"></canvas>` +
           `<canvas id="concTop10Chart__${key}" width="460" height="300" data-label="Top 10 — ${__concEsc(label)}"></canvas>` +
         `</div>` +
         `<div class="data-container" id="concKeyFiguresTable__${key}" data-label="${__concEsc(label)} — Key Figures" data-kpi-band="1"></div>` +
@@ -723,7 +780,7 @@ function ensureConcReportPanels() {
 }
 
 // Statische Report-Visuals je Dimension (wie das Live-Breakdown-Panel): Treemap
-// (Plotly, feste Groesse) + Top-10-Balken (Chart.js, Rang+Name+%-Labels). responsive:false
+// (Chart.js, feste Groesse) + Top-10-Balken (Chart.js, Rang+Name+%-Labels). responsive:false
 // + fixe Groesse + animation:false -> malen auch in versteckten Panels, damit
 // canvasThumb()/PDF ein echtes Bild bekommen. Ohne Drill-Interaktion/Tooltips.
 function renderConcReportCharts(key, m) {
@@ -756,7 +813,7 @@ function renderConcReportCharts(key, m) {
       type: 'bar',
       plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
       data: {
-        labels: top.map((it, i) => `${i + 1}   ${it.name}`),   // Rang + Name (wie Live-Panel)
+        labels: top.map((it, i) => `${i + 1}   ${_concDispName(it.name, key)}`),   // Rang + Name (wie Live-Panel)
         datasets: [{
           data: top.map(it => +(it.share * 100).toFixed(2)),
           backgroundColor: top.map((_, i) => __concGradAt(i)),   // Farbe nach Rang
@@ -787,55 +844,112 @@ function renderConcReportCharts(key, m) {
   __concReportCharts[key] = prev;
 }
 
-// Report-Treemap je Dimension: eigenes Plotly-Element mit FEST gesetzter Breite/Hoehe
-// (im Layout) -> rendert auch in verstecktem Panel korrekt, damit Preview/PDF ein Bild
-// bekommen. staticPlot: keine Interaktion (reines Report-Bild).
-function renderConcReportTreemap(key, m) {
-  const el = document.getElementById(`concTreemap__${key}`);
-  if (!el) return;
-  // Plotly on-demand: beim ersten Bedarf laden, dann diese Funktion einmal neu aufrufen.
-  if (!window.Plotly) { ensurePlotly().then(() => { try { renderConcReportTreemap(key, m); } catch {} }).catch(() => {}); return; }
-  if (!m || !Array.isArray(m.items) || !m.items.length) { try { window.Plotly.purge(el); } catch {} return; }
-
-  const N = 15;
-  const items = m.items;
+// Gemeinsame Treemap-Daten (Live + Report): Top-N-Kacheln + "Others (n)"-Sammelkachel.
+// Liefert das Chart.js-treemap-`tree` (Objekte mit v/__color/__lines) und die Others-Info
+// (fuer den Live-Drill). Farbe nach RANG (groesste = navy ... kleinste = rot); Kachel-Text
+// = umbrochener Name + Anteil (mehrzeilig, wie zuvor bei Plotly).
+function __concBuildTreemapTree(items, N = 15, dimKey = null) {
   const shown = items.slice(0, N);
   const rest  = items.slice(N);
-  const labels = shown.map(it => it.name);
-  const values = shown.map(it => it.value);
-  const custom = shown.map(it => __concPct(it.share));
-  const colors = shown.map((_, i) => __concGradAt(i));   // Farbe nach Rang (wie Live-Treemap)
+  // name = Rohwert (Drill/Klick, IMMER underscore); disp = Anzeigename (bei RANK mit Space).
+  const tree = shown.map((it, i) => {
+    const disp = _concDispName(it.name, dimKey);
+    return {
+      name: it.name,
+      disp,
+      v: it.value,
+      __color: __concGradAt(i),
+      __lines: __wrapLabel(disp).split('<br>').concat(__concPct(it.share)),
+    };
+  });
+  let others = null;
   if (rest.length) {
     const rv = rest.reduce((s, it) => s + it.value, 0);
     const rs = rest.reduce((s, it) => s + it.share, 0);
-    labels.push(`Others (${rest.length})`);
-    values.push(rv);
-    custom.push(__concPct(rs));
+    const label = `Others (${rest.length})`;
     const othersBigger = shown.filter(it => it.value > rv).length;
-    colors.push(__concGradAt(Math.max(0, othersBigger - 0.5)));
+    tree.push({
+      name: label,
+      disp: label,
+      v: rv,
+      __color: __concGradAt(Math.max(0, othersBigger - 0.5)),
+      __lines: __wrapLabel(label).split('<br>').concat(__concPct(rs)),
+    });
+    others = { label, names: new Set(rest.map(it => it.name)) };
   }
+  return { tree, others };
+}
 
+// Chart.js-Config fuer eine Treemap (Flaeche proportional zum Wert, squarified).
+// live=true -> responsive + Interaktion; live=false -> feste Bitmap fuer Report/PDF
+// (kein Event, keine Animation). Farbe/Label je Kachel aus __color/__lines (ctx.raw._data).
+function __concTreemapChartConfig(tree, { chartFont, fontSize, live }) {
+  return {
+    type: 'treemap',
+    data: {
+      datasets: [{
+        tree,
+        key: 'v',
+        spacing: 2,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.25)',
+        backgroundColor: (ctx) => (ctx.type === 'data' ? (ctx.raw?._data?.__color || '#888') : 'transparent'),
+        labels: {
+          display: true,
+          color: '#fff',
+          align: 'center',
+          position: 'middle',
+          // 'fit': Label skaliert NUR in zu kleinen Kacheln herunter (passt sonst nicht),
+          // grosse Kacheln bleiben bei der Basisgroesse -> kleine Kacheln zeigen jetzt Text.
+          overflow: 'fit',
+          font: { family: chartFont, size: fontSize, weight: '600' },
+          formatter: (ctx) => (ctx.raw?._data?.__lines || ''),
+        },
+      }],
+    },
+    options: {
+      responsive: !!live,
+      maintainAspectRatio: false,
+      animation: live ? undefined : false,
+      events: live ? undefined : [],
+      layout: { padding: 0 },
+      plugins: {
+        legend: { display: false },
+        title: { display: false },
+        datalabels: { display: false },
+        tooltip: live ? {
+          enabled: true,
+          displayColors: false,
+          callbacks: {
+            title: (its) => { const d = its?.[0]?.raw?._data; return d ? (d.disp ?? d.name) : ''; },
+            label: (ctx) => { const d = ctx.raw?._data; return d ? d.__lines[d.__lines.length - 1] : ''; },
+          },
+        } : { enabled: false },
+      },
+    },
+  };
+}
+
+// Report-Treemap je Dimension: festes Canvas (520x300), statisch (kein Event/Animation),
+// rendert auch im verborgenen Panel -> Preview/PDF bekommen ein Bild via canvasToPngData.
+function renderConcReportTreemap(key, m) {
+  const el = document.getElementById(`concTreemap__${key}`);
+  if (!el) return;
+  if (!__ensureTreemapController()) { console.warn('[conc] treemap controller missing'); return; }
+  const prev = __concReportCharts[key] || {};
+  if (!m || !Array.isArray(m.items) || !m.items.length) {
+    try { prev.tree?.destroy(); } catch {}
+    prev.tree = null; __concReportCharts[key] = prev; return;
+  }
+  const { tree } = __concBuildTreemapTree(m.items, 15, key);
   const bodyCss   = getComputedStyle(document.body);
   const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
-  const data = [{
-    type: 'treemap', labels, values, parents: labels.map(() => ''),
-    customdata: custom,
-    text: labels.map(t => __wrapLabel(t)),
-    texttemplate: '%{text}<br>%{customdata}',
-    hoverinfo: 'skip',
-    textposition: 'middle center',
-    textfont: { color: '#fff', family: chartFont, size: 14 },
-    tiling: { pad: 2, packing: 'squarify' },
-    marker: { colors, line: { width: 1, color: 'rgba(0,0,0,0.25)' } },
-    pathbar: { visible: false },
-    sort: true,
-  }];
-  const layout = {
-    width: 520, height: 300, margin: { l: 0, r: 0, t: 0, b: 0 },
-    paper_bgcolor: 'rgba(0,0,0,0)', font: { family: chartFont, size: 11 },
-  };
-  try { window.Plotly.react(el, data, layout, { displayModeBar: false, staticPlot: true, responsive: false }); }
-  catch (e) { console.warn('[conc] Plotly.react (report treemap) failed', key, e); }
+  el.width = 520; el.height = 300;   // feste Bitmap; Neusetzen leert das Canvas
+  try { prev.tree?.destroy(); } catch {}
+  try {
+    prev.tree = new window.Chart(el.getContext('2d'), __concTreemapChartConfig(tree, { chartFont, fontSize: 13, live: false }));
+  } catch (e) { console.warn('[conc] report treemap chart failed', key, e); }
+  __concReportCharts[key] = prev;
 }
 
 // Report-Panels je Dimension mit dem aktuellen Portfolio fuellen (alle Dimensionen,
@@ -857,6 +971,8 @@ function fillConcReportPanels(filteredData) {
 // Aktuelle "Others"-Aggregat-Kachel der Treemap (Label + Namensmenge des Rests),
 // je Render aktualisiert -> die einmalig gebundenen Handler lesen den aktuellen Stand.
 let _concTreemapOthers = null;
+let _concLiveTreemapChart = null;   // Chart.js-Treemap-Instanz (Live-Panel) -> Destroy/Recreate
+let _concLiveTreemapTree = null;    // aktuelles tree-Array -> Index-Lookup bei Klick/Hover
 
 // Pfad-Schritt fuer eine Treemap-Kachel: normale Emittenten exakt; "Others" via
 // Match ueber die aggregierten Rest-Namen -> Drill zeigt die Positionen ALLER
@@ -871,110 +987,72 @@ function __concTreemapStep(name) {
   return __concStep(_concDimension, String(name));
 }
 
-// Top-Emittenten-Treemap (ersetzt die Karten): Flaeche ∝ Anteil (Plotly, squarify).
-// Braucht ein sichtbares Panel fuer die Breite -> beim Panel-Open re-rendert der Hook.
-// Top 15 einzeln + "Others (n)"-Kachel fuer den Rest. Klick -> Drill zu Positionen.
+// Top-Emittenten-Treemap (Chart.js chartjs-chart-treemap): Flaeche proportional zum Anteil,
+// squarified. Braucht ein sichtbares Panel fuer die Breite -> Panel-Open-Hook re-rendert.
+// Top 15 einzeln + "Others (n)"-Kachel. Klick -> Drill; Rechtsklick -> Drill-Menue.
 function renderConcTreemap(items, host) {
-  const el = document.getElementById('concCards');
-  if (!el) return;
-  // Plotly on-demand: beim ersten Bedarf laden, dann diese Funktion einmal neu aufrufen.
-  if (!window.Plotly) { ensurePlotly().then(() => { try { renderConcTreemap(items, host); } catch {} }).catch(() => {}); return; }
+  const box = document.getElementById('concCards');
+  if (!box) return;
   if (host && host.offsetParent === null) return;   // Panel nicht sichtbar -> Groesse 0
-  el.style.display = 'block';   // .conc-cards ist flex -> fuer Plotly-Breitenmessung auf block
+  if (!__ensureTreemapController()) { console.warn('[conc] treemap controller missing'); return; }
 
-  const N = 15;
-  const shown = items.slice(0, N);
-  const rest = items.slice(N);
-  const labels = shown.map(it => it.name);
-  const values = shown.map(it => it.value);
-  const custom = shown.map(it => __concPct(it.share));
-  const shares = shown.map(it => it.share);   // parallel zu labels -> Farbe nach Wert
-  if (rest.length) {
-    const rv = rest.reduce((s, it) => s + it.value, 0);
-    const rs = rest.reduce((s, it) => s + it.share, 0);
-    const othersLabel = `Others (${rest.length})`;
-    labels.push(othersLabel);
-    values.push(rv);
-    custom.push(__concPct(rs));
-    shares.push(rs);
-    _concTreemapOthers = { label: othersLabel, names: new Set(rest.map(it => it.name)) };
-  } else {
-    _concTreemapOthers = null;
+  // Container auf feste Hoehe; Canvas (einmalig) darin anlegen. Chart.js responsive
+  // fuellt den Container -> Breite ergibt sich aus dem sichtbaren Panel.
+  box.style.display = 'block';
+  box.style.height = '260px';
+  box.style.position = 'relative';
+  let canvas = box.querySelector('canvas.conc-treemap-canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.className = 'conc-treemap-canvas';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+    box.appendChild(canvas);
   }
+
+  const { tree, others } = __concBuildTreemapTree(items, 15, _concDimension);
+  _concTreemapOthers = others;
+  _concLiveTreemapTree = tree;
 
   const bodyCss   = getComputedStyle(document.body);
   const chartFont = (bodyCss.fontFamily || 'system-ui, sans-serif').trim();
-  // Farbe nach RANG: shown[i] -> Gradient[i] (groesste = navy, dann blau/teal/gruen/
-  // gold/orange/rot). Others sitzt farblich an seiner Wert-Position (dunkler als der
-  // naechstkleinere Emittent). So bleiben die Blautoene fuer die Top-Kacheln.
-  const colors = shown.map((_, i) => __concGradAt(i));
-  if (rest.length) {
-    const rv = values[values.length - 1];   // Others-Wert (zuletzt angehaengt)
-    const othersBigger = shown.filter(it => it.value > rv).length;
-    colors.push(__concGradAt(Math.max(0, othersBigger - 0.5)));
-  }
 
-  const data = [{
-    type: 'treemap',
-    labels,
-    values,
-    parents: labels.map(() => ''),
-    customdata: custom,
-    // text = umgebrochener Anzeige-Name (labels bleiben der echte Name -> Hover/Klick
-    // funktionieren weiter). %{text} zeigt den mehrzeiligen Namen + Anteil.
-    text: labels.map(t => __wrapLabel(t)),
-    texttemplate: '%{text}<br>%{customdata}',
-    hovertemplate: '%{label}<br>%{customdata}<extra></extra>',
-    textposition: 'middle center',
-    textfont: { color: '#fff', family: chartFont, size: 15 },
-    tiling: { pad: 2, packing: 'squarify' },
-    marker: { colors, line: { width: 1, color: 'rgba(0,0,0,0.25)' } },
-    pathbar: { visible: false },
-    sort: true,
-  }];
-  const layout = {
-    height: 260,
-    margin: { l: 0, r: 0, t: 0, b: 0 },
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: chartFont, size: 11 },
-    // KEIN uniformtext/minsize -> Plotly skaliert den Text pro Kachel und zeigt ihn
-    // IMMER an (kleine Kacheln = kleinerer Text, aber vorhanden). Der Umbruch (<br>)
-    // macht lange Namen lesbarer, ohne extrem schrumpfen zu muessen.
+  try { _concLiveTreemapChart?.destroy(); } catch {}
+  const cfg = __concTreemapChartConfig(tree, { chartFont, fontSize: 15, live: true });
+  // Linksklick auf eine Kachel -> Drill zu Positionen (wie zuvor der Plotly-Treemapklick).
+  cfg.options.onClick = (evt, elements, chart) => {
+    if (!elements?.length) return;
+    const idx = elements[0].index;
+    const node = chart.getDatasetMeta(0).data[idx];
+    const name = node?.$context?.raw?._data?.name ?? _concLiveTreemapTree?.[idx]?.name;
+    if (name) { try { concDrillTo({ path: [__concTreemapStep(name)], by: null }); } catch {} }
   };
   try {
-    window.Plotly.react(el, data, layout, { displayModeBar: false, responsive: true });
-  } catch (e) { console.warn('[conc] Plotly.react failed', e); return; }
+    _concLiveTreemapChart = new window.Chart(canvas.getContext('2d'), cfg);
+  } catch (e) { console.warn('[conc] treemap chart failed', e); return; }
 
-  if (!el.__concTreemapBound && typeof el.on === 'function') {
-    el.__concTreemapBound = true;
+  // Hover merkt Ziel + Ankerpunkt (am Cursor); Rechtsklick zeigt das Drill-Menue
+  // (Positions / By <Dimension>), auch fuer "Others". Einmalig binden: das Canvas
+  // bleibt bestehen, nur die Chart-Instanz wird bei Re-Render ausgetauscht.
+  if (!canvas.__concTreemapBound) {
+    canvas.__concTreemapBound = true;
 
-    // Klick auf eine Kachel -> Drill zu Positionen. return false verhindert das
-    // Plotly-interne Treemap-Zoom (Schnellweg, wie der bisherige Karten-Klick).
-    el.on('plotly_treemapclick', (ev) => {
-      const name = ev?.points?.[0]?.label;
-      if (name) {
-        try { concDrillTo({ path: [__concTreemapStep(name)], by: null }); } catch {}
-      }
-      return false;
-    });
-
-    // Menue erst bei Rechtsklick sichtbar: Hover merkt sich nur Ziel + Ankerpunkt
-    // (Positions / By <Dimension>), am Cursor verankert. Auch fuer "Others".
-    el.on('plotly_hover', (ev) => {
-      const name = ev?.points?.[0]?.label;
+    canvas.addEventListener('mousemove', (e) => {
+      const ch = _concLiveTreemapChart;
+      if (!ch) { _concCtxThunk = null; return; }
+      const els = ch.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+      if (!els.length) { _concCtxThunk = null; return; }
+      const idx = els[0].index;
+      const node = ch.getDatasetMeta(0).data[idx];
+      const name = node?.$context?.raw?._data?.name ?? _concLiveTreemapTree?.[idx]?.name;
       if (!name) { _concCtxThunk = null; return; }
-      const me = ev?.event;
-      const x = me && typeof me.clientX === 'number' ? me.clientX : null;
-      const y = me && typeof me.clientY === 'number' ? me.clientY : null;
-      const anchor = (x != null && y != null)
-        ? { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) }
-        : el;
+      const x = e.clientX, y = e.clientY;
+      const anchor = { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) };
       _concCtxThunk = () => __concShowMenu(anchor, [__concTreemapStep(name)]);
     });
-    el.on('plotly_unhover', () => { _concCtxThunk = null; });
-
-    // Rechtsklick auf eine Kachel -> Drill-Menue.
-    el.addEventListener('contextmenu', (e) => {
+    canvas.addEventListener('mouseleave', () => { _concCtxThunk = null; });
+    canvas.addEventListener('contextmenu', (e) => {
       if (!_concCtxThunk) return;
       e.preventDefault();
       __concMenuCancelHide();
@@ -1025,7 +1103,7 @@ export function renderConcentrationDashboard(filteredData, opts = {}) {
   if (sub) sub.textContent = `${count} entries · basis: ${valueType}`;
 
   // Top-Emittenten als Treemap (Flaeche ∝ Anteil) statt gleich breiter Karten.
-  // Rendert nur bei sichtbarem Panel (Plotly braucht Breite); der Panel-Open-Hook
+  // Rendert nur bei sichtbarem Panel (Chart.js braucht Breite); der Panel-Open-Hook
   // re-rendert beim Oeffnen.
   try { renderConcTreemap(items, host); } catch (e) { console.warn('[conc] treemap failed', e); }
 
@@ -1079,7 +1157,7 @@ export function renderConcentrationDashboard(filteredData, opts = {}) {
       type: 'bar',
       plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
       data: {
-        labels: top.map((it, i) => `${i + 1}   ${it.name}`),   // Rang + Name (wie Screenshot)
+        labels: top.map((it, i) => `${i + 1}   ${_concDispName(it.name, _concDimension)}`),   // Rang + Name (wie Screenshot)
         datasets: [{
           data: top.map(it => +(it.share * 100).toFixed(2)),
           // Farbe pro Balken nach RANG (dunkler = groesser) — gleiche Reihenfolge wie
@@ -1666,7 +1744,7 @@ function renderConcView(view, ctx) {
         <thead><tr><th>${__concEsc(__concColLabel(view.by))}</th><th style="text-align:right;">Notional</th><th style="text-align:right;">${__concEsc(valueLabel)}</th>${extraCols.map(e => `<th style="text-align:right;">${__concEsc(e.label)}</th>`).join('')}<th style="text-align:right;">Share</th></tr></thead>
         <tbody>
           ${sub.map(x => `<tr class="conc-drill-row" data-drill-value="${__concEsc(x.name)}">
-            <td>${__concEsc(x.name)} <span class="conc-drill-hint">›</span></td>
+            <td>${__concEsc(_concDispName(x.name, view.by))} <span class="conc-drill-hint">›</span></td>
             <td style="text-align:right;" data-sort-value="${x.notional}">${fmtVal(x.notional)}</td>
             <td style="text-align:right;" data-sort-value="${x.val}">${fmtVal(x.val)}</td>
             ${x.extras.map(v => `<td style="text-align:right;" data-sort-value="${v}">${fmtVal(v)}</td>`).join('')}

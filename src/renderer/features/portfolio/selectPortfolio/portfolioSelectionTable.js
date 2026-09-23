@@ -26,9 +26,14 @@ import {
 } from '../../../utils/tableCellColorize.js';
 
 import {
+  enhanceIncludeCheckboxes,
+} from '../../../core/ui/enhancers/includeToggleEnhancer.js';
+
+import {
   ALL_PORT_COLUMN_KEYS,
   DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
   LOCKED_PORT_COLUMN_KEYS,
+  PORT_COLUMN_GROUPS,
 } from '../selectPortfolio/portfolioSelectionTableColumns.js';
 
 import {
@@ -155,6 +160,12 @@ function renderPortTableOnly(portData, index) {
     // Always shown first, not toggleable, hidden from the column selector.
     lockedColumns: LOCKED_PORT_COLUMN_KEYS,
 
+    // Gruppierte Checkboxen im Column-Selector (ENTITY/FX/Bewertung/... via Keys).
+    columnGroups: PORT_COLUMN_GROUPS,
+
+    // adjusted_rating ist redundant (== RATINGres/Resolved Rating) -> komplett ausblenden.
+    excludeColumns: ['adjusted_rating'],
+
     defaultVisibleColumns: DEFAULT_VISIBLE_PORT_COLUMN_KEYS,
 
     columnLabelMap: PORTFOLIO_DISPLAY_NAMES,
@@ -198,6 +209,10 @@ function renderPortTableOnly(portData, index) {
 
       addTooltipsForTruncatedText(container);
       addProdIdTooltips(container);
+
+      // INCLUDE-Spalte hier ebenfalls als klickbare Checkbox (identisch zu Change
+      // Portfolio): derselbe zentrale Enhancer, Persistenz nach DealsMain per TRADE_ID.
+      enhanceIncludeCheckboxes(container);
     },
   });
 }

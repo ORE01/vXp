@@ -234,17 +234,22 @@ export function handleVegaSensData(appState, forcedPortName = null, holdingsOver
     );
   }
 
-  updateMarketRiskSensitivityKpis({
-    rows: portfolioRows,
-    portName: selectedPort,
-    vegaCalcData: {
-      totalVega: calcData.totalVega,
-      filteredRowsCount: calcData.filteredRowsCount,
-      groupedVega: calcData.groupedVega,
-    },
-    notionalByCcy: notionalByCcyFromHoldings(holdings),
-    navTotal: navTotalFromHoldings(holdings),
-  });
+  // KPI-Update isoliert: ein KPI-Fehler darf den Vega-Chart-Render nicht blockieren.
+  try {
+    updateMarketRiskSensitivityKpis({
+      rows: portfolioRows,
+      portName: selectedPort,
+      vegaCalcData: {
+        totalVega: calcData.totalVega,
+        filteredRowsCount: calcData.filteredRowsCount,
+        groupedVega: calcData.groupedVega,
+      },
+      notionalByCcy: notionalByCcyFromHoldings(holdings),
+      navTotal: navTotalFromHoldings(holdings),
+    });
+  } catch (e) {
+    console.error('[VEGA SENS] KPI update threw — chart/table still rendered', e);
+  }
 
   // Feed the right-click drill. Vega lives per-trade in PortfolioRiskSensitivities;
   // join those rows (already narrowed to the filtered holdings) with the holdings

@@ -279,9 +279,16 @@ export function createMarketRiskRefresh({ appState } = {}) {
     // - eigene Daten zu filtern
     // - eigenes UI zu rendern
     // - eigenes UI zu clearen, wenn keine Daten vorhanden sind
-    handleIRSensData(appState, port);
-    handleCSSensData(appState, port);
-    handleVegaSensData(appState, port);
+    // Jeder Handler ISOLIERT: wirft einer (z. B. bei einem Datenrand-Fall nach
+    // einer Neuberechnung), duerfen die anderen zwei trotzdem rendern. Frueher
+    // brach ein einziger Fehler die ganze Kette ab -> Panel blieb ungerefresht.
+    // Fehler werden als echter error geloggt (nicht stumm), damit sie sichtbar sind.
+    try { handleIRSensData(appState, port); }
+    catch (e) { console.error('[marketRiskRefresh] IR (PV01) sensitivities render failed', e); }
+    try { handleCSSensData(appState, port); }
+    catch (e) { console.error('[marketRiskRefresh] CS (CPV01) sensitivities render failed', e); }
+    try { handleVegaSensData(appState, port); }
+    catch (e) { console.error('[marketRiskRefresh] Vega sensitivities render failed', e); }
 
     if (typeof window !== 'undefined' && window.__MVAR_TIMING === true) console.log('[marketRiskRefresh] refresh sensitivities UI DONE', {
       reason,
@@ -338,6 +345,13 @@ export function createMarketRiskRefresh({ appState } = {}) {
       });
 
       refreshMarketRiskSensitivitiesUI('portfolio-risk-sensitivities-data-refreshed');
+    });
+
+    // WICHTIG: Die PV01/CPV01-Charts rekonstruieren aus ProductRiskSensitivities (per-unit
+    // × Holdings). Wenn ein Calculate die PRODUKT-Sensitivitaeten neu rechnet, feuert dieses
+    // Event -> ohne Listener blieb das Panel nach dem Rechnen stehen ("Charts refreshen nicht").
+    document.addEventListener('product-risk-sensitivities-data-refreshed', () => {
+      refreshMarketRiskSensitivitiesUI('product-risk-sensitivities-data-refreshed');
     });
 
 document.addEventListener('portfolio-context-changed', (event) => {

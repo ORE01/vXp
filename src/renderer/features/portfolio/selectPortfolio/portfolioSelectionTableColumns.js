@@ -92,23 +92,27 @@ export const SELECTABLE_PORT_COLUMN_KEYS = SELECTABLE_PORT_COLUMNS.map(col => co
 
 // export const DEFAULT_VISIBLE_PORT_COLUMN_KEYS = [...SELECTABLE_PORT_COLUMN_KEYS];
 export const DEFAULT_VISIBLE_PORT_COLUMN_KEYS = [
-  'CATEGORY',  
-  'PROD_ID',
-  'Depotbank',
-  'ISSUER',
-  'MATURITY',
-  'RATINGres',
-  'NOTIONAL',
-  'NAV',  
-];
-
-export const LOCKED_PORT_COLUMN_KEYS = [
-  'TRADE_ID',
-  'PROD_ID',
+  // Trade ID + Product ID bleiben (vorerst) fix links (LOCKED) und stehen daher
+  // NICHT hier. Clean Price/Credit Spread/Notional/NAV sind jetzt normal waehlbar
+  // und per Default sichtbar (in dieser Reihenfolge nach den fixen ID-Spalten).
+  // INCLUDE zuerst -> die Ein-/Ausschalt-Checkbox steht gleich vorne (wie in Change Portfolio).
+  'INCLUDE',
   'clean_price',
   'C_SPREAD',
   'NOTIONAL',
   'NAV',
+  'CATEGORY',
+  'Depotbank',
+  'ISSUER',
+  'MATURITY',
+  'RATINGres',
+];
+
+// Nur noch die beiden ID-Spalten sind fix links (sticky). Clean Price, Credit Spread,
+// Notional und NAV wurden aufgeloest -> normal ein-/ausblendbar und per Drag sortierbar.
+export const LOCKED_PORT_COLUMN_KEYS = [
+  'TRADE_ID',
+  'PROD_ID',
 ];
 
 export function getPortColumnLabel(columnKey) {
@@ -120,3 +124,19 @@ export const ALL_PORT_COLUMNS = ALL_PORT_COLUMN_KEYS.map((key) => ({
   key,
   label: getPortColumnLabel(key),
 }));
+
+// Gruppierung der Spalten-Checkboxen im Column-Selector der Portfolio-Tabelle.
+// Nur ueber KEYS definiert (Labels kommen aus dem columnLabelMap der Tabelle).
+// Spalten, die in keiner Gruppe stehen, landen automatisch in einer "Other"-Sektion.
+export const PORT_COLUMN_GROUPS = [
+  { title: 'Portfolio & Instrument', keys: ['port_name', 'ISSUER', 'DESCRIPTION', 'TICKER', 'CATEGORY', 'RANK', 'Depotbank', 'INCLUDE'] },
+  { title: 'Currency & FX',          keys: ['CCY', 'BASE_CCY', 'FX_PAIR', 'FX_RATE', 'FX_TO_BASE'] },
+  { title: 'Notional & Valuation',   keys: ['NOTIONAL', 'NAV', 'clean_price', 'NAV_LOCAL', 'NAV_BASE', 'PV_LOCAL', 'PV_BASE', 'PRICE_BUY'] },
+  { title: 'Coupon & Yield',         keys: ['COUPON', 'CouponType', 'ytm', 'ytm_BUY', 'ytmPort', 'ytmPortA'] },
+  { title: 'Maturity & Dates',       keys: ['START_DATE', 'TRADE_DATE', 'MATURITY', 'MATURITY_YEAR', 'TtM'] },
+  { title: 'Interest Rate Risk',     keys: ['PV01rel', 'PV01', 'PV01_LOCAL', 'PV01_BASE'] },
+  { title: 'Credit Spread',          keys: ['C_SPREAD', 'C_SPREAD_BASE', 'CS_SPREAD_OVERRIDE_BP', 'C_SPREAD_DELTA'] },
+  { title: 'Credit Spread Risk',     keys: ['CPV01rel', 'CPV01', 'CPV01_LOCAL', 'CPV01_BASE'] },
+  { title: 'Rating',                 keys: ['RATING', 'RATINGres', 'RATING_PROD', 'ratings_numeric'] },
+  { title: 'Model & Calculation',    keys: ['MODEL', 'METHODE', 'FINLIB'] },
+];

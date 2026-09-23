@@ -60,6 +60,15 @@ export const PERCENT_DECIMAL_FIELDS = Object.entries(FIELD_FORMAT_CONFIG)
   .map(([field]) => field);
 
 
+// Rank-Anzeige: intern IMMER underscore ("senior_preferred"), Anzeige mit Leerzeichen
+// ("senior preferred"). NUR fuer die Darstellung — Rohwert/Filter/Sortierung nutzen weiter
+// underscore. Zentral hier, damit Tabellenzellen UND Filter-Dropdowns identisch anzeigen.
+export function formatRankLabel(value) {
+  if (value == null) return value;
+  const s = String(value);
+  return s.indexOf('_') >= 0 ? s.replace(/_/g, ' ') : s;
+}
+
 export function getFormatRules() {
   const rules = {};
 
@@ -78,6 +87,10 @@ export function getFormatRules() {
       : (typeof v === 'number'
           ? String(Math.trunc(v))
           : ((String(v).trim().match(/^(-?\d+)(?:[.,]\d+)?$/) || [,''])[1] || String(v)));
+
+  // RANK: underscore -> Leerzeichen (nur Anzeige). Greift fuer Tabellenzelle (modalData)
+  // und Filter-Label (tableColumnFilters) gleichermassen.
+  rules.RANK = formatRankLabel;
 
   return rules;
 }

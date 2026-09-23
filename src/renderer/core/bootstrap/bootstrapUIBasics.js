@@ -12,6 +12,7 @@ import {
   updateFactorMapScenarioWarningUI,
   updatePdHistScenarioWarningUI,
   updateCreditIssuerScenarioWarningUI,
+  updateProductCSWarningUI,
   bindScenarioWarningNavigation,
 } from '../ui/warnings.js';
 
@@ -72,6 +73,15 @@ export function bootstrapUIBasics(appState) {
   // Credit-Issuer-Szenario-Badge: initial + bei Änderung von CREDIT_ISSUER_ACTIVE.
   updateCreditIssuerScenarioWarningUI();
   document.addEventListener('creditissuer:active:ready', updateCreditIssuerScenarioWarningUI);
+
+  // Produkt-CS-Override-Badge: initial + bei jedem Produktdaten-Refresh. Zeigt sofort
+  // nach dem Start, dass ein Produkt einen Credit-Spread-Override gesetzt hat — auch
+  // wenn die Produkt-Tabelle noch nicht geöffnet wurde. Quelle ist CS_SPREAD_OVERRIDE_BP
+  // aus den geladenen Produktdaten.
+  const refreshProductCSWarning = (e) =>
+    updateProductCSWarningUI(e?.detail?.rows || appState.getProdData?.() || []);
+  refreshProductCSWarning();
+  window.addEventListener('products-app-data-refreshed', refreshProductCSWarning);
 
   // Szenario-Badges klickbar machen -> zur jeweiligen "Set Scenario"-Quelle springen.
   bindScenarioWarningNavigation();

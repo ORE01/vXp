@@ -97,8 +97,13 @@ function createBarChart(data, chartName, Type = 'bar', IndexAxis = 'y', opts = {
           },
 
           // Falls chartjs-plugin-annotation global registriert ist,
-          // soll es auf simplen BarCharts nicht laufen.
-          annotation: false,
+          // laeuft es auf simplen BarCharts nicht -- ausser der Aufrufer
+          // uebergibt opts.annotations (ein Annotations-Objekt). Muss zur
+          // Konstruktionszeit gesetzt werden; nachtraeglich zieht das Plugin
+          // die Optionen nicht zuverlaessig.
+          annotation: opts.annotations
+            ? { clip: false, annotations: opts.annotations }
+            : false,
 
           // Tooltip nur wenn interaktiv (sonst wuerde er ohne Events ohnehin nie erscheinen).
           tooltip: { enabled: !!opts.interactive },

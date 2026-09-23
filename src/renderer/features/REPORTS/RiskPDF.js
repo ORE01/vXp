@@ -758,6 +758,23 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   let concCompactState = null; // { col, top } der laufenden Kompakt-Seite
   const chapterByPage = {};   // Seite -> uebergeordnetes Kapitel (direkter Elternknoten)
   const titleByLevel = [];    // Titel je Hierarchie-Ebene (1-basiert)
+  let currentChapterTitle = null;  // aktuelles Hauptkapitel (Level 1) -> Divider bei Wechsel
+
+  // Hauptkapitel-Titelseite (Divider): grosser, zentrierter Kapitelname auf eigener Seite.
+  const drawChapterDivider = (dpDoc, chTitle) => {
+    const pw = dpDoc.internal.pageSize.getWidth();
+    const ph = dpDoc.internal.pageSize.getHeight();
+    const cx = pw / 2, cy = ph * 0.42;
+    dpDoc.setFont('helvetica', 'bold');
+    dpDoc.setFontSize(28);
+    dpDoc.setTextColor(26, 31, 41);
+    dpDoc.text(String(chTitle || '').toUpperCase(), cx, cy, { align: 'center' });
+    const lw = Math.min(80, pw * 0.4);
+    dpDoc.setDrawColor(180); dpDoc.setLineWidth(0.6);
+    dpDoc.line(cx - lw / 2, cy + 7, cx + lw / 2, cy + 7);
+    dpDoc.setFont('helvetica', 'normal'); dpDoc.setTextColor(0);
+    dpDoc.setDrawColor(0); dpDoc.setLineWidth(0.2);
+  };
 
   for (let i = 0; i < sections.length; i++) {
     const sec = sections[i];
@@ -773,7 +790,23 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     const parentChapter = titleByLevel[level - 1] || '';
     // Voller Pfad (Root -> aktuelles Blatt) als laufender Kolumnentitel in der Kopfzeile,
     // z.B. "PORTFOLIO / PERFORMANCE / YIELD" statt nur "YIELD".
-    const chapterPath = titleByLevel.slice(1, level + 1).filter(Boolean).join(' / ');
+    // Kopfzeile: nur der uebergeordnete Pfad (OHNE das aktuelle Blatt/Panel selbst — das
+    // steht bereits als Section-Titel im Body). Bei Level 1 bleibt der Pfad leer.
+    const chapterPath = titleByLevel.slice(1, level).filter(Boolean).join(' / ');
+
+    // Hauptkapitel-Wechsel (Level 1) -> eigene Divider-Titelseite; der Inhalt folgt danach.
+    const chapterTitle = titleByLevel[1] || title;
+    let dividerPage = null;
+    if (chapterTitle !== currentChapterTitle) {
+      currentChapterTitle = chapterTitle;
+      if (wroteAnySection) doc.addPage();   // erste Divider-Seite ist bereits die Post-TOC-Seite
+      drawChapterDivider(doc, chapterTitle);
+      wroteAnySection = true;               // Inhalt startet danach auf der naechsten Seite
+      dividerPage = doc.internal.getNumberOfPages();
+      chapterByPage[dividerPage] = '';   // Divider = Level-1-Kapitel -> kein hoeheres Kapitel
+
+    }
+
     const hasContent =
       // Breakdown-PARENT: reine Kapitel-Ueberschrift (die Inhalte tragen die
       // Dimensions-Kinder) -> keine eigene, fast leere Divider-Seite erzeugen.
@@ -784,8 +817,13 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
     // Gruppen-/Überschrift-Sektionen (ohne Inhalt): NUR ins Inhaltsverzeichnis,
     // keine eigene Seite. Die Seitenzahl folgt dem ersten Blatt darunter.
     if (!hasContent) {
-      pendingGroupToc.push(tocEntries.length);
-      addTOCEntry(sec.sectionNumber, title, null, level);
+      if (level === 1 && dividerPage != null) {
+        // Hauptkapitel hat eine eigene Divider-Seite -> TOC zeigt direkt darauf.
+        addTOCEntry(sec.sectionNumber, title, dividerPage, level);
+      } else {
+        pendingGroupToc.push(tocEntries.length);
+        addTOCEntry(sec.sectionNumber, title, null, level);
+      }
       continue;
     }
 
@@ -798,7 +836,8 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
 
     const pageIndex = doc.internal.getNumberOfPages();
 
-    addTOCEntry(sec.sectionNumber, title, pageIndex, level);
+    // Level-1-Kapitel mit Divider-Seite -> TOC zeigt auf die Divider-Seite, sonst auf die Inhaltsseite.
+    addTOCEntry(sec.sectionNumber, title, (level === 1 && dividerPage != null) ? dividerPage : pageIndex, level);
 
     // ausstehende Gruppen-Überschriften auf diese (erste Inhalts-)Seite zeigen lassen
     pendingGroupToc.forEach((idx) => { if (tocEntries[idx]) tocEntries[idx].page = pageIndex; });
@@ -1771,6 +1810,80 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   // Abstand NACH dem Titel: bei der Overview deutlich kleiner, damit die Karten hoch-
   // ruecken und die 3 Balkencharts unten mit auf die Seite passen.
   y += (sec.key === 'overview') ? Math.max(2, cfg.sectionTitleSpacing - 6) : cfg.sectionTitleSpacing;
+
+  // ── Sensitivities: PV01, CPV01 und Vega je auf EIGENER Seite (KPI-Band + Chart + Details).
+  //    Bypasst die generische KPI-Band/Composed-Row/Tabellen-Logik (continue am Ende).
+  if (sec.key === 'sensitivities') {
+    const sensPages = [
+      { sub: 'Interest Rate Sensitivity (PV01)',  band: 'sensKpiTablePv01',  chart: 'PV01Chart',  chartTitle: 'Interest rate sensitivity by maturity bucket', details: 'IRSensDataContainer', detLabel: 'PV01 Details' },
+      { sub: 'Credit Spread Sensitivity (CPV01)', band: 'sensKpiTableCpv01', chart: 'CPV01Chart', chartTitle: 'Credit spread sensitivity by rating bucket',    details: 'CSSensDataContainer', detLabel: 'CPV01 Details' },
+      { sub: 'Volatility Sensitivity (Vega)',      band: 'sensKpiTableVega',  chart: 'VegaChart',  chartTitle: 'Parallel swaption volatility sensitivity',      details: 'VegaSensDataContainer', detLabel: 'Vega Details' },
+    ];
+    for (let pi = 0; pi < sensPages.length; pi += 1) {
+      const pg = sensPages[pi];
+      // CPV01 / Vega: neue Seite erzwingen (voller Seiten-Bedarf -> Umbruch), Sektionstitel oben.
+      if (pi > 0) ensurePageSpace(layout.bottomSafe - layout.topSafe, sectionTitle);
+
+      // Sub-Titel der Seite.
+      ensurePageSpace(12, sectionTitle);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(26, 31, 41);
+      doc.text(pg.sub, marginX, y);
+      doc.setFont('helvetica', 'normal');
+      y += 6;
+
+      // KPI-Band.
+      const bandEl = ctx.getById(pg.band);
+      if (bandEl) {
+        const kpis = kpisFromTableEl(bandEl);
+        if (kpis.length) {
+          ensurePageSpace(30, sectionTitle);
+          y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis, { tileH: 14, valueFont: 11, gapAfter: 4 });
+          y += 4;
+        }
+      }
+
+      // Chart (volle Breite).
+      const chartEl = ctx.getById(pg.chart);
+      const img = chartEl ? canvasToPngData(chartEl) : null;
+      if (img && img.dataUrl) {
+        const cardW = layout.contentWidth;
+        const cardH = 82;
+        ensurePageSpace(cardH + 12, sectionTitle);
+        drawChartCard(doc, marginX, y, cardW, cardH + 8);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90);
+        doc.text(pg.chartTitle, marginX + cardW / 2, y + 5, { align: 'center' });
+        const srcW = img.width || 900, srcH = img.height || 520;
+        const capH = 7, availH = cardH - 2;
+        const scale = Math.min(cardW / srcW, availH / srcH, 1);
+        const w = srcW * scale, h = srcH * scale;
+        const ix = marginX + (cardW - w) / 2;
+        const iy = y + capH + (availH - h) / 2;
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', ix, iy, w, h); } catch (e) { console.warn('[PDF] sensitivities chart failed', pg.chart, e); }
+        y += cardH + 12;
+      }
+
+      // Details-Tabelle (full-width).
+      const tbl = extractTableFromContainer(pg.details, { maxRows: 500, maxCols: 40, ctx });
+      if (tbl && tbl.body && tbl.body.length) {
+        ensurePageSpace(40, sectionTitle);
+        doc.setFontSize(10); doc.setTextColor(0);
+        doc.text(pg.detLabel, marginX, y);
+        const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
+        safeAutoTable(doc, layout, {
+          startY: y + 6,
+          head,
+          body: tbl.body,
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2 },
+          headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+          margin: { left: marginX },
+        });
+        y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : (y + 40)) + cfg.blockGap;
+      }
+    }
+    return;
+  }
 
   // Economic-Capital-KPI-Story (App-Panel) VOR den Charts, wenn die Sektion EC-Charts hat.
   // Historic (…Hist) -> panel-credit; market adjusted (…Norm) -> panel-credit-current.

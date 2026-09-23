@@ -274,3 +274,50 @@ th.tcf-filtered {
 }
 
 .table .select-dropdown { min-width: 180px; }
+
+/* ============================================================
+   Spalten-Reihenfolge (Phase 1): Header-Drag&Drop + "Column Order"-Liste.
+   Theme-neutrale Farben (grau/Portfolio-Blau), damit es in Light & Dark passt.
+   ============================================================ */
+
+/* Ziehbare Header-Zellen */
+th.col-draggable { cursor: grab; }
+th.col-draggable:active { cursor: grabbing; }
+th.col-dragging { opacity: .5; }
+/* Einfuege-Indikator am Ziel-Header (linke Kante) */
+th.col-drop-target { box-shadow: inset 3px 0 0 0 #6C9BD1; }
+
+/* "Column Order"-Liste im Column-Selection-Panel */
+.column-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.column-order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(128, 128, 128, .35);
+  border-radius: 4px;
+  background: rgba(128, 128, 128, .10);
+  cursor: grab;
+  user-select: none;
+  font-size: 13px;
+}
+.column-order-item:active { cursor: grabbing; }
+.column-order-item.col-dragging { opacity: .4; }
+.column-order-item.col-drop-target {
+  border-color: #6C9BD1;
+  box-shadow: inset 0 0 0 1px #6C9BD1;
+}
+.column-order-grip {
+  opacity: .5;
+  font-size: 14px;
+  line-height: 1;
+  cursor: grab;
+}
+.column-order-empty { padding: 4px 8px; }

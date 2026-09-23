@@ -947,7 +947,7 @@ console.log('[VALUATION HEADER ROW]', {
           <input
             id="productValuationCsSpreadOverrideBp"
             class="structure-drawer-input"
-            value="${escapeHtml(options.csSpreadOverrideBp || row?.CS_SPREAD_OVERRIDE_BP || '')}"
+            value="${escapeHtml([options.csSpreadOverrideBp, row?.CS_SPREAD_OVERRIDE_BP].find((v) => v !== null && v !== undefined && String(v).trim() !== '') ?? '')}"
             placeholder="e. g. 25 = 25 bp"
           />
         </label>

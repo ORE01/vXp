@@ -71,19 +71,22 @@ export function updateProductCSWarningUI(filteredProdData) {
 
   const rows = Array.isArray(filteredProdData) ? filteredProdData : [];
 
+  // Active override = CS_SPREAD_OVERRIDE_BP is set (0 counts as an override!),
+  // NOT the legacy CS_Szenario column (which does not exist in v_PRODUCTS_APP).
   const affectedRows = rows.filter(
     row =>
-      row.CS_Szenario !== null &&
-      row.CS_Szenario !== undefined &&
-      String(row.CS_Szenario).trim() !== ""
+      row.CS_SPREAD_OVERRIDE_BP !== null &&
+      row.CS_SPREAD_OVERRIDE_BP !== undefined &&
+      String(row.CS_SPREAD_OVERRIDE_BP).trim() !== ""
   );
 
   const affected = affectedRows
     .map(row => {
       const prodId = String(row.PROD_ID || "").trim();
-      const value = String(row.CS_Szenario || "").trim();
+      // ?? keeps 0 -> "0" (|| would drop it).
+      const value = String(row.CS_SPREAD_OVERRIDE_BP ?? "").trim();
 
-      if (prodId && value) return `${prodId}: ${value} bp`;
+      if (prodId && value !== "") return `${prodId}: ${value} bp`;
       if (prodId) return prodId;
       return "";
     })

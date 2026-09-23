@@ -547,13 +547,16 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
 
+    // Verborgenes Panel (0-Groesse, z.B. Report-/PDF-Warmup mit force:true): NICHT abbrechen,
+    // sondern mit fester Puffergroesse + responsive:false zeichnen (analog zu den Sensitivities-
+    // History-Charts) -> der Chart wird auch versteckt gerendert und im PDF erfasst. Im sichtbaren
+    // Live-Panel (w,h > 0) bleibt es responsive; der panel:opened-Re-Render zeichnet dann neu.
     if (w === 0 || h === 0) {
-      if (++tries < maxTries) {
-        _mktRiskRafByCanvas[canvasId] = requestAnimationFrame(tryRender);
-      } else {
-        console.warn("❌ canvas has 0 size after retries:", canvasId, { w, h });
-      }
-      return;
+      const cont = canvas.parentElement;
+      canvas.width  = Math.round(cont?.clientWidth  || 0) || 1000;
+      canvas.height = Math.round(cont?.clientHeight || 0) || 360;
+      options.responsive = false;
+      options.maintainAspectRatio = false;
     }
 
     try {
@@ -579,7 +582,9 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
         return;
       }
 
-      _mktRiskChartByCanvas[canvasId].resize();
+      // Bei verborgenem Panel (0-Groesse) NICHT resize() aufrufen — das wuerde den Chart
+      // auf die 0-Container-Groesse zuruecksetzen und das feste Bitmap wieder leeren.
+      if (w !== 0 && h !== 0) _mktRiskChartByCanvas[canvasId].resize();
       _mktRiskChartByCanvas[canvasId].update();
 
       // "Reset Zoom"-Button wie bei den anderen History-Charts (Yield/Value/Credit).
@@ -595,7 +600,11 @@ function renderHistoricMarketRiskChart(historyData, canvasId = "historicMarketRi
     }
   };
 
-  _mktRiskRafByCanvas[canvasId] = requestAnimationFrame(tryRender);
+  // SYNCHRON zeichnen (nicht erst im naechsten Frame): der Report-/PDF-Warmup zerstoert oben
+  // den alten Chart (Canvas wird leer) und erfasst das Canvas unmittelbar danach -> ein
+  // rAF-verzoegertes Neuzeichnen kaeme zu spaet (leeres Bitmap im PDF). tryRender() plant bei
+  // noch fehlendem Canvas selbst weiterhin rAF-Retries.
+  tryRender();
 }
 
 // function renderHistoricMarketRiskChart(historyData) {

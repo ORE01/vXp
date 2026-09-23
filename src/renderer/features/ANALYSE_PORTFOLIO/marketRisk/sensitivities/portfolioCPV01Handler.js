@@ -11,6 +11,7 @@ import {
   updateMarketRiskSensitivityKpis,
   notionalByCcyFromHoldings,
   navTotalFromHoldings,
+  navValuedFromHoldings,
 } from './marketRiskSensitivityKpis.js';
 import { applyColumnFilters } from '../../../CUSTOMER/tableLayouts/tableColumnFilters.js';
 import {
@@ -55,6 +56,102 @@ function resetCpv01Drill() {
 }
 
 let CPV01Chart;
+
+/**
+ * Sets the "Weighted Rating" card (Sensitivities/CPV01 tab) from the CURRENTLY FILTERED
+ * holdings, so it follows the header filter. NAV-weighted average rating notch mapped back
+ * to a rating label. Two rows: Total NAV (all rated positions) and Valued NAV (only valued,
+ * i.e. non-cash, rated positions). The bar shows rating quality (AAA = full, worse = shorter).
+ */
+function updateCpv01WeightedRatingCard(holdings, fixedCats, ratingOrder) {
+  const order = Array.isArray(ratingOrder) ? ratingOrder : [];
+  const cats = fixedCats instanceof Set ? fixedCats : new Set(fixedCats || []);
+  const norm = (s) => String(s ?? '').trim().toUpperCase();
+
+  let notchNavAll = 0, navAll = 0, notchNavValued = 0, navValued = 0;
+  (Array.isArray(holdings) ? holdings : []).forEach((h) => {
+    const rt = norm(h.RATINGres ?? h.ratingres ?? h.RATING ?? h.rating);
+    const notch = order.findIndex((x) => norm(x) === rt);
+    if (notch < 0) return;                        // unrated -> ignore
+    const nav = Number(h.NAV ?? h.nav ?? h.NAV_BASE ?? h.nav_base) || 0;
+    if (nav <= 0) return;
+    notchNavAll += notch * nav; navAll += nav;
+    const cat = String(h.CATEGORY ?? h.category ?? '').trim();
+    if (!(cat && cats.has(cat))) { notchNavValued += notch * nav; navValued += nav; } // valued = non-cash
+  });
+
+  const labelOf = (nw, w) => (w > 0 && order.length)
+    ? order[Math.max(0, Math.min(order.length - 1, Math.round(nw / w)))]
+    : '–';
+  const barOf = (nw, w) => {
+    if (!(w > 0) || order.length < 2) return 0;
+    const notch = nw / w;                          // 0 = AAA (best)
+    return Math.max(0, Math.min(100, (1 - notch / (order.length - 1)) * 100));
+  };
+
+  const setRow = (barId, valId, nw, w) => {
+    const bar = document.getElementById(barId);
+    if (bar) bar.style.width = `${barOf(nw, w)}%`;
+    const el = document.getElementById(valId);
+    if (el) el.textContent = labelOf(nw, w);
+  };
+  setRow('sensWRatingTotalBar', 'sensWRatingTotal', notchNavAll, navAll);
+  setRow('sensWRatingValuedBar', 'sensWRatingValued', notchNavValued, navValued);
+
+  // Fraktionale Notches (fuer den Chart-Marker "Valued NAV Rating").
+  return {
+    notchTotal:  navAll > 0 ? notchNavAll / navAll : null,
+    notchValued: navValued > 0 ? notchNavValued / navValued : null,
+  };
+}
+
+/**
+ * Sets the "Credit Spread Duration" and "Average Maturity" cards (Sensitivities/CPV01 tab)
+ * from the CURRENTLY FILTERED holdings, so both follow the header filter.
+ *  - CS Duration = |Σ CPV01| / NAV * 10000 (years), Total NAV vs Valued NAV.
+ *  - Average Maturity = NAV-weighted mean TtM over valued (non-cash) holdings, SAME NAV
+ *    denominators as the duration -> Total/Valued ratios line up (like the PV01 tab).
+ */
+function updateCpv01DurationMaturityCards({
+  holdings,
+  fixedCats,
+  navTotal,
+  navValued,
+  totalCpv01,
+} = {}) {
+  const cats = fixedCats instanceof Set ? fixedCats : new Set(fixedCats || []);
+
+  const absCpv01 = Math.abs(Number(totalCpv01) || 0);
+  const csDurTotal  = navTotal  ? (absCpv01 / navTotal)  * 10000 : null;
+  const csDurValued = navValued ? (absCpv01 / navValued) * 10000 : null;
+
+  // WAM numerator: Σ(TtM · NAV) over valued (non-cash) holdings with TtM >= 0.
+  let ttmNavValued = 0;
+  (Array.isArray(holdings) ? holdings : []).forEach((h) => {
+    const cat = String(h.CATEGORY ?? h.category ?? '').trim();
+    if (cat && cats.has(cat)) return;
+    const ttm = Number(h.TtM ?? h.ttm);
+    if (!Number.isFinite(ttm) || ttm < 0) return;
+    const nav = Number(h.NAV ?? h.nav ?? h.NAV_BASE ?? h.nav_base) || 0;
+    ttmNavValued += ttm * nav;
+  });
+  const wamTotal  = navTotal  ? ttmNavValued / navTotal  : null;
+  const wamValued = navValued ? ttmNavValued / navValued : null;
+
+  const csScale  = Math.max(csDurTotal || 0, csDurValued || 0) || 1;
+  const wamScale = Math.max(wamTotal || 0, wamValued || 0) || 1;
+
+  const setBar = (barId, valId, v, scale) => {
+    const bar = document.getElementById(barId);
+    if (bar) bar.style.width = `${Number.isFinite(v) ? Math.max(0, Math.min(100, (v / scale) * 100)) : 0}%`;
+    const el = document.getElementById(valId);
+    if (el) el.textContent = Number.isFinite(v) ? `${v.toFixed(2).replace('.', ',')}Y` : '–';
+  };
+  setBar('sensCsDurTotalBar', 'sensCsDurTotal', csDurTotal, csScale);
+  setBar('sensCsDurValuedBar', 'sensCsDurValued', csDurValued, csScale);
+  setBar('sensCsWamTotalBar', 'sensCsWamTotal', wamTotal, wamScale);
+  setBar('sensCsWamValuedBar', 'sensCsWamValued', wamValued, wamScale);
+}
 
 function normalizePortfolioName(portName) {
   return String(portName ?? '')
@@ -289,23 +386,54 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
     );
   }
 
-  updateMarketRiskSensitivityKpis({
-    rows: portfolioRows,
-    portName: selectedPort,
-    cpv01CalcData: {
-      cpv01TotalByCcy: calcData.cpv01TotalByCcy,
-      groupedCPV01ByCcy: calcData.groupedCPV01ByCcy,
-      sortedCPV01ByCcy: calcData.sortedCPV01ByCcy,
-      filteredRowsCount: calcData.filteredRowsCount,
-    },
-    notionalByCcy: notionalByCcyFromHoldings(holdings),
-    navTotal: navTotalFromHoldings(holdings),
-  });
+  // NAV-Basen + Σ CPV01 einmal aus den GEFILTERTEN Holdings/Daten (Nenner fuer Duration/WAM).
+  const fixedCats = appState.getFixedValueCategoryNames?.();
+  const navTotal = navTotalFromHoldings(holdings);
+  const navValued = navValuedFromHoldings(holdings, fixedCats);
+  const totalCpv01 = Object.values(calcData.cpv01TotalByCcy || {})
+    .reduce((s, v) => s + (Number(v) || 0), 0);
+
+  // KPI-Update isoliert: ein KPI-Fehler darf den CPV01-Chart-Render nicht blockieren.
+  try {
+    updateMarketRiskSensitivityKpis({
+      rows: portfolioRows,
+      portName: selectedPort,
+      cpv01CalcData: {
+        cpv01TotalByCcy: calcData.cpv01TotalByCcy,
+        groupedCPV01ByCcy: calcData.groupedCPV01ByCcy,
+        sortedCPV01ByCcy: calcData.sortedCPV01ByCcy,
+        filteredRowsCount: calcData.filteredRowsCount,
+      },
+      notionalByCcy: notionalByCcyFromHoldings(holdings),
+      navTotal,
+      navValued,
+    });
+  } catch (e) {
+    console.error('[CS SENS] KPI update threw — chart/table still rendered', e);
+  }
+
+  // CPV01-Kacheln aus den GEFILTERTEN Holdings (folgen dem Header-Filter):
+  // Weighted Rating, Credit Spread Duration (2 Balken) und Average Maturity (2 Balken).
+  let cpv01Ratings = {};
+  try {
+    cpv01Ratings = updateCpv01WeightedRatingCard(holdings, fixedCats, appState.ratingOrder) || {};
+  } catch (e) { console.warn('[CS SENS] weighted rating card failed', e); }
+  try {
+    updateCpv01DurationMaturityCards({ holdings, fixedCats, navTotal, navValued, totalCpv01 });
+  } catch (e) { console.warn('[CS SENS] CS duration/maturity cards failed', e); }
 
   // Feed the right-click drill (empty on the legacy fallback path).
   _cpv01DrillRows = Array.isArray(calcData.drillRows) ? calcData.drillRows : [];
 
-  return renderCPV01TableAndChart(calcData, selectedPort);
+  return renderCPV01TableAndChart(
+    {
+      ...calcData,
+      ratingNotchValued: cpv01Ratings.notchValued,
+      ratingNotchTotal: cpv01Ratings.notchTotal,
+      ratingOrder: appState.ratingOrder,
+    },
+    selectedPort,
+  );
 }
 
 function calculateCreditSensitivity(rows, portName, holdings = []) {
@@ -518,6 +646,9 @@ function renderCPV01TableAndChart(data, portName) {
   const {
     cpv01TotalByCcy = {},
     sortedCPV01ByCcy = {},
+    ratingNotchValued = null,
+    ratingNotchTotal = null,
+    ratingOrder = [],
   } = data;
 
   const wrapper = document.createElement('div');
@@ -564,6 +695,9 @@ function renderCPV01TableAndChart(data, portName) {
     createCPV01Chart({
       sortedCPV01ByCcy,
       cpv01TotalByCcy,
+      ratingNotchValued,
+      ratingNotchTotal,
+      ratingOrder,
     });
   });
 
@@ -627,6 +761,9 @@ function mountCPV01Details(wrapper) {
 function createCPV01Chart({
   sortedCPV01ByCcy = {},
   cpv01TotalByCcy = {},
+  ratingNotchValued = null,
+  ratingNotchTotal = null,
+  ratingOrder = [],
 } = {}) {
   const canvasId = 'CPV01Chart';
 
@@ -672,7 +809,114 @@ function createCPV01Chart({
     datasets,
   };
 
-  CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x', { interactive: true });
+  // Drei vertikale Marker auf der Rating-Achse (Linien ohne eigene Labels; die Werte stehen
+  // im lateralen Label-Stapel, jeder in eigener Zeile). Alle liegen auf der SAEULE ihres
+  // (gerundeten) Ratings (Saeulenmitte); nur wenn die Saeule fehlt, wird interpoliert.
+  //  - RED "Total NAV Rating" = NAV-gewichtetes Ø-Rating ueber ALLE gerateten Positionen.
+  //  - BLUE "Valued NAV Rating" = NAV-gewichtetes Ø-Rating der BEWERTETEN (Nicht-Cash) Positionen.
+  //  - ORANGE "CPV01 Weighted Rating" = Schwerpunkt der CPV01-Verteilung (netto-CPV01-
+  //    gewichteter Bucket), analog zur "PV01 Weighted Tenor"-Linie.
+  const pv01Annotations = {};
+  {
+    const ORANGE = 'rgba(245, 130, 32, 0.95)';
+    const BLUE = 'rgba(33, 150, 243, 0.95)';
+    const RED = 'rgba(211, 47, 47, 0.95)';
+    const order = Array.isArray(ratingOrder) ? ratingOrder : [];
+    const N = allBuckets.length;
+
+    // CPV01-gewichteter Bucket-Index (Chart-Position direkt).
+    const rawByBucket = {};
+    Object.values(sortedCPV01ByCcy).forEach((rows) => {
+      (Array.isArray(rows) ? rows : []).forEach(([bucket, value]) => {
+        rawByBucket[bucket] = (rawByBucket[bucket] || 0) + (Number(value) || 0);
+      });
+    });
+    let wNum = 0;
+    let wDen = 0;
+    allBuckets.forEach((bucket, idx) => {
+      const v = rawByBucket[bucket] || 0;
+      wNum += idx * v;
+      wDen += v;
+    });
+    const cpv01Idx = Math.abs(wDen) > 1e-12 ? wNum / wDen : null;
+
+    // Full-scale Notch -> fraktionaler Chart-Index (Interpolation ueber die Bucket-Notches).
+    const bucketNotches = allBuckets.map((b) => order.findIndex(
+      (x) => String(x).trim().toUpperCase() === String(b).trim().toUpperCase()));
+    const notchToChartX = (notch) => {
+      if (!Number.isFinite(notch) || bucketNotches.length === 0) return null;
+      if (notch <= bucketNotches[0]) return 0;
+      if (notch >= bucketNotches[bucketNotches.length - 1]) return bucketNotches.length - 1;
+      for (let i = 0; i < bucketNotches.length - 1; i += 1) {
+        const a = bucketNotches[i];
+        const b = bucketNotches[i + 1];
+        if (notch >= a && notch <= b) return i + (b > a ? (notch - a) / (b - a) : 0);
+      }
+      return null;
+    };
+    const inRange = (cv) => cv != null && cv >= -0.5 && cv <= N - 0.5;
+    const mkLine = (value, color) => ({
+      type: 'line', scaleID: 'x', value,
+      borderColor: color, borderWidth: 2, borderDash: [6, 4], drawTime: 'afterDatasetsDraw',
+    });
+
+    // Beide Marker sitzen auf der SAEULE ihres (gerundeten) Ratings (Saeulenmitte), nicht an
+    // einer fraktionalen Zwischenposition. Nur wenn die Saeule fehlt, wird interpoliert.
+    // ORANGE (CPV01-Schwerpunkt): der gewichtete Bucket-Index gerundet -> vorhandene Saeule.
+    const cpv01BarIdx = (cpv01Idx != null) ? Math.max(0, Math.min(N - 1, Math.round(cpv01Idx))) : null;
+
+    // NAV-Rating-Notch (volle Skala) -> Saeule GENAU des gerundeten Ratings; fehlt sie -> interpoliert.
+    const notchToBar = (notch) => {
+      if (!Number.isFinite(notch) || !order.length) return { idx: null, label: '' };
+      const rn = Math.max(0, Math.min(order.length - 1, Math.round(notch)));
+      const label = order[rn];
+      const exact = allBuckets.findIndex(
+        (b) => String(b).trim().toUpperCase() === String(label).trim().toUpperCase());
+      return { idx: exact >= 0 ? exact : notchToChartX(rn), label };
+    };
+    // BLUE (Valued NAV Rating) und RED (Total NAV Rating).
+    const { idx: valuedBarIdx, label: valuedLabel } = notchToBar(ratingNotchValued);
+    const { idx: totalBarIdx, label: totalLabel } = notchToBar(ratingNotchTotal);
+
+    // Zeichenreihenfolge: blau/rot zuerst, orange (CPV01-Schwerpunkt) zuletzt/oben.
+    if (inRange(totalBarIdx))  pv01Annotations.totalRatingLine  = mkLine(totalBarIdx, RED);
+    if (inRange(valuedBarIdx)) pv01Annotations.valuedRatingLine = mkLine(valuedBarIdx, BLUE);
+    if (inRange(cpv01BarIdx))  pv01Annotations.cpv01WeightedLine = mkLine(cpv01BarIdx, ORANGE);
+
+    // Label-Stapel: jede Zeile eigen, lateral ueber ihrer Linie; Anker haelt sie im Plot.
+    let yTop = 0;
+    datasets.forEach((ds) => (ds.data || []).forEach((v) => {
+      const n = Number(v) || 0;
+      if (n > yTop) yTop = n;
+    }));
+    if (!(yTop > 0)) yTop = 100;
+
+    const stack = [];
+    if (inRange(totalBarIdx))  stack.push([`Total NAV Rating ${totalLabel}`, RED, totalBarIdx]);
+    if (inRange(valuedBarIdx)) stack.push([`Valued NAV Rating ${valuedLabel}`, BLUE, valuedBarIdx]);
+    if (inRange(cpv01BarIdx))  stack.push([`CPV01 Weighted Rating ${allBuckets[cpv01BarIdx]}`, ORANGE, cpv01BarIdx]);
+
+    const span = Math.max(1, N - 1);
+    stack.forEach(([content, color, cv], i) => {
+      const f = cv / span;
+      const xPos = f > 0.6 ? 'end' : (f < 0.4 ? 'start' : 'center');
+      pv01Annotations[`lbl${i}`] = {
+        type: 'label', xValue: cv, yValue: yTop,
+        position: { x: xPos, y: 'start' },
+        xAdjust: xPos === 'end' ? -4 : (xPos === 'start' ? 4 : 0),
+        yAdjust: 6 + i * 21,
+        content, backgroundColor: color, color: '#fff', borderRadius: 3,
+        font: { size: 10, weight: 'bold' },
+        padding: { top: 3, bottom: 3, left: 6, right: 6 },
+        textAlign: 'left', drawTime: 'afterDatasetsDraw',
+      };
+    });
+  }
+
+  CPV01Chart = createBarChart(chartConfig, canvasId, 'bar', 'x', {
+    interactive: true,
+    annotations: Object.keys(pv01Annotations).length ? pv01Annotations : undefined,
+  });
 
   if (CPV01Chart) {
     // Right-click drill: bar (CCY dataset + rating bucket) -> contributing products.

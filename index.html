@@ -118,6 +118,8 @@ Feature:    Wenn es nur in einem Panel gilt
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+  <!-- Treemap-Controller fuer Chart.js (ersetzt Plotly fuer die Breakdown-Treemaps) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
 
   <!-- Math.js entfernt: app-weit ungenutzt (kein math.*-Aufruf irgendwo) -> spart Startup-Parse. -->
 
@@ -125,9 +127,8 @@ Feature:    Wenn es nur in einem Panel gilt
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-  <!-- Plotly wird NICHT mehr synchron im Head geladen (schwere ~3MB-Lib, blockierte den
-       App-Start). On-demand via ensurePlotly() in SummaryBreakdown.js, sobald die
-       Concentration-Treemaps / der Report sie brauchen. CSP script-src erlaubt jsdelivr. -->
+  <!-- Plotly ENTFERNT: die Breakdown-Treemaps laufen jetzt ueber Chart.js
+       (chartjs-chart-treemap, oben geladen). Spart ~3MB Startup-Last. -->
 
 
 
@@ -973,17 +974,18 @@ Feature:    Wenn es nur in einem Panel gilt
   </div>
 </div>
 
-<!-- Breakdown: Konzentrations-Dashboard (Dimension per Dropdown im Panel).
-     Alle Dimensionen sind im PDF ueber versteckte Report-Panels einzeln waehlbar
-     (ensureConcReportPanels in SummaryBreakdown.js). -->
-<div class="chart-section">
-  <button class="section-trigger"
-          data-panel="panel-concentration"
-          aria-controls="panel-concentration"
-          aria-expanded="false">
+<!-- Breakdown: Konzentrations-Dashboard. Dimension via Sidebar-Sub-Trigger (statt Dropdown),
+     gruppiert in ENTITY/RATINGS/PRODUCT/GEOGRAPHY. Aufbau dynamisch aus BREAKDOWN_CONFIG in
+     #breakdownDimTriggers (ensureBreakdownDimTriggers in SummaryBreakdown.js).
+     Der Parent-Trigger klappt NUR auf (kein data-panel) -> laedt/oeffnet NICHTS. Erst ein
+     Dimension-Blatt (data-dimension) setzt die Dimension und oeffnet panel-concentration. -->
+<div class="chart-section risk-acc">
+  <button class="section-trigger risk-acc-toggle"
+          aria-expanded="false" type="button">
     <span class="section-header">Breakdown</span>
     <span class="chev"></span>
   </button>
+  <div class="risk-acc-body" id="breakdownDimTriggers"></div>
 </div>
 
     <!--   Performance   Trigger (Gruppe: reiner Toggle, klappt nur auf).
@@ -1394,12 +1396,9 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
         </div>
 
-        <!-- Auswahl-Dropdowns unter den Graph verschoben. -->
+        <!-- Dimension jetzt via Sidebar-Sub-Trigger (Breakdown-Accordion), nicht mehr per
+             Dropdown. Value basis bleibt als Dropdown hier. -->
         <div class="conc-dim-bar" style="display:flex; align-items:center; gap:16px; margin:12px 0;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <label for="concDimensionSelect" class="select-label">Dimension</label>
-            <select id="concDimensionSelect" class="deals-dropdown" style="width:220px; min-width:0;"></select>
-          </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <label for="concValueSelector" class="select-label">Value basis</label>
             <select id="concValueSelector" class="deals-dropdown">
@@ -2314,14 +2313,93 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="sens-kpi-value" id="SensDuration">—</div>
             <div class="sens-kpi-chg" id="SensDurationChg"></div>
           </div>
+          <!-- IR-Duration-Karte (2 Balken Total/Valued NAV). Einzelbreite (conc-kpi--dur2),
+               eigene IDs (sensIrDur*), befuellt in homeOverview.js parallel zur Overview-Kachel. -->
+          <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="pv01">
+            <div class="pf-dur-cap">Interest Rate Duration</div>
+            <div class="pf-dur2">
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Total NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensIrDurTotalBar"></div></div>
+                <span class="pf-dur-val" id="sensIrDurTotal">–</span>
+              </div>
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Valued NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensIrDurValuedBar"></div></div>
+                <span class="pf-dur-val" id="sensIrDurValued">–</span>
+              </div>
+            </div>
+          </div>
+          <!-- Mittlere Restlaufzeit (2 Balken Total/Valued NAV), NAV-gewichtet.
+               Eigene IDs (sensWam*), befuellt in homeOverview.js. -->
+          <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="pv01">
+            <div class="pf-dur-cap">Average Maturity</div>
+            <div class="pf-dur2">
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Total NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensWamTotalBar"></div></div>
+                <span class="pf-dur-val" id="sensWamTotal">–</span>
+              </div>
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Valued NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensWamValuedBar"></div></div>
+                <span class="pf-dur-val" id="sensWamValued">–</span>
+              </div>
+            </div>
+          </div>
           <div class="conc-kpi" data-sens-kpi-for="cpv01">
             <div class="conc-kpi__lbl">Top Credit Bucket</div>
             <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
           </div>
-          <div class="conc-kpi" data-sens-kpi-for="cpv01">
-            <div class="conc-kpi__lbl">Credit Spread Duration (Years)</div>
-            <div class="sens-kpi-value" id="SensCsDuration">—</div>
-            <div class="sens-kpi-chg" id="SensCsDurationChg"></div>
+          <!-- Gewichtetes Rating (NAV-gewichteter Notch -> Rating-Label): Total NAV (alle
+               gerateten Positionen) vs. Valued NAV (nur bewertete, ohne Cash). 2-Balken-Kachel
+               wie die Duration-Karten; Balken = Rating-Qualitaet (AAA voll, schlechter kuerzer). -->
+          <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="cpv01">
+            <div class="pf-dur-cap">Weighted Rating</div>
+            <div class="pf-dur2">
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Total NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensWRatingTotalBar"></div></div>
+                <span class="pf-dur-val" id="sensWRatingTotal">–</span>
+              </div>
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Valued NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensWRatingValuedBar"></div></div>
+                <span class="pf-dur-val" id="sensWRatingValued">–</span>
+              </div>
+            </div>
+          </div>
+          <!-- Credit Spread Duration (2 Balken): |ΣCPV01|/NAV×10000, Total vs Valued NAV. -->
+          <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="cpv01">
+            <div class="pf-dur-cap">Credit Spread Duration</div>
+            <div class="pf-dur2">
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Total NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensCsDurTotalBar"></div></div>
+                <span class="pf-dur-val" id="sensCsDurTotal">–</span>
+              </div>
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Valued NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensCsDurValuedBar"></div></div>
+                <span class="pf-dur-val" id="sensCsDurValued">–</span>
+              </div>
+            </div>
+          </div>
+          <!-- Average Maturity (2 Balken), CPV01-Tab-Variante (gleiche portfolioweite Restlaufzeit). -->
+          <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="cpv01">
+            <div class="pf-dur-cap">Average Maturity</div>
+            <div class="pf-dur2">
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Total NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensCsWamTotalBar"></div></div>
+                <span class="pf-dur-val" id="sensCsWamTotal">–</span>
+              </div>
+              <div class="pf-dur-row">
+                <span class="pf-dur-lbl">Valued NAV</span>
+                <div class="pf-dur-track"><div class="pf-dur-fill" id="sensCsWamValuedBar"></div></div>
+                <span class="pf-dur-val" id="sensCsWamValued">–</span>
+              </div>
+            </div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="vega">
             <div class="conc-kpi__lbl">Total Vega</div>
@@ -2331,8 +2409,11 @@ Feature:    Wenn es nur in einem Panel gilt
         </div>
       </div>
 
-      <!-- Report-Spiegel (unsichtbar): Sensitivities-KPIs als KPI-Band fuer Preview/PDF. -->
-      <div class="data-container" id="sensKpiTable" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+      <!-- Report-Spiegel (unsichtbar): Sensitivities-KPIs als KPI-Baender fuer Preview/PDF.
+           Drei getrennte Baender -> im PDF PV01 / CPV01 / Vega je eigene Seite. -->
+      <div class="data-container" id="sensKpiTablePv01"  data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+      <div class="data-container" id="sensKpiTableCpv01" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+      <div class="data-container" id="sensKpiTableVega"  data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
 
       <!-- Sensitivity Type Tabs -->
       <!-- Tab-Leiste ausgeblendet: die Umschaltung erfolgt jetzt ueber die Sidebar-Sub-Trigger
