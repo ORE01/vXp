@@ -408,7 +408,7 @@ function fillSensReportKpiBand() {
   buildBand('sensKpiTablePv01', [
     ['Total PV01', 'SensTotalPV01', 'SensTotalPV01Chg'],
     ['Top IR Tenor', 'SensTopIRTenor', null],
-    ['PV01 Weighted Tenor', 'SensPV01WTenor', null],
+    ['Average Risk Tenor', 'SensPV01WTenor', null],
     ['IR Duration (Total NAV)', 'sensIrDurTotal', null],
     ['IR Duration (Valued NAV)', 'sensIrDurValued', null],
     ['Average Time to Maturity (Total NAV)', 'sensWamTotal', null],
@@ -614,7 +614,8 @@ if (hasPV01Data) {
     wNum += (i + 1) * net; wDen += net; wAbs += Math.abs(net);
   }
   const wavgTenor = (Math.abs(wDen) > 1e-9 && wAbs >= 1e-3) ? wNum / wDen : null;
-  setText('SensPV01WTenor', wavgTenor != null ? `${formatNumber(wavgTenor, 2)} y` : '—');
+  // Einheitliche Jahres-Schreibweise wie Chart-Linien + Duration/WAM-Karten: "X,XXY".
+  setText('SensPV01WTenor', wavgTenor != null ? `${wavgTenor.toFixed(2).replace('.', ',')}Y` : '—');
 
   // Pass 1/0 intentionally.
   // The KPI card visibility helper expects a numeric-like value, not a formatted text.

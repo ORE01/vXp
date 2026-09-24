@@ -832,28 +832,33 @@ function createPV01Chart({
     const wavgTenor = (Math.abs(wDen) > 1e-9 && wAbs >= PV01_NO_SENS_EPS) ? wNum / wDen : null;
     const avgCV = wavgTenor != null ? wavgTenor - 1 - startIndex : null;
 
+    // Label-Farben (kraeftig, gut lesbar).
     const RED = 'rgba(211, 47, 47, 0.95)';
     const BLUE = 'rgba(33, 150, 243, 0.95)';
     const ORANGE = 'rgba(245, 130, 32, 0.95)';
+    // Sekundaere Linien-Farben (Duration = Vergleichsgroesse) dezenter/transparenter.
+    const RED_DIM = 'rgba(211, 47, 47, 0.55)';
+    const BLUE_DIM = 'rgba(33, 150, 243, 0.55)';
     const fmtY = (v) => `${v.toFixed(2).replace('.', ',')}Y`;
 
-    // Bare dashed line (no own label -- labels live in the vertical stack below).
-    const mkLine = (value, color) => ({
+    // Bare line (no own label -- labels live in the vertical stack below).
+    // Orange (Average Risk Tenor) = Hauptreferenzlinie -> durchgezogen, kraeftiger.
+    // Rot/Blau (Duration) = sekundaere Vergleichsgroessen -> gestrichelt, dezenter.
+    const mkLine = (value, color, { dash = [6, 4], width = 1.5 } = {}) => ({
       type: 'line',
       scaleID: 'x',
       value,
       borderColor: color,
-      borderWidth: 2,
-      borderDash: [6, 4],
+      borderWidth: width,
+      borderDash: dash,
       drawTime: 'afterDatasetsDraw',
     });
 
-    // Order matters within the same drawTime: later keys paint on top -> blue
-    // first, then RED LAST so the red line covers the blue one when they coincide.
-    // (Gap band / shaded area entfernt auf Wunsch.)
-    if (inRange(durValuedCV)) pv01Annotations.durationValuedLine = mkLine(durValuedCV, BLUE);
-    if (inRange(avgCV))       pv01Annotations.wavgLine           = mkLine(avgCV, ORANGE);
-    if (inRange(durTotalCV))  pv01Annotations.durationTotalLine  = mkLine(durTotalCV, RED); // last -> on top
+    // Order matters within the same drawTime: later keys paint on top. Duration-Linien
+    // zuerst (sekundaer), ORANGE zuletzt -> Hauptreferenzlinie liegt oben auf.
+    if (inRange(durValuedCV)) pv01Annotations.durationValuedLine = mkLine(durValuedCV, BLUE_DIM);
+    if (inRange(durTotalCV))  pv01Annotations.durationTotalLine  = mkLine(durTotalCV, RED_DIM);
+    if (inRange(avgCV))       pv01Annotations.wavgLine           = mkLine(avgCV, ORANGE, { dash: [], width: 2.5 }); // solid, on top
 
     // Label stack: one row per metric (top to bottom, never overlapping), but each
     // shifted LATERALLY to sit over the line / region it belongs to. Anchored near
@@ -866,14 +871,18 @@ function createPV01Chart({
     }));
     if (!(yTop > 0)) yTop = 100;
 
+    // Duration-Labels zweizeilig: 2. Zeile "Zero-Bond Equivalent" (Duration = zero-bond-
+    // aequivalente Restlaufzeit). Average Risk Tenor bleibt einzeilig.
     const stack = [];
-    if (inRange(durTotalCV))  stack.push([`Total Duration ${fmtY(durTotal)}`, RED, durTotalCV]);
-    if (inRange(durValuedCV)) stack.push([`Valued Duration ${fmtY(durValued)}`, BLUE, durValuedCV]);
-    if (inRange(avgCV))       stack.push([`PV01 Weighted Tenor ${fmtY(wavgTenor)}`, ORANGE, avgCV]);
+    if (inRange(durTotalCV))  stack.push([[`Total Duration ${fmtY(durTotal)}`, 'Zero-Bond Equivalent'], RED, durTotalCV]);
+    if (inRange(durValuedCV)) stack.push([[`Valued Duration ${fmtY(durValued)}`, 'Zero-Bond Equivalent'], BLUE, durValuedCV]);
+    if (inRange(avgCV))       stack.push([`Average Risk Tenor ${fmtY(wavgTenor)}`, ORANGE, avgCV]);
     // (Gap-Label sitzt zentriert in der Fläche, siehe Box oben -- nicht im Stapel.)
 
     const span = Math.max(1, labels.length - 1);
+    let yOff = 6;                          // laufender vertikaler Offset (Zeilenzahl-abhaengig)
     stack.forEach(([content, color, cv], i) => {
+      const lines = Array.isArray(content) ? content.length : 1;
       const f = cv / span;
       const xPos = f > 0.6 ? 'end' : (f < 0.4 ? 'start' : 'center');
       pv01Annotations[`lbl${i}`] = {
@@ -882,7 +891,7 @@ function createPV01Chart({
         yValue: yTop,
         position: { x: xPos, y: 'start' },
         xAdjust: xPos === 'end' ? -4 : (xPos === 'start' ? 4 : 0),
-        yAdjust: 6 + i * 21,              // vertical: own row -> no overlap
+        yAdjust: yOff,                    // vertical: own row -> no overlap
         content,
         backgroundColor: color,
         color: '#fff',
@@ -892,6 +901,7 @@ function createPV01Chart({
         textAlign: 'left',
         drawTime: 'afterDatasetsDraw',
       };
+      yOff += lines * 12 + 9;            // Boxhoehe (~12px/Zeile) + Abstand -> naechste Kachel darunter
     });
   }
 
