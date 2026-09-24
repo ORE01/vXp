@@ -867,8 +867,8 @@ function createPV01Chart({
     if (!(yTop > 0)) yTop = 100;
 
     const stack = [];
-    if (inRange(durTotalCV))  stack.push([`Total NAV Duration ${fmtY(durTotal)}`, RED, durTotalCV]);
-    if (inRange(durValuedCV)) stack.push([`Valued NAV Duration ${fmtY(durValued)}`, BLUE, durValuedCV]);
+    if (inRange(durTotalCV))  stack.push([`Total Duration ${fmtY(durTotal)}`, RED, durTotalCV]);
+    if (inRange(durValuedCV)) stack.push([`Valued Duration ${fmtY(durValued)}`, BLUE, durValuedCV]);
     if (inRange(avgCV))       stack.push([`PV01 Weighted Tenor ${fmtY(wavgTenor)}`, ORANGE, avgCV]);
     // (Gap-Label sitzt zentriert in der Fläche, siehe Box oben -- nicht im Stapel.)
 

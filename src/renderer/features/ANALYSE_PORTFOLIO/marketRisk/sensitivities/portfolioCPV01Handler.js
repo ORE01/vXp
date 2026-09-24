@@ -892,8 +892,8 @@ function createCPV01Chart({
     if (!(yTop > 0)) yTop = 100;
 
     const stack = [];
-    if (inRange(totalBarIdx))  stack.push([`Total NAV Rating ${totalLabel}`, RED, totalBarIdx]);
-    if (inRange(valuedBarIdx)) stack.push([`Valued NAV Rating ${valuedLabel}`, BLUE, valuedBarIdx]);
+    if (inRange(totalBarIdx))  stack.push([`Total Rating ${totalLabel}`, RED, totalBarIdx]);
+    if (inRange(valuedBarIdx)) stack.push([`Valued Rating ${valuedLabel}`, BLUE, valuedBarIdx]);
     if (inRange(cpv01BarIdx))  stack.push([`CPV01 Weighted Rating ${allBuckets[cpv01BarIdx]}`, ORANGE, cpv01BarIdx]);
 
     const span = Math.max(1, N - 1);

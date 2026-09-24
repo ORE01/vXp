@@ -36,7 +36,6 @@ function renderSensKpiChanges(selPort, live = {}) {
   const fmtY = (v) => `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`;
   setSensKpiChange('SensTotalPV01Chg',  Number(live.pv01),       _num(prev.PV01),      fmtEurCompact);
   setSensKpiChange('SensTotalCPV01Chg', Number(live.cpv01),      _num(prev.CPV01),     fmtEurCompact);
-  setSensKpiChange('SensDurationChg',   Number(live.duration),   _num(prev.MDURATION), fmtY);
   setSensKpiChange('SensCsDurationChg', Number(live.csDuration), _num(prev.CS_DURATION), fmtY);
   setSensKpiChange('SensTotalVegaChg',  Number(live.vega),       _num(prev.VEGA),      fmtEurCompact);
 }
@@ -409,11 +408,11 @@ function fillSensReportKpiBand() {
   buildBand('sensKpiTablePv01', [
     ['Total PV01', 'SensTotalPV01', 'SensTotalPV01Chg'],
     ['Top IR Tenor', 'SensTopIRTenor', null],
-    ['Duration (Years)', 'SensDuration', 'SensDurationChg'],
+    ['PV01 Weighted Tenor', 'SensPV01WTenor', null],
     ['IR Duration (Total NAV)', 'sensIrDurTotal', null],
     ['IR Duration (Valued NAV)', 'sensIrDurValued', null],
-    ['Average Maturity (Total NAV)', 'sensWamTotal', null],
-    ['Average Maturity (Valued NAV)', 'sensWamValued', null],
+    ['Average Time to Maturity (Total NAV)', 'sensWamTotal', null],
+    ['Average Time to Maturity (Valued NAV)', 'sensWamValued', null],
   ]);
 
   // CPV01-Seite
@@ -424,6 +423,8 @@ function fillSensReportKpiBand() {
     ['Weighted Rating (Valued NAV)', 'sensWRatingValued', null],
     ['CS Duration (Total NAV)', 'sensCsDurTotal', null],
     ['CS Duration (Valued NAV)', 'sensCsDurValued', null],
+    ['Average Time to Maturity (Total NAV)', 'sensCsWamTotal', null],
+    ['Average Time to Maturity (Valued NAV)', 'sensCsWamValued', null],
   ]);
 
   // Vega-Seite
@@ -595,16 +596,31 @@ if (hasPV01Data) {
   // chart marker; kept in sync with the KPI so a portfolio switch never shows a
   // stale value (it used to be read from the card DOM, which lagged the switch).
   const durationValued = navValued ? (Math.abs(totalPv01) / navValued) * 10000 : 0;
-  setText('SensDuration', duration ? `${formatNumber(duration, 2)} y` : '—');
   liveTotals.pv01 = totalPv01;
   liveTotals.duration = duration;
   liveTotals.durationValued = durationValued;
+
+  // PV01 Weighted Tenor (Top-KPI, ersetzt die redundante Duration-Kachel — Duration
+  // steckt schon im "Interest Rate Duration"-Block). Identisch zur orangen Chart-Linie:
+  // Σ(tenor·PV01)/Σ(PV01) mit signierten Gewichten (Tenor-Index i -> (i+1) Jahre).
+  // Kein echter IR-Exposure (z. B. Floater) -> "—".
+  let wNum = 0, wDen = 0, wAbs = 0, nTenors = 0;
+  Object.values(irSensitivityByCcy).forEach((arr) => {
+    if (Array.isArray(arr)) nTenors = Math.max(nTenors, arr.length);
+  });
+  for (let i = 0; i < nTenors; i += 1) {
+    let net = 0;
+    Object.values(irSensitivityByCcy).forEach((arr) => { net += Number(arr?.[i]) || 0; });
+    wNum += (i + 1) * net; wDen += net; wAbs += Math.abs(net);
+  }
+  const wavgTenor = (Math.abs(wDen) > 1e-9 && wAbs >= 1e-3) ? wNum / wDen : null;
+  setText('SensPV01WTenor', wavgTenor != null ? `${formatNumber(wavgTenor, 2)} y` : '—');
 
   // Pass 1/0 intentionally.
   // The KPI card visibility helper expects a numeric-like value, not a formatted text.
   setSensitivityKpiVisible('SensTotalPV01', hasVisiblePV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopIRTenor', hasVisiblePV01 ? 1 : 0);
-  setSensitivityKpiVisible('SensDuration', (hasVisiblePV01 && duration) ? 1 : 0);
+  setSensitivityKpiVisible('SensPV01WTenor', hasVisiblePV01 ? 1 : 0);
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] PV01 by CCY updated:', {
@@ -617,7 +633,7 @@ if (hasPV01Data) {
 } else {
   clearAndHideSensitivityKpi('SensTotalPV01');
   clearAndHideSensitivityKpi('SensTopIRTenor');
-  clearAndHideSensitivityKpi('SensDuration');
+  clearAndHideSensitivityKpi('SensPV01WTenor');
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] PV01 hidden: no data for selected portfolio', {

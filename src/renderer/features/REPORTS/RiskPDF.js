@@ -15,7 +15,7 @@ const { jsPDF } = window.jspdf;
 import { getActiveRiskSectionsForPdf, RISK_CONFIG, getTableNote } from './RiskPDFPreview.js';
 // Cross-module element lookups (chart/container ids from the source modules)
 // go through the capture adapter — see captureAdapter.js for the rationale.
-import { getInAppById } from './captureAdapter.js';
+import { getInAppById, getOverviewStatusItems } from './captureAdapter.js';
 import { getMarketDashboardModel } from '../ANALYSE_PORTFOLIO/marketRisk/marketRiskDashboard.js';
 import { getCreditDashboardModel } from '../ANALYSE_PORTFOLIO/CREDIT_RISK/creditRiskDashboard.js';
 
@@ -288,11 +288,12 @@ function drawCoverPage(doc, layout, { title, subtitle, metaLines = [], logoEl, r
   };
   metaBlock('Generated', reportTimeText);
 
+  // Status-Zeilen (Overview) klein und gedaempft, untereinander — Groesse wie der Footer.
   if (Array.isArray(metaLines) && metaLines.length) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(WHITE[0], WHITE[1], WHITE[2]);
-    metaLines.filter(Boolean).forEach((ln) => { doc.text(String(ln), marginL, y); y += 7; });
+    doc.setFontSize(9);
+    doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
+    metaLines.filter(Boolean).forEach((ln) => { doc.text(String(ln), marginL, y); y += 5; });
   }
 
   // Footer unten links
@@ -684,8 +685,13 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   } catch {}
   const headerLabel = `vXp | ${portName || reportTitle}`;
 
+  // Overview-Status ("Portfolio: UNI · Portfolio <date> · Portfolio Trades <date> · ...")
+  // als kleine Zeilen unter GENERATED aufs Cover bringen.
+  let coverMetaLines = [];
+  try { coverMetaLines = getOverviewStatusItems(); } catch {}
+
   doc.setPage(1);
-  drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText });
+  drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText, metaLines: coverMetaLines });
 
   const includeTOC = !!opts.includeTOC;
   // TOC-Seiten werden weiter unten reserviert — erst wenn die Eintragsanzahl
@@ -1811,76 +1817,79 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   // ruecken und die 3 Balkencharts unten mit auf die Seite passen.
   y += (sec.key === 'overview') ? Math.max(2, cfg.sectionTitleSpacing - 6) : cfg.sectionTitleSpacing;
 
-  // ── Sensitivities: PV01, CPV01 und Vega je auf EIGENER Seite (KPI-Band + Chart + Details).
-  //    Bypasst die generische KPI-Band/Composed-Row/Tabellen-Logik (continue am Ende).
-  if (sec.key === 'sensitivities') {
-    const sensPages = [
-      { sub: 'Interest Rate Sensitivity (PV01)',  band: 'sensKpiTablePv01',  chart: 'PV01Chart',  chartTitle: 'Interest rate sensitivity by maturity bucket', details: 'IRSensDataContainer', detLabel: 'PV01 Details' },
-      { sub: 'Credit Spread Sensitivity (CPV01)', band: 'sensKpiTableCpv01', chart: 'CPV01Chart', chartTitle: 'Credit spread sensitivity by rating bucket',    details: 'CSSensDataContainer', detLabel: 'CPV01 Details' },
-      { sub: 'Volatility Sensitivity (Vega)',      band: 'sensKpiTableVega',  chart: 'VegaChart',  chartTitle: 'Parallel swaption volatility sensitivity',      details: 'VegaSensDataContainer', detLabel: 'Vega Details' },
-    ];
-    for (let pi = 0; pi < sensPages.length; pi += 1) {
-      const pg = sensPages[pi];
-      // CPV01 / Vega: neue Seite erzwingen (voller Seiten-Bedarf -> Umbruch), Sektionstitel oben.
-      if (pi > 0) ensurePageSpace(layout.bottomSafe - layout.topSafe, sectionTitle);
+  // ── Sensitivities-Sub-Sektionen (dynamisch: sensitivities-<tab>). Jede ist eine EIGENE
+  //    Section (eigene Seite via addPage). GENERISCH: KPI-Band(er) (enabledTables mit
+  //    data-kpi-band) + ausgewaehlte Chart(s) + Detail-Tabelle(n) (Rest der enabledTables).
+  //    Kein Hardcoding von IDs -> Charts/Tabellen kommen aus der (nach data-sens-tab)
+  //    gruppierten Auswahl. Section-Titel ist bereits das Sub-Trigger-Label.
+  if (/^sensitivities-/.test(sec.key)) {
+    // KPI-Band(er) zuerst.
+    for (const t of (sec.enabledTables || [])) {
+      const el = ctx.getById(t.id);
+      if (!el || !el.dataset || !el.dataset.kpiBand) continue;
+      const kpis = kpisFromTableEl(el);
+      if (!kpis.length) continue;
+      ensurePageSpace(30, sectionTitle);
+      y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis, { tileH: 14, valueFont: 11, gapAfter: 4 });
+      y += 4;
+    }
 
-      // Sub-Titel der Seite.
-      ensurePageSpace(12, sectionTitle);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(26, 31, 41);
-      doc.text(pg.sub, marginX, y);
-      doc.setFont('helvetica', 'normal');
-      y += 6;
-
-      // KPI-Band.
-      const bandEl = ctx.getById(pg.band);
-      if (bandEl) {
-        const kpis = kpisFromTableEl(bandEl);
-        if (kpis.length) {
-          ensurePageSpace(30, sectionTitle);
-          y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis, { tileH: 14, valueFont: 11, gapAfter: 4 });
-          y += 4;
-        }
-      }
-
-      // Chart (volle Breite).
-      const chartEl = ctx.getById(pg.chart);
-      const img = chartEl ? canvasToPngData(chartEl) : null;
-      if (img && img.dataUrl) {
-        const cardW = layout.contentWidth;
-        const cardH = 82;
-        ensurePageSpace(cardH + 12, sectionTitle);
-        drawChartCard(doc, marginX, y, cardW, cardH + 8);
+    // Ausgewaehlte Chart(s) mit gueltigem Bild sammeln, dann die verbleibende Seitenhoehe auf
+    // sie aufteilen -> KPI + ALLE Charts (Haupt- + History-Chart) passen auf EINE Seite.
+    const chartImgs = [];
+    for (const ch of (sec.enabledCharts || [])) {
+      const el = ctx.getById(ch.id);
+      const img = el ? canvasToPngData(el) : null;
+      if (img && img.dataUrl) chartImgs.push({ ch, img });
+    }
+    if (chartImgs.length) {
+      const n = chartImgs.length;
+      const gap = 4, capH = 6, botPad = 2;
+      const cardW = layout.contentWidth;
+      // Restplatz der AKTUELLEN Seite (nach Titel + KPI) auf die Charts aufteilen. Footprint je
+      // Chart = H (volle Kartenhoehe) + gap. n*(H+gap) = Restplatz -> alle auf EINE Seite.
+      const availForCharts = (layout.bottomSafe - y) - 3;   // 3mm Sicherheitsrand
+      const H = availForCharts / n - gap;     // volle Kartenhoehe je Chart
+      const imgH = H - capH - botPad;         // Bild-Hoehenbudget (fuer ALLE Charts gleich)
+      for (const { ch, img } of chartImgs) {
+        ensurePageSpace(H + gap, sectionTitle);
+        drawChartCard(doc, marginX, y, cardW, H);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(90);
-        doc.text(pg.chartTitle, marginX + cardW / 2, y + 5, { align: 'center' });
+        doc.text(chartAppTitle(ch.id) || ch.label || ch.id, marginX + cardW / 2, y + 4.5, { align: 'center' });
         const srcW = img.width || 900, srcH = img.height || 520;
-        const capH = 7, availH = cardH - 2;
-        const scale = Math.min(cardW / srcW, availH / srcH, 1);
+        // Seitenverhaeltnis ERHALTEN (kein Verzerren): in cardW x imgH einpassen, zentriert.
+        // Breite Charts (Development) fuellen die Breite; ~quadratische (Bucket) bleiben unverzerrt.
+        const scale = Math.min(cardW / srcW, imgH / srcH);
         const w = srcW * scale, h = srcH * scale;
         const ix = marginX + (cardW - w) / 2;
-        const iy = y + capH + (availH - h) / 2;
-        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', ix, iy, w, h); } catch (e) { console.warn('[PDF] sensitivities chart failed', pg.chart, e); }
-        y += cardH + 12;
+        const iy = y + capH + (imgH - h) / 2;
+        try { doc.addImage(img.dataUrl, img.fmt || 'JPEG', ix, iy, w, h); }
+        catch (e) { console.warn('[PDF] sensitivities chart failed', ch.id, e); }
+        y += H + gap;
       }
+    }
 
-      // Details-Tabelle (full-width).
-      const tbl = extractTableFromContainer(pg.details, { maxRows: 500, maxCols: 40, ctx });
-      if (tbl && tbl.body && tbl.body.length) {
-        ensurePageSpace(40, sectionTitle);
-        doc.setFontSize(10); doc.setTextColor(0);
-        doc.text(pg.detLabel, marginX, y);
-        const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
-        safeAutoTable(doc, layout, {
-          startY: y + 6,
-          head,
-          body: tbl.body,
-          theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
-          alternateRowStyles: { fillColor: [245, 245, 245] },
-          margin: { left: marginX },
-        });
-        y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : (y + 40)) + cfg.blockGap;
-      }
+    // Detail-Tabelle(n) full-width (enabledTables OHNE data-kpi-band).
+    for (const t of (sec.enabledTables || [])) {
+      const el = ctx.getById(t.id);
+      if (el && el.dataset && el.dataset.kpiBand) continue;
+      const tbl = extractTableFromContainer(t.id, { maxRows: 500, maxCols: 40, ctx });
+      if (!tbl || !tbl.body || !tbl.body.length) continue;
+      ensurePageSpace(40, sectionTitle);
+      const tblLabel = (t.label && t.label !== t.id) ? String(t.label) : '';
+      if (tblLabel) { doc.setFontSize(10); doc.setTextColor(0); doc.text(tblLabel, marginX, y); }
+      const head = tbl.head && tbl.head.length ? [tbl.head] : undefined;
+      safeAutoTable(doc, layout, {
+        startY: y + (tblLabel ? 6 : 0),
+        head,
+        body: tbl.body,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [34, 34, 34], textColor: [220, 220, 220] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { left: marginX },
+      });
+      y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : (y + 40)) + cfg.blockGap;
     }
     return;
   }
@@ -2725,10 +2734,13 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       if (hasSc || hasTcm) {
         const gap = 6, scH = 62;
         // Concentration-Funnel ("How does tail risk concentrate?") als 1. Spalte -> 3 Spalten
-        // (0.8 / 1 / 1) wie in der App. Fehlt der Funnel, bleibt es beim 2-Spalten-Layout.
+        // (0.8 / 1 / 1) wie in der App. Fehlt der Funnel ODER ist sein Tile in der App
+        // ausgeblendet (display:none), bleibt es beim 2-Spalten-Layout (Scatter + TCM).
         const funnelId = v.chartId.endsWith('Hist') ? 'crTcmFunnelHist' : 'crTcmFunnelNorm';
         const funnelEl = ctx.getById(funnelId);
-        const hasFunnel = !!(funnelEl && funnelEl.querySelectorAll(':scope > div > div').length);
+        const funnelTile = funnelEl && funnelEl.closest ? funnelEl.closest('.cr-tail-tile') : null;
+        const funnelHidden = !!(funnelTile && funnelTile.style && funnelTile.style.display === 'none');
+        const hasFunnel = !funnelHidden && !!(funnelEl && funnelEl.querySelectorAll(':scope > div > div').length);
         ensurePageSpace(scH + 24, `${sectionTitle} (cont.)`);
         const rowTop = y;
         let bottom = rowTop;
@@ -3167,6 +3179,15 @@ function extractTableFromContainer(containerIds, { maxRows = 100, maxCols = 20, 
   // Ohne das erscheint generisch "COL 1/2/3" und die echte Kopfzeile (z.B. label/VaR/ES)
   // landet als Datenzeile. Betrifft u.a. die Credit-Tabellen (insertRow/insertCell -> nur <td>).
   if (!head.length && rows.length) {
+    // Fuehrende Titel-/Caption-Zeilen (EINE Zelle mit colSpan>1, z.B. "PV01 Details by CCY
+    // for UNI") ueberspringen -> sonst wird die 1-Zellen-Titelzeile als 1-Spalten-Header
+    // genommen und die ganze Tabelle auf eine Spalte reduziert.
+    while (rows.length > 1) {
+      const c0 = Array.from(rows[0].children);
+      const span = c0.length === 1 ? Number(c0[0].getAttribute('colspan') || c0[0].colSpan || 1) : 1;
+      if (!(c0.length === 1 && span > 1)) break;
+      rows = rows.slice(1);
+    }
     const first = Array.from(rows[0].children).slice(0, maxCols);
     head = first.map((c) => (c.textContent || '').trim());
     rows = rows.slice(1);

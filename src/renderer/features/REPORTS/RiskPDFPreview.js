@@ -333,6 +333,29 @@ function discoverTablesFromPanel(panel) {
 }
 
 
+// Sensitivities-Sub-Trigger (PV01/CPV01/Vega) DYNAMISCH aus der Sidebar lesen: Reihenfolge,
+// Labels und Tab-Keys. Kein Hardcoding -> neue/umbenannte Sub-Trigger werden automatisch
+// uebernommen. Jeder Sub-Trigger ist ein Button unter dem Sensitivities-Parent mit
+// data-sens-open="<tab>"; die zugehoerigen Charts/Tabellen tragen data-sens-tab="<tab>".
+function readSensitivitiesSubTriggers() {
+  const btns = document.querySelectorAll(
+    '.section-trigger--sub[data-panel="panel-sensitivities"][data-sens-open]'
+  );
+  const out = [];
+  const seen = new Set();
+  btns.forEach((btn) => {
+    const tab = String(btn.dataset.sensOpen || '').trim().toLowerCase();
+    if (!tab || seen.has(tab)) return;
+    seen.add(tab);
+    out.push({
+      tab,
+      key: `sensitivities-${tab}`,
+      label: (btn.querySelector('.section-header')?.textContent || tab).trim(),
+    });
+  });
+  return out;
+}
+
 function discoverSectionsFull() {
   const sectionMap = {};
 
@@ -344,6 +367,28 @@ function discoverSectionsFull() {
       element,
     };
   });
+
+  // Sensitivities DYNAMISCH in Sub-Sektionen aufteilen: Sub-Trigger aus der Sidebar,
+  // Charts/Tabellen nach ihrem data-sens-tab gruppiert (alle referenzieren dasselbe Panel).
+  const sens = sectionMap['sensitivities'];
+  if (sens) {
+    const subs = readSensitivitiesSubTriggers();
+    if (subs.length) {
+      delete sectionMap['sensitivities'];
+      const tabOf = (id) => {
+        const el = sens.element.querySelector(`[id="${id}"]`);
+        return String(el?.dataset?.sensTab || '').trim().toLowerCase();
+      };
+      for (const s of subs) {
+        sectionMap[s.key] = {
+          key: s.key,
+          charts: (sens.charts || []).filter((c) => tabOf(c.id) === s.tab),
+          tables: (sens.tables || []).filter((t) => tabOf(t.id) === s.tab),
+          element: sens.element,
+        };
+      }
+    }
+  }
 
   return sectionMap;
 }
@@ -475,7 +520,7 @@ export const RISK_CONFIG = {
     market: 'Market Risk',
     marketTraffic: 'Market Risk — Traffic Light', // injected special section (key = marketTraffic)
     mvar: 'Market Risk — VaR Details', // panel-mvar -> "mvar"
-    sensitivities: 'Market Risk — Sensitivities', // panel-sensitivities -> "sensitivities"
+    sensitivities: 'Sensitivities',   // Gruppe; Kinder + Titel dynamisch aus den Sidebar-Sub-Triggern
 
     // ===== Credit (Parent + Children) =====
     credit: 'Credit Risk', // panel-credit -> "credit"
@@ -644,10 +689,16 @@ function computeRiskLayout(chartState = {}) {
   const discovered = discoverSectionsFull();
   const sections = [];
 
+  // Titel der Sensitivities-Sub-Sektionen dynamisch aus den Sidebar-Sub-Triggern (PV01/CPV01/
+  // Vega). Sie teilen sich EIN Panel -> die Panel-Ueberschrift waere sonst 3x gleich.
+  const sensSubTitleByKey = new Map(readSensitivitiesSubTriggers().map((s) => [s.key, s.label]));
+
   Object.entries(discovered).forEach(([secKey, sec]) => {
-    const title = getSectionTitleFromPanel
-      ? getSectionTitleFromPanel(sec.element, secKey)
-      : sectionTitleFromKey(secKey);
+    const title = sensSubTitleByKey.has(secKey)
+      ? sensSubTitleByKey.get(secKey)
+      : (getSectionTitleFromPanel
+          ? getSectionTitleFromPanel(sec.element, secKey)
+          : sectionTitleFromKey(secKey));
 
     // ---- Section-Ignore (Meta-Panels etc.) ----
     if (IGNORED_SECTION_TITLES.includes(title?.trim())) return;
@@ -1773,30 +1824,40 @@ function buildPortfolioHierarchy() {
   const TAB   = 'tab__analyse';
   const GSEL  = 'analyse-grp-select-portfolio';
   const GPERF = 'analyse-grp-performance';
+  const SENS = 'sensitivities';   // Gruppe; Kinder DYNAMISCH aus den Sidebar-Sub-Triggern.
+  const sensSubs = readSensitivitiesSubTriggers();   // [{tab, key, label}]
+  const sensChildKeys = sensSubs.map((s) => s.key);
+
   const parents = {
     selectPort: GSEL, newDeals: GSEL, deals: GSEL, [GSEL]: TAB,
     concentration: TAB,
     'performance-history': GPERF, 'performance-dashboard': GPERF, [GPERF]: TAB,
     performance: 'performance-dashboard',
-    sensitivities: TAB, 'mvar-scenarios': TAB, liquidity: TAB,
+    [SENS]: TAB,
+    'mvar-scenarios': TAB, liquidity: TAB,
   };
+  sensSubs.forEach((s) => { parents[s.key] = SENS; });
+
   const order = {
-    [TAB]: [GSEL, 'concentration', GPERF, 'sensitivities', 'mvar-scenarios', 'liquidity'],
+    [TAB]: [GSEL, 'concentration', GPERF, SENS, 'mvar-scenarios', 'liquidity'],
     [GSEL]: ['selectPort', 'newDeals', 'deals'],
     [GPERF]: ['performance-history', 'performance-dashboard'],
     'performance-dashboard': ['performance'],
+    [SENS]: sensChildKeys,
   };
   const groupNodes = [
     { key: TAB,   title: tabLabel('ANALYSE_Tab', 'PORTFOLIO') },
     { key: GSEL,  title: 'Select Portfolio' },
     { key: GPERF, title: 'Performance' },
+    { key: SENS,  title: 'Sensitivities' },
   ];
   const labels = {
     selectPort: 'Portfolio', newDeals: 'Create Portfolio', deals: 'Change Portfolio',
     concentration: 'Breakdown',
     'performance-history': 'Profit & Loss', 'performance-dashboard': 'Yield', performance: 'Yield vs Rates',
-    sensitivities: 'Sensitivities', 'mvar-scenarios': 'Scenarios', liquidity: 'Liquidity',
+    'mvar-scenarios': 'Scenarios', liquidity: 'Liquidity',
   };
+  sensSubs.forEach((s) => { labels[s.key] = s.label; });
   return { parents, order, groupNodes, labels };
 }
 

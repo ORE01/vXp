@@ -2309,9 +2309,8 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
           </div>
           <div class="conc-kpi" data-sens-kpi-for="pv01">
-            <div class="conc-kpi__lbl">Duration (Years)</div>
-            <div class="sens-kpi-value" id="SensDuration">—</div>
-            <div class="sens-kpi-chg" id="SensDurationChg"></div>
+            <div class="conc-kpi__lbl">PV01 Weighted Tenor</div>
+            <div class="sens-kpi-value" id="SensPV01WTenor">—</div>
           </div>
           <!-- IR-Duration-Karte (2 Balken Total/Valued NAV). Einzelbreite (conc-kpi--dur2),
                eigene IDs (sensIrDur*), befuellt in homeOverview.js parallel zur Overview-Kachel. -->
@@ -2333,7 +2332,7 @@ Feature:    Wenn es nur in einem Panel gilt
           <!-- Mittlere Restlaufzeit (2 Balken Total/Valued NAV), NAV-gewichtet.
                Eigene IDs (sensWam*), befuellt in homeOverview.js. -->
           <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="pv01">
-            <div class="pf-dur-cap">Average Maturity</div>
+            <div class="pf-dur-cap">Average Time to Maturity</div>
             <div class="pf-dur2">
               <div class="pf-dur-row">
                 <span class="pf-dur-lbl">Total NAV</span>
@@ -2387,7 +2386,7 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
           <!-- Average Maturity (2 Balken), CPV01-Tab-Variante (gleiche portfolioweite Restlaufzeit). -->
           <div class="conc-kpi conc-kpi--dur2" data-sens-kpi-for="cpv01">
-            <div class="pf-dur-cap">Average Maturity</div>
+            <div class="pf-dur-cap">Average Time to Maturity</div>
             <div class="pf-dur2">
               <div class="pf-dur-row">
                 <span class="pf-dur-lbl">Total NAV</span>
@@ -2411,9 +2410,9 @@ Feature:    Wenn es nur in einem Panel gilt
 
       <!-- Report-Spiegel (unsichtbar): Sensitivities-KPIs als KPI-Baender fuer Preview/PDF.
            Drei getrennte Baender -> im PDF PV01 / CPV01 / Vega je eigene Seite. -->
-      <div class="data-container" id="sensKpiTablePv01"  data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
-      <div class="data-container" id="sensKpiTableCpv01" data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
-      <div class="data-container" id="sensKpiTableVega"  data-label="Key Figures" data-kpi-band="1" style="display:none;"></div>
+      <div class="data-container" id="sensKpiTablePv01"  data-label="Key Figures" data-kpi-band="1" data-sens-tab="pv01"  style="display:none;"></div>
+      <div class="data-container" id="sensKpiTableCpv01" data-label="Key Figures" data-kpi-band="1" data-sens-tab="cpv01" style="display:none;"></div>
+      <div class="data-container" id="sensKpiTableVega"  data-label="Key Figures" data-kpi-band="1" data-sens-tab="vega"  style="display:none;"></div>
 
       <!-- Sensitivity Type Tabs -->
       <!-- Tab-Leiste ausgeblendet: die Umschaltung erfolgt jetzt ueber die Sidebar-Sub-Trigger
@@ -2460,12 +2459,13 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">Interest rate sensitivity by maturity bucket</div>
+              <div class="sens-card-title">Where is the portfolio most sensitive to interest rate movements?</div>
+              <div class="sens-card-subtitle">PV01 contribution by tenor</div>
             </div>
           </div>
 
           <div class="pv01-chart-container chart-container">
-            <canvas id="PV01Chart" data-label="PV01 by Tenor"></canvas>
+            <canvas id="PV01Chart" data-label="PV01 by Tenor" data-sens-tab="pv01"></canvas>
           </div>
         </div>
 
@@ -2477,7 +2477,7 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
           </div>
 
-          <div class="data-container" id="IRSensDataContainer"></div>
+          <div class="data-container" id="IRSensDataContainer" data-label="PV01 Details" data-sens-tab="pv01"></div>
         </div>
 
         <!-- PV01-Verlauf aus der Portfolio-History (bp) — aufgeteilte Haelfte des kombinierten
@@ -2485,12 +2485,12 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card sens-hist-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">PV01 development</div>
-              <div class="sens-card-subtitle">Historic PV01 (bp) over time</div>
+              <div class="sens-card-title">How has interest rate sensitivity changed over time?</div>
+              <div class="sens-card-subtitle">Historic portfolio PV01</div>
             </div>
           </div>
           <div class="sens-hist-chart-container">
-            <canvas id="sensPv01HistChart" data-label="PV01 development"></canvas>
+            <canvas id="sensPv01HistChart" data-label="PV01 development" data-sens-tab="pv01"></canvas>
           </div>
         </div>
 
@@ -2516,12 +2516,13 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">Credit spread sensitivity by rating bucket</div>
+              <div class="sens-card-title">Where is the portfolio most sensitive to credit spread movements?</div>
+              <div class="sens-card-subtitle">CPV01 contribution by rating bucket</div>
             </div>
           </div>
 
           <div class="cpv01-chart-container chart-container">
-            <canvas id="CPV01Chart" data-label="CPV01 by Rating Bucket"></canvas>
+            <canvas id="CPV01Chart" data-label="CPV01 by Rating Bucket" data-sens-tab="cpv01"></canvas>
           </div>
         </div>
 
@@ -2533,7 +2534,7 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
           </div>
 
-          <div class="data-container" id="CSSensDataContainer"></div>
+          <div class="data-container" id="CSSensDataContainer" data-label="CPV01 Details" data-sens-tab="cpv01"></div>
         </div>
 
         <!-- CPV01-Verlauf aus der Portfolio-History (bp) — zweite Haelfte des kombinierten
@@ -2541,12 +2542,12 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card sens-hist-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">CPV01 development</div>
-              <div class="sens-card-subtitle">Historic CPV01 (bp) over time</div>
+              <div class="sens-card-title">How has credit spread sensitivity changed over time?</div>
+              <div class="sens-card-subtitle">Historic portfolio CPV01</div>
             </div>
           </div>
           <div class="sens-hist-chart-container">
-            <canvas id="sensCpv01HistChart" data-label="CPV01 development"></canvas>
+            <canvas id="sensCpv01HistChart" data-label="CPV01 development" data-sens-tab="cpv01"></canvas>
           </div>
         </div>
 
@@ -2571,12 +2572,13 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="sens-chart-card">
           <div class="sens-card-header">
             <div>
-              <div class="sens-card-title">Parallel swaption volatility sensitivity</div>
+              <div class="sens-card-title">Where is the portfolio most sensitive to volatility movements?</div>
+              <div class="sens-card-subtitle">Vega contribution by tenor</div>
             </div>
           </div>
 
           <div class="vega-chart-container chart-container">
-            <canvas id="VegaChart"></canvas>
+            <canvas id="VegaChart" data-label="Vega by Tenor" data-sens-tab="vega"></canvas>
           </div>
         </div>
 
@@ -2588,7 +2590,7 @@ Feature:    Wenn es nur in einem Panel gilt
             </div>
           </div>
 
-          <div class="data-container" id="VegaSensDataContainer"></div>
+          <div class="data-container" id="VegaSensDataContainer" data-label="Vega Details" data-sens-tab="vega"></div>
         </div>
 
         <!-- Drill-down: eigene Tabelle unter Graph + Vega-Details (volle Breite). -->
@@ -2655,9 +2657,9 @@ Feature:    Wenn es nur in einem Panel gilt
           <canvas id="crTailContribChartNorm" width="560" height="260" style="width:100%; height:auto;" data-label="Top tail drivers &mdash; Market adjusted"></canvas>
         </div>
       </div>
-      <!-- Reihe 2: Funnel (#1) + Scatter + TCM-Tabelle. -->
-      <div style="display:grid; grid-template-columns: 0.8fr 1fr 1fr; gap:20px;">
-        <div class="cr-tail-tile" style="display:flex; flex-direction:column;">
+      <!-- Reihe 2: Scatter + TCM-Tabelle. Funnel ausgeblendet (display:none), bleibt im DOM. -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        <div class="cr-tail-tile" style="display:none;">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How does tail risk concentrate?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:10px; color:var(--text-muted); font-weight:600;">Concentration funnel</div>
           <div id="crTcmFunnelNorm" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"></div>
@@ -2831,9 +2833,9 @@ Feature:    Wenn es nur in einem Panel gilt
           <canvas id="crTailContribChartHist" width="560" height="260" style="width:100%; height:auto;" data-label="Top tail drivers &mdash; Historic"></canvas>
         </div>
       </div>
-      <!-- Reihe 2: Funnel (#1) + Scatter + TCM-Tabelle. -->
-      <div style="display:grid; grid-template-columns: 0.8fr 1fr 1fr; gap:20px;">
-        <div class="cr-tail-tile" style="display:flex; flex-direction:column;">
+      <!-- Reihe 2: Scatter + TCM-Tabelle. Funnel ausgeblendet (display:none), bleibt im DOM. -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        <div class="cr-tail-tile" style="display:none;">
           <div style="font-size:13px; color:var(--text-bright); font-weight:700; margin-bottom:1px;">How does tail risk concentrate?</div>
           <div class="conc-panel__title" style="font-size:11px; margin-bottom:10px; color:var(--text-muted); font-weight:600;">Concentration funnel</div>
           <div id="crTcmFunnelHist" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;"></div>

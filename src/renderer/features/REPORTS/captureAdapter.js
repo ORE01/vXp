@@ -63,3 +63,16 @@ export function getOffersTableHost(containerId = OFFERS_TABLE_CONTAINER_ID) {
 export function getInAppById(id) {
   return document.getElementById(id);
 }
+
+/**
+ * The Overview "as of" status line (#homeAsOf), e.g.
+ * "Portfolio: UNI  ·  Portfolio 2026-09-24  ·  Portfolio Trades 2026-09-16  ·  ...".
+ * Returns the individual dot-separated items as a trimmed array (empty if the
+ * Overview has not been rendered yet). REPORTS uses it for the PDF cover page.
+ */
+export function getOverviewStatusItems() {
+  const el = document.getElementById('homeAsOf');
+  const txt = el ? (el.textContent || '').trim() : '';
+  if (!txt) return [];
+  return txt.split('·').map((s) => s.trim()).filter(Boolean);
+}
