@@ -414,11 +414,23 @@ function wirePanelPathTitles() {
   // is authoritative for the Breakdown dimensions, which all share #panel-concentration
   // (so panelId alone can't distinguish Issuer from Product Categories).
   document.addEventListener('click', (e) => {
-    const trig = e.target?.closest?.('.section-trigger[data-panel]');
+    // Leaf-Trigger, die etwas oeffnen: data-panel (Panels) ODER data-prod-add (Add-Product-
+    // Drawer, z.B. "Simple FRN" hat KEIN data-panel). Reine Gruppen-Toggles ohne beides
+    // (nur Aufklappen) werden nicht markiert.
+    const trig = e.target?.closest?.('.section-trigger[data-panel], .section-trigger[data-prod-add]');
     if (!trig) return;
-    const modal = document.getElementById(ANALYSE_MODAL_ID);
-    if (!modal || !modal.contains(trig)) return;
+    // Roter Aktiv-Schatten in JEDER Tab-Sidebar: alle Tab-Modals tragen class "table".
+    if (!trig.closest('.table')) return;
     activateTriggerEl(trig);
+  });
+
+  // Aktiven Tab in der oberen Leiste markieren (roter Rahmen): der Tab, in dessen Menue
+  // man gerade ist. Faengt Nutzer-Klicks UND programmatische .click() (z.B. Overview-Icons).
+  document.addEventListener('click', (e) => {
+    const tab = e.target?.closest?.('.tablinks');
+    if (!tab) return;
+    document.querySelectorAll('.tablinks.tab-active').forEach((t) => t.classList.remove('tab-active'));
+    tab.classList.add('tab-active');
   });
 
   document.addEventListener('panel:opened', (e) => {
@@ -520,5 +532,7 @@ export function initializeTabs() {
 
   // Landing nach Login = OVERVIEW (frueher: kein Modal sichtbar -> nur Header).
   showModal('HOME_Modal', tables);
+  // Initialen aktiven Tab markieren (roter Rahmen) — der Klick-Listener uebernimmt danach.
+  document.getElementById('HOME_Tab')?.classList.add('tab-active');
   try { window.renderHomeOverview?.(); } catch (_) {}
 }

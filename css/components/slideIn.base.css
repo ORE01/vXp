@@ -136,10 +136,12 @@
 .risk-acc:has(.select-portfolio-head) .section-trigger { --trigger-accent: #6C9BD1 !important; }
 /* Portfolio-Ansicht: ALLE Trigger-Akzente hellblau (Portfolio-Farbe). */
 #ANALYSE_Modal.view-analyse .section-trigger.has-accent{ --trigger-accent: #6C9BD1 !important; }
-/* Der Trigger, dessen Panel gerade offen ist, bekommt einen ROTEN linken Streifen —
-   in BEIDEN Ansichten (Valuation + Risk). box-shadow direkt gesetzt, damit er die
-   Bereichsfarbe/den Inline-Akzent unabhaengig von has-accent ueberschreibt. */
-#ANALYSE_Modal .section-trigger.trigger-active{ box-shadow: inset 3px 0 0 #E02424 !important; }
+/* Der Trigger, dessen Panel gerade offen ist, bekommt in JEDER Sidebar (alle Tabs: Portfolio/
+   Risk, UPDATES, Market Data, Reports, Issuer, Products, Data Provider, Customer Setup …) einen
+   ROTEN linken Streifen. .trigger-active wird ausschliesslich von tabs.js gesetzt (panel:opened /
+   Klick), daher ist die globale Regel unbedenklich. box-shadow direkt -> ueberschreibt jede
+   Bereichsfarbe/den Inline-Akzent unabhaengig von has-accent. */
+.section-trigger.trigger-active{ box-shadow: inset 3px 0 0 #E02424 !important; }
 /* Mit Icon: Inhalt linksbuendig, Chevron bleibt rechts. */
 .section-trigger.has-ico { justify-content: flex-start; }
 .section-trigger.has-ico .chev { margin-left: auto; }

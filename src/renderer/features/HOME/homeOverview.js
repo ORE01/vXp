@@ -2031,8 +2031,9 @@ export function renderHomeOverview() {
     const cvar = day(_appMeta?.cvar_calculation_at || _pump.cvar_calculation_at) || latestCreatedAtOf(appState.getAllCvarData?.());
     const mkt  = latestRatesDate();
     const hist = latestMarketDataDate();
-    // Historic Risk Data = juengster "Save to Historic Metrics"-Eintrag (PortfolioHistoryMetrics)
-    // fuer das gewaehlte Portfolio.
+    // Portfolio Historic Data = juengster "Save to Historic Metrics"-Eintrag
+    // (PortfolioHistoryMetrics) fuer das gewaehlte Portfolio. Nur sichtbar, wenn es fuer
+    // dieses Portfolio ueberhaupt gespeicherte Historik gibt (sonst leer -> weggelassen).
     let histRisk = '';
     for (const r of (appState.getPortfolioHistoryData?.() || [])) {
       if (String(r?.port_name ?? r?.PORT_NAME ?? '').trim() !== port) continue;
@@ -2043,7 +2044,9 @@ export function renderHomeOverview() {
     if (imp)  parts.push(`Portfolio Trades ${imp}`);
     if (mkt)  parts.push(`Market Data ${mkt}`);
     if (hist) parts.push(`Historic Data ${hist}`);
-    if (histRisk) parts.push(`Historic Risk Data ${histRisk}`);
+    // Immer anzeigen; hat das gewaehlte Portfolio keine gespeicherte Historik -> "–",
+    // damit klar ist, dass es (noch) keine Historic Data gibt (statt den Eintrag wegzulassen).
+    parts.push(`Portfolio Historic Data ${histRisk || '–'}`);
     if (mvar) parts.push(`Market Risk ${mvar}`);
     if (cvar) parts.push(`Credit Risk ${cvar}`);
     return `Portfolio: ${port}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;
