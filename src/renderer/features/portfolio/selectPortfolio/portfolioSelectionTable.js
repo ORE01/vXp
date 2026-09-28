@@ -238,11 +238,47 @@ function fillFromProduct(rowValue, productCandidates = []) {
   return rowValue ?? '';
 }
 
+// Show the as-of date of the last calculation for the given portfolio in the
+// Show-Portfolio toolbar. The portfolio-pricing tables carry no wall-clock
+// timestamp, so ASOF_DATE (the calculation's valuation date) is the only signal.
+function updatePortLastCalcLabel(portName) {
+  const el = document.getElementById('portLastCalcDate');
+  if (!el) return;
+
+  const norm = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim();
+  const rows = appState.getPortfolioRiskSensitivitiesData?.() || [];
+  const asof = rows.find(
+    (r) => norm(r.PORT_NAME ?? r.port_name) === norm(portName)
+  )?.ASOF_DATE ?? rows.find(
+    (r) => norm(r.PORT_NAME ?? r.port_name) === norm(portName)
+  )?.asof_date;
+
+  if (!asof) {
+    el.textContent = '';
+    el.title = '';
+    return;
+  }
+
+  // "September 27th, 2026" -> 27-09-2026 (DD-MM-YYYY); raw string as fallback.
+  let text = String(asof);
+  const d = new Date(String(asof).replace(/(\d+)(st|nd|rd|th)/i, '$1'));
+  if (!Number.isNaN(d.getTime())) {
+    const p = (n) => String(n).padStart(2, '0');
+    text = `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`;
+  }
+
+  el.textContent = `Last calculated: ${text}`;
+  el.title = 'Valuation as-of date of the last portfolio calculation';
+}
+
 export function handlePortProdData(receivedData, index, port_name) {
   const elementId = `portDataContainer${index}`;
   const portDataContainer = document.getElementById(elementId);
 
   if (!portDataContainer || !Array.isArray(receivedData)) return;
+
+  // Main Show-Portfolio table only (compare panels use index 1/2).
+  if (index === 0) updatePortLastCalcLabel(port_name);
 
   // 1) Risk-Anreicherung: fügt PV01rel/CPV01rel (= IR/CS Duration) und Risk-
   //    Summaries pro Trade hinzu (port_name nötig für den Trade-Join).

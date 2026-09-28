@@ -242,12 +242,21 @@ function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
   const varRel = Math.abs(Number(cvar?.VaR_rel));
   const esAbs = Math.abs(Number(cvar?.ES_abs));
   const esRel = Math.abs(Number(cvar?.ES_rel));
-  const base = (Number.isFinite(varAbs) && Number.isFinite(varRel) && varRel > 0) ? varAbs / varRel : NaN;
+  // base = NAV; derive from VaR, but VaR=0 makes varAbs/varRel = 0/0 = NaN, so fall
+  // back to ES (esAbs/esRel = NAV) -> rel figures stay computable when VaR is degenerate.
+  const base = (Number.isFinite(varAbs) && Number.isFinite(varRel) && varRel > 0)
+    ? varAbs / varRel
+    : (Number.isFinite(esAbs) && Number.isFinite(esRel) && esRel > 0 ? esAbs / esRel : NaN);
 
   const haveEl = elCnt > 0, haveVar = Number.isFinite(varAbs), haveEs = Number.isFinite(esAbs);
   const elRel = (haveEl && Number.isFinite(base)) ? elSum / base : NaN;
   const edeRel = (haveEl && Number.isFinite(base)) ? edeSum / base : NaN;
-  const ecAbs = (haveEl && haveVar) ? varAbs - elSum : NaN;
+  // EC = VaR − EL. For a small, high-grade book the 99.9% VaR can pin to 0 (fewer than
+  // (1−conf) of scenarios default) -> VaR ≤ EL and VaR−EL would be negative. Then use the
+  // coherent tail measure EC = ES − EL (always ≥ 0, reflects the real tail).
+  const _ecVarDegenerate = haveEl && haveVar && haveEs && varAbs <= elSum;
+  const ecAbs = _ecVarDegenerate ? (esAbs - elSum)
+                                 : ((haveEl && haveVar) ? varAbs - elSum : NaN);
   const ecRel = (Number.isFinite(ecAbs) && Number.isFinite(base)) ? ecAbs / base : NaN;
 
   const fA = (x) => Number.isFinite(x) ? `EUR ${_fmtKpiCompact.format(x)}` : '–';
@@ -309,7 +318,7 @@ function renderCreditKpiSet(port, suffix, opts, rowsOverride) {
                   title: '= EAD × LGD × PD',
                   abs: haveEl ? elSum : null, rel: _pct(elRel) }),
         kpiCard({ tileKey: 'credit_ec', metric: 'ec', connector: '=', label: 'Economic Capital (EC)', pairInline: true,
-                  title: '= VaR − EL', abs: ecAbs, rel: _pct(ecRel) }),
+                  title: _ecVarDegenerate ? '= ES − EL' : '= VaR − EL', abs: ecAbs, rel: _pct(ecRel) }),
         kpiCard({ tileKey: 'credit_var_hist', metric: 'var', connector: '→', label: 'Value at Risk (VaR)', pairInline: true,
                   title: `Credit VaR${_confTxt ? ' · ' + _confTxt : ''}`, dot: _cvarState || null,
                   abs: haveVar ? varAbs : null, rel: _pct(varRel), chg: _varChg }),
@@ -486,7 +495,7 @@ function renderEadKpis(filtered, port_name) {
 
   const rows = Array.isArray(filtered) ? filtered : [];
   if (!rows.length) {
-    ['eadKpiCoverageVal', 'eadKpiLgdVal', 'eadKpiPdVal', 'eadKpiConcVal'].forEach(id => set(id, '–'));
+    ['eadKpiCoverageVal', 'eadKpiLgdVal', 'eadKpiPdVal', 'eadKpiConcVal', 'eadKpiAvgRatingNav'].forEach(id => set(id, '–'));
     ['eadKpiCoverageSub', 'eadKpiLgdSub', 'eadKpiPdSub', 'eadKpiConcSub'].forEach(id => set(id, ''));
     return;
   }
@@ -539,6 +548,25 @@ function renderEadKpis(filtered, port_name) {
     set('eadKpiConcVal', '–'); set('eadKpiConcSub', '');
   }
 
+  // 5) Avg Rating · NAV: NAV-gewichteter Ø-Rating-Notch -> Rating-Label (RATINGres, Fallback
+  //    RATING; ungeratet ausgeklammert). Identische Logik wie Yield-Dashboard/-vs-Rates,
+  //    daher aus den ROH-Portfoliozeilen (NAV), NICHT aus den EAD-Szenariozeilen.
+  let avgRatingNav = '–';
+  try {
+    const order = appState.ratingOrder || [];
+    const pRows = (appState.getAllPortfolioData?.() || [])
+      .filter(r => String(r?.port_name ?? r?.PORT_NAME ?? '').trim() === port_name);
+    let rn = 0, w = 0;
+    for (const r of pRows) {
+      const notch = order.indexOf(String(r.RATINGres ?? r.RATING ?? '').trim().toUpperCase());
+      if (notch < 0) continue;
+      const nav = num(r.NAV ?? r.nav ?? r.NAV_BASE);
+      if (nav > 0) { rn += notch * nav; w += nav; }
+    }
+    if (w > 0 && order.length) avgRatingNav = order[Math.max(0, Math.min(order.length - 1, Math.round(rn / w)))];
+  } catch (_) {}
+  set('eadKpiAvgRatingNav', avgRatingNav);
+
   // KPI-Kacheln in den Balkenfarben des LGD-Charts umrahmen (wie die MVaR-Factor-KPIs):
   // EAD-Balken (hellblau) fuer EAD/Konzentration, Loss-Exposure-Balken (rot) fuer LGD.
   // PD hat keinen Balken -> dezenter Standardrahmen.
@@ -567,6 +595,7 @@ function renderEadKpis(filtered, port_name) {
         ['Loss Given Default (LGD)', g('eadKpiLgdVal'), g('eadKpiLgdSub'), LOSS_RGB],
         ['Probability of Default (PD)', g('eadKpiPdVal'), [g('eadKpiPdSub'), g('eadKpiPdSub2')].filter(Boolean).join(' · '), ''],
         ['EAD Concentration', g('eadKpiConcVal'), g('eadKpiConcSub'), EAD_RGB],
+        ['Avg Rating · NAV', avgRatingNav, '', ''],
       ];
       tbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
         items.map(([k, v, s, f]) => `<tr><td>${_esc(k)}</td><td${s ? ` data-sub="${_esc(s)}"` : ''}${f ? ` data-frame="${f}"` : ''}>${_esc(v)}</td></tr>`).join('')

@@ -45,6 +45,10 @@ export function hidePanel(ctx) {
   if (ctx.type === 'legacy') {
     ctx.panel.hidden = true;
   }
+
+  document.dispatchEvent(new CustomEvent('panel:closed', {
+    detail: { panelId: ctx.panel.id },
+  }));
 }
 
 export function hasOpenPanels(ctx) {

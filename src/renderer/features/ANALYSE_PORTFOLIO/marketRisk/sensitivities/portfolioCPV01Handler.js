@@ -98,6 +98,11 @@ function updateCpv01WeightedRatingCard(holdings, fixedCats, ratingOrder) {
   setRow('sensWRatingTotalBar', 'sensWRatingTotal', notchNavAll, navAll);
   setRow('sensWRatingValuedBar', 'sensWRatingValued', notchNavValued, navValued);
 
+  // Total-NAV-Balken pink (#EC4899) -> verlinkt mit der pinken "Total Rating"-Linie/-Label
+  // im Chart, analog zur IR-Duration-Karte im PV01-Tab. Andere Balken bleiben Standard.
+  const _wrTotBar = document.getElementById('sensWRatingTotalBar');
+  if (_wrTotBar) _wrTotBar.style.background = '#EC4899';
+
   // Fraktionale Notches (fuer den Chart-Marker "Valued NAV Rating").
   return {
     notchTotal:  navAll > 0 ? notchNavAll / navAll : null,
@@ -221,6 +226,30 @@ function sortCreditBuckets(a, b) {
   if (ib !== -1) return 1;
 
   return String(a).localeCompare(String(b));
+}
+
+/**
+ * CPV01 Weighted Rating (der orange Chart-Marker "CPV01 Weighted Rating") als Rating-Label:
+ * netto-CPV01-gewichteter Schwerpunkt der nach Rating sortierten Buckets. EXAKT dieselbe
+ * Logik wie der Chart-Marker (allBuckets via sortCreditBuckets, Σ idx·v / Σ v, gerundet),
+ * damit KPI-Kachel und Marker denselben Wert zeigen. Wird VOR dem KPI-Update berechnet und
+ * uebergeben, damit auch das Report-Band (Preview/PDF) ihn enthaelt.
+ */
+function computeCpv01WeightedRatingLabel(sortedCPV01ByCcy) {
+  const src = sortedCPV01ByCcy || {};
+  const buckets = Array.from(new Set(
+    Object.values(src).flat().map(([b]) => b)
+  )).sort(sortCreditBuckets);
+  if (!buckets.length) return null;
+  const raw = {};
+  Object.values(src).forEach((rows) => {
+    (Array.isArray(rows) ? rows : []).forEach(([b, v]) => { raw[b] = (raw[b] || 0) + (Number(v) || 0); });
+  });
+  let wNum = 0, wDen = 0;
+  buckets.forEach((b, idx) => { const v = raw[b] || 0; wNum += idx * v; wDen += v; });
+  if (!(Math.abs(wDen) > 1e-12)) return null;
+  const i = Math.max(0, Math.min(buckets.length - 1, Math.round(wNum / wDen)));
+  return buckets[i];
 }
 
 export function handleCSSensData(appState, forcedPortName = null, holdingsOverride = null) {
@@ -393,6 +422,11 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
   const totalCpv01 = Object.values(calcData.cpv01TotalByCcy || {})
     .reduce((s, v) => s + (Number(v) || 0), 0);
 
+  // CPV01 Weighted Rating (orange Marker) VOR dem KPI-Update berechnen, damit die neue
+  // KPI-Kachel + das Report-Band (Preview/PDF) den Wert enthalten.
+  let cpv01WRating = null;
+  try { cpv01WRating = computeCpv01WeightedRatingLabel(calcData.sortedCPV01ByCcy); } catch (_) {}
+
   // KPI-Update isoliert: ein KPI-Fehler darf den CPV01-Chart-Render nicht blockieren.
   try {
     updateMarketRiskSensitivityKpis({
@@ -404,6 +438,7 @@ export function handleCSSensData(appState, forcedPortName = null, holdingsOverri
         sortedCPV01ByCcy: calcData.sortedCPV01ByCcy,
         filteredRowsCount: calcData.filteredRowsCount,
       },
+      cpv01WeightedRating: cpv01WRating,
       notionalByCcy: notionalByCcyFromHoldings(holdings),
       navTotal,
       navValued,
@@ -820,7 +855,11 @@ function createCPV01Chart({
   {
     const ORANGE = 'rgba(245, 130, 32, 0.95)';
     const BLUE = 'rgba(33, 150, 243, 0.95)';
-    const RED = 'rgba(211, 47, 47, 0.95)';
+    // Total Rating = helles Pink (verlinkt mit dem pinken "Total NAV"-Balken der Weighted-
+    // Rating-KPI-Karte), analog PV01. Sekundaere Linien dezenter/transparenter.
+    const MAGENTA = 'rgba(236, 72, 153, 0.95)';   // #EC4899
+    const MAGENTA_DIM = 'rgba(236, 72, 153, 0.55)';
+    const BLUE_DIM = 'rgba(33, 150, 243, 0.55)';
     const order = Array.isArray(ratingOrder) ? ratingOrder : [];
     const N = allBuckets.length;
 
@@ -855,9 +894,11 @@ function createCPV01Chart({
       return null;
     };
     const inRange = (cv) => cv != null && cv >= -0.5 && cv <= N - 0.5;
-    const mkLine = (value, color) => ({
+    // Orange (CPV01 Weighted Rating) = Hauptreferenzlinie -> durchgezogen, kraeftiger.
+    // Pink/Blau (Total/Valued Rating) = sekundaere Vergleichsgroessen -> gestrichelt, dezenter.
+    const mkLine = (value, color, { dash = [6, 4], width = 1.5 } = {}) => ({
       type: 'line', scaleID: 'x', value,
-      borderColor: color, borderWidth: 2, borderDash: [6, 4], drawTime: 'afterDatasetsDraw',
+      borderColor: color, borderWidth: width, borderDash: dash, drawTime: 'afterDatasetsDraw',
     });
 
     // Beide Marker sitzen auf der SAEULE ihres (gerundeten) Ratings (Saeulenmitte), nicht an
@@ -878,10 +919,10 @@ function createCPV01Chart({
     const { idx: valuedBarIdx, label: valuedLabel } = notchToBar(ratingNotchValued);
     const { idx: totalBarIdx, label: totalLabel } = notchToBar(ratingNotchTotal);
 
-    // Zeichenreihenfolge: blau/rot zuerst, orange (CPV01-Schwerpunkt) zuletzt/oben.
-    if (inRange(totalBarIdx))  pv01Annotations.totalRatingLine  = mkLine(totalBarIdx, RED);
-    if (inRange(valuedBarIdx)) pv01Annotations.valuedRatingLine = mkLine(valuedBarIdx, BLUE);
-    if (inRange(cpv01BarIdx))  pv01Annotations.cpv01WeightedLine = mkLine(cpv01BarIdx, ORANGE);
+    // Zeichenreihenfolge: pink/blau (sekundaer) zuerst, orange (CPV01-Schwerpunkt) zuletzt/oben.
+    if (inRange(totalBarIdx))  pv01Annotations.totalRatingLine  = mkLine(totalBarIdx, MAGENTA_DIM);
+    if (inRange(valuedBarIdx)) pv01Annotations.valuedRatingLine = mkLine(valuedBarIdx, BLUE_DIM);
+    if (inRange(cpv01BarIdx))  pv01Annotations.cpv01WeightedLine = mkLine(cpv01BarIdx, ORANGE, { dash: [], width: 2.5 }); // solid, on top
 
     // Label-Stapel: jede Zeile eigen, lateral ueber ihrer Linie; Anker haelt sie im Plot.
     let yTop = 0;
@@ -892,14 +933,16 @@ function createCPV01Chart({
     if (!(yTop > 0)) yTop = 100;
 
     const stack = [];
-    if (inRange(totalBarIdx))  stack.push([`Total Rating ${totalLabel}`, RED, totalBarIdx]);
+    if (inRange(totalBarIdx))  stack.push([`Total Rating ${totalLabel}`, MAGENTA, totalBarIdx]);
     if (inRange(valuedBarIdx)) stack.push([`Valued Rating ${valuedLabel}`, BLUE, valuedBarIdx]);
     if (inRange(cpv01BarIdx))  stack.push([`CPV01 Weighted Rating ${allBuckets[cpv01BarIdx]}`, ORANGE, cpv01BarIdx]);
 
     const span = Math.max(1, N - 1);
     stack.forEach(([content, color, cv], i) => {
       const f = cv / span;
-      const xPos = f > 0.6 ? 'end' : (f < 0.4 ? 'start' : 'center');
+      // Labels seitlich NEBEN die Linie (nie zentriert darueber) — wie PV01: nur nah am
+      // rechten Rand nach links ausklappen, sonst nach rechts.
+      const xPos = f > 0.6 ? 'end' : 'start';
       pv01Annotations[`lbl${i}`] = {
         type: 'label', xValue: cv, yValue: yTop,
         position: { x: xPos, y: 'start' },

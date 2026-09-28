@@ -354,6 +354,15 @@ export function createMarketRiskRefresh({ appState } = {}) {
       refreshMarketRiskSensitivitiesUI('product-risk-sensitivities-data-refreshed');
     });
 
+    // Die PV01/CPV01-Balken werden aus den GEFILTERTEN Holdings (getFilteredPortData) ×
+    // ProductRiskSensitivities gebaut. Diese Holdings sind ein Snapshot, der beim Port-
+    // Tabellen-Render gesetzt wird — oft NACH den Sensitivitaeten-Events. Ohne diesen Listener
+    // blieben die Balken nach Calculate/Portfolio-Wechsel stale (bis Reload). Jetzt: sobald die
+    // gefilterten Holdings aktualisiert werden, die Sensitivitaeten (debounced) neu rendern.
+    document.addEventListener('filtered-port-data-updated', () => {
+      refreshMarketRiskSensitivitiesUI('filtered-port-data-updated');
+    });
+
 document.addEventListener('portfolio-context-changed', (event) => {
   const riskRows = getRiskRows(appState);
   const availablePorts = getAvailablePorts(riskRows);

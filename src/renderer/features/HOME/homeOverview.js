@@ -1784,10 +1784,31 @@ function bindHomeCardLinks() {
     if (t) t.click();
   });
 
+  // Overview-Icon Market/Credit Risk: Risk-Sidebar oeffnen, die passende GRUPPE (Market Risk
+  // bzw. Credit Risk) aufklappen und deren GRUPPEN-Trigger rot markieren (.trigger-active) —
+  // aber KEIN Panel oeffnen, damit die Overview sichtbar bleibt, bis der Nutzer in der Sidebar
+  // ein Unterelement waehlt (dann wandert der rote Schatten via Klick-Handler dorthin).
+  const openRiskGroupOverview = (groupLabel) => tabThenPanel('RISK_Tab', null, () => {
+    const modal = document.getElementById('ANALYSE_Modal');
+    const toggle = [...(modal?.querySelectorAll('.section-trigger.risk-acc-toggle') || [])]
+      .find((t) => (t.querySelector('.section-header')?.textContent || '').trim() === groupLabel);
+    if (!toggle) return;
+    // Diese Gruppe + alle uebergeordneten Gruppen aufklappen (kein Panel -> Overview bleibt).
+    let acc = toggle.closest('.risk-acc');
+    while (acc) {
+      acc.classList.add('is-expanded');
+      acc.querySelector(':scope > .risk-acc-toggle')?.setAttribute('aria-expanded', 'true');
+      acc = acc.parentElement?.closest('.risk-acc');
+    }
+    // Gruppen-Trigger rot markieren; bleibt bis der Nutzer ein Unterelement anklickt.
+    document.querySelectorAll('.section-trigger.trigger-active').forEach((t) => t.classList.remove('trigger-active'));
+    toggle.classList.add('trigger-active');
+  });
+
   const ACTIONS = {
     homePfIco: () => tabThenPanel('ANALYSE_Tab', null),
-    homeMktIco: () => tabThenPanel('RISK_Tab', 'panel-market-dashboard'),
-    homeCrIco: () => tabThenPanel('RISK_Tab', 'panel-credit-dashboard'),
+    homeMktIco: () => openRiskGroupOverview('Market Risk'),
+    homeCrIco: () => openRiskGroupOverview('Credit Risk'),
   };
 
   // Alle Credit-Overview-Kacheln als klickbare Trigger -> passendes Credit-Panel.

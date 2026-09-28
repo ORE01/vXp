@@ -109,6 +109,11 @@ function updateSensDurationMaturityCards({
   setBar('sensIrDurValuedBar', 'sensIrDurValued', dV, durScale);
   setBar('sensWamTotalBar', 'sensWamTotal', wT, wamScale);
   setBar('sensWamValuedBar', 'sensWamValued', wV, wamScale);
+
+  // Total-NAV-Balken der IR-Duration-Karte pink faerben -> verlinkt mit der pinken
+  // "Total Duration"-Linie/-Label im Chart (#EC4899). Andere Balken bleiben Standard.
+  const _irTotBar = document.getElementById('sensIrDurTotalBar');
+  if (_irTotBar) _irTotBar.style.background = '#EC4899';
 }
 
 /**
@@ -832,12 +837,13 @@ function createPV01Chart({
     const wavgTenor = (Math.abs(wDen) > 1e-9 && wAbs >= PV01_NO_SENS_EPS) ? wNum / wDen : null;
     const avgCV = wavgTenor != null ? wavgTenor - 1 - startIndex : null;
 
-    // Label-Farben (kraeftig, gut lesbar).
-    const RED = 'rgba(211, 47, 47, 0.95)';
+    // Label-Farben (kraeftig, gut lesbar). Total Duration = helles Pink (verlinkt mit dem
+    // pinken "Total NAV"-Balken der IR-Duration-KPI-Karte).
+    const MAGENTA = 'rgba(236, 72, 153, 0.95)';   // #EC4899 (helles Pink)
     const BLUE = 'rgba(33, 150, 243, 0.95)';
     const ORANGE = 'rgba(245, 130, 32, 0.95)';
     // Sekundaere Linien-Farben (Duration = Vergleichsgroesse) dezenter/transparenter.
-    const RED_DIM = 'rgba(211, 47, 47, 0.55)';
+    const MAGENTA_DIM = 'rgba(236, 72, 153, 0.55)';
     const BLUE_DIM = 'rgba(33, 150, 243, 0.55)';
     const fmtY = (v) => `${v.toFixed(2).replace('.', ',')}Y`;
 
@@ -857,7 +863,7 @@ function createPV01Chart({
     // Order matters within the same drawTime: later keys paint on top. Duration-Linien
     // zuerst (sekundaer), ORANGE zuletzt -> Hauptreferenzlinie liegt oben auf.
     if (inRange(durValuedCV)) pv01Annotations.durationValuedLine = mkLine(durValuedCV, BLUE_DIM);
-    if (inRange(durTotalCV))  pv01Annotations.durationTotalLine  = mkLine(durTotalCV, RED_DIM);
+    if (inRange(durTotalCV))  pv01Annotations.durationTotalLine  = mkLine(durTotalCV, MAGENTA_DIM);
     if (inRange(avgCV))       pv01Annotations.wavgLine           = mkLine(avgCV, ORANGE, { dash: [], width: 2.5 }); // solid, on top
 
     // Label stack: one row per metric (top to bottom, never overlapping), but each
@@ -874,7 +880,7 @@ function createPV01Chart({
     // Duration-Labels zweizeilig: 2. Zeile "Zero-Bond Equivalent" (Duration = zero-bond-
     // aequivalente Restlaufzeit). Average Risk Tenor bleibt einzeilig.
     const stack = [];
-    if (inRange(durTotalCV))  stack.push([[`Total Duration ${fmtY(durTotal)}`, 'Zero-Bond Equivalent'], RED, durTotalCV]);
+    if (inRange(durTotalCV))  stack.push([[`Total Duration ${fmtY(durTotal)}`, 'Zero-Bond Equivalent'], MAGENTA, durTotalCV]);
     if (inRange(durValuedCV)) stack.push([[`Valued Duration ${fmtY(durValued)}`, 'Zero-Bond Equivalent'], BLUE, durValuedCV]);
     if (inRange(avgCV))       stack.push([`Average Risk Tenor ${fmtY(wavgTenor)}`, ORANGE, avgCV]);
     // (Gap-Label sitzt zentriert in der Fläche, siehe Box oben -- nicht im Stapel.)

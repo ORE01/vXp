@@ -73,12 +73,13 @@ function bindPerfContextDrill(canvas, targetId, showAllFallback = false) {
 function ensurePerfZoomResetButton(canvas, targetId) {
   const box = canvas?.parentElement;
   if (!box) return;
-  if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
   if (box.querySelector('.perf-zoom-tools')) return;
 
   const bar = document.createElement('div');
   bar.className = 'perf-zoom-tools';
-  bar.style.cssText = 'position:absolute;top:4px;right:4px;z-index:5;display:flex;gap:3px;';
+  // Rechtsbuendig als normaler Block DIREKT ueber der Graph-Flaeche (nicht absolut oben
+  // rechts) -> ueberdeckt die Ueberschrift nicht mehr.
+  bar.style.cssText = 'display:flex;gap:3px;justify-content:flex-end;margin-bottom:6px;';
 
   const mkBtn = (label, title, onClick) => {
     const b = document.createElement('button');
@@ -103,7 +104,9 @@ function ensurePerfZoomResetButton(canvas, targetId) {
     try { window[targetId + '_chartInstance']?.resetZoom?.(); } catch {}
   }));
 
-  box.appendChild(bar);
+  // Direkt vor dem Canvas einfuegen -> unter der (zuvor eingefuegten) Ueberschrift,
+  // ueber der Graph-Flaeche.
+  box.insertBefore(bar, canvas);
 }
 // Drill-Datenquelle: Positionen des gewaehlten Portfolios, angereichert mit den
 // normalisierten Yields (current + buy) in Prozent.
@@ -300,6 +303,26 @@ const portfolioData = appState.getPortAggData(elementId) || {};
   _set('yieldKpiTtm',      ttm == null ? '–' : `${ttm.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
   _set('yieldKpiDuration', dur == null ? '–' : `${dur.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`);
 
+  // Avg Rating · NAV: NAV-gewichteter Ø-Rating-Notch -> Rating-Label (RATINGres, Fallback
+  // RATING; NR/ungeratet ausgeklammert). Identische Logik wie das Yield-Dashboard.
+  let avgRatingNav = '–';
+  try {
+    const _order = appState.ratingOrder || [];
+    const _pn2 = port_name || appState.getSelectedPortTableName?.() || '';
+    const _normP2 = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
+    const _p2 = _normP2(_pn2);
+    const _rows2 = (appState.getAllPortfolioData?.() || []).filter(r => _normP2(r?.port_name) === _p2);
+    let _rn = 0, _w = 0;
+    for (const r of _rows2) {
+      const notch = _order.indexOf(String(r.RATINGres ?? r.RATING ?? '').trim().toUpperCase());
+      if (notch < 0) continue;
+      const nav = _num(r.NAV ?? r.nav ?? r.NAV_BASE);
+      if (Number.isFinite(nav) && nav > 0) { _rn += notch * nav; _w += nav; }
+    }
+    if (_w > 0 && _order.length) avgRatingNav = _order[Math.max(0, Math.min(_order.length - 1, Math.round(_rn / _w)))];
+  } catch (e) { console.warn('[Yield KPI] Avg-Rating-Berechnung fehlgeschlagen', e); }
+  _set('yieldKpiAvgRatingNav', avgRatingNav);
+
   // Aenderung zur Vorperiode (letzte Zeile) — nur wo Historie belastbar ist: der aktuelle
   // Portfolio-Yield (History-Feld RETURN = Yield je Periode). Fuer buy-yield / TtM / IR-duration
   // gibt es keine verlaessliche Historie -> keine Aenderungszeile ("falls wir sie haben").
@@ -319,25 +342,26 @@ const portfolioData = appState.getPortAggData(elementId) || {};
     }
   } catch (_) {}
 
-  // KPI 1 (Portfolio Yield current) und 3 (Δ vs buy) ausblenden — angezeigt bleiben nur
-  // "Portfolio Yield (at buy)", "Time to maturity (Ø)" und "IR duration".
-  ['yieldKpiCurrent', 'yieldKpiDelta'].forEach(id => {
+  // Nur "Δ vs buy" ausblenden. "Portfolio Yield (current)" ist als KPI #2 sichtbar.
+  ['yieldKpiDelta'].forEach(id => {
     const tile = document.getElementById(id)?.closest('.conc-kpi');
     if (tile) tile.style.display = 'none';
   });
 
-  // Report-Spiegel: die 3 sichtbaren KPIs als data-kpi-band-Tabelle fuer Preview/PDF.
+  // Report-Spiegel: die sichtbaren KPIs als data-kpi-band-Tabelle fuer Preview/PDF.
   const _ykTbl = document.getElementById('yieldKpiTable');
   if (_ykTbl) {
     const _fmt = (v, unit) => (v == null ? '–' : `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${unit}`);
     const _escK = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const _rows = [
-      ['Portfolio Yield (at buy)', _fmt(buy, '%')],
-      ['Time to maturity (Ø)',     _fmt(ttm, 'Y')],
-      ['IR duration',              _fmt(dur, 'Y')],
+      ['Portfolio Yield',          _fmt(buy, '%'), 'Yield at purchase'],
+      ['Portfolio Yield',          _fmt(cur, '%'), 'Current'],
+      ['Average Time to Maturity', _fmt(ttm, 'Y')],
+      ['Interest Rate Duration',   _fmt(dur, 'Y')],
+      ['Average Rating',           avgRatingNav,   'NAV-weighted'],
     ];
     _ykTbl.innerHTML = `<table class="conc-report-table"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${
-      _rows.map(([k, v]) => `<tr><td>${_escK(k)}</td><td>${_escK(v)}</td></tr>`).join('')
+      _rows.map(([k, v, s]) => `<tr><td>${_escK(k)}</td><td${s ? ` data-sub="${_escK(s)}"` : ''}>${_escK(v)}</td></tr>`).join('')
     }</tbody></table>`;
   }
 })();
@@ -514,10 +538,10 @@ if (false) console.log('[SUMMARY YIELD ACTIVE CURVE FINAL]', {
 
   if (portfolioYield && Array.isArray(EUSWData) && EUSWData.length > 0) {
 
-    insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'Portfolio Yield vs reference curve', subtitle: 'Maturity' });
-    insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Product Yield vs reference curve', subtitle: 'Maturity' });
-    insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'Portfolio Yield vs reference curve', subtitle: 'Duration' });
-    insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Product Yield vs reference curve', subtitle: 'Duration' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'euswapPortfolioYieldChart', title: 'How does the portfolio yield compare with the reference curve?', subtitle: 'Positioned by time to maturity' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'euswapProductYieldChart', title: 'Which products offer yield above or below the reference curve?', subtitle: 'Positioned by time to maturity' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'durationSwapChart', title: 'How does the portfolio yield compare on a duration-equivalent basis?', subtitle: 'Positioned by interest rate duration' });
+    insertHeadingIntoExistingChartBox({ canvasId: 'durationProductYieldChart', title: 'Which products stand out on a duration-adjusted basis?', subtitle: 'Positioned by interest rate duration' });
 
     // =========================
     // 1) Portfolio vs Maturity

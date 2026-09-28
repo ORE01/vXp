@@ -158,7 +158,7 @@ export function renderPerformanceDashboard() {
     // (Portfolio Yield + Profit / Loss in EUR).
     const kpiRows = [
       ['Portfolio Yield', _yieldTxt, _retChg ? { up: _retChg.up, chg: `${_retChg.bp} bp` } : null],
-      ['Profit / Loss', _eur(ertrag), null],
+      // Profit / Loss ausgeblendet (App-Kachel display:none) -> auch nicht in Preview/PDF.
       ['Avg Rating · Notional', _avgRatingNotional, null],
       ['Avg Rating · NAV buy',  _avgRatingNavBuy,   null],
       ['Avg Rating · NAV',      _avgRatingNav,      null],

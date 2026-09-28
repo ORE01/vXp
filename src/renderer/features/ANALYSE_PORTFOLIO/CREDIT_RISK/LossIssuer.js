@@ -114,6 +114,42 @@ const _clossVarLinePlugin = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Importance Sampling: die Sorted-Loss-by-Quantil-Darstellung (unterer Chart) ist
+// unter IS nicht aussagekraeftig — die Rohszenarien sind stress-verschoben, die
+// Rang-Quantil-Achse entspricht nicht dem wahren Wahrscheinlichkeitsmaß. In dem Fall
+// wird statt des Charts "Not applicable" angezeigt; ohne IS erscheint der normale
+// (rangbasierte) Chart wieder.
+// ---------------------------------------------------------------------------
+function showCombinedLossesNotApplicable(chartId) {
+  const canvas = document.getElementById(chartId);
+  const existing = (canvas && typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(canvas) : null;
+  if (existing) { try { existing.destroy(); } catch (e) {} }
+  if (window[chartId] && typeof window[chartId].destroy === 'function') { try { window[chartId].destroy(); } catch (e) {} }
+  if (canvas) canvas.style.display = 'none';
+  const legend = document.getElementById('clossChartLegend'); if (legend) legend.style.display = 'none';
+  const tools = document.querySelector('.closs-chart-tools'); if (tools) tools.style.display = 'none';
+  const scroll = document.getElementById('LossIssuerChartScroll');
+  let msg = document.getElementById('clossNotApplicable');
+  if (!msg && scroll && scroll.parentNode) {
+    msg = document.createElement('div');
+    msg.id = 'clossNotApplicable';
+    msg.style.cssText = 'display:flex; align-items:center; justify-content:center; min-height:200px; padding:24px; text-align:center; color:var(--text-muted); font-size:13px; line-height:1.6;';
+    scroll.parentNode.insertBefore(msg, scroll);
+  }
+  if (msg) {
+    msg.innerHTML = '<div><strong>Not applicable</strong><br>The loss-by-quantile distribution is not meaningful under importance sampling.<br>Disable importance sampling to view this chart — the reweighted loss distribution is shown above.</div>';
+    msg.style.display = 'flex';
+  }
+}
+
+function hideCombinedLossesNotApplicable() {
+  const canvas = document.getElementById('LossIssuerChartCombinedTop'); if (canvas) canvas.style.removeProperty('display');
+  const legend = document.getElementById('clossChartLegend'); if (legend) legend.style.removeProperty('display');
+  const tools = document.querySelector('.closs-chart-tools'); if (tools) tools.style.removeProperty('display');
+  const msg = document.getElementById('clossNotApplicable'); if (msg) msg.style.display = 'none';
+}
+
 // Drill-down fuer die kombinierte Loss-Chart (Balken = Quantil -> ausfallender
 // Emittent aus ISSUER_RANK). Dieselbe Engine wie die Market-Risk-Beitragspanels.
 // Nur eine Metrik-Schiene noetig ('var'); die 'es'-Config zeigt auf dieselben IDs
@@ -619,9 +655,20 @@ export function handleLossIssuerMainData(receivedData) {
 
   // Kombinierte Charts nur erstellen, wenn alle drei da sind
   if (ratingData.length > 0 && marketData.length > 0 && marketNormData.length > 0) {
-    // Rating/Market/Norm Losses in EINER horizontalen Balkenchart (gleicher Stil
-    // wie die früheren Einzelcharts), als 3 farbige Serien.
-    createCombinedLossesChart(ratingData, marketData, marketNormData, 'LossIssuerChartCombinedTop');
+    // Unter Importance Sampling ist die Sorted-Loss-by-Quantil-Darstellung nicht
+    // aussagekraeftig (Rohszenarien stress-verschoben -> Rang-Quantil != wahres
+    // Quantil) -> "Not applicable" anzeigen. Ohne IS: normaler (rangbasierter) Chart.
+    const _clossPort = appState.getSelectedPortTableName?.();
+    const _clossIsActive = (appState.getMfgcIssuerTail?.() || []).some(
+      r => String(r?.port_name ?? '').trim() === String(_clossPort ?? '').trim()
+    );
+    if (_clossIsActive) {
+      showCombinedLossesNotApplicable('LossIssuerChartCombinedTop');
+    } else {
+      // Rating/Market/Norm Losses in EINER horizontalen Balkenchart (3 farbige Serien).
+      hideCombinedLossesNotApplicable();
+      createCombinedLossesChart(ratingData, marketData, marketNormData, 'LossIssuerChartCombinedTop');
+    }
     // Auflistung aller Tail-Emittenten (>= VaR) unter dem Chart.
     renderClossTailList();
 

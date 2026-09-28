@@ -129,10 +129,17 @@
 .section-trigger.has-accent { box-shadow: inset 3px 0 0 var(--trigger-accent, transparent); }
 /* Gezielt den Farbstreifen unterdruecken (z.B. "Select Portfolio"-Kopf). */
 .section-trigger.no-accent.has-accent { box-shadow: none; }
-/* Select-Portfolio-Gruppe: Akzent-Streifen in Rot statt Portfolio-Blau (Kopf UND Sub-Trigger
-   wie Show/Create/Change Portfolio). --trigger-accent wird von tabs.js inline gesetzt -> hier
-   per !important ueberschreiben; :has() trifft die ganze Gruppe ueber den Kopf. */
-.risk-acc:has(.select-portfolio-head) .section-trigger { --trigger-accent: #e02424 !important; }
+/* Select-Portfolio-Gruppe (Kopf UND Sub-Trigger Show/Create/Change Portfolio): linker
+   Akzent-Streifen in Hellblau (Portfolio-Farbe, wie das Overview-Portfolio-Icon), in
+   BEIDEN Ansichten (Valuation + Risk). --trigger-accent wird von tabs.js inline gesetzt
+   -> hier per !important ueberschreiben. */
+.risk-acc:has(.select-portfolio-head) .section-trigger { --trigger-accent: #6C9BD1 !important; }
+/* Portfolio-Ansicht: ALLE Trigger-Akzente hellblau (Portfolio-Farbe). */
+#ANALYSE_Modal.view-analyse .section-trigger.has-accent{ --trigger-accent: #6C9BD1 !important; }
+/* Der Trigger, dessen Panel gerade offen ist, bekommt einen ROTEN linken Streifen —
+   in BEIDEN Ansichten (Valuation + Risk). box-shadow direkt gesetzt, damit er die
+   Bereichsfarbe/den Inline-Akzent unabhaengig von has-accent ueberschreibt. */
+#ANALYSE_Modal .section-trigger.trigger-active{ box-shadow: inset 3px 0 0 #E02424 !important; }
 /* Mit Icon: Inhalt linksbuendig, Chevron bleibt rechts. */
 .section-trigger.has-ico { justify-content: flex-start; }
 .section-trigger.has-ico .chev { margin-left: auto; }

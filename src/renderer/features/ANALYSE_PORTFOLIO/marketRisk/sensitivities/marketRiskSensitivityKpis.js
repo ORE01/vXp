@@ -36,7 +36,6 @@ function renderSensKpiChanges(selPort, live = {}) {
   const fmtY = (v) => `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Y`;
   setSensKpiChange('SensTotalPV01Chg',  Number(live.pv01),       _num(prev.PV01),      fmtEurCompact);
   setSensKpiChange('SensTotalCPV01Chg', Number(live.cpv01),      _num(prev.CPV01),     fmtEurCompact);
-  setSensKpiChange('SensCsDurationChg', Number(live.csDuration), _num(prev.CS_DURATION), fmtY);
   setSensKpiChange('SensTotalVegaChg',  Number(live.vega),       _num(prev.VEGA),      fmtEurCompact);
 }
 
@@ -419,6 +418,7 @@ function fillSensReportKpiBand() {
   buildBand('sensKpiTableCpv01', [
     ['Total CPV01', 'SensTotalCPV01', 'SensTotalCPV01Chg'],
     ['Top Credit Bucket', 'SensTopCreditBucket', null],
+    ['Weighted Rating', 'SensCpv01WRating', null],
     ['Weighted Rating (Total NAV)', 'sensWRatingTotal', null],
     ['Weighted Rating (Valued NAV)', 'sensWRatingValued', null],
     ['CS Duration (Total NAV)', 'sensCsDurTotal', null],
@@ -508,6 +508,7 @@ export function updateMarketRiskSensitivityKpis({
   pv01CalcData = null,
   cpv01SourceRows = null,
   cpv01CalcData = null,
+  cpv01WeightedRating = null,
   vegaCalcData = null,
   notionalByCcy = {},
   navTotal = 0,
@@ -677,17 +678,22 @@ if (hasCPV01Data) {
   );
   setText('SensTopCreditBucket', topCreditBucketByCcy);
 
+  // Weighted Rating (Einzel-KPI, orange umrahmt = orange Chart-Marker "CPV01 Weighted
+  // Rating"). Wert wird vom CPV01-Handler VOR dem KPI-Update berechnet und hier gesetzt.
+  setText('SensCpv01WRating', cpv01WeightedRating || '—');
+  setSensitivityKpiVisible('SensCpv01WRating', hasVisibleCPV01 ? 1 : 0);
+
   // Credit spread duration (years) = |Σ CPV01| / Σ NAV × 10000 — analog to the
   // Overview "Credit Spread Duration" slider.
   const totalCpv01 = Object.values(cpv01ByCcy).reduce((s, v) => s + (Number(v) || 0), 0);
+  // CS Duration wird als 2-Balken-Karte (sensCsDur*) gezeigt; die alte einwertige
+  // "SensCsDuration"-Kachel wurde entfernt. csDuration bleibt nur fuer liveTotals.
   const csDuration = navTotal ? (Math.abs(totalCpv01) / navTotal) * 10000 : 0;
-  setText('SensCsDuration', csDuration ? `${formatNumber(csDuration, 2)} y` : '—');
   liveTotals.cpv01 = totalCpv01;
   liveTotals.csDuration = csDuration;
 
   setSensitivityKpiVisible('SensTotalCPV01', hasVisibleCPV01 ? 1 : 0);
   setSensitivityKpiVisible('SensTopCreditBucket', hasVisibleCPV01 ? 1 : 0);
-  setSensitivityKpiVisible('SensCsDuration', (hasVisibleCPV01 && csDuration) ? 1 : 0);
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] CPV01 by CCY updated:', {
@@ -701,7 +707,7 @@ if (hasCPV01Data) {
 } else {
   clearAndHideSensitivityKpi('SensTotalCPV01');
   clearAndHideSensitivityKpi('SensTopCreditBucket');
-  clearAndHideSensitivityKpi('SensCsDuration');
+  clearAndHideSensitivityKpi('SensCpv01WRating');
 
   // if (DEBUG_SENS_KPI) {
   //   console.log('[SENS KPI] CPV01 hidden: no data for selected portfolio', {

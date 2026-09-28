@@ -27,6 +27,16 @@ function startPythonScriptWithEvent(event, scriptIdentifier, eventType, args = [
         progress: msg.progress,
         message: msg.message || ''
       });
+      // Excel-Import: die per-Schritt-Progress des Python-Skripts (Issuer/Products/Deals/
+      // Market) zusaetzlich an die Excel-Import-Balken weiterreichen, damit sie beim
+      // "Import: ALL" der Reihe nach gruen werden (Balken hoeren auf py-excel-progress).
+      if (scriptIdentifier === 'excel') {
+        event.sender.send('py-excel-progress', {
+          provider: msg.provider || 'GLOBAL',
+          progress: msg.progress,
+          message: msg.message || ''
+        });
+      }
     },
 
     onStdout: (line) => {

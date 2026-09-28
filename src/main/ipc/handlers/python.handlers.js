@@ -784,12 +784,35 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     try {
       event.sender.send('py-excel-progress', { provider: mode, progress: 5, message: `Starting Excel import (${mode}) ...` });
 
+      // Bei "Import: ALL" die Unterbalken (Issuer/Products/Deals/Market) zuruecksetzen,
+      // damit sie beim Lauf der Reihe nach neu gruen werden (Python emittiert je Schritt
+      // progress=100 -> ueber onProgress als py-excel-progress an den passenden Balken).
+      if (mode === 'ALL') {
+        ['ISSUER', 'PRODUCTS', 'DEALS', 'MARKET'].forEach((p) => {
+          event.sender.send('py-excel-progress', { provider: p, progress: 0, message: 'Waiting...' });
+        });
+      }
+
       const result = await startPythonScriptWithEvent(event, 'excel', 'py-excel', scriptArgs);
 
       event.sender.send('py-excel-progress', { provider: mode, progress: 70, message: `Updating UI tables (${mode}) ...` });
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
 
       event.sender.send('py-excel-progress', { provider: mode, progress: 100, message: `Excel import completed (${mode}).` });
+
+      // Globalen Excel-Status (Text links unten) aktualisieren — sonst bleibt "Starting..."
+      // stehen, weil nur GLOBAL-Provider-Events den globalen Text setzen.
+      event.sender.send('py-excel-progress', { provider: 'GLOBAL', progress: 100, message: `Excel import completed (${mode}).` });
+
+      // Sicherheitsnetz fuer "Import: ALL": die Unterbalken am Ende final auf 100 mit ihrem
+      // Text setzen (falls die letzte per-Schritt-stderr-Zeile, v.a. MARKET, am Prozessende
+      // gegen das ___RESULT___ rennt und die Balken sonst auf "Waiting..." stehen blieben).
+      if (mode === 'ALL') {
+        event.sender.send('py-excel-progress', { provider: 'ISSUER',   progress: 100, message: 'Issuer imported' });
+        event.sender.send('py-excel-progress', { provider: 'PRODUCTS', progress: 100, message: 'Products imported' });
+        event.sender.send('py-excel-progress', { provider: 'DEALS',    progress: 100, message: 'Portfolio trades imported' });
+        event.sender.send('py-excel-progress', { provider: 'MARKET',   progress: 100, message: 'Market data imported' });
+      }
 
       // Portfolio-Import-Datum festhalten, wenn Deals (bzw. der Sammel-Import ALL) importiert wurden.
       if (mode === 'DEALS' || mode === 'ALL') {
@@ -802,6 +825,10 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     } catch (error) {
       event.sender.send('py-excel-progress', {
         provider: mode, progress: 100,
+        message: `Excel import failed (${mode}): ${error?.message || String(error)}`
+      });
+      event.sender.send('py-excel-progress', {
+        provider: 'GLOBAL', progress: 100,
         message: `Excel import failed (${mode}): ${error?.message || String(error)}`
       });
 

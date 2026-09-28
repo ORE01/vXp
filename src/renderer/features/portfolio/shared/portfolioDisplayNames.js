@@ -63,7 +63,7 @@ export const PORTFOLIO_DISPLAY_NAMES = {
 
   // Rating
   RATING: 'Rating',
-  RATINGres: 'Resolved Rating',
+  RATINGres: 'Effective Rating',
   RATING_PROD: 'Product Rating',
   ratings_numeric: 'Rating (Numeric)',
 

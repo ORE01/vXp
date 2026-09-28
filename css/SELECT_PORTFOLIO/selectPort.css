@@ -88,6 +88,14 @@
   gap: 12px;
 }
 
+/* Date of the last calculation (valuation as-of date; the portfolio-pricing tables
+   carry no wall-clock timestamp). margin-right:auto keeps it left, buttons right. */
+#panel-selectPort .port-last-calc{
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--text-muted, #9aa0a6);
+}
+
 /* --- PORT: Innenabstand + Scroll im Sub-Panel-Body --------------------- */
 #panel-selectPort .sub-panel-body{
   padding: 16px 28px 20px;  /* Luft zu den Rändern */

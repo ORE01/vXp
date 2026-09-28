@@ -499,7 +499,7 @@ export const RISK_CONFIG = {
     'concentration-RATING': 'Issuer General Rating',
     'concentration-RANK': 'Issuer Capital Structure',
     'concentration-RATING_PROD': 'Product Ratings',
-    'concentration-RATINGres': 'Rating Resolved',
+    'concentration-RATINGres': 'Effective Rating',
     'concentration-CATEGORY': 'Product Categories',
     'concentration-CouponType': 'Product Coupon Type',
     'concentration-Depotbank': 'Depot Bank',

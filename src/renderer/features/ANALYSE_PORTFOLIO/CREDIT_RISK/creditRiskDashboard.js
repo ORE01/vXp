@@ -189,8 +189,10 @@ const _crLinePlugin = {
     // "Economic Capital"-Beschriftung verschwindet nie.
     let ecMidX = NaN, ecBandXa = NaN, ecBandXb = NaN;
     const ecBandY = area.top + (area.bottom - area.top) * 0.60;
-    if (_ecVisible && ec && ec.elIdx >= 0 && ec.varIdx >= 0) {
-      const x1 = chart.scales.x.getPixelForValue(ec.elIdx), x2 = chart.scales.x.getPixelForValue(ec.varIdx);
+    // Right edge of the EC band: ES bin when the VaR is degenerate (option B), else the VaR bin.
+    const _ecRight = (ec && ec.ecRightIdx != null && ec.ecRightIdx >= 0) ? ec.ecRightIdx : (ec ? ec.varIdx : -1);
+    if (_ecVisible && ec && ec.elIdx >= 0 && _ecRight >= 0) {
+      const x1 = chart.scales.x.getPixelForValue(ec.elIdx), x2 = chart.scales.x.getPixelForValue(_ecRight);
       if (Number.isFinite(x1) && Number.isFinite(x2)) {
         ecBandXa = Math.min(x1, x2); ecBandXb = Math.max(x1, x2);
         ecMidX = (ecBandXa + ecBandXb) / 2;
@@ -460,7 +462,10 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   const _elPct = (() => {
     const rr = cvarByFlag[_elCfg.flag] || {};
     const vAbs = Math.abs(num(rr.VaR_abs)), vRel = Math.abs(num(rr.VaR_rel));
-    const b = (vRel > 0) ? vAbs / vRel : NaN;
+    const eAbs = Math.abs(num(rr.ES_abs)), eRel = Math.abs(num(rr.ES_rel));
+    // base = NAV; VaR=0 makes vAbs/vRel = 0/0 = NaN, so fall back to ES (eAbs/eRel = NAV)
+    // -> the EL line + EC band still render when the VaR is degenerate.
+    const b = (vRel > 0) ? vAbs / vRel : (eRel > 0 ? eAbs / eRel : NaN);
     if (!Number.isFinite(b)) return NaN;
     let elAbs = 0;
     for (const r of (appState.getAllEADData?.() || [])) {
@@ -474,6 +479,14 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   const _elIdx = Number.isFinite(_elPct) ? nearestIdx(_elPct) : -1;
   const _defVarPct = Math.abs(num((cvarByFlag[_elCfg.flag] || {}).VaR_rel)) * 100;
   const _defVarIdx = Number.isFinite(_defVarPct) ? nearestIdx(_defVarPct) : -1;
+  // ES bin of the default series + degenerate-VaR handling (option B): when the 99.9%
+  // VaR <= EL (VaR pins to 0 for a safe, few-name book) the EC band would collapse, so
+  // span it EL..ES instead (EC = ES - EL), matching the KPI fallback in CVaR.js. The real
+  // VaR bin is kept for the Tail-Risk shading.
+  const _defEsPct = Math.abs(num((cvarByFlag[_elCfg.flag] || {}).ES_rel)) * 100;
+  const _defEsIdx = Number.isFinite(_defEsPct) ? nearestIdx(_defEsPct) : -1;
+  const _ecVarDegenerate = Number.isFinite(_defVarPct) && Number.isFinite(_elPct) && _defVarPct <= _elPct;
+  const _ecRightIdx = (_ecVarDegenerate && _defEsIdx >= 0) ? _defEsIdx : _defVarIdx;
   // Prozent-Label (de-DE) fuer die EL/VaR/ES-Linienbeschriftung, z.B. "0,03 %".
   const pctLbl = (v) => Number.isFinite(v) ? `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '';
 
@@ -573,7 +586,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
       plugins: {
         legend: { display: false },   // Serien-Legende als HTML-Overlay oben rechts (renderCrLossLegend), schrumpft den Plot nicht
         subtitle: { display: false },
-        crLines: { v: lineMap[defaultIdx], ec: { elIdx: _elIdx, varIdx: _defVarIdx } },
+        crLines: { v: lineMap[defaultIdx], ec: { elIdx: _elIdx, varIdx: _defVarIdx, ecRightIdx: _ecRightIdx } },
         tooltip: { callbacks: { title: (c) => `Loss ${labels[c[0].dataIndex]}%`, label: (c) => `${c.dataset.label}: ${c.parsed.y}` } },
       },
       scales: {
@@ -584,7 +597,7 @@ function renderCreditLossDist(canvasId = 'crLossDistChart', defaultKey = 'rating
   });
   chart.$crLineMap = lineMap;
   chart.$crLossSteps = stepsByDs;
-  chart.$ecArrow = { elIdx: _elIdx, varIdx: _defVarIdx };   // Economic-Capital-Flaeche (EL..VaR der Default-Serie)
+  chart.$ecArrow = { elIdx: _elIdx, varIdx: _defVarIdx, ecRightIdx: _ecRightIdx };   // Economic-Capital-Flaeche (EL..VaR bzw. EL..ES bei degeneriertem VaR)
   chart.$ecDsIdx = defaultIdx;   // EC-Band + Tail-Risk nur zeigen, solange DIESE Serie (Historic) eingeblendet ist
   chart.$legendTextCol = col;    // Textfarbe fuer die Canvas-Serien-Legende (im _crLinePlugin)
   window[canvasId] = chart;

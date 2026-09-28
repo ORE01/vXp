@@ -410,7 +410,18 @@
     setFilteredPortData(data) {
         //console.log('filteredPortData:', data)
         this.filteredPortData = data
-        
+
+        // Sensitivitaeten-Charts (PV01/CPV01) bauen ihre Balken aus DIESEN gefilterten
+        // Holdings × per-unit ProductRiskSensitivities. Ohne Signal blieben die Balken nach
+        // einem Calculate/Portfolio-Wechsel stehen (Snapshot war zur Sens-Render-Zeit stale),
+        // bis ein Reload. -> beim Aktualisieren der Holdings ein Event feuern; marketRiskRefresh
+        // rendert die Sensitivitaeten dann (debounced) mit frischen Holdings neu.
+        try {
+            if (typeof document !== 'undefined') {
+                document.dispatchEvent(new CustomEvent('filtered-port-data-updated'));
+            }
+        } catch (_) {}
+
         // this.notifyObservers();
     }
 

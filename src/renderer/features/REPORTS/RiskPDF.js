@@ -35,7 +35,8 @@ export const REPORT_DEFAULTS = {
 function formatNowTimestamp() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  // Deutsches Datumsformat: TT-MM-JJJJ.
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
 }
 
 // =====================================================================
@@ -599,6 +600,81 @@ function drawKpiBand(doc, { marginX, contentW, y }, kpis, opts = {}) {
   return y + tileH + (opts.gapAfter ?? 6);
 }
 
+// Eine gerenderte 2-Balken-Karte (conc-kpi--dur2: IR/CS Duration, Average Time to Maturity,
+// Weighted Rating) aus dem App-DOM -> Tile-Objekt { caption, rows:[{lbl,val,pct}] }.
+function readSensDur2Tile(cardEl) {
+  const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+  const caption = clean(cardEl.querySelector('.pf-dur-cap')?.textContent);
+  const rows = Array.from(cardEl.querySelectorAll('.pf-dur-row')).map((r) => {
+    const fill = r.querySelector('.pf-dur-fill');
+    const pct = fill ? (parseFloat(String(fill.style.width || '').replace('%', '')) || 0) : 0;
+    // Balkenfarbe aus dem Inline-Style uebernehmen (z.B. magenta Total-NAV-Balken),
+    // sonst null -> Standard-Blau im PDF.
+    const col = fill ? _tileToRgb(fill.style.background || fill.style.backgroundColor || '') : null;
+    return {
+      lbl: clean(r.querySelector('.pf-dur-lbl')?.textContent),
+      val: clean(r.querySelector('.pf-dur-val')?.textContent),
+      pct, col,
+    };
+  }).filter((r) => r.val && r.val !== '–' && r.val !== '-');
+  return { caption, rows };
+}
+
+// 2-Balken-Kachel zeichnen (gleicher Rahmen/Look wie drawKpiTile): Caption zentriert oben,
+// darunter je Zeile "Label | Balken | Wert" (Total NAV / Valued NAV) — wie in der App.
+function drawKpiDur2Tile(doc, x, y, w, h, tile) {
+  doc.setDrawColor(...TILE_COL.BORDER); doc.setLineWidth(0.4); doc.setFillColor(...TILE_COL.CARD);
+  doc.roundedRect(x, y, w, h, 1.8, 1.8, 'FD');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...TILE_COL.MUTED);
+  const cap = String(tile.caption || '');
+  doc.text(doc.splitTextToSize(cap, w - 4)[0] || cap, x + w / 2, y + 4.5, { align: 'center' });
+  const padX = 4, lblW = 15, valW = 11, gap = 2;
+  const trackX = x + padX + lblW, trackW = Math.max(4, w - 2 * padX - lblW - valW - gap);
+  (tile.rows || []).slice(0, 2).forEach((r, i) => {
+    const ry = y + 8.5 + i * 6.5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(...TILE_COL.MUTED);
+    doc.text(String(r.lbl), x + padX, ry + 2);
+    doc.setFillColor(226, 230, 236); doc.roundedRect(trackX, ry, trackW, 2, 0.8, 0.8, 'F');
+    const fw = Math.max(0, Math.min(trackW, trackW * (Number(r.pct) / 100)));
+    const barCol = Array.isArray(r.col) ? r.col : [108, 155, 209];
+    if (fw > 0.3) { doc.setFillColor(...barCol); doc.roundedRect(trackX, ry, fw, 2, 0.8, 0.8, 'F'); }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(...TILE_COL.TEXT);
+    doc.text(String(r.val), x + w - padX - doc.getTextWidth(String(r.val)), ry + 2);
+  });
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(0); doc.setLineWidth(0.2);
+}
+
+// Sensitivities-KPI-Band wie in der App: Einzelkacheln (Mirror-Strings) + 2-Balken-Kacheln
+// (aus dem App-DOM) in EINER Reihe, gleiche Breite.
+function drawSensKpiBandMixed(doc, { marginX, contentW, y }, singles, dur2Tiles) {
+  const tiles = [
+    ...singles.map((k) => ({ kind: 'single', k })),
+    ...dur2Tiles.map((d) => ({ kind: 'dur2', d })),
+  ];
+  if (!tiles.length) return y;
+  const n = tiles.length, tileGap = 4, tileW = (contentW - tileGap * (n - 1)) / n;
+  const hasTrend = singles.some((k) => k.trendChg);
+  const tileH = hasTrend ? 23 : 22;
+  tiles.forEach((t, idx) => {
+    const x = marginX + idx * (tileW + tileGap);
+    if (t.kind === 'single') {
+      const parts = _tileSplitValue(t.k.value);
+      // Orange umrahmen (wie die orange Hauptlinie/-Marker im Chart): PV01 "Average Risk
+      // Tenor" und CPV01 "Weighted Rating" (die Einzel-KPI, nicht die 2-Balken-Karte).
+      const _lbl = String(t.k.label || '').trim();
+      const isArt = _lbl === 'Average Risk Tenor' || _lbl === 'Weighted Rating';
+      drawKpiTile(doc, x, y, tileW, tileH, {
+        label: t.k.label, abs: parts[0] || '', rel: parts.slice(1).join(' · '), sub: t.k.sub || '',
+        chg: t.k.trendChg ? { text: String(t.k.trendChg), dirUp: !!t.k.trendUp, red: !t.k.trendColorUp } : null,
+        borderRgb: isArt ? [245, 130, 32] : null,
+      });
+    } else {
+      drawKpiDur2Tile(doc, x, y, tileW, tileH, t.d);
+    }
+  });
+  return y + tileH + 4;
+}
+
 // KPI-Paare (Label/Wert) aus einer gespiegelten .data-container-Tabelle lesen.
 function kpisFromTableEl(el) {
   const kpis = [];
@@ -686,9 +762,19 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   const headerLabel = `vXp | ${portName || reportTitle}`;
 
   // Overview-Status ("Portfolio: UNI · Portfolio <date> · Portfolio Trades <date> · ...")
-  // als kleine Zeilen unter GENERATED aufs Cover bringen.
+  // als kleine Zeilen unter GENERATED aufs Cover bringen. Datum ZUERST + deutsch (TT-MM-JJJJ):
+  // "Portfolio 2026-09-24" -> "24-09-2026 Portfolio". Zeilen ohne Datum (z.B. "Portfolio: UNI")
+  // bleiben unveraendert.
   let coverMetaLines = [];
-  try { coverMetaLines = getOverviewStatusItems(); } catch {}
+  try {
+    coverMetaLines = getOverviewStatusItems().map((s) => {
+      const m = String(s).match(/^(.*?)\s*(\d{4})-(\d{2})-(\d{2})\s*$/);
+      if (!m) return s;
+      const label = m[1].trim();
+      const de = `${m[4]}-${m[3]}-${m[2]}`;
+      return label ? `${de} ${label}` : de;
+    });
+  } catch {}
 
   doc.setPage(1);
   drawCoverPage(doc, layout, { title: reportTitle, logoEl, reportTimeText, metaLines: coverMetaLines });
@@ -1793,8 +1879,11 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
       doc.setFontSize(10); doc.setTextColor(0);
       doc.text('Maturity — Category', both ? rightX : marginX, rowY);
       safeAutoTable(doc, layout, {
-        theme: 'grid', styles: { fontSize: 7.5, cellPadding: 1.6 }, pageBreak: 'avoid',
-        headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60] },
+        theme: 'grid', styles: { fontSize: 7.5, cellPadding: 1.6, halign: 'right' }, pageBreak: 'avoid',
+        // Zahlenspalten (Jahre + Sum) rechtsbuendig wie in der App; nur die 1. Spalte
+        // (Maturity/Category) linksbuendig. autoTable erbt CSS-text-align nicht.
+        headStyles: { fillColor: [245, 245, 245], textColor: [60, 60, 60], halign: 'right' },
+        columnStyles: { 0: { halign: 'left' } },
         alternateRowStyles: { fillColor: [255, 255, 255] },
         html: tblEl, startY: rowY + 3,
         tableWidth: both ? leftW : contentW, margin: { left: both ? rightX : marginX },
@@ -1823,15 +1912,25 @@ async function renderPanelSectionToPDF(doc, sec, layout, ctx) {
   //    Kein Hardcoding von IDs -> Charts/Tabellen kommen aus der (nach data-sens-tab)
   //    gruppierten Auswahl. Section-Titel ist bereits das Sub-Trigger-Label.
   if (/^sensitivities-/.test(sec.key)) {
-    // KPI-Band(er) zuerst.
+    // KPI-Band(er) zuerst — wie in der App: Einzelkacheln + 2-Balken-Karten (Total/Valued NAV).
     for (const t of (sec.enabledTables || [])) {
       const el = ctx.getById(t.id);
       if (!el || !el.dataset || !el.dataset.kpiBand) continue;
       const kpis = kpisFromTableEl(el);
       if (!kpis.length) continue;
+      const tab = el.dataset.sensTab || '';
+      // 2-Balken-Karten (conc-kpi--dur2) aus dem App-DOM des aktiven Tabs lesen.
+      const dur2Tiles = Array.from((ctx.appRoot || document).querySelectorAll(
+        `.sens-kpi-row .conc-kpi--dur2[data-sens-kpi-for="${tab}"]`
+      )).map(readSensDur2Tile).filter((d) => d.rows.length);
+      // Einzelkacheln = Mirror-Zeilen OHNE "(Total/Valued NAV)"-Suffix (diese Zeilen stecken
+      // jetzt in den Kombi-Kacheln). Kein Caption-Abgleich noetig -> robust gegen abweichende
+      // Benennung (Mirror "IR Duration" vs. DOM-Caption "Interest Rate Duration").
+      const singles = dur2Tiles.length
+        ? kpis.filter((k) => !/\((?:Total|Valued) NAV\)\s*$/.test(String(k.label || '')))
+        : kpis;
       ensurePageSpace(30, sectionTitle);
-      y = drawKpiBand(doc, { marginX, contentW: layout.contentWidth, y }, kpis, { tileH: 14, valueFont: 11, gapAfter: 4 });
-      y += 4;
+      y = drawSensKpiBandMixed(doc, { marginX, contentW: layout.contentWidth, y }, singles, dur2Tiles);
     }
 
     // Ausgewaehlte Chart(s) mit gueltigem Bild sammeln, dann die verbleibende Seitenhoehe auf

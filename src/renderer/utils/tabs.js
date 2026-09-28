@@ -334,7 +334,16 @@ function decorateTriggerIcons() {
 // der Tab-Prefix richtet sich nach der aktuellen Ansicht.
 // ============================================================
 function _panelTriggerPath(panelId) {
-  const trig = document.querySelector(`.section-trigger[data-panel="${panelId}"]`);
+  return _panelTriggerPathFromTrigger(
+    document.querySelector(`.section-trigger[data-panel="${panelId}"]`)
+  );
+}
+
+// Build the breadcrumb path from a SPECIFIC trigger element (not by panelId): several
+// triggers can share one data-panel (e.g. the Breakdown dimensions all open
+// #panel-concentration), so querySelector-by-panelId would always return the first
+// (Issuer). The direct-click path uses this to title/highlight the trigger clicked.
+function _panelTriggerPathFromTrigger(trig) {
   if (!trig) return null;   // kein Sidebar-Trigger -> alten Titel behalten
   const label = (el) => (el?.querySelector('.section-header')?.textContent || '').replace(/\s+/g, ' ').trim();
   const names = [];
@@ -357,17 +366,74 @@ function _panelTriggerPath(panelId) {
   return names.map((n) => n.replace(/\//g, ' & ')).join(' / ');
 }
 
+// Mark the sidebar trigger of the panel the user is currently in with .trigger-active
+// (-> red left accent via slideIn.base.css). Driven by the panel that was JUST opened,
+// NOT by a DOM scan: the "Show Portfolio" panel (panel-selectPort) stays open in the
+// background, so scanning for the first .sub-panel.open would always land on it and the
+// red would stick to the Select-Portfolio group.
+function setActiveTrigger(panelId) {
+  if (!panelId) {
+    document.querySelectorAll('.section-trigger.trigger-active').forEach((t) => t.classList.remove('trigger-active'));
+    return;
+  }
+  const trigs = document.querySelectorAll(`.section-trigger[data-panel="${panelId}"]`);
+  // No trigger (programmatic panel) or SEVERAL sharing the panel (ambiguous, e.g. the
+  // Breakdown dimensions) -> keep the current highlight; the click handler is authoritative.
+  if (trigs.length !== 1) return;
+  document.querySelectorAll('.section-trigger.trigger-active').forEach((t) => t.classList.remove('trigger-active'));
+  trigs[0].classList.add('trigger-active');
+}
+
+// Highlight a specific trigger element + refresh its panel's title FROM that trigger.
+// This is the only reliable path when several triggers share a data-panel (Breakdown).
+function activateTriggerEl(trig) {
+  if (!trig) return;
+  document.querySelectorAll('.section-trigger.trigger-active').forEach((t) => t.classList.remove('trigger-active'));
+  trig.classList.add('trigger-active');
+  const panelId = trig.getAttribute('data-panel');
+  const titleEl = panelId ? document.getElementById(panelId)?.querySelector('.sub-panel-title') : null;
+  if (titleEl) {
+    const path = _panelTriggerPathFromTrigger(trig);
+    if (path) titleEl.textContent = path;
+  }
+}
+
+// On close: fall back to the LAST panel still open (top-most), so closing a slide-in
+// moves the highlight back to the panel that remains visible (usually Show Portfolio).
+function syncActiveTriggerFromOpen() {
+  const modal = document.getElementById(ANALYSE_MODAL_ID);
+  const open = modal ? [...modal.querySelectorAll('.sub-panel.open')] : [];
+  setActiveTrigger(open.length ? open[open.length - 1].id : null);
+}
+
 function wirePanelPathTitles() {
   if (window.__panelPathTitlesBound) return;
   window.__panelPathTitlesBound = true;
+
+  // Direct click on a leaf trigger: highlight it + set the title FROM this trigger. This
+  // is authoritative for the Breakdown dimensions, which all share #panel-concentration
+  // (so panelId alone can't distinguish Issuer from Product Categories).
+  document.addEventListener('click', (e) => {
+    const trig = e.target?.closest?.('.section-trigger[data-panel]');
+    if (!trig) return;
+    const modal = document.getElementById(ANALYSE_MODAL_ID);
+    if (!modal || !modal.contains(trig)) return;
+    activateTriggerEl(trig);
+  });
+
   document.addEventListener('panel:opened', (e) => {
     const panel = e?.detail?.panel, panelId = e?.detail?.panelId;
+    setActiveTrigger(panelId);   // self-guards: acts only on a UNIQUE trigger
     if (!panel || !panelId) return;
+    // Title only when the panel maps to exactly one trigger; if several share it
+    // (Breakdown), the click handler above already set the correct title.
+    const trigs = document.querySelectorAll(`.section-trigger[data-panel="${panelId}"]`);
+    if (trigs.length !== 1) return;
     const titleEl = panel.querySelector('.sub-panel-title');
-    if (!titleEl) return;
-    const path = _panelTriggerPath(panelId);
-    if (path) titleEl.textContent = path;
+    const path = _panelTriggerPathFromTrigger(trigs[0]);
+    if (titleEl && path) titleEl.textContent = path;
   });
+  document.addEventListener('panel:closed', () => syncActiveTriggerFromOpen());
 }
 
 export function initializeTabs() {

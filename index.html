@@ -1341,6 +1341,7 @@ Feature:    Wenn es nur in einem Panel gilt
     <div class="port-layout">
       <!-- Toolbar: Columns + Reset rechtsbündig (Filter leben in den Headern) -->
       <div class="port-toolbar">
+        <span id="portLastCalcDate" class="port-last-calc"></span>
         <button id="portColumnsBtn" type="button" class="edit-button">Columns</button>
         <button id="portResetFiltersButton"
                 class="reset-FiltersButton"
@@ -1496,7 +1497,7 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="conc-kpi__val" id="perfKpiReturn">–</div>
               <div class="conc-kpi__sub" id="perfKpiReturnDelta" style="display:none;">–</div>
             </div>
-            <div class="conc-kpi">
+            <div class="conc-kpi" style="display:none;">
               <div class="conc-kpi__lbl">Profit / Loss</div>
               <div class="conc-kpi__val" id="perfKpiErtrag">–</div>
             </div>
@@ -1583,14 +1584,15 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="conc-panel__title">Key Figures</div>
           <div class="conc-kpi-grid">
             <div class="conc-kpi">
-              <div class="conc-kpi__lbl">Portfolio Yield (current)</div>
-              <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
-              <div class="conc-kpi__sub" id="yieldKpiCurrentChg"></div>
+              <div class="conc-kpi__lbl">Portfolio Yield</div>
+              <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
+              <div class="conc-kpi__sub">Yield at purchase</div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__lbl">Portfolio Yield (at buy)</div>
-              <div class="conc-kpi__val" id="yieldKpiBuy">–</div>
-              <div class="conc-kpi__sub" id="yieldKpiBuyChg"></div>
+              <div class="conc-kpi__lbl">Portfolio Yield</div>
+              <div class="conc-kpi__val" id="yieldKpiCurrent">–</div>
+              <div class="conc-kpi__sub">Current</div>
+              <div class="conc-kpi__sub" id="yieldKpiCurrentChg"></div>
             </div>
             <div class="conc-kpi">
               <div class="conc-kpi__lbl">&Delta; vs buy</div>
@@ -1598,14 +1600,19 @@ Feature:    Wenn es nur in einem Panel gilt
               <div class="conc-kpi__sub" id="yieldKpiDeltaChg"></div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__lbl">Time to maturity (&Oslash;)</div>
+              <div class="conc-kpi__lbl">Average Time to Maturity</div>
               <div class="conc-kpi__val" id="yieldKpiTtm">–</div>
               <div class="conc-kpi__sub" id="yieldKpiTtmChg"></div>
             </div>
             <div class="conc-kpi">
-              <div class="conc-kpi__lbl">IR duration</div>
+              <div class="conc-kpi__lbl">Interest Rate Duration</div>
               <div class="conc-kpi__val" id="yieldKpiDuration">–</div>
               <div class="conc-kpi__sub" id="yieldKpiDurationChg"></div>
+            </div>
+            <div class="conc-kpi">
+              <div class="conc-kpi__lbl">Average Rating</div>
+              <div class="conc-kpi__val" id="yieldKpiAvgRatingNav">–</div>
+              <div class="conc-kpi__sub">NAV-weighted</div>
             </div>
           </div>
         </div>
@@ -2308,7 +2315,7 @@ Feature:    Wenn es nur in einem Panel gilt
             <div class="conc-kpi__lbl">Top IR Tenor</div>
             <div class="sens-kpi-value" id="SensTopIRTenor">—</div>
           </div>
-          <div class="conc-kpi" data-sens-kpi-for="pv01" title="PV01-weighted average tenor">
+          <div class="conc-kpi" data-sens-kpi-for="pv01" title="PV01-weighted average tenor" style="border:2px solid #F58220;">
             <div class="conc-kpi__lbl">Average Risk Tenor</div>
             <div class="sens-kpi-value" id="SensPV01WTenor">—</div>
           </div>
@@ -2349,6 +2356,10 @@ Feature:    Wenn es nur in einem Panel gilt
           <div class="conc-kpi" data-sens-kpi-for="cpv01">
             <div class="conc-kpi__lbl">Top Credit Bucket</div>
             <div class="sens-kpi-value" id="SensTopCreditBucket">—</div>
+          </div>
+          <div class="conc-kpi" data-sens-kpi-for="cpv01" title="CPV01-weighted average rating" style="border:2px solid #F58220;">
+            <div class="conc-kpi__lbl">Weighted Rating</div>
+            <div class="sens-kpi-value" id="SensCpv01WRating">—</div>
           </div>
           <!-- Gewichtetes Rating (NAV-gewichteter Notch -> Rating-Label): Total NAV (alle
                gerateten Positionen) vs. Valued NAV (nur bewertete, ohne Cash). 2-Balken-Kachel
@@ -3035,6 +3046,10 @@ Feature:    Wenn es nur in einem Panel gilt
                   <div class="conc-kpi__lbl">EAD Concentration</div>
                   <div class="conc-kpi__val" id="eadKpiConcVal">&ndash;</div>
                   <div class="conc-kpi__sub" id="eadKpiConcSub"></div>
+                </div>
+                <div class="conc-kpi" title="NAV-weighted average rating (RATINGres, fallback RATING)">
+                  <div class="conc-kpi__lbl">Avg Rating &middot; NAV</div>
+                  <div class="conc-kpi__val" id="eadKpiAvgRatingNav">&ndash;</div>
                 </div>
               </div>
             </div>
