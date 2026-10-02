@@ -139,6 +139,7 @@ export function renderCreditIssuerScenarioBuilder() {
   if (!builderListenersInstalled) {
     document.addEventListener('creditissuer:scenario:ready', renderCreditIssuerScenarioBuilder);
     document.addEventListener('creditissuer:active:ready', renderCreditIssuerScenarioBuilder);
+    document.addEventListener('creditsynth:ready', renderCreditIssuerScenarioBuilder);
     builderListenersInstalled = true;
   }
 
@@ -147,6 +148,9 @@ export function renderCreditIssuerScenarioBuilder() {
 
   const appState = window.appState;
   if (!appState) return;
+
+  // Synthetischer Benchmark-Modus (funktioniert auch ohne Portfolio-EAD-Zeilen).
+  initSynthMode();
 
   const base = baseRows();
   const scenarioRows = appState.getCreditIssuerScenarioData?.() || [];
@@ -439,7 +443,10 @@ export function renderCreditIssuerScenarioSetPanel() {
   if (!setPanelListenersInstalled) {
     document.addEventListener('creditissuer:scenario:ready', renderCreditIssuerScenarioSetPanel);
     document.addEventListener('creditissuer:active:ready', renderCreditIssuerScenarioSetPanel);
+    document.addEventListener('creditsynth:ready', renderCreditIssuerScenarioSetPanel);
     setPanelListenersInstalled = true;
+    // Synth-Szenarien einmalig aus der DB nachladen (fuellt den Store -> creditsynth:ready).
+    try { window.api.send('fetch-table-data', TABLE_SYNTH); } catch (_) {}
   }
 
   const container = document.getElementById('creditIssuerScenarioSetContainer');
@@ -455,8 +462,15 @@ export function renderCreditIssuerScenarioSetPanel() {
     .sort((a, b) => a.localeCompare(b));
   const scenarios = ['BASE', ...names];
 
+  // Synthetische Szenario-Namen (werden unten per _augmentSetDropdownWithSynth ins
+  // Dropdown ergaenzt) muessen bei der Gueltigkeitspruefung MITzaehlen — sonst wird ein
+  // aktives Synth-Szenario faelschlich auf BASE zurueckgesetzt.
+  const synthNames = (appState.getCreditSynthConfig?.() || [])
+    .map((r) => norm(r.name)).filter(Boolean);
+  const validActive = new Set([...scenarios, ...synthNames]);
+
   let active = norm(activeRows[0]?.scenario_id) || 'BASE';
-  if (!scenarios.includes(active)) active = 'BASE';
+  if (!validActive.has(active)) active = 'BASE';
 
   const options = scenarios
     .map((s) => `<option value="${escAttr(s)}"${s === active ? ' selected' : ''}>${escHtml(s)}</option>`)
@@ -473,6 +487,10 @@ export function renderCreditIssuerScenarioSetPanel() {
       </tbody>
     </table>
   `;
+
+  // Benannte synthetische Benchmark-Szenarien zusaetzlich ins Dropdown aufnehmen
+  // (Aktivierung = Auswahl hier + Apply, genau wie bei den echten Szenarien).
+  _augmentSetDropdownWithSynth(active);
 
   const applyBtn = document.getElementById('applyCreditIssuerScenarioChanges');
   if (applyBtn && applyBtn.dataset.bound !== '1') {
@@ -491,6 +509,174 @@ export function renderCreditIssuerScenarioSetPanel() {
       showSuccess(`Active credit scenario: ${scenarioId}. Run Credit Risk to apply.`);
     };
   }
+}
+
+// =============================================================================
+// SYNTHETISCHES BENCHMARK-BUCH (Modell-Testpfad, k-Faktor-PCA).
+// BENANNTE Szenarien in CREDIT_SYNTH_CONFIG (name PK) — wie die echten Issuer-
+// Szenarien. Aktiviert wird NICHT hier, sondern ueber "Set Credit Scenario"
+// (CREDIT_ISSUER_ACTIVE.scenario_id); ist der aktive Name ein Synth-Name, routet der
+// Python-Dispatch auf den Synth-Pfad. Schreiben via erase-data + add-new-row;
+// Ruecklesen via fetch-table-data -> Store (getCreditSynthConfig) -> creditsynth:ready.
+// =============================================================================
+const TABLE_SYNTH = 'CREDIT_SYNTH_CONFIG';
+let synthModeBound = false;
+let _synthRowsCache = [];
+
+function applySynthModeVisibility() {
+  const mode = document.getElementById('creditScenMode');
+  const synth = (norm(mode?.value) === 'synth');
+  ['creditRealSetup', 'creditRealIssuers', 'creditRealButtons'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = synth;
+  });
+  const synthSec = document.getElementById('creditSynthSection');
+  if (synthSec) synthSec.hidden = !synth;
+}
+
+function _fillSynthFields(cfg) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val != null && String(val) !== '') el.value = val;
+  };
+  set('creditSynthN', cfg?.n_names ?? 100);
+  set('creditSynthPerNotch', cfg?.per_notch ?? 10);
+  set('creditSynthNotional', fmtNum(cfg?.notional != null ? cfg.notional : 1000000));
+  set('creditSynthCorr', String(cfg?.corr != null ? cfg.corr : 0.2).replace('.', ','));
+  const pca = document.getElementById('creditSynthPca');
+  if (pca) pca.value = String(cfg?.pca_factors || 'FULL').toUpperCase();
+}
+
+// Synth-Szenarien aus der DB nachladen (fuellt den Store -> creditsynth:ready -> re-render).
+function fetchSynthScenarios() {
+  try { window.api.send('fetch-table-data', TABLE_SYNTH); } catch (_) {}
+}
+
+// Benannte Synth-Szenarien aus dem Store ins Edit-Dropdown. Rein lesend, keine Aktivierung.
+function loadSynthScenariosIntoForm() {
+  const select = document.getElementById('creditSynthSelect');
+  _synthRowsCache = window.appState?.getCreditSynthConfig?.() || [];
+
+  if (select) {
+    const prev = norm(select.value);
+    const names = _synthRowsCache
+      .map((r) => norm(r.name)).filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    select.innerHTML = `<option value="">-- New Scenario --</option>` +
+      names.map((n) => `<option value="${escAttr(n)}">${escHtml(n)}</option>`).join('');
+    if (prev && names.includes(prev)) select.value = prev;
+  }
+  applySynthModeVisibility();
+}
+
+// Set-Panel-Dropdown um die benannten synthetischen Szenarien erweitern (aus dem Store).
+function _augmentSetDropdownWithSynth(active) {
+  const sel = document.getElementById('creditIssuerScenarioActiveSelect');
+  if (!sel) return;
+  const names = (window.appState?.getCreditSynthConfig?.() || [])
+    .map((r) => norm(r.name)).filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+  if (!names.length) return;
+  const existing = new Set(Array.from(sel.options).map((o) => o.value));
+  names.forEach((n) => {
+    if (existing.has(n)) return;
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = `${n} (synthetic)`;
+    sel.appendChild(opt);
+  });
+  if (active && names.includes(norm(active))) sel.value = active;
+}
+
+function initSynthMode() {
+  const mode = document.getElementById('creditScenMode');
+  if (!mode) return;
+
+  if (!synthModeBound) {
+    synthModeBound = true;
+
+    // Modus-Umschalter: nur Sichtbarkeit (Aktivierung passiert im Set-Panel).
+    mode.addEventListener('change', applySynthModeVisibility);
+
+    // Edit-Dropdown: ausgewaehltes Szenario in die Felder laden.
+    const select = document.getElementById('creditSynthSelect');
+    if (select) {
+      select.addEventListener('change', () => {
+        const name = norm(select.value);
+        const nameInput = document.getElementById('creditSynthName');
+        if (nameInput) nameInput.value = name;
+        const cfg = _synthRowsCache.find((r) => norm(r.name) === name);
+        if (cfg) _fillSynthFields(cfg);
+      });
+    }
+
+    // Speichern = benanntes Szenario schreiben (erst loeschen, dann einfuegen).
+    const saveBtn = document.getElementById('creditSynthSaveBtn');
+    if (saveBtn) {
+      saveBtn.onclick = () => {
+        try {
+          const name = norm(document.getElementById('creditSynthName')?.value)
+            || norm(document.getElementById('creditSynthSelect')?.value);
+          if (!name) { showError('Enter a scenario name'); return; }
+          if (name.toUpperCase() === 'BASE') { showError('"BASE" is reserved'); return; }
+
+          const n = toNum(document.getElementById('creditSynthN')?.value);
+          const per = toNum(document.getElementById('creditSynthPerNotch')?.value);
+          const notional = parseDeNumber(document.getElementById('creditSynthNotional')?.value);
+          const corr = parseDeNumber(document.getElementById('creditSynthCorr')?.value);
+          const pca = (document.getElementById('creditSynthPca')?.value || 'FULL').toUpperCase();
+
+          const newRowData = {
+            name,
+            pca_factors: pca,
+            n_names: Number.isFinite(n) && n > 0 ? Math.round(n) : 100,
+            per_notch: Number.isFinite(per) && per > 0 ? Math.round(per) : 10,
+            notional: Number.isFinite(notional) && notional > 0 ? notional : 1000000,
+            corr: Number.isFinite(corr) ? corr : 0.2,
+            updated_at: new Date().toISOString(),
+          };
+
+          window.api.send('erase-data', {
+            cleanTableName: TABLE_SYNTH,
+            uniqueIdentifier: { column: 'name', value: name },
+          });
+          window.api.send('add-new-row', { cleanTableName: TABLE_SYNTH, newRowData });
+
+          showSuccess(`Synthetic scenario "${name}" saved. Activate it under "Set Credit Scenario".`);
+          // Nach dem async DB-Write die Tabelle neu ziehen -> creditsynth:ready
+          // re-rendert Create- UND Set-Panel (beide hoeren auf das Event).
+          setTimeout(fetchSynthScenarios, 200);
+        } catch (err) {
+          console.error('[synth save] FAILED', err);
+          showError('Save failed: ' + (err?.message || err));
+        }
+      };
+    }
+
+    // Loeschen eines benannten Synth-Szenarios.
+    const delBtn = document.getElementById('creditSynthDeleteBtn');
+    if (delBtn) {
+      delBtn.onclick = () => {
+        const name = norm(document.getElementById('creditSynthSelect')?.value)
+          || norm(document.getElementById('creditSynthName')?.value);
+        if (!name) { showError('Select a scenario to delete'); return; }
+        if (!window.confirm(`Delete synthetic scenario "${name}"? This cannot be undone.`)) return;
+        window.api.send('erase-data', {
+          cleanTableName: TABLE_SYNTH,
+          uniqueIdentifier: { column: 'name', value: name },
+        });
+        showSuccess(`Synthetic scenario "${name}" deleted`);
+        const nameInput = document.getElementById('creditSynthName');
+        if (nameInput) nameInput.value = '';
+        setTimeout(fetchSynthScenarios, 200);
+      };
+    }
+
+    // Einmalig aus der DB nachladen (fuellt den Store -> creditsynth:ready).
+    fetchSynthScenarios();
+  }
+
+  loadSynthScenariosIntoForm();
 }
 
 // --- kleine HTML-Escapes ---

@@ -484,7 +484,11 @@ export function initializeTabs() {
   const riskTab = document.getElementById('RISK_Tab');
 
   if (analyseTab) {
-    analyseTab.addEventListener('click', () => {
+    analyseTab.addEventListener('click', (e) => {
+      // Nur echte Nutzer-Klicks auf den Tab springen direkt auf "Show Portfolio".
+      // Programmatische .click() (z.B. das Overview-"Portfolio"-Icon via tabThenPanel)
+      // haben isTrusted=false -> dort nur die Sidebar, kein Panel-Sprung.
+      const trusted = !!(e && e.isTrusted);
       // Panels nur beim echten View-Wechsel RISK -> VALUATION schließen, NICHT
       // beim Zurückkommen aus einem anderen Tab (dann bleibt das Panel offen).
       const modal = document.getElementById(ANALYSE_MODAL_ID);
@@ -495,6 +499,14 @@ export function initializeTabs() {
       // mirrored to createdPortDropdown0, exactly like the RISK tab does.
       syncRiskDropdownFromPort();
       showHomeBehind();
+      // Direkt auf "Show Portfolio" (panel-selectPort) springen statt nur die Sidebar zu
+      // zeigen. Nur, wenn noch kein Analyse-Panel offen ist -> ein bereits offenes Panel
+      // (Rueckkehr aus einem anderen Tab) bleibt erhalten.
+      requestAnimationFrame(() => {
+        if (trusted && !modal?.querySelector('.sub-panel.open')) {
+          document.querySelector('.section-trigger[data-panel="panel-selectPort"]')?.click();
+        }
+      });
     });
   }
   if (riskTab) {

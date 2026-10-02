@@ -137,6 +137,49 @@ function ensureCreditIssuerScenarioSchema(db) {
   });
 }
 
+// Synthetisches Credit-Benchmark-Buch (Modell-Testpfad): BENANNTE Szenarien (wie die
+// echten Issuer-Szenarien). Aktiviert wird NICHT hier, sondern ueber das normale
+// "Set Credit Scenario"-Dropdown (CREDIT_ISSUER_ACTIVE.scenario_id). Ist der aktive
+// Name in dieser Tabelle vorhanden, routet der Python-Dispatch auf den Synth-Pfad.
+// pca_factors = FULL|AUTO|1|3|5|10. Bestehende Tabellen bleiben unveraendert; Zeilen-
+// Ops laufen ueber die generischen CRUD-Kanaele.
+function ensureCreditSynthConfigSchema(db) {
+  const createSql = `
+    CREATE TABLE IF NOT EXISTS CREDIT_SYNTH_CONFIG (
+      name        TEXT PRIMARY KEY,
+      pca_factors TEXT DEFAULT 'FULL',
+      n_names     INTEGER DEFAULT 100,
+      per_notch   INTEGER DEFAULT 10,
+      notional    REAL DEFAULT 1000000.0,
+      corr        REAL DEFAULT 0.2,
+      updated_at  TEXT
+    )`;
+
+  // Migration: eine fruehere (id-basierte) Fassung dieser Tabelle hat KEINE Spalte
+  // `name`. CREATE TABLE IF NOT EXISTS wuerde sie nicht aendern -> Inserts mit `name`
+  // schlagen still fehl. Daher altes Schema erkennen und verwerfen (keine relevanten
+  // Daten) + neu anlegen. Bestehende FREMD-Tabellen bleiben unberuehrt.
+  db.all(`PRAGMA table_info(CREDIT_SYNTH_CONFIG)`, (err, rows) => {
+    if (err) { logger.error('DB', 'inspect CREDIT_SYNTH_CONFIG failed', err); return; }
+    const cols = (rows || []).map((r) => r.name);
+    const exists = cols.length > 0;
+    const hasName = cols.includes('name');
+
+    if (exists && !hasName) {
+      db.run(`DROP TABLE CREDIT_SYNTH_CONFIG`, (e) => {
+        if (e) { logger.error('DB', 'drop legacy CREDIT_SYNTH_CONFIG failed', e); return; }
+        db.run(createSql, (e2) => {
+          if (e2) logger.error('DB', 'recreate CREDIT_SYNTH_CONFIG failed', e2);
+        });
+      });
+    } else if (!exists) {
+      db.run(createSql, (e) => {
+        if (e) logger.error('DB', 'ensure CREDIT_SYNTH_CONFIG failed', e);
+      });
+    }
+  });
+}
+
 function ensureCustomerDefaultPortfolioSchema(db) {
   db.serialize(() => {
     db.run(`
@@ -213,6 +256,7 @@ function initDb() {
         logger.info('DB', 'connected');
         ensurePdHistoricalScenarioSchema(_db);
         ensureCreditIssuerScenarioSchema(_db);
+        ensureCreditSynthConfigSchema(_db);
         ensureCustomerDefaultPortfolioSchema(_db);
         ensureScenarioDefinitionSchema(_db);
       }

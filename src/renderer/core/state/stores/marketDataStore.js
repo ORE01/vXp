@@ -301,6 +301,14 @@ export function installMarketDataStore({ appState } = {}) {
     return appState._CREDIT_ISSUER_ACTIVE || [];
   }
 
+  // Synthetische Benchmark-Szenarien (benannt) — CREDIT_SYNTH_CONFIG.
+  function setCreditSynthConfig(data) {
+    appState._CREDIT_SYNTH_CONFIG = Array.isArray(data) ? data : [];
+  }
+  function getCreditSynthConfig() {
+    return appState._CREDIT_SYNTH_CONFIG || [];
+  }
+
   // -----------------------------
   // TS Data
   // -----------------------------
@@ -449,6 +457,8 @@ function getSwaptionCubeSurface() {
   appState.getCreditIssuerScenarioData = getCreditIssuerScenarioData;
   appState.setCreditIssuerActive = setCreditIssuerActive;
   appState.getCreditIssuerActive = getCreditIssuerActive;
+  appState.setCreditSynthConfig = setCreditSynthConfig;
+  appState.getCreditSynthConfig = getCreditSynthConfig;
 
 
 
@@ -518,6 +528,8 @@ function getSwaptionCubeSurface() {
     getCreditIssuerScenarioData,
     setCreditIssuerActive,
     getCreditIssuerActive,
+    setCreditSynthConfig,
+    getCreditSynthConfig,
 
     setTblTSData,
     getTblTSData,

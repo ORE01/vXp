@@ -361,6 +361,63 @@
   height: calc(100vh - 130px);   /* Toolbar + Ränder abziehen */
 }
 
+/* Schwebende Steuerleiste fuer die Vollbild-Ansicht (Schliessen + Zoom). Haengt am
+   document.body (nicht im Overlay-Stacking-Context gefangen) -> immer sichtbar/erreichbar. */
+.ts-enlarged-controls{
+  position: fixed;
+  top: 96px;
+  right: 18px;
+  z-index: 100001;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--surface-raised, #16171a);
+  border: 1px solid var(--border-subtle, #333);
+  border-radius: 10px;
+  padding: 6px 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  cursor: move;                 /* ganze Leiste ziehbar (Buttons ausgenommen) */
+}
+.ts-enlarged-controls .ts-enlarged-handle{
+  cursor: move;
+  color: var(--text-muted, #9aa0a6);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  user-select: none;
+}
+.ts-enlarged-controls button{
+  border: 1px solid var(--border-subtle, #333);
+  background: var(--surface-header, #222);
+  color: var(--text-primary, #e8e8e8);
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ts-enlarged-controls button:hover{ background: var(--accent-active, #2a2a2a); }
+.ts-enlarged-controls .ts-enlarged-close{
+  font-weight: 700;
+  color: #ff6b6b;
+}
+.ts-enlarged-controls button.is-active{
+  background: var(--accent-active, #2f6feb);
+  border-color: var(--accent-active, #2f6feb);
+  color: #fff;
+}
+.ts-enlarged-controls .ts-enlarged-sep{
+  width: 1px;
+  height: 18px;
+  background: var(--border-subtle, #444);
+  margin: 0 3px;
+}
+
+/* Draw-Toolbar (Draw Line/Clear) GRUNDSAETZLICH ausblenden -> das Zeichen-Tool gibt es
+   nur in der Vollbild-Ansicht (dort ueber die schwebende Leiste). In der Normalansicht
+   mit mehreren Graphen sind die Buttons weg. */
+#panel-ts [id^="tsDrawToolbar_"]{ display: none !important; }
+
 /* Schmale Fenster: einspaltig */
 @media (max-width: 1100px){
   #panel-ts #modal-content-container{

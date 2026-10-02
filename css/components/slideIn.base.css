@@ -142,6 +142,13 @@
    Klick), daher ist die globale Regel unbedenklich. box-shadow direkt -> ueberschreibt jede
    Bereichsfarbe/den Inline-Akzent unabhaengig von has-accent. */
 .section-trigger.trigger-active{ box-shadow: inset 3px 0 0 #E02424 !important; }
+/* Geparkte (voruebergehend deaktivierte) Trigger: sichtbar, aber ausgegraut & funktionslos.
+   Aktivierung = `disabled`-Attribut am Button entfernen. Gilt fuer JEDEN Trigger. */
+.section-trigger:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+  filter: grayscale(100%);
+}
 /* Mit Icon: Inhalt linksbuendig, Chevron bleibt rechts. */
 .section-trigger.has-ico { justify-content: flex-start; }
 .section-trigger.has-ico .chev { margin-left: auto; }

@@ -163,6 +163,17 @@ export function createPythonExecutionRouter(ctx) {
     if (!extraParam.cvarName) throw new Error('No CVaR configuration name (cvarName) provided.');
 
     const payload = { tableName: port_name, CSSzenario, cvarName: extraParam.cvarName };
+
+    // Session-only PD-Auswahl aus den Risk-Config-Checkboxen. Nur ein echtes Subset
+    // (1-2 von 3) wird mitgegeben; alle/keine angehakt -> Default alle drei (nichts senden).
+    const _pdFlags = Array.from(document.querySelectorAll('.cvar-pd-flag'))
+      .filter((cb) => cb.checked)
+      .map((cb) => cb.dataset.flag)
+      .filter(Boolean);
+    if (_pdFlags.length >= 1 && _pdFlags.length < 3) {
+      payload.pdFlags = _pdFlags.join(',');
+    }
+
     window.api.send('start-py-CVaR', payload);
   }
 

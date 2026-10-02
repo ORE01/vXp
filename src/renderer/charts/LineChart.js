@@ -100,8 +100,16 @@ const trendlinePlugin = {
     if (!sx || !sy) return;
 
     ctx.save();
+    // Auf den Plot-Bereich clippen: extrapolierte Linien-Enden (ausserhalb des sichtbaren
+    // Zeitbereichs) werden so sauber abgeschnitten statt in Achsen/Rand zu ragen.
+    const _ca = chart.chartArea;
+    if (_ca) {
+      ctx.beginPath();
+      ctx.rect(_ca.left, _ca.top, _ca.right - _ca.left, _ca.bottom - _ca.top);
+      ctx.clip();
+    }
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = pluginOpts?.color || '#ffaa33';
+    ctx.strokeStyle = pluginOpts?.color || '#ff00ff';
     ctx.setLineDash(pluginOpts?.dash || []);
 
     // feste Linien
@@ -214,7 +222,7 @@ const trendlinePlugin = {
             mode: 'x'
           }
         },
-        trendlineDrawer: { color: '#ffaa33', dash: [] }
+        trendlineDrawer: { color: '#ff00ff', dash: [] }
       }
     },
     plugins: [trendlinePlugin, tsCrosshairPlugin]
@@ -234,23 +242,37 @@ loadTrendlines(modalIndex, chartName).then((loaded) => {
 
 
   // --- Zeichen-UI (Buttons) ---
-ensureDrawToolbar(
-  canvasElement,
-  modalIndex,
-  () => { // Toggle Draw
-    trendState.drawing = !trendState.drawing;
-    chartInstance.options.plugins.trendlineDrawer.preview = null;
-    chartInstance.update();
-  },
-  async () => { // Undo last line (statt alles lÃ¶schen)
-    if (!trendState.lines.length) return;           // nichts zu tun
-    trendState.lines.pop();                         // letzte Linie entfernen
-    trendState.tempStart = null;
-    chartInstance.options.plugins.trendlineDrawer.preview = null;
-    chartInstance.update();
-    await saveTrendlines(modalIndex, chartName, trendState.lines);
-  }
-);
+// Draw-Modus umschalten -> gibt den NEUEN (echten) Zustand zurueck, damit der/die
+// Aufrufer (Button/Box) ihre Optik am tatsaechlichen Zustand ausrichten koennen.
+function doToggleDraw() {
+  trendState.drawing = !trendState.drawing;
+  // WICHTIG: zoom.pan/zoom-Optionen NICHT umschalten -> das Zoom-Plugin wuerde beim
+  // naechsten update() Hammer.js re-initialisieren (Hammer ist nicht geladen -> Crash
+  // "reading 'Manager' of undefined"). Zoom/Pan wird ausschliesslich ueber die
+  // Capture-Phase (Maus-Events) blockiert, solange gezeichnet wird.
+  try { canvasElement.style.cursor = trendState.drawing ? 'crosshair' : ''; } catch (_) {}
+  chartInstance.options.plugins.trendlineDrawer.preview = null;
+  chartInstance.update();
+  return trendState.drawing;
+}
+async function doClearLast() {
+  if (!trendState.lines.length) return;             // nichts zu tun
+  trendState.lines.pop();                           // letzte Linie entfernen
+  trendState.tempStart = null;
+  chartInstance.options.plugins.trendlineDrawer.preview = null;
+  chartInstance.update();
+  await saveTrendlines(modalIndex, chartName, trendState.lines);
+}
+
+ensureDrawToolbar(canvasElement, modalIndex, doToggleDraw, doClearLast);
+
+// Echte Draw-API am Chart-Objekt -> Enlarge-Box (TS.js) steuert/liest den WIRKLICHEN
+// Zustand direkt (statt einen versteckten Button zu klicken).
+chartInstance.tsDrawApi = {
+  toggle: doToggleDraw,
+  isDrawing: () => !!trendState.drawing,
+  clearLast: doClearLast,
+};
 
 
   // --- Canvas-Events fÃ¼r Zeichnen ---
@@ -264,68 +286,77 @@ ensureDrawToolbar(
     return (xVal == null || yVal == null) ? null : { x: xVal, y: yVal };
   };
 
-const onClick = async (evt) => {
-  if (!trendState.drawing) return;
+// Zeichnen per ZIEHEN: Draw Line an -> linke Maustaste gedrueckt halten und ziehen,
+// loslassen = fertig. Zoom/Pan wird waehrend des Zeichnens zuverlaessig per Capture-
+// Phase auf document blockiert (feuert VOR den Canvas-Handlern des Zoom-Plugins).
+const _ptFromEvent = (evt) => {
   const pt = xValueFromEvent(chartInstance, evt);
-  if (!pt) return;
-
-  // y aus Pixel â†’ Datenwert
+  if (!pt) return null;
   const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
-  const sy  = chartInstance.scales.y;
-  const y   = sy.getValueForPixel(pos.y);
-  if (y == null) return;
-
-  const xVal = pt.x; // Label (category) ODER Number (time/linear)
-
-  if (!trendState.tempStart) {
-    trendState.tempStart = { x: xVal, y };
-  } else {
-    const end = { x: xVal, y };
-    if (evt.shiftKey) end.y = trendState.tempStart.y; // horizontale Linie
-
-    trendState.lines.push({
-      x1: trendState.tempStart.x, y1: trendState.tempStart.y,
-      x2: end.x,                  y2: end.y
-    });
-
-    trendState.tempStart = null;
-    chartInstance.options.plugins.trendlineDrawer.preview = null;
-    chartInstance.update();
-    await saveTrendlines(modalIndex, chartName, trendState.lines);
-  }
+  const y = chartInstance.scales.y?.getValueForPixel(pos.y);
+  return (y == null) ? null : { x: pt.x, y };
 };
 
-const onMouseMove = (evt) => {
+const onDrawDown = (evt) => {
+  if (!trendState.drawing) return;
+  if (evt.target !== canvasElement) return;          // nur auf DIESEM Chart
+  if (evt.button != null && evt.button !== 0) return; // nur linke Maustaste
+  evt.stopPropagation();                              // Zoom/Pan blockieren
+  evt.preventDefault();
+  const p = _ptFromEvent(evt);
+  if (!p) return;
+  trendState.tempStart = p;
+  chartInstance.options.plugins.trendlineDrawer.preview = p;
+  chartInstance.update('none');
+};
+
+const onDrawMove = (evt) => {
   if (!trendState.drawing || !trendState.tempStart) return;
-
-  const pt = xValueFromEvent(chartInstance, evt);
-  if (!pt) return;
-
-  const pos = Chart.helpers.getRelativePosition(evt, chartInstance);
-  const sy  = chartInstance.scales.y;
-  const y   = sy.getValueForPixel(pos.y);
-  if (y == null) return;
-
-  const end = { x: pt.x, y };
-  if (evt.shiftKey) end.y = trendState.tempStart.y;
+  const p = _ptFromEvent(evt);
+  if (!p) return;
+  const end = evt.shiftKey ? { x: p.x, y: trendState.tempStart.y } : p;
   chartInstance.options.plugins.trendlineDrawer.preview = end;
   chartInstance.update('none');
 };
 
+const onDrawUp = async (evt) => {
+  if (!trendState.drawing || !trendState.tempStart) return;
+  const start = trendState.tempStart;
+  const p = _ptFromEvent(evt);
+  const end = p ? (evt.shiftKey ? { x: p.x, y: start.y } : p) : null;
 
-  const onContextOrEsc = (evt) => {
-    if ((evt.type === 'contextmenu') || (evt.type === 'keydown' && evt.key === 'Escape')) {
-      trendState.tempStart = null;
-      chartInstance.options.plugins.trendlineDrawer.preview = null;
-      chartInstance.update();
-    }
-  };
+  trendState.tempStart = null;
+  chartInstance.options.plugins.trendlineDrawer.preview = null;
 
-  // Events binden
-  canvasElement.addEventListener('click', onClick);
-  canvasElement.addEventListener('mousemove', onMouseMove);
-  canvasElement.addEventListener('contextmenu', (e)=>{ e.preventDefault(); onContextOrEsc(e); });
-  window.addEventListener('keydown', onContextOrEsc);
+  if (end && !(end.x === start.x && end.y === start.y)) {
+    trendState.lines.push({ x1: start.x, y1: start.y, x2: end.x, y2: end.y });
+    await saveTrendlines(modalIndex, chartName, trendState.lines);
+  }
+  chartInstance.update();
+};
+
+const onContextOrEsc = (evt) => {
+  if ((evt.type === 'contextmenu') || (evt.type === 'keydown' && evt.key === 'Escape')) {
+    trendState.tempStart = null;
+    chartInstance.options.plugins.trendlineDrawer.preview = null;
+    chartInstance.update();
+  }
+};
+const onCtxMenu = (e) => { e.preventDefault(); onContextOrEsc(e); };
+
+// Zeichnen ueber MAUS-Events in der Capture-Phase (true) -> feuert VOR den Canvas-
+// Handlern des Zoom-Plugins (das auf Desktop ebenfalls Maus-Events nutzt), stopPropagation
+// blockiert dadurch Drag-Zoom/Pan zuverlaessig.
+document.addEventListener('mousedown', onDrawDown, true);
+document.addEventListener('mousemove', onDrawMove, true);
+document.addEventListener('mouseup', onDrawUp, true);
+// Zusaetzlich Pointer-Events blockieren, falls das Plugin diese nutzt (getrennter Stream).
+const _blockPtr = (evt) => { if (trendState.drawing && evt.target === canvasElement) evt.stopPropagation(); };
+document.addEventListener('pointerdown', _blockPtr, true);
+document.addEventListener('pointermove', _blockPtr, true);
+document.addEventListener('pointerup', _blockPtr, true);
+canvasElement.addEventListener('contextmenu', onCtxMenu);
+window.addEventListener('keydown', onContextOrEsc);
 
   // Bestehende Buttons etc.
   setupChartButtons(chartInstance, datasets, modalIndex);
@@ -334,12 +365,20 @@ const onMouseMove = (evt) => {
 const _destroy = chartInstance.destroy.bind(chartInstance);
 
 chartInstance.destroy = () => {
-  // Speichern NICHT awaiten
-  Promise.resolve(saveTrendlines(modalIndex, chartName, trendState.lines)).catch(()=>{});
+  // NUR speichern, wenn es tatsaechlich Linien gibt. Sonst wuerde ein Destroy VOR dem
+  // (asynchronen) loadTrendlines die gespeicherten Linien mit [] ueberschreiben (Reload-
+  // Verlust). Zeichnen (onDrawUp) und Clear (doClearLast) speichern ohnehin direkt.
+  if (Array.isArray(trendState.lines) && trendState.lines.length > 0) {
+    Promise.resolve(saveTrendlines(modalIndex, chartName, trendState.lines)).catch(()=>{});
+  }
 
-  canvasElement.removeEventListener('click', onClick);
-  canvasElement.removeEventListener('mousemove', onMouseMove);
-  canvasElement.removeEventListener('contextmenu', onContextOrEsc);
+  document.removeEventListener('mousedown', onDrawDown, true);
+  document.removeEventListener('mousemove', onDrawMove, true);
+  document.removeEventListener('mouseup', onDrawUp, true);
+  document.removeEventListener('pointerdown', _blockPtr, true);
+  document.removeEventListener('pointermove', _blockPtr, true);
+  document.removeEventListener('pointerup', _blockPtr, true);
+  canvasElement.removeEventListener('contextmenu', onCtxMenu);
   window.removeEventListener('keydown', onContextOrEsc);
 
   _destroy(); // Canvas wird SOFORT freigegeben
@@ -425,8 +464,32 @@ function xPixel(chart, xVal) {
   if (sx.type === 'category') {
     const labels = chart.data.labels || [];
     const idx = labels.indexOf(xVal);
-    if (idx === -1) return null;
-    return sx.getPixelForValue(idx);
+    if (idx !== -1) return sx.getPixelForValue(idx);
+
+    // Fallback: exaktes Label fehlt (z.B. durch Downsampling in 10Y/Max) -> Pixel per
+    // DATUM zwischen den beiden naechstgelegenen Labels interpolieren, damit die Trendlinie
+    // auch dann an der richtigen Stelle erscheint.
+    const t = parseDateString(xVal)?.getTime?.();
+    if (t == null || isNaN(t) || labels.length < 2) return null;
+    let lo = -1;
+    for (let i = 0; i < labels.length; i++) {
+      const lt = parseDateString(labels[i])?.getTime?.();
+      if (lt == null || isNaN(lt)) continue;
+      if (lt <= t) lo = i; else break;
+    }
+    // Zwei Anker-Indizes: innen interpolieren, an den Raendern EXTRAPOLIEREN (frac <0 / >1)
+    // -> korrekte Steigung/Lage; ausserhalb liegende Teile werden vom Clipping abgeschnitten.
+    let i0, i1;
+    if (lo === -1) { i0 = 0; i1 = 1; }
+    else if (lo >= labels.length - 1) { i0 = labels.length - 2; i1 = labels.length - 1; }
+    else { i0 = lo; i1 = lo + 1; }
+    const t0 = parseDateString(labels[i0])?.getTime?.();
+    const t1 = parseDateString(labels[i1])?.getTime?.();
+    if (t0 == null || t1 == null || isNaN(t0) || isNaN(t1) || t1 === t0) return null;
+    const p0 = sx.getPixelForValue(i0);
+    const p1 = sx.getPixelForValue(i1);
+    const frac = (t - t0) / (t1 - t0);
+    return p0 + frac * (p1 - p0);
   }
   // time/linear
   return sx.getPixelForValue(xVal);

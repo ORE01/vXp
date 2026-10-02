@@ -699,6 +699,11 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
 
     const pythonArgs = ['--table', tableName, '--CSSzenario', CSSzenario, '--cvarName', cvarName];
+    // Session-only PD-Auswahl (Risk Config Checkboxen). Nur gesetzt, wenn ein echtes
+    // Subset gewaehlt wurde; sonst rechnet Python alle drei (Default).
+    if (args && args.pdFlags) {
+      pythonArgs.push('--pdFlags', String(args.pdFlags));
+    }
 
     try {
       await startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs);
@@ -794,6 +799,14 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       }
 
       const result = await startPythonScriptWithEvent(event, 'excel', 'py-excel', scriptArgs);
+
+      // Python meldet Fehler als Ergebnis (status:"error" + Traceback), NICHT als
+      // Prozess-Crash. Ohne diese Pruefung wuerde der Erfolgspfad faelschlich
+      // "completed" zeigen und der Fehler bliebe unsichtbar (z.B. ein im kompilierten
+      // Worker scheiternder Issuer-Import, der danach zurueckgerollt wird).
+      if (result && String(result.status).toLowerCase() === 'error') {
+        throw new Error(result.error || result.message || `Excel import failed (${mode})`);
+      }
 
       event.sender.send('py-excel-progress', { provider: mode, progress: 70, message: `Updating UI tables (${mode}) ...` });
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });

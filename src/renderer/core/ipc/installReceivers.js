@@ -298,6 +298,7 @@ api.receive(channel, (data) => {
   // CREDIT ISSUER SCENARIO (Include / EAD / RR->LGD / RATINGres)
   route('CREDIT_ISSUER_SCENARIO_DATAData');
   route('CREDIT_ISSUER_ACTIVEData');
+  route('CREDIT_SYNTH_CONFIGData');
 
   // PD_M_norm normalization settings
   route('PD_NORM_SETTINGSData');

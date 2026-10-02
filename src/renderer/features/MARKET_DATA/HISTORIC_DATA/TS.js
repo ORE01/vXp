@@ -11,6 +11,134 @@ const tsWarn = (...a) => { if (_TS_DEBUG()) console.warn(...a); };
 // Store chart instances in an object with modalIndex as key
 const chartInstances = {};
 
+// --- Vollbild (⛶): schwebende Steuerleiste an document.body. Das Vollbild-Overlay
+//     (.is-enlarged) steckt in einem Stacking-Context und wird oben von den App-Leisten
+//     verdeckt -> die Section-Toolbar (⛶/Zoom) ist dort unsichtbar. Diese Leiste haengt
+//     direkt am body (hoechster z-Index, nicht gefangen) und bietet Schliessen (✕/Esc)
+//     sowie die Zoom-Buttons (per Klick auf die bestehenden Instanz-Buttons). ---
+let _tsEnlargedBar = null;
+let _tsEnlargedRoot = null;
+let _tsEnlargedIdx = null;
+
+function hideTsEnlarged() {
+  if (_tsEnlargedRoot) { try { _tsEnlargedRoot.classList.remove('is-enlarged'); } catch (_) {} }
+  if (_tsEnlargedBar) { try { _tsEnlargedBar.remove(); } catch (_) {} }
+  const idx = _tsEnlargedIdx;
+  // Zeichenmodus beim Verlassen des Vollbilds beenden -> in der Normalansicht gibt es kein
+  // Zeichnen (die globalen Maus-Handler wuerden sonst weiter zeichnen / Zoom blockieren).
+  if (idx != null) {
+    const _api = chartInstances[idx]?.tsDrawApi;
+    try { if (_api?.isDrawing?.()) _api.toggle(); } catch (_) {}
+  }
+  _tsEnlargedBar = _tsEnlargedRoot = _tsEnlargedIdx = null;
+  if (idx != null) requestAnimationFrame(() => { try { chartInstances[idx]?.resize(); } catch (_) {} });
+}
+
+function showTsEnlarged(instanceRoot, idx) {
+  hideTsEnlarged();                       // nur eine Vollbild-Instanz gleichzeitig
+  instanceRoot.classList.add('is-enlarged');
+  _tsEnlargedRoot = instanceRoot;
+  _tsEnlargedIdx = idx;
+
+  const bar = document.createElement('div');
+  bar.className = 'ts-enlarged-controls';
+
+  // Drag-Griff: Box kann weggezogen werden, damit sie den Chart nicht verdeckt.
+  const handle = document.createElement('span');
+  handle.className = 'ts-enlarged-handle';
+  handle.textContent = '⠿';
+  handle.title = 'Ziehen zum Verschieben';
+  bar.appendChild(handle);
+
+  const mkZoom = (label, targetId, title) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    if (title) b.title = title;
+    b.addEventListener('click', () => { try { document.getElementById(targetId)?.click(); } catch (_) {} });
+    return b;
+  };
+  bar.appendChild(mkZoom('1Y',  `oneYearButton_${idx}`));
+  bar.appendChild(mkZoom('5Y',  `fiveYearButton_${idx}`));
+  bar.appendChild(mkZoom('10Y', `tenYearButton_${idx}`));
+  bar.appendChild(mkZoom('Max', `maxButton_${idx}`));
+  bar.appendChild(mkZoom('Reset', `resetZoomButton_${idx}`, 'Reset zoom'));
+
+  // Draw Line / Clear ueber die ECHTE Draw-API des Charts (chart.tsDrawApi) steuern.
+  // Der gruene Zustand spiegelt den TATSAECHLICHEN Zeichenmodus (Rueckgabe von toggle()),
+  // nicht nur die Optik.
+  const _chart = chartInstances[idx];
+  const _api = _chart && _chart.tsDrawApi;
+  if (_api) {
+    const sep = document.createElement('span');
+    sep.className = 'ts-enlarged-sep';
+    bar.appendChild(sep);
+
+    const bDraw = document.createElement('button');
+    bDraw.type = 'button';
+    bDraw.textContent = 'Draw Line';
+    bDraw.title = 'Linie zeichnen: Button an, dann linke Maustaste ziehen (Shift = horizontal)';
+    if (_api.isDrawing()) bDraw.classList.add('is-active');
+    bDraw.addEventListener('click', () => {
+      const on = _api.toggle();                    // echter Zustand
+      bDraw.classList.toggle('is-active', !!on);
+    });
+    bar.appendChild(bDraw);
+
+    const bClear = document.createElement('button');
+    bClear.type = 'button';
+    bClear.textContent = 'Clear';
+    bClear.title = 'Letzte Trendlinie entfernen';
+    bClear.addEventListener('click', () => { try { _api.clearLast(); } catch (_) {} });
+    bar.appendChild(bClear);
+  }
+
+  const sep2 = document.createElement('span');
+  sep2.className = 'ts-enlarged-sep';
+  bar.appendChild(sep2);
+
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'ts-enlarged-close';
+  close.textContent = '✕';
+  close.title = 'Close fullscreen (Esc)';
+  close.addEventListener('click', hideTsEnlarged);
+  bar.appendChild(close);
+
+  document.body.appendChild(bar);
+  _tsEnlargedBar = bar;
+  _makeTsBarDraggable(bar);
+
+  requestAnimationFrame(() => { try { chartInstances[idx]?.resize(); } catch (_) {} });
+}
+
+// Macht die schwebende Vollbild-Leiste per Drag verschiebbar (Buttons bleiben klickbar).
+function _makeTsBarDraggable(el) {
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  const onMove = (e) => {
+    if (!dragging) return;
+    el.style.left = (ox + e.clientX - sx) + 'px';
+    el.style.top  = (oy + e.clientY - sy) + 'px';
+  };
+  const onUp = () => {
+    dragging = false;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+  el.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button')) return;   // Klicks auf Buttons nicht als Drag werten
+    const r = el.getBoundingClientRect();
+    el.style.left = r.left + 'px';
+    el.style.top = r.top + 'px';
+    el.style.right = 'auto';
+    ox = r.left; oy = r.top; sx = e.clientX; sy = e.clientY;
+    dragging = true;
+    e.preventDefault();
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
         // ===== Renderer-Helper: Customer-ID aus appState =====
         function getCurrentCustomerId() {
           // Variante A: knallhart testen
@@ -908,10 +1036,10 @@ function wireTsToggle() {
     if (enlargeBtn) {
       const instanceRoot = enlargeBtn.closest('.table-content');
       if (instanceRoot) {
-        instanceRoot.classList.toggle('is-enlarged');
         const idx = enlargeBtn.id.replace('tsEnlargeToggle_', '');
-        // Chart nach der Layout-Änderung neu vermessen.
-        requestAnimationFrame(() => { try { chartInstances[idx]?.resize(); } catch {} });
+        // Toggle Vollbild inkl. schwebender Steuerleiste (Schliessen + Zoom).
+        if (instanceRoot.classList.contains('is-enlarged')) hideTsEnlarged();
+        else showTsEnlarged(instanceRoot, idx);
       }
       return;
     }
@@ -922,9 +1050,9 @@ function wireTsToggle() {
     }
   });
 
-  // Escape schließt offene TS-Drawer.
+  // Escape schließt offene TS-Drawer UND das Vollbild.
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAllTsDrawers();
+    if (e.key === 'Escape') { closeAllTsDrawers(); hideTsEnlarged(); }
   });
 }
 

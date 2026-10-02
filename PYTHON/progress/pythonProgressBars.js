@@ -1,11 +1,21 @@
 export function setupPythonProgressBars({
   initialProviders = ["ECB", "FED"],
+  allowedProviders = null,
+  indeterminateWhileRunning = false,
+  clearOnDone = false,
   containerId = "progressBarsContainer",
   globalTextId = "progressText_GLOBAL",
   eventName = "py-progress"
 } = {}) {
   const container = document.getElementById(containerId);
   const globalTxt = document.getElementById(globalTextId);
+
+  // Optionaler Provider-Filter: nur Balken fuer diese Provider zulassen. Verhindert,
+  // dass fremde Jobs (z.B. MVaR/CVaR) auf dem geteilten py-progress-Kanal Balken in
+  // diesem Container erzeugen. null/leer = kein Filter (bisheriges Verhalten).
+  const allowed = (Array.isArray(allowedProviders) && allowedProviders.length)
+    ? new Set(allowedProviders)
+    : null;
 
   if (!container) {
     console.warn(`[ProgressBars] Container #${containerId} not found.`);
@@ -53,6 +63,10 @@ export function setupPythonProgressBars({
 
   if (globalTxt) globalTxt.textContent = "Starting...";
 
+  // clearOnDone: Balken nach Fertigstellung ausblenden. Debounce -> erst wenn der
+  // LETZTE Provider fertig ist (z.B. drei PD-Laeufe nacheinander), wird geleert.
+  let clearTimer = null;
+
   // ✅ 3) Bind über robustes on()
   on(eventName, (data) => {
     const provider = data?.provider || "GLOBAL";
@@ -62,13 +76,37 @@ export function setupPythonProgressBars({
       return;
     }
 
+    // Fremde Provider ignorieren, wenn ein Filter gesetzt ist.
+    if (allowed && !allowed.has(provider)) return;
+
     ensureProviderBar(provider);
 
     const bar = document.getElementById(`progressBar_${provider}`);
     const txt = document.getElementById(`progressText_${provider}`);
 
-    if (bar) bar.value = data?.progress ?? 0;
+    const pct = Number(data?.progress ?? 0);
+    if (bar) {
+      // Jobs mit grober Fortschrittsmeldung (z.B. MVaR: 0 -> 100): waehrend des
+      // Laufs animiert (indeterminate, value entfernt), bei Abschluss gefuellt.
+      if (indeterminateWhileRunning && pct < 100) {
+        bar.removeAttribute('value');
+      } else {
+        bar.value = pct;
+      }
+    }
     if (txt) txt.textContent = data?.message ?? "";
+
+    if (clearOnDone) {
+      if (pct >= 100) {
+        // Fertig -> nach kurzer Haltezeit leeren (reset, wenn vorher noch etwas startet).
+        clearTimeout(clearTimer);
+        clearTimer = setTimeout(() => { try { container.innerHTML = ""; } catch (_) {} }, 1200);
+      } else {
+        // Ein (weiterer) Lauf hat begonnen -> geplantes Leeren abbrechen.
+        clearTimeout(clearTimer);
+        clearTimer = null;
+      }
+    }
   });
 
   //console.log(`[ProgressBars] Listening on "${eventName}" for #${containerId}`);

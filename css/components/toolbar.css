@@ -94,6 +94,32 @@
   flex: 1 1 auto;
   text-align: center;
 }
+/* Kompakte Calculate-Fortschrittsbalken im Popover (MVaR + Credit; viel kleiner als HIST). */
+.toolbar-calc-menu .calc-progress:empty { display: none; }
+.toolbar-calc-menu .calc-progress .provider-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 0 0;
+}
+.toolbar-calc-menu .calc-progress .provider-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  min-width: 34px;
+}
+.toolbar-calc-menu .calc-progress progress {
+  flex: 1 1 auto;
+  height: 6px;
+  /* nativ lassen (kein appearance:none) -> Indeterminate-Animation bleibt sichtbar. */
+}
+.toolbar-calc-menu .calc-progress .progress-text {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* Abschnitts-Trenner im Calc-Menue: zentrierter Text "Historic Data" mit Linie links/rechts.
    Trennt die 3 Calculate-Buttons vom Save-to-Historic-Metrics-Button. */
 .toolbar-calc-menu .calc-menu-sep {

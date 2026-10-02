@@ -4,6 +4,7 @@
 
 import { appState } from '../../../renderer.js';
 import { parseDeNumber } from '../../../utils/tableCellFormats.js';
+import { updateProductCSWarningUI } from '../../../core/ui/warnings.js';
 
 function getValuationResultCache() {
   if (!window.__productValuationResultCache) {
@@ -294,28 +295,33 @@ function renderInitialDiscountCurveSelector(options = {}, row = null) {
 }
 
 function updateProductCSOverrideWarning(prodId, csValue){
-  const warningContainer = document.getElementById('creditWarningContainer');
-  const warningLight = document.getElementById('creditWarning');
-  const warningText = document.getElementById('creditWarningText');
-
-  if (!warningContainer || !warningLight || !warningText) return;
-
+  // Der Top-Bar-Badge ist GLOBAL (alle Produkte mit CS_SPREAD_OVERRIDE_BP), nicht
+  // produktbezogen. Daher aus der kompletten Produktliste neu rechnen und nur den
+  // aktuell im Drawer editierten Wert fuer prodId beruecksichtigen (sofortiges
+  // Feedback, noch nicht persistiert). Verhindert, dass das Entfernen EINES
+  // Overrides die anderen mit ausblendet.
+  const pid = String(prodId ?? '').trim();
   const hasOverride =
     csValue !== null &&
     csValue !== undefined &&
     String(csValue).trim() !== '';
 
-  if (hasOverride) {
-    warningContainer.style.display = 'flex';
-    warningLight.style.backgroundColor = 'red';
-    warningText.textContent = `Product CS Override active: ${prodId}`;
-    warningText.title = `CS spread override for ${prodId}: ${String(csValue).trim()} bp`;
-  } else {
-    warningContainer.style.display = 'none';
-    warningLight.style.backgroundColor = 'transparent';
-    warningText.textContent = '';
-    warningText.title = '';
+  let found = false;
+  const rows = (appState?.getProdData?.() || []).map((r) => {
+    const id = String(r?.PROD_ID || '').trim();
+    if (pid && id === pid) {
+      found = true;
+      return { ...r, CS_SPREAD_OVERRIDE_BP: hasOverride ? csValue : null };
+    }
+    return r;
+  });
+  // Produkt noch nicht in der Liste (z. B. neu angelegt) + Override gesetzt -> ergaenzen.
+  if (!found && pid && hasOverride) {
+    rows.push({ PROD_ID: pid, CS_SPREAD_OVERRIDE_BP: csValue });
   }
+
+  try { updateProductCSWarningUI(rows); }
+  catch (e) { console.warn('[csOverride] global badge recompute failed', e); }
 }
 
 function gatherValuationInput(container, prodId) {

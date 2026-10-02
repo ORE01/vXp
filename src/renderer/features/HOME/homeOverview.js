@@ -2018,6 +2018,12 @@ export function renderHomeOverview() {
   // (per IPC); sofort mit gecachtem Wert rendern, dann nach dem async-Load erneut.
   const buildAsOfHeader = () => {
     const day = (v) => (v ? String(v).slice(0, 10) : null);
+    // Anzeige-Format: YYYY-MM-DD -> DD-MM-YYYY. NUR Darstellung — die zugrunde liegenden
+    // Werte/Vergleiche (day(), histRisk-Sortierung) bleiben ISO (YYYY-MM-DD).
+    const fmtDMY = (s) => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+      return m ? `${m[3]}-${m[2]}-${m[1]}` : (s || '');
+    };
     const parts = [];
     // Meta bevorzugt aus meta:get (_appMeta), sonst aus dem Pump-Store (window.__appMetaPump),
     // der beim Import/Lauf ueber den normalen Tabellen-Pump geliefert wird (ohne IPC-Handler).
@@ -2040,15 +2046,15 @@ export function renderHomeOverview() {
       const d = String(r?.DATE ?? '').slice(0, 10);
       if (d && d > histRisk) histRisk = d;
     }
-    if (pcalc) parts.push(`Portfolio ${pcalc}`);
-    if (imp)  parts.push(`Portfolio Trades ${imp}`);
-    if (mkt)  parts.push(`Market Data ${mkt}`);
-    if (hist) parts.push(`Historic Data ${hist}`);
+    if (pcalc) parts.push(`Portfolio ${fmtDMY(pcalc)}`);
+    if (imp)  parts.push(`Portfolio Trades ${fmtDMY(imp)}`);
+    if (mkt)  parts.push(`Market Data ${fmtDMY(mkt)}`);
+    if (hist) parts.push(`Historic Data ${fmtDMY(hist)}`);
     // Immer anzeigen; hat das gewaehlte Portfolio keine gespeicherte Historik -> "–",
     // damit klar ist, dass es (noch) keine Historic Data gibt (statt den Eintrag wegzulassen).
-    parts.push(`Portfolio Historic Data ${histRisk || '–'}`);
-    if (mvar) parts.push(`Market Risk ${mvar}`);
-    if (cvar) parts.push(`Credit Risk ${cvar}`);
+    parts.push(`Portfolio Historic Data ${histRisk ? fmtDMY(histRisk) : '–'}`);
+    if (mvar) parts.push(`Market Risk ${fmtDMY(mvar)}`);
+    if (cvar) parts.push(`Credit Risk ${fmtDMY(cvar)}`);
     return `Portfolio: ${port}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;
   };
   setText('homeAsOf', buildAsOfHeader());

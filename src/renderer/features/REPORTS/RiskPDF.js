@@ -768,11 +768,12 @@ export async function generateRiskPDF(filteredData, overrides = {}) {
   let coverMetaLines = [];
   try {
     coverMetaLines = getOverviewStatusItems().map((s) => {
-      const m = String(s).match(/^(.*?)\s*(\d{4})-(\d{2})-(\d{2})\s*$/);
+      // Overview liefert die Items jetzt als "Label DD-MM-YYYY"; fuer die Cover-Zeile das
+      // Datum nach vorne stellen -> "DD-MM-YYYY Label".
+      const m = String(s).match(/^(.*?)\s*(\d{2}-\d{2}-\d{4})\s*$/);
       if (!m) return s;
       const label = m[1].trim();
-      const de = `${m[4]}-${m[3]}-${m[2]}`;
-      return label ? `${de} ${label}` : de;
+      return label ? `${m[2]} ${label}` : m[2];
     });
   } catch {}
 

@@ -271,10 +271,14 @@ Feature:    Wenn es nur in einem Panel gilt
           <button type="button" id="riskCalcMarket" class="edit-button">Calculate Market Risk</button>
           <span class="risk-calc-dot" id="riskDotMarket" title="not calculated"></span>
         </div>
+        <!-- Kleiner MVaR-Fortschrittsbalken (py-MVaR). Balken werden dynamisch erzeugt. -->
+        <div id="calcProgress_market" class="calc-progress"></div>
         <div class="risk-calc-row">
           <button type="button" id="riskCalcCredit" class="edit-button">Calculate Credit Risk</button>
           <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
         </div>
+        <!-- Kleine CVaR-Fortschrittsbalken je PD (RATING/MARKET/NORM); dynamisch erzeugt. -->
+        <div id="calcProgress_credit" class="calc-progress"></div>
         <!-- Trenner + Abschnitt "Historic Data". Save-Button aus RISK ▸ Risk Results ▸ Risk Calculation. -->
         <div class="calc-menu-sep"><span>Historic Data</span></div>
         <div class="risk-calc-row">
@@ -288,6 +292,7 @@ Feature:    Wenn es nur in einem Panel gilt
 </div>
 
     <div class="tab">
+      <button class="tablinks" id="DATA_Tab">UPDATES</button>
       <button class="tablinks" id="HOME_Tab">OVERVIEW</button>
       <button class="tablinks" id="ANALYSE_Tab">PORTFOLIO</button>
       <button class="tablinks" id="RISK_Tab">RISK</button>
@@ -297,7 +302,6 @@ Feature:    Wenn es nur in einem Panel gilt
       <button class="tablinks" id="products_Tab">PRODUCTS</button>
       <button class="tablinks" id="MARKETDATA_Tab">MARKET DATA</button>
       <button class="tablinks" id="DataProvider_Tab">DATA PROVIDER</button>
-      <button class="tablinks" id="DATA_Tab">UPDATES</button>
       <button class="tablinks" id="CUSTOMER_SETUP_Tab">CUSTOMER SETUP</button>
     </div>
 
@@ -1053,7 +1057,9 @@ Feature:    Wenn es nur in einem Panel gilt
       <button class="section-trigger pf-accent"
               data-panel="panel-mvar-scenarios"
               aria-controls="panel-mvar-scenarios"
-              aria-expanded="false">
+              aria-expanded="false"
+              disabled>
+        <!-- SCENARIOS-PARKED: zum Reaktivieren dieses "disabled" entfernen -->
         <span class="section-header">Scenarios</span>
         <span class="chev"></span>
       </button>
@@ -1162,29 +1168,11 @@ Feature:    Wenn es nur in einem Panel gilt
                 <span class="chev"></span>
               </button>
               <div class="risk-acc-body">
-                <!-- Regulatory Benchmark: analytisches ASRF-Modell, zwei PD-Sichten
-                     (historic / market-adjusted) -> Vergleichspaar zu Internal Model. -->
-                <div class="risk-acc">
-                  <button class="section-trigger section-trigger--sub risk-acc--l4 risk-acc-toggle" type="button" aria-expanded="false">
-                    <span class="section-header">Regulatory Benchmark (ASRF)</span>
-                    <span class="chev"></span>
-                  </button>
-                  <div class="risk-acc-body">
-                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-asrf" aria-controls="panel-asrf" aria-expanded="false">
-                      <span class="section-header">Historic PD</span>
-                      <span class="chev"></span>
-                    </button>
-                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-asrf-norm" aria-controls="panel-asrf-norm" aria-expanded="false">
-                      <span class="section-header">Market-adjusted PD</span>
-                      <span class="chev"></span>
-                    </button>
-                  </div>
-                </div>
                 <!-- Internal Model: MF-GC (Multi-Factor Gaussian Copula) mit den PD-Sichten
                      historic / market adjusted + Loss Distribution. -->
                 <div class="risk-acc">
                   <button class="section-trigger section-trigger--sub risk-acc--l4 risk-acc-toggle" type="button" aria-expanded="false">
-                    <span class="section-header">Internal Model (MF-GC)</span>
+                    <span class="section-header">Internal Model</span>
                     <span class="chev"></span>
                   </button>
                   <div class="risk-acc-body">
@@ -1198,6 +1186,24 @@ Feature:    Wenn es nur in einem Panel gilt
                     </button>
                     <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-cvar" aria-controls="panel-cvar" aria-expanded="false">
                       <span class="section-header">Loss Distribution</span>
+                      <span class="chev"></span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Regulatory Model: analytisches ASRF-Modell, zwei PD-Sichten
+                     (historic / market-adjusted) -> Vergleichspaar zu Internal Model. -->
+                <div class="risk-acc">
+                  <button class="section-trigger section-trigger--sub risk-acc--l4 risk-acc-toggle" type="button" aria-expanded="false">
+                    <span class="section-header">Regulatory Model</span>
+                    <span class="chev"></span>
+                  </button>
+                  <div class="risk-acc-body">
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-asrf" aria-controls="panel-asrf" aria-expanded="false">
+                      <span class="section-header">Historic PD</span>
+                      <span class="chev"></span>
+                    </button>
+                    <button class="section-trigger section-trigger--sub risk-acc--l5" type="button" data-panel="panel-asrf-norm" aria-controls="panel-asrf-norm" aria-expanded="false">
+                      <span class="section-header">Market-adjusted PD</span>
                       <span class="chev"></span>
                     </button>
                   </div>
@@ -2734,6 +2740,15 @@ Feature:    Wenn es nur in einem Panel gilt
 
       <!-- Hier rendert handleCvarInputConfigView() die Tabelle -->
       <div class="data-container" id="inputCreditVaRConfigContainer"></div>
+
+      <!-- Session-only PD-Auswahl: welche PD-Varianten der naechste Credit-Lauf rechnet.
+           Default alle drei; NICHT gespeichert (gilt nur fuer die aktuelle Session). -->
+      <div class="cvar-pd-select" style="margin-top:12px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+        <span class="sub-panel-subtitle" style="margin:0;">PD variants to compute (this session):</span>
+        <label style="display:inline-flex; align-items:center; gap:5px;"><input type="checkbox" class="cvar-pd-flag" data-flag="RATING" checked> RATING (Historic)</label>
+        <label style="display:inline-flex; align-items:center; gap:5px;"><input type="checkbox" class="cvar-pd-flag" data-flag="MARKET" checked> MARKET (Implied)</label>
+        <label style="display:inline-flex; align-items:center; gap:5px;"><input type="checkbox" class="cvar-pd-flag" data-flag="NORM" checked> NORM (Market-adj.)</label>
+      </div>
     </div>
     <!--   ENDE BLOCK 1 -->
 
@@ -3097,7 +3112,16 @@ Feature:    Wenn es nur in einem Panel gilt
             <button class="sub-panel-close" data-close="panel-create-credit-scenario" aria-label="close">&times;</button>
           </div>
           <div class="sub-panel-body">
-            <section class="table-card">
+            <!-- Scenario-Quelle: echte Portfolio-Issuer (bestehend) vs. synthetisches
+                 Benchmark-Buch (Modell-Testpfad). Steuert CREDIT_SYNTH_CONFIG.scenario_kind. -->
+            <div style="margin-bottom:12px;">
+              <label>Scenario Source</label><br>
+              <select id="creditScenMode" style="width:260px;">
+                <option value="real" selected>Portfolio Issuers</option>
+                <option value="synth">Synthetic Benchmark Book</option>
+              </select>
+            </div>
+            <section class="table-card" id="creditRealSetup">
               <h4 class="table-title">Scenario Setup</h4>
               <div style="margin-bottom:12px;">
                 <label>Edit Existing Scenario</label><br>
@@ -3116,14 +3140,54 @@ Feature:    Wenn es nur in einem Panel gilt
                 <button id="creditIssuerApplyAllBtn" class="edit-button" type="button">Apply to all</button>
               </div>
             </section>
-            <section class="table-card">
+            <section class="table-card" id="creditRealIssuers">
               <h4 class="table-title">Issuers (from selected portfolio) &mdash; LGD = EAD &times; (1 &minus; RR)</h4>
               <div id="creditIssuerScenarioTableData" class="data-container"></div>
             </section>
-            <div style="margin-top:16px;">
+            <div style="margin-top:16px;" id="creditRealButtons">
               <button id="creditIssuerSaveScenarioBtn" class="edit-button">Save Credit Scenario</button>
               <button id="creditIssuerDeleteScenarioBtn" class="edit-button delete-button">Delete Credit Scenario</button>
             </div>
+
+            <!-- Synthetisches Benchmark-Buch (Modell-Testpfad; k-Faktor-PCA). -->
+            <section class="table-card" id="creditSynthSection" hidden>
+              <h4 class="table-title">Synthetic Benchmark Book</h4>
+              <p style="margin:0 0 10px; color:var(--text-muted,#9aa0a6); font-size:12px;">
+                Artificial names I1…I&lt;N&gt; (not the system issuers), grouped by rating notch
+                (first group best rating, then next, …). PD is taken from the system rating
+                mapping (active PD scenarios apply). Fixed equicorrelation. Choose the factor
+                model for the MF-GC run; Full is the reference, Auto picks K via explained variance.
+                Saving only stores the scenario &mdash; activate it under &ldquo;Set Credit Scenario&rdquo;.
+              </p>
+              <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px;">
+                <div><label>Edit Existing Synthetic Scenario</label><br>
+                  <select id="creditSynthSelect" style="width:220px;"><option value="">-- New Scenario --</option></select>
+                </div>
+                <div><label>Scenario Name</label><br>
+                  <input id="creditSynthName" placeholder="new synthetic scenario name" style="width:220px;">
+                </div>
+              </div>
+              <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                <div><label>Number of names</label><br><input type="text" inputmode="numeric" id="creditSynthN" value="100" style="width:120px;"></div>
+                <div><label>Names per rating notch</label><br><input type="text" inputmode="numeric" id="creditSynthPerNotch" value="10" style="width:150px;"></div>
+                <div><label>Notional per name</label><br><input type="text" inputmode="decimal" id="creditSynthNotional" value="1.000.000" style="width:150px;"></div>
+                <div><label>Correlation</label><br><input type="text" id="creditSynthCorr" value="0,2" style="width:90px;"></div>
+                <div><label>Factor model (PCA)</label><br>
+                  <select id="creditSynthPca" style="width:150px;">
+                    <option value="AUTO">Auto (PCA)</option>
+                    <option value="1">1</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="FULL" selected>Full</option>
+                  </select>
+                </div>
+              </div>
+              <div style="margin-top:16px;">
+                <button id="creditSynthSaveBtn" class="edit-button" type="button">Save Synthetic Book</button>
+                <button id="creditSynthDeleteBtn" class="edit-button delete-button" type="button">Delete Synthetic Book</button>
+              </div>
+            </section>
           </div>
         </div><!-- /#panel-create-credit-scenario -->
 
@@ -5815,7 +5879,9 @@ Feature:    Wenn es nur in einem Panel gilt
               type="button"
               data-panel="panel-upd-vxp"
               aria-controls="panel-upd-vxp"
-              aria-expanded="false">
+              aria-expanded="false"
+              disabled>
+        <!-- vXp-PARKED: zum Reaktivieren dieses "disabled" entfernen -->
         <span class="section-header">vXp Imports</span><span class="chev"></span>
       </button>
     </div>

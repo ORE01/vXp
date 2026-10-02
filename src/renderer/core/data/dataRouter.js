@@ -173,6 +173,12 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
       document.dispatchEvent(new Event('creditissuer:active:ready'));
       return;
 
+    // Synthetische Benchmark-Szenarien (benannt) -> Store + Ready-Event.
+    case 'CREDIT_SYNTH_CONFIGData':
+      appState?.setCreditSynthConfig?.(rows);
+      document.dispatchEvent(new Event('creditsynth:ready'));
+      return;
+
     case 'PD_NORM_SETTINGSData':
       appState?.setPdNormSettings?.(rows);
       document.dispatchEvent(new Event('pdnorm:ready'));
