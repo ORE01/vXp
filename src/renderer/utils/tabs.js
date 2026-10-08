@@ -189,8 +189,13 @@ function wireRiskCalcStatus() {
         proxyEl.textContent = label;
         if (wasBusy) {
           dotEl.classList.remove('is-busy');
-          dotEl.classList.add('is-done');
-          dotEl.title = 'done';
+          // Fehlschlag (window.__riskRunError[metric]) -> ROT statt gruen.
+          const metric = dot === 'riskDotCredit' ? 'credit'
+            : (dot === 'riskDotPortfolio' ? 'portfolio' : null);
+          const failed = !!(metric && window.__riskRunError && window.__riskRunError[metric]);
+          dotEl.classList.toggle('is-error', failed);
+          dotEl.classList.toggle('is-done', !failed);
+          dotEl.title = failed ? 'failed' : 'done';
           wasBusy = false;
         }
       }
@@ -215,6 +220,7 @@ function resetRiskCalcDotsOnPortfolioChange() {
       const dot = document.getElementById(id);
       if (!dot || dot.classList.contains('is-busy')) return; // laufenden Lauf nicht stören
       dot.classList.remove('is-done');
+      dot.classList.remove('is-error');
       dot.title = 'not calculated';
     });
   };

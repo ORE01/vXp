@@ -43,6 +43,11 @@ export function routeTableData({ appState }, channel, data, handlers = {}) {
         for (const r of rows) { const k = r?.key; if (k) map[k] = r?.value; }
         window.__appMetaPump = map;
       } catch (_) {}
+      // AppMeta kommt FRUEH (vor den schweren Tabellen-Pumps). Overview-Kopfzeile und
+      // Calculate-Panel sofort auffrischen, damit das Datum unmittelbar nach dem Lauf
+      // erscheint statt erst nach dem Verarbeiten der grossen MarketVaR/CVaR-Pumps.
+      try { window.renderHomeOverview?.(); } catch (_) {}
+      try { document.dispatchEvent(new CustomEvent('appmeta:updated')); } catch (_) {}
       return;
     }
 

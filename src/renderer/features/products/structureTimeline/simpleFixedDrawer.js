@@ -8,6 +8,7 @@ import { applyProductTemplateDefaults } from '../productTemplateResolver.js';
 import { parseDeNumber, toDeInput } from '../../../utils/tableCellFormats.js';
 import { validateProductBeforeSave } from '../productValidation.js';
 import { PRODUCT_FIELD_CONFIG } from '../productFieldConfig.js';
+import { isRelativeToken, resolveStartISO, resolveMaturityISO } from './relativeDates.js';
 
 
 const SIMPLE_FIXED_FIELDS = [
@@ -97,10 +98,8 @@ function formatPercent(value) {
   if (!raw) return '';
   const n = Number(raw);
   if (!Number.isFinite(n)) return raw;
-  if (n !== 0 && Math.abs(n) < 1) {
-    return toDeInput(String(parseFloat((n * 100).toFixed(10))));
-  }
-  return raw;
+  // Gespeicherter Bruch -> Prozent-Anzeige (immer ×100): 0.005 -> 0,5 ; 0.0353 -> 3,53.
+  return toDeInput(String(parseFloat((n * 100).toFixed(10))));
 }
 
 function escapeHtml(value) {
@@ -240,10 +239,32 @@ function renderField(field, row) {
     `;
   }
 
-  const inputType =
-    field === 'START_DATE' || field === 'MATURITY'
-      ? 'date'
-      : 'text';
+  // Datumsfelder: absolut (Picker) ODER relativ (Token). Token hat Vorrang -> wird
+  // gespeichert (Variante a); das Pricing loest ihn frisch auf.
+  if (field === 'START_DATE' || field === 'MATURITY') {
+    const isStart = field === 'START_DATE';
+    const rawVal = String(row[field] ?? '').trim();
+    const token = isRelativeToken(rawVal) ? rawVal : '';
+    const absISO = isStart
+      ? resolveStartISO(rawVal)
+      : resolveMaturityISO(rawVal, row.START_DATE);
+    return `
+      <label class="structure-drawer-field">
+        <span class="structure-drawer-label">${field}</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="date" class="structure-drawer-input" style="flex:1 1 auto; min-width:120px;"
+            value="${escapeHtml(absISO)}" data-field="${field}" data-absdate="${field}" />
+          <input type="text" class="structure-drawer-input" style="flex:0 0 62px; min-width:0;"
+            value="${escapeHtml(token)}" data-reltoken="${field}"
+            placeholder="${isStart ? 'today+2' : '10y'}"
+            title="Relative (optional): ${isStart ? 'today or today+N days' : 'N years from start, e.g. 10y'}" />
+        </div>
+        <span data-relpreview="${field}" style="font-size:11px; color:#888; display:block; margin-top:2px;"></span>
+      </label>
+    `;
+  }
+
+  const inputType = 'text';
 
   return `
     <label class="structure-drawer-field">
@@ -256,6 +277,48 @@ function renderField(field, row) {
       />
     </label>
   `;
+}
+
+// Wiring der relativen Datums-Tokens: Token tippen -> absolutes Datum berechnen (Picker +
+// Vorschau). Picker manuell aendern -> Token leeren (= absoluter Modus).
+function bindRelativeDateTokens(container) {
+  const startTok = container.querySelector('[data-reltoken="START_DATE"]');
+  const startDate = container.querySelector('[data-absdate="START_DATE"]');
+  const matTok = container.querySelector('[data-reltoken="MATURITY"]');
+  const matDate = container.querySelector('[data-absdate="MATURITY"]');
+  const startPrev = container.querySelector('[data-relpreview="START_DATE"]');
+  const matPrev = container.querySelector('[data-relpreview="MATURITY"]');
+
+  const startValue = () => {
+    const t = String(startTok?.value || '').trim();
+    return t || String(startDate?.value || '').trim();
+  };
+
+  const recompute = () => {
+    const st = String(startTok?.value || '').trim();
+    if (st) {
+      const iso = resolveStartISO(st);
+      if (startDate && iso) startDate.value = iso;
+      if (startPrev) startPrev.textContent = iso ? `= ${iso}` : '';
+    } else if (startPrev) {
+      startPrev.textContent = '';
+    }
+
+    const mt = String(matTok?.value || '').trim();
+    if (mt) {
+      const iso = resolveMaturityISO(mt, startValue());
+      if (matDate && iso) matDate.value = iso;
+      if (matPrev) matPrev.textContent = iso ? `= ${iso}` : '';
+    } else if (matPrev) {
+      matPrev.textContent = '';
+    }
+  };
+
+  [startTok, matTok].forEach((el) => el && el.addEventListener('input', recompute));
+  if (startDate) startDate.addEventListener('change', () => { if (startTok) startTok.value = ''; recompute(); });
+  if (matDate) matDate.addEventListener('change', () => { if (matTok) matTok.value = ''; recompute(); });
+
+  recompute();
 }
 
 function bindIssuerTickerSync(container) {
@@ -297,10 +360,10 @@ function normalizeRate(value) {
 
   if (!Number.isFinite(n)) return raw;
 
-  if (raw.includes('%')) return n / 100;
-  if (n > 1) return n / 100;
-
-  return n;
+  // Feld ist "COUPON (%)": die Eingabe ist IMMER ein Prozentwert -> /100.
+  // 0.5 -> 0,5% -> 0.005 ; 3.53 -> 0.0353 ; 4 -> 0.04. Ein evtl. getipptes "%"
+  // wird von parseDeNumber ignoriert; das Ergebnis ist dasselbe.
+  return n / 100;
 }
 
 function validateSimpleFixedData(data, container) {
@@ -329,6 +392,13 @@ function validateSimpleFixedData(data, container) {
 
 function saveSimpleFixed(container, prodId, options = {}) {
   let newData = gatherDrawerData(container);
+
+  // Relative-Modus (Variante a): wenn ein Token gesetzt ist, DIESEN speichern (statt des
+  // aufgeloesten absoluten Datums). Das Pricing loest ihn bei jedem Lauf frisch auf.
+  const _startTok = String(container.querySelector('[data-reltoken="START_DATE"]')?.value || '').trim();
+  const _matTok = String(container.querySelector('[data-reltoken="MATURITY"]')?.value || '').trim();
+  if (_startTok) newData.START_DATE = _startTok;
+  if (_matTok) newData.MATURITY = _matTok;
 
   const isCreateMode = options.mode === 'create';
   const existingRow = getProductRow(prodId) || {};
@@ -487,6 +557,7 @@ export function renderSimpleFixedDrawer(container, prodId, options = {}) {
   `;
 
   bindIssuerTickerSync(container);
+  bindRelativeDateTokens(container);
 
     container
     .querySelector('#saveSimpleFixedDrawer')

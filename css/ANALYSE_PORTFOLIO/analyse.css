@@ -206,6 +206,11 @@
   animation: riskDotPulse 1s ease-in-out infinite;
 }
 .risk-calc-dot.is-done { background: var(--accent); }
+/* Fehlschlag: steady rot (ohne Puls), klar unterscheidbar von "calculating" (pulsierend). */
+.risk-calc-dot.is-error {
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--danger) inset;
+}
 @keyframes riskDotPulse {
   0%, 100% { opacity: 1; }
   50%      { opacity: .35; }

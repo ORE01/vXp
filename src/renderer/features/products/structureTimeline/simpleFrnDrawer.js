@@ -5,9 +5,10 @@
 import { appState } from '../../../renderer.js';
 import { issuerData } from '../../issuer/issuerPanel.js';
 import { applyProductTemplateDefaults } from '../productTemplateResolver.js';
-import { parseDeNumber } from '../../../utils/tableCellFormats.js';
+import { parseDeNumber, toDeInput } from '../../../utils/tableCellFormats.js';
 import { validateProductBeforeSave } from '../productValidation.js';
 import { PRODUCT_FIELD_CONFIG } from '../productFieldConfig.js';
+import { isRelativeToken, resolveStartISO, resolveMaturityISO } from './relativeDates.js';
 
 const SIMPLE_FRN_FIELDS = [
   'PROD_ID',
@@ -115,6 +116,15 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
+// Gespeicherter Bruch -> Prozent-Anzeige (immer ×100): 0.005 -> 0,5 ; 0.04 -> 4.
+function formatPercent(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return raw;
+  return toDeInput(String(parseFloat((n * 100).toFixed(10))));
+}
+
 function getIssuerOptions() {
   return [...new Set(
     (issuerData || [])
@@ -193,6 +203,49 @@ function renderField(field, row) {
           'senior_subordinated',
           'junior_subordinated',
         ], value || 'senior_unsecured')}
+      </label>
+    `;
+  }
+
+  // Datumsfelder: absolut (Picker) ODER relativ (Token). Token hat Vorrang (Variante a).
+  if (field === 'START_DATE' || field === 'MATURITY') {
+    const isStart = field === 'START_DATE';
+    const rawVal = String(row[field] ?? '').trim();
+    const token = isRelativeToken(rawVal) ? rawVal : '';
+    const absISO = isStart
+      ? resolveStartISO(rawVal)
+      : resolveMaturityISO(rawVal, row.START_DATE);
+    return `
+      <label class="structure-drawer-field">
+        <span class="structure-drawer-label">${field}</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="date" class="structure-drawer-input" style="flex:1 1 auto; min-width:120px;"
+            value="${escapeHtml(absISO)}" data-field="${field}" data-absdate="${field}" />
+          <input type="text" class="structure-drawer-input" style="flex:0 0 62px; min-width:0;"
+            value="${escapeHtml(token)}" data-reltoken="${field}"
+            placeholder="${isStart ? 'today+2' : '10y'}"
+            title="Relative (optional): ${isStart ? 'today or today+N days' : 'N years from start, e.g. 10y'}" />
+        </div>
+        <span data-relpreview="${field}" style="font-size:11px; color:#888; display:block; margin-top:2px;"></span>
+      </label>
+    `;
+  }
+
+  // Rate-Felder als Prozent (wie COUPON bei Simple Fixed): Eingabe = %, Anzeige ×100.
+  if (field === 'SPREADS' || field === 'CAP' || field === 'FLOOR') {
+    const displayValue = formatPercent(value);
+    const labelText = field === 'SPREADS' ? 'SPREADS (%)'
+      : (field === 'CAP' ? 'CAP (%)' : 'FLOOR (%)');
+    return `
+      <label class="structure-drawer-field">
+        <span class="structure-drawer-label">${labelText}</span>
+        <input
+          type="text"
+          class="structure-drawer-input"
+          value="${escapeHtml(displayValue)}"
+          data-field="${field}"
+          placeholder="e.g. 0.50"
+        />
       </label>
     `;
   }
@@ -310,6 +363,47 @@ function gatherDrawerData(container) {
   return data;
 }
 
+// Wiring der relativen Datums-Tokens (identisch zu Simple Fixed).
+function bindRelativeDateTokens(container) {
+  const startTok = container.querySelector('[data-reltoken="START_DATE"]');
+  const startDate = container.querySelector('[data-absdate="START_DATE"]');
+  const matTok = container.querySelector('[data-reltoken="MATURITY"]');
+  const matDate = container.querySelector('[data-absdate="MATURITY"]');
+  const startPrev = container.querySelector('[data-relpreview="START_DATE"]');
+  const matPrev = container.querySelector('[data-relpreview="MATURITY"]');
+
+  const startValue = () => {
+    const t = String(startTok?.value || '').trim();
+    return t || String(startDate?.value || '').trim();
+  };
+
+  const recompute = () => {
+    const st = String(startTok?.value || '').trim();
+    if (st) {
+      const iso = resolveStartISO(st);
+      if (startDate && iso) startDate.value = iso;
+      if (startPrev) startPrev.textContent = iso ? `= ${iso}` : '';
+    } else if (startPrev) {
+      startPrev.textContent = '';
+    }
+
+    const mt = String(matTok?.value || '').trim();
+    if (mt) {
+      const iso = resolveMaturityISO(mt, startValue());
+      if (matDate && iso) matDate.value = iso;
+      if (matPrev) matPrev.textContent = iso ? `= ${iso}` : '';
+    } else if (matPrev) {
+      matPrev.textContent = '';
+    }
+  };
+
+  [startTok, matTok].forEach((el) => el && el.addEventListener('input', recompute));
+  if (startDate) startDate.addEventListener('change', () => { if (startTok) startTok.value = ''; recompute(); });
+  if (matDate) matDate.addEventListener('change', () => { if (matTok) matTok.value = ''; recompute(); });
+
+  recompute();
+}
+
 function normalizeRate(value) {
   const raw = String(value ?? '').trim();
 
@@ -319,10 +413,9 @@ function normalizeRate(value) {
 
   if (!Number.isFinite(n)) return raw;
 
-  if (raw.includes('%')) return n / 100;
-  if (n > 1) return n / 100;
-
-  return n;
+  // Rate-Felder (SPREADS/CAP/FLOOR) sind Prozent: Eingabe IMMER /100.
+  // 0.5 -> 0,5% -> 0.005 ; 4 -> 0.04. Ein getipptes "%" wird ignoriert.
+  return n / 100;
 }
 
 function validateSimpleFrnData(data, container) {
@@ -353,6 +446,12 @@ function validateSimpleFrnData(data, container) {
 
 function saveSimpleFrn(container, prodId, options = {}) {
   let newData = gatherDrawerData(container);
+
+  // Relative-Modus (Variante a): Token speichern statt des aufgeloesten Datums.
+  const _startTok = String(container.querySelector('[data-reltoken="START_DATE"]')?.value || '').trim();
+  const _matTok = String(container.querySelector('[data-reltoken="MATURITY"]')?.value || '').trim();
+  if (_startTok) newData.START_DATE = _startTok;
+  if (_matTok) newData.MATURITY = _matTok;
 
   const isCreateMode = options.mode === 'create';
 
@@ -554,6 +653,7 @@ export function renderSimpleFrnDrawer(container, prodId, options = {}) {
   `;
 
   bindIssuerTickerSync(container);
+  bindRelativeDateTokens(container);
 
   container
     .querySelector('#saveSimpleFrnDrawer')

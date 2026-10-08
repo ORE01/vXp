@@ -234,6 +234,7 @@ module.exports = function registerCrudHandlers({
     rowIndex,
     newData,
     uniqueIdentifier,
+    skipRefresh,
   } = {}) => {
     try {
       const tableName = String(cleanTableName || '');
@@ -273,6 +274,17 @@ module.exports = function registerCrudHandlers({
             } catch (e) {
               console.warn('[crud.handlers] Issuer->IssuerRankRating sync failed:', e?.message || e);
             }
+          }
+
+          // Optimistisch angewandte Updates (z.B. INCLUDE-Checkbox in der Deals-Tabelle)
+          // sind im Renderer bereits reflektiert -> KEIN Server-Refresh/Push, sonst rendert
+          // die Tabelle neu (Reflow/Flackern). DB-Persist ist oben bereits erfolgt.
+          if (skipRefresh) {
+            event.reply('update-data-success', {
+              cleanTableName,
+              refreshList: [],
+            });
+            return;
           }
 
           const refreshList = computeRefreshList(cleanTableName, newData);

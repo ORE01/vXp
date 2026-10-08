@@ -41,14 +41,23 @@ export function installPythonProgressBarsBridge() {
   // (Alle hören auf py-excel-progress; ein Provider-Balken wird nur EINMAL
   //  erzeugt, im Container seiner initialProviders.)
   setupPythonProgressBars({
-    initialProviders: ["ALL"],
+    // "Import: ALL" laeuft jetzt im Modus BUSINESS -> Provider heisst "BUSINESS"
+    // (sonst bleibt der "ALL"-Balken leer und es entsteht ein zweiter Balken).
+    initialProviders: ["BUSINESS"],
     containerId: "excelProgress_full",
     globalTextId: "progressText_EXCEL",
     eventName: "py-excel-progress"
   });
   setupPythonProgressBars({
-    initialProviders: ["ISSUER", "PRODUCTS", "DEALS"],
+    initialProviders: ["ISSUER", "PRODUCTS"],
     containerId: "excelProgress_master",
+    globalTextId: "progressText_EXCEL",
+    eventName: "py-excel-progress"
+  });
+  // Portfolio Data (DEALS) -> eigener Balken in der Kachel "Portfolio Data".
+  setupPythonProgressBars({
+    initialProviders: ["DEALS"],
+    containerId: "excelProgress_deals",
     globalTextId: "progressText_EXCEL",
     eventName: "py-excel-progress"
   });

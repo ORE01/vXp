@@ -3,27 +3,19 @@
   align-items: center;
   gap: 6px;
 
-  /* Schwebende Suchbox (in den <body> injiziert): aus dem Fluss nehmen, sonst
-     addiert sie ihre Höhe zu #app-root und erzeugt einen äußeren Scrollbar. */
-  position: fixed;
-  top: 110px;          /* direkt unter der fixen Topbar */
-  left: 0;
-  z-index: 9999;
-
-  width: 210px;
-  max-width: 210px;
+  /* Sitzt jetzt INLINE in der Topbar (#toolbar .toolbar-left) -> nicht mehr
+     schwebend, verdeckt keine Panel-Inhalte mehr. */
+  width: 200px;
+  max-width: 200px;
 
   height: 28px;
   padding: 3px 8px;
-  margin: 6px 10px;
 
   border: 1px solid var(--border-subtle);
   border-radius: 999px;
   background: var(--surface-overlay);
-  backdrop-filter: blur(8px);
 
   color: inherit;
-  z-index: 9999;
 }
 
 .app-page-search-icon {

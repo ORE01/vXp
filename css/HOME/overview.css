@@ -6,11 +6,16 @@
    automatisch, hier stehen nur Layout-Regeln. Keine Akzentfarben. */
 
 .home-overview {
-  /* Padding oben gross genug, damit die fixe Seitensuche ("Search current page...")
-     den Titel nicht ueberdeckt. */
-  padding: 64px 26px 30px;
+  /* Suche sitzt jetzt in der Topbar -> kein Extra-Platz oben noetig. */
+  padding: 30px 26px 30px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* Fehlschlag eines Laufs: "error" statt Datum in der Overview-Kopfzeile (rot). */
+#homeAsOf .asof-error {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 /* Landing (HOME-Tab): denselben Platz wie die Trigger-Spalte im PORTFOLIO/RISK-

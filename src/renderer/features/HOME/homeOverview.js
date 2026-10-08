@@ -36,6 +36,8 @@ const fmtPctRaw = (v) => Number.isFinite(v) ? `${fmtNum(v, 2)} %` : '–';      
 
 const normPort = (s) => String(s ?? '').replace(/^Portfolios[_-]?/i, '').trim().toUpperCase();
 const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+const escE = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const showEl = (id, show) => { const el = document.getElementById(id); if (el) el.hidden = !show; };
 // Overview-Aenderungsdaten je Trend-Kachel { up, abs, rel } (oder null) — fuer den PDF-Mirror.
 const _ovChg = {};
@@ -570,6 +572,51 @@ function latestCreatedAtOf(rows) {
   }
   return max || null;
 }
+
+// Wie latestCreatedAtOf, aber NUR fuer das gewaehlte Portfolio (port_name).
+// MVaR/CVaR-Datum MUSS portfoliospezifisch sein -- sonst zeigt die Overview das
+// globale "zuletzt irgendwo gerechnet"-Datum, auch wenn DIESES Portfolio nie
+// gerechnet wurde (z.B. CALLABLES zeigte faelschlich das heutige Credit-Risk-Datum).
+function latestCreatedAtOfForPort(rows, port) {
+  const p = normPort(port);
+  let max = '';
+  for (const r of (Array.isArray(rows) ? rows : [])) {
+    if (normPort(r?.port_name ?? r?.PORT_NAME) !== p) continue;
+    const d = String(r?.created_at ?? '').slice(0, 10);
+    if (d && d > max) max = d;
+  }
+  return max || null;
+}
+
+// Letzte Berechnungs-Daten (Portfolio / Market Risk / Credit Risk) im Anzeigeformat
+// DD-MM-YYYY — IDENTISCHE Quelle/Logik wie die Overview-Kopfzeile (buildAsOfHeader).
+// Wird vom Calculate-Popover (Toolbar) genutzt, um das Datum neben jeden Status-Punkt
+// zu schreiben. Rein lesend aus dem bereits gecachten Meta (_appMeta) + Pump + Stores.
+export function getRiskCalcDates() {
+  const day = (v) => (v ? String(v).slice(0, 10) : null);
+  const fmtDMY = (s) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : (s || '');
+  };
+  const port = normPort(appState.getSelectedPortTableName?.() || appState.getDefaultPortfolio?.());
+  const _pump = (typeof window !== 'undefined' && window.__appMetaPump) || {};
+  const _pcKey = `portfolio_calc_at:${port}`;
+  const pcalc = day(_appMeta?.[_pcKey] || _pump[_pcKey]);
+  // MVaR/CVaR: spezifisches Pro-Portfolio-Rechendatum bevorzugt, sonst Portfolio-Datum
+  // (pcalc). Kein unzuverlaessiger Batch-created_at.
+  const mvar = day(_appMeta?.[`mvar_calculation_at:${port}`] || _pump[`mvar_calculation_at:${port}`]) || pcalc;
+  const cvar = day(_appMeta?.[`cvar_calculation_at:${port}`] || _pump[`cvar_calculation_at:${port}`]) || pcalc;
+  // Letzter Lauf fehlgeschlagen -> "error" statt Datum (Flag von bindAppButtons gesetzt).
+  const _err = (typeof window !== 'undefined' && window.__riskRunError) || {};
+  return {
+    portfolio: pcalc ? fmtDMY(pcalc) : '',
+    market:    _err.market ? 'error' : (mvar ? fmtDMY(mvar) : ''),
+    credit:    _err.credit ? 'error' : (cvar ? fmtDMY(cvar) : ''),
+  };
+}
+
+// Meta-Cache (meta:get) neu laden; danach kann getRiskCalcDates() aktuellere Werte liefern.
+export function refreshRiskCalcMeta() { return loadAppMeta(); }
 
 // MARKET-STRESS-Buffer-Ampel (HOME-Market-Karte): Buffer = Abstand des aktuellen
 // Markts (ROLLING_1) zum Stress-Szenario, relativ zum Rolling-Wert.
@@ -2032,9 +2079,15 @@ export function renderHomeOverview() {
     // Portfolio-Berechnungsdatum (Fair-Value-Lauf) fuer GENAU das gewaehlte Portfolio.
     const _pcKey = `portfolio_calc_at:${port}`;
     const pcalc = day(_appMeta?.[_pcKey] || _pump[_pcKey]);
-    // MVaR/CVaR: bevorzugt AppMeta, sonst Pump, sonst created_at aus den geladenen Stores.
-    const mvar = day(_appMeta?.mvar_calculation_at || _pump.mvar_calculation_at) || latestCreatedAtOf(appState.getAllMvarData?.());
-    const cvar = day(_appMeta?.cvar_calculation_at || _pump.cvar_calculation_at) || latestCreatedAtOf(appState.getAllCvarData?.());
+    // MVaR/CVaR: spezifisches Pro-Portfolio-Rechendatum bevorzugt (mvar/cvar_calculation_at:<port>,
+    // beim jeweiligen Lauf gesetzt; Credit aus Sensitivities geseedet). Fehlt das, faellt es auf
+    // das PORTFOLIO-Datum (pcalc = portfolio_calc_at:<port>) zurueck -- "das Datum der Calculation
+    // entspricht dem des Portfolios". Der Tabellen-created_at wird NICHT genutzt (Batch-Stempel,
+    // fuer nicht gerechnete Portfolios falsch).
+    const mvar = day(_appMeta?.[`mvar_calculation_at:${port}`] || _pump[`mvar_calculation_at:${port}`]) || pcalc;
+    const cvar = day(_appMeta?.[`cvar_calculation_at:${port}`] || _pump[`cvar_calculation_at:${port}`]) || pcalc;
+    // Letzter Lauf fehlgeschlagen -> "error" (rot) statt Datum (Flag von bindAppButtons).
+    const _runErr = (typeof window !== 'undefined' && window.__riskRunError) || {};
     const mkt  = latestRatesDate();
     const hist = latestMarketDataDate();
     // Portfolio Historic Data = juengster "Save to Historic Metrics"-Eintrag
@@ -2053,12 +2106,15 @@ export function renderHomeOverview() {
     // Immer anzeigen; hat das gewaehlte Portfolio keine gespeicherte Historik -> "–",
     // damit klar ist, dass es (noch) keine Historic Data gibt (statt den Eintrag wegzulassen).
     parts.push(`Portfolio Historic Data ${histRisk ? fmtDMY(histRisk) : '–'}`);
-    if (mvar) parts.push(`Market Risk ${fmtDMY(mvar)}`);
-    if (cvar) parts.push(`Credit Risk ${fmtDMY(cvar)}`);
-    return `Portfolio: ${port}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;
+    // Immer anzeigen; wurde fuer DIESES Portfolio nicht gerechnet -> "–" (statt
+    // ein falsches globales Datum oder Weglassen).
+    const _errSpan = '<span class="asof-error">error</span>';
+    parts.push(`Market Risk ${_runErr.market ? _errSpan : (mvar ? fmtDMY(mvar) : '–')}`);
+    parts.push(`Credit Risk ${_runErr.credit ? _errSpan : (cvar ? fmtDMY(cvar) : '–')}`);
+    return `Portfolio: ${escE(port)}${parts.length ? `  ·  ${parts.join('  ·  ')}` : ''}`;
   };
-  setText('homeAsOf', buildAsOfHeader());
-  loadAppMeta().then(() => { try { setText('homeAsOf', buildAsOfHeader()); } catch {} });
+  setHtml('homeAsOf', buildAsOfHeader());
+  loadAppMeta().then(() => { try { setHtml('homeAsOf', buildAsOfHeader()); } catch {} });
 
   // Report-Spiegel (Preview/PDF) mit den frisch gerenderten Werten befuellen.
   try { syncHomeReportPanel(port); } catch (e) { console.warn('[home] report panel sync', e); }

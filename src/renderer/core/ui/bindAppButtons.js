@@ -199,26 +199,90 @@ export function bindAppButtons({
   const calcToggle = document.getElementById('toolbarCalcToggle');
   const calcMenu   = document.getElementById('toolbarCalcMenu');
   if (calcToggle && calcMenu) {
+    // Datum des letzten Laufs neben jeden Status-Punkt schreiben (gleiche Quelle wie
+    // HOME-Overview). Lazy-Import, um Load-/Zirkular-Probleme zu vermeiden.
+    const paintCalcDates = (dates) => {
+      const set = (id, v) => {
+        const el = document.getElementById(id); if (!el) return;
+        const isErr = v === 'error';
+        el.textContent = isErr ? 'error' : (v || '');
+        el.classList.toggle('risk-calc-date--error', isErr);
+      };
+      set('riskDatePortfolio', dates?.portfolio);
+      set('riskDateMarket',    dates?.market);
+      set('riskDateCredit',    dates?.credit);
+    };
+    const refreshCalcDates = () => {
+      import('../../features/HOME/homeOverview.js').then((m) => {
+        try { paintCalcDates(m.getRiskCalcDates?.()); } catch {}
+        // Meta-Cache aktualisieren und danach erneut rendern (falls frisch gerechnet).
+        try { m.refreshRiskCalcMeta?.().then(() => { try { paintCalcDates(m.getRiskCalcDates?.()); } catch {} }); } catch {}
+      }).catch(() => {});
+    };
     const setCalcOpen = (open) => {
       calcMenu.hidden = !open;
       calcToggle.setAttribute('aria-expanded', String(open));
+      if (open) refreshCalcDates();
     };
+    // Das Panel bleibt offen, bis es bewusst ueber das Rechner-Symbol wieder
+    // ausgeschaltet wird. KEIN Schliessen per Aussenklick oder Escape.
     calcToggle.addEventListener('click', (e) => {
       e.stopPropagation();
       setCalcOpen(calcMenu.hidden);
     });
-    // mousedown (nicht click): der Proxy löst per .click() einen SYNTHETISCHEN
-    // Klick auf den versteckten Original-Button außerhalb des Menüs aus – der hat
-    // kein mousedown, würde als 'click' aber fälschlich als Außenklick zählen.
-    document.addEventListener('mousedown', (e) => {
-      if (!calcMenu.hidden && !calcMenu.contains(e.target) && !calcToggle.contains(e.target)) {
-        setCalcOpen(false);
-      }
+
+    // Da das Panel dauerhaft offen bleibt: nach JEDEM abgeschlossenen Lauf die
+    // Datumsangaben neu laden (sonst blieben sie auf dem Stand vom Oeffnen stehen).
+    try {
+      window.api?.receive?.('project-finished', () => {
+        if (!calcMenu.hidden) {
+          // kleiner Delay, damit AppMeta/Stores nach dem Lauf sicher aktualisiert sind.
+          setTimeout(refreshCalcDates, 300);
+        }
+      });
+    } catch (_) {}
+
+    // Bei Portfolio-Wechsel sofort aktualisieren (auch bei offenem Panel), damit die
+    // Daten mit der Overview uebereinstimmen. createdPortDropdown0 ist die kanonische
+    // Auswahl (RISK/VALUATION-Picker spiegeln dorthin und feuern dort 'change').
+    document.addEventListener('change', (e) => {
+      if (!e.target || e.target.id !== 'createdPortDropdown0') return;
+      // Die Fehler-Markierung gilt fuer das ZUVOR gewaehlte Portfolio -> beim Wechsel loeschen,
+      // sonst zeigt ein fremdes Portfolio faelschlich "error".
+      window.__riskRunError = { market: false, credit: false };
+      try { window.renderHomeOverview?.(); } catch (_) {}
+      // nach dem Settle der Auswahl (appState.selectedPort wird im change-Handler gesetzt).
+      if (!calcMenu.hidden) setTimeout(refreshCalcDates, 50);
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !calcMenu.hidden) setCalcOpen(false);
+
+    // AppMeta wurde aktualisiert (Import/Berechnung fertig) -> Panel SOFORT auffrischen,
+    // ohne auf die schweren Daten-Pumps/Timeouts zu warten. getRiskCalcDates liest dann
+    // bereits __appMetaPump (frisch), das Datum erscheint also unmittelbar.
+    document.addEventListener('appmeta:updated', () => {
+      if (!calcMenu.hidden) refreshCalcDates();
     });
   }
+
+  // ---------- Credit Risk: Fehlschlag am Punkt + in Overview/Panel zeigen ----------
+  // (Der Credit-Punkt wird sonst von wireRiskCalcStatus pauschal auf "done" gesetzt;
+  //  wireRiskCalcStatus respektiert jetzt window.__riskRunError.credit.)
+  try {
+    window.api?.receive?.('py-cvar-complete', (data) => {
+      const ok = !data || data.success !== false;
+      window.__riskRunError = window.__riskRunError || {};
+      window.__riskRunError.credit = !ok;
+      const dot = document.getElementById('riskDotCredit');
+      if (dot) {
+        dot.classList.remove('is-busy');
+        dot.classList.toggle('is-error', !ok);
+        dot.classList.toggle('is-done', ok);
+        dot.title = ok ? 'done' : ((data && data.message) || 'failed');
+      }
+      if (!ok) { try { if (data && data.message) showMessageBox(data.message); } catch (_) {} }
+      try { window.renderHomeOverview?.(); } catch (_) {}
+      try { document.dispatchEvent(new CustomEvent('appmeta:updated')); } catch (_) {}
+    });
+  } catch (_) {}
 
   // ---------- Excel Import ----------
   document.getElementById('importExcelButtonVXP')
@@ -326,14 +390,16 @@ export function bindAppButtons({
   // 'project-finished'. So sind stets alle ausgewaehlten Szenarien aktuell.
   // Market-Risk Dot/Proxy für die GANZE Sequenz (bleibt busy bis fertig), damit der
   // Status-Punkt nicht zwischen den Szenarien auf done springt.
-  function setMarketCalcStatus(state /* 'busy' | 'done' */) {
+  function setMarketCalcStatus(state /* 'busy' | 'done' | 'error' */, message) {
     const dot   = document.getElementById('riskDotMarket');
     const proxy = document.getElementById('riskCalcMarket');
     const busy  = state === 'busy';
+    const error = state === 'error';
     if (dot) {
       dot.classList.toggle('is-busy', busy);
-      dot.classList.toggle('is-done', !busy);
-      dot.title = busy ? 'calculating…' : 'done';
+      dot.classList.toggle('is-done', !busy && !error);
+      dot.classList.toggle('is-error', error);
+      dot.title = busy ? 'calculating…' : (error ? (message || 'failed') : 'done');
     }
     if (proxy) {
       if (busy) {
@@ -365,6 +431,20 @@ export function bindAppButtons({
       if (data && data.projectName === 'py-MVaR') {
         clearTimeout(_safetyClear);
         if (window.appState) window.appState._suppressMvarPipelineRender = false;
+
+        const ok = !data || data.success !== false;
+        window.__riskRunError = window.__riskRunError || {};
+        window.__riskRunError.market = !ok;
+
+        if (!ok) {
+          // Fehlschlag: Punkt ROT, Fehler in Overview + Panel, kurze Meldung.
+          setMarketCalcStatus('error', data && data.message);
+          try { if (data && data.message) showMessageBox(data.message); } catch (_) {}
+          try { window.renderHomeOverview?.(); } catch (_) {}
+          try { document.dispatchEvent(new CustomEvent('appmeta:updated')); } catch (_) {}
+          return;
+        }
+
         setMarketCalcStatus('done');
         // Ansicht auf ROLLING (Default) zuruecksetzen + einmal frisch rendern.
         const rollingName = intervals.find((x) => /^ROLLING/i.test(x)) || 'ROLLING_1';

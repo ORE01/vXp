@@ -48,6 +48,8 @@ const FIELD_FORMAT_CONFIG = {
   CPV01rel:   { decimals: 2, isPercentage: false, multiplyBy100: false },
   CPV01_EUR:  { decimals: 2, isPercentage: false, multiplyBy100: false },
 
+  TtM:        { decimals: 2, isPercentage: false, multiplyBy100: false },
+
   absolute:   { decimals: 0, isPercentage: false, multiplyBy100: false },
   C_SPREAD:        { decimals: 0, isPercentage: false, multiplyBy100: false },
   C_SPREAD_BASE:   { decimals: 0, isPercentage: false, multiplyBy100: false },

@@ -245,6 +245,20 @@ export function renderVolScenarioPanel() {
       renderVolScenarioPanel();
     });
 
+    // Frischer Base-Import -> gecachte Original-Basis verwerfen und neu merken.
+    // Die *-base:ready-Events feuern synchron VOR dem Szenario-Overlay
+    // (handleSwaptionAtmBaseData), der Store haelt hier also die echte neue BASE.
+    // Sonst wuerde "Set BASE" die ALTE gecachte Basis wiederherstellen (Reload noetig).
+    document.addEventListener('swaption:atm-base:ready', () => {
+      originalAtmBaseRows = null;
+      rememberOriginalBaseRows(window.appState);
+    });
+
+    document.addEventListener('swaption:smile-base:ready', () => {
+      originalSmileBaseRows = null;
+      rememberOriginalBaseRows(window.appState);
+    });
+
     volScenarioPanelListenersInstalled = true;
   }
 

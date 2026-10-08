@@ -80,6 +80,20 @@ export function createTradeDataHandlers({ appState } = {}) {
     // berechnet"-Warnung (portfolioDropdownUI) NICHT fälschlich feuert, solange die
     // enriched-View überhaupt noch nicht geladen war.
     appState.__enrichedReceived = true;
+
+    // Nach einem (Neu-)Rechnen liefert die enriched-View frische NAV/Holdings. Den
+    // kanonischen Show-Portfolio-Render (renderPortTable) erneut anstossen, damit der
+    // Snapshot getFilteredPortData frisch ist. Sonst nutzt die Sensitivities-Duration
+    // (|PV01|/navTotal) einen veralteten NAV-Nenner (der Zaehler aus
+    // ProductRiskSensitivities war bereits frisch) -> zu hohe Duration bis zum Reload.
+    try {
+      const sel = appState.getSelectedPortTableName?.();
+      if (sel && Array.isArray(receivedData) && receivedData.length) {
+        appState.handlePortTable?.(receivedData, appState.getPortIndex?.() ?? 0);
+      }
+    } catch (e) {
+      console.warn('[handlePortfolioData] port re-render failed', e);
+    }
   }
 
   return {

@@ -315,6 +315,14 @@ function injectSearchUI() {
     <span id="app-page-search-counter" class="app-page-search-counter"></span>
   `;
 
+  // Bevorzugt in die Topbar ("Leiste") einhaengen -> die Suche schwebt nicht mehr
+  // ueber den Panels (war vorher position:fixed oben links und verdeckte Inhalte).
+  const toolbarLeft = document.querySelector('#toolbar .toolbar-left');
+  if (toolbarLeft) {
+    toolbarLeft.appendChild(wrapper);
+    return;
+  }
+
   const target =
     document.querySelector('#app-header') ||
     document.querySelector('.app-header') ||

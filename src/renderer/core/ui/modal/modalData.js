@@ -315,6 +315,14 @@ function gatherModalData(form) {
     else if (matISO) newRowData.MATURITY = matISO;
   }
 
+  // TRADE_DATE: relativer Token (today / today+-N) hat Vorrang und wird gespeichert.
+  // Ohne Token bleibt der absolute Wert aus dem generischen Loop (Date-Picker) unberuehrt.
+  const hasTradeDate = presentFields.has('TRADE_DATE');
+  const tradeToken = (hasTradeDate ? (form.querySelector('#tradeDateToken')?.value || '') : '').trim();
+  if (hasTradeDate && tradeToken) {
+    newRowData.TRADE_DATE = tradeToken;
+  }
+
   return newRowData;
 }
 

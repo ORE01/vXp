@@ -48,3 +48,26 @@
   #DataProvider_Modal .provider-link{ padding: 4px 8px; }
   #DataProvider_Modal .provider-link svg{ margin-right: 0; }
 }
+
+/* ============================================================
+   Provider-Auswahl: Checkbox/Radio vor dem Sub-Trigger
+   (keine Extra-Struktur – Control sitzt inline im .chart-section--sub,
+    der Sub-Trigger bleibt wie ueberall ein .section-trigger--sub).
+   ============================================================ */
+#DataProvider_Modal .chart-section--sub > .provider-toggle,
+#DataProvider_Modal .chart-section--sub > .provider-radio{
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: middle;
+  accent-color: var(--accent, var(--link));
+  cursor: pointer;
+}
+#DataProvider_Modal .chart-section--sub > .provider-radio:disabled{ cursor: not-allowed; }
+
+/* RLB: vorgesehen, aber noch keine Anbindung -> deaktiviert/abgeblendet */
+#DataProvider_Modal .section-trigger.is-disabled{
+  cursor: not-allowed;
+  opacity: .7;
+  pointer-events: none;   /* kein Hover/Klick */
+}

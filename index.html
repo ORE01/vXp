@@ -100,9 +100,9 @@ Feature:    Wenn es nur in einem Panel gilt
   <link href="./css/REPORTS/riskPreview.css" rel="stylesheet">
   <link href="./css/REPORTS/offersPreview.css" rel="stylesheet">
 
-  <!-- Data Provider styling kommt später wieder -->
+  <!-- Data Provider styling -->
 
-  <!-- <link href="./css/DATA_PROVIDER/dataProvider.css" rel="stylesheet"> -->
+  <link href="./css/DATA_PROVIDER/dataProvider.css" rel="stylesheet">
 
   
 
@@ -266,16 +266,20 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="risk-calc-row">
           <button type="button" id="riskCalcPortfolio" class="edit-button">Calculate Portfolio</button>
           <span class="risk-calc-dot" id="riskDotPortfolio" title="not calculated"></span>
+          <!-- Datum des letzten Laufs (gleiche Quelle wie HOME-Overview). -->
+          <span class="risk-calc-date" id="riskDatePortfolio"></span>
         </div>
         <div class="risk-calc-row">
           <button type="button" id="riskCalcMarket" class="edit-button">Calculate Market Risk</button>
           <span class="risk-calc-dot" id="riskDotMarket" title="not calculated"></span>
+          <span class="risk-calc-date" id="riskDateMarket"></span>
         </div>
         <!-- Kleiner MVaR-Fortschrittsbalken (py-MVaR). Balken werden dynamisch erzeugt. -->
         <div id="calcProgress_market" class="calc-progress"></div>
         <div class="risk-calc-row">
           <button type="button" id="riskCalcCredit" class="edit-button">Calculate Credit Risk</button>
           <span class="risk-calc-dot" id="riskDotCredit" title="not calculated"></span>
+          <span class="risk-calc-date" id="riskDateCredit"></span>
         </div>
         <!-- Kleine CVaR-Fortschrittsbalken je PD (RATING/MARKET/NORM); dynamisch erzeugt. -->
         <div id="calcProgress_credit" class="calc-progress"></div>
@@ -962,17 +966,18 @@ Feature:    Wenn es nur in einem Panel gilt
       <span class="chev"></span>
     </button>
 
-    <!-- Create/Change Portfolio als Sub-Trigger unter "Select Portfolio" (gleiche Ebene
-         wie "Portfolio"), nur im PORTFOLIO-View sichtbar (view-analyse-only). -->
+    <!-- Change/Create Portfolio als Sub-Trigger unter "Select Portfolio" (gleiche Ebene
+         wie "Portfolio"), nur im PORTFOLIO-View sichtbar (view-analyse-only).
+         Reihenfolge: Show -> Change -> Create. -->
     <button class="section-trigger section-trigger--sub view-analyse-only" type="button"
-            data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
-      <span class="section-header">Create Portfolio</span>
+            data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
+      <span class="section-header">Change Portfolio</span>
       <span class="chev"></span>
     </button>
 
     <button class="section-trigger section-trigger--sub view-analyse-only" type="button"
-            data-panel="panel-deals" aria-controls="panel-deals" aria-expanded="false">
-      <span class="section-header">Change Portfolio</span>
+            data-panel="panel-newDeals" aria-controls="panel-newDeals" aria-expanded="false">
+      <span class="section-header">Create Portfolio</span>
       <span class="chev"></span>
     </button>
   </div>
@@ -1345,8 +1350,9 @@ Feature:    Wenn es nur in einem Panel gilt
 
     <!-- Toolbar + Tabelle in voller Breite -->
     <div class="port-layout">
-      <!-- Toolbar: Columns + Reset rechtsbündig (Filter leben in den Headern) -->
+      <!-- Toolbar: Titel + Datum links, Columns/Reset rechts (Filter leben in den Headern) -->
       <div class="port-toolbar">
+        <h2 class="small-section-header" style="margin:0; font-size:15px; color:var(--text-bright);">Calculated Trades</h2>
         <span id="portLastCalcDate" class="port-last-calc"></span>
         <button id="portColumnsBtn" type="button" class="edit-button">Columns</button>
         <button id="portResetFiltersButton"
@@ -3757,14 +3763,17 @@ Feature:    Wenn es nur in einem Panel gilt
         -->
 
 
-        <!-- Toolbar: Columns + Reset (Filter leben in den Spaltenköpfen) -->
-        <div class="deals-table-toolbar" style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin:0 0 8px;">
-          <button id="dealsColumnsBtn" type="button" class="edit-button">Columns</button>
-          <button id="dealsResetFiltersButton"
-                  class="reset-FiltersButton"
-                  type="button"
-                  title="Reset all filters"
-                  aria-label="Reset all filters"></button>
+        <!-- Toolbar: Titel links + Columns/Reset rechts (Filter leben in den Spaltenköpfen) -->
+        <div class="deals-table-toolbar" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin:0 0 8px;">
+          <h2 class="small-section-header" style="margin:0;">Portfolio Trades</h2>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button id="dealsColumnsBtn" type="button" class="edit-button">Columns</button>
+            <button id="dealsResetFiltersButton"
+                    class="reset-FiltersButton"
+                    type="button"
+                    title="Reset all filters"
+                    aria-label="Reset all filters"></button>
+          </div>
         </div>
 
         <!-- Drawer: Spaltenauswahl der Change-Portfolio-Tabelle (Container wird vom Configurable-Table befüllt) -->
@@ -4805,35 +4814,70 @@ Feature:    Wenn es nur in einem Panel gilt
     <span class="close" data-provider-close="1">&times;</span>
 
     <div class="portfolio-info">
-      <h2 class="panel-title">PROVIDER</h2>
+      <h2 class="panel-title">MARKET DATA SOURCES</h2>
 
-      <!-- Triggers direkt im Header -->
+      <!-- Provider-Navigation: zwei aufklappbare Gruppen – exakt das Accordion-Muster
+           aus CUSTOMER SETUP (.chart-section Haupt-Trigger mit data-panel auf ein
+           NICHT existierendes Panel -> togglet nur die Gruppe; .chart-section--sub
+           = Unterpunkte, sichtbar via .chart-section.is-open + .chart-section--sub).
+           Gruppen stehen per is-open offen. Historical = Checkboxen (mehrere),
+           Current = Radios (genau einer; derzeit fix ERSTE, RLB deaktiviert). -->
       <div class="provider-triggers">
+
+        <!-- ===== Gruppe: Historical Market Data ===== -->
         <div class="chart-section">
-          <button class="section-trigger" data-panel="panel-ecb" aria-controls="panel-ecb" aria-expanded="false">
+          <button class="section-trigger" data-panel="panel-hist-sources" aria-controls="panel-hist-sources" aria-expanded="false">
+            <span class="section-header">Historical Market Data</span><span class="chev"></span>
+          </button>
+        </div>
+
+        <div class="chart-section chart-section--sub">
+          <input type="checkbox" class="provider-toggle" id="provChk-ECB" data-provider="ECB" checked
+                 aria-label="Use ECB as historical data source">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-ecb" aria-controls="panel-ecb" aria-expanded="false">
             <span class="section-header">ECB</span><span class="chev"></span>
           </button>
         </div>
 
-        <div class="chart-section">
-          <button class="section-trigger" data-panel="panel-fed" aria-controls="panel-fed" aria-expanded="false">
+        <div class="chart-section chart-section--sub">
+          <input type="checkbox" class="provider-toggle" id="provChk-FED" data-provider="FED" checked
+                 aria-label="Use Fed as historical data source">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-fed" aria-controls="panel-fed" aria-expanded="false">
             <span class="section-header">Fed</span><span class="chev"></span>
           </button>
         </div>
 
-        <div class="chart-section">
-          <button class="section-trigger" data-panel="panel-yahoo" aria-controls="panel-yahoo" aria-expanded="false">
+        <div class="chart-section chart-section--sub">
+          <input type="checkbox" class="provider-toggle" id="provChk-YAHOO" data-provider="YAHOO" checked
+                 aria-label="Use Yahoo as historical data source">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-yahoo" aria-controls="panel-yahoo" aria-expanded="false">
             <span class="section-header">Yahoo</span><span class="chev"></span>
           </button>
         </div>
 
+        <!-- ===== Gruppe: Current Market Data (genau ein Provider) =====
+             Erste fix gesetzt. RLB vorgesehen, aber ohne Anbindung -> Radio deaktiviert. -->
         <div class="chart-section">
-          <button class="section-trigger" data-panel="panel-erste" aria-controls="panel-erste" aria-expanded="false">
+          <button class="section-trigger" data-panel="panel-current-sources" aria-controls="panel-current-sources" aria-expanded="false">
+            <span class="section-header">Current Market Data</span><span class="chev"></span>
+          </button>
+        </div>
+
+        <div class="chart-section chart-section--sub">
+          <input type="radio" name="currentProvider" class="provider-radio" id="provRad-ERSTE" data-provider="ERSTE"
+                 checked disabled aria-label="Erste is the current market data source">
+          <button class="section-trigger section-trigger--sub" data-panel="panel-erste" aria-controls="panel-erste" aria-expanded="false">
             <span class="section-header">Erste</span><span class="chev"></span>
           </button>
         </div>
 
-
+        <div class="chart-section chart-section--sub">
+          <input type="radio" name="currentProvider" class="provider-radio" id="provRad-RLB" data-provider="RLB"
+                 disabled aria-label="RLB (not available yet)">
+          <button class="section-trigger section-trigger--sub is-disabled" type="button" disabled aria-disabled="true">
+            <span class="section-header">RLB</span><span class="chev"></span>
+          </button>
+        </div>
 
       </div>
     </div>
@@ -5850,17 +5894,7 @@ Feature:    Wenn es nur in einem Panel gilt
               data-panel="panel-upd-market"
               aria-controls="panel-upd-market"
               aria-expanded="false">
-        <span class="section-header">Market Data</span><span class="chev"></span>
-      </button>
-    </div>
-
-    <div class="chart-section">
-      <button class="section-trigger"
-              type="button"
-              data-panel="panel-upd-excel"
-              aria-controls="panel-upd-excel"
-              aria-expanded="false">
-        <span class="section-header">Excel Import</span><span class="chev"></span>
+        <span class="section-header">Current Market Data</span><span class="chev"></span>
       </button>
     </div>
 
@@ -5870,7 +5904,17 @@ Feature:    Wenn es nur in einem Panel gilt
               data-panel="panel-upd-historic"
               aria-controls="panel-upd-historic"
               aria-expanded="false">
-        <span class="section-header">Historic Data (APIs)</span><span class="chev"></span>
+        <span class="section-header">Historical Market Data</span><span class="chev"></span>
+      </button>
+    </div>
+
+    <div class="chart-section">
+      <button class="section-trigger"
+              type="button"
+              data-panel="panel-upd-excel"
+              aria-controls="panel-upd-excel"
+              aria-expanded="false">
+        <span class="section-header">Customer Data</span><span class="chev"></span>
       </button>
     </div>
 
@@ -5915,6 +5959,18 @@ Feature:    Wenn es nur in einem Panel gilt
         <div class="upd-tile-target">Writes to: <span id="ersteTargetLabel" title="">…</span></div>
       </section>
 
+      <!-- Aus "Customer Data" (Excel Import) hierher verschoben; Verknuepfung spaeter. -->
+      <section class="cp-card upd-tile">
+        <h2 class="small-section-header">Market Data from Excel</h2>
+        <div class="upd-tile-body">
+          <div class="upd-btns">
+            <button id="updateExcelMarketButton" class="edit-button" type="button">Import Market Data</button>
+          </div>
+          <div class="upd-progress" id="excelProgress_market"></div>
+        </div>
+        <div class="upd-src" data-src-key="market"></div>
+      </section>
+
     </div>
 
     <!-- Globaler Market-Status -->
@@ -5928,7 +5984,7 @@ Feature:    Wenn es nur in einem Panel gilt
 <!-- Panel: Excel Import -->
 <div id="panel-upd-excel" class="sub-panel upd-import-panel" role="dialog" aria-modal="false" aria-labelledby="panel-upd-excel-title" hidden>
   <div class="sub-panel-header">
-    <div id="panel-upd-excel-title" class="sub-panel-title">EXCEL IMPORT</div>
+    <div id="panel-upd-excel-title" class="sub-panel-title">CUSTOMER DATA</div>
     <button class="sub-panel-close" data-close="panel-upd-excel" aria-label="close">&times;</button>
   </div>
 
@@ -5945,17 +6001,16 @@ Feature:    Wenn es nur in einem Panel gilt
           </div>
           <div class="upd-progress" id="excelProgress_full"></div>
         </div>
-        <!-- Quelle (dauerhaft): woraus dieser Import liest -->
-        <div class="upd-src" data-src-key="both"></div>
+        <!-- Quelle (dauerhaft): woraus dieser Import liest -> nur UNI_DATA.xlsm -->
+        <div class="upd-src" data-src-key="business"></div>
       </section>
 
       <section class="cp-card upd-tile">
-        <h2 class="small-section-header">Master &amp; Portfolio Data</h2>
+        <h2 class="small-section-header">Master Data</h2>
         <div class="upd-tile-body">
           <div class="upd-btns">
             <button id="updateExcelIssuerButton" class="edit-button" type="button">Issuer</button>
             <button id="updateExcelProductsButton" class="edit-button" type="button">Products</button>
-            <button id="updateExcelDealsButton" class="edit-button" type="button">Portfolio Trades</button>
           </div>
           <div class="upd-progress" id="excelProgress_master"></div>
         </div>
@@ -5963,14 +6018,14 @@ Feature:    Wenn es nur in einem Panel gilt
       </section>
 
       <section class="cp-card upd-tile">
-        <h2 class="small-section-header">Market Data</h2>
+        <h2 class="small-section-header">Portfolio Data</h2>
         <div class="upd-tile-body">
           <div class="upd-btns">
-            <button id="updateExcelMarketButton" class="edit-button" type="button">Import Market Data</button>
+            <button id="updateExcelDealsButton" class="edit-button" type="button">Portfolio Trades</button>
           </div>
-          <div class="upd-progress" id="excelProgress_market"></div>
+          <div class="upd-progress" id="excelProgress_deals"></div>
         </div>
-        <div class="upd-src" data-src-key="market"></div>
+        <div class="upd-src" data-src-key="business"></div>
       </section>
 
     </div>

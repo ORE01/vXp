@@ -15,6 +15,9 @@ export function updateDealsIncludeByKey(
       rowIndex: 0,
       newData: { INCLUDE: includeVal },
       uniqueIdentifier: { column: keyName, value: keyValue },
+      // Optimistisch: Checkbox + appState sind schon aktualisiert -> kein Server-Refresh
+      // (sonst rendert die Deals-Tabelle neu -> Flackern/Größensprung).
+      skipRefresh: true,
     };
 
     const ok = () => resolve(true);

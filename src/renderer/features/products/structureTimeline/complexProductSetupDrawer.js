@@ -8,6 +8,7 @@ import { issuerData } from '../../issuer/issuerPanel.js';
 import { applyProductTemplateDefaults } from '../productTemplateResolver.js';
 import { validateProductBeforeSave } from '../productValidation.js';
 import { getFieldConfig } from '../productFieldConfig.js';
+import { isRelativeToken, resolveStartISO, resolveMaturityISO } from './relativeDates.js';
 
 const FALLBACK_PRODUCT_SETUP_FIELDS = [
   'PROD_ID',
@@ -162,12 +163,34 @@ function renderField(field, row) {
     `;
   }
 
+  // Datumsfelder: absolut (Picker) ODER relativ (Token). Token hat Vorrang (Variante a).
+  if (field === 'START_DATE' || field === 'MATURITY') {
+    const isStart = field === 'START_DATE';
+    const relRaw = String(rawValue ?? '').trim();
+    const token = isRelativeToken(relRaw) ? relRaw : '';
+    const absISO = isStart
+      ? resolveStartISO(relRaw)
+      : resolveMaturityISO(relRaw, row.START_DATE);
+    return `
+      <label class="structure-drawer-field">
+        <span class="structure-drawer-label">${field}</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="date" class="structure-drawer-input" style="flex:1 1 auto; min-width:120px;"
+            value="${escapeHtml(absISO)}" data-field="${field}" data-absdate="${field}" />
+          <input type="text" class="structure-drawer-input" style="flex:0 0 62px; min-width:0;"
+            value="${escapeHtml(token)}" data-reltoken="${field}"
+            placeholder="${isStart ? 'today+2' : '10y'}"
+            title="Relative (optional): ${isStart ? 'today or today+N days' : 'N years from start, e.g. 10y'}" />
+        </div>
+        <span data-relpreview="${field}" style="font-size:11px; color:#888; display:block; margin-top:2px;"></span>
+      </label>
+    `;
+  }
+
   const inputType =
     config?.type === 'number'
       ? 'number'
-      : field === 'START_DATE' || field === 'MATURITY'
-        ? 'date'
-        : 'text';
+      : 'text';
 
   return `
     <label class="structure-drawer-field">
@@ -181,6 +204,47 @@ function renderField(field, row) {
       />
     </label>
   `;
+}
+
+// Wiring der relativen Datums-Tokens (identisch zu Simple Fixed/FRN).
+function bindRelativeDateTokens(container) {
+  const startTok = container.querySelector('[data-reltoken="START_DATE"]');
+  const startDate = container.querySelector('[data-absdate="START_DATE"]');
+  const matTok = container.querySelector('[data-reltoken="MATURITY"]');
+  const matDate = container.querySelector('[data-absdate="MATURITY"]');
+  const startPrev = container.querySelector('[data-relpreview="START_DATE"]');
+  const matPrev = container.querySelector('[data-relpreview="MATURITY"]');
+
+  const startValue = () => {
+    const t = String(startTok?.value || '').trim();
+    return t || String(startDate?.value || '').trim();
+  };
+
+  const recompute = () => {
+    const st = String(startTok?.value || '').trim();
+    if (st) {
+      const iso = resolveStartISO(st);
+      if (startDate && iso) startDate.value = iso;
+      if (startPrev) startPrev.textContent = iso ? `= ${iso}` : '';
+    } else if (startPrev) {
+      startPrev.textContent = '';
+    }
+
+    const mt = String(matTok?.value || '').trim();
+    if (mt) {
+      const iso = resolveMaturityISO(mt, startValue());
+      if (matDate && iso) matDate.value = iso;
+      if (matPrev) matPrev.textContent = iso ? `= ${iso}` : '';
+    } else if (matPrev) {
+      matPrev.textContent = '';
+    }
+  };
+
+  [startTok, matTok].forEach((el) => el && el.addEventListener('input', recompute));
+  if (startDate) startDate.addEventListener('change', () => { if (startTok) startTok.value = ''; recompute(); });
+  if (matDate) matDate.addEventListener('change', () => { if (matTok) matTok.value = ''; recompute(); });
+
+  recompute();
 }
 
 function bindIssuerTickerSync(container) {
@@ -216,6 +280,12 @@ function gatherDrawerData(container) {
 
 function saveProductSetup(container, prodId, options = {}) {
   let newData = gatherDrawerData(container);
+
+  // Relative-Modus (Variante a): Token speichern statt des aufgeloesten Datums.
+  const _startTok = String(container.querySelector('[data-reltoken="START_DATE"]')?.value || '').trim();
+  const _matTok = String(container.querySelector('[data-reltoken="MATURITY"]')?.value || '').trim();
+  if (_startTok) newData.START_DATE = _startTok;
+  if (_matTok) newData.MATURITY = _matTok;
 
   const isCreateMode = options.mode === 'create';
 
@@ -417,6 +487,7 @@ export function renderProductSetupDrawer(container, prodId, options = {}) {
   `;
 
   bindIssuerTickerSync(container);
+  bindRelativeDateTokens(container);
 
   container
     .querySelector('#saveProductSetupDrawer')

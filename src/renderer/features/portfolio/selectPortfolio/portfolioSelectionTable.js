@@ -275,10 +275,7 @@ export function handlePortProdData(receivedData, index, port_name) {
   const elementId = `portDataContainer${index}`;
   const portDataContainer = document.getElementById(elementId);
 
-  if (!portDataContainer || !Array.isArray(receivedData)) return;
-
-  // Main Show-Portfolio table only (compare panels use index 1/2).
-  if (index === 0) updatePortLastCalcLabel(port_name);
+  if (!Array.isArray(receivedData)) return;
 
   // 1) Risk-Anreicherung: fügt PV01rel/CPV01rel (= IR/CS Duration) und Risk-
   //    Summaries pro Trade hinzu (port_name nötig für den Trade-Join).
@@ -310,17 +307,30 @@ export function handlePortProdData(receivedData, index, port_name) {
     };
   });
 
-  // Keep the raw rows + name so the "filtered:" box can be recomputed from the
-  // header filters (the sums need fields that the reduced view drops).
-  lastPortRawRows = enriched;
-  lastPortName = port_name;
-
   const filteredPortData = filterColumnsInData(
     enriched,
     ALL_PORT_COLUMN_KEYS
   );
 
-  appState.setFilteredPortData(filteredPortData);
+  // Holdings-Snapshot (getFilteredPortData) fuer die HAUPT-Tabelle (index 0) IMMER
+  // aktualisieren — auch wenn die Show-Portfolio-Tabelle gerade NICHT gemountet ist
+  // (z.B. auf dem Sensitivities/PV01-Tab). Sonst bleibt der NAV-Nenner der Sensitivities-
+  // Duration (|PV01|/navTotal) nach einem Recalc veraltet -> zu alte Duration bis Reload.
+  // Fuer Compare/Offers-Indizes nur bei vorhandenem Container, damit der globale Snapshot
+  // nicht mit deren Daten verfaelscht wird.
+  if (index === 0 || portDataContainer) {
+    // Keep the raw rows + name so the "filtered:" box can be recomputed from the
+    // header filters (the sums need fields that the reduced view drops).
+    lastPortRawRows = enriched;
+    lastPortName = port_name;
+    appState.setFilteredPortData(filteredPortData);
+  }
+
+  // DOM-Render (und das Last-Calc-Label) nur wenn der Container existiert.
+  if (!portDataContainer) return;
+
+  // Main Show-Portfolio table only (compare panels use index 1/2).
+  if (index === 0) updatePortLastCalcLabel(port_name);
 
   renderPortTableOnly(filteredPortData, index);
 }

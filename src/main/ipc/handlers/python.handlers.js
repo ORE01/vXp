@@ -450,6 +450,14 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // Tabelle nach Abschluss aktualisieren
       try { refreshTable('Portfolios'); } catch {}
 
+      // Sensitivitaeten-Stores ebenfalls frisch an den Renderer pushen: das PV01/CPV01-
+      // Panel rekonstruiert den Zaehler aus ProductRiskSensitivities (per-unit) bzw. liest
+      // PortfolioRiskSensitivities. Ohne diesen Refresh blieb der Zaehler nach einem Recalc
+      // (z.B. Szenario-Wechsel) auf dem Reload-Stand haengen, waehrend der NAV-Nenner frisch
+      // war -> inkonsistente/alte Duration bis zum Reload.
+      try { refreshTable('ProductRiskSensitivities'); } catch {}
+      try { refreshTable('PortfolioRiskSensitivities'); } catch {}
+
       // Berechnungsdatum (Portfolio-Revaluation) festhalten: global + PRO Portfolio-Name,
       // damit die Overview-Kopfzeile "Portfolio <Datum>" fuer genau das gewaehlte Portfolio
       // zeigen kann.
@@ -635,7 +643,45 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
 
     try {
-      await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', pythonArgs);
+      // Pre-Check: Jeder aktuell angehakte Trade (DealsMain.INCLUDE=1) muss Sensitivitaeten in
+      // PortfolioRiskSensitivities haben (daraus baut MVaR die Exposures). Fehlt eine, wurde das
+      // Portfolio nach dem letzten Calculate geaendert (z.B. Produkt wieder angehakt) ohne Neu-
+      // berechnung -> MVaR waere unvollstaendig/falsch -> hier sauber abfangen. Query-Fehler
+      // blockieren NICHT (resolve null).
+      const _missing = await new Promise((resolve) => {
+        try {
+          getDb().get(
+            `SELECT COUNT(*) AS n FROM DealsMain d
+             WHERE d.port_name = ? AND d.INCLUDE = 1
+               AND NOT EXISTS (
+                 SELECT 1 FROM PortfolioRiskSensitivities s
+                 WHERE s.PORT_NAME = d.port_name AND s.TRADE_ID = d.TRADE_ID
+               )`,
+            [tableName],
+            (e, row) => resolve(e ? null : ((row && row.n) || 0))
+          );
+        } catch (_) { resolve(null); }
+      });
+      if (_missing && _missing > 0) {
+        const msg = 'Portfolio not calculated or changed — run Calculate Portfolio before Market Risk.';
+        event.reply('py-mvar-complete', { success: false, projectName: 'py-MVaR', message: msg });
+        event.reply('project-finished', { success: false, projectName: 'py-MVaR', message: msg });
+        return;
+      }
+
+      const _mvRes = await startPythonScriptWithEvent(event, 'mvar', 'py-MVaR', pythonArgs);
+      // Python-Fehler (z.B. leere Exposures) NICHT als Erfolg behandeln: kein Datum/Meta,
+      // kein gruener Punkt -> Fehler an den Renderer melden.
+      if (!_mvRes || String(_mvRes.status).toLowerCase() !== 'ok') {
+        let msg = (_mvRes && (_mvRes.message || _mvRes.error)) || 'Market Risk calculation failed.';
+        // Haeufigste Ursache: Portfolio nicht kalkuliert -> keine Exposures. Klartext statt Traceback.
+        if (/build_exposures_by_product|empty.*exposure|exposure.*empty/i.test(String(msg))) {
+          msg = 'Portfolio not calculated — run Calculate Portfolio first.';
+        }
+        event.reply('py-mvar-complete', { success: false, projectName: 'py-MVaR', message: msg });
+        event.reply('project-finished', { success: false, projectName: 'py-MVaR', message: msg });
+        return;
+      }
 
       // Nur EIN asof-Stichtag pro (port, scenario): aeltere, nicht bewusst gespeicherte
       // Laeufe werden ersetzt/geloescht. Bewusste Historie liegt separat in
@@ -644,17 +690,20 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // im Renderer rechnet ROLLING ohnehin explizit als Baseline mit.)
       try { await pruneMvarToLatestAsof(dbApi); } catch (e) { console.warn('[MVaR] prune failed', e?.message || e); }
 
-      // Berechnungsdatum in MarketVaR.created_at + AppMeta festhalten. ALLE Zeilen neu
-      // stempeln (nicht nur NULL): nach dem Lauf gehoeren sie komplett zu DIESEM Lauf
-      // (pruneMvarToLatestAsof haelt nur den juengsten asof) -> Datum bleibt aktuell.
+      // Berechnungsdatum festhalten: NUR die Zeilen des gerechneten Portfolios neu
+      // stempeln (nicht die ganze Tabelle) -> created_at bleibt PRO PORTFOLIO
+      // aussagekraeftig. Zusaetzlich pro-Portfolio-Meta (wie portfolio_calc_at:<port>),
+      // damit die Overview das Datum fuer genau dieses Portfolio zeigt.
       const _nowMv = new Date().toISOString();
+      const _mvPort = String(tableName || '').trim();
       // node-sqlite3 ist async: db.run(...) mit Callback, kein synchrones .prepare().run().
       try {
-        getDb().run(`UPDATE MarketVaR SET created_at = ?`, [_nowMv], (e) => {
+        getDb().run(`UPDATE MarketVaR SET created_at = ? WHERE port_name = ?`, [_nowMv, _mvPort], (e) => {
           if (e) console.warn('[MVaR] stamp created_at failed', e?.message || e);
         });
       } catch (e) { console.warn('[MVaR] stamp created_at failed', e?.message || e); }
       try { setAppMeta('mvar_calculation_at', _nowMv); } catch {}
+      try { if (_mvPort) setAppMeta(`mvar_calculation_at:${_mvPort}`, _nowMv); } catch {}
       try { refreshTable('AppMeta'); } catch {}
 
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
@@ -706,29 +755,67 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
     }
 
     try {
-      await startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs);
+      // Pre-Check (wie MVaR): "Portfolio aktuell berechnet?" ueber PortfolioRiskSensitivities.
+      // Die werden von "Calculate Portfolio" je angehaktem Trade gebaut und fuer ausgehakte
+      // weggelassen. Fehlt fuer einen aktuell angehakten Trade (DealsMain.INCLUDE=1) die
+      // Sensitivitaet, wurde das Portfolio nach der letzten Berechnung geaendert (z.B. Produkt
+      // wieder angehakt) ohne Neuberechnung -> CVaR liefe auf veralteter Basis -> abfangen.
+      // (EAD selbst wird erst VOM CVaR-Lauf gebaut, taugt daher NICHT als Baseline.)
+      const _cvMissing = await new Promise((resolve) => {
+        try {
+          getDb().get(
+            `SELECT COUNT(*) AS n FROM DealsMain d
+             WHERE d.port_name = ? AND d.INCLUDE = 1
+               AND NOT EXISTS (
+                 SELECT 1 FROM PortfolioRiskSensitivities s
+                 WHERE s.PORT_NAME = d.port_name AND s.TRADE_ID = d.TRADE_ID
+               )`,
+            [tableName],
+            (e, row) => resolve(e ? null : ((row && row.n) || 0))
+          );
+        } catch (_) { resolve(null); }
+      });
+      if (_cvMissing && _cvMissing > 0) {
+        const msg = 'Portfolio not calculated or changed — run Calculate Portfolio before Credit Risk.';
+        event.reply('py-cvar-complete', { success: false, projectName: 'py-CVaR', message: msg });
+        event.reply('project-finished', { success: false, projectName: 'py-CVaR', message: msg });
+        return;
+      }
+
+      const _cvRes = await startPythonScriptWithEvent(event, 'cvar', 'py-CVaR', pythonArgs);
+      // Python-Fehler NICHT als Erfolg behandeln: kein Datum/Meta, kein gruener Punkt.
+      if (!_cvRes || String(_cvRes.status).toLowerCase() !== 'ok') {
+        const msg = (_cvRes && (_cvRes.message || _cvRes.error)) || 'Credit Risk calculation failed.';
+        event.reply('py-cvar-complete', { success: false, projectName: 'py-CVaR', message: msg });
+        event.reply('project-finished', { success: false, projectName: 'py-CVaR', message: msg });
+        return;
+      }
 
       // Berechnungsdatum in CreditVaR.created_at (Spalte ggf. anlegen) + AppMeta festhalten.
       // node-sqlite3 ist async: der ALTER-Fehler kommt im Callback, nicht synchron -> ein
       // try/catch faengt ihn NICHT. Deshalb per PRAGMA pruefen, ob die Spalte schon existiert,
       // und nur bei Bedarf anlegen (verhindert den "duplicate column"-Uncaught).
       const _nowCv = new Date().toISOString();
+      const _cvPort = String(tableName || '').trim();
       try {
         const db = getDb();
-        const stampAll = () => db.run(`UPDATE CreditVaR SET created_at = ?`, [_nowCv], (uErr) => {
+        // NUR das gerechnete Portfolio stempeln (nicht die ganze Tabelle) -> created_at
+        // bleibt pro Portfolio aussagekraeftig.
+        const stampPort = () => db.run(`UPDATE CreditVaR SET created_at = ? WHERE port_name = ?`, [_nowCv, _cvPort], (uErr) => {
           if (uErr) console.warn('[CVaR] stamp created_at failed', uErr?.message || uErr);
         });
         db.all(`PRAGMA table_info(CreditVaR)`, [], (pErr, cols) => {
           if (pErr) { console.warn('[CVaR] stamp created_at failed', pErr?.message || pErr); return; }
           const hasCol = Array.isArray(cols) && cols.some((c) => c && c.name === 'created_at');
-          if (hasCol) { stampAll(); return; }
+          if (hasCol) { stampPort(); return; }
           db.run(`ALTER TABLE CreditVaR ADD COLUMN created_at TEXT`, (aErr) => {
             if (aErr) console.warn('[CVaR] add created_at failed', aErr?.message || aErr);
-            stampAll();
+            stampPort();
           });
         });
       } catch (e) { console.warn('[CVaR] stamp created_at failed', e?.message || e); }
       try { setAppMeta('cvar_calculation_at', _nowCv); } catch {}
+      try { if (_cvPort) setAppMeta(`cvar_calculation_at:${_cvPort}`, _nowCv); } catch {}
       try { refreshTable('AppMeta'); } catch {}
 
       tablesToRefresh.forEach(t => { try { refreshTable(t); } catch {} });
@@ -820,15 +907,19 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       // Sicherheitsnetz fuer "Import: ALL": die Unterbalken am Ende final auf 100 mit ihrem
       // Text setzen (falls die letzte per-Schritt-stderr-Zeile, v.a. MARKET, am Prozessende
       // gegen das ___RESULT___ rennt und die Balken sonst auf "Waiting..." stehen blieben).
-      if (mode === 'ALL') {
+      if (mode === 'ALL' || mode === 'BUSINESS') {
         event.sender.send('py-excel-progress', { provider: 'ISSUER',   progress: 100, message: 'Issuer imported' });
         event.sender.send('py-excel-progress', { provider: 'PRODUCTS', progress: 100, message: 'Products imported' });
         event.sender.send('py-excel-progress', { provider: 'DEALS',    progress: 100, message: 'Portfolio trades imported' });
-        event.sender.send('py-excel-progress', { provider: 'MARKET',   progress: 100, message: 'Market data imported' });
+        // MARKET nur beim echten Komplett-Import (ALL); BUSINESS/Customer Data laesst Market aus.
+        if (mode === 'ALL') {
+          event.sender.send('py-excel-progress', { provider: 'MARKET', progress: 100, message: 'Market data imported' });
+        }
       }
 
-      // Portfolio-Import-Datum festhalten, wenn Deals (bzw. der Sammel-Import ALL) importiert wurden.
-      if (mode === 'DEALS' || mode === 'ALL') {
+      // Portfolio-Import-Datum festhalten, wenn Portfolio Trades (Deals) mit-importiert
+      // wurden: direkt (DEALS) oder als Sammel-Import (ALL bzw. BUSINESS = Customer Data).
+      if (mode === 'DEALS' || mode === 'ALL' || mode === 'BUSINESS') {
         try { setAppMeta('portfolio_import_at', new Date().toISOString()); } catch {}
         try { refreshTable('AppMeta'); } catch {}
       }

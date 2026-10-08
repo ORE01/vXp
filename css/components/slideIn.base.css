@@ -35,9 +35,8 @@
    damit verschachtelte Sub-Panel-Inhalte unberührt bleiben. */
 .table > .table-content {
   padding-left: 14px;
-  /* Platz für die jetzt fixe Suchbox (#app-page-search) oben links — ersetzt den
-     Versatz, den sie vorher als In-Flow-Element erzeugt hat. */
-  padding-top: 48px;
+  /* Suchbox sitzt jetzt in der Topbar -> kein reservierter Platz mehr noetig. */
+  padding-top: 14px;
 }
 
 /* Trigger-Zeilen (NUR in table) */

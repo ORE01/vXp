@@ -120,10 +120,14 @@ const NUMERIC_ALIGN_EXCLUDE = new Set(['TRADE_ID', 'PROD_ID', 'DESCRIPTION']);
 function looksNumeric(text) {
   const s = String(text).trim();
   if (s === '' || s === '-') return false;
-  const cleaned = s
-    .replace(/[\s,%]/g, '')
+  let cleaned = s
+    .replace(/\s/g, '')
+    .replace(/%/g, '')
     .replace(/eur$/i, '')
     .replace(/bp$/i, '');
+  // de-DE-Format: '.' = Tausendertrenner, ',' = Dezimaltrenner.
+  // Tausenderpunkte entfernen, Dezimalkomma zu '.' -> parsebar fuer Number().
+  cleaned = cleaned.replace(/\./g, '').replace(/,/g, '.');
   return cleaned !== '' && Number.isFinite(Number(cleaned));
 }
 

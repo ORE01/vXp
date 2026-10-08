@@ -100,12 +100,12 @@ export function renderCreateCouponScheduleEmptyState(container, prodId, options 
         />
 
         <label style="display:block; font-size:12px; margin-top:8px;">
-          Coupon Rate
+          Coupon Rate (%)
         </label>
         <input
           id="initialCouponRate"
           value=""
-          placeholder="optional, e.g. 0.04"
+          placeholder="optional, e.g. 4"
           style="width:100%; box-sizing:border-box; margin-bottom:8px;"
         />
 
@@ -158,10 +158,11 @@ export function renderCreateCouponScheduleEmptyState(container, prodId, options 
         return;
       }
 
+      // Eingabe ist Prozent ("Coupon Rate (%)") -> als Bruch speichern (÷100).
       const couponRate =
         couponRateRaw === ''
           ? null
-          : Number(couponRateRaw);
+          : Number(couponRateRaw) / 100;
 
       if (couponRateRaw !== '' && !Number.isFinite(couponRate)) {
         showStructureMessage(
@@ -262,11 +263,11 @@ export function renderCouponScheduleDrawer(drawer, prodId, container, rows, opti
       <div><strong>Target:</strong> all existing COUPON_FIXED rows</div>
     </div>
 
-    <label style="display:block; font-size:12px; margin-top:8px;">Coupon Rate</label>
+    <label style="display:block; font-size:12px; margin-top:8px;">Coupon Rate (%)</label>
     <input
       id="couponScheduleRateInput"
-      value="0.04"
-      placeholder="0.04 = 4%"
+      value="4"
+      placeholder="e.g. 4 = 4%"
       style="width:100%; box-sizing:border-box; margin-bottom:8px;"
     />
 
@@ -301,9 +302,10 @@ export function renderCouponScheduleDrawer(drawer, prodId, container, rows, opti
         return;
       }
 
+      // Eingabe ist Prozent ("Coupon Rate (%)") -> als Bruch (÷100).
       const rate = Number(
         drawer.querySelector('#couponScheduleRateInput')?.value || 0
-      );
+      ) / 100;
 
       const notionalFactor = Number(
         drawer.querySelector('#couponScheduleNotionalInput')?.value || 1

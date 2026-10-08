@@ -1,6 +1,8 @@
 // src/main/services/productCanonical.service.js
 'use strict';
 
+const { selectAll } = require('./db.service');
+
 /**
  * Canonical Product Service
  *
@@ -95,6 +97,18 @@ function createProductCanonicalService(dbApi) {
 
     await eraseRowFromDB('PRODUCTS_MASTER', {
       column: 'product_id',
+      value: productId,
+    });
+
+    // Legacy-Repraesentation mitloeschen, damit keine zweite (divergierende)
+    // Kennnummer im Trade-/Portfolio-Cache zurueckbleibt (Spalte dort: PROD_ID).
+    await eraseRowFromDB('DealsMain', {
+      column: 'PROD_ID',
+      value: productId,
+    });
+
+    await eraseRowFromDB('Portfolios', {
+      column: 'PROD_ID',
       value: productId,
     });
 
@@ -233,6 +247,12 @@ function createProductCanonicalService(dbApi) {
       if (!newData.METHODE) {
         newData.METHODE = '';
       }
+
+      // Simpler Fixed Bond nutzt KEINE expliziten Events -> Event-Modus aus
+      // (raeumt via Reconcile evtl. alte PRODUCT_STRUCTURE-Zeilen weg).
+      if (!('USES_EVENTS' in newData)) {
+        newData.USES_EVENTS = 0;
+      }
     }
 
     if (selectedTemplate === 'FRN') {
@@ -249,6 +269,11 @@ function createProductCanonicalService(dbApi) {
       if (!newData.METHODE) {
         newData.METHODE = '';
       }
+
+      // Simpler Floater nutzt KEINE expliziten Events.
+      if (!('USES_EVENTS' in newData)) {
+        newData.USES_EVENTS = 0;
+      }
     }
 
     if (selectedTemplate === 'COMPLEX_BOND') {
@@ -260,6 +285,11 @@ function createProductCanonicalService(dbApi) {
 
       if (!newData.SCHEDULE && !newData.SCHEDULE_RULE) {
         newData.SCHEDULE = '1';
+      }
+
+      // Complex Bond nutzt explizite Events (Schedule/Calls aus PRODUCT_STRUCTURE).
+      if (!('USES_EVENTS' in newData)) {
+        newData.USES_EVENTS = 1;
       }
 
       if (!newData.FINLIB) {
@@ -451,14 +481,10 @@ function createProductCanonicalService(dbApi) {
 
       conventions.schedule_generation_rule = scheduleValue;
 
-      if (
-        scheduleValue === '1' ||
-        scheduleValue.toUpperCase() === 'Y' ||
-        scheduleValue.toUpperCase() === 'YES' ||
-        scheduleValue.toUpperCase() === 'TRUE'
-      ) {
-        conventions.uses_explicit_events = 1;
-      }
+      // SCHEDULE ist eine Schedule-GENERIERUNGS-Regel und darf NICHT automatisch
+      // den Explicit-Events-Modus einschalten. uses_explicit_events wird NUR ueber
+      // USES_EVENTS gesetzt (s.u.) -- sonst wuerde ein simpler Bond faelschlich aus
+      // (evtl. veralteten) PRODUCT_STRUCTURE-Events gerechnet statt aus fixed_coupon_rate.
     }
 
     if ('USES_EVENTS' in newData) {
@@ -553,6 +579,37 @@ function createProductCanonicalService(dbApi) {
       );
 
       updatedTables.push(`PRODUCTS_PRICING_CONFIG:${action}`);
+    }
+
+    // ------------------------------------------------------------
+    // RECONCILE EXPLICIT EVENTS (PRODUCT_STRUCTURE)
+    // Invariante: Ein Produkt, das NICHT explizite Events nutzt
+    // (uses_explicit_events = 0), darf KEINE PRODUCT_STRUCTURE-Zeilen behalten.
+    // Sonst ueberschreiben veraltete Events (Rate/Schedule/Calls) die kanonischen
+    // Terms (z.B. fixed_coupon_rate) -> falscher Preis (siehe FIX006: Coupon auf
+    // 3,53% geaendert, aber Events trugen weiter rate:0.04).
+    // ------------------------------------------------------------
+    try {
+      let usesEvents = null;
+      if ('USES_EVENTS' in newData) {
+        usesEvents = Number(newData.USES_EVENTS || 0) ? 1 : 0;
+      } else {
+        const rows = await selectAll(
+          'SELECT uses_explicit_events FROM PRODUCTS_CONVENTIONS WHERE product_id = ?',
+          [productId]
+        );
+        usesEvents = rows.length ? (Number(rows[0].uses_explicit_events || 0) ? 1 : 0) : 0;
+      }
+
+      if (usesEvents === 0) {
+        await eraseRowFromDB('PRODUCT_STRUCTURE', {
+          column: 'product_id',
+          value: productId,
+        });
+        updatedTables.push('PRODUCT_STRUCTURE:cleared(no-explicit-events)');
+      }
+    } catch (e) {
+      console.warn('[canonical] explicit-events reconcile failed:', e?.message || e);
     }
 
     console.log('[CANONICAL PRODUCT UPDATE]', {

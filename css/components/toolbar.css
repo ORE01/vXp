@@ -26,6 +26,12 @@
   gap: 8px;
 }
 
+/* EN/DE-Sprachbuttons in der Leiste ausblenden (Theme-Toggle bleibt sichtbar). */
+#lang-en,
+#lang-de {
+  display: none !important;
+}
+
 #toolbar button {
   height: 28px;
   padding: 4px 10px;
@@ -63,8 +69,14 @@
   border-color: var(--accent-hover);
 }
 #toolbar .toolbar-calc-btn[aria-expanded="true"] {
-  background: var(--accent-active);
-  border-color: var(--accent-active);
+  /* Offen-Zustand = gleiches Gruen wie die Buttons (--accent), nicht das dunklere
+     --accent-active. Das Panel bleibt ohnehin offen, bis man es wieder ausschaltet. */
+  background: var(--accent);
+  border-color: var(--accent);
+}
+#toolbar .toolbar-calc-btn[aria-expanded="true"]:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 #toolbar .toolbar-calc-btn svg { width: 24px; height: 24px; }
 .toolbar-calc-menu {
@@ -83,7 +95,8 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 220px;
+  /* Feste Breite -> Popover springt NICHT breiter, wenn die Fortschrittsbalken erscheinen. */
+  width: 280px;
 }
 .toolbar-calc-menu .risk-calc-row {
   display: flex;
@@ -91,8 +104,30 @@
   gap: 10px;
 }
 .toolbar-calc-menu .risk-calc-row .edit-button {
-  flex: 1 1 auto;
-  text-align: center;
+  /* Alle Buttons gleich breit (Breite des breitesten: "Save to Historic Metrics"). */
+  flex: 0 0 auto;
+  width: 180px;
+  text-align: left;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+/* Punkt + Datum als Gruppe rechtsbuendig; Datum in eigener (rechts ausgerichteter) Spalte,
+   damit es ueber alle 3 Zeilen untereinander fluchtet. */
+.toolbar-calc-menu .risk-calc-row .risk-calc-dot {
+  margin-left: auto;
+}
+.toolbar-calc-menu .risk-calc-row .risk-calc-date {
+  flex: 0 0 auto;
+  min-width: 64px;   /* leere Spalte haelt die Breite -> kein Springen vor erstem Lauf */
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+/* Fehlschlag: "error" statt Datum in Rot. */
+.toolbar-calc-menu .risk-calc-row .risk-calc-date.risk-calc-date--error {
+  color: var(--danger);
+  font-weight: 700;
 }
 /* Kompakte Calculate-Fortschrittsbalken im Popover (MVaR + Credit; viel kleiner als HIST). */
 .toolbar-calc-menu .calc-progress:empty { display: none; }

@@ -3,6 +3,7 @@
 import { bindGlobalChangeDelegation } from '../ui/globalChangeDelegation.js';
 import { bindClearCSScenario } from '../../features/OFFERS/csScenarioUI.js';
 import { installMarketProvidersBridge } from '../../features/MARKET_DATA/PROVIDERS/marketProvidersBridge.js';
+import { initProviderSelection } from '../../features/MARKET_DATA/PROVIDERS/providerUI.js';
 import { bindSwaptionReadyListeners } from '../../features/MARKET_DATA/VOLS/swaptionReadyListeners.js';
 
 export function bootstrapBridges(appState, deps = {}) {
@@ -50,6 +51,9 @@ export function bootstrapBridges(appState, deps = {}) {
     api,
     handleProviderData,
   });
+
+  // DATA PROVIDER: Gruppen-Navigation + Provider-Auswahl (Checkbox/Radio).
+  initProviderSelection();
 
   bindSwaptionReadyListeners({ appState });
 }

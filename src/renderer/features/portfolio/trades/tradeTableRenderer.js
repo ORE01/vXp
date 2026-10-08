@@ -3,6 +3,8 @@ import { handleModalAction } from '../../../core/ui/modal/modalActions.js';
 import { addTooltipsForTruncatedText, addProdIdTooltips } from '../../../utils/tooltips.js';
 import { attachIdLinks } from '../../../utils/linksToTables.js';
 import { enhanceIncludeCheckboxes } from '../../../core/ui/enhancers/includeToggleEnhancer.js';
+import { applyTableCellAlignment } from '../../../utils/tableCellAlignment.js';
+import { isDayToken, resolveDayISO } from '../../products/structureTimeline/relativeDates.js';
 import { renderConfigurableTable } from '../../../core/ui/tables/configurableTable.js';
 import { clearColumnFilters } from '../../CUSTOMER/tableLayouts/tableColumnFilters.js';
 
@@ -67,7 +69,11 @@ function filterDealsColumnsForDisplay(rows) {
 
   return rows.map((row) => {
     return DEALS_VISIBLE_COLUMNS.reduce((obj, key) => {
-      obj[key] = row?.[key] ?? '';
+      let v = row?.[key] ?? '';
+      // TRADE_DATE kann als relativer Token (today / today+-N) gespeichert sein ->
+      // fuer die Anzeige frisch aufloesen, damit nicht roh "today+2" in der Tabelle steht.
+      if (key === 'TRADE_DATE' && isDayToken(v)) v = resolveDayISO(v);
+      obj[key] = v;
       return obj;
     }, {});
   });
@@ -245,6 +251,11 @@ function applyDealsUIEnhancements(container) {
   addTooltipsForTruncatedText(container);
   addProdIdTooltips(container);
   attachIdLinks(container);
+  // EUR-/Zahlenspalten (Notional, Buy Price, ...) rechtsbündig – gleiche Logik
+  // wie die Show-Portfolio-Tabelle (handlePortProdData). Läuft hier im afterRender
+  // der Configurable-Table, bevor die Header-Trichter angehängt werden, sodass der
+  // Header-Text-Match sauber greift.
+  applyTableCellAlignment(container);
 }
 
 // "Reset all filters": leert die Spaltenkopf-Filter der Deals-Tabelle und rendert neu.

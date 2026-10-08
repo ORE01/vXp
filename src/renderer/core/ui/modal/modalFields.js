@@ -1,5 +1,6 @@
 ﻿import { prodData } from '../../../features/products/productTableController.js';
 import { convertDateToISO, formatDisplayValue } from '../../../utils/tableCellFormats.js';
+import { isDayToken, resolveDayISO } from '../../../features/products/structureTimeline/relativeDates.js';
 import { handleProductFields } from '../../../features/products/productFieldRenderer.js';
 import { getFieldConfig } from '../../../features/products/productFieldConfig.js';
 import { getTemplateFieldSection } from '../../../features/products/productTemplates.js';
@@ -308,19 +309,64 @@ export function generateInputFields(rowData, form, uniqueIssuers, selectedTableN
         }
     
         case 'TRADE_DATE': {
-          const tradeDateInput = document.createElement('input');
-          tradeDateInput.type = 'date';
-          tradeDateInput.id = 'tradeDate';
-          tradeDateInput.classList.add('input-field');
-    
-          const isoDate = rowData[fieldName]
-            ? convertDateToISO(rowData[fieldName])
-            : '';
-          tradeDateInput.value = isoDate;
-    
-          tradeDateInput.setAttribute('data-field', fieldName);
+          // Absolut (Date-Picker) ODER relativ (Token today / today+-N). Token hat
+          // Vorrang -> wird gespeichert (Variante a); das Backend loest ihn bei jedem
+          // Lauf frisch auf (trades_loader.py). Gespeicherte Werte: #tradeDateDate /
+          // #tradeDateToken -> siehe gatherModalData.
+          const raw = String(rowData[fieldName] ?? '').trim();
+          const isTok = isDayToken(raw);
+          const absISO = isTok ? resolveDayISO(raw) : (raw ? convertDateToISO(raw) : '');
+          const tokVal = isTok ? raw : '';
+
+          const wrap = document.createElement('div');
+          wrap.style.cssText = 'display:flex; gap:6px; align-items:center;';
+
+          const dateInput = document.createElement('input');
+          dateInput.type = 'date';
+          dateInput.id = 'tradeDateDate';
+          dateInput.classList.add('input-field');
+          dateInput.style.cssText = 'flex:1 1 auto; min-width:120px;';
+          dateInput.value = absISO;
+          dateInput.setAttribute('data-field', fieldName);
+          dateInput.setAttribute('data-absdate', fieldName);
+
+          const tokInput = document.createElement('input');
+          tokInput.type = 'text';
+          tokInput.id = 'tradeDateToken';
+          tokInput.classList.add('input-field');
+          tokInput.style.cssText = 'flex:0 0 62px; min-width:0;';
+          tokInput.value = tokVal;
+          tokInput.placeholder = 'today-5';
+          tokInput.title = 'Relative (optional): today, today+N or today-N days';
+          tokInput.setAttribute('data-reltoken', fieldName);
+
+          const preview = document.createElement('span');
+          preview.id = 'tradeDatePreview';
+          preview.style.cssText = 'font-size:11px; color:#888; display:block; margin-top:2px;';
+          preview.textContent = (isTok && absISO) ? `= ${absISO}` : '';
+
+          const recompute = () => {
+            const t = String(tokInput.value || '').trim();
+            if (t) {
+              const iso = resolveDayISO(t);
+              if (iso) dateInput.value = iso;
+              preview.textContent = iso ? `= ${iso}` : '';
+            } else {
+              preview.textContent = '';
+            }
+          };
+          tokInput.addEventListener('input', recompute);
+          dateInput.addEventListener('change', () => {
+            if (tokInput.value) tokInput.value = '';
+            recompute();
+          });
+
+          wrap.appendChild(dateInput);
+          wrap.appendChild(tokInput);
+
           formRow.appendChild(label);
-          formRow.appendChild(tradeDateInput);
+          formRow.appendChild(wrap);
+          formRow.appendChild(preview);
           return true;
         }
     

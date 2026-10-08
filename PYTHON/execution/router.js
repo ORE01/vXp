@@ -318,7 +318,9 @@ export function createPythonExecutionRouter(ctx) {
 
         case 'py-excel': {
           const modeMap = {
-            updateExcelAllButton:       'ALL',
+            // "Import: ALL" in Customer Data importiert NUR die UNI_DATA.xlsm-Daten
+            // (Issuer/Products/Deals/Rank) -> Modus BUSINESS, KEIN Market mehr.
+            updateExcelAllButton:       'BUSINESS',
             updateExcelIssuerButton:    'ISSUER',
             updateExcelProductsButton:  'PRODUCTS',
             updateExcelDealsButton:     'DEALS',

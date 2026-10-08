@@ -93,6 +93,23 @@ export function renderDealsPanel(appState) {
 
   ensureDealsTablesDropdown(appState);
 
+  // "Change Portfolio" uebernimmt die in "Select Portfolio" (createdPortDropdown0) gewaehlte,
+  // sofern sie als Option existiert -> man muss sie nicht erneut waehlen. Eine andere Wahl
+  // bleibt moeglich. Async-safe, weil ensureDealsTablesDropdown die Optionen teils per
+  // queueMicrotask befuellt (dann gewinnt diese Auswahl).
+  const adoptMainSelection = () => {
+    if (!dd) return;
+    const main = String(document.getElementById('createdPortDropdown0')?.value ?? '').trim();
+    if (!main) return;
+    const opts = Array.from(dd.options || []);
+    if (opts.some(o => String(o.value) === main) && String(dd.value) !== main) {
+      dd.value = main;
+      dd.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+  adoptMainSelection();
+  queueMicrotask(adoptMainSelection);
+
   const sel = String(dd?.value ?? NONE).trim();
 
   // UX: solange NONE selektiert ist, leeren wir die Tabelle
