@@ -537,5 +537,34 @@ export function bindAppButtons({
       document.dispatchEvent(new CustomEvent('theme:changed', { detail: { light } }));
     } catch {}
   });
+
+  // ---------- Global data refresh (Soft-Reload ohne vollen Reload) ----------
+  // Holt die anzeige-treibenden Kern-Tabellen frisch aus der DB (fetch-table-data ->
+  // normale Pipeline -> Stores + Panels rendern neu). Behebt Daten-/Anzeige-Stale
+  // (z.B. Coupon nach Excel-Import, NAV/Duration, PV01) OHNE den UI-Zustand zu verlieren.
+  // NICHT fuer Main-Prozess-Code-Aenderungen (dafuer echter Neustart).
+  {
+    const REFRESH_CORE_TABLES = [
+      'v_PRODUCTS_APP', 'v_PRODUCTS_CANONICAL', 'PRODUCT_STRUCTURE',
+      'Portfolios', 'DealsMain',
+      'ProductRiskSensitivities', 'PortfolioRiskSensitivities',
+      'MarketVaR', 'CreditVaR', 'EAD',
+      'Issuer', 'IssuerRankRating', 'AppMeta',
+    ];
+    const refreshBtn = document.getElementById('refreshDataBtn');
+    refreshBtn?.addEventListener('click', () => {
+      if (refreshBtn.classList.contains('is-refreshing')) return;
+      refreshBtn.classList.add('is-refreshing');
+      refreshBtn.disabled = true;
+      REFRESH_CORE_TABLES.forEach((t) => {
+        try { window.api?.send?.('fetch-table-data', t); } catch {}
+      });
+      // fetch-table-data hat kein "fertig"-Signal -> kurzer fixer Spin.
+      setTimeout(() => {
+        refreshBtn.classList.remove('is-refreshing');
+        refreshBtn.disabled = false;
+      }, 1200);
+    });
+  }
 }
 

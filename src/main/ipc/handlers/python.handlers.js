@@ -843,7 +843,11 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
       break;
 
     case 'PRODUCTS':
-      tablesToRefresh = ['v_PRODUCTS_CANONICAL'];
+      // v_PRODUCTS_APP MUSS mit: die Produkt-Tabelle + der Structure-Timeline-Drawer lesen
+      // aus v_PRODUCTS_APP (Store prodData). v_PRODUCTS_CANONICAL allein aktualisiert die
+      // Anzeige NICHT (Route setzt nur ein Flag) -> sonst bleibt der Coupon im Panel stale.
+      // Spiegelt die REFRESH_DEPENDENCIES des normalen Produkt-Saves (crud.handlers).
+      tablesToRefresh = ['v_PRODUCTS_CANONICAL', 'v_PRODUCTS_APP'];
       break;
 
     case 'DEALS':
@@ -864,6 +868,7 @@ if (!ipcMain) throw new Error('[python.handlers] ipcMain missing');
         'Portfolios',
         'DealsMain',
         'v_PRODUCTS_CANONICAL',
+        'v_PRODUCTS_APP',
         'Issuer',
         'Rank',
         'RATES_BASE',

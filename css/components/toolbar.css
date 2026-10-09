@@ -38,6 +38,33 @@
   line-height: 1;
 }
 
+/* Globaler Daten-Refresh-Button (Soft-Reload ohne vollen Reload). ⟳ dreht sich waehrend
+   des Refreshs. padding/width override fuer ein quadratisches Icon-Button-Format. */
+#toolbar .refresh-data-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  padding: 0;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-bright, #e8e8e8);
+  background: var(--surface-raised, #2a2a2a);
+  border: 1px solid var(--border-subtle, #444);
+  border-radius: 6px;
+}
+#toolbar .refresh-data-button:hover { filter: brightness(1.15); }
+#toolbar .refresh-data-button:disabled { opacity: 0.7; cursor: default; }
+/* Nur das Pfeil-Kreis-Glyph dreht sich, nicht die gesamte Kachel. */
+#toolbar .refresh-data-button .refresh-icon {
+  display: inline-block;
+  line-height: 1;
+}
+#toolbar .refresh-data-button.is-refreshing .refresh-icon {
+  animation: vxp-spin 0.8s linear infinite;
+}
+@keyframes vxp-spin { to { transform: rotate(360deg); } }
+
 #creditWarningText {
   cursor: help;
 }
